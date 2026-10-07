@@ -201,7 +201,24 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
    another.
    `DebuggerScenario` holds a real server at a breakpoint for 40 s with a bot
    online (past Paper's watchdog warning and the keep-alive limit); its DAP
-   is raw JSON over `Editor.notify`.
+   is raw JSON over `Editor.notify`. `ScheduleScenario` runs its server with
+   the test-only `-Dnetherforge.test.wall-clock-rate=60` (through
+   `PaperServer`'s `jvmProperties`; see plugin-runtime's "Schedules"), so a
+   cron schedule for every minute fires on the real tick every second.
+   - **Scopes** (`-Pnetherforge.integration.scope=full|pr|quarantine`,
+     `full` by default): a scenario whose checks don't change with the
+     Minecraft version is `@VersionIndependent` (`support/Tags.kt`, the JUnit
+     tag `version-independent`): `ScheduleScenario`, `DebuggerScenario`,
+     `SettingsScenario`, `SpawnRatesScenario`, `CutsceneScenario`,
+     `TerrainScenario` (its version-sensitive parts are `MainWorldScenario`'s,
+     `DimensionTypeScenario`'s and `StructureGenerationScenario`'s). The `pr`
+     scope leaves them out on every version but the newest (the build works
+     it out from the adapters); `full` runs everything. Untagged means it runs
+     on every version: anything touching world storage, datapacks, registries,
+     packets or goals (`ContractScenario`, `BotScenario`, the world and
+     datapack scenarios, `BlockScenario`, `MobScenario`, `GameDataScenario`,
+     `ReloadScenario`, …). `LumenValeScenario` runs only on the version its
+     example targets (`assumptions()`).
    - **A scenario is a class** (`support/Scenario.kt`) whose tests are its
      steps, in `@Order`, against one server running a copy of
      `examples/basic` (retargeted to the adapter's version) with fixtures
@@ -219,7 +236,7 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
      `PaperServer` (the server folder, starting and stopping, what the
      plugin's store holds: `stored(sql)`, read beside the running server; `prepare` writes `server.properties`,
      `spigot.yml` and `bukkit.yml` afresh each time, with `levelSeed` and `mainWorldGenerator` for a scenario whose
-     main world matters, so nothing a scenario routed outlives it), `Editor` (the bridge: `request`, `next`, `logged`, `run`,
+     main world matters, so nothing a scenario routed outlives it), `Editor` (the bridge: `request`, `next`, `logged`, `line`, `settle`, `assertNone`, `run`,
      `reload`), `Bots` (acting and waiting on what a bot sees),
      `Maps` (the editor's world capture).
    - **What's there**: `ReloadScenario` (hot reload of every kind, typed
@@ -244,9 +261,35 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
      asks `Adapter`.
    - **Waiting for a frame, match what you mean**: `editor.next { ... }` takes
      the first frame its predicate accepts, and a loaded machine sends others
-     meanwhile (a sourceless "is slow" `ScriptError` from a tick over budget).
-     Match a `ScriptError` by its source file or message, never as the first
-     one.
+     meanwhile. Match a `ScriptError` by its source file or message, never as
+     the first one. `editor.logged(...)` waits for an exact log line,
+     `editor.line(first)` for the next line whose first field is `first` (its
+     other fields back, what a fixture's probe reports).
+   - **Never sleep, then assert.** Up to four servers share a machine, so a
+     tick or a chunk can take seconds. Every wait has one limit,
+     `WAIT_SECONDS` (60 s, `support/Waits.kt`), and returns as soon as it
+     can: `eventually(what, poll = { ... }) { accept }` asks again until the
+     answer is accepted (a count after chunks load, a file written off the
+     main thread, where the camera is), `Bots.eventually`/`heard` poll a bot
+     the same way. Something that must happen a number of ticks later is
+     counted in ticks by the fixture (`nf.after(5, ...)`), not in sleeps. A
+     check that something did **not** happen is `editor.assertNone(what) { }`,
+     which first waits for everything the server reported until now
+     (`Editor.settle`: a request the main thread answers, sent after
+     whatever it said before).
+   - **A timeout says what came instead**: it names what it waited for and
+     lists the last 40 frames with their content (log fields, script errors
+     with their file and line, problems, answers); `logged` and `line` also
+     show the log lines with the same first field, field by field ("field 3:
+     "minecraft:stone", not "minecraft:gold_block""). A bridge the plugin
+     closed fails at once.
+   - **No script fails unless a step says so.** After every step that passed
+     (and across a `restart`), `Scenario` settles and fails the step on any
+     `ScriptError` no wait took. A step that breaks a script on purpose calls
+     `expectScriptErrors("why") { it.source?.file == "..." }` (by source or
+     message) for the rest of the scenario, and waits for the error it checks
+     with `next` (`MobScenario`, `ReloadScenario`). Servers run with
+     `performance.warn-ms: 0`, so a slow-script warning is never one.
    - **Bots**: `BotScenario` joins bots (fake players, the `NetherForgeBots`
      plugin; see the plugin-runtime skill) on an online-mode server and checks
      what only a player can do or see: the join, chat and commands, clicking
@@ -437,7 +480,8 @@ The Paper run's server log is `apps/plugin/integration/build/integration/<minecr
 pnpm test                 # everything fast: Gradle check, vitest, cargo test
 node tools/gradle.mjs :format:allTests
 node tools/gradle.mjs :plugin:runtime:test
-pnpm test:integration
+pnpm test:integration   # every version, the `full` scope
+node tools/gradle.mjs :plugin:integration:integrationTest-26.2 -Pnetherforge.integration.scope=pr   # what a PR runs on 26.2
 pnpm test:e2e
 pnpm test:screenshots     # the previews' pictures (Docker); --update rewrites them
 ```
@@ -447,17 +491,49 @@ pnpm test:screenshots     # the previews' pictures (Docker); --update rewrites t
 `.github/workflows/ci.yml` runs on every PR and every push to `main`, and the
 release workflow calls it on the tagged commit (see the release skill):
 
-| Job         | Runner                 | What                                                                                                                                                              |
-| ----------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| check       | ubuntu, macOS, Windows | `pnpm build`, lint, `pnpm test`. rustfmt and clippy on Linux only (`node tools/check.mjs lint --skip rust` elsewhere); the Rust tests everywhere.                 |
-| integration | ubuntu                 | One job per Paper adapter (listed from `apps/plugin/paper-*`), each `integrationTest-<minecraft>`, its Paper and Mojang jars cached per version and pinned build. |
-| e2e         | ubuntu                 | `pnpm test:e2e` (Chromium), then `pnpm test:screenshots` (the previews' pictures, in the Playwright container).                                                   |
-| tauri-build | ubuntu                 | `tauri build --debug --no-bundle`.                                                                                                                                |
+| Job         | Runner                 | What                                                                                                                                                                                                                                                 |
+| ----------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| check       | ubuntu, macOS, Windows | `pnpm build`, lint, `pnpm test`. rustfmt and clippy on Linux only (`node tools/check.mjs lint --skip rust` elsewhere); the Rust tests everywhere.                                                                                                    |
+| integration | ubuntu                 | One job per Paper adapter (listed from `apps/plugin/paper-*`), each `integrationTest-<minecraft>`, its Paper and Mojang jars cached per version and pinned build. PRs in the `pr` scope, `main` and releases `full`. Test counts in the job summary. |
+| e2e         | ubuntu                 | `pnpm test:e2e` (Chromium), then `pnpm test:screenshots` (the previews' pictures, in the Playwright container).                                                                                                                                      |
+| tauri-build | ubuntu                 | `tauri build --debug --no-bundle`.                                                                                                                                                                                                                   |
+
+`nightly.yml`:
+
+| Job         | Runner                                                | What                                                                                                                                              |
+| ----------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| integration | every version on ubuntu; the newest on macOS, Windows | `integrationTest-<minecraft>` in the `full` scope, then (Linux) the `quarantine` scope in a step that can't fail the night (`continue-on-error`). |
+| editor      | ubuntu, macOS, Windows                                | `pnpm test:e2e`, the bundle, and the packaged-app smoke test (not on macOS).                                                                      |
+| report      | ubuntu                                                | A failure of either opens an issue labelled `nightly`.                                                                                            |
 
 A newer push to a PR cancels its older run; runs on `main` and tags always
-finish. `nightly.yml`: integration, e2e, packaged builds and smoke tests on
-all three OSes; a failure opens an issue. Flaky tests are fixed or
-quarantined with a linked issue the same day, never retried silently.
+finish. Every job has `timeout-minutes`. A failed integration job keeps each
+scenario's server log (`build/integration/<minecraft>/server/*.log` and
+`logs/`), the JUnit XML and the HTML report as the artifact
+`integration-<minecraft>[-<os>]`; a failed e2e run keeps Playwright's
+`test-results/` (each failed test's trace) and `playwright-report/` as
+`e2e-results`. `.github/actions/junit-summary` writes a folder of JUnit XML's
+counts and failed tests into the job's summary. `docs.yml` builds the docs on
+every PR and push that touches them and deploys from `main` only when the
+repository has GitHub Pages (see the release skill).
+
+**Flaky tests are fixed or quarantined with a linked issue the same day**,
+never retried silently. Quarantining one: open an issue (what fails, a link to
+the run), then tag the test with it:
+
+- **Integration (Kotlin)**: `@Quarantine("https://github.com/<owner>/<repo>/issues/<n>")`
+  (`support/Tags.kt`, the JUnit tag `quarantine`) on the scenario class, or on
+  a step no later step builds on. Every normal run leaves it out; nightly runs
+  `-Pnetherforge.integration.scope=quarantine` on its own, without failing,
+  so a pass there says the fix worked.
+- **Unit tests (Kotlin, JUnit 5)**: `@Tag("quarantine")` with the issue's
+  URL in a comment above it (the runtime's tests use the same tag name).
+- **vitest**: `it.skip('…', …)` (or `describe.skip`) with
+  `// quarantined: <issue URL>` above it.
+- **Playwright**: `test.fixme('…', …)` (or `test.fixme()` inside the test)
+  with `// quarantined: <issue URL>` above it.
+
+The fix takes the tag (or `skip`/`fixme`) off and closes the issue.
 
 Every third-party action is pinned to a full commit SHA with its version in
 a comment (`uses: actions/checkout@<sha> # v5.1.0`), and every workflow and

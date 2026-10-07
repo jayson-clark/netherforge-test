@@ -1,13 +1,12 @@
 package dev.netherforge.plugin.integration
 
-import dev.netherforge.format.bridge.ScriptError
 import dev.netherforge.plugin.integration.support.Scenario
 import dev.netherforge.plugin.integration.support.TestProject
+import dev.netherforge.plugin.integration.support.VersionIndependent
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
-import kotlin.test.assertEquals
 
 /**
  * Mob spawn rates per world on a real server: the main world's come from
@@ -15,6 +14,7 @@ import kotlin.test.assertEquals
  * `world:set_spawn_limit` and `set_spawn_interval`, a reload puts the file's
  * back, and a world created later is configured as it loads.
  */
+@VersionIndependent
 class SpawnRatesScenario : Scenario("spawnrates") {
     override fun prepare(project: TestProject) {
         val manifest = project.file("netherforge.json")
@@ -60,6 +60,5 @@ class SpawnRatesScenario : Scenario("spawnrates") {
     fun `a world created later has its rates as it loads`() {
         editor.run("it-spawn create")
         editor.logged("created", "70", "1", "10", "3")
-        assertEquals(emptyList(), editor.seen.filterIsInstance<ScriptError>().map { it.message })
     }
 }

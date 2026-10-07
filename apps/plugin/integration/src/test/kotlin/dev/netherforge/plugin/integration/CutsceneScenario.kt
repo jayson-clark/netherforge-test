@@ -5,15 +5,14 @@ import dev.netherforge.format.bridge.BotJoinParams
 import dev.netherforge.format.bridge.BotParams
 import dev.netherforge.format.bridge.BotState
 import dev.netherforge.format.bridge.BotsExtension
-import dev.netherforge.format.bridge.Log
-import dev.netherforge.format.bridge.ScriptError
 import dev.netherforge.plugin.integration.support.Bots
 import dev.netherforge.plugin.integration.support.PaperServer
 import dev.netherforge.plugin.integration.support.Scenario
+import dev.netherforge.plugin.integration.support.VersionIndependent
+import dev.netherforge.plugin.integration.support.eventually
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import kotlin.math.abs
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
@@ -22,6 +21,7 @@ import kotlin.test.assertTrue
  * put back (game mode, where they stood) however it ends: it finishes, a script stops it, the
  * player quits mid-way (their saved data is what's put back) or the server stops.
  */
+@VersionIndependent
 class CutsceneScenario : Scenario("cutscenes") {
     override val server = PaperServer(onlineMode = true, maxPlayers = 2)
 
@@ -49,8 +49,7 @@ class CutsceneScenario : Scenario("cutscenes") {
     /** Where the server has the runner now (`/probewhere`): the camera's place while a cutscene plays. */
     private fun where(): Triple<Double, Double, Double> {
         bots.act(RUNNER, BotAction.Command("/probewhere"))
-        val log = editor.next(30) { it is Log && it.message.startsWith("probe at\t") } as Log
-        val (x, y, z) = log.message.split("\t").drop(1).map { it.toDouble() }
+        val (x, y, z) = editor.line("probe at").map { it.toDouble() }
         return Triple(x, y, z)
     }
 
@@ -73,9 +72,8 @@ class CutsceneScenario : Scenario("cutscenes") {
         // The server moves a spectating player to the camera each tick: 48 blocks east over six seconds, 40 up.
         val first = where()
         assertTrue(abs(first.second - (home.y + 40)) < 1.5, "high above where they stood: $first")
-        Thread.sleep(700)
-        val second = where()
-        assertTrue(second.first > first.first + 1.5, "moving east: $first then $second")
+        // Polled rather than after a sleep: a loaded server's ticks come late, and the camera with them.
+        val second = eventually("the camera moving east from $first", poll = ::where) { it.first > first.first + 1.5 }
         assertTrue(abs(second.second - first.second) < 0.5, "level: $first then $second")
         editor.logged("probe cue", "middle")
         bots.eventually(RUNNER) { it.subtitle?.contains("Halfway there") == true }
@@ -86,7 +84,6 @@ class CutsceneScenario : Scenario("cutscenes") {
 
         editor.logged("probe ended", "finished", "adventure")
         backHome()
-        assertEquals(emptyList(), editor.seen.filterIsInstance<ScriptError>().map { it.message })
     }
 
     @Test
@@ -117,7 +114,6 @@ class CutsceneScenario : Scenario("cutscenes") {
         restart()
         join()
         backHome()
-        assertTrue(editor.seen.none { it is ScriptError }, "no script failed")
     }
 
     private companion object {

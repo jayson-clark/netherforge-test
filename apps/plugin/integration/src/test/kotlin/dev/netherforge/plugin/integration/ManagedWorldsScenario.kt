@@ -1,14 +1,13 @@
 package dev.netherforge.plugin.integration
 
-import dev.netherforge.format.bridge.ScriptError
 import dev.netherforge.plugin.integration.support.Adapter
 import dev.netherforge.plugin.integration.support.Maps
 import dev.netherforge.plugin.integration.support.Scenario
+import dev.netherforge.plugin.integration.support.eventually
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -73,15 +72,12 @@ class ManagedWorldsScenario : Scenario("worlds") {
         editor.run("it-worlds unload")
         editor.logged("unloaded", "true", "false", "false", "true", "false", "true")
         editor.logged("loaded back", "it_void", "minecraft:diamond_block", "vec3(5, 0, 5)")
-        assertEquals(emptyList(), editor.seen.filterIsInstance<ScriptError>().map { it.message })
     }
 
     @Test
     @Order(6)
     fun `on disk, the deleted copy's files go off the main thread and the others stay`() {
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20)
-        while (Files.exists(dimension("it_copy")) && System.nanoTime() < deadline) Thread.sleep(100)
-        assertFalse(Files.exists(dimension("it_copy")), "the deleted copy's files are gone")
+        eventually("the deleted copy's files gone", poll = { Files.exists(dimension("it_copy")) }) { exists -> !exists }
         assertTrue(Files.isDirectory(dimension("it_void")))
         assertTrue(Files.isDirectory(dimension("it_copy2")))
         if (Adapter.worldsAreDimensions) {

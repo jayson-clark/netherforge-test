@@ -1,6 +1,5 @@
 package dev.netherforge.plugin.integration
 
-import dev.netherforge.format.bridge.Log
 import dev.netherforge.format.bridge.Problems
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.project.TerrainKind
@@ -62,7 +61,7 @@ class MainWorldScenario : Scenario("mainworld") {
 
     private fun step(command: String, line: String): List<String> {
         editor.run("it-mainworld $command")
-        return (editor.next { it is Log && it.message.startsWith("$line\t") } as Log).message.split('\t').drop(1)
+        return editor.line(line)
     }
 
     private fun assertColumns(generator: TerrainGenerator, columns: List<Pair<Int, Int>>) {

@@ -12,6 +12,8 @@ import dev.netherforge.format.terrain.TerrainCompiler
 import dev.netherforge.format.terrain.TerrainGenerator
 import dev.netherforge.plugin.integration.support.Scenario
 import dev.netherforge.plugin.integration.support.TestProject
+import dev.netherforge.plugin.integration.support.VersionIndependent
+import dev.netherforge.plugin.integration.support.eventually
 import dev.netherforge.plugin.testkit.StructureFiles
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -31,6 +33,7 @@ import kotlin.test.assertTrue
  * across a restart. Scripts read its biomes (W5.9): a block's is the generator's, the server's own search finds another off
  * the main thread, and a new chunk is heard as it's generated.
  */
+@VersionIndependent
 class TerrainScenario : Scenario("terrain", "structures") {
     private val seed = 20260714L
     private val file = "terrain/ruby_hills.json"
@@ -68,7 +71,7 @@ class TerrainScenario : Scenario("terrain", "structures") {
 
     private fun step(command: String, line: String): List<String> {
         editor.run("it-terrain $command")
-        return (editor.next { it is Log && it.message.startsWith("$line\t") } as Log).message.split('\t').drop(1)
+        return editor.line(line)
     }
 
     /** A column's top block as the generator makes it: its y and block. */
@@ -174,9 +177,8 @@ class TerrainScenario : Scenario("terrain", "structures") {
         assertTrue(result.resources.single().ok, "${result.resources}")
         assertTrue(!result.restart, "a terrain is data the chunk threads read: nothing restarts")
         for (row in -82..-78) step("load -80 $row 2", "loaded")
-        Thread.sleep(500)
-        val first = step("guards", "guards")[0].toInt()
-        assertTrue(first > 0, "no guard spawned from a generated ruin")
+        // A marker becomes its centity on a tick after its chunk loads: asked again until one has.
+        eventually("a guard spawned from a generated ruin", poll = { step("guards", "guards")[0].toInt() }) { it > 0 }
     }
 
     @Test
@@ -215,7 +217,7 @@ class TerrainScenario : Scenario("terrain", "structures") {
         val here = generator.biomeAt(0, 0)
         val other = generator.terrain.biomes.first { it != here }
         editor.run("it-terrain-locate 0 0 $other")
-        val found = (editor.next { it is Log && it.message.startsWith("located\t") } as Log).message.split('\t').drop(1)
+        val found = editor.line("located")
         assertNotEquals("none", found[0], "a place of $other near the origin: ${found.drop(1)}")
         assertEquals(other, generator.biomeAt(found[0].toInt(), found[1].toInt()), "what the search found at ${found[0]},${found[1]}")
         // A chunk nobody has been near, generated as it loads: the handler hears it and reads its blocks.

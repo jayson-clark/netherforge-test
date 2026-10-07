@@ -2,9 +2,9 @@ package dev.netherforge.plugin.integration
 
 import dev.netherforge.format.bridge.BlockPos
 import dev.netherforge.format.bridge.Bridge
-import dev.netherforge.format.bridge.Log
 import dev.netherforge.format.bridge.SaveStructureParams
 import dev.netherforge.plugin.integration.support.Scenario
+import dev.netherforge.plugin.integration.support.eventually
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
@@ -25,12 +25,14 @@ import kotlin.test.assertTrue
 class StructureGenerationScenario : Scenario("structures") {
     private fun datapack(path: String) = server.folder.resolve("plugins/NetherForge/datapack").resolve(path).readText()
 
-    /** How many it_guard centities there are, a few ticks after whatever just loaded chunks (a marker becomes its centity on the tick after its chunk loads). */
+    /**
+     * How many it_guard centities there are, counted by the fixture a few server ticks after whatever just loaded
+     * chunks (a marker becomes its centity on the tick after its chunk loads): ticks, not a sleep, so a loaded
+     * machine counts as late as its ticks come.
+     */
     private fun guards(): Int {
-        Thread.sleep(500)
         editor.run("it-structures count")
-        val line = editor.next { it is Log && it.message.startsWith("guards\t") } as Log
-        return line.message.substringAfter('\t').toInt()
+        return editor.line("guards").single().toInt()
     }
 
     @Test
@@ -74,8 +76,7 @@ class StructureGenerationScenario : Scenario("structures") {
         editor.run("it-structures generate")
         editor.logged("generated", "it_gen")
         // The server found it (a datapack structure it can't use never generates one).
-        val first = guards()
-        assertTrue(first > 0, "no guard spawned from a generated ruin")
+        val first = eventually("a guard spawned from a generated ruin", poll = ::guards) { it > 0 }
         assertEquals(first, guards(), "counting changes nothing")
         // A structure with its markers doesn't spawn from the same marker again when its chunks load once more.
         editor.run("it-structures generate")

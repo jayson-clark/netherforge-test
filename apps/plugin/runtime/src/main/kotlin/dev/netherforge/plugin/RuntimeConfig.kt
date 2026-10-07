@@ -50,9 +50,21 @@ data class RuntimeConfig(
      */
     val packageCache: Path? = null,
     /** Set only when the script test runner runs the project: what `nf.test` moves (the fake server's clock, its players). Never on a server. */
-    val testing: TestHarness? = null
+    val testing: TestHarness? = null,
+    /**
+     * How fast the wall clock `nf.schedule` and `nf.server.unix_time()` read runs: 1 always, except on the
+     * integration test's dev servers ([WALL_CLOCK_RATE_PROPERTY]).
+     */
+    val wallClockRate: Double = 1.0
 ) {
     companion object {
+        /**
+         * Test-only, and read only on a dev server: `-Dnetherforge.test.wall-clock-rate=60` runs the wall clock 60
+         * times as fast from start-up, so the integration test sees a cron schedule fire on the server's tick within
+         * a second rather than at the next real minute. The editor never sets it.
+         */
+        const val WALL_CLOCK_RATE_PROPERTY = "netherforge.test.wall-clock-rate"
+
         /** What the adapter logs when [read] finds no project to run. */
         const val NO_PROJECT =
             "No project to run. Set `project:` in plugins/NetherForge/config.yml to a NetherForge project folder and restart."
@@ -99,7 +111,8 @@ data class RuntimeConfig(
                     databases = databases,
                     packageCache = properties(Bridge.PACKAGE_CACHE_PROPERTY)?.takeIf {
                         it.isNotBlank()
-                    }?.let { Path.of(it).toAbsolutePath().normalize() }
+                    }?.let { Path.of(it).toAbsolutePath().normalize() },
+                    wallClockRate = properties(WALL_CLOCK_RATE_PROPERTY)?.toDoubleOrNull()?.takeIf { it > 0 && it.isFinite() } ?: 1.0
                 )
             }
             val project = settings.text("project") ?: return null
