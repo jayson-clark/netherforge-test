@@ -193,6 +193,7 @@ object PaperContracts {
         PaperPlatformInfoTest::class.java,
         PaperTextOpsTest::class.java,
         PaperPerformanceOpsTest::class.java,
+        PaperPauseOpsTest::class.java,
         PaperWorldOpsTest::class.java,
         PaperBlockOpsTest::class.java,
         PaperParticleOpsTest::class.java,
