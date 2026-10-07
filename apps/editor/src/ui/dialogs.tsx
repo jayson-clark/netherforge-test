@@ -183,10 +183,12 @@ function PromptDialog({
         autoFocus
         value={value}
         aria-invalid={!!error}
+        // Why it's refused is read with the field.
+        aria-describedby={error && value ? `${id}-error` : undefined}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={(event) => event.key === 'Enter' && submit()}
       />
-      {error && value && <FormError>{error}</FormError>}
+      {error && value && <FormError id={`${id}-error`}>{error}</FormError>}
     </Modal>
   )
 }

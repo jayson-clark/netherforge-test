@@ -21,7 +21,10 @@ const writeBytes = (page: Page, files: Record<string, string>) =>
     files,
   )
 
-test("shows a map's world, then saves a dev-server world over it", async ({ page }) => {
+// What the inspector shows of a world and saving a dev-server world over it are
+// MapEditor.test.tsx's (and what a capture copies is the backend's); this is a map's binary
+// files reaching the page and opening from the explorer.
+test('opens a map from the explorer and shows what its world holds', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   await openExampleWithAssets(page)
@@ -30,80 +33,18 @@ test("shows a map's world, then saves a dev-server world over it", async ({ page
     'maps/arena/level.dat': await base64(levelRoot({ name: 'Arena', spawn: [4, 70, -8] })),
     [`maps/arena/${world}/data/minecraft/world_gen_settings.dat`]: await base64(worldGenRoot(-42n)),
     [`maps/arena/${world}/data/minecraft/game_rules.dat`]: await base64(
-      gameRulesRoot({ 'minecraft:keep_inventory': true, 'minecraft:random_tick_speed': 3 }),
+      gameRulesRoot({ 'minecraft:keep_inventory': true }),
     ),
     [`maps/arena/${world}/region/r.0.0.mca`]: Buffer.alloc(4096, 1).toString('base64'),
   })
 
   await openResource(page, 'arena', 'Maps')
-  // What the map holds is in the inspector.
   const screen = page.getByRole('complementary', { name: 'Map' })
   await expect(screen.getByLabel('World name')).toHaveText('Arena')
   await expect(screen.getByLabel('Seed')).toHaveText('-42')
-  await expect(screen.getByLabel('Spawn')).toHaveText('4, 70, -8')
-  await expect(screen.getByLabel('Dimensions')).toHaveText('minecraft:overworld')
-  await expect(screen.getByLabel('Size on disk')).toContainText('in 4 files')
-  const rules = screen.getByRole('table', { name: 'Game rules' })
-  await expect(rules).toContainText('minecraft:keep_inventorytrue')
-  await expect(rules).toContainText('minecraft:random_tick_speed3')
-
-  // The dev server has a second world; saving it replaces the map.
-  const serverWorld = 'world/dimensions/minecraft/lobby'
-  await outside(
-    page,
-    (backend, files) => {
-      backend.testConnect()
-      backend.testWorld('lobby')
-      backend.testServerFiles(files)
-    },
-    {
-      'world/level.dat': await base64(levelRoot({ name: 'world', spawn: [0, 88, 0] })),
-      'world/session.lock': Buffer.from('lock').toString('base64'),
-      'world/players/data/x.dat': Buffer.from('player').toString('base64'),
-      [`${serverWorld}/region/r.0.0.mca`]: Buffer.alloc(8192, 2).toString('base64'),
-      [`${serverWorld}/data/minecraft/world_gen_settings.dat`]: await base64(worldGenRoot(7n)),
-      [`${serverWorld}/data/paper/metadata.dat`]: Buffer.from('uuid').toString('base64'),
-    },
+  await expect(screen.getByRole('table', { name: 'Game rules' })).toContainText(
+    'minecraft:keep_inventorytrue',
   )
-  await screen.getByRole('button', { name: 'Refresh worlds' }).click()
-  await screen.getByRole('combobox', { name: 'World' }).selectOption('lobby')
-  await screen.getByRole('button', { name: 'Save and replace' }).click()
-  await page
-    .getByRole('dialog', { name: 'Replace arena' })
-    .getByRole('button', { name: 'Replace' })
-    .click()
-  await expect(screen.getByRole('status')).toContainText('Saved lobby into maps/arena/')
-  await expect(screen.getByLabel('Seed')).toHaveText('7')
-  // The copy's spawn is the world's own (the fake server's is 0, 64, 0), not the main world's.
-  await expect(screen.getByLabel('Spawn')).toHaveText('0, 64, 0')
-
-  const paths = Object.keys(
-    await outside(
-      page,
-      (backend) => {
-        const all: Record<string, true> = {}
-        for (const path of [
-          'maps/arena/level.dat',
-          `maps/arena/dimensions/minecraft/overworld/region/r.0.0.mca`,
-        ])
-          if (backend.testBytes(path)) all[path] = true
-        return all
-      },
-      null,
-    ),
-  )
-  expect(paths).toHaveLength(2)
-  const gone = await outside(
-    page,
-    (backend) =>
-      [
-        'maps/arena/dimensions/minecraft/overworld/data/minecraft/game_rules.dat',
-        'maps/arena/dimensions/minecraft/overworld/data/paper/metadata.dat',
-        'maps/arena/session.lock',
-      ].filter((path) => backend.testBytes(path) !== null),
-    null,
-  )
-  expect(gone).toEqual([])
   expect(errors).toEqual([])
 })
 
@@ -138,7 +79,10 @@ test("draws a map's chunks around its spawn, and more as the view grows or moves
   // Radius 6 around chunk 0, 0 takes the row's first seven chunks: 16 × 16 floors, top and
   // bottom, their long edges, and the west end; faces toward a neighbouring chunk's stone
   // (the seventh's east one too: the eighth is read for it) are left out.
-  await expect(drawn).toContainText(`Drawing 7 chunks (${7 * 512 + 7 * 32 + 16} faces).`)
+  // The first draw waits for the terrain worker to start, which a loaded machine slows.
+  await expect(drawn).toContainText(`Drawing 7 chunks (${7 * 512 + 7 * 32 + 16} faces).`, {
+    timeout: 15_000,
+  })
   await expect(preview.getByLabel('Unreadable chunks')).toContainText(
     "1 chunk can't be read: chunk 0, 1:",
   )

@@ -4,7 +4,9 @@ import { files, openExampleWithAssets, openResource, save, test } from './helper
 
 const TREASURE = 'loot/treasure.json'
 
-test('edits a loot table: picks a pool, weighs an entry, adds one and a condition, and rolls it', async ({
+// Shares, adding entries and conditions, and rolling are LootEditor.test.tsx's; this is the
+// outline picking a pool, an entry drawn with the client's icon, and the edit saved canonically.
+test('edits a loot table from its outline, saves it canonically, and rolls it', async ({
   page,
 }) => {
   await openExampleWithAssets(page)
@@ -13,44 +15,27 @@ test('edits a loot table: picks a pool, weighs an entry, adds one and a conditio
   await expect(pools.getByRole('row')).toHaveCount(2)
   await pools.getByRole('row', { name: 'gems' }).click()
 
-  // Each entry with its item and its share of a pick: weights 3, 1 and 2.
-  const entries = page.getByRole('list', { name: 'Entries' })
-  const ruby = entries.getByRole('button', { name: 'Entry: ruby' })
-  await expect(ruby).toContainText('50% of a pick')
+  const ruby = page
+    .getByRole('list', { name: 'Entries' })
+    .getByRole('button', { name: 'Entry: ruby' })
   await expect(ruby.locator('img')).toHaveCount(1)
-  await expect(entries.getByRole('button', { name: 'Entry: Nothing' })).toContainText('33.3%')
-
-  // Weighing it down in the inspector moves every share.
   await ruby.click()
-  const inspector = page.getByRole('complementary', { name: 'Inspector' })
-  const weight = inspector.getByRole('textbox', { name: 'Weight' })
-  await expect(weight).toHaveValue('3')
+  const weight = page
+    .getByRole('complementary', { name: 'Inspector' })
+    .getByRole('textbox', { name: 'Weight' })
   await weight.fill('1')
   await weight.press('Enter')
   await expect(ruby).toContainText('25% of a pick')
 
-  // A new entry, and a condition on it.
-  await page
-    .getByRole('group', { name: 'Add an entry' })
-    .getByRole('button', { name: 'Nothing' })
-    .click()
-  await expect(entries.getByRole('listitem')).toHaveCount(4)
-  await inspector.getByRole('combobox', { name: 'New condition' }).last().selectOption('player')
-  await inspector.getByRole('button', { name: 'Add condition' }).last().click()
-  await expect(entries.getByRole('listitem').last()).toContainText('only if a player did it')
-
   await save(page, 'treasure')
   const written = (await files(page))[TREASURE]!
   expect(written).toBe(JSON.parse(canonicalize('loot_table', TREASURE, written)).text)
-  const gems = JSON.parse(written).pools.gems
-  expect(gems.entries[0].weight).toBe(1)
-  expect(gems.entries[3]).toEqual({ type: 'empty', conditions: [{ type: 'player' }] })
+  expect(JSON.parse(written).pools.gems.entries[0].weight).toBe(1)
 
-  // A roll by format's roller: the same seed, the same items.
+  // A roll by format's roller: the same seed, the same stacks (`ruby ×2`), by name and count.
   const preview = page.getByRole('region', { name: 'Roll preview' })
   await preview.getByRole('button', { name: 'Roll', exact: true }).click()
   const rolled = preview.getByRole('list', { name: 'Rolled' })
-  // Each stack by its name and count (`ruby ×2`), as the accessibility tree has them.
   await expect(rolled.getByRole('listitem').first()).toHaveAccessibleName(/ ×\d+$/)
   const first = await rolled.ariaSnapshot()
   await preview.getByRole('button', { name: 'Roll', exact: true }).click()
