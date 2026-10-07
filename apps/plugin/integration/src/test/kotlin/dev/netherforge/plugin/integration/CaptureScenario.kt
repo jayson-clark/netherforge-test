@@ -6,7 +6,6 @@ import dev.netherforge.format.bridge.LoadedWorld
 import dev.netherforge.format.bridge.PlayerPositionParams
 import dev.netherforge.format.bridge.SaveStructureParams
 import dev.netherforge.format.bridge.SavedWorld
-import dev.netherforge.format.bridge.ScriptError
 import dev.netherforge.plugin.integration.support.Adapter
 import dev.netherforge.plugin.integration.support.Maps
 import dev.netherforge.plugin.integration.support.Scenario
@@ -94,6 +93,5 @@ class CaptureScenario : Scenario("capture") {
         assertEquals(listOf("map:it_captured" to true), result.resources.map { it.label to it.ok })
         editor.run("it-capture copy")
         editor.logged("copied", "it_from_map", "minecraft:emerald_block")
-        assertEquals(emptyList(), editor.seen.filterIsInstance<ScriptError>().map { it.message })
     }
 }

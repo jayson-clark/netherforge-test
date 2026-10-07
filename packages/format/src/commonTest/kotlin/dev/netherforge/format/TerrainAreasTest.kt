@@ -167,11 +167,13 @@ class TerrainAreasTest {
     // ---- terrain per area, blended -------------------------------------------------------------------
 
     /** The biggest step between two neighbouring columns along a line crossing the world. */
+    /** The biggest step between neighbouring columns along z = 77, through one sampler (so its grid is read once). */
     private fun steepest(g: TerrainGenerator): Int {
+        val sampler = g.sampler()
         var steepest = 0
-        var last = g.surfaceAt(-3000, 77)
+        var last = sampler.surfaceAt(-3000, 77)
         for (x in -2999..3000) {
-            val here = g.surfaceAt(x, 77)
+            val here = sampler.surfaceAt(x, 77)
             steepest = maxOf(steepest, abs(here - last))
             last = here
         }
@@ -187,8 +189,9 @@ class TerrainAreasTest {
         // Without blending a column is its own area's height: the low area's is 50 +- 3, the high's 110 +- 20.
         var lows = 0
         var highs = 0
+        val cliffSampler = cliffs.sampler()
         for (x in -3000..3000 step 7) {
-            val top = cliffs.surfaceAt(x, 77)
+            val top = cliffSampler.surfaceAt(x, 77)
             when (cliffs.areaAt(x, 77)) {
                 low -> assertTrue(top in 47..53, "a low column at $x is $top").also { lows++ }
                 high -> assertTrue(top in 82..138, "a high column at $x is $top").also { highs++ }
@@ -196,12 +199,15 @@ class TerrainAreasTest {
         }
         assertTrue(lows > 50 && highs > 50, "both areas are crossed ($lows, $highs)")
         // Cliffs where they meet; with blending the ground climbs between them.
-        assertTrue(steepest(cliffs) > 25, "a cliff: ${steepest(cliffs)}")
-        assertTrue(steepest(blended) < steepest(cliffs) / 2, "blended: ${steepest(blended)} against ${steepest(cliffs)}")
+        val cliff = steepest(cliffs)
+        val slope = steepest(blended)
+        assertTrue(cliff > 25, "a cliff: $cliff")
+        assertTrue(slope < cliff / 2, "blended: $slope against $cliff")
         // Far from any border, blending changes nothing.
         var same = 0
         for (x in -3000..3000 step 13) {
-            val near = (-40..40 step 4).any {
+            // Another area within 40 blocks on either diagonal, looked for every 8 (areas are hundreds of blocks across).
+            val near = (-40..40 step 8).any {
                 blended.areaAt(x + it, 77 + it) != blended.areaAt(x, 77) ||
                     blended.areaAt(x + it, 77 - it) != blended.areaAt(x, 77)
             }

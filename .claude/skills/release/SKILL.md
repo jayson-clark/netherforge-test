@@ -20,7 +20,7 @@ of CI on the tagged commit, then builds every artifact and attaches it to a
 | `.github/workflows/release.yml` | Tag → draft release with every artifact.                                                         |
 | `tools/release-signing.mjs`     | CI only: turns whichever signing secrets exist into env vars and a Tauri config overlay.         |
 | `tools/luals.mjs`               | The pinned lua-language-server (version and sha256 per OS) the editor bundles; fetches one.      |
-| `.github/workflows/docs.yml`    | Push to main → docs site on GitHub Pages.                                                        |
+| `.github/workflows/docs.yml`    | PR → docs build; push to main → docs site on GitHub Pages (once Pages is set up).                |
 
 ## Version sync
 
@@ -307,9 +307,12 @@ banner.
 
 ## Docs site
 
-`docs.yml` builds `docs/` with VitePress and deploys it to GitHub Pages on
-every push to `main` that touches `docs/` (or by hand). One-time setup:
-**Settings → Pages → Source: GitHub Actions**. The workflow passes the Pages
+`docs.yml` builds `docs/` with VitePress on every PR and push to `main` that
+touches `docs/` (so a broken build fails), and deploys it to GitHub Pages from
+`main` (or by hand). One-time setup: **Settings → Pages → Source: GitHub
+Actions**; until then the build asks the API whether Pages is there
+(`repos/<repo>/pages` answers 404), builds anyway, skips the deploy and says
+so in a notice. The workflow passes the Pages
 base path (`DOCS_BASE`) and the repository (`DOCS_REPO`; links written as
 `https://github.com/netherforge/netherforge/...` in the Markdown are rewritten to
 it), plus `DOCS_URL`, the absolute site URL that `llms.txt` links pages by.

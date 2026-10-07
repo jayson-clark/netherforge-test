@@ -184,7 +184,21 @@
   {
     "severity": "error",
     "file": "particles/broken/effect.json",
-    "message": "This effect can spawn 318 points in one tick; the limit is 256",
+    "message": "burst must be 1 to 256 points",
+    "path": "$.emitters.none.burst",
+    "code": "particle.burst"
+  },
+  {
+    "severity": "error",
+    "file": "particles/broken/effect.json",
+    "message": "Only a ring, a disc or a line can spin",
+    "path": "$.emitters.ball.spin",
+    "code": "particle.spin"
+  },
+  {
+    "severity": "error",
+    "file": "particles/broken/effect.json",
+    "message": "This effect can spawn 319 points in one tick; the limit is 256",
     "path": "$.emitters",
     "code": "particle.budget"
   },

@@ -12,7 +12,19 @@ import dev.netherforge.format.game.Box
  * Glyph widths come from the player's own client (the default font's bitmaps,
  * read by the editor when it imports a version), passed in as [advance]. So
  * this only runs where client data exists: the editor's previews and its
- * "fit to display" for text hitboxes. The plugin never measures text.
+ * "fit to display" for text hitboxes. The plugin never measures text with it.
+ *
+ * Why there are two measurers: this one and [TextWidth] answer different
+ * questions and must disagree where they do. This is a layout for drawing a
+ * preview: it always has an answer (a character the font doesn't cover gets
+ * an estimate, a glyph no pack has draws nothing, as the game draws it), it
+ * wraps, and every line keeps its range of the source, all over the same
+ * [MiniMessagePass] pieces the editor draws. [TextWidth] is the server's
+ * `nf.text.width`: one number that's exact or null, never an estimate, so
+ * anything it can't know (an uncovered character, an unknown glyph advance, a
+ * client-only insert, another font) makes it null, and it reads unknown tags
+ * as MiniMessage does (as text). Folding one into the other would make the
+ * server guess or the preview go blank.
  */
 class TextMetrics(
     /**

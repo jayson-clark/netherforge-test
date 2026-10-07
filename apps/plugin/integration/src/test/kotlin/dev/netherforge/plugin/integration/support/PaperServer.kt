@@ -25,7 +25,11 @@ class PaperServer(
     /** `level-seed`, when the main world's terrain matters; otherwise the server picks one. */
     private val levelSeed: Long? = null,
     /** Whether `bukkit.yml` asks NetherForge to generate the main world (`worlds.world.generator: NetherForge`), as the editor's does for a project that names one. */
-    private val mainWorldGenerator: Boolean = false
+    private val mainWorldGenerator: Boolean = false,
+    /** Whether the game generates its structures (`generate-structures`): off, so worlds compare block for block. */
+    private val structures: Boolean = false,
+    /** More system properties for the server's JVM, given each time it starts: `-Dname=value`. */
+    private val jvmProperties: List<String> = emptyList()
 ) {
     val folder: Path = Adapter.server
 
@@ -81,7 +85,7 @@ class PaperServer(
             server-port=$port
             level-type=minecraft\:flat
             generator-settings={"layers"\:[{"block"\:"minecraft\:bedrock","height"\:1},{"block"\:"minecraft\:grass_block","height"\:1}],"biome"\:"minecraft\:plains"}
-            generate-structures=false
+            generate-structures=$structures
             spawn-protection=0
             view-distance=$viewDistance
             simulation-distance=$viewDistance
@@ -121,7 +125,7 @@ class PaperServer(
         ServerSocket(0).use { listener ->
             listener.soTimeout = TimeUnit.MINUTES.toMillis(8).toInt()
             val process = launch(
-                listOf("-Dnetherforge.project=$project", "-Dnetherforge.bridge.port=${listener.localPort}"),
+                listOf("-Dnetherforge.project=$project", "-Dnetherforge.bridge.port=${listener.localPort}") + jvmProperties,
                 log
             )
             try {
@@ -142,7 +146,8 @@ class PaperServer(
      */
     fun refuses(project: Path, log: String): Int {
         ServerSocket(0).use { listener ->
-            val process = launch(listOf("-Dnetherforge.project=$project", "-Dnetherforge.bridge.port=${listener.localPort}"), log)
+            val process =
+                launch(listOf("-Dnetherforge.project=$project", "-Dnetherforge.bridge.port=${listener.localPort}") + jvmProperties, log)
             try {
                 assertTrue(process.waitFor(5, TimeUnit.MINUTES), "the server gave up starting by itself")
                 return process.exitValue()

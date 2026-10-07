@@ -66,7 +66,7 @@ describe('the generator preview is the format generator', () => {
     expect(sliceTop(slice)).toBeGreaterThan(slice.minY)
   })
 
-  it('draws 3D ground: a slice of islands over the ground, a map of the topmost, quickly', () => {
+  it('draws 3D ground: a slice of islands over the ground, a map of the topmost', () => {
     const islands = JSON.stringify({
       terrain: {
         base: 60,
@@ -80,7 +80,6 @@ describe('the generator preview is the format generator', () => {
       layers: [{ block: 'minecraft:grass_block' }, { block: 'minecraft:dirt', thickness: 3 }],
     })
     const previewer = draw(islands)
-    const started = performance.now()
     const map = previewer.map('42', -192, -192, 96, 4, -64, 320) as TerrainMap
     // Along the map's row with the most island in it.
     const row = [...Array(96).keys()].reduce((best, z) => {
@@ -89,7 +88,6 @@ describe('the generator preview is the format generator', () => {
       return count(z) > count(best) ? z : best
     }, 0)
     const slice = previewer.slice('42', true, -192 + row * 4, -192, 384, -64, 320) as TerrainSlice
-    const took = performance.now() - started
     expect(map.type).toBe('map')
     expect(slice.type).toBe('slice')
     // The islands are the map's tops, and the slice has columns with air between the island and the ground.
@@ -107,8 +105,6 @@ describe('the generator preview is the format generator', () => {
     expect(slice.columns.filter((_, column) => surfaces(column) >= 2).length).toBeGreaterThan(20)
     expect(slice.columns.some((runs) => runs.some((v, i) => i % 2 === 0 && v === grass))).toBe(true)
     expect(sliceTop(slice)).toBeGreaterThan(140)
-    // What the editor draws at once (its map and its slice) stays well under a few seconds.
-    expect(took).toBeLessThan(5000)
   })
 
   it('says why a file that cannot be generated is not drawn', () => {

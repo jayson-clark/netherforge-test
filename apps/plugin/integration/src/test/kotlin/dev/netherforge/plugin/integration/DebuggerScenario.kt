@@ -7,6 +7,7 @@ import dev.netherforge.format.bridge.Bridge
 import dev.netherforge.format.bridge.Log
 import dev.netherforge.plugin.integration.support.PaperServer
 import dev.netherforge.plugin.integration.support.Scenario
+import dev.netherforge.plugin.integration.support.VersionIndependent
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -32,6 +33,7 @@ import kotlin.test.assertTrue
  * requests are refused with why. DAP is spoken as raw JSON here, over the
  * bridge's `dap` channel, as the editor's client sends it.
  */
+@VersionIndependent
 class DebuggerScenario : Scenario("debugger") {
     override val server = PaperServer(onlineMode = true)
 

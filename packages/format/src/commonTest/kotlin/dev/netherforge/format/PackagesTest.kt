@@ -22,13 +22,11 @@ import dev.netherforge.format.ref.ReferenceIndex
 import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.resourcepack.PackLayout
 import dev.netherforge.format.text.GlyphTags
-import kotlinx.serialization.builtins.ListSerializer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.test.fail
 
 /** Dependencies: resolving them, what a project can name of a package, the lock, and how a package's resources run. */
 class PackagesTest {
@@ -40,26 +38,10 @@ class PackagesTest {
      */
     @Test
     fun casesReportExpectedProblems() {
-        val base = "packages/format/testdata/packages"
-        val cases = TestFiles.dirs(base)
+        val cases = TestFiles.dirs(ProblemGoldens.PACKAGES)
         assertTrue(cases.isNotEmpty(), "no package cases found")
-        val serializer = ListSerializer(Problem.serializer())
-        for (case in cases) {
-            val snapshot = loadTestProject("$base/$case", "app")
-            val actual = CanonicalJson.write(serializer, snapshot.problems)
-            val path = "$base/$case/expected.json"
-            if (actual != TestFiles.read(path)) {
-                if (TestFiles.updateGolden) {
-                    TestFiles.write(path, actual)
-                } else {
-                    fail("$path: problems differ. Run with UPDATE_GOLDEN=1 to accept.\n--- actual\n$actual")
-                }
-            }
-            for (problem in snapshot.problems) {
-                val code = problem.code?.let(ProblemCodes::byCode) ?: fail("$case: \"${problem.code}\" isn't in ProblemCodes")
-                assertEquals(code.severity, problem.severity, "$case: ${code.code}'s severity")
-            }
-        }
+        val failures = cases.flatMap { ProblemGoldens.loadPackages(it).failures(mustHaveProblems = false) }
+        ProblemGoldens.failAll("package cases", cases.size, failures)
     }
 
     @Test

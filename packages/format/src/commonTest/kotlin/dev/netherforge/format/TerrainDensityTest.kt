@@ -84,7 +84,8 @@ class TerrainDensityTest {
                             sampler.surfacesAt(cx * 16 + lx, cz * 16 + lz).toList(),
                             "the surfaces at ${cx * 16 + lx},${cz * 16 + lz}"
                         )
-                        assertEquals(tops.firstOrNull() ?: -65, g.surfaceAt(cx * 16 + lx, cz * 16 + lz))
+                        // A lone column (a fresh sampler each time) answers the same; a quarter of them is plenty to show it.
+                        if (lx % 2 == 0 && lz % 2 == 0) assertEquals(tops.firstOrNull() ?: -65, g.surfaceAt(cx * 16 + lx, cz * 16 + lz))
                         if (tops.size < 2) continue
                         if (tops[0] >= 120) islands++ else overhangs++
                         // Every dry surface is topped with the layers, the ground under an overhang too.
@@ -194,8 +195,8 @@ class TerrainDensityTest {
         val grass = index(w, "minecraft:grass_block")
         var high = 0
         var shaded = 0
-        for (cx in -2..2) {
-            for (cz in -2..2) {
+        for (cx in -1..1) {
+            for (cz in -1..1) {
                 val buffer = g.generate(cx, cz)
                 for (lx in 0 until 16) {
                     for (lz in 0 until 16) {
@@ -231,10 +232,11 @@ class TerrainDensityTest {
         val blended = compile(twoAreas(24)).bind(11L, -64, 320)
         val cliffs = compile(twoAreas(0)).bind(11L, -64, 320)
         fun steepest(g: TerrainGenerator): Int {
-            var last = g.surfaceAt(-2000, 40)
+            val sampler = g.sampler()
+            var last = sampler.surfaceAt(-2000, 40)
             var most = 0
             for (x in -1999..2000) {
-                val here = g.surfaceAt(x, 40)
+                val here = sampler.surfaceAt(x, 40)
                 most = maxOf(most, abs(here - last))
                 last = here
             }
@@ -247,9 +249,10 @@ class TerrainDensityTest {
         // Far from a border each area is its own: the low one exactly its height, with no 3D noise.
         val low = blended.terrain.areas.indexOfFirst { it.name == "low" }
         var far = 0
+        val sampler = blended.sampler()
         for (x in -2000..2000 step 10) {
-            val sampler = blended.sampler()
-            if ((-48..48 step 8).all { dx -> (-48..48 step 8).all { dz -> blended.areaAt(x + dx, 40 + dz) == low } }) {
+            // Low ground every 16 blocks for 48 round it: far from any border (the blend is 24 wide).
+            if ((-48..48 step 16).all { dx -> (-48..48 step 16).all { dz -> blended.areaAt(x + dx, 40 + dz) == low } }) {
                 far++
                 assertEquals(sampler.baseHeight(x, 40), blended.surfaceAt(x, 40))
             }

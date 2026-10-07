@@ -7,7 +7,7 @@
   },
   "spawning": {
     "worlds": ["fine", "not a world"],
-    "biomes": ["Not A Biome"],
+    "biomes": ["Not A Biome", "#Not A Tag"],
     "blocks": ["#"],
     "light": { "min": 9, "max": 20 },
     "height": { "min": 70, "max": 60 },

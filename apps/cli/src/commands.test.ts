@@ -10,12 +10,14 @@ import {
 import os from 'node:os'
 import path from 'node:path'
 import { GAME_DATA_SCHEMA } from '@netherforge/format/constants'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { run } from './main.ts'
 import { editorDataDir, hashPackage, listFiles } from './project.ts'
 
 const example = path.resolve(import.meta.dirname, '../../../examples/basic')
 
+/** This test's folder (the project, the library beside it, the editor's data), removed after it. */
+let tmp: string
 let project: string
 let library: string
 let data: string
@@ -23,7 +25,7 @@ let data: string
 let env: NodeJS.ProcessEnv
 
 beforeEach(() => {
-  const tmp = mkdtempSync(path.join(os.tmpdir(), 'netherforge-cli-'))
+  tmp = mkdtempSync(path.join(os.tmpdir(), 'netherforge-cli-'))
   project = path.join(tmp, 'project')
   data = path.join(tmp, 'data')
   cpSync(example, project, {
@@ -35,6 +37,8 @@ beforeEach(() => {
   cpSync(path.resolve(example, '../library'), library, { recursive: true })
   env = { NETHERFORGE_DATA_DIR: data }
 })
+// Most tests change the project, so each has its own copy, gone when it ends.
+afterEach(() => rmSync(tmp, { recursive: true, force: true }))
 
 const centity = () => path.join(project, 'centities/crate/centity.json')
 const editJson = (
@@ -93,7 +97,7 @@ describe('check', () => {
   })
 
   it('refuses a folder that is no project', async () => {
-    const outcome = await run(['check', os.tmpdir()], env)
+    const outcome = await run(['check', tmp], env)
     expect(outcome.code).toBe(2)
     expect(outcome.err[0]).toContain('No netherforge.json')
   })

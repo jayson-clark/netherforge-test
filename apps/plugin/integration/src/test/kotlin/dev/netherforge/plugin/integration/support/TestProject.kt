@@ -7,25 +7,37 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 /**
- * A copy of `examples/basic` (and the `examples/library` it depends on, beside
- * it) in a temp folder, with fixtures (folders of
- * `src/test/fixtures`, laid over it file by file) added. Scenarios change it
- * as the editor would, then reload over the bridge.
+ * A copy of an example (`examples/basic`, by default, and the
+ * [dependencies] it names by path, beside it: `examples/library`) in a temp
+ * folder, with fixtures (folders of `src/test/fixtures`, laid over it file
+ * by file) added. Scenarios change it as the editor would, then reload over
+ * the bridge.
  */
-class TestProject(vararg fixtures: String) : AutoCloseable {
+class TestProject(example: String, dependencies: List<String>, fixtures: List<String>) : AutoCloseable {
+    /** `examples/basic` with `examples/library`, and [fixtures]. */
+    constructor(vararg fixtures: String) : this("basic", listOf("library"), fixtures.toList())
+
     private val work: Path = createTempDirectory("netherforge-it")
-    val root: Path = work.resolve("basic")
+    val root: Path = work.resolve(example)
 
     init {
-        copyExample(Adapter.example, root)
-        // examples/library beside it, where basic's netherforge.json finds its dependency.
-        val library = work.resolve("library")
-        copyExample(Adapter.example.resolveSibling("library"), library)
+        copyExample(Adapter.example.resolveSibling(example), root)
+        // Beside it, where its netherforge.json finds them.
+        val copies =
+            listOf(root) + dependencies.map { name -> work.resolve(name).also { copyExample(Adapter.example.resolveSibling(name), it) } }
         // The examples target the newest version; these copies target the adapter's, as projects for it would.
-        for (manifest in listOf(file("netherforge.json"), library.resolve("netherforge.json"))) {
+        for (manifest in copies.map { it.resolve("netherforge.json") }) {
             manifest.writeText(manifest.readText().replace(Regex("\"minecraft\": \"[^\"]*\""), "\"minecraft\": \"${Adapter.minecraft}\""))
         }
         fixtures.forEach(::add)
+    }
+
+    companion object {
+        /** The Minecraft version `examples/<example>` targets, as its manifest says. */
+        fun target(example: String): String {
+            val manifest = Adapter.example.resolveSibling(example).resolve("netherforge.json").readText()
+            return Regex("\"minecraft\": \"([^\"]*)\"").find(manifest)!!.groupValues[1]
+        }
     }
 
     /**
