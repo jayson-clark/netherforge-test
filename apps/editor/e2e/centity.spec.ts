@@ -247,15 +247,25 @@ test('keys an animation in the timeline, with the pointer and the keyboard', asy
   expect(spin[1].easing).toBe('step')
 })
 
-/** A picture of [canvas] once two in a row agree (the camera's damping has settled). */
+/**
+ * A picture of [canvas] once the camera's damping has settled: two pictures
+ * 150 ms apart are the same. Bounded, so a view that never stops moving fails
+ * here rather than hanging the test.
+ */
 async function settled(canvas: Locator): Promise<Buffer> {
   let last = await canvas.screenshot()
-  for (;;) {
-    await canvas.page().waitForTimeout(150)
-    const next = await canvas.screenshot()
-    if (next.equals(last)) return next
-    last = next
-  }
+  await expect
+    .poll(
+      async () => {
+        const next = await canvas.screenshot()
+        const still = next.equals(last)
+        last = next
+        return still
+      },
+      { message: "the camera's damping to settle", intervals: [150], timeout: 10_000 },
+    )
+    .toBe(true)
+  return last
 }
 
 test("every 3D view draws in one canvas, which keeps each tab's scene and camera", async ({

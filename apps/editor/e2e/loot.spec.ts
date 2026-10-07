@@ -50,10 +50,11 @@ test('edits a loot table: picks a pool, weighs an entry, adds one and a conditio
   const preview = page.getByRole('region', { name: 'Roll preview' })
   await preview.getByRole('button', { name: 'Roll', exact: true }).click()
   const rolled = preview.getByRole('list', { name: 'Rolled' })
-  await expect(rolled).toBeVisible()
-  const first = await rolled.innerHTML()
+  // Each stack by its name and count (`ruby ×2`), as the accessibility tree has them.
+  await expect(rolled.getByRole('listitem').first()).toHaveAccessibleName(/ ×\d+$/)
+  const first = await rolled.ariaSnapshot()
   await preview.getByRole('button', { name: 'Roll', exact: true }).click()
-  expect(await rolled.innerHTML()).toBe(first)
+  await expect(rolled).toMatchAriaSnapshot(first)
 })
 
 test("includes a package's exported loot table by its full name", async ({ page }) => {

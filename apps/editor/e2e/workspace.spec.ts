@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 import {
   chooseMenu,
   files,
@@ -12,7 +12,7 @@ import {
   TOWER,
 } from './helpers'
 
-async function makeDirty(page: import('@playwright/test').Page) {
+async function makeDirty(page: Page) {
   await openCentity(page, 'tower')
   await page.getByRole('row', { name: 'top' }).click()
   const z = page.getByRole('textbox', { name: 'Translation Z' })
@@ -22,7 +22,7 @@ async function makeDirty(page: import('@playwright/test').Page) {
 }
 
 /** Another program rewrites the tower's name on disk. */
-async function writeTheirs(page: import('@playwright/test').Page, name: string) {
+async function writeTheirs(page: Page, name: string) {
   await outside(
     page,
     (backend, arg) => {
@@ -67,16 +67,13 @@ test('an external change while dirty: keep mine, or diff and take theirs', async
   expect(saved.name).toBe('Their tower')
 })
 
-test('a clean document reloads silently, and a deleted one closes', async ({ page }) => {
+// What a change on disk does to a document is the store's (workspace.test.ts); this is the
+// watcher's event reaching the editor on screen.
+test('a clean document shows a change on disk', async ({ page }) => {
   await openExample(page)
   await openCentity(page, 'tower')
   await writeTheirs(page, 'Renamed outside')
   await expect(page.getByText('Renamed outside')).toBeVisible()
-  await expect(page.getByRole('alert', { name: 'File changed on disk' })).toHaveCount(0)
-
-  await outside(page, (backend) => backend.testDelete('centities/tower'), null)
-  await expect(page.getByRole('tab', { name: 'tower' })).toHaveCount(0)
-  await expect(page.getByRole('option', { name: 'tower' })).toHaveCount(0)
 })
 
 test('a console script error opens the script at its line', async ({ page }) => {
@@ -152,14 +149,25 @@ test('runs the dev server, hot-reloads on save and spawns', async ({ page }) => 
   await expect(page.getByRole('status', { name: 'Server status' })).toContainText('Stopped')
 })
 
-test('the outline’s files, quick open, Ctrl+Tab, the settings tab, a layout that’s remembered, and zoom', async ({
-  page,
-}) => {
+/** The example open on the tower, the setup the workbench flows below start from. */
+async function openTower(page: Page) {
   await openExample(page)
   await openCentity(page, 'tower')
+}
+
+/** The open-files tab named [name] (exactly). */
+const tab = (page: Page, name: string) =>
+  page.getByRole('tablist', { name: 'Open files' }).getByRole('tab', { name, exact: true })
+
+const palette = (page: Page) => page.getByRole('textbox', { name: /run a command/ })
+
+test("the outline's Files pane makes a file in place, renames it with F2 and duplicates it", async ({
+  page,
+}) => {
+  await openTower(page)
   const tower = filesOf(page, 'centities/tower')
 
-  // A new file in place, through the tree's own input, opens in a tab.
+  // A new file through the tree's own input, checked as it's typed, opens in a tab.
   await tower.getByRole('row', { name: 'script.lua' }).click({ button: 'right' })
   await page.getByRole('menuitem', { name: 'New File…' }).click()
   const name = tower.getByRole('textbox', { name: 'New file name' })
@@ -167,13 +175,9 @@ test('the outline’s files, quick open, Ctrl+Tab, the settings tab, a layout th
   await expect(tower.getByRole('alert')).toContainText('Lua file')
   await name.fill('util/helpers.lua')
   await name.press('Enter')
-  await expect(page.getByRole('tab', { name: 'helpers.lua' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  )
+  await expect(tab(page, 'helpers.lua')).toHaveAttribute('aria-selected', 'true')
   expect(Object.keys(await files(page))).toContain('centities/tower/util/helpers.lua')
 
-  // Renamed in place with F2; duplicated with the keyboard.
   await tower.getByRole('row', { name: 'helpers.lua' }).click()
   await page.keyboard.press('F2')
   const rename = tower.getByRole('textbox', { name: 'Rename helpers.lua' })
@@ -182,62 +186,71 @@ test('the outline’s files, quick open, Ctrl+Tab, the settings tab, a layout th
   await expect(tower.getByRole('row', { name: 'steps.lua' })).toBeVisible()
   await page.keyboard.press('ControlOrMeta+d')
   await expect(tower.getByRole('row', { name: 'steps_copy.lua' })).toBeVisible()
+})
 
-  // Quick open jumps anywhere; Ctrl+Tab and Ctrl+Shift+Tab step through the tabs.
+test('quick open jumps to a resource, and Ctrl+Tab and Ctrl+Shift+Tab step through the tabs', async ({
+  page,
+}) => {
+  await openTower(page)
+  await filesOf(page, 'centities/tower').getByRole('row', { name: 'script.lua' }).click()
+  await expect(tab(page, 'script.lua')).toHaveAttribute('aria-selected', 'true')
+
   await page.keyboard.press('ControlOrMeta+p')
   await page.getByRole('textbox', { name: 'Go to resource or file' }).fill('shop')
   await page.keyboard.press('Enter')
-  await expect(page.getByRole('tab', { name: 'shop', exact: true })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  )
+  await expect(tab(page, 'shop')).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('treegrid', { name: 'Slots' })).toBeVisible()
-  await page.keyboard.press('Control+Tab')
-  await expect(page.getByRole('tab', { name: 'tower', exact: true })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  )
-  await page.keyboard.press('Control+Shift+Tab')
-  await page.keyboard.press('Control+Shift+Tab')
-  await expect(page.getByRole('tab', { name: 'steps.lua' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  )
 
-  // Settings open as a tab, their pages in the outline; the page scrolls inside the tab.
+  // In the strip's order, round from the last to the first, and back.
+  await page.keyboard.press('Control+Tab')
+  await expect(tab(page, 'tower')).toHaveAttribute('aria-selected', 'true')
+  await page.keyboard.press('Control+Shift+Tab')
+  await page.keyboard.press('Control+Shift+Tab')
+  await expect(tab(page, 'script.lua')).toHaveAttribute('aria-selected', 'true')
+})
+
+test('the settings open as a tab, with their pages in the outline', async ({ page }) => {
+  await openExample(page)
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
-  await expect(page.getByRole('tab', { name: 'Settings', exact: true })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  )
+  await expect(tab(page, 'Settings')).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('region', { name: 'Minecraft settings' })).toBeVisible()
   await page
     .getByRole('treegrid', { name: 'Settings pages' })
     .getByRole('row', { name: 'Agents' })
     .click()
   await expect(page.getByRole('region', { name: 'Agents settings' })).toBeVisible()
-  await page.getByRole('tab', { name: 'steps.lua' }).click()
+})
 
-  // The palette runs commands too: a settings page, a dock, and leaving the project.
-  const palette = page.getByRole('textbox', { name: /run a command/ })
+test('the palette finds commands only after ">", and runs one', async ({ page }) => {
+  await openTower(page)
   const matches = page.getByRole('listbox', { name: 'Matches' })
   await page.keyboard.press('ControlOrMeta+Shift+p')
-  await expect(palette).toHaveValue('>')
-  await palette.fill('>server')
+  await expect(palette(page)).toHaveValue('>')
+  await palette(page).fill('>server')
   await expect(matches.getByRole('option', { name: /^Editor Settings: Server(?!-)/ })).toBeVisible()
   await expect(matches.getByRole('option', { name: /^tower/ })).toHaveCount(0)
   await page.keyboard.press('Escape')
 
   await page.keyboard.press('ControlOrMeta+p')
-  await palette.fill('show console')
+  await palette(page).fill('show console')
   await matches.getByRole('option', { name: /^Show Console/ }).click()
   await expect(
     page.getByRole('tablist', { name: 'Output panels' }).getByRole('tab', { name: /Console/ }),
   ).toHaveAttribute('aria-selected', 'true')
-  await page.getByRole('tab', { name: 'steps.lua' }).click()
+})
 
-  // Docks resize by dragging their splitter or with its arrow keys, hide, and the project
-  // opens again as it was left.
+test('a project opens again as it was left: its tabs, the active one, and its docks', async ({
+  page,
+}) => {
+  await openTower(page)
+  await page.keyboard.press('ControlOrMeta+p')
+  await page.getByRole('textbox', { name: 'Go to resource or file' }).fill('shop')
+  await page.keyboard.press('Enter')
+  await expect(tab(page, 'shop')).toHaveAttribute('aria-selected', 'true')
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
+  await tab(page, 'tower').click()
+
+  // The outline resizes by dragging its splitter or with its arrow keys.
   const outlineWidth = async () => (await page.locator('#outline').boundingBox())!.width
   const splitter = page.getByRole('separator', { name: 'Resize the outline' })
   const grip = (await splitter.boundingBox())!
@@ -254,23 +267,24 @@ test('the outline’s files, quick open, Ctrl+Tab, the settings tab, a layout th
   const resized = await outlineWidth()
   await page.getByRole('button', { name: 'Inspector', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Inspector dock' })).toBeHidden()
+
   await page.keyboard.press('ControlOrMeta+Shift+p')
-  await palette.fill('>close project')
+  await palette(page).fill('>close project')
   await page.keyboard.press('Enter')
   await page
     .getByRole('list', { name: 'Recent projects' })
     .getByRole('button', { name: /Basic example/ })
     .click()
-  await expect(page.getByRole('tab', { name: 'steps.lua' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  )
-  await expect(page.getByRole('tab', { name: 'shop', exact: true })).toBeVisible()
-  await expect(page.getByRole('tab', { name: 'Settings', exact: true })).toBeVisible()
+  await expect(tab(page, 'tower')).toHaveAttribute('aria-selected', 'true')
+  await expect(tab(page, 'shop')).toBeVisible()
+  await expect(tab(page, 'Settings')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Inspector dock' })).toBeHidden()
   await expect.poll(outlineWidth).toBeCloseTo(resized, 0)
+})
 
-  // Cmd/Ctrl +/- scale the UI (CSS zoom on the memory backend), remembered across starts; 0 resets.
+test('Cmd/Ctrl +/- scale the UI, remembered across starts, and 0 resets it', async ({ page }) => {
+  await openExample(page)
+  // CSS zoom on the memory backend (the app asks the webview).
   const zoom = () => page.evaluate<string>('document.documentElement.style.zoom')
   await page.keyboard.press('ControlOrMeta+Equal')
   await page.keyboard.press('ControlOrMeta+Equal')
@@ -283,11 +297,9 @@ test('the outline’s files, quick open, Ctrl+Tab, the settings tab, a layout th
   await expect.poll(zoom).toBe('1')
 })
 
-test('the menu bar: docks, quick open, Select All in a field, and leaving a project', async ({
-  page,
-}) => {
+test('the menu bar toggles a dock, showing it checked, and opens quick open', async ({ page }) => {
   await openExample(page)
-  // Save and undo live in the menus and on their keys now, not the toolbar.
+  // Save and undo live in the menus and on their keys, not the toolbar.
   const toolbar = page.getByRole('toolbar', { name: 'Main toolbar' })
   await expect(toolbar.getByRole('button', { name: 'Save', exact: true })).toHaveCount(0)
   await expect(toolbar.getByRole('button', { name: 'Undo' })).toHaveCount(0)
@@ -305,10 +317,13 @@ test('the menu bar: docks, quick open, Select All in a field, and leaving a proj
 
   await chooseMenu(page, 'Edit', 'Go to Resource or File')
   await expect(page.getByRole('textbox', { name: 'Go to resource or file' })).toBeFocused()
-  await page.keyboard.press('Escape')
+})
 
-  // The menu never takes focus, so Edit → Select All acts on the field being typed in.
-  await openCentity(page, 'tower')
+test('Edit → Select All acts on the field being typed in, and on nothing outside one', async ({
+  page,
+}) => {
+  await openTower(page)
+  // The menu never takes focus, so it acts on the field.
   await page.getByRole('row', { name: 'top' }).click()
   const y = page.getByRole('textbox', { name: 'Translation Y' })
   await y.fill('2.5')
@@ -317,7 +332,8 @@ test('the menu bar: docks, quick open, Select All in a field, and leaving a proj
   await page.keyboard.type('3')
   await expect(y).toHaveValue('3')
   await y.press('Enter')
-  await expect(page.getByRole('tab', { name: 'tower (unsaved)' })).toBeVisible()
+  await expect(tab(page, 'tower (unsaved)')).toBeVisible()
+
   // Outside a field there is nothing to select all of, and the page itself isn't selected.
   await page.getByRole('row', { name: 'top' }).click()
   // (The field just left still reports its range, so start from no selection.)
@@ -325,17 +341,22 @@ test('the menu bar: docks, quick open, Select All in a field, and leaving a proj
   await page.keyboard.press('ControlOrMeta+a')
   await chooseMenu(page, 'Edit', 'Select All')
   expect(await page.evaluate('String(getSelection())')).toBe('')
+})
 
-  // Leaving with unsaved edits asks first; Cancel stays.
+test('leaving a project with unsaved edits asks first, and Open Recent brings it back without them', async ({
+  page,
+}) => {
+  await openExample(page)
+  await makeDirty(page)
+
   await chooseMenu(page, 'File', 'Close Project')
   const dialog = page.getByRole('dialog', { name: 'Unsaved changes' })
   await dialog.getByRole('button', { name: 'Cancel' }).click()
-  await expect(page.getByRole('tab', { name: 'tower (unsaved)' })).toBeVisible()
+  await expect(tab(page, 'tower (unsaved)')).toBeVisible()
   await chooseMenu(page, 'File', 'New Project')
   await dialog.getByRole('button', { name: "Don't save" }).click()
   await expect(page.getByRole('form', { name: 'Create project' })).toBeVisible()
 
-  // File → Open Recent brings it back, without the edit that wasn't saved.
   await page
     .getByRole('menubar', { name: 'Menu' })
     .getByRole('menuitem', { name: 'File', exact: true })
@@ -348,6 +369,6 @@ test('the menu bar: docks, quick open, Select All in a field, and leaving a proj
     .getByRole('menu', { name: 'Open Recent' })
     .getByRole('menuitem', { name: /Basic example/ })
     .click()
-  await expect(page.getByRole('tab', { name: 'tower', exact: true })).toBeVisible()
+  await expect(tab(page, 'tower')).toBeVisible()
   expect(JSON.parse((await files(page))[TOWER]!).nodes.top.transform.translation).toEqual([0, 1, 0])
 })

@@ -28,6 +28,7 @@ import { mainFileOf, resourceIdsOf, resourceOf } from '@/core/paths'
 import { packageText, splitPackagePath } from '@/core/store/packages'
 import { ItemEditor } from '@/minecraft/item/ItemForm'
 import { ItemIcon } from '@/minecraft/item/ItemIcon'
+import { itemLabel } from '@/minecraft/item/item'
 import { useItemTooltip } from '@/minecraft/item/ItemTooltip'
 import { currentText, useNameableIds, useProjectItemIds } from '@/minecraft/item/projectItems'
 import { useGlyphMap } from '@/minecraft/text/glyphs'
@@ -402,7 +403,13 @@ function RollPreview({ path, id, tooltip }: { path: string; id: string; tooltip:
           {preview.drops.length === 0 && <Empty>Nothing.</Empty>}
           {preview.drops.map((drop, index) =>
             drop.item ? (
-              <li key={index} className={styles.drop} {...tooltip.handlers(drop.item)}>
+              <li
+                key={index}
+                className={styles.drop}
+                // The picture says nothing to a screen reader: the stack's name and count do.
+                aria-label={`${drop.item.item ?? itemLabel(drop.item.kind || '?')} ×${drop.count}`}
+                {...tooltip.handlers(drop.item)}
+              >
                 <ItemIcon item={drop.item} size={32} />
                 <span className={styles.count}>{drop.count}</span>
               </li>
