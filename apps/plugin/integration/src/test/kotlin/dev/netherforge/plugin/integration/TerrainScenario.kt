@@ -12,6 +12,7 @@ import dev.netherforge.format.terrain.TerrainCompiler
 import dev.netherforge.format.terrain.TerrainGenerator
 import dev.netherforge.plugin.integration.support.Scenario
 import dev.netherforge.plugin.integration.support.TestProject
+import dev.netherforge.plugin.integration.support.VersionIndependent
 import dev.netherforge.plugin.integration.support.eventually
 import dev.netherforge.plugin.testkit.StructureFiles
 import org.junit.jupiter.api.Order
@@ -32,6 +33,7 @@ import kotlin.test.assertTrue
  * across a restart. Scripts read its biomes (W5.9): a block's is the generator's, the server's own search finds another off
  * the main thread, and a new chunk is heard as it's generated.
  */
+@VersionIndependent
 class TerrainScenario : Scenario("terrain", "structures") {
     private val seed = 20260714L
     private val file = "terrain/ruby_hills.json"

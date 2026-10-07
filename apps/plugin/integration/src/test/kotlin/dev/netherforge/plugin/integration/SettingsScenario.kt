@@ -2,6 +2,7 @@ package dev.netherforge.plugin.integration
 
 import dev.netherforge.format.bridge.Bridge
 import dev.netherforge.plugin.integration.support.Scenario
+import dev.netherforge.plugin.integration.support.VersionIndependent
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
@@ -14,6 +15,7 @@ import kotlin.test.assertTrue
  * restarts one that read the setting and doesn't; the value is the server's, in
  * `settings/<namespace>.json`.
  */
+@VersionIndependent
 class SettingsScenario : Scenario("settings") {
     @Test
     @Order(1)

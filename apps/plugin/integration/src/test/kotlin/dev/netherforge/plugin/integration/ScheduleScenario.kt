@@ -3,6 +3,7 @@ package dev.netherforge.plugin.integration
 import dev.netherforge.plugin.RuntimeConfig
 import dev.netherforge.plugin.integration.support.PaperServer
 import dev.netherforge.plugin.integration.support.Scenario
+import dev.netherforge.plugin.integration.support.VersionIndependent
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test
  * daylight saving, catching up) are tested against a clock the test moves, in the runtime's
  * `ScheduleTest`.
  */
+@VersionIndependent
 class ScheduleScenario : Scenario("schedules") {
     override val server = PaperServer(jvmProperties = listOf("-D${RuntimeConfig.WALL_CLOCK_RATE_PROPERTY}=60"))
 

@@ -2,6 +2,7 @@ package dev.netherforge.plugin.integration
 
 import dev.netherforge.plugin.integration.support.Scenario
 import dev.netherforge.plugin.integration.support.TestProject
+import dev.netherforge.plugin.integration.support.VersionIndependent
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import kotlin.io.path.readText
@@ -13,6 +14,7 @@ import kotlin.io.path.writeText
  * `world:set_spawn_limit` and `set_spawn_interval`, a reload puts the file's
  * back, and a world created later is configured as it loads.
  */
+@VersionIndependent
 class SpawnRatesScenario : Scenario("spawnrates") {
     override fun prepare(project: TestProject) {
         val manifest = project.file("netherforge.json")

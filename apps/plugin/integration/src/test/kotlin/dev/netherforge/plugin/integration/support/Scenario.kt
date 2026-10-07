@@ -46,6 +46,9 @@ abstract class Scenario(private vararg val fixtures: String) {
     /** The server's output, in its folder: a file per scenario, a restart's appended. */
     private val log: String get() = "${javaClass.simpleName}.log"
 
+    /** That output: what the console printed, for what only the console says. */
+    val serverLog: java.nio.file.Path get() = server.folder.resolve(log)
+
     /** Script errors steps said they'd cause, by why. */
     private val expected = mutableListOf<Pair<String, (ScriptError) -> Boolean>>()
 
@@ -55,11 +58,15 @@ abstract class Scenario(private vararg val fixtures: String) {
     /** Makes the project this scenario runs: a copy of `examples/basic` with its fixtures, by default. */
     open fun makeProject(): TestProject = TestProject(*fixtures)
 
+    /** Where the scenario runs at all: JUnit assumptions, checked before anything starts (a failed one skips it). */
+    open fun assumptions() {}
+
     /** Changes the project before the server first starts. */
     open fun prepare(project: TestProject) {}
 
     @BeforeAll
     fun startServer() {
+        assumptions()
         project = makeProject()
         prepare(project)
         server.prepare()

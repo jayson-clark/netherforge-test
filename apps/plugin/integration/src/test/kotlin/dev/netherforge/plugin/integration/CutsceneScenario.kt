@@ -8,6 +8,7 @@ import dev.netherforge.format.bridge.BotsExtension
 import dev.netherforge.plugin.integration.support.Bots
 import dev.netherforge.plugin.integration.support.PaperServer
 import dev.netherforge.plugin.integration.support.Scenario
+import dev.netherforge.plugin.integration.support.VersionIndependent
 import dev.netherforge.plugin.integration.support.eventually
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -20,6 +21,7 @@ import kotlin.test.assertTrue
  * put back (game mode, where they stood) however it ends: it finishes, a script stops it, the
  * player quits mid-way (their saved data is what's put back) or the server stops.
  */
+@VersionIndependent
 class CutsceneScenario : Scenario("cutscenes") {
     override val server = PaperServer(onlineMode = true, maxPlayers = 2)
 
