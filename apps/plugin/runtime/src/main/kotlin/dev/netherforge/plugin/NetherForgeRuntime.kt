@@ -151,7 +151,9 @@ class NetherForgeRuntime(val platform: Platform, val config: RuntimeConfig) {
         private set
 
     /** What `nf.schedule` reads the time from; tests set their own before [enable]. */
-    internal var wallClock: java.time.Clock = java.time.Clock.systemUTC()
+    internal var wallClock: java.time.Clock = java.time.Clock.systemUTC().let {
+        if (config.wallClockRate == 1.0) it else dev.netherforge.plugin.schedule.ScaledClock(it, config.wallClockRate)
+    }
 
     /** What the spec says needs a newer Minecraft than some servers run; tests set their own before [enable]. */
     internal var versionGates: VersionGates = VersionGates.SPEC
