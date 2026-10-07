@@ -36,6 +36,8 @@ dependencies {
     testFixturesApi(libs.junit.jupiter)
     // A bot's dialog inputs are JSON values (format's bridge types).
     testFixturesImplementation(libs.serialization.json)
+    // ContractRun reports a run of the suites (the contract plugin's) as a launcher listener.
+    testFixturesApi(libs.junit.launcher)
 
     testImplementation(project(":plugin:testkit"))
     testImplementation(kotlin("test"))

@@ -1,30 +1,25 @@
 package dev.netherforge.plugin.paper.contract
 
+import dev.netherforge.plugin.contract.ContractResult
+import dev.netherforge.plugin.contract.ContractRun
 import dev.netherforge.plugin.contract.ContractServer
+import dev.netherforge.plugin.contract.ContractTarget
 import dev.netherforge.plugin.contract.RecordingEvents
 import dev.netherforge.plugin.paper.NetherForgePlugin
 import dev.netherforge.plugin.paper.PaperPlatform
 import dev.netherforge.plugin.platform.ItemLook
 import dev.netherforge.plugin.platform.Location
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.bukkit.Bukkit
 import org.bukkit.GameRules
 import org.bukkit.plugin.java.JavaPlugin
-import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.engine.discovery.DiscoverySelectors
-import org.junit.platform.engine.support.descriptor.MethodSource
-import org.junit.platform.launcher.TestExecutionListener
-import org.junit.platform.launcher.TestIdentifier
 import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder
 import org.junit.platform.launcher.core.LauncherFactory
-import java.io.PrintWriter
-import java.io.StringWriter
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
 
@@ -75,21 +70,25 @@ class ContractPlugin : JavaPlugin() {
 
     private fun run(results: Path, platform: PaperPlatform) {
         Thread.currentThread().contextClassLoader = javaClass.classLoader
-        val listener = Results()
+        val run = ContractRun(ContractTarget.PAPER) { message, failure -> logger.log(Level.WARNING, message, failure) }
         try {
             val request = LauncherDiscoveryRequestBuilder.request()
                 .selectors(PaperContracts.ALL.map { DiscoverySelectors.selectClass(it) })
                 // In @Order, so the suite that checks what all of them saw runs last.
                 .configurationParameter("junit.jupiter.testclass.order.default", "org.junit.jupiter.api.ClassOrderer\$OrderAnnotation")
+                // A test only on the fake (@OnlyOn) is disabled here.
+                .configurationParameter(ContractTarget.PARAMETER, ContractTarget.PAPER.name)
                 .build()
-            LauncherFactory.create().execute(request, listener)
+            LauncherFactory.create().execute(request, run)
+            // Every suite's test that runs on the fake must have run here: what didn't is MISSING.
+            run.finish()
         } catch (e: Throwable) {
             logger.log(Level.SEVERE, "The contract suites couldn't run", e)
-            listener.failed("launcher", "running the suites", e)
+            run.failed("launcher", "running the suites", e)
         }
         Files.createDirectories(results.toAbsolutePath().parent)
-        Files.writeString(results, JsonArray(listener.all.toList()).toString())
-        logger.info("Contract suites: ${listener.all.size} results written to $results")
+        Files.writeString(results, JsonArray(run.all.map(::json)).toString())
+        logger.info("Contract suites: ${run.all.size} results written to $results")
         server.scheduler.runTask(
             this,
             Runnable {
@@ -99,32 +98,13 @@ class ContractPlugin : JavaPlugin() {
         )
     }
 
-    /** Each test's outcome, as the integration test reads it back. */
-    private inner class Results : TestExecutionListener {
-        val all: MutableList<kotlinx.serialization.json.JsonObject> = Collections.synchronizedList(mutableListOf())
-
-        override fun executionFinished(test: TestIdentifier, result: TestExecutionResult) {
-            val method = test.source.orElse(null) as? MethodSource
-            if (!test.isTest && result.status == TestExecutionResult.Status.SUCCESSFUL) return
-            val suite = method?.className?.substringAfterLast('.') ?: test.displayName
-            val failure = result.throwable.orElse(null)
-            if (failure != null) logger.log(Level.WARNING, "Contract $suite > ${test.displayName} failed", failure)
-            record(suite, test.displayName, result.status.name, failure)
-        }
-
-        fun failed(suite: String, name: String, cause: Throwable) = record(suite, name, TestExecutionResult.Status.FAILED.name, cause)
-
-        private fun record(suite: String, name: String, status: String, failure: Throwable?) {
-            all += buildJsonObject {
-                put("suite", suite)
-                put("name", name)
-                put("status", status)
-                failure?.let {
-                    put("message", JsonPrimitive(it.toString()))
-                    put("trace", StringWriter().also { out -> it.printStackTrace(PrintWriter(out)) }.toString())
-                }
-            }
-        }
+    /** [result] as `ContractScenario` reads it back. */
+    private fun json(result: ContractResult) = buildJsonObject {
+        put("suite", result.suite)
+        put("name", result.name)
+        put("status", result.status)
+        result.message?.let { put("message", it) }
+        result.trace?.let { put("trace", it) }
     }
 
     private companion object {
