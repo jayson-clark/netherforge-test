@@ -54,6 +54,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.io.path.createDirectories
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.writeText
@@ -236,9 +237,14 @@ class DebuggerTest {
         }
     }
 
-    private fun debugging(files: Map<String, Any>, sandbox: SandboxLimits = SandboxLimits(), test: (TestServer, Editor) -> Unit) {
+    private fun debugging(
+        files: Map<String, Any>,
+        sandbox: SandboxLimits = SandboxLimits(),
+        clock: (() -> Long)? = null,
+        test: (TestServer, Editor) -> Unit
+    ) {
         ServerSocket(0).use { listener ->
-            TestServer(files, bridge = BridgeConfig(listener.localPort, "secret"), sandbox = sandbox).use { server ->
+            TestServer(files, bridge = BridgeConfig(listener.localPort, "secret"), sandbox = sandbox, clock = clock).use { server ->
                 test(server, Editor(listener))
             }
         }
@@ -423,11 +429,16 @@ class DebuggerTest {
 
     @Test
     fun `time paused isn't the script's, its time limit and its costs leave it out`() {
-        debugging(mapOf("modules/m/init.lua" to module), sandbox = SandboxLimits(deadlineMillis = 100)) { server, editor ->
+        // A clock only the test moves: the stop holds it 400 ms, and nothing else takes any time at all.
+        val now = AtomicLong()
+        debugging(mapOf("modules/m/init.lua" to module), sandbox = SandboxLimits(deadlineMillis = 100), clock = now::get) {
+                server,
+                editor
+            ->
             editor.breakpoints("modules/m/init.lua", 10)
             val watcher = editor.watch {
                 nextStop()
-                Thread.sleep(400)
+                now.addAndGet(TimeUnit.MILLISECONDS.toNanos(400))
                 goOn()
             }
             server.tick()
@@ -435,7 +446,7 @@ class DebuggerTest {
             assertTrue(editor.errors.isEmpty(), "held 400 ms with a 100 ms limit: ${editor.errors}")
             assertEquals(listOf("total 11"), editor.logged(1))
             val cost = server.runtime.session.costs.report().single { it.scope.module == "m" }
-            assertTrue(cost.maxMillis < 100, "the paused tick cost ${cost.maxMillis} ms")
+            assertEquals(0.0, cost.maxMillis, "the paused tick cost ${cost.maxMillis} ms")
         }
     }
 

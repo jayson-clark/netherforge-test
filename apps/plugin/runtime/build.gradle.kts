@@ -61,8 +61,7 @@ ktlint {
 
 val repoRoot: File by rootProject.extra
 
-tasks.test {
-    useJUnitPlatform()
+tasks.withType<Test>().configureEach {
     // A Lua budget bug shows up as a hang; fail instead of waiting forever.
     timeout.set(Duration.ofMinutes(5))
     // luajava loads Lua's native library; Java 25 warns unless that's allowed explicitly.
@@ -72,4 +71,19 @@ tasks.test {
     environment("NETHERFORGE_REPO", repoRoot.absolutePath)
     inputs.file(repoRoot.resolve("packages/api/generated/api.json")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir(repoRoot.resolve("examples")).withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
+// A flaky test is quarantined (`@Quarantined(issue)`, JUnit's tag "quarantine") until it's fixed: out of `test`, run
+// on its own by `quarantinedTest`.
+tasks.test {
+    useJUnitPlatform { excludeTags("quarantine") }
+}
+
+tasks.register<Test>("quarantinedTest") {
+    description = "Runs only the quarantined tests (@Quarantined), which test leaves out"
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform { includeTags("quarantine") }
+    filter.isFailOnNoMatchingTests = false
 }

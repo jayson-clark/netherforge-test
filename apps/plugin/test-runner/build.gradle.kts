@@ -20,6 +20,8 @@ dependencies {
     runtimeOnly(libs.slf4j.nop)
 
     testImplementation(kotlin("test"))
+    // @Quarantined, shared with the runtime's tests.
+    testImplementation(testFixtures(project(":plugin:runtime")))
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.launcher)
@@ -27,8 +29,7 @@ dependencies {
 
 val repoRoot: File by rootProject.extra
 
-tasks.test {
-    useJUnitPlatform()
+tasks.withType<Test>().configureEach {
     // RunnerJarTest runs the built jar the way `netherforge test` does.
     val built = files(tasks.named<ShadowJar>("shadowJar").flatMap { it.archiveFile })
     jvmArgumentProviders.add(SystemPropertyPath("netherforge.runner.jar", built))
@@ -37,6 +38,21 @@ tasks.test {
     // The tests run examples/basic's own tests.
     environment("NETHERFORGE_REPO", repoRoot.absolutePath)
     inputs.dir(repoRoot.resolve("examples")).withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
+// A flaky test is quarantined (`@Quarantined(issue)`, JUnit's tag "quarantine") until it's fixed: out of `test`, run
+// on its own by `quarantinedTest`.
+tasks.test {
+    useJUnitPlatform { excludeTags("quarantine") }
+}
+
+tasks.register<Test>("quarantinedTest") {
+    description = "Runs only the quarantined tests (@Quarantined), which test leaves out"
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform { includeTags("quarantine") }
+    filter.isFailOnNoMatchingTests = false
 }
 
 tasks.named<Jar>("jar") {

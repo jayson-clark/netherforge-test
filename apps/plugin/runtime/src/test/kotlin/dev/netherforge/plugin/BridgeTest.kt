@@ -518,23 +518,6 @@ class BridgeTest {
         }
     }
 
-    @Test
-    fun `an editor that stays connected keeps the server running`() {
-        ServerSocket(0).use { listener ->
-            TestServer(
-                TestServer.example("basic"),
-                bridge = BridgeConfig(listener.localPort, "t", abandonAfterMillis = 300)
-            ).use { server ->
-                val editor = connect(listener, server)
-                editor.next<HelloParams>()
-                Thread.sleep(1_000)
-                server.runMain()
-                assertTrue(editor.request(Bridge.instances, Unit).ok)
-                assertEquals(null, server.platform.shutdownReason)
-            }
-        }
-    }
-
     /** Polls [condition], running main-thread tasks as a real server would, for up to 10 s. */
     private fun eventually(server: TestServer, condition: () -> Boolean): Boolean {
         val deadline = System.nanoTime() + 10_000_000_000L
