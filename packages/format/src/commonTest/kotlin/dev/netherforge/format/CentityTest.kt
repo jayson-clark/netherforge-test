@@ -7,6 +7,7 @@ import dev.netherforge.format.centity.CentityFile
 import dev.netherforge.format.centity.CentityValidator
 import dev.netherforge.format.centity.Channel
 import dev.netherforge.format.centity.Composer
+import dev.netherforge.format.centity.ItemDisplay
 import dev.netherforge.format.centity.Keyframe
 import dev.netherforge.format.centity.LoopMode
 import dev.netherforge.format.centity.NodeDef
@@ -15,6 +16,7 @@ import dev.netherforge.format.game.BlockInfo
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.GameDataBundle
 import dev.netherforge.format.game.MinecraftVersion
+import dev.netherforge.format.game.RegistryKey
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -111,6 +113,18 @@ class CentityTest {
         val sink = ProblemSink("c")
         CentityValidator.validate(file, sink, emptySet(), game)
         assertEquals(listOf("centity.block-property", "centity.unknown-block"), sink.problems.map { it.code })
+    }
+
+    @Test
+    fun gameDataChecksItems() {
+        val game = GameDataBundle(minecraft = "26.3", registries = mapOf(RegistryKey.ITEM.id to listOf("minecraft:apple")))
+        val file = CentityFile(nodes = mapOf("a" to NodeDef(display = ItemDisplay("apple")), "b" to NodeDef(display = ItemDisplay("pear"))))
+        fun problems(game: GameDataBundle?) = ProblemSink("c").also { CentityValidator.validate(file, it, emptySet(), game) }.problems.map {
+            it.code to it.message
+        }
+        assertEquals(listOf("centity.unknown-item" to "Minecraft 26.3 has no item \"minecraft:pear\""), problems(game))
+        // Without the game's items, an id is checked for its shape only.
+        assertEquals(emptyList(), problems(null))
     }
 
     @Test

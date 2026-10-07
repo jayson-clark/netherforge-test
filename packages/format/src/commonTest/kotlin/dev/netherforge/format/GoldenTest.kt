@@ -7,8 +7,6 @@ import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Kinds
 import dev.netherforge.format.project.LockFile
 import dev.netherforge.format.project.LockKind
-import dev.netherforge.format.project.MapProjectSource
-import dev.netherforge.format.project.Projects
 import dev.netherforge.format.ref.RefUse
 import kotlinx.serialization.builtins.ListSerializer
 import kotlin.test.Test
@@ -133,32 +131,15 @@ class GoldenTest {
 
     /**
      * Each case in `packages/format/testdata/invalid/<case>/` is a small project; its
-     * `expected.json` lists the problems loading it must produce.
+     * `expected.json` lists the problems loading it must produce (see [ProblemGoldens]). Every
+     * case is checked before the test fails, so one run reports all the cases that differ.
      */
     @Test
     fun invalidCasesReportExpectedProblems() {
-        val cases = TestFiles.dirs("packages/format/testdata/invalid")
+        val cases = TestFiles.dirs(ProblemGoldens.INVALID)
         assertTrue(cases.isNotEmpty(), "no invalid cases found")
-        val serializer = ListSerializer(Problem.serializer())
-        for (case in cases) {
-            val base = "packages/format/testdata/invalid/$case"
-            val files = TestFiles.list(base).filter { it != "expected.json" }
-            val snapshot = Projects.load(MapProjectSource(files.associateWith { TestFiles.read("$base/$it") }))
-            val actual = CanonicalJson.write(serializer, snapshot.problems)
-            val expected = TestFiles.read("$base/expected.json")
-            if (actual != expected) {
-                if (TestFiles.updateGolden) {
-                    TestFiles.write("$base/expected.json", actual)
-                } else {
-                    fail("$base: problems differ. Run with UPDATE_GOLDEN=1 to accept.\n--- actual\n$actual--- expected\n$expected")
-                }
-            }
-            assertTrue(snapshot.problems.isNotEmpty(), "$base reports no problems; an invalid case should")
-            for (problem in snapshot.problems) {
-                val code = problem.code?.let(ProblemCodes::byCode) ?: fail("$base: \"${problem.code}\" isn't in ProblemCodes")
-                assertEquals(code.severity, problem.severity, "$base: ${code.code}'s severity")
-            }
-        }
+        val failures = cases.flatMap { ProblemGoldens.loadInvalid(it).failures(mustHaveProblems = true) }
+        ProblemGoldens.failAll("invalid cases", cases.size, failures)
     }
 
     private fun <T> canonicalize(kind: DocumentKind<T>, text: String, path: String): String = when (val parsed = kind.parse(text, path)) {

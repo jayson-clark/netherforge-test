@@ -72,7 +72,12 @@ dependencies {
 val repoRoot: File by rootProject.extra
 
 val updateGolden = System.getenv("UPDATE_GOLDEN") ?: ""
-val goldenInputs = listOf(repoRoot.resolve("examples"), layout.projectDirectory.dir("testdata").asFile)
+val goldenInputs = listOf(
+    repoRoot.resolve("examples"),
+    layout.projectDirectory.dir("testdata").asFile,
+    // ProblemCoverageTest checks that the runtime tests it names for a problem code name that code.
+    repoRoot.resolve("apps/plugin/runtime/src/test")
+)
 
 // TerrainScriptApiTest holds the terrain scripts' Lua to the API spec's JSON.
 val terrainApi = repoRoot.resolve("packages/api/generated/terrain.json")
