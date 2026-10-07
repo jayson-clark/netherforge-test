@@ -87,6 +87,8 @@ tasks.withType<Test>().configureEach {
     goldenInputs.forEach { inputs.dir(it) }
     inputs.file(terrainApi)
     inputs.property("updateGolden", updateGolden)
+    // NETHERFORGE_BENCH=1 runs the benchmarks (TerrainDensityTimingTest), so a run with it isn't up to date from one without.
+    inputs.property("bench", System.getenv("NETHERFORGE_BENCH") ?: "")
     // Rewriting goldens must always run, even if nothing changed since the last pass.
     if (updateGolden == "1") outputs.upToDateWhen { false }
 }

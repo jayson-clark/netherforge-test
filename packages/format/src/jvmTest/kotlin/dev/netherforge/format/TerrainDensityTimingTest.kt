@@ -6,14 +6,20 @@ import dev.netherforge.format.terrain.TerrainCompiler
 import dev.netherforge.format.terrain.TerrainFile
 import dev.netherforge.format.terrain.TerrainGenerator
 import dev.netherforge.format.terrain.TerrainPreview
+import org.junit.Assume.assumeTrue
+import org.junit.Before
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
  * What 3D terrain costs: chunks of the density fixture (`testdata/terrain/density.json`: ground leaning into
  * overhangs, arches in one area, islands over another, caves, ores and decorations) against the same file with its
- * heights only, generated on one thread after a warm-up, and the preview's map of each. Prints the numbers (run with
- * `-i` to see them) and fails only when 3D terrain is far past what it should cost, so a slow machine doesn't.
+ * heights only, generated on one thread after a warm-up, and the preview's map of each. Prints the numbers and fails
+ * only when 3D terrain is far past what it should cost.
+ *
+ * A benchmark, not a check: it takes seconds and its numbers depend on the machine, so like the runtime's benchmarks
+ * it only runs with `NETHERFORGE_BENCH=1` (`NETHERFORGE_BENCH=1 node tools/gradle.mjs :format:jvmTest --tests
+ * '*TerrainDensityTimingTest*' -i`) and is skipped otherwise.
  */
 class TerrainDensityTimingTest {
     private fun generators(): Pair<TerrainGenerator, TerrainGenerator> {
@@ -37,6 +43,11 @@ class TerrainDensityTimingTest {
         val start = System.nanoTime()
         TerrainPreview.map(generator, -512, -512, 256, 4)
         return (System.nanoTime() - start) / 1e6
+    }
+
+    @Before
+    fun onlyWhenBenchmarking() {
+        assumeTrue("set NETHERFORGE_BENCH=1 to run the terrain timing", System.getenv("NETHERFORGE_BENCH") == "1")
     }
 
     @Test
