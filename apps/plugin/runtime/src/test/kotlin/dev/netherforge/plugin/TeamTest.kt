@@ -7,7 +7,6 @@ import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * Scoreboard teams, the player list and the line under name tags, against
@@ -227,9 +226,9 @@ class TeamTest {
                 val list = server.platform.playerList
                 val alex = server.platform.players.byId.values.first { it.ref.name == "Alex" }
                 val bo = server.platform.players.byId.values.first { it.ref.name == "Bo" }
-                assertEquals("<gold>* Alex", list.names[alex.ref.uuid])
-                assertEquals(5, list.orders[alex.ref.uuid])
-                assertEquals(setOf(alex.ref.uuid), list.unlisted[bo.ref.uuid]?.toSet())
+                assertEquals("<gold>* Alex", list.name(alex.ref.uuid))
+                assertEquals(5, list.order(alex.ref.uuid))
+                assertEquals(false, list.isListed(bo.ref.uuid, alex.ref.uuid))
                 assertEquals(mapOf("Alex" to "<red>12 hearts"), server.platform.teams.belowNames)
 
                 // Alex leaves and comes back: the server forgot it all; the runtime takes them out of Bo's list again.
@@ -238,14 +237,14 @@ class TeamTest {
                 assertEquals(emptyMap(), server.platform.teams.belowNames, "the line under their name goes when they leave")
                 assertNull(server.runtime.session.teams.belowName(alex.ref.uuid))
                 server.platform.raise.playerJoin(GameEvent.PlayerJoin(alex.ref, false, null))
-                assertEquals(setOf(alex.ref.uuid), list.unlisted[bo.ref.uuid]?.toSet())
-                assertNull(list.names[alex.ref.uuid])
+                assertEquals(false, list.isListed(bo.ref.uuid, alex.ref.uuid))
+                assertEquals("Alex", list.name(alex.ref.uuid), "their own name again")
 
                 // Bo leaves and comes back: Alex is out of their list again.
                 list.quit(bo.ref.uuid)
                 server.platform.raise.playerQuit(GameEvent.PlayerQuit(bo.ref, null))
                 server.platform.raise.playerJoin(GameEvent.PlayerJoin(bo.ref, false, null))
-                assertEquals(setOf(alex.ref.uuid), list.unlisted[bo.ref.uuid]?.toSet())
+                assertEquals(false, list.isListed(bo.ref.uuid, alex.ref.uuid))
             }
         )
         assertEquals(listOf("done"), result)
@@ -270,7 +269,10 @@ class TeamTest {
                 server.player("Bo")
             },
             after = { server ->
-                assertTrue(server.platform.playerList.unlisted.values.all { it.isEmpty() })
+                val (alex, bo) = listOf("Alex", "Bo").map { name ->
+                    server.platform.players.byId.values.first { it.ref.name == name }.ref.uuid
+                }
+                assertEquals(true, server.platform.playerList.isListed(bo, alex))
                 assertEquals(mapOf("Alex" to "<gold>VIP"), server.platform.teams.belowNames)
                 server.runtime.disable()
                 assertEquals(emptyMap(), server.platform.teams.belowNames)

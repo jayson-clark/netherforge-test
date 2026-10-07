@@ -4,6 +4,7 @@ import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.plugin.pack.PackZip
 import dev.netherforge.plugin.pack.Packs
 import dev.netherforge.plugin.platform.GameEvent
+import dev.netherforge.plugin.testkit.FakePlatform
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -47,6 +48,18 @@ class PackTest {
             val sent = server.platform.resourcePacks.sent.single()
             assertEquals(built.sha1, sent.second.sha1)
             assertEquals(built.url, sent.second.url)
+        }
+    }
+
+    @Test
+    fun `a server that doesn't say its resource pack format builds no pack, and says why (runtime pack-format)`() {
+        val game = FakePlatform.GAME.copy(packFormat = null)
+        TestServer(TestServer.example("basic"), platform = FakePlatform(game = game)).use { server ->
+            assertNull(server.runtime.packs.built, "nothing built")
+            val problem = server.runtime.session.problems().single { it.code == "runtime.pack-format" }
+            assertEquals("resource_packs", problem.file)
+            assertTrue("doesn't say which resource pack format" in problem.message, problem.message)
+            assertTrue(server.platform.log.lines.any { "resource pack format" in it }, "${server.platform.log.lines}")
         }
     }
 

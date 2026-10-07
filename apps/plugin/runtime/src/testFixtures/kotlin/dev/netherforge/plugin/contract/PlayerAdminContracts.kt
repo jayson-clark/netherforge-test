@@ -183,6 +183,22 @@ abstract class PermissionOpsContract : PlatformContract() {
             permissions.apply(UUID.randomUUID(), mapOf("nf.contract.yes" to true))
         }
     }
+
+    @Test
+    fun `nodes are held on the player while online, so one who leaves and comes back has none`() {
+        val player = join()
+        main {
+            permissions.apply(player.uuid, mapOf("nf.contract.kept" to true, "nf.contract.denied" to false))
+            assertTrue(platform.players.hasPermission(player.uuid, "nf.contract.kept"))
+        }
+        leave(player)
+        val back = join(name = player.name)
+        assertEquals(player.uuid, back.uuid, "the same player")
+        main {
+            assertFalse(platform.players.hasPermission(back.uuid, "nf.contract.kept"), "the server forgot it")
+            assertFalse(platform.players.hasPermission(back.uuid, "nf.contract.denied"))
+        }
+    }
 }
 
 /** [AdvancementOps]: players' advancements by key. */

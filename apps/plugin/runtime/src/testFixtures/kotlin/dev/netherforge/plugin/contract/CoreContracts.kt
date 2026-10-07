@@ -107,4 +107,22 @@ abstract class PerformanceOpsContract : PlatformContract() {
             assertTrue(platform.performance.tickMilliseconds() >= 0)
         }
     }
+
+    /**
+     * Only what any server running these suites must say: a tick here takes
+     * far less than a second, and the averages stay sensible as ticks pass.
+     * How close to 20 a loaded CI machine keeps up isn't the platform's promise.
+     */
+    @Test
+    fun `tick time is an average of real ticks, well under a second here, and stays sensible as the server ticks`() {
+        repeat(3) {
+            ticks(5)
+            main {
+                val millis = platform.performance.tickMilliseconds()
+                assertTrue(millis.isFinite() && millis >= 0 && millis < 1000, "tick time: $millis ms")
+                val tps = platform.performance.ticksPerSecond()
+                assertTrue(tps.isFinite() && tps > 0 && tps <= 21, "ticks per second: $tps")
+            }
+        }
+    }
 }

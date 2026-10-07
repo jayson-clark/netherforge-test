@@ -1,6 +1,7 @@
 package dev.netherforge.plugin.contract
 
 import dev.netherforge.format.Vec3
+import dev.netherforge.format.bridge.BotEvent
 import dev.netherforge.plugin.platform.BlockOps
 import dev.netherforge.plugin.platform.ParticleOps
 import dev.netherforge.plugin.platform.ParticleSpawn
@@ -192,30 +193,73 @@ abstract class BlockOpsContract : PlatformContract() {
     }
 }
 
-/** [ParticleOps]: batches of spawns to listed viewers. Nothing comes back to read, so this only says what's accepted. */
+/**
+ * [ParticleOps]: batches of spawns to listed viewers. What reaches a viewer is
+ * what their client is sent (a bot keeps it): each spawn as given, to the
+ * listed viewers only, within 32 blocks (512 forced), of the particles the
+ * game has.
+ */
 abstract class ParticleOpsContract : PlatformContract() {
     private val particles: ParticleOps get() = platform.particles
 
+    private fun spawn(particle: String, dx: Double, dy: Double, count: Int, offset: Vec3, speed: Double, force: Boolean) =
+        ParticleSpawn(particle, Vec3(origin.x + dx, origin.y + dy, origin.z), count, offset, speed, null, force)
+
+    private fun received(player: dev.netherforge.plugin.platform.PlayerRef, since: Int) =
+        sentSince(player, since).filterIsInstance<BotEvent.Particle>()
+
     @Test
-    fun `spawns go to listed viewers, none, or a world that's gone, without failing`() {
+    fun `each spawn reaches the listed viewers as it was given, and nobody else`() {
         val viewer = join()
+        val other = join(at(2))
+        val flame = spawn("minecraft:flame", 0.0, 1.0, 4, Vec3(0.25, 0.5, 0.25), 0.125, false)
+        val rod = spawn("minecraft:end_rod", 0.0, 2.0, 0, Vec3(0.0, 1.0, 0.0), 0.5, true)
+        val since = mark(viewer)
+        val otherSince = mark(other)
+        main { particles.spawn(world, listOf(flame, rod), listOf(viewer)) }
+        val got = awaitSent(viewer, since, "both spawns") { events -> events.filterIsInstance<BotEvent.Particle>().takeIf { it.size >= 2 } }
+        assertEquals(
+            listOf(
+                listOf("minecraft:flame", origin.x, origin.y + 1, origin.z, 4, 0.25, 0.5, 0.25, 0.125, false),
+                listOf("minecraft:end_rod", origin.x, origin.y + 2, origin.z, 0, 0.0, 1.0, 0.0, 0.5, true)
+            ),
+            got.map { listOf(it.particle, it.x, it.y, it.z, it.count, it.dx, it.dy, it.dz, it.speed, it.forced) }
+        )
+        settled()
+        assertEquals(emptyList(), received(other, otherSince), "not listed")
+    }
+
+    @Test
+    fun `nothing reaches a viewer out of range, of a particle the game lacks, or in a world that's gone`() {
+        val viewer = join()
+        val since = mark(viewer)
         main {
-            val spawns = listOf(
-                ParticleSpawn("minecraft:flame", Vec3(origin.x, origin.y + 1, origin.z), 4, Vec3(0.2, 0.2, 0.2), 0.01, null, false),
-                ParticleSpawn("minecraft:end_rod", Vec3(origin.x, origin.y + 2, origin.z), 0, Vec3(0.0, 1.0, 0.0), 0.1, null, true)
-            )
-            particles.spawn(world, spawns, listOf(viewer))
-            particles.spawn(world, spawns, emptyList())
-            particles.spawn(MISSING_WORLD, spawns, listOf(viewer))
+            particles.spawn(world, listOf(spawn("minecraft:nf_no_such_particle", 0.0, 1.0, 1, Vec3.ZERO, 0.0, false)), listOf(viewer))
+            particles.spawn(world, listOf(spawn("minecraft:flame", 64.0, 1.0, 1, Vec3.ZERO, 0.0, false)), listOf(viewer))
+            particles.spawn(MISSING_WORLD, listOf(spawn("minecraft:flame", 0.0, 1.0, 1, Vec3.ZERO, 0.0, false)), listOf(viewer))
+            particles.spawn(world, listOf(spawn("minecraft:flame", 0.0, 1.0, 1, Vec3.ZERO, 0.0, false)), emptyList())
+            // Forced, it reaches past the 32 blocks; and what the adapter keeps between spawns may go at any time.
             particles.forget()
+            particles.spawn(world, listOf(spawn("minecraft:end_rod", 64.0, 1.0, 1, Vec3.ZERO, 0.0, true)), listOf(viewer))
         }
+        awaitSent(viewer, since, "the forced spawn") { events -> events.filterIsInstance<BotEvent.Particle>().firstOrNull { it.forced } }
+        settled()
+        assertEquals(listOf("minecraft:end_rod"), received(viewer, since).map { it.particle }, "only the forced spawn")
     }
 }
 
-/** [SoundOps]: sounds in the world and to one player. */
+/**
+ * [SoundOps]: sounds in the world and to one player. What reaches a player is
+ * what their client is sent: a world's sound by those in it within 16 blocks
+ * (16 times the volume when that's more), one played to a player where they
+ * are, and the stops.
+ */
 abstract class SoundOpsContract : PlatformContract() {
     private val sounds: SoundOps get() = platform.sounds
     private val click = SoundPlay("minecraft:ui.button.click", "master", 1.0, 1.0)
+
+    private fun heard(player: dev.netherforge.plugin.platform.PlayerRef, since: Int) =
+        sentSince(player, since).filterIsInstance<BotEvent.Sound>()
 
     @Test
     fun `sounds play in worlds that exist and to players online`() {
@@ -230,5 +274,58 @@ abstract class SoundOpsContract : PlatformContract() {
             assertFalse(sounds.playTo(offline, click))
             assertFalse(sounds.stop(offline, null))
         }
+    }
+
+    @Test
+    fun `a sound in the world is heard near it, as it was played, and not far off`() {
+        val near = join(at(1))
+        val far = join(at(36))
+        val pling = SoundPlay("minecraft:block.note_block.pling", "block", 0.5, 1.5)
+        val since = mark(near)
+        val farSince = mark(far)
+        main { assertTrue(sounds.play(world, Vec3(origin.x, origin.y, origin.z), pling)) }
+        val sound = awaitSent(near, since, "the pling") { events ->
+            events.filterIsInstance<BotEvent.Sound>().firstOrNull {
+                it.sound ==
+                    pling.sound
+            }
+        }
+        assertEquals(listOf("minecraft:block.note_block.pling", 0.5, 1.5), listOf(sound.sound, sound.volume, sound.pitch))
+        // The packet carries a position to an eighth of a block.
+        assertNear(origin.x, sound.x, POSITION)
+        assertNear(origin.y, sound.y, POSITION)
+        assertNear(origin.z, sound.z, POSITION)
+        settled()
+        assertEquals(emptyList(), heard(far, farSince).filter { it.sound == pling.sound }, "36 blocks off")
+    }
+
+    @Test
+    fun `a sound played to a player is heard where they are, by them alone, and stopping reaches their client`() {
+        val player = join(at(2))
+        val other = join()
+        val since = mark(player)
+        val otherSince = mark(other)
+        main { assertTrue(sounds.playTo(player.uuid, click)) }
+        val sound = awaitSent(player, since, "the click") { events ->
+            events.filterIsInstance<BotEvent.Sound>().firstOrNull {
+                it.sound ==
+                    click.sound
+            }
+        }
+        assertEquals(listOf("minecraft:ui.button.click", 1.0, 1.0), listOf(sound.sound, sound.volume, sound.pitch))
+        assertNear(origin.x + 2, sound.x, POSITION, "where they are")
+        main {
+            assertTrue(sounds.stop(player.uuid, "minecraft:ui.button.click"))
+            assertTrue(sounds.stop(player.uuid, null))
+        }
+        val stops =
+            awaitSent(player, since, "both stops") { events -> events.filterIsInstance<BotEvent.StopSound>().takeIf { it.size >= 2 } }
+        assertEquals(listOf("minecraft:ui.button.click", null), stops.map { it.sound })
+        settled()
+        assertEquals(emptyList(), heard(other, otherSince).filter { it.sound == click.sound }, "played to someone else")
+    }
+
+    private companion object {
+        const val POSITION = 0.125
     }
 }

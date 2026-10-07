@@ -44,7 +44,7 @@ class FakePlatform(
     override val dialogs = FakeDialogs(this)
     override val resourcePacks = FakePacks(this)
     override val blocks = FakeBlocks(this)
-    override val particles = FakeParticles()
+    override val particles = FakeParticles(this)
     override val sounds = FakeSounds(this)
     override val worldEntities = FakeWorldEntities(this)
     override val inventories = FakeInventories(this)

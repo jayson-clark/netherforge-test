@@ -8,6 +8,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.Packet
 import net.minecraft.network.protocol.game.ClientboundForgetLevelChunkPacket
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket
+import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket
 import net.minecraft.network.protocol.game.ClientboundPlayerChatPacket
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
@@ -77,6 +78,8 @@ internal object Protocol : BotProtocol {
         ServerboundSignUpdatePacket(pos, front, lines[0], lines[1], lines[2], lines[3])
 
     override fun item(body: ItemBody): ItemStack = body.item().create()
+
+    override fun particleMotion(packet: ClientboundLevelParticlesPacket) = packet.maxSpeed to packet.isOverrideLimiter
 
     override fun teamLook(parameters: ClientboundSetPlayerTeamPacket.Parameters) = TeamLook(
         displayName = parameters.displayName(),

@@ -1,5 +1,6 @@
 package dev.netherforge.plugin.contract
 
+import dev.netherforge.format.bridge.BotPack
 import dev.netherforge.format.dialog.DialogButton
 import dev.netherforge.format.dialog.DialogFile
 import dev.netherforge.format.dialog.DialogType
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** [DialogOps]: dialogs built per show. What's pressed comes back only from a client, which the bot scenario covers. */
@@ -55,6 +57,24 @@ abstract class DialogOpsContract : PlatformContract() {
             assertFalse(dialogs.close(UUID.randomUUID()))
         }
     }
+
+    @Test
+    fun `the player's screen shows the dialog as built, only theirs, until it's closed`() {
+        val player = join()
+        val other = join(at(2))
+        val file = DialogFile(
+            title = "<gold>Contract <i>terms",
+            type = DialogType.CONFIRMATION,
+            buttons = listOf(DialogButton("yes", "<green>Agree"), DialogButton("no"))
+        )
+        main { assertTrue(dialogs.show(player.uuid, DialogSpec("contract_terms", file))) }
+        val shown = awaitScreen(player, "the dialog") { it.dialog != null }.dialog!!
+        assertEquals(listOf("confirmation", "Contract terms", listOf("Agree", "no")), listOf(shown.type, shown.title, shown.buttons))
+        settled()
+        assertNull(screen(other).dialog, "shown to someone else")
+        main { assertTrue(dialogs.close(player.uuid)) }
+        awaitScreen(player, "no dialog") { it.dialog == null }
+    }
 }
 
 /** [ResourcePackOps]: offering a pack, which the player's game answers. */
@@ -68,6 +88,23 @@ abstract class ResourcePackOpsContract : PlatformContract() {
         main { assertTrue(packs.send(player.uuid, pack)) }
         eventually("the player's answer") { events.of("resourcePackStatus").any { it == listOf(player.uuid, pack.id, "declined") } }
         main { assertFalse(packs.send(UUID.randomUUID(), pack)) }
+    }
+
+    @Test
+    fun `the player's client is offered the pack's url and hash, and an offer under the same id replaces it`() {
+        val player = join()
+        val id = UUID.randomUUID()
+        val first = PackOffer(id, "http://127.0.0.1:1/first.zip", "ab".repeat(20), required = false, prompt = null)
+        main { assertTrue(packs.send(player.uuid, first)) }
+        awaitScreen(player, "the pack") { state -> state.resourcePacks.any { it.id == id.toString() && it.status == "declined" } }
+        val again = PackOffer(id, "http://127.0.0.1:1/second.zip", "cd".repeat(20), required = true, prompt = "<red>Needed")
+        main { assertTrue(packs.send(player.uuid, again)) }
+        val state = awaitScreen(player, "the second pack") { state -> state.resourcePacks.any { it.url == again.url } }
+        assertEquals(
+            listOf(BotPack(id.toString(), again.url, again.sha1, "declined")),
+            state.resourcePacks.filter { it.id == id.toString() },
+            "one pack under that id"
+        )
     }
 }
 

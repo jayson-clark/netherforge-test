@@ -34,6 +34,14 @@ abstract class WorldManagerOpsContract : PlatformContract() {
     private val void = WorldSettings("void", "normal", seed = 1, structures = false, keepSpawnLoaded = false)
 
     @Test
+    fun `the server's dimension types include the game's, by namespaced id`() {
+        val types = main { manager.dimensionTypes() }
+        assertTrue(types.containsAll(GAME_DIMENSION_TYPES), "$types")
+        assertTrue(types.all { ':' in it }, "$types")
+        assertFalse("minecraft:nf_no_such_type" in types)
+    }
+
+    @Test
     fun `a world made is loaded and saved, unloads, loads again and is deleted`() {
         val name = "nf_contract_${WORLDS.incrementAndGet()}"
         main {
@@ -120,6 +128,9 @@ abstract class WorldManagerOpsContract : PlatformContract() {
 
     private companion object {
         val WORLDS = AtomicInteger()
+
+        /** The dimension types every supported Minecraft has. */
+        val GAME_DIMENSION_TYPES = setOf("minecraft:overworld", "minecraft:overworld_caves", "minecraft:the_nether", "minecraft:the_end")
 
         /** A generator of flat ground at [base], of stone under grass, with the ore of a custom block's state. */
         fun flatGenerator(base: Int = 64): ProjectGenerator {

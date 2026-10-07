@@ -41,6 +41,23 @@ abstract class EntityOpsContract : PlatformContract() {
         }
     }
 
+    /**
+     * Only what this server can show: none of what NetherForge or the game
+     * makes is a marker. A structure's real markers are `StructureGenerationScenario`'s on Paper and
+     * `StructureSpawnsTest`'s on the fake (the contract server generates no project structures).
+     */
+    @Test
+    fun `no entity but a structure's marker is listed as one`() {
+        main {
+            val display = tagged(entities.spawnDisplay(at(0, 2), BlockDisplay("minecraft:stone"), pose, tag("not_a_marker")))
+            val hitbox = tagged(entities.spawnHitbox(at(0), 1.0, 1.0, tag("not_a_marker", EntityRole.HITBOX)))
+            spawn("minecraft:armor_stand")
+            val markers = entities.structureMarkers().map { it.id }
+            assertFalse(display in markers || hitbox in markers, "$markers")
+            assertEquals(emptyList(), markers, "nothing generated here has a marker")
+        }
+    }
+
     @Test
     fun `a display of something the server doesn't have isn't made`() {
         main {

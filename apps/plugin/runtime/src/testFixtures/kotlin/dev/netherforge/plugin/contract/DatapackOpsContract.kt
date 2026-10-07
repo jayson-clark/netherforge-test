@@ -3,6 +3,7 @@ package dev.netherforge.plugin.contract
 import dev.netherforge.plugin.platform.DatapackOps
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** [DatapackOps]: the data pack format the server reads, and its JSON text. */
@@ -14,6 +15,15 @@ abstract class DatapackOpsContract : PlatformContract() {
         val format = datapacks.format
         assertEquals(2, format?.size, "$format")
         assertTrue(format!!.all { it >= 0 } && format[0] > 0, "$format")
+    }
+
+    @Test
+    fun `a server started with no project loaded no datapack of one, so none was built for a main world`() {
+        // The contract server has no project: nothing for the start-up datapack, nothing refused, no main world it was for.
+        // (A project's: DatapackTest and StartupDatapackCheck on the fake, DimensionTypeScenario and MainWorldScenario on Paper.)
+        assertEquals(emptyMap(), datapacks.started)
+        assertNull(datapacks.refused)
+        assertNull(datapacks.mainWorld)
     }
 
     @Test

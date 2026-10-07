@@ -57,8 +57,11 @@ class FakeDatapacks : DatapackOps {
     /** The refusal on record as the fake server starts: what the Paper adapter keeps in the plugin's folder. */
     var refusal: DatapackRefusal? = null
 
-    /** The fake server's main world, as its [FakeWorlds.defaultWorld]. */
-    override var mainWorld: String? = "world"
+    /** The fake server's `level-name`: its main world, as its [FakeWorlds.defaultWorld]. */
+    var level = "world"
+
+    /** The main world the start-up datapack was built for: [level] once [bootstrap] has built one, as on Paper; null before. */
+    override var mainWorld: String? = null
 
     /** The project's advancements the fake server started with, by key: their criteria, and their requirement groups. */
     var advancements: Map<String, Pair<List<String>, List<List<String>>>> = emptyMap()
@@ -72,6 +75,7 @@ class FakeDatapacks : DatapackOps {
     fun bootstrap(project: Path, resolvesPackages: Boolean = true) {
         val source = ProjectFiles(project, resolvesPackages)
         val snapshot = source.load(null).snapshot
+        mainWorld = format?.let { level }
         val start = format?.let { StartupDatapackFiles.forStart(snapshot, it, ::textJson, mainWorld, source::readBytes, refusal) }
         started = start?.files.orEmpty()
         refused = start?.refused

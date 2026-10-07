@@ -1,5 +1,6 @@
 package dev.netherforge.plugin.testkit
 
+import dev.netherforge.format.bridge.BotEvent
 import dev.netherforge.plugin.platform.BossBarLook
 import dev.netherforge.plugin.platform.BossBarOps
 import dev.netherforge.plugin.platform.PlayerListOps
@@ -25,16 +26,25 @@ class FakeBossBars(private val platform: FakePlatform) : BossBarOps {
 
     override fun show(id: Int, player: UUID): Boolean {
         if (player !in platform.players.byId) return false
-        return shown[id]?.add(player) != null
+        val viewers = shown[id] ?: return false
+        if (viewers.add(player)) shownTo(player, id, true)
+        return true
     }
 
     override fun hide(id: Int, player: UUID) {
-        shown[id]?.remove(player)
+        if (shown[id]?.remove(player) == true) shownTo(player, id, false)
     }
 
     override fun remove(id: Int) {
+        for (player in shown[id].orEmpty()) shownTo(player, id, false)
         bars.remove(id)
         shown.remove(id)
+    }
+
+    /** What a bot's client hears of a bar coming onto or off its screen, by the bar's plain text. */
+    private fun shownTo(player: UUID, id: Int, on: Boolean) {
+        val text = platform.text.strip(bars.getValue(id).text)
+        platform.bots.sent(player) { BotEvent.BossBar(it, text, on) }
     }
 
     /** The bars a player sees now. */

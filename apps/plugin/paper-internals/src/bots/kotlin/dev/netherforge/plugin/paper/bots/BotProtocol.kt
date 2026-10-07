@@ -6,6 +6,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.Packet
 import net.minecraft.network.protocol.game.ClientboundForgetLevelChunkPacket
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket
+import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket
 import net.minecraft.network.protocol.game.ClientboundPlayerChatPacket
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
@@ -69,6 +70,9 @@ internal interface BotProtocol {
 
     /** A team's look, from the parameters the server sends. */
     fun teamLook(parameters: ClientboundSetPlayerTeamPacket.Parameters): TeamLook
+
+    /** The speed particles [packet] sends move at, and whether it's forced past the client's particle setting and range. */
+    fun particleMotion(packet: ClientboundLevelParticlesPacket): Pair<Float, Boolean>
 }
 
 /** The kinds of container click, which each version's server names its own way. */

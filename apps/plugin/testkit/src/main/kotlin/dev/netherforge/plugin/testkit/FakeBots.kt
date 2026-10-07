@@ -2,17 +2,22 @@ package dev.netherforge.plugin.testkit
 
 import dev.netherforge.format.bridge.BotActResult
 import dev.netherforge.format.bridge.BotAction
+import dev.netherforge.format.bridge.BotBossBar
 import dev.netherforge.format.bridge.BotClick
 import dev.netherforge.format.bridge.BotDialog
 import dev.netherforge.format.bridge.BotDialogInput
 import dev.netherforge.format.bridge.BotEntity
+import dev.netherforge.format.bridge.BotEvent
 import dev.netherforge.format.bridge.BotEvents
 import dev.netherforge.format.bridge.BotHand
 import dev.netherforge.format.bridge.BotInfo
 import dev.netherforge.format.bridge.BotItem
+import dev.netherforge.format.bridge.BotListEntry
 import dev.netherforge.format.bridge.BotMenu
+import dev.netherforge.format.bridge.BotPack
 import dev.netherforge.format.bridge.BotPackAnswer
 import dev.netherforge.format.bridge.BotPosition
+import dev.netherforge.format.bridge.BotSidebar
 import dev.netherforge.format.bridge.BotState
 import dev.netherforge.format.dialog.BooleanInput
 import dev.netherforge.format.dialog.DialogInput
@@ -33,6 +38,7 @@ import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.InventoryRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.Location
+import dev.netherforge.plugin.platform.PackOffer
 import dev.netherforge.plugin.platform.Ray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -60,6 +66,49 @@ import kotlin.math.sqrt
 class FakeBots(private val platform: FakePlatform) : BotOps {
     private val online = linkedMapOf<String, FakePlayer>()
 
+    /** What each bot online has been sent, by its player's UUID: a new one each join, as a real bot is a new client. */
+    private val screens = HashMap<UUID, Screen>()
+
+    /** A bot's own view of what the server sent it: its events, numbered from 0 (the last [KEPT]), and the packs offered. */
+    private class Screen {
+        val kept = ArrayDeque<BotEvent>()
+        var next = 0
+        val packs = LinkedHashMap<UUID, BotPack>()
+
+        fun add(event: (seq: Int) -> BotEvent) {
+            kept.addLast(event(next++))
+            while (kept.size > KEPT) kept.removeFirst()
+        }
+
+        fun since(seq: Int): BotEvents {
+            val first = kept.firstOrNull()?.seq ?: next
+            return BotEvents(kept.filter { it.seq >= seq }, next, dropped = (first - seq).coerceAtLeast(0).coerceAtMost(next))
+        }
+    }
+
+    /**
+     * The fake's packets: what the server sends [player] reaches their client
+     * as [event], when they're a bot (anyone else has no client here). The
+     * fake's sounds, particles, boss bars and resource packs call it where
+     * Paper would send the packet the real bots record.
+     */
+    fun sent(player: UUID, event: (seq: Int) -> BotEvent) {
+        screens[player]?.add(event)
+    }
+
+    /** [player]'s client was offered [pack] and answered as it was told to ([FakePlayer.packAnswer]): the real bots' answers. */
+    fun offered(player: FakePlayer, pack: PackOffer) {
+        val screen = screens[player.ref.uuid] ?: return
+        val status = when (player.packAnswer) {
+            "loaded" -> "successfully_loaded"
+            "declined" -> "declined"
+            "failed" -> "failed_download"
+            else -> "offered"
+        }
+        screen.packs[pack.id] = BotPack(pack.id.toString(), pack.url, pack.sha1, status)
+        screen.add { BotEvent.ResourcePack(it, pack.id.toString(), pack.url, status) }
+    }
+
     /** Every action asked for, with where the runtime aimed it. */
     val acted = mutableListOf<Triple<String, BotAction, BotAim?>>()
 
@@ -81,19 +130,23 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
                 BotPackAnswer.IGNORE -> null
             }
             online[name] = player
+            screens[player.ref.uuid] = Screen()
             platform.raise.playerJoin(GameEvent.PlayerJoin(player.ref, firstJoin, "$name joined the game"))
             done(Result.success(info(player)))
         }
     }
 
     override fun leave(name: String) {
-        platform.players.quit(bot(name))
+        val bot = bot(name)
+        platform.players.quit(bot)
         online.remove(name)
+        screens.remove(bot.ref.uuid)
     }
 
     override fun leaveAll() {
         for (player in online.values.toList()) if (player.ref.uuid in platform.players.byId) platform.players.quit(player)
         online.clear()
+        screens.clear()
     }
 
     override fun list(): List<BotInfo> = online.values.filter { it.ref.uuid in platform.players.byId }.map(::info)
@@ -593,9 +646,15 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
             inventory = inventorySlots.withIndex().mapNotNull { (slot, item) -> item?.let { botItem(slot, it) } },
             menu = platform.menus.viewing(ref.uuid)?.let { window -> menu(platform.menus.windows.getValue(window)) },
             dialog = platform.dialogs.showing[ref.uuid]?.let(::dialog),
+            bossBars = platform.bossBars.of(this).map { BotBossBar(platform.text.strip(it.text), it.progress, it.color, it.style) },
+            sidebar = platform.sidebars.showing[ref.uuid]?.let { (title, lines) ->
+                BotSidebar(platform.text.strip(title), lines.map(platform.text::strip))
+            },
             actionBar = platform.pause.actionBars[ref.uuid],
+            resourcePacks = screens[ref.uuid]?.packs?.values?.toList().orEmpty(),
+            playerList = playerList(this),
             entities = nearby(this),
-            events = 0
+            events = screens[ref.uuid]?.next ?: 0
         )
     }
 
@@ -618,6 +677,22 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
             .filter { it.distance <= NEARBY }
             .sortedBy { it.distance }
             .take(MAX_NEARBY)
+    }
+
+    /**
+     * The players its client knows, as the real bots list them (by name): everyone online, whether they're listed for
+     * it, the name their entry shows when one was set, their place, and the line under their name tag, as plain text.
+     */
+    private fun playerList(bot: FakePlayer): List<BotListEntry> = platform.players.byId.values.sortedBy { it.ref.name }.map { player ->
+        val list = platform.playerList
+        BotListEntry(
+            player.ref.name,
+            player.ref.uuid.toString(),
+            listed = list.isListed(bot.ref.uuid, player.ref.uuid) ?: false,
+            displayName = list.names[player.ref.uuid]?.let(platform.text::strip),
+            order = list.order(player.ref.uuid) ?: 0,
+            belowName = platform.teams.belowNames[player.ref.name]?.let(platform.text::strip)
+        )
     }
 
     private fun distance(a: Location, b: Location) = sqrt((a.x - b.x).pow(2) + (a.y - b.y).pow(2) + (a.z - b.z).pow(2))
@@ -673,10 +748,8 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
         )
     }
 
-    override fun events(name: String, since: Int): BotEvents {
-        bot(name)
-        return BotEvents(emptyList(), next = 0)
-    }
+    /** What the bot's client was sent that the fake models: sounds, particles, boss bars shown and hidden, and resource packs. */
+    override fun events(name: String, since: Int): BotEvents = screens.getValue(bot(name).ref.uuid).since(since)
 
     private fun info(player: FakePlayer) = with(player.location) {
         BotInfo(player.ref.name, player.ref.uuid.toString(), world, x, y, z, 0)
@@ -692,6 +765,9 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
 
     private companion object {
         const val OFF_HAND = 40
+
+        /** The real bots' `BotEventLog.KEPT`. */
+        const val KEPT = 1000
 
         /** The real bots' `Bot.NEARBY` and `Bot.MAX_NEARBY`. */
         const val NEARBY = 16.0
