@@ -17,35 +17,9 @@ import kotlin.test.assertTrue
  * the API says so.
  */
 class TeamTest {
-    private val prelude = """
-        local function check(label, got, want)
-          if got ~= want then
-            log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want))
-          end
-        end
-        local function fails(label, fn, message)
-          local ok, err = pcall(fn)
-          if ok or not tostring(err):find(message, 1, true) then
-            log("FAIL " .. label .. ": " .. tostring(err))
-          end
-        end
-    """.trimIndent()
-
-    /** Runs [body] as the console's `/run`, once [setup] has prepared the server; then [after]. */
-    private fun run(body: String, setup: (TestServer) -> Unit = {}, after: (TestServer) -> Unit = {}): List<String> {
-        val script = "$prelude\nnf.commands.register(\"run\", function(event)\n$body\nlog(\"done\")\nend)"
-        TestServer(mapOf("modules/t/init.lua" to script), start = false).use { server ->
-            setup(server)
-            server.start()
-            server.platform.commands.runConsole("run")
-            after(server)
-            return server.errors.map { "ERROR ${it.message}" } + server.logs
-        }
-    }
-
     @Test
     fun `a team is made on the main scoreboard under the project's name, with every option`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local red = nf.teams.create("red", {
               display_name = "<red>Red Team", prefix = "<red>[R] ", suffix = " <gray>*", color = "red",
@@ -112,7 +86,7 @@ class TeamTest {
 
     @Test
     fun `players and entities join one team at a time, and say which project team they're in`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local alex = nf.players.get("Alex")
             local world = nf.worlds.default()
@@ -217,7 +191,7 @@ class TeamTest {
 
     @Test
     fun `the player list's name and order last until they leave, and being out of someone's list until it's undone`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local alex = nf.players.get("Alex")
             local bo = nf.players.get("Bo")
@@ -279,7 +253,7 @@ class TeamTest {
 
     @Test
     fun `putting someone back in a list, and lines under name tags going when the project stops`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local alex, bo = nf.players.get("Alex"), nf.players.get("Bo")
             alex:set_listed_for(bo, false)

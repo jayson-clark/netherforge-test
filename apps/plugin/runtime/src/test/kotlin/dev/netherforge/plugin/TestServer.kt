@@ -185,6 +185,9 @@ class TestServer(
     /** Lines scripts logged (the runtime's own lines carry no source). */
     val logs: List<String> get() = sent.filterIsInstance<Log>().filter { it.source != null }.map { it.message }
 
+    /** Script errors (`ERROR <message>`), then the lines scripts logged: what a [LuaChecks] script is judged by. */
+    fun output(): List<String> = errors.map { "ERROR ${it.message}" } + logs
+
     fun player(name: String = "Alex") = platform.players.add(name)
 
     /** [player] breaks [block], which would drop [drops]: true when a script cancelled it. */

@@ -1,5 +1,6 @@
 package dev.netherforge.plugin
 
+import dev.netherforge.plugin.LuaChecks.runChecks
 import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.WatchedEvent
 import dev.netherforge.plugin.testkit.FakePlatform.BlockAt
@@ -15,35 +16,11 @@ import kotlin.test.assertTrue
  * while a script listens.
  */
 class BiomeTest {
-    private val helpers = """
-        local function check(label, got, want)
-          if got ~= want then
-            log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want))
-          end
-        end
-        local function fails(label, fn, message)
-          local ok, err = pcall(fn)
-          if ok or not tostring(err):find(message, 1, true) then
-            log("FAIL " .. label .. ": " .. tostring(err))
-          end
-        end
-    """.trimIndent()
-
-    /** A module whose `/run` runs [body], with `check` and `fails`. */
-    private fun module(body: String) = "$helpers\nnf.commands.register(\"run\", function(event)\n$body\nlog(\"done\")\nend)\n"
-
-    private fun TestServer.run(): List<String> {
-        platform.commands.runConsole("run")
-        return output()
-    }
-
-    private fun TestServer.output() = errors.map { "ERROR ${it.message}" } + logs
-
     @Test
     fun `a block's biome is the world's there, and nil where nothing can be read`() {
         TestServer(
             mapOf(
-                "modules/t/init.lua" to module(
+                "modules/t/init.lua" to LuaChecks.command(
                     """
                     local world = nf.worlds.default()
                     check("default", world:block(vec3(0, 64, 0)):biome(), "minecraft:plains")
@@ -58,7 +35,7 @@ class BiomeTest {
             server.platform.worlds.biomes[BlockAt("world", 3, 70, -5)] = "minecraft:desert"
             server.platform.worlds.unloaded += Triple("world", 6, 6)
             server.start()
-            assertEquals(listOf("done"), server.run())
+            assertEquals(listOf("done"), server.runChecks())
         }
     }
 
@@ -67,7 +44,7 @@ class BiomeTest {
         TestServer(
             mapOf(
                 "biomes/ruby_grove.json" to "{}",
-                "modules/t/init.lua" to module(
+                "modules/t/init.lua" to LuaChecks.command(
                     """
                     local world = nf.worlds.default()
                     check("project", world:block(vec3(3, 70, -5)):biome(), "ruby_grove")
@@ -85,7 +62,7 @@ class BiomeTest {
         ).use { server ->
             server.platform.worlds.biomes[BlockAt("world", 3, 70, -5)] = "test:ruby_grove"
             server.start()
-            assertEquals(listOf("done"), server.run())
+            assertEquals(listOf("done"), server.runChecks())
             server.tick()
             assertEquals(listOf("done", "grove vec3(3, 70, -5) nil", "plains vec3(0, 64, 0)"), server.output())
             assertEquals(
@@ -99,7 +76,7 @@ class BiomeTest {
     fun `a biome search arrives at its callback on a later tick, from the spawn unless told where`() {
         TestServer(
             mapOf(
-                "modules/t/init.lua" to module(
+                "modules/t/init.lua" to LuaChecks.command(
                     """
                     local world = nf.worlds.default()
                     world:set_spawn_location(vec3(10, 70, -20))
@@ -121,7 +98,7 @@ class BiomeTest {
             server.platform.worlds.biomes[BlockAt("world", 300, 40, 90)] = "minecraft:desert"
             server.platform.worlds.biomes[BlockAt("world", 1150, 64, 0)] = "minecraft:forest"
             server.start()
-            assertEquals(listOf("done"), server.run(), "nothing arrives during the call")
+            assertEquals(listOf("done"), server.runChecks(), "nothing arrives during the call")
             server.tick()
             assertEquals(
                 listOf(
@@ -147,7 +124,7 @@ class BiomeTest {
     fun `in a task a search waits, and what finds nothing fails with why`() {
         TestServer(
             mapOf(
-                "modules/t/init.lua" to module(
+                "modules/t/init.lua" to LuaChecks.command(
                     """
                     local world = nf.worlds.default()
                     nf.task(function()
@@ -165,7 +142,7 @@ class BiomeTest {
         ).use { server ->
             server.platform.worlds.biomes[BlockAt("world", -500, 64, 30)] = "minecraft:desert"
             server.start()
-            assertEquals(listOf("done"), server.run())
+            assertEquals(listOf("done"), server.runChecks())
             server.tick(3)
             assertEquals(
                 listOf(
@@ -183,7 +160,7 @@ class BiomeTest {
     fun `a biome the server lacks, a radius out of range or a world that's gone`() {
         TestServer(
             mapOf(
-                "modules/t/init.lua" to module(
+                "modules/t/init.lua" to LuaChecks.command(
                     """
                     local world = nf.worlds.default()
                     local function none() end
@@ -204,7 +181,7 @@ class BiomeTest {
                 )
             )
         ).use { server ->
-            assertEquals(listOf("done"), server.run())
+            assertEquals(listOf("done"), server.runChecks())
             server.tick()
             assertEquals(listOf("done", "gone nil world \"moon\" has gone"), server.output())
         }

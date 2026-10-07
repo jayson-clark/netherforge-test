@@ -9,36 +9,9 @@ import kotlin.test.assertEquals
  * matching, boss bars and sidebars, against the fake server.
  */
 class InventoryTest {
-    private fun run(body: String, setup: (TestServer) -> Unit = {}, after: (TestServer) -> Unit = {}): List<String> {
-        val script = """
-            local function check(label, got, want)
-              if got ~= want then
-                log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want))
-              end
-            end
-            local function fails(label, fn, message)
-              local ok, err = pcall(fn)
-              if ok or not tostring(err):find(message, 1, true) then
-                log("FAIL " .. label .. ": " .. tostring(err))
-              end
-            end
-            nf.commands.register("run", function(event)
-            $body
-            log("done")
-            end)
-        """.trimIndent()
-        TestServer(mapOf("modules/t/init.lua" to script), start = false).use { server ->
-            setup(server)
-            server.start()
-            server.platform.commands.runConsole("run")
-            after(server)
-            return server.errors.map { "ERROR ${it.message}" } + server.logs
-        }
-    }
-
     @Test
     fun `a player's inventory takes, counts and finds items by kind or by a partial item`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local alex = nf.players.get("Alex")
             local inventory = alex:inventory()
@@ -83,7 +56,7 @@ class InventoryTest {
 
     @Test
     fun `a chest's inventory is the block's, while it's a chest`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local world = nf.worlds.default()
             local block = world:block(vec3(4, 64, 4))
@@ -152,7 +125,7 @@ class InventoryTest {
 
     @Test
     fun `a sidebar shows lines without numbers, and gives the main board back when hidden`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local alex = nf.players.get("Alex")
             local sidebar = alex:sidebar()

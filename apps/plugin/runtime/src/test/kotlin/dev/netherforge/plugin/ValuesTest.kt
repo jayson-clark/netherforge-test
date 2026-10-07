@@ -10,40 +10,9 @@ import kotlin.test.assertEquals
  * Lua and logs only what it got wrong, so a failure names the expression.
  */
 class ValuesTest {
-    /** Runs [body] in a module with `check(label, got, want)` and `near(label, got, want)`; returns the failures and the lines it logged. */
-    private fun run(body: String, setup: (TestServer) -> Unit = {}): List<String> {
-        val script = """
-            local function check(label, got, want)
-              if got ~= want then
-                log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want))
-              end
-            end
-            local function near(label, got, want)
-              if got == nil or (got - want):length() > 1e-9 then
-                log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want))
-              end
-            end
-            local function fails(label, fn, message)
-              local ok, err = pcall(fn)
-              if ok or not tostring(err):find(message, 1, true) then
-                log("FAIL " .. label .. ": " .. tostring(err))
-              end
-            end
-            nf.commands.register("run", function(event)
-            $body
-            end)
-        """.trimIndent()
-        TestServer(mapOf("modules/t/init.lua" to script), start = false).use { server ->
-            setup(server)
-            server.start()
-            server.platform.commands.runConsole("run")
-            return server.errors.map { "ERROR ${it.message}" } + server.logs
-        }
-    }
-
     @Test
     fun `vectors add, scale and compare`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local a, b = vec3(1, 2, 3), vec3(4, 5, 6)
             check("fields", a.x + a.y + a.z, 6)
@@ -66,7 +35,6 @@ class ValuesTest {
             fails("add a number", function() return a + 1 end, "a Vec3 can only be added to another Vec3")
             fails("divide by a vector", function() return a / a end, "a Vec3 can only be divided by a number")
             fails("build from a string", function() return vec3("1", 2, 3) end, "bad argument 'x' (number expected, got string)")
-            log("done")
             """
         )
         assertEquals(listOf("done"), result)
@@ -74,7 +42,7 @@ class ValuesTest {
 
     @Test
     fun `vectors measure, turn and round`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local v = vec3(3, 4, 0)
             check("length", v:length(), 5)
@@ -99,7 +67,6 @@ class ValuesTest {
             fails("rotated about nothing", function() return v:rotated(vec3.zero, 90) end, "isn't zero")
             fails("dot with a number", function() return v:dot(1) end, "bad argument 'other' (Vec3 expected, got number)")
             fails("method with a dot", function() return vec3.one.length(5) end, "call Vec3 methods with ':'")
-            log("done")
             """
         )
         assertEquals(listOf("done"), result)
@@ -107,7 +74,7 @@ class ValuesTest {
 
     @Test
     fun `the vec3 table holds the common vectors and Minecraft's angles`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             check("zero", vec3.zero, vec3(0, 0, 0))
             check("one", vec3.one, vec3(1, 1, 1))
@@ -127,7 +94,6 @@ class ValuesTest {
             for key in pairs(vec3) do keys[#keys + 1] = key end
             table.sort(keys)
             log(table.concat(keys, ","))
-            log("done")
             """
         )
         assertEquals(listOf("down,east,from_yaw_pitch,north,one,south,up,west,zero", "done"), result)
@@ -135,7 +101,7 @@ class ValuesTest {
 
     @Test
     fun `values can't be changed or faked`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local v = vec3(1, 2, 3)
             fails("assign a field", function() v.x = 5 end, "vectors can't be changed (setting 'x')")
@@ -149,15 +115,15 @@ class ValuesTest {
             fails("a fake as a place", function() nf.centities.spawn("c", fake) end, "bad argument 'location_or_position' (Location or Vec3 expected, got table)")
             local location = nf.players.get("Alex"):location()
             fails("assign a location field", function() location.world = "nether" end, "locations can't be changed (setting 'world')")
-            log("done")
-            """
-        ) { it.player("Alex") }
+            """,
+            setup = { server -> server.player("Alex") }
+        )
         assertEquals(listOf("done"), result)
     }
 
     @Test
     fun `locations carry a world, a position and maybe a facing`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local alex = nf.players.get("Alex")
             local here = alex:location()
@@ -188,13 +154,13 @@ class ValuesTest {
             crate:remove()
             check("gone", crate:location(), nil)
             check("gone position", crate:position(), nil)
-            log("done")
-            """
-        ) { server ->
-            server.write("centities/c/centity.json", TestServer.scriptedCentity())
-            server.write("centities/c/script.lua", "-- nothing")
-            server.player("Alex").location = Location("world", 1.0, 64.0, 2.0, yaw = 90.0, pitch = 0.0)
-        }
+            """,
+            setup = { server ->
+                server.write("centities/c/centity.json", TestServer.scriptedCentity())
+                server.write("centities/c/script.lua", "-- nothing")
+                server.player("Alex").location = Location("world", 1.0, 64.0, 2.0, yaw = 90.0, pitch = 0.0)
+            }
+        )
         assertEquals(listOf("done"), result)
     }
 }

@@ -17,43 +17,9 @@ import kotlin.test.assertTrue
  * that answer nil or false on entities they don't apply to.
  */
 class EntityTest {
-    /** Runs [body] as a console command in a module (with `check` and `fails`), returning errors and log lines. */
-    private fun run(
-        body: String,
-        files: Map<String, Any> = emptyMap(),
-        setup: (TestServer) -> Unit = {},
-        after: (TestServer) -> Unit = {}
-    ): List<String> {
-        TestServer(files + mapOf("modules/t/init.lua" to script(body)), start = false).use { server ->
-            setup(server)
-            server.start()
-            server.platform.commands.runConsole("run")
-            after(server)
-            return server.errors.map { "ERROR ${it.message}" } + server.logs
-        }
-    }
-
-    private fun script(body: String) = """
-        local function check(label, got, want)
-          if got ~= want then
-            log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want))
-          end
-        end
-        local function fails(label, fn, message)
-          local ok, err = pcall(fn)
-          if ok or not tostring(err):find(message, 1, true) then
-            log("FAIL " .. label .. ": " .. tostring(err))
-          end
-        end
-        nf.commands.register("run", function(event)
-        $body
-        log("done")
-        end)
-    """.trimIndent()
-
     @Test
     fun `an entity's handle is the class it is, with the methods that class has`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local world = nf.worlds.default()
             local pig = world:spawn_entity("minecraft:pig", world:location(vec3(3, 64, 4), 90, 0), {
@@ -157,7 +123,7 @@ class EntityTest {
 
     @Test
     fun `a player is a living entity, not a mob`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local alex = nf.players.get("Alex")
             check("is a player", alex:is_player(), true)
@@ -186,7 +152,7 @@ class EntityTest {
     @Test
     fun `an entity's table is saved on it and comes back typed`() {
         val files = mapOf(
-            "modules/t/init.lua" to script(
+            "modules/t/init.lua" to LuaChecks.command(
                 """
                 local pig = nf.worlds.default():spawn_entity("pig", vec3(0, 64, 0), { data = { owner = "Alex" } })
                 local data = pig:data()
@@ -207,7 +173,7 @@ class EntityTest {
             val alex = server.player("Alex")
             server.start()
             server.platform.commands.runConsole("run")
-            assertEquals(listOf("done"), server.logs)
+            assertEquals(LuaChecks.DONE, server.output())
             val pig = server.platform.worldEntities.mobs.values.single()
             assertEquals("{\"owner\":\"Alex\"}", pig.data, "only options.data until a save")
             server.runtime.events.worldSaving("world")
@@ -225,7 +191,7 @@ class EntityTest {
 
     @Test
     fun `damage, death and interact are heard by the entity, then nf`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local world = nf.worlds.default()
             local pig = world:spawn_entity("pig", vec3(0, 64, 0))
@@ -284,7 +250,7 @@ class EntityTest {
 
     @Test
     fun `an unknown event on an entity is an error, and a tick isn't one of its events`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local pig = nf.worlds.default():spawn_entity("pig", vec3(0, 64, 0))
             fails("tick", function() pig:on("tick", function() end) end, "tick")
@@ -295,7 +261,7 @@ class EntityTest {
 
     @Test
     fun `a world hears what spawns in it, and can stop it`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local world = nf.worlds.default()
             local causes = {}
@@ -317,7 +283,7 @@ class EntityTest {
 
     @Test
     fun `rays and targets hit entities, players included`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local world = nf.worlds.default()
             local alex = nf.players.get("Alex")
@@ -345,7 +311,7 @@ class EntityTest {
 
     @Test
     fun `a hidden entity stays hidden from someone who comes back`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local pig = nf.worlds.default():spawn_entity("pig", vec3(0, 64, 0))
             local alex = nf.players.get("Alex")
@@ -369,7 +335,7 @@ class EntityTest {
 
     @Test
     fun `what a script hid shows again when the session ends`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local pig = nf.worlds.default():spawn_entity("pig", vec3(0, 64, 0))
             check("hide", pig:hide_from(nf.players.get("Alex")), true)
@@ -388,7 +354,7 @@ class EntityTest {
 
     @Test
     fun `a hidden entity is hidden again when its chunk loads`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local pig = nf.worlds.default():spawn_entity("pig", vec3(0, 64, 0))
             local alex = nf.players.get("Alex")
@@ -411,7 +377,7 @@ class EntityTest {
 
     @Test
     fun `player methods reach the player`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local alex = nf.players.get("Alex")
             check("display name", alex:display_name(), "Alex")
@@ -483,7 +449,7 @@ class EntityTest {
 
     @Test
     fun `give_item drops what doesn't fit at their feet`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local alex = nf.players.get("Alex")
             local inventory = alex:inventory()

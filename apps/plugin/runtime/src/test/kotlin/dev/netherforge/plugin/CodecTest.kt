@@ -10,36 +10,15 @@ import kotlin.test.assertEquals
  * deep. Each check runs in Lua and logs only what it got wrong.
  */
 class CodecTest {
-    private fun run(body: String): List<String> {
-        val script = """
-            local function check(label, got, want)
-              if got ~= want then
-                log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want))
-              end
-            end
-            local function fails(label, fn, message)
-              local ok, err = pcall(fn)
-              if ok or not tostring(err):find(message, 1, true) then
-                log("FAIL " .. label .. ": " .. tostring(err))
-              end
-            end
-            nf.commands.register("run", function(event)
-              local player = event.player
-              local world = nf.worlds.default()
-            $body
-              log("done")
-            end)
-        """.trimIndent()
-        TestServer(
-            mapOf(
-                "modules/t/init.lua" to script,
-                "menus/i/menu.json" to """{ "shared": true }"""
-            )
-        ).use { server ->
-            val alex = server.player("Alex")
-            server.platform.commands.run(alex, "run")
-            return server.errors.map { "ERROR ${it.message}" } + server.logs
-        }
+    /** Runs [body] as Alex's `/run`, with `player` (Alex) and `world` (the default) at hand. */
+    private fun run(body: String): List<String> = TestServer(
+        mapOf(
+            "modules/t/init.lua" to LuaChecks.command("local player = event.player\nlocal world = nf.worlds.default()\n$body"),
+            "menus/i/menu.json" to """{ "shared": true }"""
+        )
+    ).use { server ->
+        server.platform.commands.run(server.player("Alex"), "run")
+        server.output()
     }
 
     @Test

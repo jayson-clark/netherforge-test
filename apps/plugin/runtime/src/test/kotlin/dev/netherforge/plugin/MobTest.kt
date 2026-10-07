@@ -12,35 +12,11 @@ import kotlin.test.assertEquals
  * `path_end` the runtime works out each tick.
  */
 class MobTest {
-    private val helpers = """
-        local function check(label, got, want)
-          if got ~= want then
-            log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want))
-          end
-        end
-        local function fails(label, fn, message)
-          local ok, err = pcall(fn)
-          if ok or not tostring(err):find(message, 1, true) then
-            log("FAIL " .. label .. ": " .. tostring(err))
-          end
-        end
-    """.trimIndent()
-
-    /** Runs [body] as a module's body, then [after] with the server; returns errors and log lines. */
-    private fun run(body: String, setup: (TestServer) -> Unit = {}, after: (TestServer) -> Unit = {}): List<String> {
-        TestServer(mapOf("modules/t/init.lua" to "$helpers\n$body\nlog(\"done\")"), start = false).use { server ->
-            setup(server)
-            server.start()
-            after(server)
-            return server.errors.map { "ERROR ${it.message}" } + server.logs
-        }
-    }
-
     private fun TestServer.mob(kind: String): UUID = platform.worldEntities.mobs.values.single { it.kind == kind }.id
 
     @Test
     fun `attributes read, change and take the project's modifiers`() {
-        val result = run(
+        val result = LuaChecks.runModuleBody(
             """
             local world = nf.worlds.default()
             local zombie = world:spawn_entity("minecraft:zombie", vec3(0, 64, 0))
@@ -104,7 +80,7 @@ class MobTest {
 
     @Test
     fun `a mob walks where move_to sends it, and path_end says whether it got there`() {
-        val result = run(
+        val result = LuaChecks.runModuleBody(
             """
             local world = nf.worlds.default()
             local zombie = world:spawn_entity("minecraft:zombie", vec3(0, 64, 0))
@@ -138,7 +114,7 @@ class MobTest {
 
     @Test
     fun `a walk is given up when the mob stops short, or its AI sends it elsewhere`() {
-        val result = run(
+        val result = LuaChecks.runModuleBody(
             """
             local world = nf.worlds.default()
             local zombie = world:spawn_entity("minecraft:zombie", vec3(0, 64, 0))
@@ -178,7 +154,7 @@ class MobTest {
 
     @Test
     fun `a mob follows an entity, finding a new path as it moves, until it has gone`() {
-        val result = run(
+        val result = LuaChecks.runModuleBody(
             """
             local world = nf.worlds.default()
             local zombie = world:spawn_entity("minecraft:zombie", vec3(0, 64, 0))
@@ -213,7 +189,7 @@ class MobTest {
 
     @Test
     fun `things that aren't mobs don't walk`() {
-        val result = run(
+        val result = LuaChecks.runModuleBody(
             """
             local world = nf.worlds.default()
             local cart = world:spawn_entity("minecraft:chest_minecart", vec3(0, 64, 0))

@@ -85,10 +85,7 @@ class RecipeTest {
     @Test
     fun `scripts register recipes held to the files' rules, and they go with the script`() {
         val module = """
-            local function fails(label, fn, message)
-              local ok, err = pcall(fn)
-              if ok or not tostring(err):find(message, 1, true) then log("FAIL " .. label .. ": " .. tostring(err)) end
-            end
+            ${LuaChecks.HELPERS}
             nf.recipes.register("gem_pair", {
               type = "shapeless",
               ingredients = { { item = "gem" }, "#minecraft:planks" },
@@ -128,7 +125,7 @@ class RecipeTest {
         server(module).use { server ->
             assertEquals(
                 listOf("all\tbaked_gem,gem_block,gem_cut,gem_pair", "removed\ttrue\tfalse", "done"),
-                server.errors.map { "ERROR ${it.message}" } + server.logs
+                server.output()
             )
             val pair = server.recipes.added.getValue("gem_pair").file
             assertEquals(listOf(Ingredient(item = ResourceRef("gem")), Ingredient(tag = "minecraft:planks")), pair.ingredients)
@@ -160,7 +157,7 @@ class RecipeTest {
             server.platform.commands.runConsole("book")
             assertEquals(
                 listOf("discover\ttrue\tfalse\ttrue", "has\ttrue\tfalse", "undiscover\ttrue\tfalse", "typo\tfalse\ttrue"),
-                server.errors.map { "ERROR ${it.message}" } + server.logs
+                server.output()
             )
         }
     }
