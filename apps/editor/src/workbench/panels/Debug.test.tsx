@@ -61,8 +61,7 @@ describe('the Debug panel', () => {
     await within(variables).findByText('settings')
     expect(within(variables).getByText('Player Steve')).toBeTruthy()
     // A table opens lazily.
-    const settings = within(variables).getByText('settings').closest<HTMLElement>('[role="row"]')!
-    fireEvent.click(settings.querySelector('[data-twisty]')!)
+    fireEvent.click(within(variables).getByRole('button', { name: 'Expand settings' }))
     await within(variables).findByText('colors')
     expect(backend.dapLog.at(-1)).toMatchObject({
       command: 'variables',
