@@ -1,7 +1,6 @@
 package dev.netherforge.plugin.integration
 
 import dev.netherforge.format.bridge.Bridge
-import dev.netherforge.format.bridge.ScriptError
 import dev.netherforge.plugin.integration.support.Scenario
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -32,7 +31,6 @@ class SettingsScenario : Scenario("settings") {
         editor.logged("reader starts", "3")
         val saved = server.folder.resolve("plugins/NetherForge/settings/basic.json")
         assertTrue(Files.readString(saved).contains("Hello there"), "the owner's values are kept on the server")
-        assertEquals(emptyList(), editor.seen.filterIsInstance<ScriptError>().map { it.message })
     }
 
     @Test

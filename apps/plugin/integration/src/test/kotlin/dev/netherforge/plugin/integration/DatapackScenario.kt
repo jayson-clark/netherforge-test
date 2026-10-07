@@ -40,7 +40,7 @@ class DatapackScenario : Scenario("datapacks") {
 
     private fun columns(): List<List<String>> {
         editor.run("it-datapack columns")
-        val log = editor.next(180) { it is Log && it.message.startsWith("columns\t") } as Log
+        val log = editor.next(180, "the columns' log line") { it is Log && it.message.startsWith("columns\t") } as Log
         return log.message.substringAfter('\t').split(';').map { it.split(',') }
     }
 

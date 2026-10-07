@@ -1,6 +1,5 @@
 package dev.netherforge.plugin.integration
 
-import dev.netherforge.format.bridge.Log
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.project.TerrainKind
 import dev.netherforge.format.terrain.TerrainCompiler
@@ -46,7 +45,7 @@ class DimensionTypeScenario : Scenario("mainworld", "dimension_type") {
 
     private fun step(command: String, line: String): List<String> {
         editor.run("it-dimension $command")
-        return (editor.next { it is Log && it.message.startsWith("$line\t") } as Log).message.split('\t').drop(1)
+        return editor.line(line)
     }
 
     @Test

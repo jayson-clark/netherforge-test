@@ -31,8 +31,8 @@ class WorldScenario : Scenario("world") {
         // glow, brightness, a billboard, easing and view range on a real block display, every tick it syncs
         editor.run("it-look")
         editor.logged("look", "true", "true", "true", "true", "true", "true")
-        val settled = editor.next(60) { it is Log && it.message.startsWith("crate settled at") } as Log
-        assertEquals(emptyList(), editor.seen.filter { it is Log && "failed to tick" in it.message })
+        val settled = editor.next(what = "the crate settling") { it is Log && it.message.startsWith("crate settled at") } as Log
+        editor.assertNone("a centity failed to tick") { it is Log && "failed to tick" in it.message }
         val restingY = settled.message.substringAfter("at ").toDouble()
         assertEquals(0.0, restingY, 0.05, "the crate fell 3 blocks onto the ground under its anchor (y ${crate!!.y})")
         editor.run("nf kill crate")
@@ -97,7 +97,7 @@ class WorldScenario : Scenario("world") {
         val (unknown, _) = editor.request(Bridge.playParticleEffect, PlayParticleEffectParams("nope"))
         assertFalse(unknown.ok)
         assertTrue(editor.request(Bridge.stopParticleEffects, Unit).first.ok)
-        assertEquals(emptyList(), editor.seen.filter { it is Log && "particle" in it.message && "Couldn't" in it.message })
+        editor.assertNone("a particle couldn't be played") { it is Log && "particle" in it.message && "Couldn't" in it.message }
         editor.run("forceload remove 192 192 223 223")
     }
 }

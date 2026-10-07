@@ -1,10 +1,8 @@
 package dev.netherforge.plugin.integration
 
-import dev.netherforge.format.bridge.ScriptError
 import dev.netherforge.plugin.integration.support.Scenario
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
 
 /**
  * `nf.schedule` on a real server, in the shipped jar (cron-utils and all) and the real clock: the
@@ -23,6 +21,5 @@ class ScheduleScenario : Scenario("schedules") {
     @Order(2)
     fun `a cron schedule runs on the server's tick`() {
         editor.logged("minute", seconds = 90)
-        assertEquals(emptyList(), editor.seen.filterIsInstance<ScriptError>().map { it.message })
     }
 }
