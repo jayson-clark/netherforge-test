@@ -35,7 +35,7 @@ import dev.netherforge.format.bridge.SpawnParams
 import dev.netherforge.format.bridge.Status
 import dev.netherforge.format.bridge.WorldSpawn
 import dev.netherforge.plugin.platform.Location
-import dev.netherforge.plugin.testkit.FakePlatform
+import dev.netherforge.plugin.testkit.BlockAt
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import java.io.BufferedReader
@@ -438,7 +438,7 @@ class BridgeTest {
                 assertTrue(LoadedWorld("arena", "normal", false) in loaded, "$loaded")
 
                 // A box's structure comes back as bytes; nothing is left in the data folder or the project.
-                server.platform.worlds.blocks[FakePlatform.BlockAt("world", 1, 64, 1)] = "minecraft:stone"
+                server.platform.worlds.blocks[BlockAt("world", 1, 64, 1)] = "minecraft:stone"
                 val saved = editor.request(
                     Bridge.saveStructure,
                     SaveStructureParams("world", BlockPos(2, 65, 2), BlockPos(1, 64, 0), entities = true)

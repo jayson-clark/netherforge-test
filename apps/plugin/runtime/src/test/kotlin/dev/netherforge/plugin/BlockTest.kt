@@ -7,6 +7,7 @@ import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.ClickButton
 import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.ItemData
+import dev.netherforge.plugin.testkit.BlockAt
 import dev.netherforge.plugin.testkit.FakePlatform
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -152,7 +153,7 @@ class BlockTest {
             assertTrue(server.platform.sounds.played.any { it.contains("test:ui/thud") }, server.platform.sounds.played.toString())
 
             // Something standing there, or a protection plugin, keeps it from being placed, and keeps the item.
-            server.platform.blocks.occupied += dev.netherforge.plugin.testkit.FakePlatform.BlockAt("world", 6, 64, 0)
+            server.platform.blocks.occupied += BlockAt("world", 6, 64, 0)
             val blocked = BlockRef("world", 6, 63, 0, "minecraft:stone", "minecraft:stone")
             assertTrue(server.runtime.events.playerInteract(server.alex.ref, ClickButton.RIGHT, blocked, "up", oreItem, "main_hand"))
             assertEquals("minecraft:air", server.state(6, 64, 0))
@@ -304,7 +305,7 @@ class BlockTest {
         server().use { server ->
             val state = server.custom().stateOf("ore")!!
             // A generator wrote a block into the chunk's data; nothing recorded it.
-            server.platform.worlds.blocks[FakePlatform.BlockAt("world", 40, 70, 40)] = state
+            server.platform.worlds.blocks[BlockAt("world", 40, 70, 40)] = state
             assertNull(server.custom().at("world", 40, 70, 40))
             server.platform.raise.chunkLoad(GameEvent.ChunkLoad("world", 2, 2, true))
             assertEquals("ore", server.custom().at("world", 40, 70, 40))
@@ -317,13 +318,13 @@ class BlockTest {
             assertEquals("ore", server.custom().at("world", 40, 70, 40))
 
             // Something else took its place meanwhile: it's forgotten when the chunk next loads, with its data.
-            server.platform.blocks.data[FakePlatform.BlockAt("world", 40, 70, 40)] = """{"age":4}"""
-            server.platform.worlds.blocks[FakePlatform.BlockAt("world", 40, 70, 40)] = "minecraft:stone"
+            server.platform.blocks.data[BlockAt("world", 40, 70, 40)] = """{"age":4}"""
+            server.platform.worlds.blocks[BlockAt("world", 40, 70, 40)] = "minecraft:stone"
             server.runtime.events.game.chunkUnload(GameEvent.Chunk("world", 2, 2))
             server.platform.raise.chunkLoad(GameEvent.ChunkLoad("world", 2, 2, false))
             assertNull(server.custom().at("world", 40, 70, 40))
             assertNull(server.platform.blocks.records.keys.firstOrNull { it.x == 40 })
-            assertNull(server.platform.blocks.data[FakePlatform.BlockAt("world", 40, 70, 40)])
+            assertNull(server.platform.blocks.data[BlockAt("world", 40, 70, 40)])
         }
     }
 

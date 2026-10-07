@@ -17,6 +17,7 @@ import dev.netherforge.plugin.lua.SandboxLimits
 import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.testkit.FakePlatform
+import dev.netherforge.plugin.testkit.FakePlayer
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.sql.DataSource
@@ -191,7 +192,7 @@ class TestServer(
     fun player(name: String = "Alex") = platform.players.add(name)
 
     /** [player] breaks [block], which would drop [drops]: true when a script cancelled it. */
-    fun breaks(player: FakePlatform.FakePlayer, block: BlockRef, drops: List<ItemData> = emptyList(), experience: Int = 0): Boolean =
+    fun breaks(player: FakePlayer, block: BlockRef, drops: List<ItemData> = emptyList(), experience: Int = 0): Boolean =
         runtime.events.blockBreak(player.ref, block, { drops }, experience) == null
 
     override fun close() {

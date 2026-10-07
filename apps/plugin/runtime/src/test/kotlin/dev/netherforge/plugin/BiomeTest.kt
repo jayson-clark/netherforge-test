@@ -3,7 +3,7 @@ package dev.netherforge.plugin
 import dev.netherforge.plugin.LuaChecks.runChecks
 import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.WatchedEvent
-import dev.netherforge.plugin.testkit.FakePlatform.BlockAt
+import dev.netherforge.plugin.testkit.BlockAt
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

@@ -179,7 +179,7 @@ class FakePermissions(private val platform: FakePlatform) : PermissionOps {
 /**
  * A few of the game's advancements by key, each with its criteria's names,
  * the project's from the start-up datapack the fake server started with
- * ([FakePlatform.FakeDatapacks.advancements]), and what each player has met.
+ * ([FakeDatapacks.advancements]), and what each player has met.
  * Completing one (every requirement group met) raises the server's event, as
  * Paper does.
  */
