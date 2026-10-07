@@ -1,10 +1,11 @@
 //! App-level pieces: where the editor keeps its files, events, bundled plugin
-//! jars, the script test runner and `app_info`.
+//! jars, the script test runner, the tools the editor runs and `app_info`.
 
 pub mod dirs;
 pub mod events;
 pub mod plugins;
 pub mod test_runner;
+pub mod tools;
 
 use serde::Serialize;
 

@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager, Runtime, State};
+use tauri::State;
 
 use super::blocking;
 use crate::app::test_runner::{self, TestReport};
@@ -15,11 +15,7 @@ use crate::state::AppState;
 /// server or the project's files. The project runs its scripts, so it has to be trusted.
 #[tauri::command]
 #[specta::specta]
-pub async fn tests_run<R: Runtime>(
-    app: AppHandle<R>,
-    state: State<'_, AppState>,
-    filter: Option<String>,
-) -> Result<TestReport> {
+pub async fn tests_run(state: State<'_, AppState>, filter: Option<String>) -> Result<TestReport> {
     let root = state.trusted_root()?;
     let minecraft = state
         .opened()
@@ -44,15 +40,13 @@ pub async fn tests_run<R: Runtime>(
             ),
         )
     })?;
-    let resources = app.path().resource_dir().ok();
-    let jar =
-        test_runner::find(&test_runner::search_dirs(resources.as_deref())).ok_or_else(|| {
-            Error::new(
-                ErrorCode::Unavailable,
-                "This editor has no test runner (NetherForgeTest-<version>.jar)",
-            )
-        })?;
-    let (java, _) = java::find(&java::JavaEnv::current(&state.dirs))
+    let jar = test_runner::find(&state.tools.test_runner_dirs).ok_or_else(|| {
+        Error::new(
+            ErrorCode::Unavailable,
+            "This editor has no test runner (NetherForgeTest-<version>.jar)",
+        )
+    })?;
+    let (java, _) = java::find(&state.tools.java)
         .await
         .ok_or_else(|| {
             Error::new(

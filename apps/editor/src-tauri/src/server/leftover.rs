@@ -157,14 +157,13 @@ mod tests {
         assert!(!pid_file(tmp.path()).exists());
     }
 
-    #[cfg(unix)]
     #[tokio::test]
     async fn finds_and_stops_a_leftover_server() {
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path().join("project");
         // Stands in for an orphaned `java … -Dnetherforge.project=<root> …`.
-        let mut child = std::process::Command::new("/bin/sh")
-            .args(["-c", "sleep 30; true", &project_arg(&root)])
+        let mut child = std::process::Command::new(crate::testing::fake_server())
+            .args(["sleep", "30", &project_arg(&root)])
             .spawn()
             .unwrap();
         record(tmp.path(), child.id()).unwrap();

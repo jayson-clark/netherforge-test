@@ -234,7 +234,7 @@ impl LanguageServer {
 mod tests {
     use super::*;
     use crate::app::events::RecordingSink;
-    use std::time::Duration;
+    use crate::testing;
 
     #[test]
     fn locates_the_first_that_exists() {
@@ -249,67 +249,53 @@ mod tests {
         assert_eq!(locate(&candidates), Some(bundled));
     }
 
-    /// Waits for [what], up to 10 s: the stand-in server is a process the OS starts, which is slow on a busy machine.
-    async fn until(what: impl Fn() -> bool) {
-        for _ in 0..1000 {
-            if what() {
-                return;
-            }
-            tokio::time::sleep(Duration::from_millis(10)).await;
-        }
-        panic!("timed out");
-    }
-
-    /// `cat` stands in for the server: whatever goes in comes back out, framed.
-    #[cfg(unix)]
+    /// The fake server stands in for LuaLS (it's given LuaLS's arguments):
+    /// whatever goes in comes back out, framed, until it's told to exit.
     #[tokio::test]
-    async fn bridges_messages_both_ways_and_reports_its_exit() {
+    async fn bridges_messages_both_ways_and_reports_only_its_own_exit() {
         let dir = tempfile::tempdir().unwrap();
         let sink = Arc::new(RecordingSink::default());
         let server = LanguageServer::new(sink.clone(), dir.path().join("luals"));
-        // `cat` would take `--metapath=…` as files: a script that ignores its arguments.
-        let script = dir.path().join("echo.sh");
-        std::fs::write(&script, "#!/bin/sh\nexec cat\n").unwrap();
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let fake = testing::fake_server();
 
-        let first = server.start(&script, dir.path()).unwrap();
+        let first = server.start(&fake, dir.path()).unwrap();
         server.send(first, r#"{"id":1}"#.into()).unwrap();
-        until(|| !sink.named::<LualsMessage>().is_empty()).await;
+        testing::until("the echo", || !sink.named::<LualsMessage>().is_empty()).await;
         assert_eq!(
             sink.named::<LualsMessage>(),
             vec![serde_json::json!({ "generation": first, "message": r#"{"id":1}"# })]
         );
 
         // A restart replaces it: the old generation is refused and its exit isn't reported.
-        let second = server.start(&script, dir.path()).unwrap();
+        let second = server.start(&fake, dir.path()).unwrap();
         assert!(second > first);
         assert!(server.send(first, "{}".into()).is_err());
         server.send(second, r#"{"id":2}"#.into()).unwrap();
-        until(|| sink.named::<LualsMessage>().len() == 2).await;
+        testing::until("the second echo", || {
+            sink.named::<LualsMessage>().len() == 2
+        })
+        .await;
 
         server.stop();
         assert_eq!(server.running(), None);
         assert!(server.send(second, "{}".into()).is_err());
-        tokio::time::sleep(Duration::from_millis(100)).await;
-        assert!(sink.named::<LualsExit>().is_empty());
-    }
 
-    #[cfg(unix)]
-    #[tokio::test]
-    async fn reports_a_server_that_exits_by_itself() {
-        let dir = tempfile::tempdir().unwrap();
-        let sink = Arc::new(RecordingSink::default());
-        let server = LanguageServer::new(sink.clone(), dir.path().join("luals"));
-        let script = dir.path().join("crash.sh");
-        std::fs::write(&script, "#!/bin/sh\nexit 3\n").unwrap();
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
-        let generation = server.start(&script, dir.path()).unwrap();
-        until(|| !sink.named::<LualsExit>().is_empty()).await;
+        // Neither the replaced server nor the stopped one says it exited. Their
+        // monitors return the moment their kill channel drops, without a word;
+        // "never" can only be checked up to a point, and that point is a third
+        // server exiting by itself (a process start and a message later): its
+        // exit is reported, and it's the only one.
+        let third = server.start(&fake, dir.path()).unwrap();
+        server
+            .send(third, r#"{"method":"exit","params":{"code":3}}"#.into())
+            .unwrap();
+        testing::until("the third server's exit", || {
+            !sink.named::<LualsExit>().is_empty()
+        })
+        .await;
         assert_eq!(
             sink.named::<LualsExit>(),
-            vec![serde_json::json!({ "generation": generation, "code": 3 })]
+            vec![serde_json::json!({ "generation": third, "code": 3 })]
         );
         assert_eq!(server.running(), None);
     }

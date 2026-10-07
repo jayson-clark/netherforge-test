@@ -33,7 +33,9 @@ fn app(dir: &Path) -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
         .build(crate::context())
         .expect("the mock app builds");
     let sink: Arc<dyn EventSink> = Arc::new(app.handle().clone());
-    app.manage(AppState::new(AppDirs::in_one(dir), sink));
+    let dirs = AppDirs::in_one(dir);
+    let tools = crate::app::tools::Tools::for_app(None, &dirs);
+    app.manage(AppState::new(dirs, tools, sink));
     let window = WebviewWindowBuilder::new(&app, "main", Default::default())
         .build()
         .expect("the mock window opens");

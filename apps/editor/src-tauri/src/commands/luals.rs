@@ -1,5 +1,5 @@
 use serde::Serialize;
-use tauri::{AppHandle, Manager, Runtime, State};
+use tauri::State;
 
 use super::blocking;
 use crate::error::{Error, ErrorCode, Result};
@@ -21,14 +21,10 @@ pub struct LualsStarted {
 /// Starts lua-language-server for the open project (restarting one that runs).
 #[tauri::command]
 #[specta::specta]
-pub async fn luals_start<R: Runtime>(
-    app: AppHandle<R>,
-    state: State<'_, AppState>,
-) -> Result<LualsStarted> {
+pub async fn luals_start(state: State<'_, AppState>) -> Result<LualsStarted> {
     // LuaLS reads the project's .luarc.json, which can name a plugin for it to run.
     let root = state.trusted_root()?;
-    let resources = app.path().resource_dir().ok();
-    let program = luals::locate(&luals::search_paths(resources.as_deref())).ok_or_else(|| {
+    let program = luals::locate(&state.tools.luals).ok_or_else(|| {
         Error::new(
             ErrorCode::Unavailable,
             "lua-language-server isn't installed with this editor (in a dev build, run node tools/luals.mjs)",

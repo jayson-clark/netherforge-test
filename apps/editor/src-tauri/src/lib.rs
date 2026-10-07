@@ -18,6 +18,8 @@ mod protocols;
 pub mod server;
 pub mod settings;
 pub mod state;
+#[cfg(test)]
+mod testing;
 pub mod trust;
 pub mod watcher;
 
@@ -70,20 +72,19 @@ pub fn run() {
         .setup(move |app| {
             commands.mount_events(app);
             let sink: Arc<dyn app::events::EventSink> = Arc::new(app.handle().clone());
-            let state = AppState::new(dirs.clone(), sink);
+            let resources = app.path().resource_dir().ok();
+            let tools = app::tools::Tools::for_app(resources.as_deref(), &dirs);
+            // The `netherforge test` command finds the runner jar in the data folder: a copy of the one this editor carries.
+            if let Some(jar) = app::test_runner::find(&tools.test_runner_dirs) {
+                let _ = app::test_runner::install_for_cli(&jar, &dirs.test_runner());
+            }
+            let state = AppState::new(dirs.clone(), tools, sink);
             // The MCP server for coding agents, as settings say. A taken port shows in Settings.
             let mcp = state.mcp.clone();
             let saved: settings::Settings = settings::load(&dirs.settings_file());
             tauri::async_runtime::spawn(async move {
                 mcp.apply(saved.mcp_enabled, saved.mcp_port).await;
             });
-            // The `netherforge test` command finds the runner jar in the data folder: a copy of the one this editor carries.
-            let resources = app.path().resource_dir().ok();
-            if let Some(jar) =
-                app::test_runner::find(&app::test_runner::search_dirs(resources.as_deref()))
-            {
-                let _ = app::test_runner::install_for_cli(&jar, &dirs.test_runner());
-            }
             app.manage(state);
             Ok(())
         })

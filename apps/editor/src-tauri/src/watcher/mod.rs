@@ -219,6 +219,48 @@ pub fn watch(root: &Path, on_change: impl Fn(Batch) + Send + 'static) -> Result<
     Ok(WatchHandle { _watcher: watcher })
 }
 
+/// For tests: returns once the watcher on [root] reports changes to the
+/// project file [probe] (`nf-probe` at the top, or inside a folder to know
+/// that folder's watch is live). The OS watchers start asynchronously
+/// (FSEvents even restarts its stream for each folder added), so a change
+/// made right after [watch] returns can go unreported; a fixed sleep only
+/// makes that rarer. So: write [probe] until it's reported, then delete it and
+/// wait for that too, leaving the project as it was. [next] gives the next
+/// batch's paths, waiting at most the time it's given.
+#[cfg(test)]
+pub(crate) fn until_watching(
+    root: &Path,
+    probe: &str,
+    mut next: impl FnMut(Duration) -> Option<Vec<String>>,
+) {
+    let file = root.join(probe);
+    let deadline = Instant::now() + crate::testing::PATIENCE;
+    let mut heard = |within: Duration| {
+        let until = Instant::now() + within;
+        while let Some(left) = until.checked_duration_since(Instant::now()) {
+            if next(left).is_some_and(|paths| paths.iter().any(|p| p == probe)) {
+                return true;
+            }
+        }
+        false
+    };
+    for attempt in 0.. {
+        assert!(
+            Instant::now() < deadline,
+            "the watcher never reported {probe}"
+        );
+        std::fs::write(&file, format!("{attempt}")).unwrap();
+        if heard(Duration::from_millis(250)) {
+            break;
+        }
+    }
+    std::fs::remove_file(&file).unwrap();
+    assert!(
+        heard(crate::testing::PATIENCE),
+        "the watcher never reported {probe} deleted"
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -308,69 +350,87 @@ mod tests {
         assert_eq!(d.deadline(), None);
     }
 
+    /// A watcher on a temp project, its batches, and the project's root.
+    fn watched(
+        folders: &[&str],
+    ) -> (
+        tempfile::TempDir,
+        PathBuf,
+        mpsc::Receiver<Batch>,
+        WatchHandle,
+    ) {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = dunce::canonicalize(tmp.path()).unwrap();
+        for folder in folders {
+            std::fs::create_dir_all(root.join(folder)).unwrap();
+        }
+        let (tx, rx) = mpsc::channel();
+        let handle = watch(&root, move |batch| {
+            let _ = tx.send(batch);
+        })
+        .unwrap();
+        (tmp, root, rx, handle)
+    }
+
+    fn paths(rx: &mpsc::Receiver<Batch>) -> impl FnMut(Duration) -> Option<Vec<String>> + '_ {
+        |wait| rx.recv_timeout(wait).ok().map(|batch| batch.paths)
+    }
+
+    /// Every batch until [done] says what's been seen is enough; panics past [PATIENCE].
     fn collect_until(
         rx: &mpsc::Receiver<Batch>,
         done: impl Fn(&BTreeSet<String>, bool) -> bool,
     ) -> (BTreeSet<String>, bool) {
         let mut seen = BTreeSet::new();
         let mut rescan = false;
-        let deadline = Instant::now() + Duration::from_secs(5);
-        while !done(&seen, rescan) && Instant::now() < deadline {
-            if let Ok(batch) = rx.recv_timeout(Duration::from_millis(200)) {
-                seen.extend(batch.paths);
-                rescan |= batch.rescan;
-            }
+        let deadline = Instant::now() + crate::testing::PATIENCE;
+        while !done(&seen, rescan) {
+            let left = deadline.checked_duration_since(Instant::now());
+            let batch = left.and_then(|left| rx.recv_timeout(left).ok());
+            let Some(batch) = batch else {
+                panic!("timed out; saw {seen:?} (rescan: {rescan})");
+            };
+            seen.extend(batch.paths);
+            rescan |= batch.rescan;
         }
         (seen, rescan)
     }
 
     #[test]
     fn real_watcher_reports_project_paths() {
-        let tmp = tempfile::tempdir().unwrap();
-        let root = dunce::canonicalize(tmp.path()).unwrap();
-        std::fs::create_dir_all(root.join("modules/a")).unwrap();
-        std::fs::create_dir_all(root.join(".netherforge/server")).unwrap();
-        let (tx, rx) = mpsc::channel();
-        let _handle = watch(&root, move |batch| {
-            let _ = tx.send(batch);
-        })
-        .unwrap();
-        std::thread::sleep(Duration::from_millis(200));
-        crate::fs::atomic::write_atomic(&root.join("modules/a/init.lua"), b"x").unwrap();
-        std::fs::write(root.join("netherforge.json"), "{}").unwrap();
+        let (_tmp, root, rx, _handle) = watched(&["modules/a", ".netherforge/server"]);
+        until_watching(&root, "nf-probe", paths(&rx));
+        until_watching(&root, "modules/nf-probe", paths(&rx));
+
+        // What it must leave out first, so the batches that bring the rest would have it.
         std::fs::write(root.join(".netherforge/server/latest.log"), "x").unwrap();
         std::fs::create_dir_all(root.join(".git")).unwrap();
         std::fs::write(root.join(".git/index"), "x").unwrap();
+        crate::fs::atomic::write_atomic(&root.join("modules/a/init.lua"), b"x").unwrap();
+        std::fs::write(root.join("netherforge.json"), "{}").unwrap();
 
         let (seen, _) = collect_until(&rx, |seen, _| {
             seen.contains("modules/a/init.lua") && seen.contains("netherforge.json")
         });
-        assert!(seen.contains("modules/a/init.lua"), "saw {seen:?}");
-        assert!(seen.contains("netherforge.json"), "saw {seen:?}");
-        assert!(seen.iter().all(|p| !p.starts_with(".git")
-            && !p.starts_with(".netherforge")
-            && !p.contains(".nftmp-")));
+        assert!(
+            seen.iter().all(|p| !p.starts_with(".git")
+                && !p.starts_with(".netherforge")
+                && !p.contains(".nftmp-")),
+            "saw {seen:?}"
+        );
     }
 
     #[test]
     fn a_new_top_level_folder_is_watched_and_rescanned() {
-        let tmp = tempfile::tempdir().unwrap();
-        let root = dunce::canonicalize(tmp.path()).unwrap();
-        let (tx, rx) = mpsc::channel();
-        let _handle = watch(&root, move |batch| {
-            let _ = tx.send(batch);
-        })
-        .unwrap();
-        std::thread::sleep(Duration::from_millis(200));
+        let (_tmp, root, rx, _handle) = watched(&[]);
+        until_watching(&root, "nf-probe", paths(&rx));
         // Written before the new folder's watch can exist: only a rescan covers it.
         crate::fs::atomic::write_atomic(&root.join("dialogs/a/dialog.json"), b"x").unwrap();
-        let (_, rescan) = collect_until(&rx, |_, rescan| rescan);
-        assert!(rescan);
+        collect_until(&rx, |_, rescan| rescan);
 
-        // Once watched, changes inside it arrive as paths.
-        std::thread::sleep(Duration::from_millis(200));
+        // Once its watch is live, changes inside it arrive as paths.
+        until_watching(&root, "dialogs/nf-probe", paths(&rx));
         crate::fs::atomic::write_atomic(&root.join("dialogs/a/dialog.json"), b"y").unwrap();
-        let (seen, _) = collect_until(&rx, |seen, _| seen.contains("dialogs/a/dialog.json"));
-        assert!(seen.contains("dialogs/a/dialog.json"), "saw {seen:?}");
+        collect_until(&rx, |seen, _| seen.contains("dialogs/a/dialog.json"));
     }
 }
