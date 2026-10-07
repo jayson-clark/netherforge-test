@@ -87,7 +87,8 @@ function coreOver(files: Map<string, Uint8Array>) {
   return { core, results, reads, baked, idle: () => idle }
 }
 
-const settle = (done: () => boolean) => vi.waitFor(() => expect(done()).toBe(true))
+/** Until [done] holds (the worker answers on real messages, not a clock). */
+const until = (done: () => boolean) => vi.waitFor(() => expect(done()).toBe(true))
 
 describe('which chunks a view draws', () => {
   it('takes a disc around the middle, nearest first', () => {
@@ -115,13 +116,13 @@ describe('the terrain worker', () => {
     ])
     const { core, results, idle } = coreOver(files)
     core.view(0, 0, 0, [], 1)
-    await settle(() => idle() === 1)
+    await until(() => idle() === 1)
     // A 16³ cube is 6 × 256 faces; the side against chunk 1's stone goes.
     expect(results.get('0,0')).toMatchObject({ status: 'drawn', mesh: { faces: 5 * 256 } })
     expect(results.get('0,0')!.mesh!.culled).toBe(16 * 16 * 16 * 6 - 6 * 256 + 256)
 
     core.view(31, 5, 0, [], 2)
-    await settle(() => idle() === 2)
+    await until(() => idle() === 2)
     expect(results.get('31,5')!.mesh!.faces).toBe(5 * 256)
     // Its mesh is relative to its own corner.
     const positions = results.get('31,5')!.mesh!.groups[0]!.positions
@@ -143,7 +144,7 @@ describe('the terrain worker', () => {
     ])
     const { core, results, idle } = coreOver(files)
     core.view(0, 0, 1, [], 1)
-    await settle(() => idle() === 1)
+    await until(() => idle() === 1)
     expect(results.get('0,0')!.mesh!.faces).toBe(6 * 256)
     expect(results.get('1,0')).toMatchObject({ status: 'empty', mesh: null })
     expect(results.get('0,-1')).toMatchObject({ status: 'empty' })
@@ -174,7 +175,7 @@ describe('the terrain worker', () => {
     ])
     const { core, results, idle } = coreOver(files)
     core.view(0, 0, 0, [], 1)
-    await settle(() => idle() === 1)
+    await until(() => idle() === 1)
     const mesh = results.get('0,0')!.mesh!
     // Floor: top minus the pillar's foot, bottom, four edges; pillar: 31 blocks, four sides each and a top.
     expect(mesh.faces).toBe(255 + 256 + 4 * 16 + 31 * 4 + 1)
@@ -200,7 +201,7 @@ describe('the terrain worker', () => {
     )
     const { core, results, idle } = coreOver(files)
     core.view(0, 0, 1, [], 1)
-    await settle(() => idle() === 1)
+    await until(() => idle() === 1)
     expect(results.get('1,0')).toMatchObject({ status: 'failed', mesh: null })
     expect(results.get('1,0')!.error).toBeTruthy()
     expect(results.get('0,1')).toMatchObject({ status: 'drawn' })
@@ -216,7 +217,7 @@ describe('the terrain worker', () => {
       chunks.push(chunk(cx, 0, [solid(cx % 2 ? 'stone' : 'dirt')]))
     const { core, results, reads, baked, idle } = coreOver(await regions(chunks))
     core.view(0, 0, 2, [], 1)
-    await settle(() => idle() === 1)
+    await until(() => idle() === 1)
     expect(reads.filter((it) => it === 'r.0.0.mca')).toHaveLength(1)
     expect(baked.flat().sort()).toEqual(['dirt', 'stone'])
     const first = results.size
@@ -227,14 +228,14 @@ describe('the terrain worker', () => {
 
     // Far away: the old chunks and regions are let go.
     core.view(36, 0, 2, [], 2)
-    await settle(() => idle() === 2)
+    await until(() => idle() === 2)
     expect(core.held()).toMatchObject({ chunks: 21 + 2, regions: 2 })
     expect(reads.filter((it) => it === 'r.1.0.mca')).toHaveLength(1)
 
     // Coming back sends again only what the main thread said it dropped.
     results.clear()
     core.view(0, 0, 2, ['0,0'], 3)
-    await settle(() => idle() === 3)
+    await until(() => idle() === 3)
     expect([...results.keys()]).toEqual(['0,0'])
   })
 })

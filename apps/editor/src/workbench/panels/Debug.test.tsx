@@ -1,9 +1,9 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
-import { AppProvider, createApp, type AppStores } from '@/state/providers'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
+import type { MemoryBackend } from '@/core/backend/memory'
+import { AppProvider, type AppStores } from '@/state/providers'
 import { DebugPanel, describeStop } from './Debug'
+import { openExampleApp } from '@/testing/workspace'
 
 const TOWER = 'centities/tower/script.lua'
 
@@ -12,9 +12,7 @@ let app: AppStores
 
 beforeEach(async () => {
   window.localStorage.clear()
-  backend = new MemoryBackend({ projects: exampleProjects() })
-  app = createApp(backend)
-  await app.workspace.getState().openProject(EXAMPLE_ROOT)
+  ;({ backend, app } = await openExampleApp())
   await app.run.getState().connect()
   await app.debug.getState().connect()
 })

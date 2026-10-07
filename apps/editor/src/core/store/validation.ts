@@ -17,7 +17,8 @@ import { isModel } from './documents'
 import { errorText, type SliceArgs } from './slice'
 import type { Workspace } from './workspace'
 
-const VALIDATE_DELAY_MS = 250
+/** How long after the last change `validateSoon` validates. */
+export const VALIDATE_DELAY_MS = 250
 
 /** Each model's text as format reads it, worked out once per model (an edit makes a new one). */
 const modelTexts = new WeakMap<object, string>()

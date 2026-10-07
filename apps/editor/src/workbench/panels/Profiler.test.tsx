@@ -1,17 +1,15 @@
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
-import { AppProvider, createApp, type AppStores } from '@/state/providers'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
+import type { MemoryBackend } from '@/core/backend/memory'
+import { AppProvider, type AppStores } from '@/state/providers'
 import { ProfilerPanel } from './Profiler'
+import { openExampleApp } from '@/testing/workspace'
 
 let backend: MemoryBackend
 let app: AppStores
 
 beforeEach(async () => {
-  backend = new MemoryBackend({ projects: exampleProjects() })
-  app = createApp(backend)
-  await app.workspace.getState().openProject(EXAMPLE_ROOT)
+  ;({ backend, app } = await openExampleApp())
   await app.run.getState().connect()
   await app.profiler.getState().connect()
 })
@@ -87,8 +85,9 @@ describe('the Profiler panel', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Open centities/tower/script.lua:9' }))
-    await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
-    expect(app.workspace.getState().activeTab).toBe('script:centities/tower/script.lua')
+    await waitFor(() =>
+      expect(app.workspace.getState().activeTab).toBe('script:centities/tower/script.lua'),
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Scopes' }))
     expect(rows('Scopes')).toEqual(['module shop0.153.0013.003.00'])

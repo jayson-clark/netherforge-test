@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { MemoryBackend, type MemoryBackendOptions } from '@/core/backend/memory'
-import { createApp, type AppStores } from '@/state/providers'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { MemoryBackend, MemoryBackendOptions } from '@/core/backend/memory'
+import type { AppStores } from '@/state/providers'
+import { advanceUntil, openExampleApp, settle } from '@/testing/workspace'
 import type { Tool } from '@modelcontextprotocol/sdk/types.js'
 
 const TOOL_NAMES = [
@@ -27,20 +27,20 @@ let backend: MemoryBackend
 let app: AppStores
 
 async function open(options: MemoryBackendOptions = {}) {
-  backend = new MemoryBackend({
-    projects: exampleProjects(),
-    serverDelayMs: 0,
-    ...options,
-  })
-  app = createApp(backend)
+  ;({ backend, app } = await openExampleApp({ backend: { serverDelayMs: 0, ...options } }))
   await app.run.getState().connect()
-  await app.workspace.getState().openProject(EXAMPLE_ROOT)
 }
 
-beforeEach(() => open())
+// Tools wait for the server on timers (a reload's settling, a bot's): the fake clock, moved on
+// by `call` until the answer comes.
+beforeEach(async () => {
+  vi.useFakeTimers()
+  await open()
+})
+afterEach(() => vi.useRealTimers())
 
 /** Calls a tool the way an agent does and returns its parsed text, or the error text. */
-async function call(name: string, args: Record<string, unknown> = {}) {
+async function request(name: string, args: Record<string, unknown> = {}) {
   const response = await backend.testMcpCall('tools/call', { name, arguments: args })
   if (response.error) throw new Error(`protocol error: ${response.error.message}`)
   const result = response.result as { content: { text: string }[]; isError?: boolean }
@@ -48,10 +48,15 @@ async function call(name: string, args: Record<string, unknown> = {}) {
   return result.isError ? { error: text } : JSON.parse(text)
 }
 
+/** [request], with the clock moving until it's answered. */
+const call = (name: string, args: Record<string, unknown> = {}) => advanceUntil(request(name, args))
+
 describe('MCP tools on an untrusted project', () => {
   it('refuses every call until the project is trusted, and nothing reaches the tools', async () => {
     await open({ trusted: [] })
-    const refused = await backend.testMcpCall('tools/call', { name: 'get_status', arguments: {} })
+    const refused = await advanceUntil(
+      backend.testMcpCall('tools/call', { name: 'get_status', arguments: {} }),
+    )
     expect(refused.error?.code).toBe(-32001)
     expect(refused.error?.message).toMatch(/isn't trusted/)
     await app.workspace.getState().trustProject(true)
@@ -141,14 +146,13 @@ describe('MCP tools', () => {
 
   it('reloads, and returns the errors the server logged meanwhile', async () => {
     backend.testConnect()
-    const pending = call('reload', { paths: ['modules/greeter/init.lua'] })
-    // The server logs the error while it reloads.
-    await vi.waitFor(() =>
-      expect(backend.bridgeLog).toContainEqual({
-        method: 'reload',
-        params: { paths: ['modules/greeter/init.lua'] },
-      }),
-    )
+    const pending = request('reload', { paths: ['modules/greeter/init.lua'] })
+    // The server logs the error while it reloads, before the tool's settling time is up.
+    await settle()
+    expect(backend.bridgeLog).toContainEqual({
+      method: 'reload',
+      params: { paths: ['modules/greeter/init.lua'] },
+    })
     backend.testBridgeEvent('console', {
       items: [
         {
@@ -158,7 +162,7 @@ describe('MCP tools', () => {
         },
       ],
     })
-    const result = await pending
+    const result = await advanceUntil(pending)
     expect(result.resources).toEqual([
       { package: 'basic', kind: 'module', id: 'greeter', ok: true, reattached: 0 },
     ])
@@ -180,9 +184,8 @@ describe('MCP tools', () => {
       params: { paths: ['advancements/treasure_hunter.json'] },
     })
     // It was stopped and started again.
-    await vi.waitFor(() =>
-      expect(backend.serverState().then((it) => it.phase)).resolves.toBe('running'),
-    )
+    await settle()
+    expect((await backend.serverState()).phase).toBe('running')
     const lines = app.run
       .getState()
       .console.lines()

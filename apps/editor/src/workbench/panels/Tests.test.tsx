@@ -1,10 +1,10 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
+import type { MemoryBackend } from '@/core/backend/memory'
 import type { TestReport } from '@/core/backend/types'
-import { AppProvider, createApp, type AppStores } from '@/state/providers'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
+import { AppProvider, type AppStores } from '@/state/providers'
 import { TestsPanel } from './Tests'
+import { openExampleApp } from '@/testing/workspace'
 
 const REPORT: TestReport = {
   results: [
@@ -45,9 +45,7 @@ let backend: MemoryBackend
 let app: AppStores
 
 beforeEach(async () => {
-  backend = new MemoryBackend({ projects: exampleProjects() })
-  app = createApp(backend)
-  await app.workspace.getState().openProject(EXAMPLE_ROOT)
+  ;({ backend, app } = await openExampleApp())
   await app.workspace.getState().trustProject(true)
 })
 

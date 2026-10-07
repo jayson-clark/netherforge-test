@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
-import { createWorkspace, type Workspace } from '@/core/store/workspace'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
+import type { Workspace } from '@/core/store/workspace'
+import { openExampleWorkspace } from '@/testing/workspace'
 import { loadApiStubs } from './apiStubs'
 import { followLualsStubs, lualsFilesOf, modelReader, packageSources } from './follow'
 import { lualsLibraryFiles, projectNames, projectStub } from './stubs'
@@ -9,10 +8,8 @@ import { lualsLibraryFiles, projectNames, projectStub } from './stubs'
 const namesOf = (state: Workspace) => projectNames(state.outline, modelReader(state))
 
 async function example() {
-  const backend = new MemoryBackend({ projects: exampleProjects() })
-  const store = createWorkspace(backend)
-  await store.getState().openProject(EXAMPLE_ROOT)
-  return { backend, store }
+  const { backend, workspace } = await openExampleWorkspace()
+  return { backend, store: workspace }
 }
 
 describe("the project's names for lua-language-server", () => {
@@ -58,7 +55,6 @@ describe("the project's names for lua-language-server", () => {
 
   it('include what the packages it depends on export, and a stub per exported module file', async () => {
     const { store } = await example()
-    await new Promise((resolve) => setTimeout(resolve, 20))
     const state = store.getState()
     const packages = packageSources(state)
     expect(packages.map((it) => it.namespace)).toEqual(['library'])

@@ -50,7 +50,9 @@ describe('the MCP transport', () => {
     const sent = vi.spyOn(backend, 'mcpSend')
     backend.testMcpMessage('hello')
     backend.testMcpMessage({ jsonrpc: '2.0', method: 'notifications/initialized' })
-    await new Promise((resolve) => setTimeout(resolve, 10))
-    expect(sent).not.toHaveBeenCalled()
+    // Messages are handled in order: once a later request is answered, these two have been
+    // handled, and nothing was sent for them.
+    expect((await backend.testMcpCall('tools/list')).result).toBeDefined()
+    expect(sent.mock.calls.length).toBe(1)
   })
 })

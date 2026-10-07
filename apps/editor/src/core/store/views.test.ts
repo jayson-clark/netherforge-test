@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { MemoryBackend } from '@/core/backend/memory'
 import type { CentityFile } from '@/core/format'
-import { EXAMPLE_ROOT, exampleProject } from '@/testing/fixtures'
+import { openExampleWorkspace, settle } from '@/testing/workspace'
 import { liveViews } from './views'
-import { createWorkspace, type WorkspaceStore } from './workspace'
+import type { WorkspaceStore } from './workspace'
 
 const TOWER = 'centities/tower/centity.json'
 const SCRIPT = 'centities/tower/script.lua'
@@ -13,11 +13,11 @@ let store: WorkspaceStore
 const ws = () => store.getState()
 
 beforeEach(async () => {
-  backend = new MemoryBackend({ projects: { [EXAMPLE_ROOT]: exampleProject } })
-  store = createWorkspace(backend)
-  await ws().openProject(EXAMPLE_ROOT)
+  vi.useFakeTimers()
+  ;({ backend, workspace: store } = await openExampleWorkspace())
   await ws().openFile(TOWER)
 })
+afterEach(() => vi.useRealTimers())
 
 describe('view state', () => {
   it('keeps a selection and state per document, merging state changes', () => {
@@ -66,8 +66,8 @@ describe('view state', () => {
 
     await ws().openFile('menus/shop/menu.json')
     ws().select('menus/shop/menu.json', [13])
-    await backend.testDelete('menus/shop/menu.json')
-    await new Promise((resolve) => setTimeout(resolve, 5))
+    backend.testDelete('menus/shop/menu.json')
+    await settle()
     expect(ws().views).toEqual({})
 
     await ws().openFile('dialogs/welcome/dialog.json')

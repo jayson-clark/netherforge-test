@@ -1,11 +1,11 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
-import { createApp, AppProvider, type AppStores } from '@/state/providers'
+import type { MemoryBackend } from '@/core/backend/memory'
+import { AppProvider, type AppStores } from '@/state/providers'
 import { DialogHost } from '@/ui/dialogs'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
 import { SettingsScreen } from './settings/SettingsScreen'
 import { askToUntrust, TrustBanner } from './TrustBanner'
+import { openExampleApp } from '@/testing/workspace'
 
 let backend: MemoryBackend
 let app: AppStores
@@ -13,9 +13,7 @@ let app: AppStores
 beforeEach(async () => {
   localStorage.clear()
   // Every project given to the memory backend is trusted, as one the user trusted before.
-  backend = new MemoryBackend({ projects: exampleProjects() })
-  app = createApp(backend)
-  await app.workspace.getState().openProject(EXAMPLE_ROOT)
+  ;({ backend, app } = await openExampleApp())
 })
 
 afterEach(async () => {

@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MEMORY_MCP_TOKEN, MemoryBackend } from '@/core/backend/memory'
 import { canonicalizeModel, type CentityFile, type RecipeFile } from '@/core/format'
 import { EXAMPLE_ROOT, exampleFiles, exampleProject, exampleProjects } from '@/testing/fixtures'
+import { exampleBackend, openExampleWorkspace, settle } from '@/testing/workspace'
 import { modelOf, sameJson } from './documents'
 import { readOnlyReason } from './project'
 import { SETTINGS_PATH, SETTINGS_TAB } from './tabs'
@@ -10,17 +11,15 @@ import { createWorkspace, type WorkspaceStore } from './workspace'
 const TOWER = 'centities/tower/centity.json'
 const SCRIPT = 'centities/tower/script.lua'
 
-/** Lets the memory backend's change events and the store's async work settle. */
-const settle = () => new Promise((resolve) => setTimeout(resolve, 5))
-
 let backend: MemoryBackend
 let store: WorkspaceStore
 
+// The memory backend's change events and the store's async work run on timers: `settle()`.
 beforeEach(async () => {
-  backend = new MemoryBackend({ projects: exampleProjects() })
-  store = createWorkspace(backend)
-  await store.getState().openProject(EXAMPLE_ROOT)
+  vi.useFakeTimers()
+  ;({ backend, workspace: store } = await openExampleWorkspace())
 })
+afterEach(() => vi.useRealTimers())
 
 const ws = () => store.getState()
 const tower = () => modelOf<CentityFile>(ws().docs[TOWER])!
@@ -155,9 +154,7 @@ describe('workspace', () => {
   })
 
   it('writes the docs for coding agents on open, and only when they changed', async () => {
-    await vi.waitFor(() =>
-      expect(Object.keys(backend.testFiles())).toContain('.netherforge/docs/README.md'),
-    )
+    await settle()
     const files = backend.testFiles()
     expect(files['.netherforge/docs/format/centity.md']).toMatch(/^# /m)
     expect(files['.netherforge/docs/reference/nf.md']).toBeDefined()
@@ -165,7 +162,6 @@ describe('workspace', () => {
 
     const write = vi.spyOn(backend, 'writeText')
     await ws().openProject(EXAMPLE_ROOT)
-    await settle()
     await settle()
     expect(write.mock.calls.filter(([path]) => path.startsWith('.netherforge/docs/'))).toEqual([])
   })
@@ -720,10 +716,9 @@ describe('workspace', () => {
 describe('the default font file', () => {
   const FONT = 'fonts/default.json'
   const withClient = (extra: Record<string, string> = {}) =>
-    new MemoryBackend({
-      projects: exampleProjects(EXAMPLE_ROOT, { ...exampleProject, ...extra }),
-      importedClients: ['26.3'],
-      glyphAdvances: { '26.3': { '65': 6, '32': 4 } },
+    exampleBackend({
+      project: { ...exampleProject, ...extra },
+      backend: { importedClients: ['26.3'], glyphAdvances: { '26.3': { '65': 6, '32': 4 } } },
     })
 
   it('is written from the import, canonically, and only when it differs', async () => {
@@ -752,7 +747,7 @@ describe('the default font file', () => {
     await settle()
     expect(client.testFiles()[FONT]).toContain('"minecraft": "26.3"')
     client.testDelete(FONT)
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await settle()
     expect(client.testFiles()[FONT]).toContain('"65": 6')
 
     // No import: nothing to write from, and nothing to complain about.
@@ -820,13 +815,9 @@ describe('read-only files', () => {
 
 describe('glyph advances', () => {
   it('come from the client import, apart from the game data validation reads', async () => {
-    const withClient = new MemoryBackend({
-      projects: exampleProjects(),
-      importedClients: ['26.3'],
-      glyphAdvances: { '26.3': { '65': 6 } },
+    const { workspace: store } = await openExampleWorkspace({
+      backend: { importedClients: ['26.3'], glyphAdvances: { '26.3': { '65': 6 } } },
     })
-    const store = createWorkspace(withClient)
-    await store.getState().openProject(EXAMPLE_ROOT)
     expect(store.getState().glyphAdvances).toEqual({ '65': 6 })
     // No server export: validation gets no game data, text measuring still has the advances.
     expect(store.getState().gameData).toBeNull()

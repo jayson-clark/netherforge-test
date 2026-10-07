@@ -1,10 +1,10 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
+import type { MemoryBackend } from '@/core/backend/memory'
 import type { ParticleEffectFile } from '@/core/format'
-import { AppProvider, createApp, type AppStores } from '@/state/providers'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
+import { AppProvider, type AppStores } from '@/state/providers'
 import { PlayOnServer } from './PlayOnServer'
+import { openExampleApp } from '@/testing/workspace'
 
 const SPARKLE = 'particles/sparkle/effect.json'
 
@@ -12,16 +12,20 @@ let backend: MemoryBackend
 let app: AppStores
 
 beforeEach(async () => {
-  backend = new MemoryBackend({ projects: exampleProjects() })
-  app = createApp(backend)
-  await app.workspace.getState().openProject(EXAMPLE_ROOT)
+  ;({ backend, app } = await openExampleApp())
   await app.workspace.getState().openFile(SPARKLE)
   await app.run.getState().connect()
 })
 
 afterEach(cleanup)
 
-const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+/** What the editor sent the dev server, past what it sends on connecting. */
+const sent = () =>
+  backend.bridgeLog.filter((it) => it.method !== 'profiler_subscribe' && it.method !== 'settings')
+
+/** Once the editor has sent [method]. */
+const sentOnce = (method: string) =>
+  waitFor(() => expect(sent().map((it) => it.method)).toContain(method))
 
 function show(loop: boolean) {
   render(
@@ -50,29 +54,23 @@ describe('Play on server', () => {
     const { play, stop } = show(true)
     expect((play as HTMLButtonElement).disabled).toBe(false)
     fireEvent.click(play)
-    await settle()
+    await sentOnce('play_particle_effect')
     expect(app.workspace.getState().docs[SPARKLE]?.dirty).toBe(false)
-    expect(
-      backend.bridgeLog.filter(
-        (it) => it.method !== 'profiler_subscribe' && it.method !== 'settings',
-      ),
-    ).toEqual([
+    expect(sent()).toEqual([
       { method: 'reload', params: { paths: [SPARKLE] } },
       { method: 'play_particle_effect', params: { effect: 'sparkle', loop: true } },
     ])
     fireEvent.click(stop)
-    await settle()
+    await sentOnce('stop_particle_effects')
     expect(backend.bridgeLog.at(-1)).toEqual({ method: 'stop_particle_effects' })
   })
 
   it('plays a saved effect without saving it again', async () => {
     act(() => backend.testConnect())
     fireEvent.click(show(false).play)
-    await settle()
-    expect(
-      backend.bridgeLog.filter(
-        (it) => it.method !== 'profiler_subscribe' && it.method !== 'settings',
-      ),
-    ).toEqual([{ method: 'play_particle_effect', params: { effect: 'sparkle', loop: false } }])
+    await sentOnce('play_particle_effect')
+    expect(sent()).toEqual([
+      { method: 'play_particle_effect', params: { effect: 'sparkle', loop: false } },
+    ])
   })
 })

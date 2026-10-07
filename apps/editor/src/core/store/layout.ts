@@ -166,7 +166,8 @@ function parseStored(text: string | null): unknown {
 }
 
 const storageKey = (root: string) => `netherforge.layout:${root}`
-const SAVE_DELAY_MS = 300
+/** How long after a change the layout is written. */
+export const SAVE_DELAY_MS = 300
 
 export function createLayout(): LayoutStore {
   return createStore<LayoutState>()((set, get) => ({

@@ -1,10 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { MemoryBackend } from '@/core/backend/memory'
 import type { CentityFile, MenuFile, ResourcePackFile, RecipeFile } from '@/core/format'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
+import { openExampleWorkspace, settle } from '@/testing/workspace'
 import { modelOf } from './documents'
 import { tabIdOf } from './tabs'
-import { createWorkspace, type WorkspaceStore } from './workspace'
+import type { WorkspaceStore } from './workspace'
 
 const TOWER = 'centities/tower/centity.json'
 const RUBY = 'items/ruby/item.json'
@@ -13,19 +13,16 @@ const DUST = 'recipes/ruby_dust.json'
 const SWORD = 'recipes/ruby_sword.json'
 const MENU = 'menus/shop/menu.json'
 
-/** Lets the memory backend's change events and the store's async work settle. */
-const settle = () => new Promise((resolve) => setTimeout(resolve, 20))
-
 let backend: MemoryBackend
 let store: WorkspaceStore
 const ws = () => store.getState()
 
 beforeEach(async () => {
-  backend = new MemoryBackend({ projects: exampleProjects() })
-  store = createWorkspace(backend)
-  await ws().openProject(EXAMPLE_ROOT)
+  vi.useFakeTimers()
+  ;({ backend, workspace: store } = await openExampleWorkspace())
   await settle()
 })
+afterEach(() => vi.useRealTimers())
 
 /** Every project file's bytes (base64), text and binary alike. */
 async function disk(): Promise<Record<string, string | null>> {

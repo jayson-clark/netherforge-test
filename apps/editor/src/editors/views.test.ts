@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
-import { createWorkspace, type WorkspaceStore } from '@/core/store/workspace'
-import { EXAMPLE_ROOT, exampleProject } from '@/testing/fixtures'
+import type { WorkspaceStore } from '@/core/store/workspace'
+import { openExampleWorkspace } from '@/testing/workspace'
 import { distinct, toggled, viewOf } from './views'
 
 const TOWER = 'centities/tower/centity.json'
@@ -12,8 +11,7 @@ const TERRAIN = 'terrain/ruby_hills.json'
 let store: WorkspaceStore
 
 beforeEach(async () => {
-  store = createWorkspace(new MemoryBackend({ projects: { [EXAMPLE_ROOT]: exampleProject } }))
-  await store.getState().openProject(EXAMPLE_ROOT)
+  ;({ workspace: store } = await openExampleWorkspace())
   await store.getState().openFile(TOWER)
 })
 

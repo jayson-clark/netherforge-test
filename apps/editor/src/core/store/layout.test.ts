@@ -1,17 +1,16 @@
-import { describe, expect, it } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { EXAMPLE_ROOT } from '@/testing/fixtures'
+import { exampleWorkspace, settle } from '@/testing/workspace'
 import {
   createLayout,
   DEFAULT_LAYOUT,
   followProject,
   readLayout,
+  SAVE_DELAY_MS,
   type LayoutStorage,
 } from './layout'
 import { SETTINGS_PATH } from './tabs'
 import { createWorkspace } from './workspace'
-
-const settle = () => new Promise((resolve) => setTimeout(resolve, 400))
 
 function mapStorage(): LayoutStorage & { map: Map<string, string> } {
   const map = new Map<string, string>()
@@ -61,10 +60,15 @@ describe('showBottom', () => {
 })
 
 describe('followProject', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
   it('remembers the layout and open tabs per project, and reopens them', async () => {
     const storage = mapStorage()
-    const backend = new MemoryBackend({ projects: exampleProjects() })
-    let workspace = createWorkspace(backend)
+    const key = `netherforge.layout:${EXAMPLE_ROOT}`
+    const example = exampleWorkspace()
+    const { backend } = example
+    let workspace = example.workspace
     let layout = createLayout()
     let stop = followProject(layout, workspace, storage)
     await workspace.getState().openProject(EXAMPLE_ROOT)
@@ -74,11 +78,15 @@ describe('followProject', () => {
     workspace.getState().activate('script:centities/tower/script.lua')
     layout.getState().set({ outlineWidth: 300, bottomRightTab: 'console', bottomSplit: 0.3 })
     layout.getState().toggle('inspector')
-    await settle()
+    // Written a moment after the last change, not on every one.
+    await vi.advanceTimersByTimeAsync(SAVE_DELAY_MS - 1)
+    expect(storage.map.has(key)).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    const saved = JSON.parse(storage.map.get(key)!)
+    expect(saved).toMatchObject({ outlineWidth: 300, inspectorOpen: false })
     await workspace.getState().closeProject()
     stop()
 
-    const saved = JSON.parse(storage.map.get(`netherforge.layout:${EXAMPLE_ROOT}`)!)
     expect(saved.openPaths).toEqual([
       'centities/tower/script.lua',
       'menus/shop/menu.json',
@@ -109,8 +117,7 @@ describe('followProject', () => {
       `netherforge.layout:${EXAMPLE_ROOT}`,
       JSON.stringify({ openPaths: ['menus/gone/menu.json', 'menus/shop/menu.json'] }),
     )
-    const backend = new MemoryBackend({ projects: exampleProjects() })
-    const workspace = createWorkspace(backend)
+    const { workspace } = exampleWorkspace()
     const layout = createLayout()
     const stop = followProject(layout, workspace, storage)
     await workspace.getState().openProject(EXAMPLE_ROOT)

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
+import type { MemoryBackend } from '@/core/backend/memory'
+import { EXAMPLE_ROOT } from '@/testing/fixtures'
+import { exampleBackend } from '@/testing/workspace'
 import {
   finishThumbnail,
   forgetSaved,
@@ -20,7 +21,7 @@ const INDEX = `${THUMBNAIL_FOLDER}/index.json`
 let backend: MemoryBackend
 
 beforeEach(async () => {
-  backend = new MemoryBackend({ projects: exampleProjects() })
+  backend = exampleBackend()
   await backend.openProject(EXAMPLE_ROOT)
   useThumbnails.setState({ root: null })
   await loadThumbnails(backend, EXAMPLE_ROOT)
