@@ -18,7 +18,16 @@ kotlin {
 
     js(IR) {
         // Nothing here touches browser or Node APIs; nodejs() is what runs the tests.
-        nodejs()
+        nodejs {
+            testTask {
+                useMocha {
+                    // Mocha's default of 2 s per test is too tight for the terrain tests (they generate whole chunks)
+                    // and the Lua ones (wasmoon loads its WebAssembly first) on a shared CI runner, which is several
+                    // times slower than a laptop. A test that hangs still fails, well before the JVM's 5-minute task limit.
+                    timeout = "30s"
+                }
+            }
+        }
         binaries.library()
         generateTypeScriptDefinitions()
         useEsModules()
