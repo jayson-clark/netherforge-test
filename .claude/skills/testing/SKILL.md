@@ -55,9 +55,30 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
      The runtime half (`testing/ScriptTests`, `NfTestImpl`, the `testOnly`
      namespace, `RaisableEvents`) is in the plugin-runtime and lua-api skills.
    - `apps/editor/src`: Vitest + Testing Library. Assert on behaviour, not DOM
-     snapshots. A `*.node.test.ts` runs in Node (type-checked by
+     snapshots; find things by role and name (`getByRole`), never test ids or
+     `querySelector`: a control a test can't name is an a11y bug to fix in the
+     component. A `*.node.test.ts` runs in Node (type-checked by
      `tsconfig.node.json`): `core/luals/luals.node.test.ts` drives the real
      lua-language-server the way the editor sets it up.
+     - **The shared set-up** is `src/testing/workspace.ts`:
+       `openExampleWorkspace()` (a workspace store with `examples/basic` open,
+       `{ backend, workspace, ws }`), `openExampleApp()` (every store as
+       `createApp` wires them, `{ backend, app }`), `exampleWorkspace()` (not
+       opened yet, to attach something first) and `exampleBackend()`; each
+       takes `{ project, backend }` (the example's files, the memory backend's
+       other options). Don't build that by hand in a test.
+     - **No wall-clock waits.** A test never sleeps a fixed time or relies on
+       one timer beating another. Code that runs on timers (the memory
+       backend's file events, validation's `VALIDATE_DELAY_MS`, the layout's
+       `SAVE_DELAY_MS`, MCP tools' settling, the fake server) is tested on
+       `vi.useFakeTimers()` and moved on with `settle(ms)` (which adds
+       `HOPS_MS` for chains of 0 ms timers, each 1 ms on the fake clock),
+       `advanceUntil(promise)` for code that sleeps until something answers,
+       or `vi.advanceTimersByTimeAsync` at a delay's exact end. What finishes
+       off the JS thread (WebCrypto hashing a package, LuaLS, a worker) or in
+       React is awaited as state: `vi.waitFor`, Testing Library's
+       `waitFor`/`findBy…`, both bounded. Component tests run on real timers
+       (Testing Library's waits don't drive vitest's fake clock).
    - `apps/editor/src-tauri`: `cargo test` with temp dirs.
 2. **Golden and contract tests.**
    - `examples/*` must load clean and be byte-for-byte canonical (JVM and JS),
@@ -234,7 +255,15 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
 4. **Editor UI flows**: `pnpm test:e2e`, Playwright against the e2e web build
    (`vite build --mode e2e`), which runs on the memory backend with an
    in-memory project, in the spec files under
-   `apps/editor/e2e/`. Only flows nothing lower can cover go here. There's no
+   `apps/editor/e2e/`. Only flows nothing lower can cover go here: Monaco,
+   WebGL and the client's pictures, the real worker, layout and pointer
+   gestures, focus across the workbench, one canonical save per editor, flows
+   across editors. What a field does to the model is the editor's component
+   test (`editors/<kind>/*Editor.test.tsx`), and a store's rules are the
+   store's; an e2e flow says in a comment which test covers the rest. Keep each
+   flow to one story (a shared set-up helper, not one long test), compare by
+   role and accessible name (`ariaSnapshot`, not `innerHTML`), and bound every
+   wait (`expect.poll` with a timeout, never a loop on `waitForTimeout`). There's no
    lua-language-server there (scripts are highlighted only), so Lua language
    features are tested against the real server in vitest, above.
    - **Screenshots** of the pixel-exact previews (a menu's window with its
