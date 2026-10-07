@@ -14,7 +14,7 @@
 
 use std::path::Path;
 
-use crate::error::{Context, Result};
+use crate::error::Result;
 use crate::fs::atomic::write_atomic;
 
 pub const FILE: &str = "mcp-token";
@@ -44,6 +44,7 @@ pub fn load_or_create(path: &Path) -> Result<String> {
     write_atomic(path, token.as_bytes())?;
     #[cfg(unix)]
     {
+        use crate::error::Context;
         use std::os::unix::fs::PermissionsExt;
         std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))
             .context(|| format!("Couldn't restrict {}", path.display()))?;
