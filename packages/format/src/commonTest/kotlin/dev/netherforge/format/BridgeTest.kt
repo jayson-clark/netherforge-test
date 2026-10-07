@@ -17,6 +17,8 @@ import dev.netherforge.format.bridge.RpcMessage
 import dev.netherforge.format.bridge.RpcNotification
 import dev.netherforge.format.bridge.RpcRequest
 import dev.netherforge.format.bridge.RpcResponse
+import dev.netherforge.format.bridge.SetSettingParams
+import dev.netherforge.format.bridge.SettingState
 import dev.netherforge.format.bridge.Status
 import kotlinx.serialization.descriptors.PolymorphicKind
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -129,6 +131,28 @@ class BridgeTest {
             JsonRpc.line(notification)
         )
         assertEquals(listOf<ConsoleEntry>(Log(LogLevel.INFO, "a"), Log(LogLevel.WARN, "b")), Bridge.console.decode(notification.params))
+    }
+
+    /** The recording sets a value and is answered; what it doesn't show is a reset and a setting the owner never set. */
+    @Test
+    fun settingsMessagesLeaveOutWhatTheyDontSay() {
+        val reset = Bridge.setSetting.request(5, SetSettingParams("basic", "greeting"))
+        // No value puts the setting back to its default: the key is left out, not sent as null.
+        assertEquals(
+            """{"jsonrpc":"2.0","id":5,"method":"set_setting","params":{"namespace":"basic","setting":"greeting"}}""",
+            JsonRpc.line(reset)
+        )
+        assertEquals(SetSettingParams("basic", "greeting"), Bridge.setSetting.decodeParams(reset.params))
+        val state = Bridge.json.decodeFromString(
+            SettingState.serializer(),
+            """{"definition":{"type":"boolean","description":"On?","default":true},"value":true}"""
+        )
+        assertEquals(false, state.set, "a value the owner didn't set is the default")
+        assertEquals(null, state.problem)
+        assertEquals(
+            """{"definition":{"type":"boolean","description":"On?","default":true},"value":true}""",
+            Bridge.json.encodeToString(SettingState.serializer(), state)
+        )
     }
 
     @Test
