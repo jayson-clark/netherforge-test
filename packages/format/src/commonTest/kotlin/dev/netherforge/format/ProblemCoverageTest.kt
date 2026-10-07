@@ -82,14 +82,12 @@ class ProblemCoverageTest {
         "settings.unknown" to plugin("SettingsTest"),
         "script.error" to plugin("EventTest"),
         "script.slow" to plugin("ScriptCostsTest"),
-        "particles.budget" to plugin("ParticleEffectTest")
+        "particles.budget" to plugin("ParticleEffectTest"),
+        "runtime.pack-format" to plugin("PackTest")
     )
 
     /** Codes nothing tests yet, each with what it would take. Keep this short; every entry is a gap. */
-    private val untested: Map<String, String> = mapOf(
-        "runtime.pack-format" to
-            "the plugin's Packs.kt reports it when the server's resource pack format is unknown; it needs a runtime test"
-    )
+    private val untested: Map<String, String> = emptyMap()
 
     private fun produced(): Set<String> =
         ProblemGoldens.expectedFiles().flatMap { path -> ProblemGoldens.expected(path).mapNotNull { it.code } }.toSet()
