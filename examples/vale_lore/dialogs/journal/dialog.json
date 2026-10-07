@@ -1,0 +1,37 @@
+{
+  "$schema": "../../.netherforge/schema/dialog.schema.json",
+  "name": "Journal",
+  "type": "multi_action",
+  "title": "<gold>Wanderer's Journal",
+  "columns": 2,
+  "body": [
+    {
+      "type": "item",
+      "item": {
+        "item": "journal"
+      },
+      "showTooltip": false
+    },
+    {
+      "type": "message",
+      "text": "<gray>Your quests will be written here.",
+      "width": 300,
+      "key": "entries"
+    }
+  ],
+  "buttons": [
+    {
+      "key": "quests",
+      "label": "Quests",
+      "tooltip": "What you're doing now"
+    },
+    {
+      "key": "history",
+      "label": "Past deeds",
+      "tooltip": "Every quest you've begun and finished, and when"
+    }
+  ],
+  "script": {
+    "file": "script.lua"
+  }
+}

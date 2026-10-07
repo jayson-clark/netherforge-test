@@ -1,0 +1,1 @@
+{ "model": "ui/half", "hardness": -2, "tick": 0, "requiresTool": true, "script": { "file": "missing.lua" } }

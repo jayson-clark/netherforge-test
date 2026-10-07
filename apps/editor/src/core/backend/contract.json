@@ -1,0 +1,721 @@
+{
+  "$comment": "The backend contract: what MemoryBackend and the Rust backend must both do. Run by contract.test.ts (MemoryBackend) and src-tauri/src/commands/contract.rs (the real commands, through Tauri's IPC on its mock runtime). Each case starts from a fresh backend with `project` (project path -> text) at $ROOT, opened first unless `open` is false. A step calls a command by its Rust name with the arguments the UI sends, and expects `ok` (matched as a subset: every key given must match, \"$any\" matches anything, arrays match element by element) or an `error` code. \"$ROOT\" in a string is the project's absolute root. Each of `repositories` is a git repository at \"$GIT/<name>\" (a file:// URL), its files committed on main and tagged v1. A step with `save` keeps its answer (a string) as \"$<save>\" for the steps after it.",
+  "project": {
+    "netherforge.json": "{ \"name\": \"Contract\", \"namespace\": \"contract\", \"minecraft\": \"26.3\" }\n",
+    "modules/shop/init.lua": "return {}\n",
+    "B.txt": "upper\n",
+    "a.txt": "lower\n",
+    "_under.txt": "under\n",
+    ".git/config": "[core]\n",
+    ".netherforge/schema/centity.json": "{}\n"
+  },
+  "packages": {
+    "lib": {
+      "netherforge.json": "{ \"namespace\": \"lib\" }\n",
+      "items/gem/item.json": "{}\n",
+      "items/gem/script.lua": "-- gem\n",
+      ".git/HEAD": "ref\n"
+    },
+    "notapackage": {
+      "readme.txt": "hi\n"
+    }
+  },
+  "repositories": {
+    "lib": {
+      "netherforge.json": "{ \"namespace\": \"lib\" }\n",
+      "items/gem/item.json": "{}\n"
+    }
+  },
+  "cases": [
+    {
+      "name": "a package beside the project is listed with digests, read and copied in, never over anything",
+      "steps": [
+        {
+          "call": "package_files",
+          "args": { "location": "../lib" },
+          "ok": {
+            "root": "$any",
+            "files": [
+              {
+                "path": "items/gem/item.json",
+                "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+              },
+              { "path": "items/gem/script.lua", "sha256": "$any" },
+              { "path": "netherforge.json", "sha256": "$any" }
+            ]
+          }
+        },
+        {
+          "call": "package_read_text",
+          "args": { "location": "./../lib", "path": "items/gem/script.lua" },
+          "ok": "-- gem\n"
+        },
+        {
+          "call": "package_read_text",
+          "args": { "location": "../lib", "path": "../project/a.txt" },
+          "error": "invalidPath"
+        },
+        { "call": "package_files", "args": { "location": "../missing" }, "error": "notFound" },
+        { "call": "package_files", "args": { "location": "../notapackage" }, "error": "notFound" },
+        { "call": "package_files", "args": { "location": "/lib" }, "error": "invalidPath" },
+        { "call": "package_files", "args": { "location": "..\\lib" }, "error": "invalidPath" },
+        {
+          "call": "package_copy",
+          "args": { "location": "../lib", "from": "items/gem", "to": "items/shiny" },
+          "ok": null
+        },
+        { "call": "fs_read_text", "args": { "path": "items/shiny/script.lua" }, "ok": "-- gem\n" },
+        {
+          "call": "package_copy",
+          "args": { "location": "../lib", "from": "items/gem", "to": "items/shiny" },
+          "error": "alreadyExists"
+        },
+        {
+          "call": "package_copy",
+          "args": { "location": "../lib", "from": "items/gem", "to": ".git/hooks" },
+          "error": "readOnly"
+        },
+        {
+          "call": "package_copy",
+          "args": { "location": "../lib", "from": "items/none", "to": "items/none" },
+          "error": "notFound"
+        }
+      ]
+    },
+    {
+      "name": "a git package is fetched into the package cache and read at git:<commit>, a pinned one without the network",
+      "steps": [
+        { "call": "project_trust", "args": { "trusted": true }, "ok": { "trusted": true } },
+        {
+          "call": "package_fetch_git",
+          "args": { "url": "$GIT/lib", "rev": "v1", "commit": null },
+          "ok": "$any",
+          "save": "commit"
+        },
+        {
+          "call": "package_files",
+          "args": { "location": "git:$commit" },
+          "ok": {
+            "root": "$any",
+            "files": [
+              {
+                "path": "items/gem/item.json",
+                "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+              },
+              { "path": "netherforge.json", "sha256": "$any" }
+            ]
+          }
+        },
+        {
+          "call": "package_read_text",
+          "args": { "location": "git:$commit", "path": "items/gem/item.json" },
+          "ok": "{}\n"
+        },
+        {
+          "call": "package_fetch_git",
+          "args": { "url": "$GIT/lib", "rev": null, "commit": null },
+          "ok": "$commit"
+        },
+        {
+          "call": "package_fetch_git",
+          "args": { "url": "$GIT/gone", "rev": "v1", "commit": "$commit" },
+          "ok": "$commit"
+        },
+        {
+          "call": "package_fetch_git",
+          "args": { "url": "$GIT/lib", "rev": "nope", "commit": null },
+          "error": "network"
+        },
+        {
+          "call": "package_fetch_git",
+          "args": {
+            "url": "$GIT/lib",
+            "rev": null,
+            "commit": "ffffffffffffffffffffffffffffffffffffffff"
+          },
+          "error": "notFound"
+        },
+        {
+          "call": "package_fetch_git",
+          "args": { "url": "http://example.com/lib.git", "rev": null, "commit": null },
+          "error": "invalid"
+        },
+        {
+          "call": "package_fetch_git",
+          "args": { "url": "ext::sh -c touch% pwned", "rev": null, "commit": null },
+          "error": "invalid"
+        },
+        {
+          "call": "package_fetch_git",
+          "args": { "url": "$GIT/lib", "rev": "-x", "commit": null },
+          "error": "invalid"
+        },
+        {
+          "call": "package_fetch_git",
+          "args": { "url": "$GIT/lib", "rev": null, "commit": "abc" },
+          "error": "invalid"
+        },
+        { "call": "package_files", "args": { "location": "git:abc" }, "error": "invalidPath" },
+        {
+          "call": "package_files",
+          "args": { "location": "git:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" },
+          "error": "notFound"
+        }
+      ]
+    },
+    {
+      "name": "an untrusted project edits, but nothing runs or reaches out for it until it's trusted",
+      "steps": [
+        { "call": "fs_write_text", "args": { "path": "a.txt", "text": "edited\n" }, "ok": null },
+        { "call": "server_start", "error": "untrusted" },
+        { "call": "tests_run", "args": { "filter": null }, "error": "untrusted" },
+        { "call": "luals_start", "error": "untrusted" },
+        {
+          "call": "package_fetch_git",
+          "args": { "url": "$GIT/lib", "rev": "v1", "commit": null },
+          "error": "untrusted"
+        },
+        {
+          "call": "package_fetch_git",
+          "args": { "url": "http://example.com/lib.git", "rev": null, "commit": null },
+          "error": "invalid"
+        },
+        {
+          "call": "project_trust",
+          "args": { "trusted": true },
+          "ok": { "root": "$ROOT", "name": "Contract", "trusted": true }
+        },
+        { "call": "project_open", "args": { "root": "$ROOT" }, "ok": { "trusted": true } },
+        { "call": "server_start", "error": "eulaRequired" },
+        {
+          "call": "package_fetch_git",
+          "args": { "url": "$GIT/lib", "rev": "v1", "commit": null },
+          "ok": "$any",
+          "save": "commit"
+        },
+        { "call": "project_trust", "args": { "trusted": false }, "ok": { "trusted": false } },
+        { "call": "server_start", "error": "untrusted" },
+        { "call": "tests_run", "args": { "filter": "greets" }, "error": "untrusted" },
+        {
+          "call": "package_fetch_git",
+          "args": { "url": "$GIT/lib", "rev": "v1", "commit": "$commit" },
+          "ok": "$commit"
+        },
+        { "call": "project_close", "ok": null },
+        { "call": "project_trust", "args": { "trusted": true }, "error": "noProject" },
+        { "call": "project_open", "args": { "root": "$ROOT" }, "ok": { "trusted": false } }
+      ]
+    },
+    {
+      "name": "file commands need an open project",
+      "open": false,
+      "steps": [
+        { "call": "fs_list", "error": "noProject" },
+        { "call": "fs_read_text", "args": { "path": "a.txt" }, "error": "noProject" },
+        { "call": "fs_write_text", "args": { "path": "a.txt", "text": "x" }, "error": "noProject" },
+        { "call": "tests_run", "args": { "filter": null }, "error": "noProject" }
+      ]
+    },
+    {
+      "name": "opening a project names it from its manifest and remembers it",
+      "open": false,
+      "steps": [
+        { "call": "project_open", "args": { "root": "$ROOT/modules" }, "error": "invalid" },
+        {
+          "call": "project_open",
+          "args": { "root": "$ROOT" },
+          "ok": { "root": "$ROOT", "name": "Contract", "trusted": false }
+        },
+        {
+          "call": "project_recent",
+          "ok": [{ "root": "$ROOT", "name": "Contract", "openedAt": "$any" }]
+        },
+        { "call": "project_close", "ok": null },
+        { "call": "fs_list", "error": "noProject" }
+      ]
+    },
+    {
+      "name": "listing is sorted byte-wise and hides .git and .netherforge",
+      "steps": [
+        {
+          "call": "fs_list",
+          "ok": [
+            { "path": "B.txt", "size": 6, "modified": "$any" },
+            { "path": "_under.txt", "size": 6, "modified": "$any" },
+            { "path": "a.txt", "size": 6, "modified": "$any" },
+            { "path": "modules/shop/init.lua", "size": 10, "modified": "$any" },
+            { "path": "netherforge.json", "size": "$any", "modified": "$any" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "text round-trips and writes make their folders",
+      "steps": [
+        {
+          "call": "fs_write_text",
+          "args": { "path": "deep/er/note.md", "text": "hi\n" },
+          "ok": null
+        },
+        { "call": "fs_read_text", "args": { "path": "deep/er/note.md" }, "ok": "hi\n" },
+        { "call": "fs_write_text", "args": { "path": "a.txt", "text": "again" }, "ok": null },
+        { "call": "fs_read_text", "args": { "path": "a.txt" }, "ok": "again" }
+      ]
+    },
+    {
+      "name": "reading what isn't there or isn't text",
+      "steps": [
+        { "call": "fs_read_text", "args": { "path": "missing.txt" }, "error": "notFound" },
+        {
+          "call": "fs_write_bytes",
+          "args": { "path": "img.png", "bytes": [137, 80, 78, 71, 255, 0] },
+          "ok": null
+        },
+        { "call": "fs_read_text", "args": { "path": "img.png" }, "error": "invalid" }
+      ]
+    },
+    {
+      "name": "paths that aren't project paths are refused",
+      "steps": [
+        { "call": "fs_read_text", "args": { "path": "" }, "error": "invalidPath" },
+        { "call": "fs_read_text", "args": { "path": "../outside.txt" }, "error": "invalidPath" },
+        { "call": "fs_read_text", "args": { "path": "/etc/hosts" }, "error": "invalidPath" },
+        { "call": "fs_read_text", "args": { "path": "a//b.txt" }, "error": "invalidPath" },
+        { "call": "fs_read_text", "args": { "path": "./a.txt" }, "error": "invalidPath" },
+        {
+          "call": "fs_write_text",
+          "args": { "path": "a\\b.txt", "text": "x" },
+          "error": "invalidPath"
+        },
+        { "call": "fs_delete", "args": { "path": "modules/../a.txt" }, "error": "invalidPath" },
+        { "call": "fs_read_text", "args": { "path": "a.txt:stream" }, "error": "invalidPath" }
+      ]
+    },
+    {
+      "name": "names Windows would change or reserve are refused on every OS",
+      "steps": [
+        {
+          "call": "fs_write_text",
+          "args": { "path": "notes.", "text": "x" },
+          "error": "invalidPath"
+        },
+        {
+          "call": "fs_write_text",
+          "args": { "path": "dir./a.txt", "text": "x" },
+          "error": "invalidPath"
+        },
+        {
+          "call": "fs_write_text",
+          "args": { "path": "a.txt ", "text": "x" },
+          "error": "invalidPath"
+        },
+        { "call": "fs_write_text", "args": { "path": "con", "text": "x" }, "error": "invalidPath" },
+        {
+          "call": "fs_write_text",
+          "args": { "path": "sub/CON.txt", "text": "x" },
+          "error": "invalidPath"
+        },
+        {
+          "call": "fs_write_text",
+          "args": { "path": "Nul.tar.gz", "text": "x" },
+          "error": "invalidPath"
+        },
+        {
+          "call": "fs_write_text",
+          "args": { "path": "x/com1", "text": "x" },
+          "error": "invalidPath"
+        },
+        {
+          "call": "fs_write_text",
+          "args": { "path": "x/LPT9.lua", "text": "x" },
+          "error": "invalidPath"
+        },
+        {
+          "call": "fs_write_text",
+          "args": { "path": "aux /x", "text": "x" },
+          "error": "invalidPath"
+        },
+        {
+          "call": "fs_rename",
+          "args": { "from": "a.txt", "to": "prn.txt" },
+          "error": "invalidPath"
+        },
+        { "call": "fs_write_text", "args": { "path": "console.txt", "text": "ok" }, "ok": null },
+        { "call": "fs_write_text", "args": { "path": "com10.txt", "text": "ok" }, "ok": null },
+        { "call": "fs_write_text", "args": { "path": "a..b", "text": "ok" }, "ok": null }
+      ]
+    },
+    {
+      "name": ".git and most of .netherforge are read-only",
+      "steps": [
+        {
+          "call": "fs_write_text",
+          "args": { "path": ".git/config", "text": "x" },
+          "error": "readOnly"
+        },
+        {
+          "call": "fs_write_text",
+          "args": { "path": "sub/.git/hooks/x", "text": "x" },
+          "error": "readOnly"
+        },
+        {
+          "call": "fs_write_text",
+          "args": { "path": ".netherforge/server/paper.jar", "text": "x" },
+          "error": "readOnly"
+        },
+        { "call": "fs_delete", "args": { "path": ".netherforge" }, "error": "readOnly" },
+        {
+          "call": "fs_write_text",
+          "args": { "path": ".netherforge/schema/menu.json", "text": "{}" },
+          "ok": null
+        },
+        { "call": "fs_read_text", "args": { "path": ".netherforge/schema/menu.json" }, "ok": "{}" },
+        {
+          "call": "fs_rename",
+          "args": { "from": "a.txt", "to": ".git/a.txt" },
+          "error": "readOnly"
+        }
+      ]
+    },
+    {
+      "name": ".git and .netherforge are matched without regard to case, trailing dots or spaces",
+      "steps": [
+        {
+          "call": "fs_write_text",
+          "args": { "path": ".GIT/hooks/pre-commit", "text": "x" },
+          "error": "readOnly"
+        },
+        {
+          "call": "fs_write_text",
+          "args": { "path": "sub/.Git/config", "text": "x" },
+          "error": "readOnly"
+        },
+        {
+          "call": "fs_write_text",
+          "args": { "path": ".git./hooks/x", "text": "x" },
+          "error": "readOnly"
+        },
+        {
+          "call": "fs_write_text",
+          "args": { "path": ".git /hooks/x", "text": "x" },
+          "error": "readOnly"
+        },
+        {
+          "call": "fs_write_text",
+          "args": { "path": ".NetherForge/server/plugins/evil.jar", "text": "x" },
+          "error": "readOnly"
+        },
+        { "call": "fs_delete", "args": { "path": ".NETHERFORGE" }, "error": "readOnly" },
+        {
+          "call": "fs_rename",
+          "args": { "from": "a.txt", "to": ".GIT/a.txt" },
+          "error": "readOnly"
+        },
+        {
+          "call": "fs_write_text",
+          "args": { "path": ".gitignore", "text": "x" },
+          "ok": null
+        },
+        {
+          "call": "fs_write_text",
+          "args": { "path": ".git-keep/x", "text": "x" },
+          "ok": null
+        }
+      ]
+    },
+    {
+      "name": "deleting files and folders",
+      "steps": [
+        { "call": "fs_delete", "args": { "path": "missing" }, "error": "notFound" },
+        { "call": "fs_delete", "args": { "path": "modules" }, "ok": null },
+        {
+          "call": "fs_read_text",
+          "args": { "path": "modules/shop/init.lua" },
+          "error": "notFound"
+        },
+        { "call": "fs_delete", "args": { "path": "a.txt" }, "ok": null },
+        { "call": "fs_read_text", "args": { "path": "a.txt" }, "error": "notFound" }
+      ]
+    },
+    {
+      "name": "renaming files and folders",
+      "steps": [
+        {
+          "call": "fs_rename",
+          "args": { "from": "missing.txt", "to": "b.txt" },
+          "error": "notFound"
+        },
+        {
+          "call": "fs_rename",
+          "args": { "from": "a.txt", "to": "B.txt" },
+          "error": "alreadyExists"
+        },
+        { "call": "fs_rename", "args": { "from": "a.txt", "to": "new/place.txt" }, "ok": null },
+        { "call": "fs_read_text", "args": { "path": "new/place.txt" }, "ok": "lower\n" },
+        {
+          "call": "fs_rename",
+          "args": { "from": "modules/shop", "to": "modules/store" },
+          "ok": null
+        },
+        {
+          "call": "fs_read_text",
+          "args": { "path": "modules/store/init.lua" },
+          "ok": "return {}\n"
+        },
+        { "call": "fs_read_text", "args": { "path": "modules/shop/init.lua" }, "error": "notFound" }
+      ]
+    },
+    {
+      "name": "creating a project",
+      "open": false,
+      "steps": [
+        {
+          "call": "project_create",
+          "args": { "root": "$ROOT", "files": { "netherforge.json": "{}" } },
+          "error": "alreadyExists"
+        },
+        {
+          "call": "project_create",
+          "args": { "root": "$ROOT/new", "files": { "a.txt": "x" } },
+          "error": "invalid"
+        },
+        {
+          "call": "project_create",
+          "args": {
+            "root": "$ROOT/new",
+            "files": { "netherforge.json": "{ \"name\": \"Fresh\" }", "scripts/a.lua": "-- a\n" }
+          },
+          "ok": { "root": "$ROOT/new", "name": "Fresh", "trusted": true }
+        },
+        { "call": "fs_read_text", "args": { "path": "scripts/a.lua" }, "ok": "-- a\n" }
+      ]
+    },
+    {
+      "name": "settings start at their defaults and are checked",
+      "steps": [
+        {
+          "call": "settings_get",
+          "ok": {
+            "serverJvmArgs": [],
+            "serverMemoryMb": 2048,
+            "serverPort": 25565,
+            "mcpEnabled": true,
+            "mcpPort": 47615
+          }
+        },
+        {
+          "call": "settings_set",
+          "args": {
+            "settings": {
+              "serverJvmArgs": ["-Xss4m"],
+              "serverMemoryMb": 4096,
+              "serverPort": 25570,
+              "mcpEnabled": false,
+              "mcpPort": 47615
+            }
+          },
+          "ok": null
+        },
+        {
+          "call": "settings_get",
+          "ok": {
+            "serverJvmArgs": ["-Xss4m"],
+            "serverMemoryMb": 4096,
+            "serverPort": 25570,
+            "mcpEnabled": false,
+            "mcpPort": 47615
+          }
+        },
+        {
+          "call": "settings_set",
+          "args": {
+            "settings": {
+              "serverJvmArgs": [],
+              "serverMemoryMb": 100,
+              "serverPort": 25565,
+              "mcpEnabled": false,
+              "mcpPort": 47615
+            }
+          },
+          "error": "invalid"
+        },
+        {
+          "call": "settings_set",
+          "args": {
+            "settings": {
+              "serverJvmArgs": [],
+              "serverMemoryMb": 2048,
+              "serverPort": 25565,
+              "mcpEnabled": true,
+              "mcpPort": 25565
+            }
+          },
+          "error": "invalid"
+        }
+      ]
+    },
+    {
+      "name": "JVM arguments outside the allowlist are refused with their own code",
+      "steps": [
+        {
+          "call": "settings_set",
+          "args": {
+            "settings": {
+              "serverJvmArgs": [
+                "-Xmx6G",
+                "-XX:+UseG1GC",
+                "-XX:MaxGCPauseMillis=200",
+                "-Dpaper.x=1"
+              ],
+              "serverMemoryMb": 2048,
+              "serverPort": 25565,
+              "mcpEnabled": false,
+              "mcpPort": 47615
+            }
+          },
+          "ok": null
+        },
+        {
+          "call": "settings_set",
+          "args": {
+            "settings": {
+              "serverJvmArgs": ["-Xmx6G", "-javaagent:/tmp/evil.jar"],
+              "serverMemoryMb": 2048,
+              "serverPort": 25565,
+              "mcpEnabled": false,
+              "mcpPort": 47615
+            }
+          },
+          "error": "jvmArgument"
+        },
+        {
+          "call": "settings_set",
+          "args": {
+            "settings": {
+              "serverJvmArgs": ["-XX:OnOutOfMemoryError=rm -rf ~"],
+              "serverMemoryMb": 2048,
+              "serverPort": 25565,
+              "mcpEnabled": false,
+              "mcpPort": 47615
+            }
+          },
+          "error": "jvmArgument"
+        },
+        {
+          "call": "settings_set",
+          "args": {
+            "settings": {
+              "serverJvmArgs": ["-Djava.class.path=/tmp/x"],
+              "serverMemoryMb": 2048,
+              "serverPort": 25565,
+              "mcpEnabled": false,
+              "mcpPort": 47615
+            }
+          },
+          "error": "jvmArgument"
+        },
+        {
+          "call": "settings_set",
+          "args": {
+            "settings": {
+              "serverJvmArgs": ["-Dnetherforge.bridge.port=1"],
+              "serverMemoryMb": 2048,
+              "serverPort": 25565,
+              "mcpEnabled": false,
+              "mcpPort": 47615
+            }
+          },
+          "error": "jvmArgument"
+        },
+        {
+          "call": "settings_set",
+          "args": {
+            "settings": {
+              "serverJvmArgs": ["  "],
+              "serverMemoryMb": 2048,
+              "serverPort": 25565,
+              "mcpEnabled": false,
+              "mcpPort": 47615
+            }
+          },
+          "error": "jvmArgument"
+        },
+        {
+          "call": "settings_get",
+          "ok": {
+            "serverJvmArgs": ["-Xmx6G", "-XX:+UseG1GC", "-XX:MaxGCPauseMillis=200", "-Dpaper.x=1"]
+          }
+        }
+      ]
+    },
+    {
+      "name": "the EULA is accepted once, and starting needs it",
+      "steps": [
+        { "call": "project_trust", "args": { "trusted": true }, "ok": { "trusted": true } },
+        {
+          "call": "server_eula_status",
+          "ok": { "accepted": false, "url": "https://aka.ms/MinecraftEULA" }
+        },
+        { "call": "server_start", "error": "eulaRequired" },
+        { "call": "server_eula_accept", "ok": null },
+        { "call": "server_eula_status", "ok": { "accepted": true } }
+      ]
+    },
+    {
+      "name": "a stopped server takes no requests",
+      "steps": [
+        {
+          "call": "server_state",
+          "ok": {
+            "phase": "stopped",
+            "minecraft": "26.3",
+            "port": null,
+            "bridgeConnected": false,
+            "message": null
+          }
+        },
+        { "call": "server_command", "args": { "line": "say hi" }, "error": "notConnected" },
+        {
+          "call": "bridge_send",
+          "args": { "message": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"instances\"}" },
+          "error": "notConnected"
+        },
+        { "call": "server_stop", "ok": null },
+        {
+          "call": "map_capture",
+          "args": {
+            "level": "world/level.dat",
+            "dimension": "world",
+            "id": "arena",
+            "replace": false
+          },
+          "error": "notFound"
+        }
+      ]
+    },
+    {
+      "name": "nothing is cached for a version yet",
+      "steps": [
+        {
+          "call": "mc_cache_status",
+          "args": { "version": "26.3" },
+          "ok": { "version": "26.3", "client": false, "server": false }
+        },
+        { "call": "mc_cache_status", "args": { "version": "../26.3" }, "error": "invalid" },
+        { "call": "mc_game_data", "args": { "version": "26.3" }, "ok": null },
+        { "call": "mc_glyph_advances", "args": { "version": "26.3" }, "ok": null }
+      ]
+    },
+    {
+      "name": "a language server that isn't running takes no messages",
+      "steps": [
+        {
+          "call": "luals_send",
+          "args": { "generation": 7, "message": "{}" },
+          "error": "unavailable"
+        },
+        { "call": "luals_stop", "ok": null }
+      ]
+    }
+  ]
+}

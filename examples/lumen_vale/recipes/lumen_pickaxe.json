@@ -1,0 +1,14 @@
+{
+  "$schema": "../.netherforge/schema/recipe.schema.json",
+  "type": "smithing_transform",
+  "template": {
+    "item": "wisp_essence"
+  },
+  "base": "minecraft:iron_pickaxe",
+  "addition": {
+    "item": "lumen_shard"
+  },
+  "result": {
+    "item": "lumen_pickaxe"
+  }
+}

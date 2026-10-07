@@ -1,0 +1,93 @@
+[
+  {
+    "file": "resource_packs/lore/pack.json",
+    "path": "$.items.journal.texture",
+    "kind": "texture",
+    "text": "item/journal.png",
+    "target": "resource_packs/lore/textures/item/journal.png"
+  },
+  {
+    "file": "resource_packs/lore/pack.json",
+    "path": "$.items.moonstone.texture",
+    "kind": "texture",
+    "text": "item/moonstone.png",
+    "target": "resource_packs/lore/textures/item/moonstone.png"
+  },
+  {
+    "file": "resource_packs/lore/pack.json",
+    "path": "$.items.old_coin.texture",
+    "kind": "texture",
+    "text": "item/old_coin.png",
+    "target": "resource_packs/lore/textures/item/old_coin.png"
+  },
+  {
+    "file": "items/journal/item.json",
+    "path": "$.itemModel",
+    "kind": "item_model",
+    "text": "lore/journal",
+    "target": "vale_lore:lore/journal"
+  },
+  {
+    "file": "items/journal/item.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "items/journal/script.lua"
+  },
+  {
+    "file": "items/moonstone/item.json",
+    "path": "$.itemModel",
+    "kind": "item_model",
+    "text": "lore/moonstone",
+    "target": "vale_lore:lore/moonstone"
+  },
+  {
+    "file": "items/moonstone/item.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "items/moonstone/script.lua"
+  },
+  {
+    "file": "items/old_coin/item.json",
+    "path": "$.itemModel",
+    "kind": "item_model",
+    "text": "lore/old_coin",
+    "target": "vale_lore:lore/old_coin"
+  },
+  {
+    "file": "loot/trinkets.json",
+    "path": "$.pools.main.entries[0].item.item",
+    "kind": "item",
+    "text": "old_coin",
+    "target": "vale_lore:old_coin"
+  },
+  {
+    "file": "loot/trinkets.json",
+    "path": "$.pools.main.entries[1].item.item",
+    "kind": "item",
+    "text": "moonstone",
+    "target": "vale_lore:moonstone"
+  },
+  {
+    "file": "advancements/chronicle.json",
+    "path": "$.display.icon.item",
+    "kind": "item",
+    "text": "journal",
+    "target": "vale_lore:journal"
+  },
+  {
+    "file": "dialogs/journal/dialog.json",
+    "path": "$.body[0].item.item",
+    "kind": "item",
+    "text": "journal",
+    "target": "vale_lore:journal"
+  },
+  {
+    "file": "dialogs/journal/dialog.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "dialogs/journal/script.lua"
+  }
+]

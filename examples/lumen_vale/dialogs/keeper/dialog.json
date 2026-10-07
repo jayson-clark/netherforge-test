@@ -1,0 +1,62 @@
+{
+  "$schema": "../../.netherforge/schema/dialog.schema.json",
+  "name": "Shrine keeper",
+  "type": "multi_action",
+  "title": "<light_purple><glyph:lumen/wisp> The Shrine Keeper",
+  "columns": 3,
+  "body": [
+    {
+      "type": "message",
+      "text": "<gray>The keeper looks up from the lantern.",
+      "width": 280,
+      "key": "speech"
+    }
+  ],
+  "inputs": [
+    {
+      "type": "single_option",
+      "key": "topic",
+      "label": "Ask about",
+      "width": 200,
+      "options": [
+        {
+          "id": "vale",
+          "label": "The vale",
+          "initial": true
+        },
+        {
+          "id": "wisps",
+          "label": "The wisps"
+        },
+        {
+          "id": "altar",
+          "label": "The altars"
+        },
+        {
+          "id": "sky",
+          "label": "The sky reach"
+        }
+      ]
+    }
+  ],
+  "buttons": [
+    {
+      "key": "ask",
+      "label": "Ask",
+      "tooltip": "Ask the keeper about what you picked"
+    },
+    {
+      "key": "offer",
+      "label": "Offer shards",
+      "tooltip": "Hand over the lumen shards you carry"
+    },
+    {
+      "key": "journal",
+      "label": "My journal",
+      "tooltip": "What you've been asked to do"
+    }
+  ],
+  "script": {
+    "file": "script.lua"
+  }
+}

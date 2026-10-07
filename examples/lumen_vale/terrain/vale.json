@@ -1,0 +1,267 @@
+{
+  "$schema": "../.netherforge/schema/terrain.schema.json",
+  "terrain": {
+    "base": 74,
+    "seaLevel": 62,
+    "noises": {
+      "detail": {
+        "noise": {
+          "frequency": 0.03,
+          "octaves": 2
+        },
+        "amplitude": 3
+      },
+      "hills": {
+        "noise": {
+          "frequency": 0.0035,
+          "octaves": 4
+        },
+        "amplitude": 24
+      }
+    },
+    "blend": 28,
+    "density": {}
+  },
+  "layers": [
+    {
+      "block": "minecraft:grass_block"
+    },
+    {
+      "block": "minecraft:dirt",
+      "thickness": 3
+    }
+  ],
+  "underwater": [
+    {
+      "block": "minecraft:sand",
+      "thickness": 2
+    },
+    {
+      "block": "minecraft:dirt",
+      "thickness": 2
+    }
+  ],
+  "stone": {
+    "block": "minecraft:stone"
+  },
+  "floor": {
+    "block": "minecraft:bedrock",
+    "thickness": 4
+  },
+  "caves": {
+    "caverns": {
+      "type": "cheese",
+      "noise": {
+        "frequency": 0.022,
+        "octaves": 2
+      },
+      "threshold": 0.3,
+      "minY": -48,
+      "maxY": 20
+    },
+    "tunnels": {
+      "type": "spaghetti",
+      "minY": -40,
+      "maxY": 72,
+      "depth": 8
+    }
+  },
+  "ores": {
+    "calcite": {
+      "block": "minecraft:calcite",
+      "size": 28,
+      "veins": 3,
+      "minY": -40,
+      "maxY": 20
+    },
+    "coal": {
+      "block": "minecraft:coal_ore",
+      "size": 12,
+      "veins": 14,
+      "minY": 0,
+      "maxY": 110
+    },
+    "iron": {
+      "block": "minecraft:iron_ore",
+      "size": 8,
+      "veins": 10,
+      "minY": -32,
+      "maxY": 64
+    },
+    "lumen": {
+      "customBlock": "lumen_ore",
+      "size": 5,
+      "veins": 7,
+      "minY": -48,
+      "maxY": 48,
+      "distribution": "triangle"
+    },
+    "lumen_shallow": {
+      "customBlock": "lumen_ore",
+      "size": 4,
+      "veins": 5,
+      "minY": 20,
+      "maxY": 72,
+      "biomes": ["grove"]
+    }
+  },
+  "decorations": {
+    "cave_crystals": {
+      "block": "minecraft:amethyst_cluster[facing=up]",
+      "placement": "caveFloor",
+      "count": 18,
+      "maxY": 24
+    },
+    "cave_icicles": {
+      "block": "minecraft:amethyst_cluster[facing=down]",
+      "placement": "caveCeiling",
+      "count": 12,
+      "maxY": 24
+    },
+    "cave_lumen": {
+      "customBlock": "lumen_ore",
+      "placement": "caveCeiling",
+      "count": 4,
+      "maxY": 24
+    },
+    "crystal_spires": {
+      "structure": "crystal_spire",
+      "count": 2,
+      "chance": 0.4,
+      "biomes": ["grove"],
+      "on": ["minecraft:moss_block"]
+    },
+    "grove_buds": {
+      "block": "minecraft:small_amethyst_bud[facing=up]",
+      "count": 6,
+      "biomes": ["grove"],
+      "on": ["minecraft:moss_block"]
+    },
+    "meadow_alliums": {
+      "block": "minecraft:allium",
+      "count": 4,
+      "noise": {
+        "frequency": 0.05
+      },
+      "threshold": 0.4,
+      "biomes": ["meadows"],
+      "on": ["minecraft:grass_block"]
+    },
+    "meadow_cornflowers": {
+      "block": "minecraft:cornflower",
+      "count": 8,
+      "noise": {
+        "frequency": 0.04
+      },
+      "threshold": 0.2,
+      "biomes": ["meadows"],
+      "on": ["minecraft:grass_block"]
+    },
+    "ridge_rubble": {
+      "block": "minecraft:cobblestone",
+      "count": 3,
+      "chance": 0.5,
+      "biomes": ["ridge"],
+      "on": ["minecraft:gravel"]
+    }
+  },
+  "climate": {
+    "temperature": {
+      "frequency": 0.0022,
+      "octaves": 2
+    },
+    "humidity": {
+      "frequency": 0.0026,
+      "octaves": 2
+    },
+    "jitter": {
+      "amplitude": 20
+    }
+  },
+  "biomes": {
+    "grove": {
+      "biome": "crystal_grove",
+      "temperature": {
+        "min": -0.3
+      },
+      "humidity": {
+        "min": 0.15
+      },
+      "layers": [
+        {
+          "block": "minecraft:moss_block"
+        },
+        {
+          "block": "minecraft:dirt",
+          "thickness": 3
+        }
+      ],
+      "terrain": {
+        "base": 78,
+        "scale": 0.8,
+        "noises": {
+          "knolls": {
+            "noise": {
+              "frequency": 0.02,
+              "octaves": 2
+            },
+            "amplitude": 5
+          }
+        }
+      }
+    },
+    "meadows": {
+      "biome": "mossy_meadows",
+      "temperature": {
+        "min": -0.3
+      },
+      "terrain": {
+        "scale": 0.55
+      }
+    },
+    "ridge": {
+      "biome": "ashen_ridge",
+      "temperature": {
+        "max": -0.3
+      },
+      "layers": [
+        {
+          "block": "minecraft:gravel"
+        },
+        {
+          "block": "minecraft:tuff",
+          "thickness": 4
+        }
+      ],
+      "terrain": {
+        "base": 90,
+        "scale": 1.4,
+        "noises": {
+          "crags": {
+            "noise": {
+              "frequency": 0.01,
+              "fractal": "ridged",
+              "octaves": 3
+            },
+            "amplitude": 26
+          }
+        },
+        "density": {
+          "noises": {
+            "overhangs": {
+              "noise": {
+                "frequency": 0.03,
+                "octaves": 2
+              },
+              "amplitude": 9,
+              "squash": 0.6
+            }
+          }
+        }
+      }
+    }
+  },
+  "structures": {
+    "vanilla": true
+  }
+}

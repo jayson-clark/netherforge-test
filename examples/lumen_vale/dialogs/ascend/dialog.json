@@ -1,0 +1,30 @@
+{
+  "$schema": "../../.netherforge/schema/dialog.schema.json",
+  "name": "Ascend",
+  "type": "confirmation",
+  "title": "<light_purple>The Sky Reach",
+  "body": [
+    {
+      "type": "item",
+      "item": {
+        "item": "lumen_lantern",
+        "glint": true
+      },
+      "description": "<gray>The kindled lantern tugs upward, towards the islands above the grove."
+    }
+  ],
+  "buttons": [
+    {
+      "key": "rise",
+      "label": "<light_purple>Rise",
+      "tooltip": "Go up to the sky reach"
+    },
+    {
+      "key": "stay",
+      "label": "Stay"
+    }
+  ],
+  "script": {
+    "file": "script.lua"
+  }
+}

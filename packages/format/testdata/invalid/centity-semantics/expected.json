@@ -1,0 +1,107 @@
+[
+  {
+    "severity": "error",
+    "file": "centities/bad/centity.json",
+    "message": "\"Not A Block\" isn't a block state",
+    "path": "$.nodes.root.display.block",
+    "code": "centity.block-state"
+  },
+  {
+    "severity": "error",
+    "file": "centities/bad/centity.json",
+    "message": "Node \"orphan\" has unknown parent \"nowhere\"",
+    "path": "$.nodes.orphan.parent",
+    "code": "centity.unknown-parent"
+  },
+  {
+    "severity": "error",
+    "file": "centities/bad/centity.json",
+    "message": "\"bad name!\" isn't a usable node name (letters, digits, _ and -, at most 64 characters)",
+    "path": "$.nodes[\"bad name!\"]",
+    "code": "centity.node-name"
+  },
+  {
+    "severity": "error",
+    "file": "centities/bad/centity.json",
+    "message": "A hitbox has either boxes or shape: \"collision\", not both",
+    "path": "$.nodes.box.hitbox",
+    "code": "centity.hitbox-both"
+  },
+  {
+    "severity": "error",
+    "file": "centities/bad/centity.json",
+    "message": "shape: \"collision\" needs a block display on the same node",
+    "path": "$.nodes.box.hitbox.shape",
+    "code": "centity.hitbox-collision"
+  },
+  {
+    "severity": "error",
+    "file": "centities/bad/centity.json",
+    "message": "Each box's max must be greater than its min on every axis",
+    "path": "$.nodes.box.hitbox.boxes[0]",
+    "code": "centity.hitbox-size"
+  },
+  {
+    "severity": "error",
+    "file": "centities/bad/centity.json",
+    "message": "background must be #AARRGGBB",
+    "path": "$.nodes.label.display.background",
+    "code": "centity.background"
+  },
+  {
+    "severity": "warning",
+    "file": "centities/bad/centity.json",
+    "message": "bounciness is clamped to between 0 and 1",
+    "path": "$.nodes.body.physics.bounciness",
+    "code": "centity.physics-range"
+  },
+  {
+    "severity": "warning",
+    "file": "centities/bad/centity.json",
+    "message": "It collides with neither blocks nor centities, so nothing will stop it falling",
+    "path": "$.nodes.body.physics",
+    "code": "centity.physics-falls"
+  },
+  {
+    "severity": "error",
+    "file": "centities/bad/centity.json",
+    "message": "Node \"a\" is part of a parent cycle",
+    "path": "$.nodes.a.parent",
+    "code": "centity.cycle"
+  },
+  {
+    "severity": "error",
+    "file": "centities/bad/centity.json",
+    "message": "Node \"b\" is part of a parent cycle",
+    "path": "$.nodes.b.parent",
+    "code": "centity.cycle"
+  },
+  {
+    "severity": "error",
+    "file": "centities/bad/centity.json",
+    "message": "Animation \"wave\" drives unknown node \"ghost\"",
+    "path": "$.animations.wave.tracks.ghost",
+    "code": "centity.animation-node"
+  },
+  {
+    "severity": "warning",
+    "file": "centities/bad/centity.json",
+    "message": "Keyframes after 0.5s never play",
+    "path": "$.animations.wave.length",
+    "code": "centity.keys-past-length"
+  },
+  {
+    "severity": "warning",
+    "file": "centities/bad/centity.json",
+    "message": "Animation \"empty\" has no tracks",
+    "path": "$.animations.empty.tracks",
+    "code": "centity.animation-empty"
+  },
+  {
+    "severity": "error",
+    "file": "centities/bad/centity.json",
+    "message": "Script file \"missing.lua\" doesn't exist",
+    "path": "$.script.file",
+    "code": "script.missing"
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "$schema": "../../.netherforge/schema/item.schema.json",
+  "kind": "minecraft:paper",
+  "name": "<light_purple>Lumen Circlet",
+  "lore": [
+    "<gray>Gold and lumen, infused at an altar.",
+    "<gray>Wisps drift closer to whoever wears it"
+  ],
+  "itemModel": "lumen/lumen_circlet",
+  "tooltipStyle": "lumen/lumen",
+  "equipment": {
+    "asset": "lumen/lumen_circlet",
+    "slot": "head"
+  },
+  "maxStackSize": 1,
+  "rarity": "epic",
+  "attributeModifiers": [
+    {
+      "attribute": "minecraft:armor",
+      "amount": 2,
+      "operation": "add_value",
+      "slot": "head"
+    }
+  ]
+}

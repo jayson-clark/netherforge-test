@@ -1,0 +1,25 @@
+{
+  "$schema": "../.netherforge/schema/loot_table.schema.json",
+  "pools": {
+    "gift": {
+      "entries": [
+        {
+          "type": "item",
+          "item": {
+            "item": "lumen_shard"
+          },
+          "weight": 4
+        },
+        {
+          "type": "table",
+          "table": "vale_lore:trinkets",
+          "weight": 2
+        },
+        {
+          "type": "empty",
+          "weight": 4
+        }
+      ]
+    }
+  }
+}

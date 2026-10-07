@@ -1,0 +1,15 @@
+{
+  "$schema": "../../.netherforge/schema/item.schema.json",
+  "kind": "minecraft:iron_pickaxe",
+  "name": "<light_purple>Lumen Pickaxe",
+  "lore": [
+    "<gray>Finds the light in lumen ore:",
+    "<gray>every ore it breaks gives a shard more"
+  ],
+  "enchantments": {
+    "minecraft:efficiency": 2
+  },
+  "itemModel": "lumen/lumen_pickaxe",
+  "tooltipStyle": "lumen/lumen",
+  "rarity": "rare"
+}

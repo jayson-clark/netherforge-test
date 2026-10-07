@@ -1,0 +1,49 @@
+{
+  "$schema": ".netherforge/schema/netherforge.schema.json",
+  "formatVersion": 1,
+  "name": "Lumen Vale",
+  "namespace": "lumen_vale",
+  "version": "0.1.0",
+  "minecraft": "26.3",
+  "worlds": {
+    "sky_reach": {
+      "spawnLimits": {
+        "monster": 0
+      },
+      "terrain": "sky_reach",
+      "seed": 7031,
+      "dimensionType": "vale"
+    },
+    "world": {
+      "terrain": "vale",
+      "dimensionType": "vale"
+    }
+  },
+  "requires": {
+    "db": true
+  },
+  "dependencies": {
+    "vale_lore": {
+      "path": "../vale_lore"
+    }
+  },
+  "settings": {
+    "grove_cutscene": {
+      "type": "boolean",
+      "description": "Whether a player's first steps into the crystal grove play the grove's awakening, a flight to the nearest shrine.",
+      "default": true
+    },
+    "keeper_shards": {
+      "type": "integer",
+      "description": "How many lumen shards the shrine keeper asks for before the vale will open the sky reach.",
+      "default": 8,
+      "min": 1,
+      "max": 64
+    },
+    "wisps_at_night_only": {
+      "type": "boolean",
+      "description": "Whether wisps appear only at night. Off, they drift through the grove all day.",
+      "default": true
+    }
+  }
+}

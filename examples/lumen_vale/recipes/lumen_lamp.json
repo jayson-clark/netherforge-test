@@ -1,0 +1,22 @@
+{
+  "$schema": "../.netherforge/schema/recipe.schema.json",
+  "type": "shapeless",
+  "ingredients": [
+    {
+      "item": "crystal_glass"
+    },
+    {
+      "item": "lumen_shard"
+    },
+    {
+      "item": "lumen_shard"
+    },
+    {
+      "item": "wisp_essence"
+    }
+  ],
+  "result": {
+    "item": "lumen_lamp"
+  },
+  "category": "building"
+}

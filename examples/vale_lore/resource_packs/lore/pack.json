@@ -1,0 +1,16 @@
+{
+  "$schema": "../../.netherforge/schema/resource_pack.schema.json",
+  "name": "Vale lore",
+  "description": "The journal and the trinkets the library's quests hand out",
+  "items": {
+    "journal": {
+      "texture": "item/journal.png"
+    },
+    "moonstone": {
+      "texture": "item/moonstone.png"
+    },
+    "old_coin": {
+      "texture": "item/old_coin.png"
+    }
+  }
+}

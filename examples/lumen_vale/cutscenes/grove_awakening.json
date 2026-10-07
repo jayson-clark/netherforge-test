@@ -1,0 +1,75 @@
+{
+  "$schema": "../.netherforge/schema/cutscene.schema.json",
+  "length": 14,
+  "skippable": true,
+  "camera": {
+    "position": [
+      {
+        "time": 0,
+        "value": [-40, 30, -32],
+        "easing": "ease_in_out"
+      },
+      {
+        "time": 4,
+        "value": [12, 24, -40],
+        "easing": "ease_in_out"
+      },
+      {
+        "time": 8,
+        "value": [32, 14, 8],
+        "easing": "ease_in_out"
+      },
+      {
+        "time": 12,
+        "value": [7, 4, 7],
+        "easing": "ease_out"
+      }
+    ],
+    "rotation": [
+      {
+        "time": 0,
+        "yaw": -51,
+        "pitch": 30,
+        "easing": "ease_in_out"
+      },
+      {
+        "time": 4,
+        "yaw": 17,
+        "pitch": 29,
+        "easing": "ease_in_out"
+      },
+      {
+        "time": 8,
+        "yaw": 104,
+        "pitch": 22,
+        "easing": "ease_in_out"
+      },
+      {
+        "time": 12,
+        "yaw": 135,
+        "pitch": 17
+      }
+    ]
+  },
+  "cues": [
+    {
+      "time": 0.5,
+      "text": "<light_purple><glyph:lumen/wisp> The Crystal Grove <glyph:lumen/wisp>",
+      "duration": 3
+    },
+    {
+      "time": 4.5,
+      "text": "<gray>Where lumen grows through the stone, the vale's old spirits linger",
+      "duration": 3.5
+    },
+    {
+      "time": 8.5,
+      "text": "<gray>At the heart of the ruins, a keeper still tends the shrine",
+      "duration": 3.5
+    },
+    {
+      "time": 11.5,
+      "event": "arrive"
+    }
+  ]
+}

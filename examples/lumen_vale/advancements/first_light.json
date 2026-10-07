@@ -1,0 +1,14 @@
+{
+  "$schema": "../.netherforge/schema/advancement.schema.json",
+  "parent": "vale_lore:chronicle",
+  "display": {
+    "icon": {
+      "item": "lumen_shard"
+    },
+    "title": "<light_purple>First Light",
+    "description": "Find a <glyph:lumen/lumen> lumen shard in the stone of the vale"
+  },
+  "criteria": {
+    "found": {}
+  }
+}

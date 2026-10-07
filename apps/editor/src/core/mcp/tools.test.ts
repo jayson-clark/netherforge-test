@@ -1,0 +1,331 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryBackend, type MemoryBackendOptions } from '@/core/backend/memory'
+import { createApp, type AppStores } from '@/state/providers'
+import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
+import type { Tool } from '@modelcontextprotocol/sdk/types.js'
+
+const TOOL_NAMES = [
+  'get_status',
+  'get_problems',
+  'reload',
+  'get_console',
+  'run_command',
+  'spawn_centity',
+  'list_instances',
+  'lookup_game_data',
+  'start_server',
+  'stop_server',
+  'open_in_editor',
+  'bot_join',
+  'bot_act',
+  'bot_state',
+  'bot_events',
+  'bot_leave',
+]
+
+let backend: MemoryBackend
+let app: AppStores
+
+async function open(options: MemoryBackendOptions = {}) {
+  backend = new MemoryBackend({
+    projects: exampleProjects(),
+    serverDelayMs: 0,
+    ...options,
+  })
+  app = createApp(backend)
+  await app.run.getState().connect()
+  await app.workspace.getState().openProject(EXAMPLE_ROOT)
+}
+
+beforeEach(() => open())
+
+/** Calls a tool the way an agent does and returns its parsed text, or the error text. */
+async function call(name: string, args: Record<string, unknown> = {}) {
+  const response = await backend.testMcpCall('tools/call', { name, arguments: args })
+  if (response.error) throw new Error(`protocol error: ${response.error.message}`)
+  const result = response.result as { content: { text: string }[]; isError?: boolean }
+  const text = result.content[0]!.text
+  return result.isError ? { error: text } : JSON.parse(text)
+}
+
+describe('MCP tools on an untrusted project', () => {
+  it('refuses every call until the project is trusted, and nothing reaches the tools', async () => {
+    await open({ trusted: [] })
+    const refused = await backend.testMcpCall('tools/call', { name: 'get_status', arguments: {} })
+    expect(refused.error?.code).toBe(-32001)
+    expect(refused.error?.message).toMatch(/isn't trusted/)
+    await app.workspace.getState().trustProject(true)
+    expect(await call('get_status')).toMatchObject({ project: expect.anything() })
+  })
+})
+
+describe('MCP tools', () => {
+  it('lists every tool with the JSON Schema of its zod arguments', async () => {
+    const response = await backend.testMcpCall('tools/list')
+    const tools = (response.result as { tools: Tool[] }).tools
+    expect(tools.map((it) => it.name)).toEqual(TOOL_NAMES)
+    for (const tool of tools) {
+      expect(tool.inputSchema.type).toBe('object')
+      expect(tool.annotations?.openWorldHint).toBe(false)
+    }
+    const console = tools.find((it) => it.name === 'get_console')!.inputSchema
+    expect(console.properties).toMatchObject({
+      since: { type: 'integer', minimum: 0 },
+      level: { enum: ['debug', 'info', 'warn', 'error'] },
+      limit: { type: 'integer', minimum: 1, maximum: 500 },
+    })
+    expect(console.required ?? []).toEqual([])
+    const spawn = tools.find((it) => it.name === 'spawn_centity')!.inputSchema
+    expect(spawn.required).toEqual(['centity'])
+  })
+
+  it("checks arguments against the tool's schema before it runs", async () => {
+    backend.testConnect()
+    const invalid = [
+      ['get_console', { limit: 0 }],
+      ['get_console', { level: 'loud' }],
+      ['spawn_centity', {}],
+      ['run_command', { command: '   ' }],
+      ['lookup_game_data', { registry: 'biome' }],
+      ['bot_join', { name: 'x' }],
+      ['bot_join', { name: 'Other', x: 1 }],
+      ['bot_act', { name: 'Tester', action: 'jump' }],
+      ['bot_act', { name: 'Tester', action: { type: 'flop' } }],
+    ] as const
+    for (const [name, args] of invalid) {
+      const result = await call(name, args)
+      expect(result.error, `${name} ${JSON.stringify(args)}`).toMatch(/Input validation error/)
+    }
+    expect((await call('bot_join', { name: 'Other', x: 1 })).error).toMatch(/x, y and z/)
+    expect((await call('bot_join', { name: 'x' })).error).toMatch(/3 to 16/)
+    expect(
+      backend.bridgeLog.filter(
+        (it) => it.method !== 'profiler_subscribe' && it.method !== 'settings',
+      ),
+    ).toEqual([])
+    expect(backend.commandLog).toEqual([])
+  })
+
+  it('refuses unknown tools and arguments that are no object', async () => {
+    expect((await call('nope')).error).toMatch(/nope not found/)
+    const bad = await backend.testMcpCall('tools/call', { name: 'get_status', arguments: [1] })
+    expect(bad.error?.code).toBeDefined()
+  })
+
+  it('reports status, including files with unsaved edits', async () => {
+    await app.workspace.getState().openFile('modules/greeter/init.lua')
+    app.workspace.getState().setText('modules/greeter/init.lua', '-- changed\n')
+    const status = await call('get_status')
+    expect(status.project.minecraft).toBe('26.3')
+    expect(status.server.phase).toBe('stopped')
+    expect(status.unsavedFiles).toEqual(['modules/greeter/init.lua'])
+  })
+
+  it('sees problems in a file the agent just wrote, before the watcher says so', async () => {
+    expect((await call('get_problems')).errors).toBe(0)
+    backend.testWriteMissed(
+      'centities/tower/centity.json',
+      JSON.stringify({ nodes: { top: { bogus: 1 } } }),
+    )
+    const problems = await call('get_problems', { file: 'centities/tower' })
+    expect(problems.errors).toBeGreaterThan(0)
+    expect(problems.editor[0]).toMatchObject({ file: 'centities/tower/centity.json' })
+    expect((await call('get_problems', { file: 'modules' })).errors).toBe(0)
+  })
+
+  it("says what to do when the dev server isn't running", async () => {
+    const result = await call('reload')
+    expect(result.error).toMatch(/start_server/)
+    expect((await call('run_command', { command: 'nf list' })).error).toMatch(/not running/)
+  })
+
+  it('reloads, and returns the errors the server logged meanwhile', async () => {
+    backend.testConnect()
+    const pending = call('reload', { paths: ['modules/greeter/init.lua'] })
+    // The server logs the error while it reloads.
+    await vi.waitFor(() =>
+      expect(backend.bridgeLog).toContainEqual({
+        method: 'reload',
+        params: { paths: ['modules/greeter/init.lua'] },
+      }),
+    )
+    backend.testBridgeEvent('console', {
+      items: [
+        {
+          type: 'script_error',
+          message: 'attempt to call a nil value',
+          source: { file: 'modules/greeter/init.lua', line: 3 },
+        },
+      ],
+    })
+    const result = await pending
+    expect(result.resources).toEqual([
+      { package: 'basic', kind: 'module', id: 'greeter', ok: true, reattached: 0 },
+    ])
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        kind: 'script_error',
+        source: { file: 'modules/greeter/init.lua', line: 3 },
+      }),
+    ])
+  })
+
+  it('restarts the dev server when a reload says it must, as a save does', async () => {
+    backend.testConnect()
+    backend.testReloadRestarts()
+    const result = await call('reload', { paths: ['advancements/treasure_hunter.json'] })
+    expect(result.restarted).toBe(true)
+    expect(backend.bridgeLog).toContainEqual({
+      method: 'reload',
+      params: { paths: ['advancements/treasure_hunter.json'] },
+    })
+    // It was stopped and started again.
+    await vi.waitFor(() =>
+      expect(backend.serverState().then((it) => it.phase)).resolves.toBe('running'),
+    )
+    const lines = app.run
+      .getState()
+      .console.lines()
+      .map((it) => it.text)
+    expect(lines).toContain('Restarting the dev server')
+    expect(lines).toContain('[Server] Stopping server')
+  })
+
+  it('reloads the whole project when no paths are given', async () => {
+    backend.testConnect()
+    await call('reload')
+    expect(backend.bridgeLog.at(-1)).toEqual({
+      method: 'reload',
+      params: { paths: ['netherforge.json'] },
+    })
+  })
+
+  it('reads the console from a cursor and by level', async () => {
+    backend.testServerOutput('[12:00:00 INFO]: one')
+    backend.testServerOutput('[12:00:00 WARN]: two')
+    const all = await call('get_console')
+    expect(all.lines.map((it: { text: string }) => it.text)).toEqual([
+      '[12:00:00 INFO]: one',
+      '[12:00:00 WARN]: two',
+    ])
+    backend.testServerOutput('[12:00:01 INFO]: three')
+    const fresh = await call('get_console', { since: all.lastId })
+    expect(fresh.lines.map((it: { text: string }) => it.text)).toEqual(['[12:00:01 INFO]: three'])
+    const warnings = await call('get_console', { level: 'warn' })
+    expect(warnings.lines).toHaveLength(1)
+  })
+
+  it('runs commands through the bridge and spawns centities', async () => {
+    backend.testConnect()
+    await call('run_command', { command: '/time set day' })
+    expect(backend.commandLog).toEqual(['/time set day'])
+    const instance = await call('spawn_centity', { centity: 'tower' })
+    expect(instance.centity).toBe('tower')
+    expect((await call('list_instances')).instances).toHaveLength(1)
+  })
+
+  it('joins a bot, has it act, and reports what it was sent', async () => {
+    backend.testConnect()
+    const joined = await call('bot_join', { name: 'Tester', x: 1, y: 64, z: 2 })
+    expect(joined.bot).toMatchObject({ name: 'Tester', x: 1, z: 2 })
+    expect(joined.events).toEqual([{ type: 'chat', seq: 0, text: 'Tester joined the game' }])
+    expect(backend.bridgeLog.at(-2)).toMatchObject({
+      method: 'bots/join',
+      params: { at: { x: 1, y: 64, z: 2 }, resourcePack: 'accept' },
+    })
+
+    const said = await call('bot_act', {
+      name: 'Tester',
+      action: { type: 'chat', message: 'hi' },
+      settleMs: 0,
+    })
+    expect(said.events).toEqual([{ type: 'chat', seq: 1, text: '<Tester> hi' }])
+    expect((await call('bot_state', { name: 'Tester' })).events).toBe(2)
+    expect((await call('bot_events', { name: 'Tester', since: 1 })).events).toHaveLength(1)
+    expect((await call('bot_events', { name: 'Tester', types: ['dialog'] })).events).toEqual([])
+
+    expect((await call('bot_act', { name: 'Nobody', action: { type: 'jump' } })).error).toMatch(
+      /no bot named/,
+    )
+    expect(await call('bot_leave', { name: 'Tester' })).toEqual({ left: 'Tester' })
+    expect((await call('bot_state', { name: 'Tester' })).error).toMatch(/no bot named/)
+  })
+
+  it('looks up ids in the game data, exact match first', async () => {
+    await open({
+      gameData: {
+        '26.3': {
+          minecraft: '26.3',
+          blocks: {
+            'minecraft:stone_bricks': {},
+            'minecraft:stone': {},
+            'minecraft:oak_stairs': { properties: { half: ['top', 'bottom'] } },
+            'minecraft:dark_oak_stairs': {},
+          },
+          registries: {
+            'minecraft:block': [
+              'minecraft:dark_oak_stairs',
+              'minecraft:oak_stairs',
+              'minecraft:stone',
+              'minecraft:stone_bricks',
+            ],
+            'minecraft:item': ['minecraft:oak_stairs', 'minecraft:stick'],
+          },
+          tags: { 'minecraft:item': { 'minecraft:stairs': ['minecraft:oak_stairs'] } },
+        },
+      },
+    })
+    const stone = await call('lookup_game_data', {
+      registry: 'minecraft:block',
+      query: 'minecraft:stone',
+    })
+    expect(stone.results.map((it: { id: string }) => it.id)).toEqual([
+      'minecraft:stone',
+      'minecraft:stone_bricks',
+    ])
+    const oak = await call('lookup_game_data', { registry: 'minecraft:block', query: 'oak_stairs' })
+    expect(oak.results.map((it: { id: string }) => it.id)).toEqual([
+      'minecraft:oak_stairs',
+      'minecraft:dark_oak_stairs',
+    ])
+    expect(oak.results[0].properties).toEqual({ half: ['top', 'bottom'] })
+    const stairs = await call('lookup_game_data', { registry: 'minecraft:block', query: 'STAIRS' })
+    expect(stairs.total).toBe(2)
+    // Only the block registry carries block states.
+    const items = await call('lookup_game_data', { registry: 'minecraft:item', query: 'stairs' })
+    expect(items.results).toEqual([{ id: 'minecraft:oak_stairs' }])
+    expect(
+      (await call('lookup_game_data', { registry: 'minecraft:item', tags: true })).results,
+    ).toEqual([{ id: '#minecraft:stairs', values: ['minecraft:oak_stairs'] }])
+    expect(
+      (await call('lookup_game_data', { registry: 'minecraft:worldgen/biome' })).error,
+    ).toMatch(/no registry "minecraft:worldgen\/biome"\. It has: minecraft:block, minecraft:item\./)
+  })
+
+  it('explains that game data comes from the first server start', async () => {
+    expect((await call('lookup_game_data', { registry: 'minecraft:block' })).error).toMatch(
+      /start_server/,
+    )
+  })
+
+  it('starts the server and waits for the plugin, but never accepts the EULA', async () => {
+    expect((await call('start_server')).error).toMatch(/EULA/)
+    expect(app.run.getState().server.phase).toBe('stopped')
+    await open({ eulaAccepted: true })
+    const started = await call('start_server')
+    expect(started.server).toMatchObject({ phase: 'running', bridgeConnected: true })
+    expect((await call('stop_server')).server.phase).toBe('stopped')
+  })
+
+  it('opens a file in the editor for the user', async () => {
+    await call('open_in_editor', { path: 'centities/tower/centity.json' })
+    expect(app.workspace.getState().activeTab).toBe('centity:centities/tower/centity.json')
+    expect((await call('open_in_editor', { path: 'nope.json' })).error).toMatch(/no nope\.json/)
+  })
+
+  it('needs an open project', async () => {
+    await app.workspace.getState().closeProject()
+    expect((await call('get_problems')).error).toMatch(/No project/)
+    expect((await call('get_status')).project).toBeNull()
+  })
+})

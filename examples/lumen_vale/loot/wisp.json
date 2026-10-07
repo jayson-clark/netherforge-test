@@ -1,0 +1,31 @@
+{
+  "$schema": "../.netherforge/schema/loot_table.schema.json",
+  "pools": {
+    "essence": {
+      "entries": [
+        {
+          "type": "item",
+          "item": {
+            "item": "wisp_essence"
+          }
+        }
+      ]
+    },
+    "spark": {
+      "entries": [
+        {
+          "type": "item",
+          "item": {
+            "item": "lumen_shard"
+          },
+          "conditions": [
+            {
+              "type": "chance",
+              "chance": 0.3
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

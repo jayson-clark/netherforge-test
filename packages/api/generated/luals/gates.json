@@ -1,0 +1,54 @@
+[
+  {
+    "function": "nf.db",
+    "requires": "db"
+  },
+  {
+    "function": "nf.server.set_max_players",
+    "requires": "moderation"
+  },
+  {
+    "function": "nf.server.set_motd",
+    "requires": "moderation"
+  },
+  {
+    "function": "nf.server.set_whitelist_enabled",
+    "requires": "moderation"
+  },
+  {
+    "function": "nf.economy.balance",
+    "requires": "plugin:vault"
+  },
+  {
+    "function": "nf.economy.deposit",
+    "requires": "plugin:vault"
+  },
+  {
+    "function": "nf.economy.withdraw",
+    "requires": "plugin:vault"
+  },
+  {
+    "function": "nf.placeholders.parse",
+    "requires": "plugin:placeholderapi"
+  },
+  {
+    "function": "nf.placeholders.register",
+    "requires": "plugin:placeholderapi"
+  },
+  {
+    "function": "nf.http.request",
+    "requires": "http"
+  },
+  {
+    "function": "Player:ban",
+    "requires": "moderation"
+  },
+  {
+    "function": "Player:unban",
+    "requires": "moderation"
+  },
+  {
+    "function": "Player:set_whitelisted",
+    "requires": "moderation"
+  }
+]

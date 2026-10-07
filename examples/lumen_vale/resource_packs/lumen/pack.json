@@ -1,0 +1,90 @@
+{
+  "$schema": "../../.netherforge/schema/resource_pack.schema.json",
+  "name": "Lumen",
+  "description": "Everything the vale looks and sounds like: crystals, the altar, the wisps",
+  "skins": {
+    "altar": {
+      "texture": "gui/altar.png",
+      "height": 168,
+      "ascent": 13,
+      "type": "chest",
+      "rows": 3
+    }
+  },
+  "glyphs": {
+    "lumen": {
+      "texture": "glyph/lumen.png"
+    },
+    "wisp": {
+      "texture": "glyph/wisp.png"
+    }
+  },
+  "items": {
+    "crystal_glass": {
+      "block": "lumen/crystal_glass"
+    },
+    "lumen_circlet": {
+      "texture": "item/lumen_circlet.png"
+    },
+    "lumen_lamp": {
+      "block": "lumen/lumen_lamp"
+    },
+    "lumen_lantern": {
+      "texture": "item/lumen_lantern.png"
+    },
+    "lumen_pickaxe": {
+      "texture": "item/lumen_pickaxe.png",
+      "parent": "minecraft:item/handheld"
+    },
+    "lumen_shard": {
+      "texture": "item/lumen_shard.png"
+    },
+    "wisp_essence": {
+      "texture": "item/wisp_essence.png"
+    }
+  },
+  "tooltips": {
+    "lumen": {
+      "background": "tooltip/lumen_background.png",
+      "frame": "tooltip/lumen_frame.png"
+    }
+  },
+  "equipment": {
+    "lumen_circlet": {
+      "humanoid": "equipment/lumen_circlet.png"
+    }
+  },
+  "blocks": {
+    "crystal_glass": {
+      "texture": "block/crystal_glass.png"
+    },
+    "lumen_lamp": {
+      "top": "block/lumen_lamp_top.png",
+      "bottom": "block/lumen_lamp_top.png",
+      "side": "block/lumen_lamp_side.png"
+    },
+    "lumen_ore": {
+      "texture": "block/lumen_ore.png"
+    }
+  },
+  "sounds": {
+    "altar_hum": {
+      "volume": 0.7,
+      "subtitle": "Altar hums"
+    },
+    "infuse": {
+      "subtitle": "Lumen infuses"
+    },
+    "lumen_break": {
+      "subtitle": "Crystal shatters"
+    },
+    "lumen_place": {
+      "subtitle": "Crystal settles"
+    },
+    "wisp_chime": {
+      "volume": 0.8,
+      "pitch": 1.1,
+      "subtitle": "Wisp chimes"
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "../.netherforge/schema/loot_table.schema.json",
+  "pools": {
+    "main": {
+      "rolls": {
+        "min": 1,
+        "max": 2
+      },
+      "entries": [
+        {
+          "type": "item",
+          "item": {
+            "item": "old_coin"
+          },
+          "count": {
+            "min": 1,
+            "max": 3
+          },
+          "weight": 6
+        },
+        {
+          "type": "item",
+          "item": {
+            "item": "moonstone"
+          },
+          "weight": 1,
+          "quality": 2
+        },
+        {
+          "type": "empty",
+          "weight": 3
+        }
+      ]
+    }
+  }
+}

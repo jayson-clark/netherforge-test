@@ -1,0 +1,46 @@
+{
+  "$schema": ".netherforge/schema/netherforge.schema.json",
+  "formatVersion": 1,
+  "name": "Basic example",
+  "namespace": "basic",
+  "version": "0.1.0",
+  "minecraft": "26.3",
+  "managedWorlds": ["lobby"],
+  "worlds": {
+    "lobby": {
+      "spawnLimits": {
+        "monster": 0
+      }
+    }
+  },
+  "requires": {
+    "db": true
+  },
+  "allow": {
+    "permissions": ["basic"]
+  },
+  "dependencies": {
+    "library": {
+      "path": "../library"
+    }
+  },
+  "settings": {
+    "greeting": {
+      "type": "string",
+      "description": "What the greeter says to everyone who joins, before their name.",
+      "default": "Welcome"
+    },
+    "show_welcome": {
+      "type": "boolean",
+      "description": "Whether a player's first join opens the welcome dialog.",
+      "default": true
+    },
+    "treasure_rolls": {
+      "type": "integer",
+      "description": "How many times /treasure rolls the treasure loot table.",
+      "default": 1,
+      "min": 1,
+      "max": 5
+    }
+  }
+}

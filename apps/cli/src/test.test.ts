@@ -1,0 +1,295 @@
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { GAME_DATA_SCHEMA } from '@netherforge/format/constants'
+import {
+  currentJavaEnv,
+  findJava,
+  javaCandidates,
+  parseReleaseFile,
+  parseVersionOutput,
+  type JavaEnv,
+} from './java.ts'
+import { run } from './main.ts'
+import { gameDataFile } from './project.ts'
+import { findJar, jarName, test } from './test.ts'
+
+let tmp: string
+beforeEach(() => {
+  tmp = mkdtempSync(path.join(os.tmpdir(), 'netherforge-cli-test-'))
+})
+afterEach(() => rmSync(tmp, { recursive: true, force: true }))
+
+/** A fake JDK: `<dir>/bin/java` (a script, on unix) and a `release` file saying its version. */
+function jdk(dir: string, major: number): string {
+  const bin = path.join(dir, 'bin')
+  mkdirSync(bin, { recursive: true })
+  const java = path.join(bin, process.platform === 'win32' ? 'java.exe' : 'java')
+  writeFileSync(java, '#!/bin/sh\necho "openjdk version \\"1\\"" >&2\n')
+  chmodSync(java, 0o755)
+  writeFileSync(path.join(dir, 'release'), `JAVA_VERSION="${major}.0.1"\n`)
+  return java
+}
+
+/** The dev server's export for [minecraft] in the editor's cache under [data] (a stand-in: the runner is stubbed here). */
+function cachedGameData(data: string, minecraft: string, schema = GAME_DATA_SCHEMA): string {
+  const file = gameDataFile(data, minecraft)
+  mkdirSync(path.dirname(file), { recursive: true })
+  writeFileSync(file, JSON.stringify({ minecraft, schema }))
+  return file
+}
+
+/** A machine with nothing on it but [env]'s variables, its home and data under [tmp]. */
+function machine(env: NodeJS.ProcessEnv): JavaEnv {
+  return {
+    platform: process.platform,
+    home: path.join(tmp, 'home'),
+    env: { NETHERFORGE_DATA_DIR: path.join(tmp, 'data'), PATH: '', ...env },
+    systemRoot: path.join(tmp, 'root'),
+  }
+}
+
+describe('finding Java', () => {
+  it('reads the major version from java -version and a release file', () => {
+    expect(parseVersionOutput('openjdk version "25.0.1" 2025-10-21\nOpenJDK Runtime')).toBe(25)
+    expect(parseVersionOutput('java version "1.8.0_391"')).toBe(8)
+    expect(parseVersionOutput('openjdk version "26-ea" 2026-03-17')).toBe(26)
+    expect(parseVersionOutput('command not found')).toBeNull()
+    expect(parseReleaseFile('IMPLEMENTOR="Eclipse"\nJAVA_VERSION="25.0.1"\n')).toBe(25)
+    expect(parseReleaseFile('JAVA_VERSION="1.8.0_391"')).toBe(8)
+    expect(parseReleaseFile('nothing')).toBeNull()
+  })
+
+  it('searches as the editor does: JAVA_HOME, then the editor-downloaded JDKs, then PATH', () => {
+    const home = jdk(path.join(tmp, 'jdk-home'), 25)
+    const managed = jdk(path.join(tmp, 'data', 'jdks', 'temurin-25'), 25)
+    const onPath = jdk(path.join(tmp, 'pathjdk'), 25)
+    const found = javaCandidates(
+      machine({ JAVA_HOME: path.join(tmp, 'jdk-home'), PATH: path.dirname(onPath) }),
+    )
+    expect(found.slice(0, 3)).toEqual([home, managed, onPath])
+    expect(findJava(machine({ JAVA_HOME: path.join(tmp, 'jdk-home') }))).toBe(home)
+  })
+
+  it('takes NETHERFORGE_JAVA first, and skips a Java older than the runner needs', () => {
+    const old = jdk(path.join(tmp, 'old'), 17)
+    const current = jdk(path.join(tmp, 'managed'), 25)
+    const env = machine({ JAVA_HOME: path.join(tmp, 'old') })
+    expect(findJava(env)).toBeNull()
+    expect(findJava(machine({ NETHERFORGE_JAVA: old }))).toBeNull()
+    expect(findJava(machine({ NETHERFORGE_JAVA: current }))).toBe(current)
+  })
+
+  it('finds the machine it runs on', () => {
+    expect(currentJavaEnv({}).platform).toBe(process.platform)
+  })
+})
+
+describe('the runner jar', () => {
+  it('is named for the version', () => {
+    expect(jarName('1.2.3')).toBe('NetherForgeTest-1.2.3.jar')
+  })
+
+  it('is found by NETHERFORGE_TEST_JAR, beside the script, or in the editor data folder', () => {
+    const beside = path.join(tmp, 'beside')
+    mkdirSync(beside)
+    const env = { NETHERFORGE_DATA_DIR: path.join(tmp, 'data') }
+    expect(findJar('1.0.0', env, beside)).toBeNull()
+    const inData = path.join(tmp, 'data', 'test-runner', jarName('1.0.0'))
+    mkdirSync(path.dirname(inData), { recursive: true })
+    writeFileSync(inData, '')
+    expect(findJar('1.0.0', env, beside)).toBe(inData)
+    const next = path.join(beside, jarName('1.0.0'))
+    writeFileSync(next, '')
+    expect(findJar('1.0.0', env, beside)).toBe(next)
+    const explicit = path.join(tmp, 'mine.jar')
+    writeFileSync(explicit, '')
+    expect(findJar('1.0.0', { ...env, NETHERFORGE_TEST_JAR: explicit }, beside)).toBe(explicit)
+    // A named jar that isn't there is not quietly replaced by another.
+    expect(
+      findJar('1.0.0', { ...env, NETHERFORGE_TEST_JAR: path.join(tmp, 'gone.jar') }, beside),
+    ).toBeNull()
+  })
+})
+
+describe('netherforge test', () => {
+  const calls: { command: string; args: string[] }[] = []
+  beforeEach(() => {
+    calls.length = 0
+  })
+  const spawn = (status: number | null) => (command: string, args: string[]) => {
+    calls.push({ command, args })
+    return { status, error: undefined }
+  }
+
+  it('launches the jar with Java, the project, the package cache and what it was asked', () => {
+    const java = jdk(path.join(tmp, 'managed'), 25)
+    const jar = path.join(tmp, 'runner.jar')
+    writeFileSync(jar, '')
+    const env = {
+      NETHERFORGE_JAVA: java,
+      NETHERFORGE_TEST_JAR: jar,
+      NETHERFORGE_DATA_DIR: path.join(tmp, 'data'),
+    }
+    const data = cachedGameData(path.join(tmp, 'data'), '26.3')
+    mkdirSync(path.join(tmp, 'project'))
+    writeFileSync(path.join(tmp, 'project', 'netherforge.json'), '{ "minecraft": "26.3" }')
+    const outcome = test(
+      path.join(tmp, 'project'),
+      { json: true, junit: path.join(tmp, 'out.xml'), filter: 'greets' },
+      '1.0.0',
+      env,
+      { spawn: spawn(1), machine: machine(env) },
+    )
+    expect(outcome).toEqual({ out: [], err: [], code: 1 })
+    expect(calls).toEqual([
+      {
+        command: java,
+        args: [
+          '-jar',
+          jar,
+          path.join(tmp, 'project'),
+          '--packages',
+          path.join(tmp, 'data', 'packages'),
+          '--game-data',
+          data,
+          '--json',
+          '--junit',
+          path.join(tmp, 'out.xml'),
+          '--filter',
+          'greets',
+        ],
+      },
+    ])
+  })
+
+  it('runs on the --game-data file when one is given, and says how to get data when there is none', () => {
+    const java = jdk(path.join(tmp, 'managed'), 25)
+    const jar = path.join(tmp, 'runner.jar')
+    writeFileSync(jar, '')
+    const env = {
+      NETHERFORGE_JAVA: java,
+      NETHERFORGE_TEST_JAR: jar,
+      NETHERFORGE_DATA_DIR: path.join(tmp, 'data'),
+    }
+    const project = path.join(tmp, 'project')
+    mkdirSync(project)
+    writeFileSync(path.join(project, 'netherforge.json'), '{ "minecraft": "26.3" }')
+    const host = { spawn: spawn(0), machine: machine(env) }
+
+    // No cache for the version: no run, and the error says what to do. Never a fallback.
+    const none = test(project, {}, '1.0.0', env, host)
+    expect(none.code).toBe(2)
+    expect(none.err[0]).toContain('game data of Minecraft 26.3')
+    expect(none.err[0]).toContain(path.join('minecraft', '26.3', 'server', 'game-data.json'))
+    expect(none.err[0]).toContain('Start the dev server')
+
+    // A cache of another schema is as good as none.
+    const stale = cachedGameData(path.join(tmp, 'data'), '26.3', 999)
+    expect(test(project, {}, '1.0.0', env, host).err[0]).toContain('another shape')
+    rmSync(stale)
+
+    const mine = path.join(tmp, 'mine.json')
+    writeFileSync(mine, JSON.stringify({ minecraft: '26.3', schema: GAME_DATA_SCHEMA }))
+    expect(test(project, { gameData: mine }, '1.0.0', env, host).code).toBe(0)
+    expect(calls.at(-1)?.args).toContain(mine)
+    expect(test(project, { gameData: path.join(tmp, 'gone.json') }, '1.0.0', env, host).code).toBe(
+      2,
+    )
+
+    writeFileSync(path.join(project, 'netherforge.json'), '{}')
+    expect(test(project, {}, '1.0.0', env, host).err[0]).toContain('Minecraft release')
+  })
+
+  it('says what is missing, and exits 2, when there is no Java or no jar', () => {
+    const env = { PATH: '', NETHERFORGE_DATA_DIR: path.join(tmp, 'data') }
+    const noJava = test(tmp, {}, '1.0.0', env, { spawn: spawn(0), machine: machine(env) })
+    expect(noJava.code).toBe(2)
+    expect(noJava.err[0]).toContain('needs Java 21')
+    expect(noJava.err[0]).toContain('NETHERFORGE_JAVA')
+    const java = jdk(path.join(tmp, 'managed'), 25)
+    const withJava = { ...env, NETHERFORGE_JAVA: java }
+    const noJar = test(tmp, {}, '1.0.0', withJava, {
+      spawn: spawn(0),
+      machine: machine(withJava),
+      beside: path.join(tmp, 'elsewhere'),
+    })
+    expect(noJar.code).toBe(2)
+    expect(noJar.err[0]).toContain('NetherForgeTest-1.0.0.jar')
+    expect(calls).toEqual([])
+  })
+
+  it('exits 2 when Java could not be started', () => {
+    const java = jdk(path.join(tmp, 'managed'), 25)
+    const jar = path.join(tmp, 'runner.jar')
+    writeFileSync(jar, '')
+    const env = { NETHERFORGE_JAVA: java, NETHERFORGE_TEST_JAR: jar }
+    writeFileSync(path.join(tmp, 'netherforge.json'), '{ "minecraft": "26.3" }')
+    const given = path.join(tmp, 'given.json')
+    writeFileSync(given, JSON.stringify({ minecraft: '26.3', schema: GAME_DATA_SCHEMA }))
+    const outcome = test(tmp, { gameData: given }, '1.0.0', env, {
+      spawn: () => ({ status: null, error: new Error('spawn failed') }),
+      machine: machine(env),
+    })
+    expect(outcome.code).toBe(2)
+    expect(outcome.err[0]).toContain('spawn failed')
+  })
+})
+
+/** The real thing: the jar Gradle built, launched with a real Java, on a small project (skipped where either is missing). */
+const builtJar = path.resolve(
+  import.meta.dirname,
+  `../../plugin/test-runner/build/libs/${jarName(process.env.npm_package_version ?? '0.1.0')}`,
+)
+const java = findJava()
+describe.skipIf(!existsSync(builtJar) || !java)('netherforge test, for real', () => {
+  // The small game data format's own tests use: what the runner reads is the same file the editor caches.
+  const game = path.resolve(
+    import.meta.dirname,
+    '../../../packages/format/testdata/game-data/bundle.json',
+  )
+
+  it('runs a project’s tests on the game data: 0 when they pass, 1 when one fails, 2 without data', async () => {
+    const project = path.join(tmp, 'project')
+    mkdirSync(path.join(project, 'tests'), { recursive: true })
+    writeFileSync(
+      path.join(project, 'netherforge.json'),
+      '{ "formatVersion": 1, "name": "P", "namespace": "p", "version": "1.0.0", "minecraft": "26.3" }\n',
+    )
+    writeFileSync(
+      path.join(project, 'tests/ok_test.lua'),
+      "nf.test.case('works', function() nf.test.advance(2) end)\n",
+    )
+    const env = {
+      NETHERFORGE_JAVA: java!,
+      NETHERFORGE_TEST_JAR: builtJar,
+      NETHERFORGE_DATA_DIR: path.join(tmp, 'data'),
+    }
+    // Nothing cached for 26.3: refused before anything runs.
+    expect((await run(['test', project], env)).code).toBe(2)
+
+    const cached = gameDataFile(path.join(tmp, 'data'), '26.3')
+    mkdirSync(path.dirname(cached), { recursive: true })
+    cpSync(game, cached)
+    const passing = await run(['test', project, '--junit', path.join(tmp, 'junit.xml')], env)
+    expect([passing.code, passing.err]).toEqual([0, []])
+    expect(existsSync(path.join(tmp, 'junit.xml'))).toBe(true)
+
+    writeFileSync(
+      path.join(project, 'tests/failing_test.lua'),
+      "nf.test.case('fails', function() assert(false) end)\n",
+    )
+    expect((await run(['test', project], env)).code).toBe(1)
+    // One file only, by path.
+    expect((await run(['test', path.join(project, 'tests/ok_test.lua')], env)).code).toBe(0)
+  }, 120_000)
+})

@@ -1,0 +1,59 @@
+{
+  "$schema": "../../.netherforge/schema/centity.schema.json",
+  "name": "Swinging door",
+  "nodes": {
+    "frame": {},
+    "panel": {
+      "parent": "frame",
+      "transform": {
+        "scale": [1, 2, 0.1875]
+      },
+      "display": {
+        "type": "block",
+        "block": "minecraft:oak_planks"
+      },
+      "hitbox": {}
+    }
+  },
+  "animations": {
+    "close": {
+      "loop": "once",
+      "tracks": {
+        "panel": {
+          "rotation": [
+            {
+              "time": 0,
+              "value": [0, -90, 0]
+            },
+            {
+              "time": 0.75,
+              "value": [0, 0, 0],
+              "easing": "ease_in_out"
+            }
+          ]
+        }
+      }
+    },
+    "open": {
+      "loop": "once",
+      "tracks": {
+        "panel": {
+          "rotation": [
+            {
+              "time": 0,
+              "value": [0, 0, 0]
+            },
+            {
+              "time": 0.75,
+              "value": [0, -90, 0],
+              "easing": "ease_in_out"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "script": {
+    "file": "script.lua"
+  }
+}

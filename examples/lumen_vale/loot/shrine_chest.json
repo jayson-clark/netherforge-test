@@ -1,0 +1,65 @@
+{
+  "$schema": "../.netherforge/schema/loot_table.schema.json",
+  "pools": {
+    "keepsakes": {
+      "rolls": 2,
+      "entries": [
+        {
+          "type": "table",
+          "table": "vale_lore:trinkets",
+          "weight": 3
+        },
+        {
+          "type": "empty",
+          "weight": 1
+        }
+      ]
+    },
+    "offerings": {
+      "rolls": {
+        "min": 2,
+        "max": 4
+      },
+      "entries": [
+        {
+          "type": "item",
+          "item": {
+            "item": "lumen_shard"
+          },
+          "count": {
+            "min": 1,
+            "max": 3
+          },
+          "weight": 5
+        },
+        {
+          "type": "item",
+          "item": {
+            "item": "crystal_glass"
+          },
+          "count": {
+            "min": 2,
+            "max": 4
+          },
+          "weight": 3
+        },
+        {
+          "type": "item",
+          "item": {
+            "item": "wisp_essence"
+          },
+          "weight": 2
+        },
+        {
+          "type": "item",
+          "item": {
+            "kind": "minecraft:golden_helmet",
+            "name": "<yellow>Tarnished Circlet",
+            "lore": ["<gray>An altar could make something of it"]
+          },
+          "weight": 1
+        }
+      ]
+    }
+  }
+}

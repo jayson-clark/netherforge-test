@@ -1,0 +1,10 @@
+{
+  "$schema": "../../.netherforge/schema/item.schema.json",
+  "kind": "minecraft:paper",
+  "name": "<yellow>Old Coin",
+  "lore": [
+    "<gray>Stamped with a lantern on one side,",
+    "<gray>worn smooth on the other"
+  ],
+  "itemModel": "lore/old_coin"
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "../.netherforge/schema/advancement.schema.json",
+  "parent": "first_light",
+  "display": {
+    "icon": {
+      "item": "lumen_lamp"
+    },
+    "title": "Altar Tender",
+    "description": "Infuse something at a lumen altar"
+  },
+  "criteria": {
+    "infused": {}
+  }
+}

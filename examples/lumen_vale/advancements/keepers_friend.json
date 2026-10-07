@@ -1,0 +1,16 @@
+{
+  "$schema": "../.netherforge/schema/advancement.schema.json",
+  "parent": "altar_tender",
+  "display": {
+    "icon": {
+      "item": "vale_lore:journal"
+    },
+    "title": "The Keeper's Friend",
+    "description": "Bring the shrine keeper what the vale asks for",
+    "frame": "goal"
+  },
+  "criteria": {
+    "rekindled": {}
+  },
+  "experience": 20
+}

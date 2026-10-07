@@ -1,0 +1,15 @@
+{
+  "$schema": "../../.netherforge/schema/item.schema.json",
+  "kind": "minecraft:book",
+  "name": "<gold>Wanderer's Journal",
+  "lore": [
+    "<gray>Every quest you take on, and how far you've got",
+    "<dark_gray>Right-click to read"
+  ],
+  "itemModel": "lore/journal",
+  "maxStackSize": 1,
+  "rarity": "uncommon",
+  "script": {
+    "file": "script.lua"
+  }
+}

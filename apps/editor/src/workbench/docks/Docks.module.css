@@ -1,0 +1,51 @@
+.dock {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg-panel);
+  overflow: hidden;
+}
+.hidden {
+  display: none;
+}
+.target {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.empty {
+  padding: 16px 12px;
+  color: var(--muted);
+}
+/* Only when the editor put nothing in the dock. */
+.target:not(:empty) + .empty {
+  display: none;
+}
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+/* The bottom dock's two columns, side by side (a resizable group). */
+.split {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg-panel);
+  overflow: hidden;
+}
+.column {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}

@@ -1,0 +1,878 @@
+[
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.skins.altar.texture",
+    "kind": "texture",
+    "text": "gui/altar.png",
+    "target": "resource_packs/lumen/textures/gui/altar.png"
+  },
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.glyphs.lumen.texture",
+    "kind": "texture",
+    "text": "glyph/lumen.png",
+    "target": "resource_packs/lumen/textures/glyph/lumen.png"
+  },
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.glyphs.wisp.texture",
+    "kind": "texture",
+    "text": "glyph/wisp.png",
+    "target": "resource_packs/lumen/textures/glyph/wisp.png"
+  },
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.items.crystal_glass.block",
+    "kind": "block_model",
+    "text": "lumen/crystal_glass",
+    "target": "lumen_vale:lumen/crystal_glass"
+  },
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.items.lumen_circlet.texture",
+    "kind": "texture",
+    "text": "item/lumen_circlet.png",
+    "target": "resource_packs/lumen/textures/item/lumen_circlet.png"
+  },
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.items.lumen_lamp.block",
+    "kind": "block_model",
+    "text": "lumen/lumen_lamp",
+    "target": "lumen_vale:lumen/lumen_lamp"
+  },
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.items.lumen_lantern.texture",
+    "kind": "texture",
+    "text": "item/lumen_lantern.png",
+    "target": "resource_packs/lumen/textures/item/lumen_lantern.png"
+  },
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.items.lumen_pickaxe.texture",
+    "kind": "texture",
+    "text": "item/lumen_pickaxe.png",
+    "target": "resource_packs/lumen/textures/item/lumen_pickaxe.png"
+  },
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.items.lumen_shard.texture",
+    "kind": "texture",
+    "text": "item/lumen_shard.png",
+    "target": "resource_packs/lumen/textures/item/lumen_shard.png"
+  },
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.items.wisp_essence.texture",
+    "kind": "texture",
+    "text": "item/wisp_essence.png",
+    "target": "resource_packs/lumen/textures/item/wisp_essence.png"
+  },
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.tooltips.lumen.background",
+    "kind": "texture",
+    "text": "tooltip/lumen_background.png",
+    "target": "resource_packs/lumen/textures/tooltip/lumen_background.png"
+  },
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.tooltips.lumen.frame",
+    "kind": "texture",
+    "text": "tooltip/lumen_frame.png",
+    "target": "resource_packs/lumen/textures/tooltip/lumen_frame.png"
+  },
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.equipment.lumen_circlet.humanoid",
+    "kind": "texture",
+    "text": "equipment/lumen_circlet.png",
+    "target": "resource_packs/lumen/textures/equipment/lumen_circlet.png"
+  },
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.blocks.crystal_glass.texture",
+    "kind": "texture",
+    "text": "block/crystal_glass.png",
+    "target": "resource_packs/lumen/textures/block/crystal_glass.png"
+  },
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.blocks.lumen_lamp.top",
+    "kind": "texture",
+    "text": "block/lumen_lamp_top.png",
+    "target": "resource_packs/lumen/textures/block/lumen_lamp_top.png"
+  },
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.blocks.lumen_lamp.bottom",
+    "kind": "texture",
+    "text": "block/lumen_lamp_top.png",
+    "target": "resource_packs/lumen/textures/block/lumen_lamp_top.png"
+  },
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.blocks.lumen_lamp.side",
+    "kind": "texture",
+    "text": "block/lumen_lamp_side.png",
+    "target": "resource_packs/lumen/textures/block/lumen_lamp_side.png"
+  },
+  {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.blocks.lumen_ore.texture",
+    "kind": "texture",
+    "text": "block/lumen_ore.png",
+    "target": "resource_packs/lumen/textures/block/lumen_ore.png"
+  },
+  {
+    "file": "cutscenes/grove_awakening.json",
+    "path": "$.cues[0].text",
+    "kind": "glyph",
+    "text": "lumen/wisp",
+    "target": "lumen_vale:lumen/wisp",
+    "start": 14,
+    "end": 32
+  },
+  {
+    "file": "cutscenes/grove_awakening.json",
+    "path": "$.cues[0].text",
+    "kind": "glyph",
+    "text": "lumen/wisp",
+    "target": "lumen_vale:lumen/wisp",
+    "start": 51,
+    "end": 69
+  },
+  {
+    "file": "structures/ruined_shrine.json",
+    "path": "$.biomes[0]",
+    "kind": "biome",
+    "text": "crystal_grove",
+    "target": "lumen_vale:crystal_grove"
+  },
+  {
+    "file": "items/crystal_glass/item.json",
+    "path": "$.itemModel",
+    "kind": "item_model",
+    "text": "lumen/crystal_glass",
+    "target": "lumen_vale:lumen/crystal_glass"
+  },
+  {
+    "file": "items/crystal_glass/item.json",
+    "path": "$.block",
+    "kind": "block",
+    "text": "crystal_glass",
+    "target": "lumen_vale:crystal_glass"
+  },
+  {
+    "file": "items/lumen_circlet/item.json",
+    "path": "$.itemModel",
+    "kind": "item_model",
+    "text": "lumen/lumen_circlet",
+    "target": "lumen_vale:lumen/lumen_circlet"
+  },
+  {
+    "file": "items/lumen_circlet/item.json",
+    "path": "$.tooltipStyle",
+    "kind": "tooltip",
+    "text": "lumen/lumen",
+    "target": "lumen_vale:lumen/lumen"
+  },
+  {
+    "file": "items/lumen_circlet/item.json",
+    "path": "$.equipment.asset",
+    "kind": "equipment",
+    "text": "lumen/lumen_circlet",
+    "target": "lumen_vale:lumen/lumen_circlet"
+  },
+  {
+    "file": "items/lumen_lamp/item.json",
+    "path": "$.itemModel",
+    "kind": "item_model",
+    "text": "lumen/lumen_lamp",
+    "target": "lumen_vale:lumen/lumen_lamp"
+  },
+  {
+    "file": "items/lumen_lamp/item.json",
+    "path": "$.block",
+    "kind": "block",
+    "text": "lumen_lamp",
+    "target": "lumen_vale:lumen_lamp"
+  },
+  {
+    "file": "items/lumen_lantern/item.json",
+    "path": "$.itemModel",
+    "kind": "item_model",
+    "text": "lumen/lumen_lantern",
+    "target": "lumen_vale:lumen/lumen_lantern"
+  },
+  {
+    "file": "items/lumen_lantern/item.json",
+    "path": "$.tooltipStyle",
+    "kind": "tooltip",
+    "text": "lumen/lumen",
+    "target": "lumen_vale:lumen/lumen"
+  },
+  {
+    "file": "items/lumen_lantern/item.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "items/lumen_lantern/script.lua"
+  },
+  {
+    "file": "items/lumen_pickaxe/item.json",
+    "path": "$.itemModel",
+    "kind": "item_model",
+    "text": "lumen/lumen_pickaxe",
+    "target": "lumen_vale:lumen/lumen_pickaxe"
+  },
+  {
+    "file": "items/lumen_pickaxe/item.json",
+    "path": "$.tooltipStyle",
+    "kind": "tooltip",
+    "text": "lumen/lumen",
+    "target": "lumen_vale:lumen/lumen"
+  },
+  {
+    "file": "items/lumen_shard/item.json",
+    "path": "$.itemModel",
+    "kind": "item_model",
+    "text": "lumen/lumen_shard",
+    "target": "lumen_vale:lumen/lumen_shard"
+  },
+  {
+    "file": "items/lumen_shard/item.json",
+    "path": "$.tooltipStyle",
+    "kind": "tooltip",
+    "text": "lumen/lumen",
+    "target": "lumen_vale:lumen/lumen"
+  },
+  {
+    "file": "items/lumen_shard/item.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "items/lumen_shard/script.lua"
+  },
+  {
+    "file": "items/wisp_essence/item.json",
+    "path": "$.itemModel",
+    "kind": "item_model",
+    "text": "lumen/wisp_essence",
+    "target": "lumen_vale:lumen/wisp_essence"
+  },
+  {
+    "file": "items/wisp_essence/item.json",
+    "path": "$.tooltipStyle",
+    "kind": "tooltip",
+    "text": "lumen/lumen",
+    "target": "lumen_vale:lumen/lumen"
+  },
+  {
+    "file": "items/wisp_essence/item.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "items/wisp_essence/script.lua"
+  },
+  {
+    "file": "recipes/crystal_glass.json",
+    "path": "$.key.S.item",
+    "kind": "item",
+    "text": "lumen_shard",
+    "target": "lumen_vale:lumen_shard"
+  },
+  {
+    "file": "recipes/crystal_glass.json",
+    "path": "$.result.item",
+    "kind": "item",
+    "text": "crystal_glass",
+    "target": "lumen_vale:crystal_glass"
+  },
+  {
+    "file": "recipes/cut_crystal_glass.json",
+    "path": "$.result.item",
+    "kind": "item",
+    "text": "crystal_glass",
+    "target": "lumen_vale:crystal_glass"
+  },
+  {
+    "file": "recipes/kindled_amethyst.json",
+    "path": "$.result.item",
+    "kind": "item",
+    "text": "lumen_shard",
+    "target": "lumen_vale:lumen_shard"
+  },
+  {
+    "file": "recipes/lumen_lamp.json",
+    "path": "$.ingredients[0].item",
+    "kind": "item",
+    "text": "crystal_glass",
+    "target": "lumen_vale:crystal_glass"
+  },
+  {
+    "file": "recipes/lumen_lamp.json",
+    "path": "$.ingredients[1].item",
+    "kind": "item",
+    "text": "lumen_shard",
+    "target": "lumen_vale:lumen_shard"
+  },
+  {
+    "file": "recipes/lumen_lamp.json",
+    "path": "$.ingredients[2].item",
+    "kind": "item",
+    "text": "lumen_shard",
+    "target": "lumen_vale:lumen_shard"
+  },
+  {
+    "file": "recipes/lumen_lamp.json",
+    "path": "$.ingredients[3].item",
+    "kind": "item",
+    "text": "wisp_essence",
+    "target": "lumen_vale:wisp_essence"
+  },
+  {
+    "file": "recipes/lumen_lamp.json",
+    "path": "$.result.item",
+    "kind": "item",
+    "text": "lumen_lamp",
+    "target": "lumen_vale:lumen_lamp"
+  },
+  {
+    "file": "recipes/lumen_lantern.json",
+    "path": "$.key.S.item",
+    "kind": "item",
+    "text": "lumen_shard",
+    "target": "lumen_vale:lumen_shard"
+  },
+  {
+    "file": "recipes/lumen_lantern.json",
+    "path": "$.result.item",
+    "kind": "item",
+    "text": "lumen_lantern",
+    "target": "lumen_vale:lumen_lantern"
+  },
+  {
+    "file": "recipes/lumen_pickaxe.json",
+    "path": "$.template.item",
+    "kind": "item",
+    "text": "wisp_essence",
+    "target": "lumen_vale:wisp_essence"
+  },
+  {
+    "file": "recipes/lumen_pickaxe.json",
+    "path": "$.addition.item",
+    "kind": "item",
+    "text": "lumen_shard",
+    "target": "lumen_vale:lumen_shard"
+  },
+  {
+    "file": "recipes/lumen_pickaxe.json",
+    "path": "$.result.item",
+    "kind": "item",
+    "text": "lumen_pickaxe",
+    "target": "lumen_vale:lumen_pickaxe"
+  },
+  {
+    "file": "loot/crystal_glass.json",
+    "path": "$.pools.main.entries[0].item.item",
+    "kind": "item",
+    "text": "crystal_glass",
+    "target": "lumen_vale:crystal_glass"
+  },
+  {
+    "file": "loot/lumen_lamp.json",
+    "path": "$.pools.main.entries[0].item.item",
+    "kind": "item",
+    "text": "lumen_lamp",
+    "target": "lumen_vale:lumen_lamp"
+  },
+  {
+    "file": "loot/lumen_ore.json",
+    "path": "$.pools.glimmer.conditions[0].tool.item",
+    "kind": "item",
+    "text": "lumen_pickaxe",
+    "target": "lumen_vale:lumen_pickaxe"
+  },
+  {
+    "file": "loot/lumen_ore.json",
+    "path": "$.pools.glimmer.entries[0].item.item",
+    "kind": "item",
+    "text": "lumen_shard",
+    "target": "lumen_vale:lumen_shard"
+  },
+  {
+    "file": "loot/lumen_ore.json",
+    "path": "$.pools.shards.entries[0].item.item",
+    "kind": "item",
+    "text": "lumen_shard",
+    "target": "lumen_vale:lumen_shard"
+  },
+  {
+    "file": "loot/shrine_chest.json",
+    "path": "$.pools.keepsakes.entries[0].table",
+    "kind": "loot_table",
+    "text": "vale_lore:trinkets",
+    "target": "vale_lore:trinkets"
+  },
+  {
+    "file": "loot/shrine_chest.json",
+    "path": "$.pools.offerings.entries[0].item.item",
+    "kind": "item",
+    "text": "lumen_shard",
+    "target": "lumen_vale:lumen_shard"
+  },
+  {
+    "file": "loot/shrine_chest.json",
+    "path": "$.pools.offerings.entries[1].item.item",
+    "kind": "item",
+    "text": "crystal_glass",
+    "target": "lumen_vale:crystal_glass"
+  },
+  {
+    "file": "loot/shrine_chest.json",
+    "path": "$.pools.offerings.entries[2].item.item",
+    "kind": "item",
+    "text": "wisp_essence",
+    "target": "lumen_vale:wisp_essence"
+  },
+  {
+    "file": "loot/tortoise_gift.json",
+    "path": "$.pools.gift.entries[0].item.item",
+    "kind": "item",
+    "text": "lumen_shard",
+    "target": "lumen_vale:lumen_shard"
+  },
+  {
+    "file": "loot/tortoise_gift.json",
+    "path": "$.pools.gift.entries[1].table",
+    "kind": "loot_table",
+    "text": "vale_lore:trinkets",
+    "target": "vale_lore:trinkets"
+  },
+  {
+    "file": "loot/wisp.json",
+    "path": "$.pools.essence.entries[0].item.item",
+    "kind": "item",
+    "text": "wisp_essence",
+    "target": "lumen_vale:wisp_essence"
+  },
+  {
+    "file": "loot/wisp.json",
+    "path": "$.pools.spark.entries[0].item.item",
+    "kind": "item",
+    "text": "lumen_shard",
+    "target": "lumen_vale:lumen_shard"
+  },
+  {
+    "file": "blocks/crystal_glass/block.json",
+    "path": "$.model",
+    "kind": "block_model",
+    "text": "lumen/crystal_glass",
+    "target": "lumen_vale:lumen/crystal_glass"
+  },
+  {
+    "file": "blocks/crystal_glass/block.json",
+    "path": "$.drops",
+    "kind": "loot_table",
+    "text": "crystal_glass",
+    "target": "lumen_vale:crystal_glass"
+  },
+  {
+    "file": "blocks/crystal_glass/block.json",
+    "path": "$.sounds.place",
+    "kind": "sound",
+    "text": "lumen/lumen_place",
+    "target": "lumen_vale:lumen/lumen_place"
+  },
+  {
+    "file": "blocks/crystal_glass/block.json",
+    "path": "$.sounds.break",
+    "kind": "sound",
+    "text": "lumen/lumen_break",
+    "target": "lumen_vale:lumen/lumen_break"
+  },
+  {
+    "file": "blocks/lumen_lamp/block.json",
+    "path": "$.model",
+    "kind": "block_model",
+    "text": "lumen/lumen_lamp",
+    "target": "lumen_vale:lumen/lumen_lamp"
+  },
+  {
+    "file": "blocks/lumen_lamp/block.json",
+    "path": "$.drops",
+    "kind": "loot_table",
+    "text": "lumen_lamp",
+    "target": "lumen_vale:lumen_lamp"
+  },
+  {
+    "file": "blocks/lumen_lamp/block.json",
+    "path": "$.sounds.place",
+    "kind": "sound",
+    "text": "lumen/lumen_place",
+    "target": "lumen_vale:lumen/lumen_place"
+  },
+  {
+    "file": "blocks/lumen_lamp/block.json",
+    "path": "$.sounds.break",
+    "kind": "sound",
+    "text": "lumen/lumen_break",
+    "target": "lumen_vale:lumen/lumen_break"
+  },
+  {
+    "file": "blocks/lumen_lamp/block.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "blocks/lumen_lamp/script.lua"
+  },
+  {
+    "file": "blocks/lumen_ore/block.json",
+    "path": "$.model",
+    "kind": "block_model",
+    "text": "lumen/lumen_ore",
+    "target": "lumen_vale:lumen/lumen_ore"
+  },
+  {
+    "file": "blocks/lumen_ore/block.json",
+    "path": "$.drops",
+    "kind": "loot_table",
+    "text": "lumen_ore",
+    "target": "lumen_vale:lumen_ore"
+  },
+  {
+    "file": "blocks/lumen_ore/block.json",
+    "path": "$.sounds.place",
+    "kind": "sound",
+    "text": "lumen/lumen_place",
+    "target": "lumen_vale:lumen/lumen_place"
+  },
+  {
+    "file": "blocks/lumen_ore/block.json",
+    "path": "$.sounds.break",
+    "kind": "sound",
+    "text": "lumen/lumen_break",
+    "target": "lumen_vale:lumen/lumen_break"
+  },
+  {
+    "file": "blocks/lumen_ore/block.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "blocks/lumen_ore/script.lua"
+  },
+  {
+    "file": "biomes/ashen_ridge.json",
+    "path": "$.features.vegetal_decoration[0]",
+    "kind": "placed_feature",
+    "text": "minecraft:patch_dead_bush",
+    "target": "minecraft:patch_dead_bush"
+  },
+  {
+    "file": "biomes/crystal_grove.json",
+    "path": "$.features.local_modifications[0]",
+    "kind": "placed_feature",
+    "text": "grove_crystals",
+    "target": "lumen_vale:grove_crystals"
+  },
+  {
+    "file": "biomes/crystal_grove.json",
+    "path": "$.features.vegetal_decoration[0]",
+    "kind": "placed_feature",
+    "text": "grove_lichen",
+    "target": "lumen_vale:grove_lichen"
+  },
+  {
+    "file": "biomes/crystal_grove.json",
+    "path": "$.features.vegetal_decoration[1]",
+    "kind": "placed_feature",
+    "text": "minecraft:patch_tall_grass_2",
+    "target": "minecraft:patch_tall_grass_2"
+  },
+  {
+    "file": "biomes/crystal_grove.json",
+    "path": "$.features.vegetal_decoration[2]",
+    "kind": "placed_feature",
+    "text": "minecraft:patch_grass_meadow",
+    "target": "minecraft:patch_grass_meadow"
+  },
+  {
+    "file": "biomes/mossy_meadows.json",
+    "path": "$.features.vegetal_decoration[0]",
+    "kind": "placed_feature",
+    "text": "minecraft:patch_tall_grass_2",
+    "target": "minecraft:patch_tall_grass_2"
+  },
+  {
+    "file": "biomes/mossy_meadows.json",
+    "path": "$.features.vegetal_decoration[1]",
+    "kind": "placed_feature",
+    "text": "minecraft:patch_grass_meadow",
+    "target": "minecraft:patch_grass_meadow"
+  },
+  {
+    "file": "biomes/mossy_meadows.json",
+    "path": "$.features.vegetal_decoration[2]",
+    "kind": "placed_feature",
+    "text": "minecraft:flower_meadow",
+    "target": "minecraft:flower_meadow"
+  },
+  {
+    "file": "biomes/mossy_meadows.json",
+    "path": "$.features.vegetal_decoration[3]",
+    "kind": "placed_feature",
+    "text": "minecraft:trees_meadow",
+    "target": "minecraft:trees_meadow"
+  },
+  {
+    "file": "terrain/sky_reach.json",
+    "path": "$.ores.lumen.customBlock",
+    "kind": "block",
+    "text": "lumen_ore",
+    "target": "lumen_vale:lumen_ore"
+  },
+  {
+    "file": "terrain/sky_reach.json",
+    "path": "$.decorations.spires.structure",
+    "kind": "structure",
+    "text": "crystal_spire",
+    "target": "lumen_vale:crystal_spire"
+  },
+  {
+    "file": "terrain/sky_reach.json",
+    "path": "$.biomes.isles.biome",
+    "kind": "biome",
+    "text": "crystal_grove",
+    "target": "lumen_vale:crystal_grove"
+  },
+  {
+    "file": "terrain/vale.json",
+    "path": "$.ores.lumen.customBlock",
+    "kind": "block",
+    "text": "lumen_ore",
+    "target": "lumen_vale:lumen_ore"
+  },
+  {
+    "file": "terrain/vale.json",
+    "path": "$.ores.lumen_shallow.customBlock",
+    "kind": "block",
+    "text": "lumen_ore",
+    "target": "lumen_vale:lumen_ore"
+  },
+  {
+    "file": "terrain/vale.json",
+    "path": "$.decorations.cave_lumen.customBlock",
+    "kind": "block",
+    "text": "lumen_ore",
+    "target": "lumen_vale:lumen_ore"
+  },
+  {
+    "file": "terrain/vale.json",
+    "path": "$.decorations.crystal_spires.structure",
+    "kind": "structure",
+    "text": "crystal_spire",
+    "target": "lumen_vale:crystal_spire"
+  },
+  {
+    "file": "terrain/vale.json",
+    "path": "$.biomes.grove.biome",
+    "kind": "biome",
+    "text": "crystal_grove",
+    "target": "lumen_vale:crystal_grove"
+  },
+  {
+    "file": "terrain/vale.json",
+    "path": "$.biomes.meadows.biome",
+    "kind": "biome",
+    "text": "mossy_meadows",
+    "target": "lumen_vale:mossy_meadows"
+  },
+  {
+    "file": "terrain/vale.json",
+    "path": "$.biomes.ridge.biome",
+    "kind": "biome",
+    "text": "ashen_ridge",
+    "target": "lumen_vale:ashen_ridge"
+  },
+  {
+    "file": "advancements/above_the_vale.json",
+    "path": "$.parent",
+    "kind": "advancement",
+    "text": "keepers_friend",
+    "target": "lumen_vale:keepers_friend"
+  },
+  {
+    "file": "advancements/above_the_vale.json",
+    "path": "$.display.icon.item",
+    "kind": "item",
+    "text": "lumen_lantern",
+    "target": "lumen_vale:lumen_lantern"
+  },
+  {
+    "file": "advancements/altar_tender.json",
+    "path": "$.parent",
+    "kind": "advancement",
+    "text": "first_light",
+    "target": "lumen_vale:first_light"
+  },
+  {
+    "file": "advancements/altar_tender.json",
+    "path": "$.display.icon.item",
+    "kind": "item",
+    "text": "lumen_lamp",
+    "target": "lumen_vale:lumen_lamp"
+  },
+  {
+    "file": "advancements/first_light.json",
+    "path": "$.parent",
+    "kind": "advancement",
+    "text": "vale_lore:chronicle",
+    "target": "vale_lore:chronicle"
+  },
+  {
+    "file": "advancements/first_light.json",
+    "path": "$.display.icon.item",
+    "kind": "item",
+    "text": "lumen_shard",
+    "target": "lumen_vale:lumen_shard"
+  },
+  {
+    "file": "advancements/first_light.json",
+    "path": "$.display.description",
+    "kind": "glyph",
+    "text": "lumen/lumen",
+    "target": "lumen_vale:lumen/lumen",
+    "start": 7,
+    "end": 26
+  },
+  {
+    "file": "advancements/keepers_friend.json",
+    "path": "$.parent",
+    "kind": "advancement",
+    "text": "altar_tender",
+    "target": "lumen_vale:altar_tender"
+  },
+  {
+    "file": "advancements/keepers_friend.json",
+    "path": "$.display.icon.item",
+    "kind": "item",
+    "text": "vale_lore:journal",
+    "target": "vale_lore:journal"
+  },
+  {
+    "file": "menus/lumen_altar/menu.json",
+    "path": "$.skin",
+    "kind": "skin",
+    "text": "lumen/altar",
+    "target": "lumen_vale:lumen/altar"
+  },
+  {
+    "file": "menus/lumen_altar/menu.json",
+    "path": "$.slots[\"22\"].item.item",
+    "kind": "item",
+    "text": "lumen_shard",
+    "target": "lumen_vale:lumen_shard"
+  },
+  {
+    "file": "menus/lumen_altar/menu.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "menus/lumen_altar/script.lua"
+  },
+  {
+    "file": "dialogs/ascend/dialog.json",
+    "path": "$.body[0].item.item",
+    "kind": "item",
+    "text": "lumen_lantern",
+    "target": "lumen_vale:lumen_lantern"
+  },
+  {
+    "file": "dialogs/ascend/dialog.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "dialogs/ascend/script.lua"
+  },
+  {
+    "file": "dialogs/keeper/dialog.json",
+    "path": "$.title",
+    "kind": "glyph",
+    "text": "lumen/wisp",
+    "target": "lumen_vale:lumen/wisp",
+    "start": 14,
+    "end": 32
+  },
+  {
+    "file": "dialogs/keeper/dialog.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "dialogs/keeper/script.lua"
+  },
+  {
+    "file": "centities/moss_tortoise/centity.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "centities/moss_tortoise/script.lua"
+  },
+  {
+    "file": "centities/moss_tortoise/centity.json",
+    "path": "$.spawning.biomes[0]",
+    "kind": "biome",
+    "text": "mossy_meadows",
+    "target": "lumen_vale:mossy_meadows"
+  },
+  {
+    "file": "centities/shrine_keeper/centity.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "centities/shrine_keeper/script.lua"
+  },
+  {
+    "file": "centities/wisp/centity.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "centities/wisp/script.lua"
+  },
+  {
+    "file": "centities/wisp/centity.json",
+    "path": "$.spawning.biomes[0]",
+    "kind": "biome",
+    "text": "crystal_grove",
+    "target": "lumen_vale:crystal_grove"
+  },
+  {
+    "file": "netherforge.json",
+    "path": "$.worlds.sky_reach.terrain",
+    "kind": "terrain",
+    "text": "sky_reach",
+    "target": "lumen_vale:sky_reach"
+  },
+  {
+    "file": "netherforge.json",
+    "path": "$.worlds.sky_reach.dimensionType",
+    "kind": "dimension_type",
+    "text": "vale",
+    "target": "lumen_vale:vale"
+  },
+  {
+    "file": "netherforge.json",
+    "path": "$.worlds.world.terrain",
+    "kind": "terrain",
+    "text": "vale",
+    "target": "lumen_vale:vale"
+  },
+  {
+    "file": "netherforge.json",
+    "path": "$.worlds.world.dimensionType",
+    "kind": "dimension_type",
+    "text": "vale",
+    "target": "lumen_vale:vale"
+  }
+]

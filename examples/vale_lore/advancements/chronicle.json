@@ -1,0 +1,16 @@
+{
+  "$schema": "../.netherforge/schema/advancement.schema.json",
+  "display": {
+    "icon": {
+      "item": "journal"
+    },
+    "title": "<gold>Vale Chronicle",
+    "description": "Take on your first quest",
+    "background": "minecraft:block/calcite",
+    "toast": false,
+    "announce": false
+  },
+  "criteria": {
+    "begun": {}
+  }
+}

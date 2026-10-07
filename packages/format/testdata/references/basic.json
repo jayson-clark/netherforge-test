@@ -1,0 +1,408 @@
+[
+  {
+    "file": "resource_packs/ui/pack.json",
+    "path": "$.skins.shop.texture",
+    "kind": "texture",
+    "text": "gui/shop.png",
+    "target": "resource_packs/ui/textures/gui/shop.png"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
+    "path": "$.glyphs.coin.texture",
+    "kind": "texture",
+    "text": "glyph/coin.png",
+    "target": "resource_packs/ui/textures/glyph/coin.png"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
+    "path": "$.items.ruby.texture",
+    "kind": "texture",
+    "text": "item/ruby.png",
+    "target": "resource_packs/ui/textures/item/ruby.png"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
+    "path": "$.items.ruby_ore.block",
+    "kind": "block_model",
+    "text": "ui/ruby_ore",
+    "target": "basic:ui/ruby_ore"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
+    "path": "$.tooltips.fancy.background",
+    "kind": "texture",
+    "text": "tooltip/background.png",
+    "target": "resource_packs/ui/textures/tooltip/background.png"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
+    "path": "$.tooltips.fancy.frame",
+    "kind": "texture",
+    "text": "tooltip/frame.png",
+    "target": "resource_packs/ui/textures/tooltip/frame.png"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
+    "path": "$.equipment.ruby.humanoid",
+    "kind": "texture",
+    "text": "armor/ruby.png",
+    "target": "resource_packs/ui/textures/armor/ruby.png"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
+    "path": "$.equipment.ruby.humanoidLeggings",
+    "kind": "texture",
+    "text": "armor/ruby_leggings.png",
+    "target": "resource_packs/ui/textures/armor/ruby_leggings.png"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
+    "path": "$.blocks.ruby_ore.texture",
+    "kind": "texture",
+    "text": "block/ruby_ore.png",
+    "target": "resource_packs/ui/textures/block/ruby_ore.png"
+  },
+  {
+    "file": "items/crown/item.json",
+    "path": "$.equipment.asset",
+    "kind": "equipment",
+    "text": "ui/ruby",
+    "target": "basic:ui/ruby"
+  },
+  {
+    "file": "items/ruby/item.json",
+    "path": "$.itemModel",
+    "kind": "item_model",
+    "text": "ui/ruby",
+    "target": "basic:ui/ruby"
+  },
+  {
+    "file": "items/ruby/item.json",
+    "path": "$.tooltipStyle",
+    "kind": "tooltip",
+    "text": "ui/fancy",
+    "target": "basic:ui/fancy"
+  },
+  {
+    "file": "items/ruby/item.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "items/ruby/script.lua"
+  },
+  {
+    "file": "items/ruby_ore/item.json",
+    "path": "$.itemModel",
+    "kind": "item_model",
+    "text": "ui/ruby_ore",
+    "target": "basic:ui/ruby_ore"
+  },
+  {
+    "file": "items/ruby_ore/item.json",
+    "path": "$.block",
+    "kind": "block",
+    "text": "ruby_ore",
+    "target": "basic:ruby_ore"
+  },
+  {
+    "file": "recipes/ruby.json",
+    "path": "$.result.item",
+    "kind": "item",
+    "text": "ruby",
+    "target": "basic:ruby"
+  },
+  {
+    "file": "recipes/ruby_dust.json",
+    "path": "$.ingredient.item",
+    "kind": "item",
+    "text": "ruby",
+    "target": "basic:ruby"
+  },
+  {
+    "file": "recipes/ruby_sword.json",
+    "path": "$.key.R.item",
+    "kind": "item",
+    "text": "ruby",
+    "target": "basic:ruby"
+  },
+  {
+    "file": "loot/junk.json",
+    "path": "$.pools.main.entries[2].conditions[1].tool.item",
+    "kind": "item",
+    "text": "ruby",
+    "target": "basic:ruby"
+  },
+  {
+    "file": "loot/ruby_ore.json",
+    "path": "$.pools.main.entries[0].item.item",
+    "kind": "item",
+    "text": "ruby",
+    "target": "basic:ruby"
+  },
+  {
+    "file": "loot/treasure.json",
+    "path": "$.pools.extra.entries[0].table",
+    "kind": "loot_table",
+    "text": "junk",
+    "target": "basic:junk"
+  },
+  {
+    "file": "loot/treasure.json",
+    "path": "$.pools.extra.entries[1].table",
+    "kind": "loot_table",
+    "text": "library:gems",
+    "target": "library:gems"
+  },
+  {
+    "file": "loot/treasure.json",
+    "path": "$.pools.gems.entries[0].item.item",
+    "kind": "item",
+    "text": "ruby",
+    "target": "basic:ruby"
+  },
+  {
+    "file": "loot/treasure.json",
+    "path": "$.pools.gems.entries[1].item.item",
+    "kind": "item",
+    "text": "library:gem",
+    "target": "library:gem"
+  },
+  {
+    "file": "blocks/floating_lamp/block.json",
+    "path": "$.centity",
+    "kind": "centity",
+    "text": "lamp",
+    "target": "basic:lamp"
+  },
+  {
+    "file": "blocks/ruby_ore/block.json",
+    "path": "$.model",
+    "kind": "block_model",
+    "text": "ui/ruby_ore",
+    "target": "basic:ui/ruby_ore"
+  },
+  {
+    "file": "blocks/ruby_ore/block.json",
+    "path": "$.drops",
+    "kind": "loot_table",
+    "text": "ruby_ore",
+    "target": "basic:ruby_ore"
+  },
+  {
+    "file": "blocks/ruby_ore/block.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "blocks/ruby_ore/script.lua"
+  },
+  {
+    "file": "biomes/ruby_grove.json",
+    "path": "$.features.local_modifications[0]",
+    "kind": "placed_feature",
+    "text": "ruby_boulders",
+    "target": "basic:ruby_boulders"
+  },
+  {
+    "file": "biomes/ruby_grove.json",
+    "path": "$.features.vegetal_decoration[0]",
+    "kind": "placed_feature",
+    "text": "minecraft:patch_grass_plain",
+    "target": "minecraft:patch_grass_plain"
+  },
+  {
+    "file": "biomes/ruby_grove.json",
+    "path": "$.features.vegetal_decoration[1]",
+    "kind": "placed_feature",
+    "text": "minecraft:flower_cherry",
+    "target": "minecraft:flower_cherry"
+  },
+  {
+    "file": "biomes/ruby_grove.json",
+    "path": "$.features.vegetal_decoration[2]",
+    "kind": "placed_feature",
+    "text": "minecraft:trees_cherry",
+    "target": "minecraft:trees_cherry"
+  },
+  {
+    "file": "terrain/ruby_hills.json",
+    "path": "$.ores.ruby.customBlock",
+    "kind": "block",
+    "text": "ruby_ore",
+    "target": "basic:ruby_ore"
+  },
+  {
+    "file": "terrain/ruby_hills.json",
+    "path": "$.decorations.oaks.structure",
+    "kind": "structure",
+    "text": "oak_tree",
+    "target": "basic:oak_tree"
+  },
+  {
+    "file": "terrain/ruby_hills.json",
+    "path": "$.decorations.ruby_crystals.customBlock",
+    "kind": "block",
+    "text": "ruby_ore",
+    "target": "basic:ruby_ore"
+  },
+  {
+    "file": "terrain/ruby_hills.json",
+    "path": "$.biomes.grove.biome",
+    "kind": "biome",
+    "text": "ruby_grove",
+    "target": "basic:ruby_grove"
+  },
+  {
+    "file": "terrain/ruby_hills.json",
+    "path": "$.biomes.plains.biome",
+    "kind": "biome",
+    "text": "minecraft:plains",
+    "target": "minecraft:plains"
+  },
+  {
+    "file": "terrain/ruby_hills.json",
+    "path": "$.biomes.snowy.biome",
+    "kind": "biome",
+    "text": "minecraft:snowy_plains",
+    "target": "minecraft:snowy_plains"
+  },
+  {
+    "file": "advancements/diamonds.json",
+    "path": "$.parent",
+    "kind": "advancement",
+    "text": "adventurer",
+    "target": "basic:adventurer"
+  },
+  {
+    "file": "advancements/gem_hoarder.json",
+    "path": "$.parent",
+    "kind": "advancement",
+    "text": "library:gem_collector",
+    "target": "library:gem_collector"
+  },
+  {
+    "file": "advancements/gem_hoarder.json",
+    "path": "$.display.icon.item",
+    "kind": "item",
+    "text": "library:gem",
+    "target": "library:gem"
+  },
+  {
+    "file": "advancements/treasure_hunter.json",
+    "path": "$.parent",
+    "kind": "advancement",
+    "text": "adventurer",
+    "target": "basic:adventurer"
+  },
+  {
+    "file": "advancements/treasure_hunter.json",
+    "path": "$.display.icon.item",
+    "kind": "item",
+    "text": "ruby",
+    "target": "basic:ruby"
+  },
+  {
+    "file": "advancements/treasure_hunter.json",
+    "path": "$.display.description",
+    "kind": "glyph",
+    "text": "ui/coin",
+    "target": "basic:ui/coin",
+    "start": 9,
+    "end": 24
+  },
+  {
+    "file": "menus/shop/menu.json",
+    "path": "$.skin",
+    "kind": "skin",
+    "text": "ui/shop",
+    "target": "basic:ui/shop"
+  },
+  {
+    "file": "menus/shop/menu.json",
+    "path": "$.slots[\"11\"].item.lore[0]",
+    "kind": "glyph",
+    "text": "ui/coin",
+    "target": "basic:ui/coin",
+    "start": 6,
+    "end": 21
+  },
+  {
+    "file": "menus/shop/menu.json",
+    "path": "$.slots[\"12\"].item.item",
+    "kind": "item",
+    "text": "library:gem",
+    "target": "library:gem"
+  },
+  {
+    "file": "menus/shop/menu.json",
+    "path": "$.slots[\"12\"].item.lore[0]",
+    "kind": "glyph",
+    "text": "ui/coin",
+    "target": "basic:ui/coin",
+    "start": 6,
+    "end": 21
+  },
+  {
+    "file": "menus/shop/menu.json",
+    "path": "$.slots[\"13\"].item.item",
+    "kind": "item",
+    "text": "ruby",
+    "target": "basic:ruby"
+  },
+  {
+    "file": "menus/shop/menu.json",
+    "path": "$.slots[\"13\"].item.lore[0]",
+    "kind": "glyph",
+    "text": "ui/coin",
+    "target": "basic:ui/coin",
+    "start": 6,
+    "end": 21
+  },
+  {
+    "file": "menus/shop/menu.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "menus/shop/script.lua"
+  },
+  {
+    "file": "dialogs/welcome/dialog.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "dialogs/welcome/script.lua"
+  },
+  {
+    "file": "centities/crate/centity.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "centities/crate/script.lua"
+  },
+  {
+    "file": "centities/door/centity.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "centities/door/script.lua"
+  },
+  {
+    "file": "centities/pool/centity.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "centities/pool/script.lua"
+  },
+  {
+    "file": "centities/tower/centity.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "centities/tower/script.lua"
+  },
+  {
+    "file": "centities/wisp/centity.json",
+    "path": "$.spawning.biomes[0]",
+    "kind": "biome",
+    "text": "#minecraft:is_end"
+  }
+]

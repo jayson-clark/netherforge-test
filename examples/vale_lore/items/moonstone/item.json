@@ -1,0 +1,14 @@
+{
+  "$schema": "../../.netherforge/schema/item.schema.json",
+  "kind": "minecraft:paper",
+  "name": "<aqua>Moonstone",
+  "lore": [
+    "<gray>Cool, and brighter after dark",
+    "<dark_gray>Right-click to read the night"
+  ],
+  "itemModel": "lore/moonstone",
+  "rarity": "rare",
+  "script": {
+    "file": "script.lua"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "../../.netherforge/schema/item.schema.json",
+  "kind": "minecraft:amethyst_shard",
+  "name": "<light_purple>Lumen Shard",
+  "lore": [
+    "<gray>A sliver of the vale's light,",
+    "<gray>still warm from the stone"
+  ],
+  "itemModel": "lumen/lumen_shard",
+  "tooltipStyle": "lumen/lumen",
+  "rarity": "uncommon",
+  "script": {
+    "file": "script.lua"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "../../.netherforge/schema/block.schema.json",
+  "model": "lumen/lumen_ore",
+  "hardness": 3,
+  "tool": "pickaxe",
+  "requiresTool": true,
+  "drops": "lumen_ore",
+  "sounds": {
+    "place": "lumen/lumen_place",
+    "break": "lumen/lumen_break"
+  },
+  "script": {
+    "file": "script.lua"
+  }
+}

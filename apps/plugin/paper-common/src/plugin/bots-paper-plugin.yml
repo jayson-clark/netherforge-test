@@ -1,0 +1,14 @@
+name: NetherForgeBots
+version: '${version}'
+main: dev.netherforge.plugin.paper.bots.BotsPlugin
+api-version: '${minecraft}'
+folia-supported: false
+description: Fake players for NetherForge's dev server, driven over the editor's bridge. Dev servers only; never install it on a production server.
+dependencies:
+  server:
+    # On NetherForge's classes. Enabled after the worlds load, before NetherForge's runtime starts (once the server has
+    # loaded), so its bots are there when the runtime starts its bridge.
+    NetherForge:
+      load: AFTER
+      required: true
+      join-classpath: true

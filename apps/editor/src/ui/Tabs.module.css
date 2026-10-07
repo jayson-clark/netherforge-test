@@ -1,0 +1,46 @@
+/* The tabs and their panel lay out in whatever holds them. */
+.root {
+  display: contents;
+}
+.row {
+  display: flex;
+  align-items: stretch;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--border);
+  min-height: 28px;
+}
+.tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-bottom: 2px solid transparent;
+  padding: 4px 8px;
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  outline: none;
+}
+.tab[data-hovered] {
+  color: var(--text);
+}
+.tab[data-selected] {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.tab[data-focus-visible] {
+  outline: 1px solid var(--info);
+  outline-offset: -1px;
+}
+.end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}

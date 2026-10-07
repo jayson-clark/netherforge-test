@@ -1,0 +1,8 @@
+{
+  "$schema": "../../.netherforge/schema/datapack.schema.json",
+  "pack": {
+    "description": "Amethyst geodes and glow lichen, more of them, for the crystal grove",
+    "min_format": 94,
+    "max_format": 121
+  }
+}

@@ -1,0 +1,80 @@
+# The NetherForge project this server runs: the folder holding netherforge.json,
+# absolute or relative to the server's folder. Point it at a git checkout and
+# `git pull` to deploy; `/nf reload` picks up the change without a restart.
+# A project with dependencies runs as a bundle instead: the folder
+# `netherforge build` wrote, holding netherforge-bundle.json.
+#
+# The NetherForge editor's dev server ignores this: the editor starts it with
+# -Dnetherforge.project=<folder> instead.
+project: ''
+
+# How players get the project's resource pack (everything under resource_packs/). The
+# plugin builds it, and by default serves it itself over HTTP and sends it to
+# players as they join. The editor's dev server ignores this section and
+# serves it on localhost.
+resource-pack:
+  enabled: true
+  # Where the built-in server listens.
+  bind: 0.0.0.0
+  port: 8163
+  # The address players download from, if not http://<server-ip>:<port>
+  # (localhost when server-ip is empty or 0.0.0.0)
+  # (a public host name, or a reverse proxy in front of the port above).
+  public-url: ''
+  # Serve it yourself instead: the plugin writes plugins/NetherForge/resource-pack.zip
+  # whenever it changes, and sends players this URL with the zip's hash.
+  external-url: ''
+  # Disconnect players who decline it.
+  required: false
+  # MiniMessage shown on the download prompt.
+  prompt: ''
+
+# When the plugin warns that a script is slowing the server down: in the
+# console and in the editor's problems, naming where it's slow. A script is
+# slow when its code took more than warn-ms milliseconds a tick on average over
+# the last warn-ticks ticks (at most 100). 0 turns the warning off. `/nf scripts`
+# lists every script's cost either way. Dev servers read this section too.
+performance:
+  warn-ms: 10
+  warn-ticks: 20
+
+# The time zone nf.schedule's times of day are in ("18:00" daily, "sat" weekly,
+# cron expressions), and the one nf.time writes and reads clock times in unless
+# a call gives its own: a name like Europe/Paris or America/New_York, or an offset
+# like +02:00. Empty is this server's own zone. Daylight saving follows the
+# zone's rules. Read when the server starts; dev servers read it too.
+schedules:
+  time-zone: ''
+
+# What nf.http.request (a script's web requests, to the hosts its package
+# declares in netherforge.json) may reach and do. Requests reach public addresses
+# only: a name that leads to loopback, a private, link-local, shared (CGNAT) or
+# unique-local address, and a redirect that leads there, is refused. Turn
+# allow-private-addresses on only for a service of your own on this machine or
+# network. Sizes are in bytes; the timeout covers a request with its redirects;
+# the rate is per package. Read when the server starts; dev servers read it too.
+http:
+  allow-private-addresses: false
+  max-request-bytes: 1048576
+  max-response-bytes: 4194304
+  timeout-seconds: 15
+  requests-per-minute: 60
+
+# MySQL and PostgreSQL servers that scripts may use, each under a name:
+# nf.db("network"). A script names a connection and never sees its host or
+# password. A connection opens only to the packages (by namespace) listed under
+# its `packages`; a package must also declare "requires": { "db": true } in its
+# netherforge.json. MySQL's driver is the server's own; PostgreSQL's and the
+# connection pool are fetched when the plugin loads. Read when the server
+# starts; dev servers read it too. Nothing is set up by default:
+# databases:
+#   network:
+#     type: mysql          # mysql (MariaDB works too) or postgres
+#     host: localhost
+#     port: 3306           # default: 3306 for mysql, 5432 for postgres
+#     database: netherforge
+#     username: netherforge
+#     password: ''
+#     pool-size: 4         # most statements running at once (1 to 32)
+#     packages: [shop]     # who may open it; empty lets no package in
+#     properties: {}       # extra driver properties, like sslMode: REQUIRED

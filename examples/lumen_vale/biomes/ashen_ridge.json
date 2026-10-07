@@ -1,0 +1,52 @@
+{
+  "$schema": "../.netherforge/schema/biome.schema.json",
+  "climate": {
+    "temperature": 0.3,
+    "downfall": 0,
+    "precipitation": false
+  },
+  "colors": {
+    "sky": "#a3a3ad",
+    "fog": "#b8b8bf",
+    "water": "#6a7378",
+    "waterFog": "#2b2f31",
+    "grass": "#8c8f80",
+    "foliage": "#7d806f",
+    "dryFoliage": "#8a8578"
+  },
+  "particle": {
+    "particle": "minecraft:white_ash",
+    "probability": 0.02
+  },
+  "sounds": {
+    "mood": {
+      "sound": "minecraft:ambient.cave"
+    },
+    "music": {
+      "sound": "minecraft:music.overworld.stony_peaks"
+    }
+  },
+  "spawns": {
+    "monster": [
+      {
+        "entity": "minecraft:skeleton",
+        "weight": 80,
+        "group": {
+          "min": 1,
+          "max": 3
+        }
+      },
+      {
+        "entity": "minecraft:spider",
+        "weight": 60,
+        "group": {
+          "min": 1,
+          "max": 2
+        }
+      }
+    ]
+  },
+  "features": {
+    "vegetal_decoration": ["minecraft:patch_dead_bush"]
+  }
+}

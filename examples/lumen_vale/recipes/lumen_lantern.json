@@ -1,0 +1,16 @@
+{
+  "$schema": "../.netherforge/schema/recipe.schema.json",
+  "type": "shaped",
+  "pattern": [" I ", "SGS", " S "],
+  "key": {
+    "G": "minecraft:glass",
+    "I": "minecraft:iron_ingot",
+    "S": {
+      "item": "lumen_shard"
+    }
+  },
+  "result": {
+    "item": "lumen_lantern"
+  },
+  "category": "equipment"
+}

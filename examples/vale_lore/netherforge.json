@@ -1,0 +1,30 @@
+{
+  "$schema": ".netherforge/schema/netherforge.schema.json",
+  "formatVersion": 1,
+  "name": "Vale Lore",
+  "namespace": "vale_lore",
+  "version": "0.1.0",
+  "minecraft": "26.3",
+  "requires": {
+    "db": true
+  },
+  "exports": {
+    "advancements": ["chronicle"],
+    "dialogs": ["journal"],
+    "items": ["journal", "moonstone", "old_coin"],
+    "loot": ["trinkets"],
+    "modules": ["quests"]
+  },
+  "settings": {
+    "announce_completions": {
+      "type": "boolean",
+      "description": "Whether everyone is told when a player completes a quest.",
+      "default": true
+    },
+    "journal_on_first_quest": {
+      "type": "boolean",
+      "description": "Whether a player who starts their first quest is handed a journal to follow it in.",
+      "default": true
+    }
+  }
+}

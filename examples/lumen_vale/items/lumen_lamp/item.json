@@ -1,0 +1,11 @@
+{
+  "$schema": "../../.netherforge/schema/item.schema.json",
+  "kind": "minecraft:paper",
+  "name": "<light_purple>Lumen Lamp",
+  "lore": [
+    "<gray>Place it, then right-click it:",
+    "<gray>every lamp is an altar"
+  ],
+  "itemModel": "lumen/lumen_lamp",
+  "block": "lumen_lamp"
+}

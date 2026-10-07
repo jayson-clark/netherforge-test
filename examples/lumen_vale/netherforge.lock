@@ -1,0 +1,13 @@
+{
+  "$schema": ".netherforge/schema/lock.schema.json",
+  "packages": {
+    "vale_lore": {
+      "version": "0.1.0",
+      "source": {
+        "type": "path",
+        "path": "../vale_lore"
+      },
+      "hash": "sha256:11f1cb6cec4a07bb68e8e32d1ae971e3460063318478a509b9553cf56882a2d4"
+    }
+  }
+}

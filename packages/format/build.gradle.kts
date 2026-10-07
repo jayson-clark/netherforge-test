@@ -1,0 +1,123 @@
+import java.time.Duration
+
+plugins {
+    kotlin("multiplatform")
+    kotlin("plugin.serialization")
+}
+
+kotlin {
+    jvmToolchain(25)
+
+    // The plugin carries the JVM artifact, and its oldest Minecraft (1.21.x) runs on Java 21.
+    jvm {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+            freeCompilerArgs.add("-Xjdk-release=21")
+        }
+    }
+
+    js(IR) {
+        // Nothing here touches browser or Node APIs; nodejs() is what runs the tests.
+        nodejs()
+        binaries.library()
+        generateTypeScriptDefinitions()
+        useEsModules()
+        outputModuleName.set("netherforge-format")
+    }
+
+    sourceSets {
+        commonMain.dependencies {
+            implementation(libs.serialization.json)
+        }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
+        // Terrain scripts' Lua (`format/lua/`): luajava's Lua 5.4 on the JVM, the same as the plugin's own
+        // state (whose jar brings the natives), and wasmoon's Lua 5.4 in WebAssembly in JS. Keep wasmoon's version
+        // the same as packages/format/package.json's, which is what the editor and the CLI resolve.
+        jvmMain.dependencies {
+            implementation(libs.luajava)
+            implementation(libs.luajava.lua54)
+        }
+        jsMain.dependencies {
+            implementation(npm("wasmoon", "1.16.0"))
+        }
+    }
+
+    compilerOptions {
+        optIn.add("kotlinx.serialization.ExperimentalSerializationApi")
+        optIn.add("kotlin.js.ExperimentalJsExport")
+    }
+}
+
+// Lua's native library for the JVM tests (the plugin's jar brings its own).
+dependencies {
+    "jvmTestRuntimeOnly"(variantOf(libs.luajava.natives) { classifier("natives-desktop") })
+}
+
+/*
+ * Golden tests read the repo's examples/ and packages/format/testdata/ directly. The
+ * paths are handed to the test JVM and the test Node process through the
+ * environment so commonTest can stay free of path logic.
+ */
+val repoRoot: File by rootProject.extra
+
+val updateGolden = System.getenv("UPDATE_GOLDEN") ?: ""
+val goldenInputs = listOf(repoRoot.resolve("examples"), layout.projectDirectory.dir("testdata").asFile)
+
+// TerrainScriptApiTest holds the terrain scripts' Lua to the API spec's JSON.
+val terrainApi = repoRoot.resolve("packages/api/generated/terrain.json")
+
+tasks.withType<Test>().configureEach {
+    // luajava (terrain scripts) loads Lua's native library; Java 25 warns unless that's allowed explicitly.
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
+    // A Lua budget bug shows up as a hang; fail instead of waiting forever.
+    timeout.set(Duration.ofMinutes(5))
+    environment("NETHERFORGE_REPO", repoRoot.absolutePath)
+    environment("UPDATE_GOLDEN", updateGolden)
+    goldenInputs.forEach { inputs.dir(it) }
+    inputs.file(terrainApi)
+    inputs.property("updateGolden", updateGolden)
+    // Rewriting goldens must always run, even if nothing changed since the last pass.
+    if (updateGolden == "1") outputs.upToDateWhen { false }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.targets.js.testing.KotlinJsTest>().configureEach {
+    environment("NETHERFORGE_REPO", repoRoot.absolutePath)
+    environment("UPDATE_GOLDEN", updateGolden)
+    goldenInputs.forEach { inputs.dir(it) }
+    inputs.file(terrainApi)
+    inputs.property("updateGolden", updateGolden)
+    if (updateGolden == "1") outputs.upToDateWhen { false }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink>().configureEach {
+    compilerOptions { sourceMap.set(false) }
+}
+
+/*
+ * JSON Schemas for project files and the editor's TypeScript types, generated
+ * from the serializers so the Kotlin model stays the one authority. Not
+ * committed: the editor can't build without this project's JS output anyway.
+ */
+val generatedDir = layout.buildDirectory.dir("generated-contract")
+
+val generateContract by tasks.registering(JavaExec::class) {
+    group = "build"
+    description = "Writes the JSON Schemas and TypeScript types for project files"
+    val main = kotlin.jvm().compilations.getByName("main")
+    classpath = main.runtimeDependencyFiles!! + files(main.output.allOutputs)
+    mainClass.set("dev.netherforge.format.codegen.ContractKt")
+    args(generatedDir.get().asFile.absolutePath)
+    dependsOn(tasks.named("jvmMainClasses"))
+    inputs.files(main.output.allOutputs)
+    outputs.dir(generatedDir)
+}
+
+val jsLibrary by tasks.registering {
+    group = "build"
+    description = "Builds the JS library and the generated contract the editor imports"
+    dependsOn("jsNodeProductionLibraryDistribution", generateContract)
+}
+
+tasks.named("assemble") { dependsOn(generateContract) }

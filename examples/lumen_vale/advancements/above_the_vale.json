@@ -1,0 +1,17 @@
+{
+  "$schema": "../.netherforge/schema/advancement.schema.json",
+  "parent": "keepers_friend",
+  "display": {
+    "icon": {
+      "item": "lumen_lantern",
+      "glint": true
+    },
+    "title": "<light_purple>Above the Vale",
+    "description": "Raise a kindled lantern at a shrine and climb to the sky reach",
+    "frame": "challenge"
+  },
+  "criteria": {
+    "ascended": {}
+  },
+  "experience": 50
+}

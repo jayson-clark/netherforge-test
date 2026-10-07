@@ -1,0 +1,44 @@
+{
+  "$schema": "../../.netherforge/schema/resource_pack.schema.json",
+  "name": "Example UI",
+  "description": "Artwork for the basic example",
+  "skins": {
+    "shop": {
+      "texture": "gui/shop.png",
+      "height": 168,
+      "ascent": 13,
+      "type": "chest",
+      "rows": 3
+    }
+  },
+  "glyphs": {
+    "coin": {
+      "texture": "glyph/coin.png"
+    }
+  },
+  "items": {
+    "ruby": {
+      "texture": "item/ruby.png"
+    },
+    "ruby_ore": {
+      "block": "ui/ruby_ore"
+    }
+  },
+  "tooltips": {
+    "fancy": {
+      "background": "tooltip/background.png",
+      "frame": "tooltip/frame.png"
+    }
+  },
+  "equipment": {
+    "ruby": {
+      "humanoid": "armor/ruby.png",
+      "humanoidLeggings": "armor/ruby_leggings.png"
+    }
+  },
+  "blocks": {
+    "ruby_ore": {
+      "texture": "block/ruby_ore.png"
+    }
+  }
+}

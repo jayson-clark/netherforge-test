@@ -1,0 +1,21 @@
+{
+  "$schema": "../../.netherforge/schema/item.schema.json",
+  "kind": "minecraft:glowstone_dust",
+  "name": "<aqua>Wisp Essence",
+  "lore": [
+    "<gray>What a calmed wisp leaves behind.",
+    "<dark_gray>Drink it to see in the dark"
+  ],
+  "itemModel": "lumen/wisp_essence",
+  "tooltipStyle": "lumen/lumen",
+  "rarity": "rare",
+  "food": {
+    "nutrition": 1,
+    "saturation": 0.5,
+    "canAlwaysEat": true,
+    "eatSeconds": 1
+  },
+  "script": {
+    "file": "script.lua"
+  }
+}
