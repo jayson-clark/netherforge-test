@@ -469,6 +469,13 @@
   },
   {
     "severity": "error",
+    "file": "terrain/crowded.json",
+    "message": "A list of layers holds at most 32",
+    "path": "$.layers",
+    "code": "terrain.limit"
+  },
+  {
+    "severity": "error",
     "file": "terrain/density.json",
     "message": "amplitude must be a number from -4096 to 4096",
     "path": "$.terrain.density.noises.overhangs.amplitude",

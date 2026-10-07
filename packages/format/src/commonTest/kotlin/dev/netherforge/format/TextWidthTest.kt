@@ -6,6 +6,7 @@ import dev.netherforge.format.project.MapProjectSource
 import dev.netherforge.format.project.Projects
 import dev.netherforge.format.text.DefaultFontFile
 import dev.netherforge.format.text.DefaultFontValidator
+import dev.netherforge.format.text.TextMetrics
 import dev.netherforge.format.text.TextWidth
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -44,6 +45,28 @@ class TextWidthTest {
         assertEquals(7 + 6, width.measure("<red><b>a</red>a"))
         // A space is a character like any other.
         assertEquals(5, width.measure("<b> </b>"))
+    }
+
+    /**
+     * Where the server's exact measure and the editor's layout ([TextMetrics]) part ways, on
+     * purpose (see [TextMetrics]): what the server can't know is null, what the preview can't
+     * know it estimates or draws as the game would. Where both know everything they agree.
+     */
+    @Test
+    fun theServersMeasureIsExactWhereThePreviewEstimates() {
+        val preview = TextMetrics(glyph = { if (it == "ui:coin") 9 else null }) { code -> font.advance(code) }
+        for (text in listOf("ai b", "<b>ab</b>a", "<glyph:ui:coin> a", "<red>a<newline>bb")) {
+            assertEquals(preview.lineWidths(text, lineWidth = 0).max(), width.measure(text), text)
+        }
+        // A glyph no pack has: the game draws nothing, but the server can't promise what it isn't told.
+        assertEquals(listOf(6), preview.lineWidths("<glyph:ui:nope>a"))
+        assertNull(width.measure("<glyph:ui:nope>a"))
+        // A character the font doesn't cover: estimated for the preview, unknown to the server.
+        assertEquals(listOf(6), preview.lineWidths("Z"))
+        assertNull(width.measure("Z"))
+        // A tag MiniMessage doesn't know is drawn as written; the preview's pass reads it as a tag.
+        assertEquals(5 + 6 * 4 + 5 + 6, width.measure("<nope>a"))
+        assertEquals(listOf(6), preview.lineWidths("<nope>a"))
     }
 
     @Test

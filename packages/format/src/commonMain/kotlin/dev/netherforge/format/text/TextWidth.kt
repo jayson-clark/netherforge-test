@@ -11,7 +11,9 @@ package dev.netherforge.format.text
  * tag that inserts text only the client resolves (`<lang>`, `<key>`,
  * `<score>`…), or a font other than the default.
  *
- * Shared by the plugin and the editor, so both measure alike.
+ * Shared by the plugin and the editor, so both measure alike. It's deliberately
+ * not built on [TextMetrics] or [MiniMessagePass]: see [TextMetrics] for why
+ * the two measurers stay apart.
  */
 class TextWidth(
     /** A character's advance by code point, gap included (from [DefaultFontFile]); null when unknown. */

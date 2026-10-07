@@ -5,13 +5,11 @@ import dev.netherforge.format.game.GameDataBundle
 import dev.netherforge.format.game.ParticleDataKind
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.item.ItemDef
-import dev.netherforge.format.particle.BoxShape
 import dev.netherforge.format.particle.ColorKey
 import dev.netherforge.format.particle.Curves
 import dev.netherforge.format.particle.DiscShape
 import dev.netherforge.format.particle.Distribution
 import dev.netherforge.format.particle.EmitterDef
-import dev.netherforge.format.particle.LineShape
 import dev.netherforge.format.particle.Motion
 import dev.netherforge.format.particle.NumberKey
 import dev.netherforge.format.particle.ParticleEffectFile
@@ -123,7 +121,6 @@ class ParticleEffectValidatorTest {
 
     @Test
     fun blockStatesAndItemsAreCheckedLikeEverywhereElse() {
-        assertEquals(listOf("particle.block-state"), codes("a" to emitter("block").copy(blockState = "not a state")))
         assertEquals(listOf("particle.unknown-block"), codes("a" to emitter("block").copy(blockState = "minecraft:nope"), game = game))
         assertEquals(listOf("particle.block-property"), codes("a" to emitter("block").copy(blockState = "oak_log[axis=w]"), game = game))
         assertEquals(listOf("item.unknown"), codes("a" to emitter("item").copy(item = ItemDef("nope")), game = game))
@@ -139,28 +136,18 @@ class ParticleEffectValidatorTest {
         assertEquals(emptyList(), codes("a" to emitter("dust").copy(curves = Curves(size = listOf(NumberKey(0, 1.0)))), game = game))
     }
 
+    // Each code's plain case is in testdata/invalid/particle-semantics; these are the other ways into it, and what isn't one.
+
     @Test
     fun emissionAndWindow() {
         assertEquals(listOf("particle.emission"), codes("a" to EmitterDef(particle = "flame")))
-        assertEquals(listOf("particle.emission"), codes("a" to emitter().copy(rate = 1.0)))
-        assertEquals(listOf("particle.burst"), codes("a" to emitter().copy(burst = 0)))
-        assertEquals(listOf("particle.rate"), codes("a" to EmitterDef(particle = "flame", rate = 0.0)))
-        assertEquals(listOf("particle.every"), codes("a" to EmitterDef(particle = "flame", rate = 1.0, every = 2)))
-        assertEquals(listOf("particle.every"), codes("a" to emitter().copy(every = 0)))
-        assertEquals(listOf("particle.window"), codes("a" to emitter().copy(start = 20)))
         assertEquals(listOf("particle.window"), codes("a" to emitter().copy(start = 5, end = 5)))
-        assertEquals(listOf("particle.window"), codes("a" to emitter().copy(end = 21)))
-        assertEquals(listOf("particle.duration"), codes("a" to emitter(), duration = 0))
     }
 
     @Test
     fun shapes() {
         assertEquals(listOf("particle.shape"), codes("a" to emitter().copy(shape = RingShape())))
         assertEquals(listOf("particle.shape"), codes("a" to emitter().copy(shape = DiscShape(radius = 0.0))))
-        assertEquals(listOf("particle.shape"), codes("a" to emitter().copy(shape = LineShape(Vec3.ZERO))))
-        assertEquals(listOf("particle.shape"), codes("a" to emitter().copy(shape = BoxShape(Vec3(1.0, 0.0, 1.0)))))
-        val both = emitter().copy(shape = RingShape(radius = 1.0), curves = Curves(radius = listOf(NumberKey(0, 1.0))))
-        assertEquals(listOf("particle.curve-conflict"), codes("a" to both))
         assertEquals(listOf("particle.curve-channel"), codes("a" to emitter().copy(curves = Curves(radius = listOf(NumberKey(0, 1.0))))))
         assertEquals(
             listOf("particle.distribution"),
@@ -169,35 +156,23 @@ class ParticleEffectValidatorTest {
             )
         )
         assertEquals(emptyList(), codes("a" to emitter().copy(shape = SphereShape(1.0, surface = true), distribution = Distribution.EVEN)))
-        assertEquals(listOf("particle.spin"), codes("a" to emitter().copy(shape = SphereShape(1.0), spin = 3.0)))
     }
 
     @Test
     fun motion() {
-        assertEquals(listOf("particle.direction"), codes("a" to emitter().copy(motion = Motion.DIRECTION)))
         assertEquals(listOf("particle.direction"), codes("a" to emitter().copy(motion = Motion.DIRECTION, direction = Vec3.ZERO)))
-        assertEquals(listOf("particle.direction"), codes("a" to emitter().copy(direction = Vec3.ONE)))
-        assertEquals(listOf("particle.count"), codes("a" to emitter().copy(motion = Motion.OUTWARD, count = 3)))
         assertEquals(listOf("particle.count"), codes("a" to emitter().copy(count = 101)))
-        assertEquals(listOf("particle.spread"), codes("a" to emitter().copy(motion = Motion.INWARD, spread = Vec3.ONE)))
         assertEquals(listOf("particle.spread"), codes("a" to emitter().copy(spread = Vec3(0.0, -1.0, 0.0))))
-        assertEquals(listOf("particle.speed"), codes("a" to emitter().copy(speed = -1.0)))
     }
 
     @Test
     fun curves() {
-        val keys = listOf(NumberKey(0, 1.0), NumberKey(0, 2.0), NumberKey(25, 1.0))
-        assertEquals(
-            listOf("particle.curve-duplicate", "particle.curve-time"),
-            codes("a" to emitter().copy(curves = Curves(speed = keys)))
-        )
         assertEquals(
             listOf("particle.curve-conflict"),
             codes(
                 "a" to emitter().copy(speed = 1.0, curves = Curves(speed = listOf(NumberKey(0, 1.0))))
             )
         )
-        assertEquals(listOf("particle.curve-channel"), codes("a" to emitter().copy(curves = Curves(rate = listOf(NumberKey(0, 1.0))))))
         // A rate curve sits beside its rate: rate says the emitter is rate-driven, the curve gives the value.
         assertEquals(
             emptyList(),
@@ -214,12 +189,6 @@ class ParticleEffectValidatorTest {
         assertEquals(101, ParticleEffectValidator.worstPointsPerTick(rate))
         assertEquals(emptyList(), codes("a" to emitter().copy(burst = 155), "b" to rate))
         assertEquals(listOf("particle.budget"), codes("a" to emitter().copy(burst = 156), "b" to rate))
-    }
-
-    @Test
-    fun namesAndEmptiness() {
-        assertEquals(listOf("particle.emitter-name"), codes("a b" to emitter()))
-        assertEquals(listOf("particle.emitters-empty"), codes())
     }
 
     @Test

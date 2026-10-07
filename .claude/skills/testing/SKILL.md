@@ -65,7 +65,18 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
      excepted); `KindsTest` makes, classifies and loads every registered kind.
    - `packages/format/testdata/invalid/<case>/` is a small project plus
      `expected.json`, the exact problems it must produce; every code in it
-     must be in `ProblemCodes`, with its severity.
+     must be in `ProblemCodes`, with its severity. `GoldenTest` and
+     `PackagesTest` check **every case before failing** and fail once with all
+     the cases that differ (`ProblemGoldens`), on the JVM and in JS, so one
+     run shows every golden a change moved.
+   - **Every problem code is produced by a test** (`ProblemCoverageTest`): a
+     code is in some golden `expected.json` (`invalid/` or `packages/`), or it's
+     in that test's `testedElsewhere` with the test that produces it and why a
+     golden can't (it needs game data, which goldens load without; JSON can't
+     hold it; it's too big for a file; the plugin's runtime reports it). The
+     test named must exist and name the code. `untested` lists the gaps
+     (`runtime.pack-format` today): an entry there is a gap to close, never a
+     place to park a new code. A new rule adds a golden case, not an entry.
    - `packages/format/testdata/references/<example>.json` is every reference
      each example makes, as the walker finds it.
    - Packages: `examples/basic` depends on `examples/library` (`../library`),
@@ -86,20 +97,35 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
      (`ProblemCatalogueTest`, JVM).
    - `docs/tests/format-docs.test.ts` (the docs package, vitest on format's JS
      build): every whole-file `json` block in `docs/format/*.md` validates as
-     its kind, and every key of each kind's JSON Schema is named on its page.
-     A snippet is marked `json partial` (project-format has the convention).
-   - `apps/cli/src/preview.test.ts` runs `netherforge preview` on a copy of
-     `examples/basic`: the PNG's size and every pixel against format's own
-     preview run in the test (`terrainPreviewer` + `mapPixels`/`slicePixels`
-     from `packages/terrain-preview`), a problem printed as `check` does, bad
-     options exit 2, and a generator's script run (a module required, a failure
-     printed). `packages/terrain-preview` tests the colours against the
-     real JS build, and its `script.test.ts` runs format's script fixture on
-     Node's Lua (`loadNodeLua`).
+     its kind, and every key of each kind's JSON Schema is named on its page
+     **as a key**: inline code that is the key, a path of keys
+     (`terrain.base`), an object's shape or one quoted entry
+     (`"invert": true`); a key of a `json` example on the page; a table row's
+     first cell; or a word of a heading. A word in prose, or inside other
+     code, doesn't count. A snippet is marked `json partial` (project-format
+     has the convention).
+   - The CLI's tests (`apps/cli/src/*.test.ts`) write only to temp folders and
+     delete them (`afterEach`, or `afterAll` for a per-file copy).
+     `preview.test.ts` copies `examples/basic` and `library` once per file (a
+     test that changes the project asks for its own copy) and runs
+     `netherforge preview`: one plumbing check (the PNG equals
+     `terrainPreviewer` + `mapPixels`/`slicePixels` from
+     `packages/terrain-preview`) and independent ones, a flat terrain whose
+     pixel colours are worked out by hand from `draw.ts`'s rules, never through
+     the drawing code; a problem printed as `check` does, bad options exit 2,
+     and a generator's script run. `java.test.ts` and `project.test.ts` run the
+     Java search and project reading on a faked machine and temp folders (no
+     Java needed). `packages/terrain-preview` tests the colours against the
+     real JS build, `nbt.ts` (every tag type big-endian, gzip/zlib/raw, writing
+     back, refusals) and `structure.ts` (both palette spellings, bare 26.x ids,
+     several palettes, the captured server file) on their own, and its
+     `script.test.ts` runs format's script fixture on Node's Lua
+     (`loadNodeLua`). No test asserts wall-clock time: a bound flakes on a slow
+     runner and proves nothing the pixels don't.
    - **3D terrain** (W5.11): format's `TerrainDensityTest` (overhangs and islands, every surface topped, the sea,
      caves' depth, decorations on islands, blending, the map and spawn, the script's `density` stage on both Luas,
-     `testdata/terrain/density.txt`), `TerrainDensityTimingTest` (jvmTest, prints the cost against heights; run
-     with `-i`), `PaperWorldGeneratorsTest`'s 3D world (every block, the game's heightmap, the spawn) and the
+     `testdata/terrain/density.txt`), `TerrainDensityTimingTest` (jvmTest, a benchmark printing the cost against heights: skipped unless
+     `NETHERFORGE_BENCH=1`, like the runtime's; run with `-i`), `PaperWorldGeneratorsTest`'s 3D world (every block, the game's heightmap, the spawn) and the
      runtime's `TerrainTest` (chunk threads).
    - **Terrain scripts** (W5.6): format's `TerrainScriptTest` runs every
      case on the JVM (luajava) and in JS (wasmoon) through `withLua`, and
@@ -109,14 +135,25 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
      `*.node.test.ts` (`// @vitest-environment node`): wasmoon can't find its
      WebAssembly in jsdom.
    - `packages/format/testdata/bridge/session.ndjson` is the dev bridge's recorded
-     session; every side must round-trip it.
+     session; every side must round-trip it. `BridgeTest` holds every line to
+     the protocol: an unknown method only where the recording calls one on
+     purpose (listed, answered method-not-found), params that don't decode
+     only where they're answered invalid-params, a response only to an open
+     request.
+   - format's JS facade (`jsMain/.../Exports.kt`) has `ExportsTest` (jsTest):
+     each export's answer shape (a sealed result's `type`, nulls left out) and
+     problems answered, not thrown. format's JS tests run under mocha with a
+     30 s per-test timeout (`build.gradle.kts`); keep a test well under it on a
+     CI runner by computing only what it checks (one `sampler()` for many
+     columns, not a fresh one per column).
    - `packages/format/testdata/game-data/bundle.json` is a small game data
      export in today's shape: `GameDataTest` looks things up in it and checks
      its `schema` is `GameDataBundle.SCHEMA`; the editor's backend checks it's
      its own `GAME_DATA_SCHEMA`.
    - API conformance: the runtime exposes exactly what `packages/api/` declares.
    - lua-language-server: the generated stubs check clean over the examples
-     and every spec example (`luals.check.test.ts`), and the editor's setup
+     and every spec example (`luals.check.test.ts`; without the binary it's
+     skipped locally, saying why, and fails when `CI` is set), and the editor's setup
      (project names, its plugin) gives a diagnostic, a project name completed
      and a definition across a `require` (`luals.node.test.ts`). Both run the
      pinned LuaLS, which `pnpm test` fetches first (`tools/luals.mjs`, cached).
@@ -253,6 +290,15 @@ version>-noble`, linux/amd64): `pnpm test:screenshots`
 --vz-rosetta`). A preview change that's meant shows up as a failed
      picture: rewrite it and review it like a golden (below).
 5. **Packaged-app smoke**: nightly only.
+
+**A test that needs a tool fails in CI, never skips.** A test that needs
+something a machine may lack (the built test-runner jar and Java 21+ for
+`apps/cli`'s `netherforge test, for real`, the pinned LuaLS) skips locally
+with the reason in its name or on stderr, and with `CI` set is a failing test
+naming what's missing, so CI can't pass by skipping it. `packages/api`'s
+`bindings.test.ts` tests the binding model's decisions on small made-up specs
+(codecs, returns, crossing shapes, handle chains, checks, refusals), not the
+emitted text, which the committed generated files and `ConformanceTest` hold.
 
 Deliberately not here: coverage gates, DOM snapshots, and Minecraft data in
 the repo or in unit tests. The integration test is the one place a real
