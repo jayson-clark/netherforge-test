@@ -20,6 +20,6 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo"
   },
   "include": ["src"],
-  "//exclude": "Tests that drive real processes run in Node, type-checked with tsconfig.node.json.",
-  "exclude": ["src/**/*.node.test.ts"]
+  "//exclude": "Tests that drive real processes run in Node, type-checked with tsconfig.node.json (or, for the Tauri side, tsconfig.tauri.json).",
+  "exclude": ["src/**/*.node.test.ts", "src/**/*.tauri.test.ts"]
 }

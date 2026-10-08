@@ -133,24 +133,35 @@ pub fn export(root: &Path) -> Result<(), String> {
 
 /// Every command's name, sorted.
 pub fn command_names() -> Vec<String> {
-    let mut names = Vec::new();
+    names().0
+}
+
+/// Every event's name (`fs://changed`), sorted.
+pub fn event_names() -> Vec<String> {
+    names().1
+}
+
+fn names() -> (Vec<String>, Vec<String>) {
+    let mut names = (Vec::new(), Vec::new());
     builder()
         .export(Names(&mut names), Path::new(""))
         .expect("collecting names can't fail");
-    names.sort_unstable();
+    names.0.sort_unstable();
+    names.1.sort_unstable();
     names
 }
 
-/// An "exporter" that only collects the command names: the builder keeps
-/// its configuration private and hands it to exporters alone.
-struct Names<'a>(&'a mut Vec<String>);
+/// An "exporter" that only collects the command and event names: the
+/// builder keeps its configuration private and hands it to exporters alone.
+struct Names<'a>(&'a mut (Vec<String>, Vec<String>));
 
 impl LanguageExt for Names<'_> {
     type Error = std::io::Error;
 
     fn export(self, cfg: &BuilderConfiguration, _: &Path) -> Result<(), Self::Error> {
-        self.0
-            .extend(cfg.commands.iter().map(|c| c.name().to_string()));
+        let (commands, events) = self.0;
+        commands.extend(cfg.commands.iter().map(|c| c.name().to_string()));
+        events.extend(cfg.events.keys().map(|name| name.to_string()));
         Ok(())
     }
 }
