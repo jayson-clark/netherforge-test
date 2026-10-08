@@ -17,6 +17,8 @@ import dev.netherforge.format.bridge.RpcMessage
 import dev.netherforge.format.bridge.RpcNotification
 import dev.netherforge.format.bridge.RpcRequest
 import dev.netherforge.format.bridge.RpcResponse
+import dev.netherforge.format.bridge.SetSettingParams
+import dev.netherforge.format.bridge.SettingState
 import dev.netherforge.format.bridge.Status
 import kotlinx.serialization.descriptors.PolymorphicKind
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -57,27 +59,55 @@ class BridgeTest {
         }
     }
 
+    /**
+     * Methods the recording calls on purpose that the protocol doesn't have, to record the answer:
+     * each must be answered with "method not found". Any other unknown method is drift.
+     */
+    private val deliberatelyUnknown = setOf("debugger/attach")
+
     @Test
     fun everyRecordedMessageHasItsDeclaredShape() {
         val methods = (listOf(Bridge.hello) + Bridge.allRequests).associateBy { it.name }
-        val asked = mutableMapOf<String, BridgeMethod<*, *>>()
+        // Each unanswered request's id → its method, or null for a deliberately unknown one. An id is free again once answered.
+        val asked = mutableMapOf<String, BridgeMethod<*, *>?>()
+        // A request whose answer must be an error, by id: the error code it must carry.
+        val mustFail = mutableMapOf<String, Int>()
         var answered = 0
         for (message in lines.flatMap { messages(JsonRpc.decode(it)) }) {
             when (message) {
                 is RpcRequest -> {
-                    val method = methods[message.method] ?: continue
-                    asked[message.id.toString()] = method
-                    // Params written by the declared type are exactly what was recorded.
+                    val id = message.id.toString()
+                    assertTrue(id !in asked, "a request reuses the id $id before it was answered")
+                    val method = methods[message.method]
+                    if (method == null) {
+                        assertTrue(message.method in deliberatelyUnknown, "\"${message.method}\" isn't a method of the protocol")
+                        asked[id] = null
+                        mustFail[id] = JsonRpc.METHOD_NOT_FOUND
+                        continue
+                    }
+                    asked[id] = method
                     @Suppress("UNCHECKED_CAST")
                     val typed = method as BridgeMethod<Any?, Any?>
-                    val params = runCatching { typed.decodeParams(message.params) }.getOrNull() ?: continue
-                    assertEquals(message.params, typed.encodeParams(params), message.method)
+                    val params = runCatching { typed.decodeParams(message.params) }.getOrNull()
+                    if (params == null) {
+                        // Params the declared type can't read are recorded to show the answer: invalid params, nothing else.
+                        mustFail[id] = JsonRpc.INVALID_PARAMS
+                    } else {
+                        // Params written by the declared type are exactly what was recorded.
+                        assertEquals(message.params, typed.encodeParams(params), message.method)
+                    }
                 }
                 is RpcResponse -> {
-                    // An unknown method's answer is an error; anything else answers what was asked.
-                    val method = asked[message.id.toString()] ?: continue
+                    val id = message.id.toString()
+                    assertTrue(id in asked, "a response to $id, which nothing asked")
+                    val method = asked.remove(id)
+                    val error = mustFail.remove(id)
+                    if (error != null) {
+                        assertEquals(error, message.error?.code, "the answer to $id (${method?.name ?: "an unknown method"})")
+                    }
                     message.result?.let {
-                        method.decodeResult(it)
+                        // A result answers what was asked, in its declared shape.
+                        checkNotNull(method) { "an unknown method can't have a result" }.decodeResult(it)
                         answered++
                     }
                 }
@@ -101,6 +131,28 @@ class BridgeTest {
             JsonRpc.line(notification)
         )
         assertEquals(listOf<ConsoleEntry>(Log(LogLevel.INFO, "a"), Log(LogLevel.WARN, "b")), Bridge.console.decode(notification.params))
+    }
+
+    /** The recording sets a value and is answered; what it doesn't show is a reset and a setting the owner never set. */
+    @Test
+    fun settingsMessagesLeaveOutWhatTheyDontSay() {
+        val reset = Bridge.setSetting.request(5, SetSettingParams("basic", "greeting"))
+        // No value puts the setting back to its default: the key is left out, not sent as null.
+        assertEquals(
+            """{"jsonrpc":"2.0","id":5,"method":"set_setting","params":{"namespace":"basic","setting":"greeting"}}""",
+            JsonRpc.line(reset)
+        )
+        assertEquals(SetSettingParams("basic", "greeting"), Bridge.setSetting.decodeParams(reset.params))
+        val state = Bridge.json.decodeFromString(
+            SettingState.serializer(),
+            """{"definition":{"type":"boolean","description":"On?","default":true},"value":true}"""
+        )
+        assertEquals(false, state.set, "a value the owner didn't set is the default")
+        assertEquals(null, state.problem)
+        assertEquals(
+            """{"definition":{"type":"boolean","description":"On?","default":true},"value":true}""",
+            Bridge.json.encodeToString(SettingState.serializer(), state)
+        )
     }
 
     @Test

@@ -51,13 +51,29 @@ val adapters: Map<String, Project> = project(":plugin").subprojects
     .filter { Regex("""paper-\d+(\.\d+){1,2}""").matches(it.name) }
     .associateBy { it.name.removePrefix("paper-") }
 
+/** Minecraft versions in release order: `1.21.11` < `26.1.2` < `26.2` < `26.10`. */
+val versionOrder = compareBy<String>({ it.split('.')[0].toInt() }, { it.split('.')[1].toInt() }, {
+    it.split('.').getOrNull(2)?.toInt()
+        ?: 0
+})
+
 /** The oldest supported version: what the contract plugin declares, so every server loads it. */
-val oldest = adapters.keys.minWith(
-    compareBy<String>({ it.split('.')[0].toInt() }, { it.split('.')[1].toInt() }, {
-        it.split('.').getOrNull(2)?.toInt()
-            ?: 0
-    })
-)
+val oldest = adapters.keys.minWith(versionOrder)
+
+/** The newest supported version: the one a pull request runs every scenario on. */
+val newest = adapters.keys.maxWith(versionOrder)
+
+/*
+ * Which scenarios run (`-Pnetherforge.integration.scope=<scope>`), by their JUnit tags (src/test/.../support/Tags.kt):
+ * - `full` (the default): every scenario on every version, quarantined ones left out. Nightly, `main` and releases.
+ * - `pr`: on the newest version the same; on the others the `version-independent` scenarios are left out too, since
+ *   what they check doesn't change with the version (the contract suites hold every adapter to the calls they make).
+ * - `quarantine`: only the quarantined (`quarantine`) tests, which nightly runs on their own without failing.
+ */
+val scope: String = providers.gradleProperty("netherforge.integration.scope").getOrElse("full")
+require(scope in setOf("full", "pr", "quarantine")) {
+    "netherforge.integration.scope is full, pr or quarantine, not \"$scope\""
+}
 
 tasks.named<Copy>("processContractResources") {
     // Locals, so the action holds strings rather than this script (which the configuration cache can't store).
@@ -130,7 +146,16 @@ val integrationTests = adapters.map { (minecraft, adapter) ->
         group = "verification"
         testClassesDirs = sourceSets.test.get().output.classesDirs
         classpath = sourceSets.test.get().runtimeClasspath
-        useJUnitPlatform()
+        useJUnitPlatform {
+            if (scope == "quarantine") {
+                includeTags("quarantine")
+            } else {
+                excludeTags("quarantine")
+                if (scope == "pr" && minecraft != newest) excludeTags("version-independent")
+            }
+        }
+        // Nothing may be quarantined: that's a run with nothing to do, not a failure.
+        failOnNoDiscoveredTests.set(scope != "quarantine")
         usesService(paperServers)
         // The scenarios only drive the server; reading the game data export is the most they hold.
         maxHeapSize = "1g"

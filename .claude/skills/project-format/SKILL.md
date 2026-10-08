@@ -445,7 +445,7 @@ generate`, the glue (and a `host_*` if Kotlin must answer), a case in `TerrainSc
   `script:density` and the point), budgeted per call; its change from the file's value is what's interpolated, and a
   failure there is no change. A `density` stage in a file without a density is a `load` failure as the state loads.
   `terrain.height` stays the base height.
-- **Cost**: `TerrainDensityTimingTest` (jvmTest) prints chunk and map timings of `testdata/terrain/density.json`
+- **Cost**: `TerrainDensityTimingTest` (jvmTest, only with `NETHERFORGE_BENCH=1`) prints chunk and map timings of `testdata/terrain/density.json`
   against the same file's heights (about 1.6x a chunk on the JVM, about 3x the map). Goldens:
   `testdata/terrain/density.txt` (JVM and JS, bit for bit).
 

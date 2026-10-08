@@ -18,6 +18,12 @@
     "4": { "item": { "kind": "minecraft:paper", "canBreak": ["not a block"], "canPlaceOn": ["minecraft:stone"] } },
     "5": { "item": { "kind": "minecraft:paper", "food": { "nutrition": -1, "saturation": 1, "eatSeconds": 0 } } },
     "6": { "item": { "kind": "minecraft:paper", "cooldown": { "seconds": 0, "group": "Not An Id" } } },
-    "7": { "item": { "kind": "minecraft:paper", "rarity": "epic", "food": { "nutrition": 2, "saturation": 0.5, "canAlwaysEat": true }, "cooldown": { "seconds": 1 } } }
+    "7": { "item": { "kind": "minecraft:paper", "rarity": "epic", "food": { "nutrition": 2, "saturation": 0.5, "canAlwaysEat": true }, "cooldown": { "seconds": 1 } } },
+    "8": {
+      "item": {
+        "kind": "minecraft:paper",
+        "enchantments": { "Not An Enchantment": 1 }
+      }
+    }
   }
 }

@@ -70,6 +70,13 @@
     "code": "item.cooldown-group"
   },
   {
+    "severity": "error",
+    "file": "menus/bag/menu.json",
+    "message": "\"Not An Enchantment\" isn't an enchantment id",
+    "path": "$.slots[\"8\"].item.enchantments[\"Not An Enchantment\"]",
+    "code": "item.enchantment"
+  },
+  {
     "severity": "warning",
     "file": "menus/drop/menu.json",
     "message": "A dispenser centres its title, so its skin is placed from the title's width, but there's no fonts/default.json: open the project in the editor with Minecraft 26.3 imported to write it",

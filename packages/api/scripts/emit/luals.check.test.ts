@@ -6,7 +6,8 @@
  * inventories, boss bars and sidebars; and every `example` in the spec.
  *
  * Runs the LuaLS the editor ships (`node tools/luals.mjs` fetches it; `pnpm test` does that
- * first), or the one in `LUA_LANGUAGE_SERVER`, or one on the PATH. Without any, these are skipped.
+ * first), or the one in `LUA_LANGUAGE_SERVER`, or one on the PATH. Without any, these are skipped
+ * locally (saying why) and fail when `CI` is set.
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -114,10 +115,18 @@ function specExamples(): { where: string; owner: string; example: string }[] {
 }
 
 const binary = findBinary()
-if (!binary)
-  console.info(
-    'Skipping the lua-language-server check: run node tools/luals.mjs, or set LUA_LANGUAGE_SERVER.',
-  )
+const MISSING =
+  'there is no lua-language-server: run node tools/luals.mjs (pnpm test does), or set LUA_LANGUAGE_SERVER'
+// Straight to stderr: vitest drops a skipped file's console output.
+if (!binary && !process.env.CI)
+  process.stderr.write(`Skipping the lua-language-server check: ${MISSING}.\n`)
+
+// CI always has it (pnpm test fetches it first), so there a missing one is a failure, never a quiet skip.
+describe.runIf(!binary && process.env.CI)('lua-language-server in CI', () => {
+  it('is there to check the stubs', () => {
+    throw new Error(`CI is set but ${MISSING}`)
+  })
+})
 
 const work = mkdtempSync(path.join(tmpdir(), 'netherforge-luals-'))
 afterAll(() => rmSync(work, { recursive: true, force: true }))

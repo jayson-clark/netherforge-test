@@ -22,19 +22,20 @@ class MobScenario : Scenario("mobs") {
         editor.run("it-mobs")
         editor.logged("attributes", "true", "true", "true", "basic:it_hurry/add_multiplied_base", "true", "true", "true", "nil", "true")
         editor.logged("walking", "true", "true", "true")
-        editor.logged("walked", "true", seconds = 30)
+        editor.logged("walked", "true")
     }
 
     @Test
     @Order(2)
     fun `a real mob's goals are listed, removed and cleared, and Lua goals run in its AI`() {
+        // The fixture's broken goal fails on purpose, and the runtime takes it off.
+        expectScriptErrors("basic:it_broken's tick fails") { it.source?.file == "modules/mobs/init.lua" && "it_broken" in it.message }
         editor.run("it-goals")
         editor.logged("goals", "true", "true", "true", "true", "true", "true", "true")
-        val boom = editor.next { it is ScriptError && "it-goals boom" in it.message } as ScriptError
+        val boom = editor.next(what = "the broken goal's error") { it is ScriptError && "it-goals boom" in it.message } as ScriptError
         assertTrue("goal basic:it_broken's tick failed" in boom.message, boom.message)
         assertEquals("modules/mobs/init.lua", boom.source?.file)
-        val run = editor.next(30) { it is Log && it.message.startsWith("goal run\t") } as Log
-        assertEquals("goal run\ttrue\ttrue\ttrue\ttrue\ttrue\ttrue", run.message)
+        editor.logged("goal run", "true", "true", "true", "true", "true", "true")
     }
 
     @Test
@@ -42,11 +43,9 @@ class MobScenario : Scenario("mobs") {
     fun `a centity walks round a wall and up a step over the real blocks, then flies back`() {
         editor.run("it-paths")
         editor.logged("centity walking", "true", "true", "true")
-        val walked = editor.next(30) { it is Log && it.message.startsWith("centity walked") } as Log
-        assertEquals("centity walked\ttrue\ttrue\ttrue", walked.message)
-        val flew = editor.next(30) { it is Log && it.message.startsWith("centity flew") } as Log
-        assertEquals("centity flew\ttrue\ttrue\ttrue\ttrue", flew.message)
-        assertEquals(emptyList(), editor.seen.filter { it is Log && "failed to tick" in it.message })
+        editor.logged("centity walked", "true", "true", "true")
+        editor.logged("centity flew", "true", "true", "true", "true")
+        editor.assertNone("a centity failed to tick") { it is Log && "failed to tick" in it.message }
         editor.run("forceload remove 192 192 223 223")
     }
 }

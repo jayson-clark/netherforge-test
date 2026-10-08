@@ -1,11 +1,11 @@
 package dev.netherforge.plugin.integration
 
-import dev.netherforge.format.bridge.Log
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.project.TerrainKind
 import dev.netherforge.format.terrain.TerrainCompiler
 import dev.netherforge.plugin.integration.support.Scenario
 import dev.netherforge.plugin.integration.support.TestProject
+import dev.netherforge.plugin.integration.support.eventually
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
@@ -39,7 +39,7 @@ class BiomeScenario : Scenario("grove") {
 
     private fun step(command: String, line: String): List<String> {
         editor.run("it-grove $command")
-        return (editor.next { it is Log && it.message.startsWith("$line\t") } as Log).message.split('\t').drop(1)
+        return editor.line(line)
     }
 
     /**
@@ -118,14 +118,11 @@ class BiomeScenario : Scenario("grove") {
     fun `locate biome finds it`() {
         editor.run("execute in minecraft:$world run locate biome basic:ruby_grove")
         val log = server.folder.resolve("${javaClass.simpleName}.log")
-        val deadline = System.currentTimeMillis() + 60_000
-        while (System.currentTimeMillis() < deadline) {
-            val text = Files.readString(log)
-            if ("Could not find a biome of type \"basic:ruby_grove\"" in text) fail("locate didn't find the grove")
-            if ("The nearest basic:ruby_grove is at" in text) return
-            Thread.sleep(200)
+        val missing = "Could not find a biome of type \"basic:ruby_grove\""
+        val text = eventually("locate's answer about basic:ruby_grove in $log", poll = { Files.readString(log) }) {
+            missing in it || "The nearest basic:ruby_grove is at" in it
         }
-        fail("locate said nothing about basic:ruby_grove: see $log")
+        if (missing in text) fail("locate didn't find the grove")
     }
 
     @Test

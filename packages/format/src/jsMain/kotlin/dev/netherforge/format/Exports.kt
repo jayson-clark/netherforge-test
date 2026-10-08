@@ -646,12 +646,6 @@ fun rollLoot(tablesJson: String, table: String, seed: Int): String {
 }
 
 /**
- * Why the editor won't open a project whose `netherforge.json` is [manifestText]:
- * its format version isn't this build's (older or newer), with the version
- * named. Null when it's the current one, or the manifest doesn't parse (the
- * project opens and shows that problem).
- */
-/**
  * A value for the server-owner setting [definitionJson] (a `SettingDef`, as
  * `netherforge.json` declares it): [input] is JSON, or words as typed when
  * [typed] (a number field's text, `12`). JSON: a `SettingValueResult`, the
@@ -674,6 +668,12 @@ fun readSetting(definitionJson: String, input: String, typed: Boolean): String {
     return encode(SettingValueResult.serializer(), result)
 }
 
+/**
+ * Why the editor won't open a project whose `netherforge.json` is [manifestText]:
+ * its format version isn't this build's (older or newer), with the version
+ * named. Null when it's the current one, or the manifest doesn't parse (the
+ * project opens and shows that problem).
+ */
 fun projectRefusal(manifestText: String): String? = Projects.formatVersionOf(manifestText)?.let(Projects::formatProblem)?.second
 
 /** The files of a new, empty project, its namespace made from [name]: `{ path: text }`. */

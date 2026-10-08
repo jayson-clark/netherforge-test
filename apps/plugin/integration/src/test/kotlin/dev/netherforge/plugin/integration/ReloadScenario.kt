@@ -12,6 +12,7 @@ import dev.netherforge.format.bridge.SpawnParams
 import dev.netherforge.plugin.integration.support.Adapter
 import dev.netherforge.plugin.integration.support.PaperServer
 import dev.netherforge.plugin.integration.support.Scenario
+import dev.netherforge.plugin.integration.support.eventually
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -21,7 +22,6 @@ import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
-import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -122,7 +122,7 @@ class ReloadScenario : Scenario("reload") {
         // A block state as the server read it: every property filled in.
         editor.run("it-typed 7 1 2 3 beta oak_stairs[facing=east]")
         editor.logged("typed 7 vec3(1.5, 2, 3.5) beta minecraft:oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]")
-        assertEquals(emptyList(), editor.seen.filter { it is Log && it.message.startsWith("typed") })
+        editor.assertNone("a refused command reached the script") { it is Log && it.message.startsWith("typed") }
     }
 
     @Test
@@ -137,7 +137,7 @@ class ReloadScenario : Scenario("reload") {
         editor.tryRun("it-typed 5 1 2 3")
         editor.run("it-typed hello")
         editor.logged("typed again hello")
-        assertEquals(emptyList(), editor.seen.filter { it is Log && it.message.startsWith("typed") })
+        editor.assertNone("a refused command reached the script") { it is Log && it.message.startsWith("typed") }
     }
 
     @Test
@@ -175,10 +175,13 @@ class ReloadScenario : Scenario("reload") {
     @Test
     @Order(9)
     fun `a broken script's error comes back located`() {
+        expectScriptErrors("the tower's script is broken on purpose") { it.source?.file == "centities/tower/script.lua" }
         project.write("centities/tower/script.lua", "do\n  log(\"unclosed\"\nend\n")
         assertFalse(editor.reload("centities/tower/script.lua").resources.single().ok)
-        // The tower's own error: not a slow-script warning some other scope raised meanwhile (it has no source).
-        val error = editor.next { it is ScriptError && it.source?.file == "centities/tower/script.lua" } as ScriptError
+        // The tower's own error, by its file: not any other error that came meanwhile.
+        val error = editor.next(what = "the tower's error") {
+            it is ScriptError && it.source?.file == "centities/tower/script.lua"
+        } as ScriptError
         assertEquals(SourceRef("centities/tower/script.lua", 3), error.source)
     }
 
@@ -206,9 +209,7 @@ class ReloadScenario : Scenario("reload") {
         // Nobody's online, so nothing has loaded the tower's chunk since the restart. Load it as a player walking up
         // would; the plugin reconciles once the entities come back with it.
         editor.run("forceload add ${tower.x.toInt()} ${tower.z.toInt()}")
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
-        while ("flag" in server.entities().displays && System.nanoTime() < deadline) Thread.sleep(100)
-        val after = server.entities()
+        val after = eventually("the flag's entity gone from the store", poll = server::entities) { "flag" !in it.displays }
         assertEquals(saved.displays - "flag", after.displays, "the same root and top displays; the flag's is gone")
         assertEquals(saved.hitboxes, after.hitboxes)
     }

@@ -99,9 +99,58 @@
   },
   {
     "severity": "error",
+    "file": "dialogs/grid/dialog.json",
+    "message": "A dialog has 1 to 8 columns",
+    "path": "$.columns",
+    "code": "dialog.columns"
+  },
+  {
+    "severity": "error",
+    "file": "dialogs/grid/dialog.json",
+    "message": "lines must be at least 1",
+    "path": "$.inputs[0].lines",
+    "code": "dialog.lines"
+  },
+  {
+    "severity": "error",
+    "file": "dialogs/grid/dialog.json",
+    "message": "A single_option input needs options",
+    "path": "$.inputs[1].options",
+    "code": "dialog.options-empty"
+  },
+  {
+    "severity": "error",
+    "file": "dialogs/grid/dialog.json",
+    "message": "\"Bad Key!\" isn't a usable key (letters, digits, _ and -, at most 64 characters)",
+    "path": "$.buttons[0].key",
+    "code": "dialog.button-key"
+  },
+  {
+    "severity": "error",
+    "file": "dialogs/grid/dialog.json",
+    "message": "Two buttons are called \"go\"",
+    "path": "$.buttons[2].key",
+    "code": "dialog.button-duplicate"
+  },
+  {
+    "severity": "warning",
+    "file": "dialogs/lost/dialog.json",
+    "message": "This dialog_list lists no dialogs",
+    "path": "$.dialogs",
+    "code": "dialog.list-empty"
+  },
+  {
+    "severity": "error",
     "file": "dialogs/menu/dialog.json",
     "message": "There's no dialog \"ghost\" (dialogs/ghost/dialog.json)",
     "path": "$.dialogs[1]",
     "code": "reference.dialog"
+  },
+  {
+    "severity": "warning",
+    "file": "dialogs/yes/dialog.json",
+    "message": "A confirmation dialog has a yes and a no button",
+    "path": "$.buttons",
+    "code": "dialog.confirmation"
   }
 ]
