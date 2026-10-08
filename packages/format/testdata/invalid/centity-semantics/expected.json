@@ -103,5 +103,103 @@
     "message": "Script file \"missing.lua\" doesn't exist",
     "path": "$.script.file",
     "code": "script.missing"
+  },
+  {
+    "severity": "error",
+    "file": "centities/empty/centity.json",
+    "message": "A centity needs at least one node",
+    "path": "$.nodes",
+    "code": "centity.no-nodes"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rules/centity.json",
+    "message": "Node \"root\" is its own parent",
+    "path": "$.nodes.root.parent",
+    "code": "centity.self-parent"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rules/centity.json",
+    "message": "\"Not An Item\" isn't an item id",
+    "path": "$.nodes.held.display.item",
+    "code": "centity.item-id"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rules/centity.json",
+    "message": "lineWidth must be positive",
+    "path": "$.nodes.sign.display.lineWidth",
+    "code": "centity.line-width"
+  },
+  {
+    "severity": "warning",
+    "file": "centities/rules/centity.json",
+    "message": "This hitbox has no boxes, so nothing can click it",
+    "path": "$.nodes.button.hitbox.boxes",
+    "code": "centity.hitbox-empty"
+  },
+  {
+    "severity": "warning",
+    "file": "centities/rules/centity.json",
+    "message": "Hitbox was fitted to \"minecraft:chest\" but the display is now \"minecraft:barrel\"; fit it again",
+    "path": "$.nodes.crate.hitbox.fittedTo",
+    "code": "centity.hitbox-stale"
+  },
+  {
+    "severity": "warning",
+    "file": "centities/rules/centity.json",
+    "message": "With maxSpeed 0 it can never move",
+    "path": "$.nodes.rock.physics.maxSpeed",
+    "code": "centity.physics-stuck"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rules/centity.json",
+    "message": "The collider's max must be greater than its min on every axis",
+    "path": "$.nodes.rock.physics.collider",
+    "code": "centity.physics-collider"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rules/centity.json",
+    "message": "mass must be positive",
+    "path": "$.nodes.rock.physics.mass",
+    "code": "centity.physics-mass"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rules/centity.json",
+    "message": "\"Bad Name!\" isn't a usable animation name (letters, digits, _ and -, at most 64 characters)",
+    "path": "$.animations[\"Bad Name!\"]",
+    "code": "centity.animation-name"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rules/centity.json",
+    "message": "length must be positive",
+    "path": "$.animations.never.length",
+    "code": "centity.animation-length"
+  },
+  {
+    "severity": "warning",
+    "file": "centities/rules/centity.json",
+    "message": "Track root.scale in \"hollow\" has no keyframes",
+    "path": "$.animations.hollow.tracks.root.scale",
+    "code": "centity.track-empty"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rules/centity.json",
+    "message": "Keyframes can't be before 0",
+    "path": "$.animations.early.tracks.root.rotation",
+    "code": "centity.key-time"
+  },
+  {
+    "severity": "warning",
+    "file": "centities/rules/centity.json",
+    "message": "A budget below 500 is raised to 500",
+    "path": "$.script.budget",
+    "code": "script.budget"
   }
 ]

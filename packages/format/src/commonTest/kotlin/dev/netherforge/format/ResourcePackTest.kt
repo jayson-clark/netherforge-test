@@ -11,6 +11,7 @@ import dev.netherforge.format.resourcepack.ItemModelDef
 import dev.netherforge.format.resourcepack.PackFonts
 import dev.netherforge.format.resourcepack.PackLayout
 import dev.netherforge.format.resourcepack.ResourcePackFile
+import dev.netherforge.format.resourcepack.ResourcePackValidator
 import dev.netherforge.format.resourcepack.SkinDef
 import dev.netherforge.format.resourcepack.SoundDef
 import dev.netherforge.format.resourcepack.TooltipDef
@@ -252,6 +253,21 @@ class ResourcePackTest {
         val snapshot = Projects.load(MapProjectSource(files))
         assertEquals(listOf("resource_packs/b/pack.json" to "resource_pack.too-many-glyphs"), snapshot.problems.map { it.file to it.code })
         assertTrue(snapshot.compiledResourcePacks.isEmpty())
+    }
+
+    /** Thousands of skins are too many for a golden file; the limit is the private-use characters a pack's skin font has. */
+    @Test
+    fun aPackHoldsAtMostAFontsWorthOfSkins() {
+        fun problems(count: Int): List<Pair<String?, String?>> {
+            val file = ResourcePackFile(skins = (0 until count).associate { "s$it" to SkinDef(texture = "a.png") })
+            return ProblemSink("resource_packs/ui/pack.json").also {
+                ResourcePackValidator.validate(file, it, setOf("a.png"))
+            }.problems.map {
+                it.code to it.path
+            }
+        }
+        assertEquals(emptyList(), problems(PackFonts.PUA_COUNT))
+        assertEquals(listOf("resource_pack.too-many" to "$.skins"), problems(PackFonts.PUA_COUNT + 1))
     }
 
     @Test

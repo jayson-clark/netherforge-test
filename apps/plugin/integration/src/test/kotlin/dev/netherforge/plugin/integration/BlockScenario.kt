@@ -3,7 +3,6 @@ package dev.netherforge.plugin.integration
 import dev.netherforge.format.bridge.BotAction
 import dev.netherforge.format.bridge.BotJoinParams
 import dev.netherforge.format.bridge.BotsExtension
-import dev.netherforge.format.bridge.Log
 import dev.netherforge.plugin.integration.support.Bots
 import dev.netherforge.plugin.integration.support.PaperServer
 import dev.netherforge.plugin.integration.support.Scenario
@@ -35,8 +34,7 @@ class BlockScenario : Scenario("blocks") {
     /** Runs one of the fixture module's steps and answers the log line it wrote, its fields after the first. */
     private fun step(name: String, x: Int = 0, z: Int = 0, line: String = name): List<String> {
         editor.run("it-blocks $name $x $z")
-        val log = editor.next { it is Log && it.message.startsWith("$line\t") } as Log
-        return log.message.split('\t').drop(1)
+        return editor.line(line)
     }
 
     /** The files of the zip at [url], by path. */
@@ -95,10 +93,10 @@ class BlockScenario : Scenario("blocks") {
         editor.run("give Tester minecraft:diamond_pickaxe")
         bots.act("Tester", BotAction.SelectSlot(1))
         bots.act("Tester", BotAction.BreakBlock(x, ground + 1, z, "up"))
-        val broke = editor.next { it is Log && it.message.startsWith("broke\t") } as Log
-        val (count, drop, each) = broke.message.split('\t').drop(1)
+        val broke = editor.line("broke")
+        val (count, drop, each) = broke
         assertEquals("ruby", drop)
-        assertTrue(count.toInt() >= 1 && each.toInt() in 2..6, broke.message)
+        assertTrue(count.toInt() >= 1 && each.toInt() in 2..6, "$broke")
         val gone = step("describe", x, z)
         assertEquals("none", gone[0])
         assertTrue(gone[1] != "minecraft:note_block", "$gone")

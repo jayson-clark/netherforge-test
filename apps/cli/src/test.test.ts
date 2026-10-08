@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from 'node:fs'
@@ -11,14 +12,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { GAME_DATA_SCHEMA } from '@netherforge/format/constants'
-import {
-  currentJavaEnv,
-  findJava,
-  javaCandidates,
-  parseReleaseFile,
-  parseVersionOutput,
-  type JavaEnv,
-} from './java.ts'
+import { findJava, type JavaEnv } from './java.ts'
 import { run } from './main.ts'
 import { gameDataFile } from './project.ts'
 import { findJar, jarName, test } from './test.ts'
@@ -58,41 +52,7 @@ function machine(env: NodeJS.ProcessEnv): JavaEnv {
   }
 }
 
-describe('finding Java', () => {
-  it('reads the major version from java -version and a release file', () => {
-    expect(parseVersionOutput('openjdk version "25.0.1" 2025-10-21\nOpenJDK Runtime')).toBe(25)
-    expect(parseVersionOutput('java version "1.8.0_391"')).toBe(8)
-    expect(parseVersionOutput('openjdk version "26-ea" 2026-03-17')).toBe(26)
-    expect(parseVersionOutput('command not found')).toBeNull()
-    expect(parseReleaseFile('IMPLEMENTOR="Eclipse"\nJAVA_VERSION="25.0.1"\n')).toBe(25)
-    expect(parseReleaseFile('JAVA_VERSION="1.8.0_391"')).toBe(8)
-    expect(parseReleaseFile('nothing')).toBeNull()
-  })
-
-  it('searches as the editor does: JAVA_HOME, then the editor-downloaded JDKs, then PATH', () => {
-    const home = jdk(path.join(tmp, 'jdk-home'), 25)
-    const managed = jdk(path.join(tmp, 'data', 'jdks', 'temurin-25'), 25)
-    const onPath = jdk(path.join(tmp, 'pathjdk'), 25)
-    const found = javaCandidates(
-      machine({ JAVA_HOME: path.join(tmp, 'jdk-home'), PATH: path.dirname(onPath) }),
-    )
-    expect(found.slice(0, 3)).toEqual([home, managed, onPath])
-    expect(findJava(machine({ JAVA_HOME: path.join(tmp, 'jdk-home') }))).toBe(home)
-  })
-
-  it('takes NETHERFORGE_JAVA first, and skips a Java older than the runner needs', () => {
-    const old = jdk(path.join(tmp, 'old'), 17)
-    const current = jdk(path.join(tmp, 'managed'), 25)
-    const env = machine({ JAVA_HOME: path.join(tmp, 'old') })
-    expect(findJava(env)).toBeNull()
-    expect(findJava(machine({ NETHERFORGE_JAVA: old }))).toBeNull()
-    expect(findJava(machine({ NETHERFORGE_JAVA: current }))).toBe(current)
-  })
-
-  it('finds the machine it runs on', () => {
-    expect(currentJavaEnv({}).platform).toBe(process.platform)
-  })
-})
+// Finding Java itself is java.test.ts.
 
 describe('the runner jar', () => {
   it('is named for the version', () => {
@@ -245,13 +205,34 @@ describe('netherforge test', () => {
   })
 })
 
-/** The real thing: the jar Gradle built, launched with a real Java, on a small project (skipped where either is missing). */
+/**
+ * The real thing: the jar Gradle built (`:plugin:test-runner:jar`, named for the repo's VERSION), launched with a
+ * real Java, on a small project. Locally a machine without either skips it and says why; in CI (`CI` set) that's a
+ * failure, so a broken build or a missing JDK can't make these tests pass by not running.
+ */
+const version = readFileSync(path.resolve(import.meta.dirname, '../../../VERSION'), 'utf8').trim()
 const builtJar = path.resolve(
   import.meta.dirname,
-  `../../plugin/test-runner/build/libs/${jarName(process.env.npm_package_version ?? '0.1.0')}`,
+  `../../plugin/test-runner/build/libs/${jarName(version)}`,
 )
 const java = findJava()
-describe.skipIf(!existsSync(builtJar) || !java)('netherforge test, for real', () => {
+const missing = [
+  existsSync(builtJar)
+    ? null
+    : `the runner jar ${builtJar} (node tools/gradle.mjs :plugin:test-runner:jar)`,
+  java ? null : 'a Java of 21 or later',
+].filter((it): it is string => it != null)
+if (missing.length > 0 && !process.env.CI) {
+  console.warn(`Skipping "netherforge test, for real": no ${missing.join(' and no ')}.`)
+}
+describe.runIf(missing.length > 0 && !!process.env.CI)('netherforge test, for real, in CI', () => {
+  it('has the jar and a Java to run it', () => {
+    throw new Error(`CI must run the real test runner, but there's no ${missing.join(' and no ')}`)
+  })
+})
+// The reason is in the name too, so a skipped run says why wherever its report is read.
+const skipped = missing.length > 0 ? ` (skipped: no ${missing.join(' and no ')})` : ''
+describe.skipIf(missing.length > 0)(`netherforge test, for real${skipped}`, () => {
   // The small game data format's own tests use: what the runner reads is the same file the editor caches.
   const game = path.resolve(
     import.meta.dirname,

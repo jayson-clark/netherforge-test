@@ -18,7 +18,16 @@ kotlin {
 
     js(IR) {
         // Nothing here touches browser or Node APIs; nodejs() is what runs the tests.
-        nodejs()
+        nodejs {
+            testTask {
+                useMocha {
+                    // Mocha's default of 2 s per test is too tight for the terrain tests (they generate whole chunks)
+                    // and the Lua ones (wasmoon loads its WebAssembly first) on a shared CI runner, which is several
+                    // times slower than a laptop. A test that hangs still fails, well before the JVM's 5-minute task limit.
+                    timeout = "30s"
+                }
+            }
+        }
         binaries.library()
         generateTypeScriptDefinitions()
         useEsModules()
@@ -63,7 +72,12 @@ dependencies {
 val repoRoot: File by rootProject.extra
 
 val updateGolden = System.getenv("UPDATE_GOLDEN") ?: ""
-val goldenInputs = listOf(repoRoot.resolve("examples"), layout.projectDirectory.dir("testdata").asFile)
+val goldenInputs = listOf(
+    repoRoot.resolve("examples"),
+    layout.projectDirectory.dir("testdata").asFile,
+    // ProblemCoverageTest checks that the runtime tests it names for a problem code name that code.
+    repoRoot.resolve("apps/plugin/runtime/src/test")
+)
 
 // TerrainScriptApiTest holds the terrain scripts' Lua to the API spec's JSON.
 val terrainApi = repoRoot.resolve("packages/api/generated/terrain.json")
@@ -78,6 +92,8 @@ tasks.withType<Test>().configureEach {
     goldenInputs.forEach { inputs.dir(it) }
     inputs.file(terrainApi)
     inputs.property("updateGolden", updateGolden)
+    // NETHERFORGE_BENCH=1 runs the benchmarks (TerrainDensityTimingTest), so a run with it isn't up to date from one without.
+    inputs.property("bench", System.getenv("NETHERFORGE_BENCH") ?: "")
     // Rewriting goldens must always run, even if nothing changed since the last pass.
     if (updateGolden == "1") outputs.upToDateWhen { false }
 }

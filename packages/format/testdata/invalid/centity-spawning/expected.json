@@ -9,6 +9,13 @@
   {
     "severity": "error",
     "file": "centities/bad/centity.json",
+    "message": "\"#Not A Tag\" isn't a biome tag",
+    "path": "$.spawning.biomes[1]",
+    "code": "centity.spawning-biome"
+  },
+  {
+    "severity": "error",
+    "file": "centities/bad/centity.json",
     "message": "\"#\" isn't a block tag",
     "path": "$.spawning.blocks[0]",
     "code": "centity.spawning-block"

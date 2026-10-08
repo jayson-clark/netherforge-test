@@ -93,31 +93,6 @@ class CentitySpawningTest {
     }
 
     @Test
-    fun worldsRangesAndNumbersAreChecked() {
-        val bad = SpawningDef(
-            worlds = listOf("fine", "no good"),
-            light = SpawnRange(min = 9, max = 20),
-            height = SpawnRange(min = 70, max = 60),
-            weight = 0,
-            group = SpawnRange(min = 0),
-            cap = -1,
-            despawnDistance = 0
-        )
-        assertEquals(
-            setOf(
-                "centity.spawning-world" to "$.spawning.worlds[1]",
-                "centity.spawning-range" to "$.spawning.light.max",
-                "centity.spawning-range" to "$.spawning.height",
-                "centity.spawning-number" to "$.spawning.weight",
-                "centity.spawning-number" to "$.spawning.group.min",
-                "centity.spawning-number" to "$.spawning.cap",
-                "centity.spawning-number" to "$.spawning.despawnDistance"
-            ),
-            problems(bad).toSet()
-        )
-    }
-
-    @Test
     fun aDespawnDistanceWithinReachIsWarnedAbout() {
         assertEquals(
             listOf("centity.spawning-despawn" to "$.spawning.despawnDistance"),

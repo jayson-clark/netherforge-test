@@ -86,7 +86,18 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
      excepted); `KindsTest` makes, classifies and loads every registered kind.
    - `packages/format/testdata/invalid/<case>/` is a small project plus
      `expected.json`, the exact problems it must produce; every code in it
-     must be in `ProblemCodes`, with its severity.
+     must be in `ProblemCodes`, with its severity. `GoldenTest` and
+     `PackagesTest` check **every case before failing** and fail once with all
+     the cases that differ (`ProblemGoldens`), on the JVM and in JS, so one
+     run shows every golden a change moved.
+   - **Every problem code is produced by a test** (`ProblemCoverageTest`): a
+     code is in some golden `expected.json` (`invalid/` or `packages/`), or it's
+     in that test's `testedElsewhere` with the test that produces it and why a
+     golden can't (it needs game data, which goldens load without; JSON can't
+     hold it; it's too big for a file; the plugin's runtime reports it). The
+     test named must exist and name the code. `untested` lists the gaps
+     (`runtime.pack-format` today): an entry there is a gap to close, never a
+     place to park a new code. A new rule adds a golden case, not an entry.
    - `packages/format/testdata/references/<example>.json` is every reference
      each example makes, as the walker finds it.
    - Packages: `examples/basic` depends on `examples/library` (`../library`),
@@ -107,20 +118,35 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
      (`ProblemCatalogueTest`, JVM).
    - `docs/tests/format-docs.test.ts` (the docs package, vitest on format's JS
      build): every whole-file `json` block in `docs/format/*.md` validates as
-     its kind, and every key of each kind's JSON Schema is named on its page.
-     A snippet is marked `json partial` (project-format has the convention).
-   - `apps/cli/src/preview.test.ts` runs `netherforge preview` on a copy of
-     `examples/basic`: the PNG's size and every pixel against format's own
-     preview run in the test (`terrainPreviewer` + `mapPixels`/`slicePixels`
-     from `packages/terrain-preview`), a problem printed as `check` does, bad
-     options exit 2, and a generator's script run (a module required, a failure
-     printed). `packages/terrain-preview` tests the colours against the
-     real JS build, and its `script.test.ts` runs format's script fixture on
-     Node's Lua (`loadNodeLua`).
+     its kind, and every key of each kind's JSON Schema is named on its page
+     **as a key**: inline code that is the key, a path of keys
+     (`terrain.base`), an object's shape or one quoted entry
+     (`"invert": true`); a key of a `json` example on the page; a table row's
+     first cell; or a word of a heading. A word in prose, or inside other
+     code, doesn't count. A snippet is marked `json partial` (project-format
+     has the convention).
+   - The CLI's tests (`apps/cli/src/*.test.ts`) write only to temp folders and
+     delete them (`afterEach`, or `afterAll` for a per-file copy).
+     `preview.test.ts` copies `examples/basic` and `library` once per file (a
+     test that changes the project asks for its own copy) and runs
+     `netherforge preview`: one plumbing check (the PNG equals
+     `terrainPreviewer` + `mapPixels`/`slicePixels` from
+     `packages/terrain-preview`) and independent ones, a flat terrain whose
+     pixel colours are worked out by hand from `draw.ts`'s rules, never through
+     the drawing code; a problem printed as `check` does, bad options exit 2,
+     and a generator's script run. `java.test.ts` and `project.test.ts` run the
+     Java search and project reading on a faked machine and temp folders (no
+     Java needed). `packages/terrain-preview` tests the colours against the
+     real JS build, `nbt.ts` (every tag type big-endian, gzip/zlib/raw, writing
+     back, refusals) and `structure.ts` (both palette spellings, bare 26.x ids,
+     several palettes, the captured server file) on their own, and its
+     `script.test.ts` runs format's script fixture on Node's Lua
+     (`loadNodeLua`). No test asserts wall-clock time: a bound flakes on a slow
+     runner and proves nothing the pixels don't.
    - **3D terrain** (W5.11): format's `TerrainDensityTest` (overhangs and islands, every surface topped, the sea,
      caves' depth, decorations on islands, blending, the map and spawn, the script's `density` stage on both Luas,
-     `testdata/terrain/density.txt`), `TerrainDensityTimingTest` (jvmTest, prints the cost against heights; run
-     with `-i`), `PaperWorldGeneratorsTest`'s 3D world (every block, the game's heightmap, the spawn) and the
+     `testdata/terrain/density.txt`), `TerrainDensityTimingTest` (jvmTest, a benchmark printing the cost against heights: skipped unless
+     `NETHERFORGE_BENCH=1`, like the runtime's; run with `-i`), `PaperWorldGeneratorsTest`'s 3D world (every block, the game's heightmap, the spawn) and the
      runtime's `TerrainTest` (chunk threads).
    - **Terrain scripts** (W5.6): format's `TerrainScriptTest` runs every
      case on the JVM (luajava) and in JS (wasmoon) through `withLua`, and
@@ -130,14 +156,25 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
      `*.node.test.ts` (`// @vitest-environment node`): wasmoon can't find its
      WebAssembly in jsdom.
    - `packages/format/testdata/bridge/session.ndjson` is the dev bridge's recorded
-     session; every side must round-trip it.
+     session; every side must round-trip it. `BridgeTest` holds every line to
+     the protocol: an unknown method only where the recording calls one on
+     purpose (listed, answered method-not-found), params that don't decode
+     only where they're answered invalid-params, a response only to an open
+     request.
+   - format's JS facade (`jsMain/.../Exports.kt`) has `ExportsTest` (jsTest):
+     each export's answer shape (a sealed result's `type`, nulls left out) and
+     problems answered, not thrown. format's JS tests run under mocha with a
+     30 s per-test timeout (`build.gradle.kts`); keep a test well under it on a
+     CI runner by computing only what it checks (one `sampler()` for many
+     columns, not a fresh one per column).
    - `packages/format/testdata/game-data/bundle.json` is a small game data
      export in today's shape: `GameDataTest` looks things up in it and checks
      its `schema` is `GameDataBundle.SCHEMA`; the editor's backend checks it's
      its own `GAME_DATA_SCHEMA`.
    - API conformance: the runtime exposes exactly what `packages/api/` declares.
    - lua-language-server: the generated stubs check clean over the examples
-     and every spec example (`luals.check.test.ts`), and the editor's setup
+     and every spec example (`luals.check.test.ts`; without the binary it's
+     skipped locally, saying why, and fails when `CI` is set), and the editor's setup
      (project names, its plugin) gives a diagnostic, a project name completed
      and a definition across a `require` (`luals.node.test.ts`). Both run the
      pinned LuaLS, which `pnpm test` fetches first (`tools/luals.mjs`, cached).
@@ -185,7 +222,24 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
    another.
    `DebuggerScenario` holds a real server at a breakpoint for 40 s with a bot
    online (past Paper's watchdog warning and the keep-alive limit); its DAP
-   is raw JSON over `Editor.notify`.
+   is raw JSON over `Editor.notify`. `ScheduleScenario` runs its server with
+   the test-only `-Dnetherforge.test.wall-clock-rate=60` (through
+   `PaperServer`'s `jvmProperties`; see plugin-runtime's "Schedules"), so a
+   cron schedule for every minute fires on the real tick every second.
+   - **Scopes** (`-Pnetherforge.integration.scope=full|pr|quarantine`,
+     `full` by default): a scenario whose checks don't change with the
+     Minecraft version is `@VersionIndependent` (`support/Tags.kt`, the JUnit
+     tag `version-independent`): `ScheduleScenario`, `DebuggerScenario`,
+     `SettingsScenario`, `SpawnRatesScenario`, `CutsceneScenario`,
+     `TerrainScenario` (its version-sensitive parts are `MainWorldScenario`'s,
+     `DimensionTypeScenario`'s and `StructureGenerationScenario`'s). The `pr`
+     scope leaves them out on every version but the newest (the build works
+     it out from the adapters); `full` runs everything. Untagged means it runs
+     on every version: anything touching world storage, datapacks, registries,
+     packets or goals (`ContractScenario`, `BotScenario`, the world and
+     datapack scenarios, `BlockScenario`, `MobScenario`, `GameDataScenario`,
+     `ReloadScenario`, …). `LumenValeScenario` runs only on the version its
+     example targets (`assumptions()`).
    - **A scenario is a class** (`support/Scenario.kt`) whose tests are its
      steps, in `@Order`, against one server running a copy of
      `examples/basic` (retargeted to the adapter's version) with fixtures
@@ -203,7 +257,7 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
      `PaperServer` (the server folder, starting and stopping, what the
      plugin's store holds: `stored(sql)`, read beside the running server; `prepare` writes `server.properties`,
      `spigot.yml` and `bukkit.yml` afresh each time, with `levelSeed` and `mainWorldGenerator` for a scenario whose
-     main world matters, so nothing a scenario routed outlives it), `Editor` (the bridge: `request`, `next`, `logged`, `run`,
+     main world matters, so nothing a scenario routed outlives it), `Editor` (the bridge: `request`, `next`, `logged`, `line`, `settle`, `assertNone`, `run`,
      `reload`), `Bots` (acting and waiting on what a bot sees),
      `Maps` (the editor's world capture).
    - **What's there**: `ReloadScenario` (hot reload of every kind, typed
@@ -228,9 +282,35 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
      asks `Adapter`.
    - **Waiting for a frame, match what you mean**: `editor.next { ... }` takes
      the first frame its predicate accepts, and a loaded machine sends others
-     meanwhile (a sourceless "is slow" `ScriptError` from a tick over budget).
-     Match a `ScriptError` by its source file or message, never as the first
-     one.
+     meanwhile. Match a `ScriptError` by its source file or message, never as
+     the first one. `editor.logged(...)` waits for an exact log line,
+     `editor.line(first)` for the next line whose first field is `first` (its
+     other fields back, what a fixture's probe reports).
+   - **Never sleep, then assert.** Up to four servers share a machine, so a
+     tick or a chunk can take seconds. Every wait has one limit,
+     `WAIT_SECONDS` (60 s, `support/Waits.kt`), and returns as soon as it
+     can: `eventually(what, poll = { ... }) { accept }` asks again until the
+     answer is accepted (a count after chunks load, a file written off the
+     main thread, where the camera is), `Bots.eventually`/`heard` poll a bot
+     the same way. Something that must happen a number of ticks later is
+     counted in ticks by the fixture (`nf.after(5, ...)`), not in sleeps. A
+     check that something did **not** happen is `editor.assertNone(what) { }`,
+     which first waits for everything the server reported until now
+     (`Editor.settle`: a request the main thread answers, sent after
+     whatever it said before).
+   - **A timeout says what came instead**: it names what it waited for and
+     lists the last 40 frames with their content (log fields, script errors
+     with their file and line, problems, answers); `logged` and `line` also
+     show the log lines with the same first field, field by field ("field 3:
+     "minecraft:stone", not "minecraft:gold_block""). A bridge the plugin
+     closed fails at once.
+   - **No script fails unless a step says so.** After every step that passed
+     (and across a `restart`), `Scenario` settles and fails the step on any
+     `ScriptError` no wait took. A step that breaks a script on purpose calls
+     `expectScriptErrors("why") { it.source?.file == "..." }` (by source or
+     message) for the rest of the scenario, and waits for the error it checks
+     with `next` (`MobScenario`, `ReloadScenario`). Servers run with
+     `performance.warn-ms: 0`, so a slow-script warning is never one.
    - **Bots**: `BotScenario` joins bots (fake players, the `NetherForgeBots`
      plugin; see the plugin-runtime skill) on an online-mode server and checks
      what only a player can do or see: the join, chat and commands, clicking
@@ -282,6 +362,15 @@ version>-noble`, linux/amd64): `pnpm test:screenshots`
 --vz-rosetta`). A preview change that's meant shows up as a failed
      picture: rewrite it and review it like a golden (below).
 5. **Packaged-app smoke**: nightly only.
+
+**A test that needs a tool fails in CI, never skips.** A test that needs
+something a machine may lack (the built test-runner jar and Java 21+ for
+`apps/cli`'s `netherforge test, for real`, the pinned LuaLS) skips locally
+with the reason in its name or on stderr, and with `CI` set is a failing test
+naming what's missing, so CI can't pass by skipping it. `packages/api`'s
+`bindings.test.ts` tests the binding model's decisions on small made-up specs
+(codecs, returns, crossing shapes, handle chains, checks, refusals), not the
+emitted text, which the committed generated files and `ConformanceTest` hold.
 
 Deliberately not here: coverage gates, DOM snapshots, and Minecraft data in
 the repo or in unit tests. The integration test is the one place a real
@@ -420,7 +509,8 @@ The Paper run's server log is `apps/plugin/integration/build/integration/<minecr
 pnpm test                 # everything fast: Gradle check, vitest, cargo test
 node tools/gradle.mjs :format:allTests
 node tools/gradle.mjs :plugin:runtime:test
-pnpm test:integration
+pnpm test:integration   # every version, the `full` scope
+node tools/gradle.mjs :plugin:integration:integrationTest-26.2 -Pnetherforge.integration.scope=pr   # what a PR runs on 26.2
 pnpm test:e2e
 pnpm test:screenshots     # the previews' pictures (Docker); --update rewrites them
 ```
@@ -430,17 +520,49 @@ pnpm test:screenshots     # the previews' pictures (Docker); --update rewrites t
 `.github/workflows/ci.yml` runs on every PR and every push to `main`, and the
 release workflow calls it on the tagged commit (see the release skill):
 
-| Job         | Runner                 | What                                                                                                                                                              |
-| ----------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| check       | ubuntu, macOS, Windows | `pnpm build`, lint, `pnpm test`. rustfmt and clippy on Linux only (`node tools/check.mjs lint --skip rust` elsewhere); the Rust tests everywhere.                 |
-| integration | ubuntu                 | One job per Paper adapter (listed from `apps/plugin/paper-*`), each `integrationTest-<minecraft>`, its Paper and Mojang jars cached per version and pinned build. |
-| e2e         | ubuntu                 | `pnpm test:e2e` (Chromium), then `pnpm test:screenshots` (the previews' pictures, in the Playwright container).                                                   |
-| tauri-build | ubuntu                 | `tauri build --debug --no-bundle`.                                                                                                                                |
+| Job         | Runner                 | What                                                                                                                                                                                                                                                 |
+| ----------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| check       | ubuntu, macOS, Windows | `pnpm build`, lint, `pnpm test`. rustfmt and clippy on Linux only (`node tools/check.mjs lint --skip rust` elsewhere); the Rust tests everywhere.                                                                                                    |
+| integration | ubuntu                 | One job per Paper adapter (listed from `apps/plugin/paper-*`), each `integrationTest-<minecraft>`, its Paper and Mojang jars cached per version and pinned build. PRs in the `pr` scope, `main` and releases `full`. Test counts in the job summary. |
+| e2e         | ubuntu                 | `pnpm test:e2e` (Chromium), then `pnpm test:screenshots` (the previews' pictures, in the Playwright container).                                                                                                                                      |
+| tauri-build | ubuntu                 | `tauri build --debug --no-bundle`.                                                                                                                                                                                                                   |
+
+`nightly.yml`:
+
+| Job         | Runner                                                | What                                                                                                                                              |
+| ----------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| integration | every version on ubuntu; the newest on macOS, Windows | `integrationTest-<minecraft>` in the `full` scope, then (Linux) the `quarantine` scope in a step that can't fail the night (`continue-on-error`). |
+| editor      | ubuntu, macOS, Windows                                | `pnpm test:e2e`, the bundle, and the packaged-app smoke test (not on macOS).                                                                      |
+| report      | ubuntu                                                | A failure of either opens an issue labelled `nightly`.                                                                                            |
 
 A newer push to a PR cancels its older run; runs on `main` and tags always
-finish. `nightly.yml`: integration, e2e, packaged builds and smoke tests on
-all three OSes; a failure opens an issue. Flaky tests are fixed or
-quarantined with a linked issue the same day, never retried silently.
+finish. Every job has `timeout-minutes`. A failed integration job keeps each
+scenario's server log (`build/integration/<minecraft>/server/*.log` and
+`logs/`), the JUnit XML and the HTML report as the artifact
+`integration-<minecraft>[-<os>]`; a failed e2e run keeps Playwright's
+`test-results/` (each failed test's trace) and `playwright-report/` as
+`e2e-results`. `.github/actions/junit-summary` writes a folder of JUnit XML's
+counts and failed tests into the job's summary. `docs.yml` builds the docs on
+every PR and push that touches them and deploys from `main` only when the
+repository has GitHub Pages (see the release skill).
+
+**Flaky tests are fixed or quarantined with a linked issue the same day**,
+never retried silently. Quarantining one: open an issue (what fails, a link to
+the run), then tag the test with it:
+
+- **Integration (Kotlin)**: `@Quarantine("https://github.com/<owner>/<repo>/issues/<n>")`
+  (`support/Tags.kt`, the JUnit tag `quarantine`) on the scenario class, or on
+  a step no later step builds on. Every normal run leaves it out; nightly runs
+  `-Pnetherforge.integration.scope=quarantine` on its own, without failing,
+  so a pass there says the fix worked.
+- **Unit tests (Kotlin, JUnit 5)**: `@Tag("quarantine")` with the issue's
+  URL in a comment above it (the runtime's tests use the same tag name).
+- **vitest**: `it.skip('…', …)` (or `describe.skip`) with
+  `// quarantined: <issue URL>` above it.
+- **Playwright**: `test.fixme('…', …)` (or `test.fixme()` inside the test)
+  with `// quarantined: <issue URL>` above it.
+
+The fix takes the tag (or `skip`/`fixme`) off and closes the issue.
 
 Every third-party action is pinned to a full commit SHA with its version in
 a comment (`uses: actions/checkout@<sha> # v5.1.0`), and every workflow and

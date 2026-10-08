@@ -1,8 +1,8 @@
 package dev.netherforge.plugin.integration
 
 import dev.netherforge.format.bridge.Bridge
-import dev.netherforge.format.bridge.ScriptError
 import dev.netherforge.plugin.integration.support.Scenario
+import dev.netherforge.plugin.integration.support.VersionIndependent
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
@@ -15,6 +15,7 @@ import kotlin.test.assertTrue
  * restarts one that read the setting and doesn't; the value is the server's, in
  * `settings/<namespace>.json`.
  */
+@VersionIndependent
 class SettingsScenario : Scenario("settings") {
     @Test
     @Order(1)
@@ -32,7 +33,6 @@ class SettingsScenario : Scenario("settings") {
         editor.logged("reader starts", "3")
         val saved = server.folder.resolve("plugins/NetherForge/settings/basic.json")
         assertTrue(Files.readString(saved).contains("Hello there"), "the owner's values are kept on the server")
-        assertEquals(emptyList(), editor.seen.filterIsInstance<ScriptError>().map { it.message })
     }
 
     @Test

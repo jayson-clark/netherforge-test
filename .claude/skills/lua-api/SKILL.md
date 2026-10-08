@@ -622,7 +622,7 @@ restarts it by; a script that listens for `setting_changed` (events.ts: `setting
 - `packages/api/src/spec.test.ts` (vitest) checks the spec itself: unique names,
   every type parses and names only declared types, every handle class says
   what identifies it, everything documented. `scripts/emit/bindings.test.ts`
-  covers the binding model; the runtime's `CodecTest` holds the codecs'
+  covers the binding model (its decisions on small made-up specs, not the emitted text); the runtime's `CodecTest` holds the codecs'
   messages, `ConformanceTest` round-trips a sample of every shape that
   crosses (every field set to a value of its declared type) through its codec,
   and `HandleTest` holds the handle table to its promises: a handle Lua lets

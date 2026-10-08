@@ -45,6 +45,8 @@
         ]
       }
     },
-    "line": { "particle": "minecraft:crit", "burst": 1, "shape": { "type": "line", "to": [0, 0, 0] }, "spin": 1 }
+    "line": { "particle": "minecraft:crit", "burst": 1, "shape": { "type": "line", "to": [0, 0, 0] }, "spin": 1 },
+    "none": { "particle": "minecraft:crit", "burst": 0 },
+    "ball": { "particle": "minecraft:crit", "burst": 1, "shape": { "type": "sphere", "radius": 1 }, "spin": 3 }
   }
 }

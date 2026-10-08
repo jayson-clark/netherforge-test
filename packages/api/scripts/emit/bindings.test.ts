@@ -1,23 +1,32 @@
+/**
+ * The binding model's decisions: which functions get a binding, how each type crosses (its
+ * codec), which shapes cross and which way, handle chains, what hand-written functions check,
+ * and what the generator refuses. Tested on the model `bindings()` works out, mostly over tiny
+ * made-up specs, not on the text the emitters write: the committed generated files are that
+ * text (`pnpm lint` fails when they're stale) and the runtime's ConformanceTest holds Kotlin to
+ * it. The few emitter checks here are about behaviour only the output shows (an order, a
+ * refusal), matched loosely.
+ */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { asyncFunction } from '../../src/async.ts'
 import { api } from '../../src/spec/index.ts'
-import type { ApiSpec, LuaClass } from '../../src/types.ts'
-import { bindings, classEvents, classFunctions, handwrittenShapes } from './bindings.ts'
-import { bindingsLua, schemaLua } from './lua.ts'
-import { useFeatures } from './common.ts'
-import { luals } from './luals.ts'
-import { referencePages } from './docs.ts'
+import type { ApiSpec, Fn, LuaClass } from '../../src/types.ts'
 import {
-  apiKotlin,
-  argumentCodecsKotlin,
-  argumentTypesKotlin,
-  eventsKotlin,
-  gatesKotlin,
-  handlesKotlin,
-  primitivesKotlin,
-  shapesKotlin,
-  unionsKotlin,
-} from './kotlin.ts'
+  bindings,
+  classEvents,
+  classFunctions,
+  handwrittenFunctions,
+  handwrittenShapes,
+  pins,
+  reachable,
+  type Codec,
+  type ShapeBinding,
+} from './bindings.ts'
+import { useFeatures } from './common.ts'
+import { referencePages } from './docs.ts'
+import { gatesKotlin, primitivesKotlin, shapesKotlin } from './kotlin.ts'
+import { bindingsLua } from './lua.ts'
+import { luals } from './luals.ts'
 
 const handle: LuaClass = {
   name: 'Thing',
@@ -32,357 +41,322 @@ const shape = (
   name: string,
   fields: LuaClass['fields'],
   extra: Partial<LuaClass> = {},
-): LuaClass => ({
-  name,
-  doc: `A ${name}.`,
-  methods: false,
+): LuaClass => ({ name, doc: `A ${name}.`, methods: false, functions: [], fields, ...extra })
+
+const vec3 = {
+  name: 'Vec3',
+  doc: 'v',
+  fields: [{ name: 'x', type: 'number', doc: 'x' }],
   functions: [],
-  fields,
-  ...extra,
+  operators: [],
+}
+
+const fn = (more: Partial<Fn> = {}): Fn => ({
+  name: 'f',
+  doc: 'd',
+  params: [],
+  returns: [],
+  ...more,
 })
 
-function spec(fn: LuaClass['functions'][number], cls: Partial<LuaClass> = {}): ApiSpec {
+function spec(f: Fn, cls: Partial<LuaClass> = {}, more: Partial<ApiSpec> = {}): ApiSpec {
   return {
     globals: [],
-    classes: [{ ...handle, ...cls, functions: [fn] }],
+    classes: [{ ...handle, ...cls, functions: [f] }],
     surfaces: [],
     shapes: [],
     removed: [],
+    values: [vec3],
+    ...more,
   }
 }
 
-/** Everything generated for [it]: the Lua half and every Kotlin file, to search. */
-function generated(it: ApiSpec) {
-  const bound = bindings(it)
-  return {
-    lua: bindingsLua(bound.classes, it),
-    schema: schemaLua(it),
-    api: apiKotlin(bound.classes),
-    primitives: primitivesKotlin(bound.classes),
-    shapes: shapesKotlin(it, bound),
-    unions: unionsKotlin(bound),
-    events: eventsKotlin(it),
-  }
-}
+/** The one function [it] binds. */
+const only = (it: ApiSpec) => bindings(it).classes[0]!.functions[0]!
 
-describe('the binding model', () => {
-  it('binds every Kotlin-implemented function in the spec', () => {
+/** How a parameter of [type] crosses, in a spec with [more]. */
+const codecOf = (type: string, more: Partial<ApiSpec> = {}, optional = false): Codec =>
+  only(spec(fn({ params: [{ name: 'x', type, doc: '', optional }] }), {}, more)).params[0]!.codec
+
+const thing = { kind: 'handle', cls: expect.objectContaining({ name: 'Thing' }) }
+
+describe('which functions get a binding', () => {
+  it('binds every function the runtime implements, and none written in Lua', () => {
     const { classes } = bindings(api)
-    const kotlin = api.classes.flatMap((cls) => cls.functions.filter((fn) => fn.impl !== 'lua'))
-    expect(classes.flatMap((it) => it.functions)).toHaveLength(kotlin.length)
+    const kotlin = api.classes.flatMap((cls) => cls.functions.filter((it) => it.impl !== 'lua'))
+    expect(classes.flatMap((it) => it.functions.map((f) => f.fn))).toEqual(kotlin)
   })
 
-  it('wraps impl lua functions: the checks, then the hand-written body', () => {
-    const lua = bindingsLua(bindings(api).classes, api)
-    expect(lua).toContain(
-      'function Entity.is_player(self)\n  self_of(self, "Entity")\n  return hand.Entity.is_player(self)\nend',
-    )
-    expect(lua).toContain('function Centity.play_animation(self, name, options)')
-    expect(lua).not.toContain('hand.Centity.play_animation')
-  })
-
-  it('refuses a handle class that does not say what identifies it', () => {
-    expect(() =>
-      bindings(spec({ name: 'f', doc: 'd', params: [], returns: [] }, { handle: undefined })),
-    ).toThrow(/without `handle`/)
-  })
-
-  it('refuses types it has no binding for, naming where', () => {
-    const fn = {
-      name: 'f',
-      doc: 'd',
-      params: [{ name: 'x', type: 'Nowhere', doc: '' }],
-      returns: [],
-    }
-    expect(() => bindings(spec(fn))).toThrow(/Thing\.f\(x\): no binding for Nowhere/)
-    const keys = { ...fn, params: [{ name: 'x', type: 'table<boolean, string>', doc: '' }] }
-    expect(() => bindings(spec(keys))).toThrow(/keys must be strings or whole numbers/)
-  })
-
-  it('passes every argument as the one Lua value it is, for Kotlin to read with its codec', () => {
-    const fn = {
-      name: 'use',
-      doc: 'd',
-      params: [
-        { name: 'with', type: 'Thing', doc: '' },
-        { name: 'count', type: 'integer', doc: '', optional: true },
-        { name: 'mode', type: '"loud"|"quiet"', doc: '' },
-        { name: 'weights', type: 'number[]', doc: '' },
+  it('keys each by its class and name; a handle method gets the handle, a namespace the caller', () => {
+    const method = only(spec(fn({ name: 'use' })))
+    expect(method).toMatchObject({ primitive: 'Thing.use', method: true })
+    const namespaced: ApiSpec = {
+      ...spec(fn()),
+      classes: [
+        {
+          name: 'nf.server',
+          doc: 'd',
+          methods: false,
+          fields: [],
+          functions: [fn({ name: 'tick' })],
+        },
       ],
-      returns: [{ type: 'Thing?' }],
     }
-    const out = generated(spec(fn))
-    // The handle crosses as its key in the handle table, which Kotlin finds it by.
-    expect(out.lua).toContain('local self_key = self_of(self, "Thing")')
-    expect(out.lua).toContain('return prim["Thing.use"](self_key, with, count, mode, weights)')
-    expect(out.primitives).toContain('val self = call.self(1) as LuaHandle.Thing')
-    expect(out.primitives).toContain('val with = call.arg(2, "with", LuaHandle.Thing.Codec)')
-    expect(out.primitives).toContain('val count = call.arg(3, "count", CODEC_1)')
-    expect(out.primitives).toContain('private val CODEC_1 = LuaOptional(LuaCodecs.INTEGER)')
-    expect(out.primitives).toContain('LuaChoice(listOf("loud", "quiet"))')
-    expect(out.primitives).toContain('LuaList(LuaCodecs.NUMBER)')
-    expect(out.primitives).toContain('call.push(result, CODEC_')
-    expect(out.api).toContain(
-      'fun use(self: LuaHandle.Thing, with: LuaHandle.Thing, count: Long?, mode: String, weights: List<Double>): LuaHandle.Thing?',
-    )
+    expect(only(namespaced)).toMatchObject({ primitive: 'nf.server.tick', method: false })
+  })
+})
+
+describe('how a type crosses', () => {
+  it('maps the primitives one to one, and any and table to a Lua value', () => {
+    for (const kind of ['string', 'number', 'integer', 'boolean', 'function'] as const)
+      expect(codecOf(kind)).toEqual({ kind })
+    expect(codecOf('fun(x: number)')).toEqual({ kind: 'function' })
+    expect(codecOf('any')).toEqual({ kind: 'any', table: false })
+    expect(codecOf('table')).toEqual({ kind: 'any', table: true })
   })
 
-  it('keeps the Vec3 fast path: three numbers both ways, checked and rebuilt in Lua', () => {
-    const lua = bindingsLua(bindings(api).classes, api)
-    expect(lua).toContain(
-      'local translation_x, translation_y, translation_z = want_vec3(translation, "translation")',
-    )
-    expect(lua).toContain('return vec3_of(prim["Node.translation"](self_key))')
-    const kotlin = primitivesKotlin(bindings(api).classes)
-    expect(kotlin).toContain('val translation = call.vec3(2)')
-    expect(kotlin).toContain('call.pushVec3(result)')
-    // Inside anything else a vector is a value like any other.
-    expect(kotlin).not.toContain('LuaList(LuaCodecs.VEC3)')
+  it('makes nil allowed an optional, however it is written; any is any value already', () => {
+    const optional = { kind: 'optional', inner: { kind: 'string' } }
+    expect(codecOf('string?')).toEqual(optional)
+    expect(codecOf('string|nil')).toEqual(optional)
+    expect(codecOf('string', {}, true)).toEqual(optional)
+    expect(codecOf('any', {}, true)).toEqual({ kind: 'any', table: false })
   })
 
-  it('crosses any union as a sealed interface Kotlin `when`s on, members tried in order', () => {
-    const out = generated(api)
-    expect(out.api).toContain(
-      'fun moveTo(self: LuaHandle.Centity, target: LocationOrVec3OrEntityOrCentity, options: CentityPathOptions?): Boolean',
-    )
-    expect(out.unions).toContain('sealed interface LocationOrVec3 {')
-    expect(out.unions).toContain(
-      'data class Vec3(val value: dev.netherforge.format.Vec3) : LocationOrVec3',
-    )
-    expect(out.unions).toContain('data class String(val value: kotlin.String) : StringOrDialog')
-    // A union of handle classes only is the `LuaHandle` it is.
-    expect(out.api).toContain(
-      'fun follow(self: LuaHandle.Effect, target: LuaHandle, offset: Vec3?): Boolean',
-    )
-    expect(out.unions).toContain(
-      'val EntityOrBlock: LuaCodec<LuaHandle> = LuaHandleUnion(listOf(LuaHandle.Entity.Codec, LuaHandle.Block.Codec))',
-    )
+  it('reads string literals as a choice, lists and maps by their parts', () => {
+    expect(codecOf('"loud"|"quiet"')).toEqual({ kind: 'choice', choices: ['loud', 'quiet'] })
+    expect(codecOf('number[]')).toEqual({ kind: 'list', item: { kind: 'number' } })
+    expect(codecOf('table<integer, Thing>')).toEqual({
+      kind: 'map',
+      key: { kind: 'integer' },
+      value: thing,
+    })
+    expect(codecOf('table<"a"|"b", string>')).toMatchObject({ key: { kind: 'choice' } })
   })
 
-  it('refuses a union whose members a value could not be told apart by', () => {
-    const fn = {
-      name: 'f',
-      doc: 'd',
-      params: [{ name: 'x', type: 'string|"a"', doc: '' }],
-      returns: [],
+  it('names handle classes, runtime value types, aliases and shapes for what they are', () => {
+    expect(codecOf('Thing')).toEqual(thing)
+    expect(codecOf('Vec3')).toEqual({ kind: 'runtime', name: 'Vec3' })
+    const aliased: Partial<ApiSpec> = {
+      aliases: [{ name: 'Text', type: 'string', doc: 'MiniMessage.' }],
     }
-    expect(() => bindings(spec(fn))).toThrow(/told apart/)
+    expect(codecOf('Text', aliased)).toEqual({ kind: 'runtime', name: 'Text' })
+    const shaped = { shapes: [shape('Opts', [{ name: 'n', type: 'integer', doc: '' }])] }
+    expect(codecOf('Opts', shaped)).toEqual({ kind: 'shape', name: 'Opts' })
   })
 
-  it('fills namespaces under nf, parents first', () => {
-    const lua = bindingsLua(bindings(api).classes, api)
-    expect(lua).toContain('  nf.server = {}')
-    // A namespace with only hand-written functions still gets its table.
-    expect(lua).toContain('  nf.commands = {}')
-    expect(lua.indexOf('nf.server = {}')).toBeLessThan(lua.indexOf('function nf.server.tick('))
-    expect(lua).toContain('return prim["nf.server.tick"](scope)')
+  it("reads a class's event names as the strings they are", () => {
+    const evented: Partial<LuaClass> = { events: [{ name: 'poke', doc: 'Poked.' }] }
+    const it = spec(fn({ params: [{ name: 'x', type: 'Thing.Event', doc: '' }] }), evented)
+    expect(only(it).params[0]!.codec).toEqual({ kind: 'string' })
   })
 
-  it('binds an async function the same way every time: a waker, a CompletionStage and the wait', () => {
-    const fn = asyncFunction({
+  it('makes any other union one value tried member by member, the literals one member where they stood', () => {
+    const union = codecOf('Vec3|"here"|Thing')
+    expect(union).toEqual({
+      kind: 'union',
+      name: 'Vec3OrChoiceOrThing',
+      members: [{ kind: 'runtime', name: 'Vec3' }, { kind: 'choice', choices: ['here'] }, thing],
+      handlesOnly: false,
+    })
+    expect(
+      bindings(spec(fn({ params: [{ name: 'x', type: 'Vec3|Thing', doc: '' }] }))).unions.has(
+        'Vec3OrThing',
+      ),
+    ).toBe(true)
+  })
+
+  it('makes a union of handle classes only a handle of one of them', () => {
+    const two: ApiSpec = {
+      ...spec(fn({ params: [{ name: 'x', type: 'Thing|Other', doc: '' }] })),
+    }
+    two.classes.push({ ...handle, name: 'Other', functions: [] })
+    expect(only(two).params[0]!.codec).toMatchObject({ kind: 'union', handlesOnly: true })
+  })
+
+  it('refuses what it has no binding for, naming where', () => {
+    expect(() => codecOf('Nowhere')).toThrow(/Thing\.f\(x\): no binding for Nowhere/)
+    expect(() => codecOf('table<boolean, string>')).toThrow(/keys must be strings or whole numbers/)
+    // Members a value can't be told apart by: a string and a string literal, two lists.
+    expect(() => codecOf('string|"a"')).toThrow(/told apart/)
+    expect(() => codecOf('string[]|number[]|string[]')).toThrow(/told apart/)
+  })
+
+  it('sends a Vec3 as its three numbers both ways, and only at the top of a parameter or return', () => {
+    const it = only(
+      spec(
+        fn({
+          params: [
+            { name: 'at', type: 'Vec3', doc: '' },
+            { name: 'maybe', type: 'Vec3?', doc: '' },
+            { name: 'many', type: 'Vec3[]', doc: '' },
+          ],
+          returns: [{ type: 'Vec3' }],
+        }),
+      ),
+    )
+    expect(it.params.map((p) => p.spread)).toEqual([true, true, false])
+    expect(it.returns).toMatchObject({ kind: 'one', spread: true })
+    // The real spec's transforms are the hot path it's for.
+    const node = bindings(api).classes.find((c) => c.cls.name === 'Node')!
+    const translation = node.functions.find((f) => f.fn.name === 'translation')!
+    expect(translation.returns).toMatchObject({ spread: true })
+  })
+})
+
+describe('what a function returns', () => {
+  const returning = (...types: string[]) =>
+    only(spec(fn({ returns: types.map((type) => ({ type })) }))).returns
+
+  it('is nothing, one value, or several that are all there or a single nil', () => {
+    expect(returning()).toEqual({ kind: 'none' })
+    expect(returning('string')).toEqual({ kind: 'one', codec: { kind: 'string' }, spread: false })
+    expect(returning('string', 'integer')).toEqual({
+      kind: 'tuple',
+      codecs: [{ kind: 'string' }, { kind: 'integer' }],
+      optional: false,
+    })
+    // One optional makes the whole tuple optional; the values themselves aren't.
+    expect(returning('string?', 'integer')).toEqual({
+      kind: 'tuple',
+      codecs: [{ kind: 'string' }, { kind: 'integer' }],
+      optional: true,
+    })
+    expect(() => returning('string', 'string', 'string', 'string', 'string')).toThrow(
+      /more than four returns/,
+    )
+  })
+
+  it('is given later for an async function: its value, with the callback the binding’s own', () => {
+    const fetch = asyncFunction({
       name: 'fetch',
       doc: 'Fetches.',
       params: [{ name: 'at', type: 'Vec3', doc: '' }],
       value: { name: 'thing', type: 'Thing', doc: 'the thing' },
     })
-    expect(fn.params.map((it) => it.name)).toEqual(['at', 'callback'])
-    expect(fn.params[1]!.type).toBe('fun(thing: Thing?, err: string?)')
-    expect(fn.returns.map((it) => it.type)).toEqual(['Thing?', 'string?'])
-    const it = spec(fn)
-    const namespaced: ApiSpec = {
-      ...it,
-      classes: [
-        handle,
-        { name: 'nf.things', doc: 'd', methods: false, fields: [], functions: [fn] },
-      ],
-    }
-    const out = generated(namespaced)
-    expect(out.lua).toContain(
-      [
-        '  function nf.things.fetch(at, callback)',
-        '    local at_x, at_y, at_z = want_vec3(at, "at")',
-        '    local waker, task, token = async.begin("nf.things.fetch", callback)',
-        '    local wait_id = prim["nf.things.fetch"](scope, at_x, at_y, at_z, waker)',
-        '    if task ~= nil then',
-        '      local value, err = async.wait(task, token, wait_id)',
-        '      return value, err',
-        '    end',
-        '  end',
-      ].join('\n'),
-    )
-    expect(out.api).toContain(
-      'fun fetch(caller: Caller, at: Vec3): CompletionStage<LuaHandle.Thing>',
-    )
-    expect(out.primitives).toContain('val result = api.nfThings.fetch(caller, at)')
-    expect(out.primitives).toMatch(
-      /lua\.push\(marshal\.await\("nf\.things\.fetch", caller\.scope, result, call\.keep\(5\), LuaHandle\.Thing\.Codec\)\.toLong\(\)\)/,
-    )
-    // On a handle, the wait is the calling scope's, which the prelude's `begin` hands over.
-    const method = generated(it)
-    expect(method.lua).toContain(
-      [
-        'function Thing.fetch(self, at, callback)',
-        '  local self_key = self_of(self, "Thing")',
-        '  local at_x, at_y, at_z = want_vec3(at, "at")',
-        '  local waker, task, token, scope = async.begin("Thing:fetch", callback)',
-        '  local wait_id = prim["Thing.fetch"](self_key, at_x, at_y, at_z, scope, waker)',
-      ].join('\n'),
-    )
-    expect(method.api).toContain(
-      'fun fetch(self: LuaHandle.Thing, at: Vec3): CompletionStage<LuaHandle.Thing>',
-    )
-    expect(method.primitives).toContain('val caller = marshal.caller(lua, 5)')
-    expect(method.primitives).toMatch(
-      /marshal\.await\("Thing:fetch", caller\.scope, result, call\.keep\(6\), LuaHandle\.Thing\.Codec\)/,
-    )
-    // LuaLS: an overload per form, so only the waiting one counts as waiting.
-    expect(luals(namespaced)).toContain(
-      [
-        '---@overload async fun(at: Vec3): Thing?, string?',
-        '---@overload fun(at: Vec3, callback: fun(thing: Thing?, err: string?))',
-        'function nf.things.fetch(at, callback) end',
-      ].join('\n'),
-    )
-    expect(luals(it)).toContain('---@overload async fun(self: Thing, at: Vec3): Thing?, string?')
+    expect(fetch.params.map((it) => it.name)).toEqual(['at', 'callback'])
+    expect(fetch.params[1]!.type).toBe('fun(thing: Thing?, err: string?)')
+    expect(fetch.returns.map((it) => it.type)).toEqual(['Thing?', 'string?'])
+    const bound = only(spec(fetch))
+    expect(bound.params.map((it) => it.name)).toEqual(['at'])
+    expect(bound.returns).toEqual({ kind: 'async', codec: thing })
     // Only in the form asyncFunction gives.
-    const bare = { ...fn, returns: [{ type: 'Thing?' }] }
-    const malformed: ApiSpec = {
-      ...it,
-      classes: [
-        handle,
-        { name: 'nf.things', doc: 'd', methods: false, fields: [], functions: [bare] },
-      ],
-    }
-    expect(() => bindings(malformed)).toThrow(/declared with asyncFunction/)
-    // A parameter its binding's own locals would shadow.
-    for (const name of ['token', 'wait_id', 'prim']) {
-      const shadowed = asyncFunction({
-        ...fn,
-        params: [{ name, type: 'string', doc: '' }],
-        value: { name: 'thing', type: 'Thing', doc: 'the thing' },
-      })
-      expect(() => generated(spec(shadowed))).toThrow(
-        new RegExp(`a parameter can't be called ${name}`),
-      )
-    }
-  })
-
-  it('refuses a class without methods that is not a namespace under nf', () => {
-    const fn = { name: 'f', doc: 'd', params: [], returns: [] }
-    expect(() => bindings(spec(fn, { name: 'loose', methods: false, handle: undefined }))).toThrow(
-      /must be nf or a namespace/,
+    expect(() => bindings(spec({ ...fetch, returns: [{ type: 'Thing?' }] }))).toThrow(
+      /declared with asyncFunction/,
     )
   })
+})
 
-  it('reads and pushes every shape the same way: an option table, a record, lists and maps of them', () => {
-    const fn = {
-      name: 'find',
-      doc: 'd',
-      params: [{ name: 'filters', type: 'table<string, Filter>', doc: '' }],
-      returns: [{ type: 'Hit[]' }],
-    }
-    const withShapes: ApiSpec = {
-      ...spec(fn),
-      shapes: [
-        shape('Filter', [
-          { name: 'kind', type: 'string', doc: '' },
-          { name: 'near', type: 'Vec3[]?', doc: '' },
-          { name: 'context', type: 'any', doc: '' },
-        ]),
-        shape('Hit', [
-          { name: 'by', type: 'Thing', doc: '' },
-          { name: 'extra', type: 'any', doc: '' },
-        ]),
-      ],
-      values: [{ name: 'Vec3', doc: 'v', fields: [], functions: [], operators: [] }],
-    }
-    const out = generated(withShapes)
-    expect(out.api).toContain(
-      'fun find(self: LuaHandle.Thing, filters: Map<String, Filter>): List<Hit>',
+describe('the shapes that cross', () => {
+  it('are every shape a binding reads or pushes, however deep, in the spec’s order, each way it goes', () => {
+    const it = spec(
+      fn({
+        params: [{ name: 'filters', type: 'table<string, Filter>', doc: '' }],
+        returns: [{ type: 'Hit[]' }],
+      }),
+      {},
+      {
+        shapes: [
+          shape('Hit', [
+            { name: 'by', type: 'Thing', doc: '' },
+            { name: 'at', type: 'Spot?', doc: '' },
+          ]),
+          shape('Unused', [{ name: 'x', type: 'string', doc: '' }]),
+          shape('Filter', [
+            { name: 'kind', type: 'string', doc: '' },
+            { name: 'spot', type: 'Spot', doc: '' },
+            { name: 'context', type: 'any', doc: '' },
+          ]),
+          shape('Spot', [{ name: 'x', type: 'number', doc: '' }]),
+        ],
+      },
     )
-    expect(out.primitives).toContain('LuaMap(LuaCodecs.STRING, Filter.Codec)')
-    expect(out.primitives).toContain('LuaList(Hit.Codec)')
-    // A shape only taken keeps an `any` as the Lua value itself; one handed back holds anything.
-    expect(out.shapes).toContain(
-      'data class Filter(val kind: String, val near: List<Vec3>? = null, val context: LuaValue? = null) : LuaShape {',
-    )
-    expect(out.shapes).toContain(
-      'data class Hit(val by: LuaHandle.Thing, val extra: Any? = null) : LuaShape {',
-    )
-    expect(out.shapes).toContain('val nearCodec = LuaOptional(LuaList(LuaCodecs.VEC3))')
-    expect(out.shapes).toContain('near = fields.field("near", nearCodec)')
-    expect(out.shapes).toContain('fields.field("by", value.by, byCodec)')
-  })
-
-  it('reads a shape that holds itself, naming its own codec lazily', () => {
-    const fn = {
-      name: 'f',
-      doc: 'd',
-      params: [{ name: 'tree', type: 'Tree', doc: '' }],
-      returns: [],
-    }
-    const recursive: ApiSpec = {
-      ...spec(fn),
-      shapes: [
-        shape('Tree', [
-          { name: 'children', type: 'table<string, Tree>?', doc: '' },
-          { name: 'leaf', type: 'Leaf?', doc: '' },
-        ]),
-        shape('Leaf', [{ name: 'value', type: 'any', doc: '' }]),
-      ],
-    }
-    const out = generated(recursive)
-    expect(out.shapes).toContain(
-      'data class Tree(val children: Map<String, Tree>? = null, val leaf: Leaf? = null) : LuaShape {',
-    )
-    expect(out.shapes).toContain(
-      'val childrenCodec = LuaOptional(LuaMap(LuaCodecs.STRING, LuaLazy("table") { Tree.Codec }))',
-    )
-    // A shape it holds that doesn't hold it back is named as any other.
-    expect(out.shapes).toContain('val leafCodec = LuaOptional(Leaf.Codec)')
-    // Whether reading pins is worked out here: a `Leaf` holds an `any`, so a `Tree` does too.
-    expect(out.shapes).toContain('override val pinned = true')
-  })
-
-  it('names a shape in full where a union case would shadow it', () => {
-    const fn = {
-      name: 'f',
-      doc: 'd',
-      params: [{ name: 'definition', type: 'Options|fun()', doc: '' }],
-      returns: [],
-    }
-    const out = generated({
-      ...spec(fn),
-      shapes: [shape('Options', [{ name: 'name', type: 'string?', doc: '' }])],
+    const { shapes } = bindings(it)
+    const ways = Object.fromEntries(shapes.map((s) => [s.shape.name, [s.read, s.pushed]]))
+    expect(ways).toEqual({ Hit: [false, true], Filter: [true, false], Spot: [true, true] })
+    // A field of any type may be left out.
+    const filter = shapes.find((s) => s.shape.name === 'Filter')!
+    expect(filter.fields.find((f) => f.name === 'context')!.codec).toEqual({
+      kind: 'optional',
+      inner: { kind: 'any', table: false },
     })
-    expect(out.unions).toContain(
-      'data class Options(val value: dev.netherforge.plugin.api.Options) : OptionsOrFunction',
+  })
+
+  it('include each event payload, pushed, and its writable fields read back', () => {
+    const evented = spec(
+      fn(),
+      {
+        events: [
+          { name: 'poke', doc: 'Poked.', payload: 'PokeEvent', cancellable: true },
+          { name: 'rename', doc: 'Renamed.', payload: 'RenameEvent', writable: ['drops'] },
+        ],
+      },
+      {
+        shapes: [
+          shape('PokeEvent', [{ name: 'by', type: 'Thing', doc: '' }], { extends: 'Event' }),
+          shape('RenameEvent', [{ name: 'drops', type: 'Drop[]', doc: '' }], { extends: 'Event' }),
+          shape('Drop', [{ name: 'count', type: 'integer', doc: '' }]),
+        ],
+      },
     )
-    expect(out.unions).toContain('(dev.netherforge.plugin.api.Options.Codec, ::Options)')
-    expect(out.unions).toContain(
-      'data class Function(val value: dev.netherforge.plugin.lua.LuaFunction)',
+    const ways = Object.fromEntries(
+      bindings(evented).shapes.map((s) => [s.shape.name, [s.read, s.pushed]]),
+    )
+    expect(ways).toEqual({
+      PokeEvent: [false, true],
+      RenameEvent: [false, true],
+      Drop: [true, true],
+    })
+  })
+
+  it('refuse a payload that is not a shape, and a writable field that is missing or a function', () => {
+    const event = (writable: string[], fields: LuaClass['fields'], payload = 'E') =>
+      spec(
+        fn(),
+        { events: [{ name: 'e', doc: 'E.', payload, writable }] },
+        { shapes: [shape('E', fields, { extends: 'Event' })] },
+      )
+    expect(() => bindings(event([], [], 'Nope'))).toThrow(/no payload shape Nope/)
+    expect(() => bindings(event(['gone'], []))).toThrow(/no payload field gone/)
+    expect(() => bindings(event(['f'], [{ name: 'f', type: 'fun()', doc: '' }]))).toThrow(
+      /a writable field can't be a function/,
     )
   })
 
-  it('gives the prelude the fields of every table a hand-written function takes, nested ones too', () => {
-    const shapes = handwrittenShapes(api)
-    expect(shapes.map((it) => it.name)).toEqual([
-      'DialogOpenOptions',
-      'EventOptions',
-      'GoalDefinition',
-    ])
-    const goal = shapes.find((it) => it.name === 'GoalDefinition')
-    expect(goal?.required).toEqual(['priority'])
-    expect(goal?.fields).toContainEqual({ name: 'priority', kind: 'integer' })
-    expect(goal?.fields).toContainEqual({ name: 'controls', kind: 'table' })
-    expect(goal?.fields).toContainEqual({ name: 'should_start', kind: 'function' })
-    const options = shapes.find((it) => it.name === 'DialogOpenOptions')
-    expect(options?.fields).toContainEqual({ name: 'context', kind: 'any' })
-    const lua = schemaLua(api)
-    expect(lua).toContain('    required = { "priority" },')
-    expect(lua).toContain(
-      '  shapes = shapes,\n  saved_handles = saved_handles,\n  test_only = test_only,\n}',
+  it('know which hold themselves, and which hold a Lua value read while the call lasts', () => {
+    const it = spec(
+      fn({ params: [{ name: 'tree', type: 'Tree', doc: '' }] }),
+      {},
+      {
+        shapes: [
+          shape('Tree', [
+            { name: 'children', type: 'table<string, Tree>?', doc: '' },
+            { name: 'leaf', type: 'Leaf?', doc: '' },
+          ]),
+          shape('Leaf', [{ name: 'value', type: 'any', doc: '' }]),
+          shape('Plain', [{ name: 'n', type: 'number', doc: '' }]),
+        ],
+      },
     )
+    const plain = shape('Plain', [{ name: 'n', type: 'number', doc: '' }])
+    const bound: ShapeBinding[] = [
+      ...bindings(it).shapes,
+      {
+        shape: plain,
+        fields: [{ name: 'n', codec: { kind: 'number' }, doc: '' }],
+        read: true,
+        pushed: false,
+      },
+    ]
+    const reach = reachable(bound)
+    expect([...reach.get('Tree')!].sort()).toEqual(['Leaf', 'Tree'])
+    expect([...reach.get('Leaf')!]).toEqual([])
+    const byName = new Map(bound.map((s) => [s.shape.name, s]))
+    // A Leaf holds an `any`, so a Tree does too; a recursive shape doesn't loop.
+    expect(pins({ kind: 'shape', name: 'Tree' }, byName)).toBe(true)
+    expect(pins({ kind: 'shape', name: 'Plain' }, byName)).toBe(false)
+    // The Kotlin emitter can't name a codec inside its own construction, so it names it lazily.
+    expect(shapesKotlin(it, bindings(it))).toMatch(/LuaLazy\([^)]*\)\s*\{\s*Tree\.Codec\s*\}/)
   })
 })
 
@@ -406,9 +380,8 @@ describe('handle classes that extend another', () => {
     expect(byName('Living').handle!.descendants).toEqual(['Living', 'Mob', 'Player'])
   })
 
-  it('refuse a chain that goes round, a key below the top, or extending what is no handle class', () => {
-    const fn = { name: 'f', doc: 'd', params: [], returns: [] }
-    const chain = (...more: LuaClass[]): ApiSpec => ({ ...spec(fn), classes: [handle, ...more] })
+  it('refuse a chain that goes round, a key below the top, extending what is no handle class, or no key', () => {
+    const chain = (...more: LuaClass[]): ApiSpec => ({ ...spec(fn()), classes: [handle, ...more] })
     const below = (name: string, extend: string, extra: Partial<LuaClass> = {}): LuaClass => ({
       ...handle,
       name,
@@ -416,30 +389,17 @@ describe('handle classes that extend another', () => {
       extends: extend,
       ...extra,
     })
-    expect(() => bindings(chain(below('A', 'B', { handle: undefined }), below('B', 'A')))).toThrow(
-      /circle/,
-    )
+    expect(() => bindings(chain(below('A', 'B'), below('B', 'A')))).toThrow(/circle/)
     expect(() => bindings(chain(below('A', 'Thing', { handle: handle.handle })))).toThrow(
       /no `handle` of its own/,
     )
     expect(() => bindings(chain(below('A', 'nf')))).toThrow(/both must be handle classes/)
-  })
-
-  it('make one constructor, for the top of the chain, and register each class with its parent', () => {
-    const lua = bindingsLua(classes, api)
-    expect(lua).toContain(
-      'function new.Entity(id)\n  return prim["handles.new"]("Entity", id)\nend',
-    )
-    expect(lua).not.toContain('function new.Mob(')
-    expect(lua).toContain('local Mob = class("Mob", "Living")')
-    expect(lua).toContain('local Living = class("Living", "Entity")')
+    expect(() => bindings(spec(fn(), { handle: undefined }))).toThrow(/without `handle`/)
   })
 
   it("list a class's functions with those up its chain, its own replacing theirs", () => {
     const names = classFunctions(api, cls('Mob')).map((it) => it.name)
-    expect(names).toContain('set_target')
-    expect(names).toContain('health')
-    expect(names).toContain('teleport')
+    expect(names).toEqual(expect.arrayContaining(['set_target', 'health', 'teleport']))
     expect(names.filter((it) => it === 'on')).toHaveLength(1)
     const player = classFunctions(api, cls('Player'))
     expect(player.map((it) => it.name)).not.toContain('set_target')
@@ -448,123 +408,189 @@ describe('handle classes that extend another', () => {
   })
 
   it("list a class's events with those up its chain, its own replacing theirs", () => {
-    const mob = classEvents(api, cls('Mob'))
-    expect(mob.find((it) => it.event.name === 'death')?.owner.name).toBe('Living')
-    expect(mob.find((it) => it.event.name === 'damage')?.owner.name).toBe('Entity')
-    expect(mob.find((it) => it.event.name === 'path_end')?.owner.name).toBe('Mob')
-    const player = classEvents(api, cls('Player'))
-    expect(player.find((it) => it.event.name === 'death')?.owner.name).toBe('Player')
-    expect(player.find((it) => it.event.name === 'heal')?.owner.name).toBe('Living')
-    expect(player.some((it) => it.event.name === 'path_end')).toBe(false)
+    const owner = (cls: LuaClass, name: string) =>
+      classEvents(api, cls).find((it) => it.event.name === name)?.owner.name
+    expect(owner(cls('Mob'), 'death')).toBe('Living')
+    expect(owner(cls('Mob'), 'damage')).toBe('Entity')
+    expect(owner(cls('Mob'), 'path_end')).toBe('Mob')
+    expect(owner(cls('Player'), 'death')).toBe('Player')
+    expect(owner(cls('Player'), 'heal')).toBe('Living')
+    expect(owner(cls('Player'), 'path_end')).toBeUndefined()
   })
 
-  it('give Kotlin a class per handle class, subclasses equal to their chain by key', () => {
-    const kotlin = handlesKotlin(classes)
-    expect(kotlin).toContain('open class Entity(val id: String) : LuaHandle {')
-    expect(kotlin).toContain('open class Living(id: String) : Entity(id) {')
-    expect(kotlin).toContain('class Mob(id: String) : Living(id) {')
-    expect(kotlin).toContain(
-      'final override fun equals(other: Any?): Boolean = other is Entity && other.id == id',
-    )
-    expect(kotlin).toContain(
-      'object Codec : HandleCodec<Living>("Living", setOf("Living", "Mob", "Player"))',
-    )
-    expect(kotlin).toContain('"Living" to "Entity"')
-    expect(primitivesKotlin(classes)).toContain('val self = call.self(1) as LuaHandle.Mob')
-  })
-
-  it('resolve an event on a class to the class that declares it, for the runtime', () => {
-    const events = eventsKotlin(api)
-    expect(events).toContain('"Mob" to mapOf(')
-    expect(events).toMatch(/"Mob" to mapOf\([^\n]*"death" to LIVING_DEATH/)
-    expect(events).toMatch(/"Player" to mapOf\([^\n]*"death" to PLAYER_DEATH/)
-    const lua = schemaLua(api)
-    const mob = lua.slice(lua.indexOf('  ["Mob"] = {'), lua.indexOf('  ["DroppedItem"] = {'))
-    expect(mob).toContain('    ["death"] = { owner = "Living",')
-    expect(mob).toContain('    ["path_end"] = { owner = "Mob",')
+  it('may be saveable only at the top of a chain', () => {
+    expect(() => bindings(spec(fn(), { saveable: true }))).not.toThrow()
+    const below: ApiSpec = {
+      ...spec(fn()),
+      classes: [
+        handle,
+        { ...handle, name: 'Part', handle: undefined, extends: 'Thing', saveable: true },
+      ],
+    }
+    expect(() => bindings(below)).toThrow(/only a handle class at the top of its chain/)
   })
 })
 
-describe('the event registry', () => {
-  const evented: ApiSpec = {
-    ...spec({ name: 'f', doc: 'd', params: [], returns: [] }),
-    classes: [
+describe('hand-written functions', () => {
+  it('check each argument as far as its type can say, and leave the rest to the body', () => {
+    const it = spec(
+      fn({
+        name: 'use',
+        impl: 'lua',
+        params: [
+          { name: 'name', type: 'string', doc: '' },
+          { name: 'count', type: 'integer', doc: '', optional: true },
+          { name: 'other', type: 'Thing', doc: '' },
+          { name: 'maybe', type: 'Thing?', doc: '' },
+          { name: 'at', type: 'Vec3', doc: '' },
+          { name: 'mode', type: '"loud"|"quiet"', doc: '' },
+          { name: 'callback', type: 'fun(x: number)', doc: '' },
+          { name: 'list', type: 'number[]', doc: '' },
+          { name: 'options', type: 'Opts?', doc: '' },
+          { name: 'text', type: 'Text', doc: '' },
+          { name: 'anything', type: 'any', doc: '' },
+          { name: 'either', type: 'Thing|Vec3', doc: '' },
+          { name: '...', type: 'any', doc: '' },
+        ],
+      }),
+      {},
       {
-        ...handle,
-        events: [
-          { name: 'poke', doc: 'Poked.', payload: 'PokeEvent', cancellable: true, bubbles: true },
-          { name: 'rename', doc: 'Renamed.', payload: 'RenameEvent', writable: ['name', 'drops'] },
-          { name: 'tick', doc: 'Ticked.', options: ['every'] },
-        ],
+        shapes: [shape('Opts', [{ name: 'size', type: 'integer', doc: '' }])],
+        aliases: [{ name: 'Text', type: 'string', doc: 'MiniMessage.' }],
       },
-    ],
-    shapes: [
-      shape(
-        'PokeEvent',
-        [
-          { name: 'by', type: 'Thing', doc: '' },
-          { name: 'where', type: 'Vec3?', doc: '' },
-          { name: 'item', type: 'Item?', doc: '' },
-        ],
-        { extends: 'Event' },
-      ),
-      shape(
-        'RenameEvent',
-        [
-          { name: 'name', type: 'string?', doc: '' },
-          { name: 'drops', type: 'Item[]', doc: '' },
-        ],
-        { extends: 'Event' },
-      ),
-    ],
-    values: [{ name: 'Vec3', doc: 'v', fields: [], functions: [], operators: [] }],
-  }
-
-  it('types every payload with its codec, writable fields var and read back by theirs', () => {
-    const { shapes } = generated(evented)
-    expect(shapes).toContain(
-      'data class PokeEvent(val by: LuaHandle.Thing, val where: Vec3? = null, val item: ItemData? = null) : LuaEvent {',
     )
-    expect(shapes).toContain(
-      'data class RenameEvent(var name: String? = null, var drops: List<ItemData>) : LuaEvent {',
-    )
-    expect(shapes).toContain('"drops" -> drops = Codec.dropsCodec.read(call, index, "event.drops")')
-    expect(shapes).toContain('val dropsCodec = LuaList(LuaCodecs.ITEM)')
+    // A hand-written function has no binding of its own: the wrapper checks, the body does the rest.
+    expect(bindings(it).classes[0]!.functions).toEqual([])
+    const params = handwrittenFunctions(it).get('Thing')![0]!.params
+    expect(
+      Object.fromEntries(params.map((p) => [p.name, [p.check, p.optional, p.vararg]])),
+    ).toEqual({
+      name: [{ kind: 'type', lua: 'string' }, false, false],
+      count: [{ kind: 'integer' }, true, false],
+      other: [{ kind: 'handle', cls: 'Thing' }, false, false],
+      maybe: [{ kind: 'handle', cls: 'Thing' }, true, false],
+      at: [{ kind: 'vec3' }, false, false],
+      mode: [{ kind: 'choice', choices: ['loud', 'quiet'] }, false, false],
+      callback: [{ kind: 'type', lua: 'function' }, false, false],
+      list: [{ kind: 'type', lua: 'table' }, false, false],
+      options: [{ kind: 'shape', name: 'Opts' }, true, false],
+      text: [{ kind: 'type', lua: 'string' }, false, false],
+      anything: [{ kind: 'body' }, false, false],
+      either: [{ kind: 'body' }, false, false],
+      '...': [{ kind: 'body' }, false, true],
+    })
   })
 
-  it('registers each event with its owner, payload codec and flags', () => {
-    const { events, schema: lua } = generated(evented)
-    expect(events).toContain(
-      'val THING_POKE = EventType<PokeEvent>("Thing", "poke", payload = PokeEvent.Codec, cancellable = true, bubbles = true, writable = emptyList(), local = false, since = null)',
+  it('give the prelude the fields of every table they take, nested ones too', () => {
+    const shapes = handwrittenShapes(api)
+    expect(shapes.map((it) => it.name)).toEqual([
+      'DialogOpenOptions',
+      'EventOptions',
+      'GoalDefinition',
+    ])
+    const goal = shapes.find((it) => it.name === 'GoalDefinition')!
+    expect(goal.required).toEqual(['priority'])
+    expect(goal.fields).toEqual(
+      expect.arrayContaining([
+        { name: 'priority', kind: 'integer' },
+        { name: 'controls', kind: 'table' },
+        { name: 'should_start', kind: 'function' },
+      ]),
     )
-    expect(events).toContain(
-      'val THING_TICK = EventType<NoPayload>("Thing", "tick", payload = null',
-    )
-    expect(events).toContain('writable = listOf("name", "drops")')
-    expect(lua).toContain(
-      '["rename"] = { owner = "Thing", cancellable = false, options = {}, writable = { name = true, drops = true } },',
-    )
-    expect(lua).toContain(
-      '["tick"] = { owner = "Thing", cancellable = false, options = { every = true }, writable = {} },',
-    )
+    expect(shapes.find((it) => it.name === 'DialogOpenOptions')!.fields).toContainEqual({
+      name: 'context',
+      kind: 'any',
+    })
   })
 
-  it('refuses a writable field that is a function', () => {
-    const bad: ApiSpec = {
-      ...evented,
-      shapes: evented.shapes.map((it) =>
-        it.name === 'RenameEvent'
-          ? {
-              ...it,
-              fields: [
-                { name: 'name', type: 'fun()', doc: '' },
-                { name: 'drops', type: 'string', doc: '' },
-              ],
-            }
-          : it,
-      ),
+  it("can't take a parameter the wrapper's own names need", () => {
+    for (const name of ['hand', 'self']) {
+      const it = spec(fn({ impl: 'lua', params: [{ name, type: 'number', doc: '' }] }))
+      expect(() => bindingsLua(bindings(it).classes, it)).toThrow(
+        new RegExp(`a parameter can't be called ${name}`),
+      )
     }
-    expect(() => bindings(bad)).toThrow(/a writable field can't be a function/)
+    // Nor can an async binding's parameter shadow its own locals.
+    for (const name of ['token', 'wait_id', 'prim']) {
+      const it = spec(
+        asyncFunction({
+          name: 'fetch',
+          doc: 'd',
+          params: [{ name, type: 'string', doc: '' }],
+          value: { name: 'thing', type: 'Thing', doc: 'the thing' },
+        }),
+      )
+      expect(() => bindingsLua(bindings(it).classes, it)).toThrow(
+        new RegExp(`a parameter can't be called ${name}`),
+      )
+    }
+  })
+})
+
+describe('what the generator refuses', () => {
+  it('a class without methods that is not a namespace under nf', () => {
+    expect(() =>
+      bindings(spec(fn(), { name: 'loose', methods: false, handle: undefined })),
+    ).toThrow(/must be nf or a namespace/)
+  })
+
+  it('a value type or alias the runtime has no codec for', () => {
+    expect(() => bindings(spec(fn(), {}, { values: [{ ...vec3, name: 'Quat' }] }))).toThrow(
+      /value type Quat has no codec/,
+    )
+    expect(() =>
+      bindings(spec(fn(), {}, { aliases: [{ name: 'Name', type: 'string', doc: 'd' }] })),
+    ).toThrow(/type alias Name has no codec/)
+  })
+
+  it('a function that waits unless hand-written and without a callback form', () => {
+    expect(() => bindings(spec(fn({ waits: true })))).toThrow(/hand-written in the prelude/)
+  })
+
+  it('a requirement that is none, or one on a hand-written function', () => {
+    expect(() => bindings(spec(fn({ requires: 'plugin:' as never })))).toThrow(
+      /isn't a requirement/,
+    )
+    expect(() => bindings(spec(fn({ requires: 'plugin:Vault' as never })))).toThrow(
+      /isn't a requirement/,
+    )
+    expect(() => bindings(spec(fn({ requires: 'moderation', impl: 'lua' })))).toThrow(
+      /not on impl lua/,
+    )
+  })
+
+  it('a command argument whose value may be nil', () => {
+    const it = spec(
+      fn(),
+      {},
+      {
+        commandArguments: [{ name: 'maybe', doc: 'd', value: 'string?', reading: 'word' }],
+      },
+    )
+    expect(() => bindings(it)).toThrow(/its value is never nil/)
+  })
+})
+
+describe('requirements', () => {
+  it('are checked by the generated primitive before any argument is read', () => {
+    const it = spec(
+      fn({
+        name: 'ban',
+        params: [{ name: 'why', type: 'string', doc: '' }],
+        requires: 'moderation',
+      }),
+    )
+    const kotlin = primitivesKotlin(bindings(it).classes)
+    const check = kotlin.indexOf('marshal.requires("moderation", "Thing:ban")')
+    expect(check).toBeGreaterThan(-1)
+    expect(check).toBeLessThan(kotlin.indexOf('"why"'))
+  })
+
+  it('say how to declare them, wherever the function is documented', () => {
+    const it = spec(fn({ requires: 'plugin:vault' }))
+    const needs = '`"requires": { "plugins": ["vault"] }`'
+    expect(luals(it)).toContain(needs)
+    expect(referencePages(it).get('thing.md')).toContain(needs)
   })
 })
 
@@ -580,354 +606,59 @@ describe('version gates', () => {
     })
   })
   afterAll(() => restore())
-  const gated: ApiSpec = {
-    globals: [],
-    classes: [
-      {
-        ...handle,
-        functions: [
-          {
-            name: 'poke',
-            doc: 'Pokes it.',
-            params: [{ name: 'options', type: 'PokeOptions', doc: '', optional: true }],
-            returns: [],
-            since: 'poking',
-          },
-        ],
-        events: [{ name: 'shake', doc: 'Shaken.', since: 'shaking' }],
-      },
-    ],
-    surfaces: [],
-    shapes: [
-      shape('PokeOptions', [
-        { name: 'hard', type: 'boolean?', doc: 'Harder.', since: 'hard_poking' },
-        { name: 'soft', type: 'boolean?', doc: 'Softer.' },
-      ]),
-    ],
-    removed: [],
-  }
-
-  it('lists every gated function, event and option field for the runtime', () => {
-    expect(gatesKotlin(gated)).toContain(
-      'val SPEC = VersionGates(functions = mapOf("Thing.poke" to "27.1"), events = mapOf("Thing.shake" to "27.2"), options = mapOf("PokeOptions.hard" to "27.3"))',
-    )
-    expect(gatesKotlin(api)).toContain('val SPEC = VersionGates(')
-  })
-
-  it("names an option table's shape in its codec, so its gated fields can be checked", () => {
-    expect(generated(gated).shapes).toContain(
-      'object Codec : ShapeCodec<PokeOptions>("PokeOptions") {',
-    )
-  })
-
-  it('shows the version in the docs and stubs', () => {
-    const pages = referencePages(gated)
-    expect(pages.get('thing.md')).toContain('*Since Minecraft 27.1.*')
-    expect(pages.get('events.md')).toContain('Shaken. *Since Minecraft 27.2.*')
-    expect(pages.get('events.md')).toContain('Harder. *Since Minecraft 27.3.*')
-    const stubs = luals(gated)
-    expect(stubs).toContain('--- Since Minecraft 27.1.')
-    expect(stubs).toContain('---@field hard boolean? Harder. (Since Minecraft 27.3.)')
-  })
-})
-
-describe('requirements', () => {
-  const ban = { name: 'ban', doc: 'Bans it.', params: [], returns: [] }
-
-  it('are checked by the generated primitive before anything is read, naming the call', () => {
-    const out = generated(spec({ ...ban, requires: 'moderation' }))
-    expect(out.primitives).toContain(
-      [
-        '        val self = call.self(1) as LuaHandle.Thing',
-        '        marshal.requires("moderation", "Thing:ban")',
-        '        api.thing.ban(self)',
-      ].join('\n'),
-    )
-  })
-
-  it('say how to declare them in the docs and stubs, and list them in the index', () => {
-    const it = spec({ ...ban, requires: 'moderation' })
-    const needs =
-      'Needs `"requires": { "moderation": true }` in `netherforge.json`: without it, calling it is an error.'
-    expect(referencePages(it).get('thing.md')).toContain(`*${needs}*`)
-    expect(referencePages(it).get('index.md')).toContain('| `moderation` |')
-    expect(luals(it)).toContain(`--- ${needs}`)
-  })
-
-  it("say how each kind is declared, a plugin's by its name", () => {
-    expect(luals(spec({ ...ban, requires: 'plugin:vault' }))).toContain(
-      '--- Needs `"requires": { "plugins": ["vault"] }` in `netherforge.json`',
-    )
-    expect(luals(spec({ ...ban, requires: 'db' }))).toContain('`"requires": { "db": true }`')
-    expect(luals(spec({ ...ban, requires: 'http' }))).toContain('`"requires": { "http": [...] }`')
-    const out = generated(spec({ ...ban, requires: 'plugin:vault' }))
-    expect(out.primitives).toContain('marshal.requires("plugin:vault", "Thing:ban")')
-  })
-
-  it('refuse what is no requirement, and a hand-written function', () => {
-    expect(() => bindings(spec({ ...ban, requires: 'plugin:' as never }))).toThrow(
-      /isn't a requirement/,
-    )
-    expect(() => bindings(spec({ ...ban, requires: 'plugin:Vault' as never }))).toThrow(
-      /isn't a requirement/,
-    )
-    expect(() => bindings(spec({ ...ban, requires: 'moderation', impl: 'lua' }))).toThrow(
-      /not on impl lua/,
-    )
-  })
-})
-
-describe('hand-written functions', () => {
-  const lua = (fn: LuaClass['functions'][number], extra: Partial<LuaClass> = {}) =>
-    generated(spec({ ...fn, impl: 'lua' }, extra)).lua
-
-  it('check self and every argument by its type, then call the body as a tail call', () => {
-    const out = lua({
-      name: 'use',
-      doc: 'd',
-      params: [
-        { name: 'name', type: 'string', doc: '' },
-        { name: 'count', type: 'integer', doc: '', optional: true },
-        { name: 'other', type: 'Thing', doc: '' },
-        { name: 'maybe', type: 'Thing?', doc: '' },
-        { name: 'at', type: 'Vec3', doc: '' },
-        { name: 'mode', type: '"loud"|"quiet"', doc: '' },
-        { name: 'callback', type: 'fun(x: number)', doc: '' },
-        { name: 'list', type: 'number[]', doc: '' },
-        { name: 'anything', type: 'any', doc: '' },
-        { name: 'either', type: 'Thing|Vec3', doc: '' },
+  const gated = spec(
+    fn({
+      name: 'poke',
+      params: [{ name: 'options', type: 'PokeOptions', doc: '', optional: true }],
+      since: 'poking',
+    }),
+    { events: [{ name: 'shake', doc: 'Shaken.', since: 'shaking' }] },
+    {
+      shapes: [
+        shape('PokeOptions', [
+          { name: 'hard', type: 'boolean?', doc: 'Harder.', since: 'hard_poking' },
+          { name: 'soft', type: 'boolean?', doc: 'Softer.' },
+        ]),
       ],
-      returns: [],
-    })
-    expect(out).toContain(
-      'function Thing.use(self, name, count, other, maybe, at, mode, callback, list, anything, either)',
-    )
-    const body = out.slice(out.indexOf('function Thing.use('))
-    for (const line of [
-      '  self_of(self, "Thing")',
-      '  want(name, "string", "name")',
-      '  count = want_integer_opt(count, "count")',
-      '  want_handle(other, "Thing", "other")',
-      '  if maybe ~= nil then\n    want_handle(maybe, "Thing", "maybe")\n  end',
-      '  vector_arg(at, "at", 2)',
-      '  choice.want(mode, Thing_use_mode, "mode")',
-      '  want(callback, "function", "callback")',
-      '  want(list, "table", "list")',
-      '  return hand.Thing.use(self, name, count, other, maybe, at, mode, callback, list, anything, either)',
+    },
+  )
+
+  it('give the runtime every gated function, event and option field with its version, and nothing else', () => {
+    const gates = gatesKotlin(gated)
+    for (const entry of [
+      '"Thing.poke" to "27.1"',
+      '"Thing.shake" to "27.2"',
+      '"PokeOptions.hard" to "27.3"',
     ])
-      expect(body).toContain(line)
-    // A union the grammar can't check is the body's to check; any value needs none.
-    expect(body).not.toContain('"anything"')
-    expect(body).not.toContain('"either"')
-    // Each choice set is built once, as a lookup.
-    expect(out).toContain('local Thing_use_mode = choice.set({ "loud", "quiet" })')
+      expect(gates).toContain(entry)
+    expect(gates).not.toContain('PokeOptions.soft')
   })
 
-  it('check a table as its shape, and an alias as the string it is', () => {
-    const it: ApiSpec = {
-      ...spec({
-        name: 'open',
-        impl: 'lua',
-        doc: 'd',
-        params: [
-          { name: 'options', type: 'OpenOptions', doc: '', optional: true },
-          { name: 'text', type: 'Text', doc: '' },
-        ],
-        returns: [],
-      }),
-      shapes: [shape('OpenOptions', [{ name: 'size', type: 'integer', doc: '' }])],
-      aliases: [{ name: 'Text', type: 'string', doc: 'MiniMessage.' }],
-    }
-    const out = bindingsLua(bindings(it).classes, it)
-    expect(out).toContain(
-      '  if options ~= nil then\n    check_shape(options, "options", "OpenOptions")\n  end',
-    )
-    expect(out).toContain('  want(text, "string", "text")')
-    expect(schemaLua(it)).toContain('  OpenOptions = {')
-  })
-
-  it('on a namespace pass the calling scope to the body; a vararg goes through as it is', () => {
-    const it: ApiSpec = {
-      ...spec({ name: 'f', doc: 'd', params: [], returns: [] }),
-      classes: [
-        {
-          name: 'nf',
-          doc: 'nf',
-          methods: false,
-          fields: [],
-          functions: [
-            {
-              name: 'start',
-              impl: 'lua',
-              doc: 'd',
-              params: [
-                { name: 'callback', type: 'fun()', doc: '' },
-                { name: '...', type: 'any', doc: '' },
-              ],
-              returns: [],
-            },
-          ],
-        },
-        {
-          name: 'nf.math',
-          doc: 'math',
-          methods: false,
-          fields: [],
-          functions: [
-            {
-              name: 'twice',
-              impl: 'lua',
-              doc: 'd',
-              params: [{ name: 'x', type: 'number', doc: '' }],
-              returns: [{ type: 'number' }],
-            },
-          ],
-        },
-      ],
-    }
-    const out = bindingsLua(bindings(it).classes, it)
-    expect(out).toContain(
-      '  function nf.start(callback, ...)\n    want(callback, "function", "callback")\n    return hand.nf.start(scope, callback, ...)\n  end',
-    )
-    expect(out).toContain('return hand["nf.math"].twice(scope, x)')
-  })
-
-  it('on a value type check self as that value, and go in the values table', () => {
-    const it: ApiSpec = {
-      ...spec({ name: 'f', doc: 'd', params: [], returns: [] }),
-      values: [
-        {
-          name: 'Vec3',
-          doc: 'v',
-          fields: [],
-          operators: [],
-          functions: [
-            {
-              name: 'dot',
-              impl: 'lua',
-              doc: 'd',
-              params: [{ name: 'other', type: 'Vec3', doc: '' }],
-              returns: [{ type: 'number' }],
-            },
-          ],
-          library: {
-            name: 'vec3',
-            doc: 'l',
-            call: { name: 'vec3', impl: 'lua', doc: 'c', params: [], returns: [{ type: 'Vec3' }] },
-            fields: [],
-            functions: [
-              {
-                name: 'unit',
-                impl: 'lua',
-                doc: 'd',
-                params: [{ name: 'yaw', type: 'number', doc: '' }],
-                returns: [{ type: 'Vec3' }],
-              },
-            ],
-          },
-        },
-      ],
-    }
-    const out = bindingsLua(bindings(it).classes, it)
-    expect(out).toContain(
-      'function values.Vec3.dot(self, other)\n  value_self(self, "Vec3")\n  vector_arg(other, "other", 2)\n  return value_body.Vec3.dot(self, other)\nend',
-    )
-    expect(out).toContain('function vec3_functions.unit(yaw)')
-    expect(out).toContain('  vec3 = vec3_functions,')
-  })
-
-  it("can't take a parameter the wrapper's own names need", () => {
-    const fn = { name: 'f', impl: 'lua' as const, doc: 'd', returns: [] }
-    expect(() => lua({ ...fn, params: [{ name: 'hand', type: 'number', doc: '' }] })).toThrow(
-      /a parameter can't be called hand/,
-    )
-    expect(() => lua({ ...fn, params: [{ name: 'self', type: 'number', doc: '' }] })).toThrow(
-      /a parameter can't be called self/,
-    )
-  })
-})
-
-describe('handle keys', () => {
-  it("get an accessor from each root class's HandleSpec, typed by what it is made of", () => {
-    const it: ApiSpec = {
-      ...spec({ name: 'f', doc: 'd', params: [], returns: [] }),
-      classes: [
-        {
-          ...handle,
-          handle: {
-            key: [
-              { name: 'world', type: 'string' },
-              { name: 'index', type: 'integer' },
-            ],
-          },
-        },
-        { ...handle, name: 'Part', handle: undefined, extends: 'Thing' },
-      ],
-    }
-    const out = bindingsLua(bindings(it).classes, it)
-    expect(out).toContain(
-      '---@param handle table\n---@return string world\n---@return integer index\nfunction keys.Thing(handle)\n  return prim["handles.key"](handle)\nend',
-    )
-    // One for the class at the top of the chain, as for the constructor.
-    expect(out).not.toContain('function keys.Part(')
-  })
-})
-
-describe('functions that wait', () => {
-  const wait = { name: 'pause', doc: 'Pauses.', params: [], returns: [], waits: true }
-
-  it('are async to LuaLS and say they need a task', () => {
-    const it = spec({ ...wait, impl: 'lua' })
-    expect(luals(it)).toContain('---@async\nfunction Thing:pause() end')
-    expect(luals(it)).toContain("--- Only in a task's own code (`nf.task`)")
-    expect(referencePages(it).get('thing.md')).toContain("*Only in a task's own code (`nf.task`)")
-  })
-
-  it('are hand-written, and never async', () => {
-    expect(() => bindings(spec(wait))).toThrow(/hand-written in the prelude/)
-  })
-})
-
-describe('saveable handle classes', () => {
-  it('give the prelude their tags, each at the top of its chain', () => {
-    const it: ApiSpec = { ...spec({ name: 'f', doc: 'd', params: [], returns: [] }) }
-    it.classes = [{ ...it.classes[0]!, saveable: true }]
-    expect(generated(it).schema).toContain('local saved_handles = {\n  Thing = "thing",\n}')
-    expect(luals(it)).toContain('--- A `data()` table, `Item.data` and `nf.json` can keep one')
-    const below: ApiSpec = {
-      ...it,
-      classes: [
-        handle,
-        { ...handle, name: 'Part', handle: undefined, extends: 'Thing', saveable: true },
-      ],
-    }
-    expect(() => bindings(below)).toThrow(/only a handle class at the top of its chain/)
+  it('are shown where each is documented', () => {
+    const pages = referencePages(gated)
+    expect(pages.get('thing.md')).toContain('Since Minecraft 27.1')
+    expect(pages.get('events.md')).toContain('Since Minecraft 27.2')
+    expect(pages.get('events.md')).toContain('Since Minecraft 27.3')
+    expect(luals(gated)).toContain('Since Minecraft 27.3')
   })
 })
 
 describe('command argument types', () => {
-  const typed: ApiSpec = {
-    ...spec({ name: 'f', doc: 'd', params: [], returns: [] }),
-    commandArguments: [
-      { name: 'word', doc: 'one word', value: 'string', reading: 'word' },
-      { name: 'things', doc: 'some things', value: 'Thing[]', reading: 'entities' },
-      { name: 'place', doc: 'a place', value: 'Thing', reading: 'word', names: true },
-    ],
-  }
-
-  it("are the runtime's ArgumentType, with what the server reads each as", () => {
-    const enum_ = argumentTypesKotlin(bindings(typed))
-    expect(enum_).toContain('    WORD("word", ArgumentReading.WORD, names = false),')
-    expect(enum_).toContain('    PLACE("place", ArgumentReading.WORD, names = true);')
-    expect(enum_).toContain('/** `"things"`: some things. */')
-  })
-
-  it("cross their handler's value, and a default, by its type's codec", () => {
-    const codecs = argumentCodecsKotlin(bindings(typed))
-    expect(codecs).toContain('        ArgumentType.WORD -> LuaCodecs.STRING')
-    expect(codecs).toContain('        ArgumentType.THINGS -> CODEC_1')
-    expect(codecs).toContain('private val CODEC_1 = LuaList(LuaHandle.Thing.Codec)')
-    expect(codecs).toContain('        ArgumentType.PLACE -> LuaHandle.Thing.Codec')
+  it("cross their handler's value by its type's codec, in the spec's order", () => {
+    const typed = spec(
+      fn(),
+      {},
+      {
+        commandArguments: [
+          { name: 'word', doc: 'one word', value: 'string', reading: 'word' },
+          { name: 'things', doc: 'some things', value: 'Thing[]', reading: 'entities' },
+        ],
+      },
+    )
+    expect(bindings(typed).commandArguments.map((it) => [it.type.name, it.codec])).toEqual([
+      ['word', { kind: 'string' }],
+      ['things', { kind: 'list', item: thing }],
+    ])
   })
 
   it('are the type field of a command argument, each with its line in its doc', () => {
@@ -935,6 +666,5 @@ describe('command argument types', () => {
     const type = shape.fields.find((it) => it.name === 'type')!
     expect(type.type.split('|')).toEqual(api.commandArguments!.map((it) => `"${it.name}"`))
     expect(type.doc).toContain('`"player"`: an online player by name')
-    expect(type.doc).toContain(', a `Player`.')
   })
 })

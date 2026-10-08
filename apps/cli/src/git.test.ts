@@ -12,7 +12,7 @@ import {
 import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { checkoutDir, fetchGit } from './git.ts'
 import { run } from './main.ts'
 import { hashPackage, listFiles } from './project.ts'
@@ -76,6 +76,8 @@ beforeEach(() => {
   cache = path.join(tmp, 'data', 'packages')
   env = { NETHERFORGE_DATA_DIR: path.join(tmp, 'data') }
 })
+// The repositories and the project are changed by the tests, so each test makes its own, gone when it ends.
+afterEach(() => rmSync(tmp, { recursive: true, force: true }))
 
 describe('git packages', () => {
   it('are fetched into the cache, locked at their commit and hashed', async () => {

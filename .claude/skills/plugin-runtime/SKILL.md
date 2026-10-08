@@ -1529,7 +1529,12 @@ a schedule with an id and no last run records "now" as one, and
 falls back the same way for both). `/nf schedules` (`AdminCommand`) lists the
 live ones soonest first from `Schedules.all()`, each rule as `Recurrence.describe()`.
 `RecurrenceTest` holds the rules (DST included) and `ScheduleTest` the service,
-`nf.time`'s zone and `/nf schedules`.
+`nf.time`'s zone and `/nf schedules`. A dev server started with the test-only
+`-Dnetherforge.test.wall-clock-rate=<n>` (`RuntimeConfig.WALL_CLOCK_RATE_PROPERTY`,
+ignored on production) runs `wallClock` n times as fast from start-up
+(`ScaledClock`, `ScaledClockTest`): the integration test's `ScheduleScenario`
+runs at 60, so a cron schedule for every minute fires on the real tick every
+second. The editor never sets it.
 
 Teams (`world/Teams.kt`, `platform/Teams.kt`) live on the **main**
 scoreboard, called `nf.<name>` there (`Teams.PREFIX`), so a project's never

@@ -102,42 +102,7 @@ class CutsceneTest {
         assertEquals(emptyList(), problems(file(cues = listOf(Cue(time = 1.0, event = "boom", text = "<red>Hi", duration = 2.0)))))
     }
 
-    @Test
-    fun `both tracks need keys, and a cutscene with no time has no length`() {
-        val empty = codes(CutsceneFile())
-        assertEquals(listOf("cutscene.length", "cutscene.track-empty", "cutscene.track-empty"), empty)
-        assertEquals(listOf("cutscene.track-empty"), codes(file(rotations = emptyList())))
-        assertEquals(listOf("cutscene.length"), codes(file(positions = listOf(position(0.0, 0.0)), length = 0.0)))
-        assertEquals(listOf("cutscene.length"), codes(file(length = CutsceneFile.MAX_LENGTH + 1)))
-    }
-
-    @Test
-    fun `key times are inside the cutscene and not shared`() {
-        val outside = file(positions = listOf(position(-1.0, 0.0), position(5.0, 1.0)), length = 2.0)
-        assertEquals(listOf("cutscene.key-time", "cutscene.key-time"), codes(outside))
-        val twice = file(positions = listOf(position(0.0, 0.0), position(1.0, 1.0), position(1.0, 2.0)))
-        val duplicate = problems(twice).single()
-        assertEquals("cutscene.key-duplicate", duplicate.code)
-        assertEquals("$.camera.position[2].time", duplicate.path)
-    }
-
-    @Test
-    fun `a pitch past straight up or down and a position past the world are refused`() {
-        assertEquals(listOf("cutscene.pitch"), codes(file(rotations = listOf(look(0.0, 0.0, pitch = 91.0)))))
-        assertEquals(listOf("cutscene.position"), codes(file(positions = listOf(position(0.0, 3.1e7), position(1.0, 0.0)))))
-    }
-
-    @Test
-    fun `a cue needs something to do, a usable name, and a duration only with text`() {
-        assertEquals(listOf("cutscene.cue-empty"), codes(file(cues = listOf(Cue(time = 1.0)))))
-        assertEquals(listOf("cutscene.cue-event"), codes(file(cues = listOf(Cue(time = 1.0, event = "Bad Name")))))
-        assertEquals(listOf("cutscene.cue-duration"), codes(file(cues = listOf(Cue(time = 1.0, event = "ok", duration = 2.0)))))
-        assertEquals(listOf("cutscene.cue-duration"), codes(file(cues = listOf(Cue(time = 1.0, text = "t", duration = 0.0)))))
-        assertEquals(
-            listOf("cutscene.key-time"),
-            codes(file(cues = listOf(Cue(time = 9.0, event = "late"), Cue(time = 1.0, event = "ok")), length = 2.0))
-        )
-    }
+    // What each code is for is testdata/invalid/cutscene-semantics; the key limit is too many keys for a golden.
 
     @Test
     fun `too many keys are refused`() {

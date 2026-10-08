@@ -30,10 +30,13 @@ function steps.generate()
   log("generated", world:name())
 end
 
--- The markers turn into centities on the tick after their chunk loads.
+-- The markers turn into centities on the tick after their chunk loads, so the count waits a few ticks (server
+-- ticks, however long a loaded machine takes over them) after whatever loaded chunks last.
 function steps.count()
-  local world = nf.worlds.get("it_gen")
-  log("guards", #nf.centities.all({ kind = "it_guard", world = world }))
+  nf.after(5, function()
+    local world = nf.worlds.get("it_gen")
+    log("guards", #nf.centities.all({ kind = "it_guard", world = world }))
+  end)
 end
 
 nf.commands.register(
