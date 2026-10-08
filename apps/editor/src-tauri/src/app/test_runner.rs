@@ -356,27 +356,17 @@ mod tests {
         assert!(report.results.is_empty());
     }
 
-    #[cfg(unix)]
+    /// The fake server stands in for `java`: it prints the "jar" (the runner's
+    /// output) and records the arguments it was given beside it.
     #[tokio::test]
     async fn runs_java_with_the_jar_and_reads_what_it_prints() {
-        use std::os::unix::fs::PermissionsExt;
         let tmp = tempfile::tempdir().unwrap();
-        // A stand-in for `java`: records its arguments, then prints what a runner would.
-        let java = tmp.path().join("java");
-        let args = tmp.path().join("args");
-        std::fs::write(
-            &java,
-            format!(
-                "#!/bin/sh\necho \"$@\" > '{}'\ncat <<'EOF'\n{OUTPUT}EOF\nexit 1\n",
-                args.display()
-            ),
-        )
-        .unwrap();
-        std::fs::set_permissions(&java, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let jar = tmp.path().join("NetherForgeTest-0.1.0.jar");
+        std::fs::write(&jar, OUTPUT).unwrap();
 
         let report = run(
-            &java,
-            Path::new("runner.jar"),
+            &crate::testing::fake_server(),
+            &jar,
             Path::new("/the/project"),
             Path::new("/cache"),
             Path::new("/data/game-data.json"),
@@ -384,28 +374,33 @@ mod tests {
         )
         .await
         .unwrap();
+        // A failed test makes the runner exit 1: still a report.
         assert_eq!(report.results.len(), 2);
+        let args =
+            std::fs::read_to_string(tmp.path().join("NetherForgeTest-0.1.0.jar.args")).unwrap();
         assert_eq!(
-            std::fs::read_to_string(&args).unwrap().trim(),
-            "-jar runner.jar /the/project --json --packages /cache --game-data /data/game-data.json --filter greets"
+            args.lines().collect::<Vec<_>>(),
+            [
+                "-jar",
+                &jar.display().to_string(),
+                "/the/project",
+                "--json",
+                "--packages",
+                "/cache",
+                "--game-data",
+                "/data/game-data.json",
+                "--filter",
+                "greets"
+            ]
         );
     }
 
-    #[cfg(unix)]
     #[tokio::test]
     async fn a_runner_that_says_nothing_is_an_error_with_its_last_line() {
-        use std::os::unix::fs::PermissionsExt;
         let tmp = tempfile::tempdir().unwrap();
-        let java = tmp.path().join("java");
-        std::fs::write(
-            &java,
-            "#!/bin/sh\necho 'Error: Unable to access jarfile' >&2\nexit 1\n",
-        )
-        .unwrap();
-        std::fs::set_permissions(&java, std::fs::Permissions::from_mode(0o755)).unwrap();
         let error = run(
-            &java,
-            Path::new("x.jar"),
+            &crate::testing::fake_server(),
+            &tmp.path().join("NetherForgeTest-0.1.0.jar"),
             Path::new("/p"),
             Path::new("/c"),
             Path::new("/g.json"),

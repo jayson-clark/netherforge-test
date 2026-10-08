@@ -31,6 +31,7 @@ use tokio::sync::{oneshot, watch};
 use crate::app::dirs::AppDirs;
 use crate::app::events::{BridgeMessage, EventSink};
 use crate::app::plugins;
+use crate::app::tools::{PaperSource, Tools};
 use crate::bridge::protocol::{self, Hello};
 use crate::bridge::{self, Bridge, BridgeHandler};
 use crate::error::{Context, Error, ErrorCode, Result, bail};
@@ -53,7 +54,8 @@ pub struct StartConfig {
     pub minecraft: Option<String>,
     pub settings: Settings,
     pub eula_accepted: bool,
-    pub plugin_dirs: Vec<PathBuf>,
+    /// Where the plugin, Java and Paper come from.
+    pub tools: Arc<Tools>,
 }
 
 struct Running {
@@ -185,7 +187,7 @@ impl ServerManager {
         if self.state().phase.is_active() {
             bail!(Busy, "The dev server is already running");
         }
-        if plugins::find(&config.plugin_dirs, &minecraft).is_none() {
+        if plugins::find(&config.tools.plugin_dirs, &minecraft).is_none() {
             bail!(
                 Unavailable,
                 "This NetherForge build has no plugin for Minecraft {minecraft}. In a dev checkout, build it with node tools/gradle.mjs :plugin:paper-{minecraft}:build"
@@ -225,7 +227,7 @@ impl ServerManager {
         };
 
         status("Finding Java");
-        let java = match java::find(&java::JavaEnv::current(&self.dirs)).await {
+        let java = match java::find(&config.tools.java).await {
             Some((java, _)) => java,
             None => {
                 status("Downloading Java");
@@ -241,12 +243,16 @@ impl ServerManager {
         check()?;
 
         status(&format!("Getting Paper {minecraft}"));
-        let paper_jar =
-            paper::ensure(&self.dirs, self.http()?, minecraft, &report, &cancelled).await?;
+        let paper_jar = match &config.tools.paper {
+            PaperSource::Fill => {
+                paper::ensure(&self.dirs, self.http()?, minecraft, &report, &cancelled).await?
+            }
+            PaperSource::Jar(jar) => jar.clone(),
+        };
         check()?;
 
         status("Setting up the server folder");
-        let plugin = plugins::find(&config.plugin_dirs, minecraft)
+        let plugin = plugins::find(&config.tools.plugin_dirs, minecraft)
             .context(|| format!("No NetherForge plugin for Minecraft {minecraft}"))?;
         let dir = self.dirs.server_dir(&config.project_root);
         // Copying the plugin is blocking file work: off the async workers.
@@ -674,6 +680,7 @@ fn random_token() -> String {
 mod tests {
     use super::*;
     use crate::app::events::RecordingSink;
+    use crate::testing;
 
     fn manager() -> (tempfile::TempDir, Arc<RecordingSink>, Arc<ServerManager>) {
         let tmp = tempfile::tempdir().unwrap();
@@ -683,13 +690,24 @@ mod tests {
     }
 
     fn config(tmp: &Path, eula: bool) -> StartConfig {
+        config_with(tmp, eula, vec![])
+    }
+
+    fn config_with(tmp: &Path, eula: bool, plugin_dirs: Vec<PathBuf>) -> StartConfig {
         StartConfig {
             project_root: tmp.join("project"),
             project_name: "Test".into(),
             minecraft: Some("26.3".into()),
             settings: Settings::default(),
             eula_accepted: eula,
-            plugin_dirs: vec![],
+            tools: Arc::new(Tools {
+                plugin_dirs,
+                test_runner_dirs: vec![],
+                luals: vec![],
+                java: java::JavaEnv::current(&AppDirs::in_one(tmp)),
+                paper: PaperSource::Fill,
+                installs: None,
+            }),
         }
     }
 
@@ -742,11 +760,18 @@ mod tests {
         assert_eq!(strip_ansi_escapes::strip_str("plain"), "plain");
     }
 
-    #[cfg(unix)]
-    async fn launch_script(manager: &Arc<ServerManager>, tmp: &Path, script: &str) -> u64 {
+    /// Launches the fake server (`examples/fake_server.rs`) with [args] as a
+    /// start would launch Java, past the preparation.
+    async fn launch_fake(
+        manager: &Arc<ServerManager>,
+        tmp: &Path,
+        args: &[String],
+        envs: &[(String, String)],
+        token: &str,
+    ) -> (u64, u16) {
         let (generation, _preparing) = manager.begin("26.3").await.unwrap();
         let bridge = Bridge::listen(
-            "t".into(),
+            token.into(),
             Arc::new(Handler {
                 manager: Arc::downgrade(manager),
                 generation,
@@ -754,19 +779,33 @@ mod tests {
         )
         .await
         .unwrap();
+        let port = bridge.port();
+        let args: Vec<String> = args
+            .iter()
+            .map(|arg| arg.replace("$PORT", &port.to_string()))
+            .collect();
         manager
             .launch(
                 generation,
-                Path::new("/bin/sh"),
-                &["-c".into(), script.into()],
+                &testing::fake_server(),
+                &args,
                 tmp,
-                &[],
+                envs,
                 bridge,
                 25565,
             )
             .await
             .unwrap();
-        generation
+        (generation, port)
+    }
+
+    async fn launch(manager: &Arc<ServerManager>, tmp: &Path, args: &[&str]) {
+        let args: Vec<String> = args.iter().map(|it| it.to_string()).collect();
+        launch_fake(manager, tmp, &args, &[], "t").await;
+    }
+
+    async fn until_phase(manager: &ServerManager, phase: ServerPhase) {
+        testing::until(&format!("{phase:?}"), || manager.state().phase == phase).await;
     }
 
     #[tokio::test]
@@ -777,108 +816,133 @@ mod tests {
         assert_eq!(manager.state().phase, ServerPhase::Stopped);
         assert!(!manager.is_current(first));
 
-        // The cancelled preparation hasn't noticed yet: the next start waits for it.
-        let next = tokio::spawn({
-            let manager = manager.clone();
-            async move {
-                manager
-                    .begin("26.3")
-                    .await
-                    .map(|(generation, _)| generation)
-            }
-        });
-        tokio::time::sleep(Duration::from_millis(50)).await;
-        assert!(!next.is_finished());
+        // The cancelled preparation hasn't noticed yet: the next start waits
+        // for it, on the lock it still holds (polled once: nothing else can
+        // make it ready while that guard lives).
+        let next = manager.begin("26.3");
+        tokio::pin!(next);
+        assert!(futures_util::poll!(&mut next).is_pending());
         assert_eq!(manager.state().phase, ServerPhase::Stopped);
 
         drop(preparing);
-        let second = next.await.unwrap().unwrap();
+        let (second, _preparing) = next.await.unwrap();
         assert!(manager.is_current(second));
         assert_eq!(manager.state().phase, ServerPhase::Preparing);
     }
 
-    #[cfg(unix)]
-    async fn wait_for_phase(manager: &ServerManager, phase: ServerPhase) {
-        for _ in 0..500 {
-            if manager.state().phase == phase {
-                return;
-            }
-            tokio::time::sleep(Duration::from_millis(10)).await;
-        }
-        panic!("never reached {phase:?}; state {:?}", manager.state());
-    }
-
-    #[cfg(unix)]
     #[tokio::test]
-    async fn runs_a_fake_server_through_its_lifecycle() {
+    async fn runs_a_server_through_its_lifecycle_and_hears_its_plugin() {
         let (tmp, sink, manager) = manager();
-        // Prints the ready line, echoes commands, exits cleanly on `stop`.
-        let script = r#"echo 'boot'; echo 'oops' >&2; echo '[INFO]: Done (0.1s)! For help, type "help"';
-            while read line; do echo "got $line"; [ "$line" = stop ] && exit 0; done"#;
-        launch_script(&manager, tmp.path(), script).await;
-        wait_for_phase(&manager, ServerPhase::Running).await;
+        let token = "the-token";
+        launch_fake(
+            &manager,
+            tmp.path(),
+            &["serve".into(), "-Dnetherforge.bridge.port=$PORT".into()],
+            &[("NETHERFORGE_BRIDGE_TOKEN".into(), token.into())],
+            token,
+        )
+        .await;
+        until_phase(&manager, ServerPhase::Running).await;
         assert_eq!(manager.state().port, Some(25565));
+        testing::until("the plugin's hello", || manager.state().bridge_connected).await;
+        // What the plugin sends once connected is relayed as it came.
+        testing::until("the plugin's console notification", || {
+            sink.named::<BridgeMessage>()
+                .iter()
+                .any(|m| m["message"].as_str().unwrap().contains("\"console\""))
+        })
+        .await;
+        // There's no game data cached: the backend asked for the export, which
+        // this plugin can't do, and says so in the console.
+        testing::until("the failed export", || {
+            sink.named::<ServerOutputEvent>().iter().any(|o| {
+                o["stream"] == "stderr" && o["line"].as_str().unwrap().contains("export failed")
+            })
+        })
+        .await;
 
         manager.command("say hi").await.unwrap();
-        for _ in 0..200 {
-            if sink
-                .named::<ServerOutputEvent>()
-                .iter()
-                .any(|o| o["line"] == "got say hi")
-            {
-                break;
-            }
-            tokio::time::sleep(Duration::from_millis(10)).await;
-        }
+        let echoed = serde_json::json!({"stream": "stdout", "line": "> say hi"});
+        testing::until("the echoed command", || {
+            sink.named::<ServerOutputEvent>().contains(&echoed)
+        })
+        .await;
         manager.stop().await.unwrap();
         assert_eq!(manager.state().phase, ServerPhase::Stopped);
         assert_eq!(manager.state().message, None);
+        assert!(!manager.state().bridge_connected);
 
-        let phases: Vec<String> = sink
+        let mut phases: Vec<String> = sink
             .named::<ServerState>()
             .iter()
             .map(|s| s["phase"].as_str().unwrap().to_string())
             .collect();
-        let mut distinct = phases.clone();
-        distinct.dedup();
+        phases.dedup();
         assert_eq!(
-            distinct,
+            phases,
             ["preparing", "starting", "running", "stopping", "stopped"]
         );
         let output = sink.named::<ServerOutputEvent>();
-        assert!(output.contains(&serde_json::json!({"stream": "stdout", "line": "boot"})));
-        assert!(output.contains(&serde_json::json!({"stream": "stderr", "line": "oops"})));
-        assert!(output.iter().any(|o| o["line"] == "got say hi"));
+        assert!(output.contains(&serde_json::json!({
+            "stream": "stdout",
+            "line": "[00:00:00 INFO]: Starting minecraft server",
+        })));
+        assert!(output.contains(&serde_json::json!({
+            "stream": "stderr",
+            "line": "[00:00:00 WARN]: a warning on stderr",
+        })));
     }
 
-    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_plugin_with_the_wrong_token_is_never_connected() {
+        let (tmp, sink, manager) = manager();
+        launch_fake(
+            &manager,
+            tmp.path(),
+            &["serve".into(), "-Dnetherforge.bridge.port=$PORT".into()],
+            &[("NETHERFORGE_BRIDGE_TOKEN".into(), "a guess".into())],
+            "the-token",
+        )
+        .await;
+        // The bridge closes on a stranger without a word, which the fake plugin reports.
+        testing::until("the refused hello", || {
+            sink.named::<ServerOutputEvent>().iter().any(|o| {
+                o["line"]
+                    .as_str()
+                    .unwrap()
+                    .contains("closed the dev bridge without answering")
+            })
+        })
+        .await;
+        assert_eq!(manager.state().phase, ServerPhase::Running);
+        assert!(!manager.state().bridge_connected);
+        assert!(sink.named::<BridgeMessage>().is_empty());
+        manager.stop().await.unwrap();
+    }
+
     #[tokio::test]
     async fn an_unexpected_exit_is_a_crash() {
         let (tmp, _sink, manager) = manager();
-        launch_script(&manager, tmp.path(), "echo starting; exit 3").await;
-        wait_for_phase(&manager, ServerPhase::Crashed).await;
+        launch(&manager, tmp.path(), &["exit", "3"]).await;
+        until_phase(&manager, ServerPhase::Crashed).await;
         let state = manager.state();
         assert!(state.message.unwrap().contains("exit code 3"));
         assert_eq!(state.port, None);
         assert!(manager.command("list").await.is_err());
         // A crashed server can start again.
-        launch_script(&manager, tmp.path(), "sleep 30").await;
+        launch(&manager, tmp.path(), &["sleep", "30"]).await;
         assert_eq!(manager.state().phase, ServerPhase::Starting);
     }
 
-    #[cfg(unix)]
     #[tokio::test]
     async fn kills_a_server_that_ignores_stop() {
         let (tmp, _sink, manager) = manager();
-        launch_script(
-            &manager,
-            tmp.path(),
-            "trap '' TERM; while read line; do :; done; sleep 30",
-        )
-        .await;
+        launch(&manager, tmp.path(), &["ignore-stop"]).await;
+        until_phase(&manager, ServerPhase::Running).await;
         manager.stop_with(Duration::from_millis(200)).await.unwrap();
         assert_eq!(manager.state().phase, ServerPhase::Stopped);
     }
+
     /// Boots real Paper (downloads it, finds Java) with a placeholder plugin
     /// jar, waits for "Done (", then stops it: `cargo test -- --ignored`.
     #[tokio::test]
@@ -897,8 +961,7 @@ mod tests {
             .local_addr()
             .unwrap()
             .port();
-        let mut config = config(tmp.path(), true);
-        config.plugin_dirs = vec![plugins];
+        let mut config = config_with(tmp.path(), true, vec![plugins]);
         config.settings.server_port = port;
         manager.start(config).await.unwrap();
         for _ in 0..1800 {

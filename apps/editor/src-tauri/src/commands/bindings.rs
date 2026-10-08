@@ -57,18 +57,18 @@ macro_rules! builder {
                 fs::package_read_text,
                 fs::package_copy,
                 fs::package_fetch_git,
-                luals::luals_start::<$runtime>,
+                luals::luals_start,
                 luals::luals_send,
                 luals::luals_stop,
                 server::server_state,
                 server::server_eula_status,
                 server::server_eula_accept,
-                server::server_start::<$runtime>,
+                server::server_start,
                 server::server_stop,
                 server::server_command,
                 server::bridge_send,
                 server::map_capture::<$runtime>,
-                tests::tests_run::<$runtime>,
+                tests::tests_run,
                 minecraft::mc_installs,
                 minecraft::mc_cache_status,
                 minecraft::mc_import_client::<$runtime>,
@@ -133,24 +133,35 @@ pub fn export(root: &Path) -> Result<(), String> {
 
 /// Every command's name, sorted.
 pub fn command_names() -> Vec<String> {
-    let mut names = Vec::new();
+    names().0
+}
+
+/// Every event's name (`fs://changed`), sorted.
+pub fn event_names() -> Vec<String> {
+    names().1
+}
+
+fn names() -> (Vec<String>, Vec<String>) {
+    let mut names = (Vec::new(), Vec::new());
     builder()
         .export(Names(&mut names), Path::new(""))
         .expect("collecting names can't fail");
-    names.sort_unstable();
+    names.0.sort_unstable();
+    names.1.sort_unstable();
     names
 }
 
-/// An "exporter" that only collects the command names: the builder keeps
-/// its configuration private and hands it to exporters alone.
-struct Names<'a>(&'a mut Vec<String>);
+/// An "exporter" that only collects the command and event names: the
+/// builder keeps its configuration private and hands it to exporters alone.
+struct Names<'a>(&'a mut (Vec<String>, Vec<String>));
 
 impl LanguageExt for Names<'_> {
     type Error = std::io::Error;
 
     fn export(self, cfg: &BuilderConfiguration, _: &Path) -> Result<(), Self::Error> {
-        self.0
-            .extend(cfg.commands.iter().map(|c| c.name().to_string()));
+        let (commands, events) = self.0;
+        commands.extend(cfg.commands.iter().map(|c| c.name().to_string()));
+        events.extend(cfg.events.keys().map(|name| name.to_string()));
         Ok(())
     }
 }

@@ -1,7 +1,6 @@
-use tauri::{AppHandle, Manager, Runtime, State};
+use tauri::{AppHandle, Runtime, State};
 
 use super::blocking;
-use crate::app::plugins;
 use std::sync::Arc;
 
 use crate::app::events::EventSink;
@@ -43,7 +42,7 @@ pub async fn server_eula_accept(state: State<'_, AppState>) -> Result<()> {
 
 #[tauri::command]
 #[specta::specta]
-pub async fn server_start<R: Runtime>(app: AppHandle<R>, state: State<'_, AppState>) -> Result<()> {
+pub async fn server_start(state: State<'_, AppState>) -> Result<()> {
     // The server runs the project's scripts: only a project the user trusts.
     let root = state.trusted_root()?;
     let dirs = state.dirs.clone();
@@ -56,14 +55,13 @@ pub async fn server_start<R: Runtime>(app: AppHandle<R>, state: State<'_, AppSta
         Ok((project::inspect(root.path())?, settings, eula))
     })
     .await?;
-    let resources = app.path().resource_dir().ok();
     let config = StartConfig {
         project_root: opened.root.path().to_path_buf(),
         project_name: opened.info.name.clone(),
         minecraft: opened.minecraft.clone(),
         settings,
         eula_accepted: eula.accepted,
-        plugin_dirs: plugins::search_dirs(resources.as_deref()),
+        tools: state.tools.clone(),
     };
     state.server.start(config).await
 }

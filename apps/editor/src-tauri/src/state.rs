@@ -4,6 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::app::dirs::AppDirs;
 use crate::app::events::EventSink;
+use crate::app::tools::Tools;
 use crate::error::{Error, ErrorCode, Result};
 use crate::fs::ProjectRoot;
 use crate::luals::LanguageServer;
@@ -21,6 +22,8 @@ pub struct OpenProject {
 
 pub struct AppState {
     pub dirs: AppDirs,
+    /// Where the editor finds what it runs (plugins, Java, Paper, LuaLS) and the player's installs.
+    pub tools: Arc<Tools>,
     pub project: Mutex<Option<OpenProject>>,
     pub server: Arc<ServerManager>,
     pub mcp: Arc<McpServer>,
@@ -29,7 +32,7 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(dirs: AppDirs, sink: Arc<dyn EventSink>) -> Self {
+    pub fn new(dirs: AppDirs, tools: Tools, sink: Arc<dyn EventSink>) -> Self {
         let token = mcp::token::load_or_create(&dirs.config.join(mcp::token::FILE)).unwrap_or_else(
             |error| {
                 // Still guarded, just not for longer than this run.
@@ -41,6 +44,7 @@ impl AppState {
             mcp: McpServer::new(sink.clone(), token),
             luals: LanguageServer::new(sink.clone(), dirs.luals()),
             server: ServerManager::new(dirs.clone(), sink),
+            tools: Arc::new(tools),
             dirs,
             project: Mutex::new(None),
         }

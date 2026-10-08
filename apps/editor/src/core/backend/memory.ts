@@ -468,7 +468,10 @@ export class MemoryBackend implements Backend {
   }
 
   projectFileUrl(path: string): string {
-    const contents = this.openRoot ? this.projects.get(this.openRoot)?.get(path) : undefined
+    const contents =
+      this.openRoot && isServed(path, true)
+        ? this.projects.get(this.openRoot)?.get(path)
+        : undefined
     if (contents === undefined) return `memory-project://${path}`
     return dataUrl(path, contents)
   }
@@ -476,7 +479,7 @@ export class MemoryBackend implements Backend {
   packageFileUrl(location: string, path: string): string {
     let contents: FileContents | undefined
     try {
-      contents = this.packageAt(location).files.get(path)
+      contents = isServed(path, false) ? this.packageAt(location).files.get(path) : undefined
     } catch {
       contents = undefined
     }
@@ -682,7 +685,8 @@ export class MemoryBackend implements Backend {
   async startServer(): Promise<void> {
     this.trustedRoot()
     if (!this.eula) fail('eulaRequired', 'Accept the Minecraft EULA before starting the dev server')
-    if (this.state.phase !== 'stopped' && this.state.phase !== 'crashed') return
+    if (this.state.phase !== 'stopped' && this.state.phase !== 'crashed')
+      fail('busy', 'The dev server is already running')
     const minecraft = this.projectMinecraft()
     this.setState({ phase: 'preparing', minecraft, message: 'Downloading Paper' })
     const steps: [PrepareProgress['step'], string][] = [
@@ -1049,8 +1053,9 @@ export class MemoryBackend implements Backend {
     replace: boolean,
   ): Promise<void> {
     const files = this.files()
-    if (!id || id.includes('/') || id.includes('\\') || id.startsWith('.'))
-      fail('invalid', `"${id}" can't name a map`)
+    // As the Rust side: a path first, then one segment that isn't hidden.
+    checkPath(id)
+    if (id.includes('/') || id.startsWith('.')) fail('invalid', `"${id}" can't name a map`)
     const folder = `maps/${id}`
     const existing = [...files.keys()].filter((it) => it.startsWith(`${folder}/`))
     if (existing.length > 0 && !replace) fail('alreadyExists', `${folder} already exists`)
@@ -1124,6 +1129,7 @@ export class MemoryBackend implements Backend {
   }
 
   async importClient(version: string): Promise<void> {
+    checkVersion(version)
     const total = 5
     for (let done = 0; done <= total; done += 1) {
       this.importEvents.emit({ version, done, total })
@@ -1295,6 +1301,19 @@ export class MemoryBackend implements Backend {
     this.changed(removed)
   }
 
+  /** Another program renames a file or folder (`git mv`, a file manager). */
+  testRename(from: string, to: string) {
+    const files = this.files()
+    const changed: string[] = []
+    for (const old of [...files.keys()].filter((it) => it === from || it.startsWith(`${from}/`))) {
+      const next = to + old.slice(from.length)
+      files.set(next, files.get(old)!)
+      files.delete(old)
+      changed.push(old, next)
+    }
+    this.changed(changed)
+  }
+
   /** The plugin sends a notification. */
   testBridgeEvent<E extends BridgeEventName>(event: E, params: BridgeEvents[E]) {
     this.bridge.emit({ event, params })
@@ -1458,6 +1477,22 @@ function checkPath(path: string) {
   ) {
     fail('invalidPath', `"${path}" isn't a project path`)
   }
+}
+
+/**
+ * As the Rust side's `fs::serve`: what the `nfproject` protocol serves of a
+ * project (or, not [project], of a package): a project path that isn't
+ * hidden, or the project's own cached thumbnails.
+ */
+function isServed(path: string, project: boolean): boolean {
+  try {
+    checkPath(path)
+  } catch {
+    return false
+  }
+  const [top, folder] = path.split('/')
+  if (project && isNamed(top!, '.netherforge') && folder === 'thumbnails') return true
+  return !isNamed(top!, '.netherforge') && !path.split('/').some((it) => isNamed(it, '.git'))
 }
 
 /** As the Rust side's `map::is_excluded`, inverted: what a map keeps of a world's folder. */

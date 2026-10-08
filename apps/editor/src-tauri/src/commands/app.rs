@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager, Runtime, State};
+use tauri::{AppHandle, Runtime, State};
 
 use super::Json;
 use crate::app::{AppInfo, plugins};
@@ -10,9 +10,11 @@ use crate::state::AppState;
 
 #[tauri::command]
 #[specta::specta]
-pub async fn app_info<R: Runtime>(app: AppHandle<R>) -> Result<AppInfo> {
-    let resources = app.path().resource_dir().ok();
-    let jars = plugins::scan(&plugins::search_dirs(resources.as_deref()));
+pub async fn app_info<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+) -> Result<AppInfo> {
+    let jars = plugins::scan(&state.tools.plugin_dirs);
     Ok(AppInfo {
         version: app.package_info().version.to_string(),
         minecraft_versions: jars.into_iter().map(|j| j.minecraft).collect(),

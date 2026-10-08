@@ -9,19 +9,15 @@ use crate::app::events::{EventSink, ImportProgress};
 use crate::error::{Result, bail};
 use crate::minecraft::cache::{self, CacheStatus};
 use crate::minecraft::import;
-use crate::minecraft::installs::{self, InstallEnv, MinecraftInstall};
+use crate::minecraft::installs::{self, MinecraftInstall};
 use crate::minecraft::launcher::{self, LauncherEnv};
 use crate::state::AppState;
 
 #[tauri::command]
 #[specta::specta]
-pub async fn mc_installs() -> Result<Vec<MinecraftInstall>> {
-    blocking(|| {
-        Ok(InstallEnv::current()
-            .map(|env| installs::detect(&env))
-            .unwrap_or_default())
-    })
-    .await
+pub async fn mc_installs(state: State<'_, AppState>) -> Result<Vec<MinecraftInstall>> {
+    let env = state.tools.installs.clone();
+    blocking(move || Ok(env.map(|env| installs::detect(&env)).unwrap_or_default())).await
 }
 
 #[tauri::command]
