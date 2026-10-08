@@ -329,7 +329,9 @@ class SettingsTest {
             val rounds = state.packages.single().settings.getValue("rounds")
             assertEquals(JsonPrimitive(3), rounds.value)
             assertFalse(rounds.set)
-            assertEquals("server/settings/test.json".takeLast(18), state.packages.single().file.takeLast(18))
+            // The OS's own path, for the editor to open: separators differ on Windows.
+            val file = Path.of(state.packages.single().file)
+            assertTrue(file.endsWith(Path.of("settings", "test.json")), "$file")
 
             server.sent.clear()
             server.settings.set("test", "rounds", JsonPrimitive(4))

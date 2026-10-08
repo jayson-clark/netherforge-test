@@ -109,14 +109,22 @@ describe('the Java search', () => {
   it("then each OS's usual install folders", () => {
     const root = path.join(tmp, 'root')
     const home = path.join(tmp, 'home')
-    const sdkman = jdk(path.join(home, '.sdkman', 'candidates', 'java', '25-tem'), 25)
-    const linux = jdk(path.join(root, 'usr/lib/jvm/java-25-openjdk'), 25)
+    const sdkman = jdk(path.join(home, '.sdkman', 'candidates', 'java', '25-tem'), 25, 'linux')
+    const linux = jdk(path.join(root, 'usr/lib/jvm/java-25-openjdk'), 25, 'linux')
     expect(javaCandidates(machine({}, 'linux'))).toEqual([sdkman, linux])
 
-    const system = jdk(path.join(root, 'Library/Java/JavaVirtualMachines/temurin-25.jdk'), 25)
-    const brew = jdk(path.join(root, 'opt/homebrew/opt/openjdk@25/libexec/openjdk.jdk'), 25)
+    const system = jdk(
+      path.join(root, 'Library/Java/JavaVirtualMachines/temurin-25.jdk'),
+      25,
+      'darwin',
+    )
+    const brew = jdk(
+      path.join(root, 'opt/homebrew/opt/openjdk@25/libexec/openjdk.jdk'),
+      25,
+      'darwin',
+    )
     // Not a JDK formula: skipped. Homebrew's are found as the search goes past them, before the other folders.
-    jdk(path.join(root, 'opt/homebrew/opt/other/libexec/openjdk.jdk'), 25)
+    jdk(path.join(root, 'opt/homebrew/opt/other/libexec/openjdk.jdk'), 25, 'darwin')
     expect(javaCandidates(machine({}, 'darwin'))).toEqual([brew, sdkman, system])
 
     const files = path.join(tmp, 'pf')
