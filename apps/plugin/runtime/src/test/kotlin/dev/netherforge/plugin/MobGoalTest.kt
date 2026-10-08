@@ -14,18 +14,8 @@ import kotlin.test.assertTrue
  * held to their scope, their budget and the AI's own loop.
  */
 class MobGoalTest {
-    private val helpers = """
-        local function check(label, got, want)
-          if got ~= want then
-            log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want))
-          end
-        end
-        local function fails(label, fn, message)
-          local ok, err = pcall(fn)
-          if ok or not tostring(err):find(message, 1, true) then
-            log("FAIL " .. label .. ": " .. tostring(err))
-          end
-        end
+    /** `keys(goals)`: a goal list's keys, in order, comma-separated. */
+    private val keys = """
         local function keys(goals)
           local out = {}
           for _, goal in ipairs(goals) do
@@ -37,15 +27,9 @@ class MobGoalTest {
 
     private fun TestServer.mob(kind: String): UUID = platform.worldEntities.mobs.values.single { it.kind == kind }.id
 
-    /** Runs [body] as a module's body, then [after] with the server; returns errors and log lines. */
-    private fun run(body: String, setup: (TestServer) -> Unit = {}, after: (TestServer) -> Unit = {}): List<String> {
-        TestServer(mapOf("modules/t/init.lua" to "$helpers\n$body\nlog(\"done\")"), start = false).use { server ->
-            setup(server)
-            server.start()
-            after(server)
-            return server.errors.map { "ERROR ${it.message}" } + server.logs
-        }
-    }
+    /** Runs [body] as a module's body (with [LuaChecks]' helpers and `keys`), then [after] with the server. */
+    private fun run(body: String, setup: (TestServer) -> Unit = {}, after: (TestServer) -> Unit = {}) =
+        LuaChecks.runModuleBody("$keys\n$body", setup = setup, after = after)
 
     @Test
     fun `a mob's goals are listed, removed and cleared`() {
@@ -125,7 +109,7 @@ class MobGoalTest {
             """,
             after = { server ->
                 server.tick(2)
-                assertEquals(listOf("done"), server.logs, "should_start said no")
+                assertEquals(LuaChecks.DONE, server.output(), "should_start said no")
                 server.platform.commands.runConsole("want")
                 server.tick()
                 server.platform.commands.runConsole("running")

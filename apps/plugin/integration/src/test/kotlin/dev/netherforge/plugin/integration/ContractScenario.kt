@@ -6,6 +6,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import java.nio.file.Files
@@ -40,12 +41,18 @@ class ContractScenario {
             if (process.isAlive) process.destroyForcibly()
         }
         if (!results.exists()) fail("the contract plugin wrote no results; see ${server.folder.resolve("contract-test.log")}")
+        // Every suite's test that runs on the fake is in here: the contract plugin adds those that didn't run as MISSING.
         val tests = Json.parseToJsonElement(results.readText()).jsonArray.map { it.jsonObject }
-        assertTrue(tests.isNotEmpty(), "the suites ran")
         return tests.map { test ->
             fun field(name: String) = test[name]?.jsonPrimitive?.content
             DynamicTest.dynamicTest("${field("suite")} > ${field("name")}") {
-                if (field("status") != "SUCCESSFUL") fail("${field("status")}: ${field("message")}\n${field("trace").orEmpty()}")
+                when (field("status")) {
+                    "SUCCESSFUL" -> Unit
+                    // It says why it can't run on Paper (@OnlyOn): skipped, as it should be.
+                    "ONLY_ON_OTHER" -> Assumptions.abort<Unit>(field("message").orEmpty())
+                    // Failed, aborted, skipped without saying it's fake-only, or never run.
+                    else -> fail("${field("status")}: ${field("message")}\n${field("trace").orEmpty()}")
+                }
             }
         }
     }

@@ -234,12 +234,7 @@ class ParticleEffectTest {
     @Test
     fun `mistakes are errors at the script's line, and an unloaded world is nil`() {
         val module = """
-            local function fails(label, fn, message)
-              local ok, err = pcall(fn)
-              if ok or not tostring(err):find(message, 1, true) then
-                log("FAIL " .. label .. ": " .. tostring(err))
-              end
-            end
+            ${LuaChecks.HELPERS}
             local nether = nf.worlds.get("nether")
             nf.commands.register("run", function()
               fails("unknown", function() nf.particles.play("plse", vec3(0, 64, 0)) end, 'no particle effect "plse" in this project (did you mean "pulse"?)')

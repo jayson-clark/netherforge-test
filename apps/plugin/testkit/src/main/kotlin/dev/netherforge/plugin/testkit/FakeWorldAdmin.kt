@@ -33,7 +33,7 @@ import kotlin.io.path.writeLines
 
 /**
  * Worlds made, loaded, copied, unloaded and deleted, as the fake's
- * [FakePlatform.FakeWorlds.worldNames]. A copy's file work makes the world
+ * [FakeWorlds.worldNames]. A copy's file work makes the world
  * saved (with no files) on whichever thread runs it, for [load] to load, as
  * Paper's imports the copied folder.
  */
@@ -292,7 +292,7 @@ class FakeStructures(private val platform: FakePlatform) : StructureOps {
             for (line in lines.drop(1)) {
                 val parts = line.split(' ')
                 val (x, y, z) = parts.take(3).map { it.toInt() }
-                platform.worlds.blocks[FakePlatform.BlockAt(world, at.x + x, at.y + y, at.z + z)] = parts[3]
+                platform.worlds.blocks[BlockAt(world, at.x + x, at.y + y, at.z + z)] = parts[3]
             }
         }
         return true

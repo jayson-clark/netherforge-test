@@ -14,27 +14,11 @@ import kotlin.test.assertTrue
  * played, advancements, and what only one player is shown.
  */
 class PlayerAdminTest {
-    private val prelude = """
-        local function check(label, got, want)
-          if got ~= want then
-            log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want))
-          end
-        end
-        local function fails(label, fn, message)
-          local ok, err = pcall(fn)
-          if ok or not tostring(err):find(message, 1, true) then
-            log("FAIL " .. label .. ": " .. tostring(err))
-          end
-        end
-    """.trimIndent()
-
-    private fun script(body: String) = "$prelude\nnf.commands.register(\"run\", function(event)\n$body\nlog(\"done\")\nend)"
-
     /** A server whose `/run` runs [body], with [allow] and [requires] in its manifest; Alex is online before it starts. */
     private fun server(body: String, allow: String? = null, requires: String? = null) = TestServer(
         mapOf(
             TestServer.MANIFEST to TestServer.manifest(allow = allow, requires = requires),
-            "modules/t/init.lua" to script(body)
+            "modules/t/init.lua" to LuaChecks.command(body)
         ),
         start = false
     ).also {

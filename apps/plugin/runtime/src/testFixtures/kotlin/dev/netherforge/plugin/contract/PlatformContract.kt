@@ -2,8 +2,10 @@ package dev.netherforge.plugin.contract
 
 import dev.netherforge.format.bridge.BotActResult
 import dev.netherforge.format.bridge.BotAction
+import dev.netherforge.format.bridge.BotEvent
 import dev.netherforge.format.bridge.BotPackAnswer
 import dev.netherforge.format.bridge.BotPosition
+import dev.netherforge.format.bridge.BotState
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.plugin.platform.BotAim
 import dev.netherforge.plugin.platform.BotOps
@@ -114,8 +116,7 @@ abstract class PlatformContract {
      * when the test ends. What the server heard while they joined is
      * forgotten, so a test's [events] start from here.
      */
-    protected fun join(at: Location = origin): PlayerRef {
-        val name = "nfc${NAMES.incrementAndGet()}"
+    protected fun join(at: Location = origin, name: String = "nfc${NAMES.incrementAndGet()}"): PlayerRef {
         var result: Result<*>? = null
         main {
             bots.join(name, BotPosition(at.x, at.y, at.z, at.world), BotPackAnswer.DECLINE) { result = it }
@@ -139,6 +140,42 @@ abstract class PlatformContract {
         eventually("${player.name} doing $action", ticks = BotAction.MAX_TICKS) { result != null }
         return result!!.getOrThrow()
     }
+
+    // ---- what a player's client was sent (players are bots, which keep it) ---------
+
+    /** What [player]'s client shows now: its menu, dialog, boss bars, sidebar, packs, … */
+    protected fun screen(player: PlayerRef): BotState = main { bots.state(player.name) }
+
+    /** The number [player]'s client's next event will have: what [sentSince] and [awaitSent] count from. */
+    protected fun mark(player: PlayerRef): Int = screen(player).events
+
+    /** Everything [player]'s client was sent from event [since] on. */
+    protected fun sentSince(player: PlayerRef, since: Int): List<BotEvent> = main { bots.events(player.name, since).events }
+
+    /**
+     * Waits until [player]'s client has been sent what [find] looks for in
+     * its events from [since] on (null: not yet), and answers what it found.
+     */
+    protected fun <T : Any> awaitSent(player: PlayerRef, since: Int, what: String, find: (List<BotEvent>) -> T?): T {
+        var found: T? = null
+        eventually("$what reaching ${player.name}") {
+            found = find(bots.events(player.name, since).events)
+            found != null
+        }
+        return found!!
+    }
+
+    /** Waits until [player]'s screen shows what [check] wants, and answers the screen. */
+    protected fun awaitScreen(player: PlayerRef, what: String, check: (BotState) -> Boolean): BotState {
+        eventually("${player.name}'s screen showing $what") { check(bots.state(player.name)) }
+        return screen(player)
+    }
+
+    /**
+     * Lets the server send what it would (a real client hears it a tick or two
+     * later): after this, what [player]'s client wasn't sent, it won't be.
+     */
+    protected fun settled() = ticks(SETTLE_TICKS)
 
     /** The platform watches [event] (`Platform.watch`) until the test ends. */
     protected fun watching(event: WatchedEvent) {
@@ -187,6 +224,9 @@ abstract class PlatformContract {
     }
 
     protected companion object {
+        /** Ticks after which what the server sent has reached a bot: it reads packets once a tick. */
+        private const val SETTLE_TICKS = 3
+
         /** A world no server has. */
         const val MISSING_WORLD = "nf_no_such_world"
 

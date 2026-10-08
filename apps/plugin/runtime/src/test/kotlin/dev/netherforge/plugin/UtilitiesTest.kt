@@ -9,33 +9,9 @@ import kotlin.test.assertEquals
  * only what it got wrong, so a failure names the expression.
  */
 class UtilitiesTest {
-    /** Runs [body] in a module with `check(label, got, want)` and `fails(label, fn, message)`; returns the failures and what it logged. */
-    private fun run(body: String): List<String> {
-        val script = """
-            local function check(label, got, want)
-              if got ~= want then
-                log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want))
-              end
-            end
-            local function fails(label, fn, message)
-              local ok, err = pcall(fn)
-              if ok or not tostring(err):find(message, 1, true) then
-                log("FAIL " .. label .. ": " .. tostring(err))
-              end
-            end
-            nf.commands.register("run", function(event)
-            $body
-            end)
-        """.trimIndent()
-        TestServer(mapOf("modules/t/init.lua" to script)).use { server ->
-            server.platform.commands.runConsole("run")
-            return server.errors.map { "ERROR ${it.message}" } + server.logs
-        }
-    }
-
     @Test
     fun `nf time formats and parses clock times`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local utc = { zone = "UTC" }
             check("epoch", nf.time.format(0, "yyyy-MM-dd HH:mm:ss", utc), "1970-01-01 00:00:00")
@@ -61,12 +37,12 @@ class UtilitiesTest {
             check("the server's zone by default", type(nf.time.format(0, "HH:mm")), "string")
             """
         )
-        assertEquals(emptyList(), result)
+        assertEquals(LuaChecks.DONE, result)
     }
 
     @Test
     fun `nf time writes and reads durations`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             check("hms", nf.time.duration(3725000), "1h 2m 5s")
             check("days", nf.time.duration((3 * 24 + 4) * 3600000), "3d 4h")
@@ -92,7 +68,7 @@ class UtilitiesTest {
             check("too long", nf.time.parse_duration("99999999999999999d"), nil)
             """
         )
-        assertEquals(emptyList(), result)
+        assertEquals(LuaChecks.DONE, result)
     }
 
     /** xoshiro256** seeded by splitmix64, from the reference C, to hold the prelude's 64-bit Lua arithmetic to. */
@@ -122,7 +98,7 @@ class UtilitiesTest {
     fun `a seeded generator is xoshiro256 starstar`() {
         // Over the whole range, `integer` hands back each word as it is, offset by mininteger.
         val expected = reference(42, 5).map { (it + Long.MIN_VALUE).toString() }
-        val result = run(
+        val result = LuaChecks.run(
             """
             local rng = nf.random.new(42)
             local words = {}
@@ -132,12 +108,12 @@ class UtilitiesTest {
             log(table.concat(words, " "))
             """
         )
-        assertEquals(listOf(expected.joinToString(" ")), result)
+        assertEquals(listOf(expected.joinToString(" "), "done"), result)
     }
 
     @Test
     fun `generators repeat for a seed and stay in range`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local a, b, c = nf.random.new(7), nf.random.new(7), nf.random.new(8)
             local same, different = true, false
@@ -207,12 +183,12 @@ class UtilitiesTest {
             fails("a seed that isn't whole", function() nf.random.new(1.5) end, "bad argument 'seed'")
             """
         )
-        assertEquals(emptyList(), result)
+        assertEquals(LuaChecks.DONE, result)
     }
 
     @Test
     fun `noise is smooth, seeded and bounded, and ids are unique`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local low, high, jump = 1, -1, 0
             local previous = nf.random.noise2(0, 0, { scale = 0.05 })
@@ -242,12 +218,12 @@ class UtilitiesTest {
             check("unique", id ~= nf.random.uuid(), true)
             """
         )
-        assertEquals(emptyList(), result)
+        assertEquals(LuaChecks.DONE, result)
     }
 
     @Test
     fun `nf math blends, clamps, remaps and eases`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             check("lerp", nf.math.lerp(10, 20, 0.25), 12.5)
             check("lerp past the end", nf.math.lerp(0, 10, 1.5), 15)
@@ -272,6 +248,6 @@ class UtilitiesTest {
             fails("not a number", function() nf.math.lerp(0, 1, "half") end, "bad argument 'fraction'")
             """
         )
-        assertEquals(emptyList(), result)
+        assertEquals(LuaChecks.DONE, result)
     }
 }

@@ -4,7 +4,7 @@ import dev.netherforge.plugin.platform.EntityFlag
 import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.InventoryRef
 import dev.netherforge.plugin.platform.Location
-import dev.netherforge.plugin.testkit.FakePlatform
+import dev.netherforge.plugin.testkit.FakePlayer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -40,7 +40,7 @@ class CutsceneTest {
     private fun server(
         module: String,
         files: Map<String, Any> = emptyMap(),
-        prepare: (FakePlatform.FakePlayer) -> Unit = {
+        prepare: (FakePlayer) -> Unit = {
             it.gameMode = "creative"
             it.flags[EntityFlag.CAN_FLY] = true
             it.flags[EntityFlag.FLYING] = true

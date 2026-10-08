@@ -2,17 +2,22 @@ package dev.netherforge.plugin.testkit
 
 import dev.netherforge.format.bridge.BotActResult
 import dev.netherforge.format.bridge.BotAction
+import dev.netherforge.format.bridge.BotBossBar
 import dev.netherforge.format.bridge.BotClick
 import dev.netherforge.format.bridge.BotDialog
 import dev.netherforge.format.bridge.BotDialogInput
 import dev.netherforge.format.bridge.BotEntity
+import dev.netherforge.format.bridge.BotEvent
 import dev.netherforge.format.bridge.BotEvents
 import dev.netherforge.format.bridge.BotHand
 import dev.netherforge.format.bridge.BotInfo
 import dev.netherforge.format.bridge.BotItem
+import dev.netherforge.format.bridge.BotListEntry
 import dev.netherforge.format.bridge.BotMenu
+import dev.netherforge.format.bridge.BotPack
 import dev.netherforge.format.bridge.BotPackAnswer
 import dev.netherforge.format.bridge.BotPosition
+import dev.netherforge.format.bridge.BotSidebar
 import dev.netherforge.format.bridge.BotState
 import dev.netherforge.format.dialog.BooleanInput
 import dev.netherforge.format.dialog.DialogInput
@@ -33,6 +38,7 @@ import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.InventoryRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.Location
+import dev.netherforge.plugin.platform.PackOffer
 import dev.netherforge.plugin.platform.Ray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -46,7 +52,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Bots on the fake server: each is a [FakePlatform.FakePlayer] once it's in,
+ * Bots on the fake server: each is a [FakePlayer] once it's in,
  * online like anyone, and answers resource packs as it was told to. What a
  * bot does raises what the Paper adapter raises for the same packets, in the
  * same order, through the fake's own players, entities and blocks: the
@@ -55,10 +61,53 @@ import kotlin.math.sqrt
  * error saying so, never a silent success.
  *
  * Like the real ones, joins and actions finish later, on the main thread
- * (here, the scheduler's next [FakePlatform.FakeScheduler.runPending]).
+ * (here, the scheduler's next [FakeScheduler.runPending]).
  */
 class FakeBots(private val platform: FakePlatform) : BotOps {
-    private val online = linkedMapOf<String, FakePlatform.FakePlayer>()
+    private val online = linkedMapOf<String, FakePlayer>()
+
+    /** What each bot online has been sent, by its player's UUID: a new one each join, as a real bot is a new client. */
+    private val screens = HashMap<UUID, Screen>()
+
+    /** A bot's own view of what the server sent it: its events, numbered from 0 (the last [KEPT]), and the packs offered. */
+    private class Screen {
+        val kept = ArrayDeque<BotEvent>()
+        var next = 0
+        val packs = LinkedHashMap<UUID, BotPack>()
+
+        fun add(event: (seq: Int) -> BotEvent) {
+            kept.addLast(event(next++))
+            while (kept.size > KEPT) kept.removeFirst()
+        }
+
+        fun since(seq: Int): BotEvents {
+            val first = kept.firstOrNull()?.seq ?: next
+            return BotEvents(kept.filter { it.seq >= seq }, next, dropped = (first - seq).coerceAtLeast(0).coerceAtMost(next))
+        }
+    }
+
+    /**
+     * The fake's packets: what the server sends [player] reaches their client
+     * as [event], when they're a bot (anyone else has no client here). The
+     * fake's sounds, particles, boss bars and resource packs call it where
+     * Paper would send the packet the real bots record.
+     */
+    fun sent(player: UUID, event: (seq: Int) -> BotEvent) {
+        screens[player]?.add(event)
+    }
+
+    /** [player]'s client was offered [pack] and answered as it was told to ([FakePlayer.packAnswer]): the real bots' answers. */
+    fun offered(player: FakePlayer, pack: PackOffer) {
+        val screen = screens[player.ref.uuid] ?: return
+        val status = when (player.packAnswer) {
+            "loaded" -> "successfully_loaded"
+            "declined" -> "declined"
+            "failed" -> "failed_download"
+            else -> "offered"
+        }
+        screen.packs[pack.id] = BotPack(pack.id.toString(), pack.url, pack.sha1, status)
+        screen.add { BotEvent.ResourcePack(it, pack.id.toString(), pack.url, status) }
+    }
 
     /** Every action asked for, with where the runtime aimed it. */
     val acted = mutableListOf<Triple<String, BotAction, BotAim?>>()
@@ -81,19 +130,23 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
                 BotPackAnswer.IGNORE -> null
             }
             online[name] = player
+            screens[player.ref.uuid] = Screen()
             platform.raise.playerJoin(GameEvent.PlayerJoin(player.ref, firstJoin, "$name joined the game"))
             done(Result.success(info(player)))
         }
     }
 
     override fun leave(name: String) {
-        platform.players.quit(bot(name))
+        val bot = bot(name)
+        platform.players.quit(bot)
         online.remove(name)
+        screens.remove(bot.ref.uuid)
     }
 
     override fun leaveAll() {
         for (player in online.values.toList()) if (player.ref.uuid in platform.players.byId) platform.players.quit(player)
         online.clear()
+        screens.clear()
     }
 
     override fun list(): List<BotInfo> = online.values.filter { it.ref.uuid in platform.players.byId }.map(::info)
@@ -117,7 +170,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
         }
     }
 
-    private fun perform(bot: FakePlatform.FakePlayer, action: BotAction, aim: BotAim?) {
+    private fun perform(bot: FakePlayer, action: BotAction, aim: BotAim?) {
         fun alive() = check(!bot.dead) { "${bot.ref.name} is dead; respawn first" }
         when (action) {
             is BotAction.Teleport -> {
@@ -274,11 +327,11 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
     // ---- moving -----------------------------------------------------------------------
 
     /** The keys held: what a bot's client sends when they change (heard only while input is watched). */
-    private fun input(bot: FakePlatform.FakePlayer, forward: Boolean = false, jump: Boolean = false, sneak: Boolean = bot.sneaking) {
+    private fun input(bot: FakePlayer, forward: Boolean = false, jump: Boolean = false, sneak: Boolean = bot.sneaking) {
         raise.playerInput(GameEvent.PlayerInput(bot.ref, forward, false, false, false, jump, sneak, bot.sprinting))
     }
 
-    private fun sprint(bot: FakePlatform.FakePlayer, on: Boolean) {
+    private fun sprint(bot: FakePlayer, on: Boolean) {
         if (bot.sprinting == on) return
         bot.sprinting = on
         raise.playerSprint(GameEvent.PlayerSprint(bot.ref, on))
@@ -290,7 +343,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
      * another block heard (while moves are watched). One a script cancels
      * puts them back, and a client walking into it again is stuck.
      */
-    private fun walk(bot: FakePlatform.FakePlayer, walk: BotAction.WalkTo) {
+    private fun walk(bot: FakePlayer, walk: BotAction.WalkTo) {
         require(walk.timeoutTicks in 1..BotAction.MAX_TICKS) { "timeoutTicks is from 1 to ${BotAction.MAX_TICKS}" }
         val wasSprinting = bot.sprinting
         if (walk.sprint) sprint(bot, true)
@@ -322,7 +375,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
         }
     }
 
-    private fun lookAt(bot: FakePlatform.FakePlayer, x: Double, y: Double, z: Double) {
+    private fun lookAt(bot: FakePlayer, x: Double, y: Double, z: Double) {
         val at = bot.location
         val dx = x - at.x
         val dy = y - (at.y + bot.eyeHeight)
@@ -330,14 +383,14 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
         bot.location = at.copy(yaw = Math.toDegrees(atan2(-dx, dz)), pitch = Math.toDegrees(-atan2(dy, hypot(dx, dz))))
     }
 
-    private fun sight(bot: FakePlatform.FakePlayer): Ray? = players.eye(bot.ref.uuid)
+    private fun sight(bot: FakePlayer): Ray? = players.eye(bot.ref.uuid)
 
-    private fun eye(bot: FakePlatform.FakePlayer) = bot.location.let { Triple(it.x, it.y + bot.eyeHeight, it.z) }
+    private fun eye(bot: FakePlayer) = bot.location.let { Triple(it.x, it.y + bot.eyeHeight, it.z) }
 
     // ---- clicking entities ------------------------------------------------------------------
 
     /** The entity to click and the point to aim at, as the real bots choose: the runtime's aim, one by UUID, or the one in sight. */
-    private fun target(bot: FakePlatform.FakePlayer, uuid: String?, aim: BotAim?): Pair<UUID, Triple<Double, Double, Double>?> {
+    private fun target(bot: FakePlayer, uuid: String?, aim: BotAim?): Pair<UUID, Triple<Double, Double, Double>?> {
         val id = aim?.entity ?: uuid?.let {
             runCatching { UUID.fromString(it) }.getOrNull() ?: throw IllegalArgumentException("\"$it\" isn't a UUID")
         }
@@ -362,7 +415,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
     }
 
     /** Looks at [target] ([at], or its middle) and checks it's within reach of the eyes, as the real bots do. */
-    private fun aimAt(bot: FakePlatform.FakePlayer, target: UUID, at: Triple<Double, Double, Double>?) {
+    private fun aimAt(bot: FakePlayer, target: UUID, at: Triple<Double, Double, Double>?) {
         val tagged = platform.entities.all[target]
         val (where, width, height) = tagged?.let { Triple(it.location, it.width, it.height) }
             ?: platform.worldEntities.body(target)!!.let { Triple(it.location, it.width, it.height) }
@@ -387,14 +440,14 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
 
     private fun hand(hand: BotHand) = if (hand == BotHand.MAIN) "main_hand" else "off_hand"
 
-    private fun heldSlot(bot: FakePlatform.FakePlayer) = (bot.numbers[EntityNumber.HELD_SLOT] ?: 0.0).toInt()
+    private fun heldSlot(bot: FakePlayer) = (bot.numbers[EntityNumber.HELD_SLOT] ?: 0.0).toInt()
 
-    private fun slotOf(bot: FakePlatform.FakePlayer, hand: String) = if (hand == "off_hand") OFF_HAND else heldSlot(bot)
+    private fun slotOf(bot: FakePlayer, hand: String) = if (hand == "off_hand") OFF_HAND else heldSlot(bot)
 
-    private fun held(bot: FakePlatform.FakePlayer, hand: String) = bot.inventorySlots[slotOf(bot, hand)]
+    private fun held(bot: FakePlayer, hand: String) = bot.inventorySlots[slotOf(bot, hand)]
 
     /** One fewer of what's in [slot] (a survival player's; creative keeps it). */
-    private fun useUp(bot: FakePlatform.FakePlayer, slot: Int) {
+    private fun useUp(bot: FakePlayer, slot: Int) {
         if (bot.gameMode == "creative") return
         val item = bot.inventorySlots[slot] ?: return
         val count = (item.def.count ?: 1) - 1
@@ -402,12 +455,12 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
     }
 
     /** Food starts being eaten (when they may eat it); anything else the fake has no use over time for. */
-    private fun startUsing(bot: FakePlatform.FakePlayer, item: ItemData, hand: String) {
+    private fun startUsing(bot: FakePlayer, item: ItemData, hand: String) {
         val kind = item.def.kind
         if (kind !in FakePlatform.FOODS) return
         val hungry = (bot.numbers[EntityNumber.FOOD] ?: 20.0) < 20.0
         if (!hungry && kind !in FakePlatform.ALWAYS_EDIBLE && bot.gameMode != "creative") return
-        bot.using = FakePlatform.FakePlayer.Using(item, hand, FakePlatform.EATING_TICKS, FakePlatform.EATING_TICKS)
+        bot.using = FakePlayer.Using(item, hand, FakePlatform.EATING_TICKS, FakePlatform.EATING_TICKS)
     }
 
     private fun block(world: String, x: Int, y: Int, z: Int): BlockRef {
@@ -416,7 +469,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
     }
 
     /** The middle of a block's face, checked to be within reach and looked at, as the real bots do. */
-    private fun face(bot: FakePlatform.FakePlayer, x: Int, y: Int, z: Int, face: String): Triple<Int, Int, Int> {
+    private fun face(bot: FakePlayer, x: Int, y: Int, z: Int, face: String): Triple<Int, Int, Int> {
         val step = FACES[face] ?: throw IllegalArgumentException("\"$face\" isn't a face; one of ${FACES.keys.joinToString()}")
         val hit = Triple(x + 0.5 + step.first * 0.5, y + 0.5 + step.second * 0.5, z + 0.5 + step.third * 0.5)
         val (ex, ey, ez) = eye(bot)
@@ -431,7 +484,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
      * held item used, then a container opened or the held block placed
      * against that face, as the server does each.
      */
-    private fun useBlock(bot: FakePlatform.FakePlayer, use: BotAction.UseBlock) {
+    private fun useBlock(bot: FakePlayer, use: BotAction.UseBlock) {
         val world = bot.location.world
         val step = face(bot, use.x, use.y, use.z, use.face)
         val hand = hand(use.hand)
@@ -469,7 +522,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
      * instant one in creative), then the break with its drops. Any of them
      * cancelled leaves the block, and the bot is refused as a real one is.
      */
-    private fun breakBlock(bot: FakePlatform.FakePlayer, mine: BotAction.BreakBlock) {
+    private fun breakBlock(bot: FakePlayer, mine: BotAction.BreakBlock) {
         val world = bot.location.world
         val target = block(world, mine.x, mine.y, mine.z)
         require(target.id != "minecraft:air") { "there's no block at ${mine.x} ${mine.y} ${mine.z} to break" }
@@ -487,7 +540,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
             listOf(ItemData(dev.netherforge.format.item.ItemDef(kind = target.id, count = 1)))
         }
         val answer = events!!.blockBreak(bot.ref, target, { drops }, 0) ?: throw refused
-        platform.worlds.blocks[FakePlatform.BlockAt(world, mine.x, mine.y, mine.z)] = "minecraft:air"
+        platform.worlds.blocks[BlockAt(world, mine.x, mine.y, mine.z)] = "minecraft:air"
         platform.blocks.changes += "$world ${mine.x} ${mine.y} ${mine.z} minecraft:air"
         if (creative) return
         val dropped = answer.drops ?: drops
@@ -497,7 +550,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
     }
 
     /** Q: one of the held stack, or all of it, heard first (cancelled, it stays), then thrown ahead of them. */
-    private fun drop(bot: FakePlatform.FakePlayer, all: Boolean) {
+    private fun drop(bot: FakePlayer, all: Boolean) {
         val slot = heldSlot(bot)
         val item = bot.inventorySlots[slot] ?: return
         val count = item.def.count ?: 1
@@ -514,7 +567,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
     }
 
     /** A click in a project menu: the menu's own slots first, then the inventory below it. */
-    private fun click(bot: FakePlatform.FakePlayer, click: BotAction.ClickSlot) {
+    private fun click(bot: FakePlayer, click: BotAction.ClickSlot) {
         val window = platform.menus.viewing(bot.ref.uuid) ?: unsupported("clicks outside a project menu")
         val size = platform.menus.windows.getValue(window).slots.size
         val top = click.slot < size
@@ -540,7 +593,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
     }
 
     /** Escape: a project menu closes (heard), or a container they opened. */
-    private fun closeMenu(bot: FakePlatform.FakePlayer) {
+    private fun closeMenu(bot: FakePlayer) {
         val uuid = bot.ref.uuid
         platform.menus.viewing(uuid)?.let {
             platform.menus.close(it, uuid)
@@ -552,7 +605,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
         raise.playerCloseInventory(GameEvent.PlayerInventory(bot.ref, kind, inventory, ref?.let { block(it.world, it.x, it.y, it.z) }))
     }
 
-    private fun respawn(bot: FakePlatform.FakePlayer) {
+    private fun respawn(bot: FakePlayer) {
         bot.dead = false
         bot.numbers[EntityNumber.HEALTH] = bot.maxHealth ?: 20.0
         val world = platform.worlds.defaultWorld()
@@ -593,9 +646,15 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
             inventory = inventorySlots.withIndex().mapNotNull { (slot, item) -> item?.let { botItem(slot, it) } },
             menu = platform.menus.viewing(ref.uuid)?.let { window -> menu(platform.menus.windows.getValue(window)) },
             dialog = platform.dialogs.showing[ref.uuid]?.let(::dialog),
+            bossBars = platform.bossBars.of(this).map { BotBossBar(platform.text.strip(it.text), it.progress, it.color, it.style) },
+            sidebar = platform.sidebars.showing[ref.uuid]?.let { (title, lines) ->
+                BotSidebar(platform.text.strip(title), lines.map(platform.text::strip))
+            },
             actionBar = platform.pause.actionBars[ref.uuid],
+            resourcePacks = screens[ref.uuid]?.packs?.values?.toList().orEmpty(),
+            playerList = playerList(this),
             entities = nearby(this),
-            events = 0
+            events = screens[ref.uuid]?.next ?: 0
         )
     }
 
@@ -604,7 +663,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
      * [MAX_NEARBY]): the world's mobs and players and NetherForge's hitboxes, in its world and not hidden
      * from it. Displays are left out; the fake has no model of their entity types, and nothing clicks them.
      */
-    private fun nearby(bot: FakePlatform.FakePlayer): List<BotEntity> {
+    private fun nearby(bot: FakePlayer): List<BotEntity> {
         val at = bot.location
         val bodies = (platform.players.byId.values + platform.worldEntities.mobs.values)
             .filter { it.id != bot.ref.uuid && bot.ref.uuid !in it.hiddenFrom }
@@ -620,6 +679,22 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
             .take(MAX_NEARBY)
     }
 
+    /**
+     * The players its client knows, as the real bots list them (by name): everyone online, whether they're listed for
+     * it, the name their entry shows when one was set, their place, and the line under their name tag, as plain text.
+     */
+    private fun playerList(bot: FakePlayer): List<BotListEntry> = platform.players.byId.values.sortedBy { it.ref.name }.map { player ->
+        val list = platform.playerList
+        BotListEntry(
+            player.ref.name,
+            player.ref.uuid.toString(),
+            listed = list.isListed(bot.ref.uuid, player.ref.uuid) ?: false,
+            displayName = list.names[player.ref.uuid]?.let(platform.text::strip),
+            order = list.order(player.ref.uuid) ?: 0,
+            belowName = platform.teams.belowNames[player.ref.name]?.let(platform.text::strip)
+        )
+    }
+
     private fun distance(a: Location, b: Location) = sqrt((a.x - b.x).pow(2) + (a.y - b.y).pow(2) + (a.z - b.z).pow(2))
 
     /** A stack as the client shows it; the fake has no item names of its own, so an unnamed one shows its kind. */
@@ -632,7 +707,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
     )
 
     /** A project menu as the client shows it: the vanilla screen its type opens. */
-    private fun menu(window: FakePlatform.FakeWindow): BotMenu {
+    private fun menu(window: FakeWindow): BotMenu {
         val type = when (window.spec.type) {
             MenuType.CHEST, MenuType.BARREL -> "minecraft:generic_9x${window.spec.size / 9}"
             MenuType.SHULKER_BOX -> "minecraft:shulker_box"
@@ -673,17 +748,15 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
         )
     }
 
-    override fun events(name: String, since: Int): BotEvents {
-        bot(name)
-        return BotEvents(emptyList(), next = 0)
-    }
+    /** What the bot's client was sent that the fake models: sounds, particles, boss bars shown and hidden, and resource packs. */
+    override fun events(name: String, since: Int): BotEvents = screens.getValue(bot(name).ref.uuid).since(since)
 
-    private fun info(player: FakePlatform.FakePlayer) = with(player.location) {
+    private fun info(player: FakePlayer) = with(player.location) {
         BotInfo(player.ref.name, player.ref.uuid.toString(), world, x, y, z, 0)
     }
 
     /** A bot that's still online: one that was kicked, banned or quit is gone. */
-    private fun bot(name: String): FakePlatform.FakePlayer =
+    private fun bot(name: String): FakePlayer =
         online[name]?.takeIf { it.ref.uuid in platform.players.byId } ?: throw IllegalArgumentException("no bot named \"$name\"")
 
     private fun Double.sq() = this * this
@@ -692,6 +765,9 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
 
     private companion object {
         const val OFF_HAND = 40
+
+        /** The real bots' `BotEventLog.KEPT`. */
+        const val KEPT = 1000
 
         /** The real bots' `Bot.NEARBY` and `Bot.MAX_NEARBY`. */
         const val NEARBY = 16.0

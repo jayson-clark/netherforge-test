@@ -1,5 +1,6 @@
 package dev.netherforge.plugin
 
+import dev.netherforge.plugin.LuaChecks.runChecks
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -21,11 +22,6 @@ class DimensionTypeTest {
     private fun server(module: String, worlds: String = "", files: Map<String, String> = mapOf("dimension_types/deep.json" to deep)) =
         TestServer(files + mapOf("netherforge.json" to manifest(worlds), "modules/t/init.lua" to module))
 
-    private fun TestServer.run(): List<String> {
-        platform.commands.runConsole("run")
-        return errors.map { "ERROR ${it.message}" } + logs
-    }
-
     private fun TestServer.problems(code: String) = runtime.session.problems().filter { it.code == code }
 
     @Test
@@ -39,7 +35,7 @@ class DimensionTypeTest {
             end)
         """.trimIndent()
         server(module).use { server ->
-            assertEquals(listOf("-128 384", "1 1"), server.run())
+            assertEquals(listOf("-128 384", "1 1"), server.runChecks())
             val made = assertNotNull(server.platform.worldManager.created["mine"])
             assertEquals("test:deep", made.dimensionType)
             assertEquals("test:deep", server.runtime.store.worlds.of("test").getValue("mine").dimensionType)
@@ -47,7 +43,7 @@ class DimensionTypeTest {
             server.write("modules/t/init.lua", """nf.commands.register("run", function() log(nf.worlds.load("mine"):min_height()) end)""")
             server.restart()
             // The server keeps the type with the world; loading it is loading it.
-            assertEquals("-128", server.run().last())
+            assertEquals("-128", server.runChecks().last())
         }
     }
 
@@ -68,7 +64,7 @@ class DimensionTypeTest {
             // Added after the server started: the project has it, the server doesn't until it restarts.
             server.write("dimension_types/later.json", deep)
             assertTrue(server.reload("dimension_types/later.json").restart, "a dimension type is start-up datapack data")
-            val out = server.run()
+            val out = server.runChecks()
             assertTrue(out[0].startsWith("false ") && "\"moon\" isn't one of the project's dimension types (it has: deep" in out[0], out[0])
             assertTrue("\"broken\" has errors" in out[1], out[1])
             assertTrue("no dimension type \"test:later\"" in out[2] && "restart" in out[2], out[2])
@@ -114,7 +110,7 @@ class DimensionTypeTest {
             server.write("netherforge.json", manifest())
             server.restart()
             assertFalse("mine" in server.platform.worlds.names())
-            val out = server.run().single()
+            val out = server.runChecks().single()
             assertTrue(out.startsWith("false ") && "made with dimension type \"test:deep\", which the server doesn't have" in out, out)
         }
     }

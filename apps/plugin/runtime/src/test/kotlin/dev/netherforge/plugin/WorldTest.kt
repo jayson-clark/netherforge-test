@@ -18,42 +18,9 @@ import dev.netherforge.format.particle.ItemData as ItemSpawnData
  * mistakes that are errors.
  */
 class WorldTest {
-    /** Runs [body] as a console command in a module (with `check` and `fails`), returning errors and log lines. */
-    private fun run(
-        body: String,
-        files: Map<String, Any> = emptyMap(),
-        setup: (TestServer) -> Unit = {},
-        after: (TestServer) -> Unit = {}
-    ): List<String> {
-        val script = """
-            local function check(label, got, want)
-              if got ~= want then
-                log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want))
-              end
-            end
-            local function fails(label, fn, message)
-              local ok, err = pcall(fn)
-              if ok or not tostring(err):find(message, 1, true) then
-                log("FAIL " .. label .. ": " .. tostring(err))
-              end
-            end
-            nf.commands.register("run", function(event)
-            $body
-            log("done")
-            end)
-        """.trimIndent()
-        TestServer(files + mapOf("modules/t/init.lua" to script), start = false).use { server ->
-            setup(server)
-            server.start()
-            server.platform.commands.runConsole("run")
-            after(server)
-            return server.errors.map { "ERROR ${it.message}" } + server.logs
-        }
-    }
-
     @Test
     fun `nf worlds and what a world says about itself`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local world = nf.worlds.default()
             check("default", world:name(), "world")
@@ -137,12 +104,7 @@ class WorldTest {
                 "modules/t/init.lua" to """
                     -- Handles are names: one kept from before the world unloaded still answers.
                     local nether = nf.worlds.get("nether")
-                    local function fails(label, fn, message)
-                      local ok, err = pcall(fn)
-                      if ok or not tostring(err):find(message, 1, true) then
-                        log("FAIL " .. label .. ": " .. tostring(err))
-                      end
-                    end
+                    ${LuaChecks.HELPERS}
                     nf.commands.register("check", function()
                       log(nf.worlds.get("nether"), nether:exists(), nether:environment(), nether:time_of_day(), nether:block(vec3(0, 0, 0)))
                       log(nether:set_block(vec3(0, 0, 0), "minecraft:stone"), nether:fill_blocks(vec3(0, 0, 0), vec3(1, 1, 1), "minecraft:stone"))
@@ -161,7 +123,7 @@ class WorldTest {
 
     @Test
     fun `blocks read and change the world live`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local world = nf.worlds.default()
             local ground = world:block(vec3(0.5, 63.9, 0.5))
@@ -321,7 +283,7 @@ class WorldTest {
 
     @Test
     fun `a ray hits the first block or centity hitbox in its way`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local world = nf.worlds.default()
             local hit = world:raycast(vec3(0.5, 70, 0.5), vec3(0, -1, 0), 20)
@@ -365,12 +327,7 @@ class WorldTest {
         TestServer(
             mapOf(
                 "modules/t/init.lua" to """
-                    local function fails(label, fn, message)
-                      local ok, err = pcall(fn)
-                      if ok or not tostring(err):find(message, 1, true) then
-                        log("FAIL " .. label .. ": " .. tostring(err))
-                      end
-                    end
+                    ${LuaChecks.HELPERS}
                     nf.commands.register("fx", function()
                       local world = nf.worlds.default()
                       local alex = nf.players.get("Alex")
@@ -430,12 +387,7 @@ class WorldTest {
                 "resource_packs/fx/pack.json" to """{ "name": "FX", "description": "Sounds" }""",
                 "resource_packs/fx/sounds/ding.ogg" to byteArrayOf(0x4f, 0x67, 0x67, 0x53),
                 "modules/t/init.lua" to """
-                    local function fails(label, fn, message)
-                      local ok, err = pcall(fn)
-                      if ok or not tostring(err):find(message, 1, true) then
-                        log("FAIL " .. label .. ": " .. tostring(err))
-                      end
-                    end
+                    ${LuaChecks.HELPERS}
                     nf.commands.register("sfx", function()
                       local world = nf.worlds.default()
                       local alex = nf.players.get("Alex")

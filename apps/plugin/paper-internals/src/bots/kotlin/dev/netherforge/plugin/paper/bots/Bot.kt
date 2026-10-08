@@ -56,6 +56,7 @@ import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket
 import net.minecraft.network.protocol.game.ClientboundDisguisedChatPacket
 import net.minecraft.network.protocol.game.ClientboundForgetLevelChunkPacket
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket
+import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket
 import net.minecraft.network.protocol.game.ClientboundOpenBookPacket
 import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket
 import net.minecraft.network.protocol.game.ClientboundPlayerChatPacket
@@ -84,6 +85,7 @@ import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket
 import net.minecraft.network.protocol.game.ClientboundSoundEntityPacket
 import net.minecraft.network.protocol.game.ClientboundSoundPacket
 import net.minecraft.network.protocol.game.ClientboundStartConfigurationPacket
+import net.minecraft.network.protocol.game.ClientboundStopSoundPacket
 import net.minecraft.network.protocol.game.ClientboundSystemChatPacket
 import net.minecraft.network.protocol.game.ServerboundChatCommandPacket
 import net.minecraft.network.protocol.game.ServerboundChunkBatchReceivedPacket
@@ -462,6 +464,26 @@ internal class Bot(
             )
             is ClientboundSoundEntityPacket -> player?.level()?.getEntity(packet.id)?.let {
                 sound(packet.sound.value().location().toString(), it.position(), packet.volume, packet.pitch)
+            }
+            is ClientboundStopSoundPacket -> events.add { BotEvent.StopSound(it, packet.name?.toString()) }
+            is ClientboundLevelParticlesPacket -> {
+                val particle = BuiltInRegistries.PARTICLE_TYPE.getKey(packet.particle.type).toString()
+                val (speed, forced) = Protocol.particleMotion(packet)
+                events.add {
+                    BotEvent.Particle(
+                        it,
+                        particle,
+                        packet.x,
+                        packet.y,
+                        packet.z,
+                        packet.count,
+                        packet.xDist.toDouble(),
+                        packet.yDist.toDouble(),
+                        packet.zDist.toDouble(),
+                        speed.toDouble(),
+                        forced
+                    )
+                }
             }
             is ClientboundAddEntityPacket -> screen.entities[packet.id] = packet.uuid to packet.type
             is ClientboundRemoveEntitiesPacket -> Protocol.removed(packet).forEach { screen.entities.remove(it) }

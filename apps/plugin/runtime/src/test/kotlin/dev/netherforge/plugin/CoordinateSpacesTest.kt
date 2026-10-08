@@ -42,11 +42,7 @@ class CoordinateSpacesTest {
 
     private fun run(body: String): List<String> {
         val script = """
-            local function near(label, got, want)
-              if got == nil or (got - want):length() > 1e-9 then
-                log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want))
-              end
-            end
+            ${LuaChecks.HELPERS}
             nf.commands.register("run", function()
             $body
             log("done")
@@ -60,7 +56,7 @@ class CoordinateSpacesTest {
             )
         ).use { server ->
             server.platform.commands.runConsole("run")
-            return server.errors.map { "ERROR ${it.message}" } + server.logs
+            return server.output()
         }
     }
 

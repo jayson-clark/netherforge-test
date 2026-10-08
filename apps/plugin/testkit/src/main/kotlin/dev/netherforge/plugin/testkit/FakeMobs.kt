@@ -11,8 +11,8 @@ import dev.netherforge.plugin.platform.GoalControl
 import dev.netherforge.plugin.platform.GoalInfo
 import dev.netherforge.plugin.platform.MobGoalOps
 import dev.netherforge.plugin.platform.PathfindingOps
-import dev.netherforge.plugin.testkit.FakePlatform.FakeBody
-import dev.netherforge.plugin.testkit.FakePlatform.FakePlayer
+import dev.netherforge.plugin.testkit.FakeBody
+import dev.netherforge.plugin.testkit.FakePlayer
 import java.util.UUID
 import kotlin.math.floor
 
@@ -178,7 +178,7 @@ class FakeMobGoals(private val platform: FakePlatform) : MobGoalOps {
 
     private var thinking = false
 
-    private fun mob(id: UUID): FakePlatform.FakeBody? = platform.worldEntities.body(id)?.takeIf { it.mob }
+    private fun mob(id: UUID): FakeBody? = platform.worldEntities.body(id)?.takeIf { it.mob }
 
     private fun selectors(id: UUID): List<MutableList<Goal>>? {
         val body = mob(id) ?: return null

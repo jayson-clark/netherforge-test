@@ -57,13 +57,7 @@ class ItemTest {
     @Test
     fun `scripts make stacks of a project item, and every item table can name one`() {
         val module = """
-            local function check(label, got, want)
-              if got ~= want then log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want)) end
-            end
-            local function fails(label, fn, message)
-              local ok, err = pcall(fn)
-              if ok or not tostring(err):find(message, 1, true) then log("FAIL " .. label .. ": " .. tostring(err)) end
-            end
+            ${LuaChecks.HELPERS}
             nf.commands.register("run", function()
               local made = nf.items.create("ruby")
               check("kind", made.kind, "minecraft:paper")
@@ -109,7 +103,7 @@ class ItemTest {
         """.trimIndent()
         server(files(module = module)).use { server ->
             server.platform.commands.runConsole("run")
-            assertEquals(listOf("done"), server.errors.map { "ERROR ${it.message}" } + server.logs)
+            assertEquals(listOf("done"), server.output())
             val held = server.slots()[0]!!
             assertEquals(
                 ProjectItems.hash(
@@ -123,13 +117,7 @@ class ItemTest {
     @Test
     fun `a project item worn as equipment makes stacks that carry it, and scripts read and write it`() {
         val module = """
-            local function check(label, got, want)
-              if got ~= want then log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want)) end
-            end
-            local function fails(label, fn, message)
-              local ok, err = pcall(fn)
-              if ok or not tostring(err):find(message, 1, true) then log("FAIL " .. label .. ": " .. tostring(err)) end
-            end
+            ${LuaChecks.HELPERS}
             nf.commands.register("run", function()
               local made = nf.items.create("crown")
               check("asset", made.equipment.asset, "gear/ruby")
@@ -154,7 +142,7 @@ class ItemTest {
         )
         server(files).use { server ->
             server.platform.commands.runConsole("run")
-            assertEquals(listOf("done"), server.errors.map { "ERROR ${it.message}" } + server.logs)
+            assertEquals(listOf("done"), server.output())
             val held = server.slots()[0]!!
             assertEquals(EquipmentDef(ResourceRef("gear/ruby"), EquipSlot.LEGS), held.def.equipment)
         }

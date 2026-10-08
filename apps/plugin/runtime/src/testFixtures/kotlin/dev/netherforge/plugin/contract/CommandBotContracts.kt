@@ -1,5 +1,6 @@
 package dev.netherforge.plugin.contract
 
+import dev.netherforge.format.bridge.BotEvent
 import dev.netherforge.format.bridge.BotInfo
 import dev.netherforge.format.bridge.BotPackAnswer
 import dev.netherforge.format.bridge.BotPosition
@@ -241,6 +242,47 @@ abstract class BotOpsContract : PlatformContract() {
             assertThrows<IllegalArgumentException> { bots.state(name) }
         }
         assertEquals(1, events.heard<GameEvent.PlayerQuit>("playerQuit").count { it.player.name == name })
+    }
+
+    @Test
+    fun `a bot joins where it's told, and its state says where it is and how it is`() {
+        val at = at(3, 0, 2)
+        val player = join(at)
+        val state = screen(player)
+        assertEquals(listOf(player.name, player.uuid.toString(), world), listOf(state.name, state.uuid, state.world))
+        assertNear(at.x, state.x, 1e-6, "x")
+        assertNear(at.z, state.z, 1e-6, "z")
+        assertEquals(listOf("survival", false, 20.0, 20), listOf(state.gameMode, state.dead, state.health, state.food))
+        val info = main { bots.list().single { it.name == player.name } }
+        assertEquals(listOf(player.uuid.toString(), world), listOf(info.uuid, info.world))
+    }
+
+    @Test
+    fun `a bot's events are numbered from 0 on, and read from any point`() {
+        val player = join()
+        val click = dev.netherforge.plugin.platform.SoundPlay("minecraft:ui.button.click", "master", 1.0, 1.0)
+        main { repeat(3) { platform.sounds.playTo(player.uuid, click) } }
+        awaitSent(player, 0, "three clicks") { events -> events.filterIsInstance<BotEvent.Sound>().takeIf { it.size >= 3 } }
+        val all = main { bots.events(player.name, 0) }
+        assertEquals((0 until all.next).toList(), all.events.map { it.seq }, "every event, in order, numbered from 0")
+        assertEquals(0, all.dropped)
+        val last = all.events.last().seq
+        assertEquals(listOf(last), main { bots.events(player.name, last).events.map { it.seq } })
+        assertEquals(emptyList(), main { bots.events(player.name, all.next).events }, "nothing new")
+        assertEquals(all.next, screen(player).events, "the state says what the next will be")
+    }
+
+    @Test
+    fun `every bot leaves at once`() {
+        val first = join()
+        val second = join(at(2))
+        main { bots.leaveAll() }
+        eventually("both leaving") { platform.players.get(first.uuid) == null && platform.players.get(second.uuid) == null }
+        main { assertEquals(emptyList(), bots.list().filter { it.name == first.name || it.name == second.name }) }
+        assertEquals(
+            setOf(first.name, second.name),
+            events.heard<GameEvent.PlayerQuit>("playerQuit").map { it.player.name }.filter { it == first.name || it == second.name }.toSet()
+        )
     }
 
     private companion object {

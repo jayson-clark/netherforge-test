@@ -6,7 +6,7 @@ import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.format.resourcepack.PackFonts
 import dev.netherforge.plugin.platform.ItemData
-import dev.netherforge.plugin.testkit.FakePlatform
+import dev.netherforge.plugin.testkit.FakePlayer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -454,7 +454,7 @@ class MenuTest {
         }
     }
 
-    private fun pressEscape(server: TestServer, player: FakePlatform.FakePlayer) {
+    private fun pressEscape(server: TestServer, player: FakePlayer) {
         server.platform.menus.closeAny(player.ref.uuid)
     }
 

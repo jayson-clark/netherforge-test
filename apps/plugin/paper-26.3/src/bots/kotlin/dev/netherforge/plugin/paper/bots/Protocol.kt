@@ -8,6 +8,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.Packet
 import net.minecraft.network.protocol.game.ClientboundForgetLevelChunkPacket
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket
+import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket
 import net.minecraft.network.protocol.game.ClientboundPlayerChatPacket
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
@@ -77,6 +78,9 @@ internal object Protocol : BotProtocol {
         ServerboundSignUpdatePacket(pos, lines, if (front) SignTextSlot.FRONT else SignTextSlot.BACK)
 
     override fun item(body: ItemBody): ItemStack = body.item().create()
+
+    // A record since 26.3, its speed one per axis (the same for a spawn given one speed, as Bukkit's are).
+    override fun particleMotion(packet: ClientboundLevelParticlesPacket) = packet.xMaxSpeed to packet.overrideLimiter
 
     override fun teamLook(parameters: ClientboundSetPlayerTeamPacket.Parameters) = TeamLook(
         displayName = parameters.displayName(),

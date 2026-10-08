@@ -537,6 +537,33 @@ sealed interface BotEvent {
         val pitch: Double
     ) : BotEvent
 
+    /** The server stopped [sound] (`minecraft:ui.button.click`) on the bot's client, or every sound for null. */
+    @Serializable
+    @SerialName("stop_sound")
+    data class StopSound(override val seq: Int, val sound: String? = null) : BotEvent
+
+    /**
+     * Particles the server sent the bot: [particle] (`minecraft:flame`), [count]
+     * of them at [x], [y], [z] spread by [dx], [dy], [dz] (or a direction, for a
+     * count of 0) at [speed], and whether they were [forced] past the client's
+     * particle setting and the usual 32 blocks.
+     */
+    @Serializable
+    @SerialName("particle")
+    data class Particle(
+        override val seq: Int,
+        val particle: String,
+        val x: Double,
+        val y: Double,
+        val z: Double,
+        val count: Int,
+        val dx: Double,
+        val dy: Double,
+        val dz: Double,
+        val speed: Double,
+        val forced: Boolean
+    ) : BotEvent
+
     @Serializable
     @SerialName("boss_bar")
     data class BossBar(override val seq: Int, val name: String, val shown: Boolean) : BotEvent

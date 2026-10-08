@@ -16,20 +16,6 @@ import kotlin.test.assertTrue
  * ground is solid below y = 64, with whatever blocks a test adds.
  */
 class CentityPathTest {
-    private val helpers = """
-        local function check(label, got, want)
-          if got ~= want then
-            log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want))
-          end
-        end
-        local function fails(label, fn, message)
-          local ok, err = pcall(fn)
-          if ok or not tostring(err):find(message, 1, true) then
-            log("FAIL " .. label .. ": " .. tostring(err))
-          end
-        end
-    """.trimIndent()
-
     /** A one-block walker whose hitbox is centred on its position, so its feet are its position. */
     private val walkerFile = """
         {
@@ -61,20 +47,13 @@ class CentityPathTest {
         }
     """
 
-    /** Runs [body] as a module's body, then [after] with the server; returns errors and log lines. */
-    private fun run(body: String, setup: (TestServer) -> Unit = {}, after: (TestServer) -> Unit = {}): List<String> {
-        val files = mapOf(
-            "modules/t/init.lua" to "$helpers\n$body\nlog(\"done\")",
-            "centities/walker/centity.json" to walkerFile,
-            "centities/tower/centity.json" to towerFile
-        )
-        TestServer(files, start = false).use { server ->
-            setup(server)
-            server.start()
-            after(server)
-            return server.errors.map { "ERROR ${it.message}" } + server.logs
-        }
-    }
+    /** Runs [body] as a module's body beside a walker and a tower, then [after] with the server. */
+    private fun run(body: String, setup: (TestServer) -> Unit = {}, after: (TestServer) -> Unit = {}) = LuaChecks.runModuleBody(
+        body,
+        mapOf("centities/walker/centity.json" to walkerFile, "centities/tower/centity.json" to towerFile),
+        setup,
+        after
+    )
 
     private fun TestServer.only(kind: String): Instance = runtime.session.centities.all().single { it.centity == kind }
 

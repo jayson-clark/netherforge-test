@@ -4,7 +4,7 @@ import dev.netherforge.plugin.platform.EntityRole
 import dev.netherforge.plugin.platform.EntityTag
 import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.store.Store
-import dev.netherforge.plugin.testkit.FakePlatform
+import dev.netherforge.plugin.testkit.FakeEntity
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -120,7 +120,7 @@ class PersistenceTest {
             val kept = server.runtime.session.centities.spawn("c", at)!!
             val stray = UUID.randomUUID()
             val tag = EntityTag(UUID.randomUUID(), "root", EntityRole.DISPLAY)
-            server.platform.entities.all[stray] = FakePlatform.FakeEntity(stray, EntityRole.DISPLAY, null, at, tag)
+            server.platform.entities.all[stray] = FakeEntity(stray, EntityRole.DISPLAY, null, at, tag)
 
             server.runtime.events.entitiesLoaded(
                 mapOf(stray to tag) + server.platform.entities.of(kept.id).associate {

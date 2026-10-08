@@ -14,11 +14,7 @@ import kotlin.test.assertTrue
 class HandleTest {
     private fun module(body: String) = mapOf(
         "modules/t/init.lua" to """
-            local function check(label, got, want)
-              if got ~= want then
-                log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want))
-              end
-            end
+            ${LuaChecks.HELPERS}
             $body
         """.trimIndent()
     )

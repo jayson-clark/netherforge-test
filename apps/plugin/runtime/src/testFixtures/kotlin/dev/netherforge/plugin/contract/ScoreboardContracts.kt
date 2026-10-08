@@ -1,5 +1,9 @@
 package dev.netherforge.plugin.contract
 
+import dev.netherforge.format.bridge.BotBossBar
+import dev.netherforge.format.bridge.BotEvent
+import dev.netherforge.format.bridge.BotSidebar
+import dev.netherforge.format.bridge.BotState
 import dev.netherforge.plugin.platform.BossBarLook
 import dev.netherforge.plugin.platform.BossBarOps
 import dev.netherforge.plugin.platform.PlayerListOps
@@ -36,6 +40,47 @@ abstract class BossBarOpsContract : PlatformContract() {
             bars.remove(id)
         }
     }
+
+    @Test
+    fun `a player sees the bar shown to them as it looks, and it goes when hidden`() {
+        val player = join()
+        val since = mark(player)
+        main {
+            afterwards { bars.remove(BAR) }
+            bars.create(BAR, BossBarLook("<red>Boss", 0.5, "red", "notched_6"))
+            assertTrue(bars.show(BAR, player.uuid))
+        }
+        awaitScreen(player, "the bar") { it.bossBars == listOf(BotBossBar("Boss", 0.5, "red", "notched_6")) }
+        main { bars.update(BAR, BossBarLook("<blue>Boss <b>two", 1.0, "blue", "progress")) }
+        awaitScreen(player, "the bar changed") { it.bossBars == listOf(BotBossBar("Boss two", 1.0, "blue", "progress")) }
+        main { bars.hide(BAR, player.uuid) }
+        awaitScreen(player, "no bar") { it.bossBars.isEmpty() }
+        val shown = sentSince(player, since).filterIsInstance<BotEvent.BossBar>()
+        assertEquals(listOf("Boss" to true, "Boss two" to false), shown.map { it.name to it.shown })
+    }
+
+    @Test
+    fun `a bar shows only to those it's shown to, and goes from every screen when removed`() {
+        val shown = join()
+        val other = join(at(2))
+        main {
+            afterwards { bars.remove(BAR) }
+            bars.create(BAR, BossBarLook("Only you", 0.25, "green", "notched_10"))
+            assertTrue(bars.show(BAR, shown.uuid))
+        }
+        awaitScreen(shown, "the bar") { it.bossBars.map(BotBossBar::name) == listOf("Only you") }
+        settled()
+        assertEquals(emptyList(), screen(other).bossBars, "not shown to them")
+        main { assertTrue(bars.show(BAR, other.uuid)) }
+        awaitScreen(other, "the bar") { it.bossBars.map(BotBossBar::name) == listOf("Only you") }
+        main { bars.remove(BAR) }
+        awaitScreen(shown, "no bar") { it.bossBars.isEmpty() }
+        awaitScreen(other, "no bar") { it.bossBars.isEmpty() }
+    }
+
+    private companion object {
+        const val BAR = 9002
+    }
 }
 
 /** [SidebarOps]: one sidebar per player online. */
@@ -54,6 +99,24 @@ abstract class SidebarOpsContract : PlatformContract() {
             assertFalse(sidebars.show(offline, "x", emptyList()))
             assertFalse(sidebars.hide(offline))
         }
+    }
+
+    @Test
+    fun `a player sees their sidebar's title and lines, top first, as text, and nobody else's`() {
+        val player = join()
+        val other = join(at(2))
+        main {
+            afterwards { sidebars.hide(player.uuid) }
+            assertTrue(sidebars.show(player.uuid, "<gold>Title", listOf("one", "<red>two", "<b>three</b>")))
+        }
+        awaitScreen(player, "the sidebar") { it.sidebar == BotSidebar("Title", listOf("one", "two", "three")) }
+        val fifteen = (1..15).map { "line $it" }
+        main { assertTrue(sidebars.show(player.uuid, "<gold>Longer", fifteen)) }
+        awaitScreen(player, "the sidebar changed") { it.sidebar == BotSidebar("Longer", fifteen) }
+        settled()
+        assertNull(screen(other).sidebar, "theirs is their own")
+        main { assertTrue(sidebars.hide(player.uuid)) }
+        awaitScreen(player, "no sidebar") { it.sidebar == null }
     }
 }
 
@@ -106,16 +169,28 @@ abstract class TeamOpsContract : PlatformContract() {
     }
 
     @Test
-    fun `lines under name tags come and go`() {
+    fun `lines under name tags come and go, as players see them`() {
         val player = join()
+        val viewer = join(at(2))
+        fun line(state: BotState) = state.playerList.firstOrNull { it.name == player.name }?.belowName
         main {
             afterwards { teams.clearBelowNames() }
             teams.setBelowName(player.name, "<red>10 hp")
+            // Anyone's, online or not.
             teams.setBelowName("Alex", "<blue>away")
-            teams.setBelowName(player.name, null)
+        }
+        awaitScreen(viewer, "the line under ${player.name}'s name") { line(it) == "10 hp" }
+        main { teams.setBelowName(player.name, "<green>20 hp") }
+        awaitScreen(viewer, "the line changed") { line(it) == "20 hp" }
+        main { teams.setBelowName(player.name, null) }
+        awaitScreen(viewer, "no line") { line(it) == null }
+        main {
+            teams.setBelowName(player.name, "back")
             teams.clearBelowNames()
             teams.setBelowName("Alex", null)
         }
+        settled()
+        assertNull(line(screen(viewer)), "cleared")
     }
 }
 
@@ -144,6 +219,20 @@ abstract class PlayerListOpsContract : PlatformContract() {
     }
 
     @Test
+    fun `an entry's name and place are what other players' lists show`() {
+        val player = join()
+        val viewer = join(at(2))
+        fun entry(state: BotState) = state.playerList.firstOrNull { it.name == player.name }
+        main {
+            assertTrue(list.setName(player.uuid, "<gold>Gold <b>star"))
+            assertTrue(list.setOrder(player.uuid, 5))
+        }
+        awaitScreen(viewer, "the entry's name and place") { entry(it)?.displayName == "Gold star" && entry(it)?.order == 5 }
+        main { assertTrue(list.setName(player.uuid, null)) }
+        awaitScreen(viewer, "the entry's own name") { entry(it)?.displayName == null }
+    }
+
+    @Test
     fun `one player can be out of another's list`() {
         val viewer = join()
         val other = join(at(2))
@@ -157,5 +246,17 @@ abstract class PlayerListOpsContract : PlatformContract() {
             assertNull(list.isListed(viewer.uuid, UUID.randomUUID()))
             assertFalse(list.setListed(viewer.uuid, UUID.randomUUID(), false))
         }
+    }
+
+    @Test
+    fun `a player out of someone's list is unlisted on their screen only`() {
+        val viewer = join()
+        val other = join(at(2))
+        fun listed(state: BotState, name: String) = state.playerList.firstOrNull { it.name == name }?.listed
+        main { assertTrue(list.setListed(viewer.uuid, other.uuid, false)) }
+        awaitScreen(viewer, "${other.name} unlisted") { listed(it, other.name) == false }
+        assertEquals(true, listed(screen(other), viewer.name), "only that way")
+        main { assertTrue(list.setListed(viewer.uuid, other.uuid, true)) }
+        awaitScreen(viewer, "${other.name} listed again") { listed(it, other.name) == true }
     }
 }

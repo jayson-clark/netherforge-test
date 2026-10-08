@@ -28,12 +28,7 @@ class VersionGateTest {
     @Test
     fun `using something newer than the server is an error naming the version`() {
         val script = """
-            local function fails(label, fn, message)
-              local ok, err = pcall(fn)
-              if ok or not tostring(err):find(message, 1, true) then
-                log("FAIL " .. label .. ": " .. tostring(err))
-              end
-            end
+            ${LuaChecks.HELPERS}
             local world = nf.worlds.default()
             local pig = world:spawn_entity("pig", vec3(0, 64, 0))
             local alex = nf.players.get("Alex")

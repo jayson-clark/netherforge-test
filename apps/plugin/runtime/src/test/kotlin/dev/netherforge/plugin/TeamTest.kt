@@ -7,7 +7,6 @@ import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * Scoreboard teams, the player list and the line under name tags, against
@@ -17,35 +16,9 @@ import kotlin.test.assertTrue
  * the API says so.
  */
 class TeamTest {
-    private val prelude = """
-        local function check(label, got, want)
-          if got ~= want then
-            log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want))
-          end
-        end
-        local function fails(label, fn, message)
-          local ok, err = pcall(fn)
-          if ok or not tostring(err):find(message, 1, true) then
-            log("FAIL " .. label .. ": " .. tostring(err))
-          end
-        end
-    """.trimIndent()
-
-    /** Runs [body] as the console's `/run`, once [setup] has prepared the server; then [after]. */
-    private fun run(body: String, setup: (TestServer) -> Unit = {}, after: (TestServer) -> Unit = {}): List<String> {
-        val script = "$prelude\nnf.commands.register(\"run\", function(event)\n$body\nlog(\"done\")\nend)"
-        TestServer(mapOf("modules/t/init.lua" to script), start = false).use { server ->
-            setup(server)
-            server.start()
-            server.platform.commands.runConsole("run")
-            after(server)
-            return server.errors.map { "ERROR ${it.message}" } + server.logs
-        }
-    }
-
     @Test
     fun `a team is made on the main scoreboard under the project's name, with every option`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local red = nf.teams.create("red", {
               display_name = "<red>Red Team", prefix = "<red>[R] ", suffix = " <gray>*", color = "red",
@@ -112,7 +85,7 @@ class TeamTest {
 
     @Test
     fun `players and entities join one team at a time, and say which project team they're in`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local alex = nf.players.get("Alex")
             local world = nf.worlds.default()
@@ -217,7 +190,7 @@ class TeamTest {
 
     @Test
     fun `the player list's name and order last until they leave, and being out of someone's list until it's undone`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local alex = nf.players.get("Alex")
             local bo = nf.players.get("Bo")
@@ -253,9 +226,9 @@ class TeamTest {
                 val list = server.platform.playerList
                 val alex = server.platform.players.byId.values.first { it.ref.name == "Alex" }
                 val bo = server.platform.players.byId.values.first { it.ref.name == "Bo" }
-                assertEquals("<gold>* Alex", list.names[alex.ref.uuid])
-                assertEquals(5, list.orders[alex.ref.uuid])
-                assertEquals(setOf(alex.ref.uuid), list.unlisted[bo.ref.uuid]?.toSet())
+                assertEquals("<gold>* Alex", list.name(alex.ref.uuid))
+                assertEquals(5, list.order(alex.ref.uuid))
+                assertEquals(false, list.isListed(bo.ref.uuid, alex.ref.uuid))
                 assertEquals(mapOf("Alex" to "<red>12 hearts"), server.platform.teams.belowNames)
 
                 // Alex leaves and comes back: the server forgot it all; the runtime takes them out of Bo's list again.
@@ -264,14 +237,14 @@ class TeamTest {
                 assertEquals(emptyMap(), server.platform.teams.belowNames, "the line under their name goes when they leave")
                 assertNull(server.runtime.session.teams.belowName(alex.ref.uuid))
                 server.platform.raise.playerJoin(GameEvent.PlayerJoin(alex.ref, false, null))
-                assertEquals(setOf(alex.ref.uuid), list.unlisted[bo.ref.uuid]?.toSet())
-                assertNull(list.names[alex.ref.uuid])
+                assertEquals(false, list.isListed(bo.ref.uuid, alex.ref.uuid))
+                assertEquals("Alex", list.name(alex.ref.uuid), "their own name again")
 
                 // Bo leaves and comes back: Alex is out of their list again.
                 list.quit(bo.ref.uuid)
                 server.platform.raise.playerQuit(GameEvent.PlayerQuit(bo.ref, null))
                 server.platform.raise.playerJoin(GameEvent.PlayerJoin(bo.ref, false, null))
-                assertEquals(setOf(alex.ref.uuid), list.unlisted[bo.ref.uuid]?.toSet())
+                assertEquals(false, list.isListed(bo.ref.uuid, alex.ref.uuid))
             }
         )
         assertEquals(listOf("done"), result)
@@ -279,7 +252,7 @@ class TeamTest {
 
     @Test
     fun `putting someone back in a list, and lines under name tags going when the project stops`() {
-        val result = run(
+        val result = LuaChecks.run(
             """
             local alex, bo = nf.players.get("Alex"), nf.players.get("Bo")
             alex:set_listed_for(bo, false)
@@ -296,7 +269,10 @@ class TeamTest {
                 server.player("Bo")
             },
             after = { server ->
-                assertTrue(server.platform.playerList.unlisted.values.all { it.isEmpty() })
+                val (alex, bo) = listOf("Alex", "Bo").map { name ->
+                    server.platform.players.byId.values.first { it.ref.name == name }.ref.uuid
+                }
+                assertEquals(true, server.platform.playerList.isListed(bo, alex))
                 assertEquals(mapOf("Alex" to "<gold>VIP"), server.platform.teams.belowNames)
                 server.runtime.disable()
                 assertEquals(emptyMap(), server.platform.teams.belowNames)

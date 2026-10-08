@@ -9,6 +9,7 @@ import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.platform.SpawnSetup
 import dev.netherforge.plugin.platform.StatusEffectData
 import dev.netherforge.plugin.platform.WatchedEvent
+import dev.netherforge.plugin.testkit.BlockAt
 import dev.netherforge.plugin.testkit.FakePlatform
 import java.util.UUID
 import kotlin.test.Test
@@ -580,7 +581,7 @@ class GameEventTest {
             val game = server.game
             val alex = server.alex.ref
             val chest = block(4, 64, 4, "minecraft:chest[facing=north,type=single,waterlogged=false]")
-            server.platform.worlds.blocks[FakePlatform.BlockAt("world", 4, 64, 4)] =
+            server.platform.worlds.blocks[BlockAt("world", 4, 64, 4)] =
                 "minecraft:chest[facing=north,type=single,waterlogged=false]"
             val inventory = InventoryRef.Block("world", 4, 64, 4)
             assertFalse(game.playerOpenInventory(GameEvent.PlayerInventory(alex, "chest", inventory, chest)))

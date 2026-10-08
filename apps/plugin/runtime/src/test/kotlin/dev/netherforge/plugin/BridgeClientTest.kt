@@ -15,15 +15,21 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
-/** The cap on a frame from the editor, before and after the hello: the reader on its own, and the client over a real socket. */
-class BridgeFrameLimitTest {
+/**
+ * The dev bridge's client on its own: the cap on a frame from the editor, before and after the hello (the reader
+ * alone, and the client over a real socket), and when it gives up on an editor that has gone.
+ */
+class BridgeClientTest {
     @Test
     fun `the reader splits frames on newlines, drops a carriage return and ends cleanly`() {
         val reader = FrameReader(ByteArrayInputStream("one\r\n\ntwo\nlast".toByteArray()), 100)
@@ -50,16 +56,58 @@ class BridgeFrameLimitTest {
         assertEquals("ééé", again.readFrame())
     }
 
-    private class Harness(val listener: ServerSocket) : AutoCloseable {
+    @Test
+    fun `time connected doesn't count towards giving up, only time since the editor went`() {
+        ServerSocket(0).use { listener ->
+            // The client's clock is the test's: only the test moves it.
+            Harness(listener, abandonAfterMillis = 300).use { harness ->
+                harness.client.start()
+                harness.accept().use { socket ->
+                    harness.answerHello(socket)
+                    // Connected for far longer than the client waits for an editor that's gone.
+                    harness.now.addAndGet(10_000)
+                }
+                // The editor went just now (on the client's clock), so the client tries again rather than giving up.
+                harness.accept().use { socket -> harness.answerHello(socket) }
+                assertFalse(harness.abandoned.get(), "gave up on an editor that had only just gone")
+                // Gone for good: once 300 ms pass on its clock without a connection, it gives up.
+                listener.close()
+                val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+                while (!harness.abandoned.get() && System.nanoTime() < deadline) {
+                    harness.now.addAndGet(100)
+                    Thread.sleep(20)
+                }
+                assertTrue(harness.abandoned.get(), "gave up once the editor had been gone past the limit")
+            }
+        }
+    }
+
+    private class Harness(val listener: ServerSocket, abandonAfterMillis: Long = Long.MAX_VALUE) : AutoCloseable {
         val problems = LinkedBlockingQueue<String>()
         val connected = LinkedBlockingQueue<Unit>()
+        val abandoned = AtomicBoolean()
+
+        /** The client's clock, in milliseconds: it moves only when a test moves it. */
+        val now = AtomicLong()
         val client = BridgeClient(
             port = listener.localPort,
             hello = { HelloParams("secret", Bridge.PROTOCOL, "0.1.0", "26.3", "/p") },
             onFrame = {},
             onConnected = { connected += Unit },
-            onProblem = { problems += it }
+            onProblem = { problems += it },
+            abandonAfterMillis = abandonAfterMillis,
+            onAbandoned = { abandoned.set(true) },
+            clock = now::get
         )
+
+        /** Reads the client's hello off [socket] and accepts it, as the editor does; waits until the client has heard. */
+        fun answerHello(socket: Socket) {
+            readHello(socket)
+            val answer = RpcResponse.ok(JsonPrimitive(0), Bridge.hello.encodeResult(HelloResult(Bridge.PROTOCOL)))
+            socket.getOutputStream().write((JsonRpc.line(answer) + "\n").toByteArray())
+            socket.getOutputStream().flush()
+            assertEquals(Unit, connected.poll(10, TimeUnit.SECONDS), "accepted")
+        }
 
         fun accept(): Socket {
             listener.soTimeout = 10_000
@@ -72,17 +120,6 @@ class BridgeFrameLimitTest {
             client.stop()
             listener.close()
         }
-    }
-
-    /** Reads the hello's line off [socket]. */
-    private fun readHello(socket: Socket) {
-        val line = StringBuilder()
-        while (true) {
-            val byte = socket.getInputStream().read()
-            if (byte < 0 || byte == '\n'.code) break
-            line.append(byte.toChar())
-        }
-        assertTrue("\"hello\"" in line, "$line")
     }
 
     /** Whether the peer has closed: reads the end of the stream, or a reset (it closed with our bytes unread). */
@@ -132,11 +169,7 @@ class BridgeFrameLimitTest {
             Harness(listener).use { harness ->
                 harness.client.start()
                 harness.accept().use { socket ->
-                    readHello(socket)
-                    val answer = RpcResponse.ok(JsonPrimitive(0), Bridge.hello.encodeResult(HelloResult(Bridge.PROTOCOL)))
-                    socket.getOutputStream().write((JsonRpc.line(answer) + "\n").toByteArray())
-                    socket.getOutputStream().flush()
-                    assertEquals(Unit, harness.connected.poll(10, TimeUnit.SECONDS), "accepted")
+                    harness.answerHello(socket)
                     // Past the pre-hello cap is fine now (the line isn't JSON, so it's a parse error, not a drop).
                     socket.getOutputStream().fill(BridgeClient.MAX_FRAME_BEFORE_HELLO + 1)
                     assertTrue(harness.problems.isEmpty())
@@ -147,4 +180,15 @@ class BridgeFrameLimitTest {
             }
         }
     }
+}
+
+/** Reads the hello's line off [socket]. */
+private fun readHello(socket: Socket) {
+    val line = StringBuilder()
+    while (true) {
+        val byte = socket.getInputStream().read()
+        if (byte < 0 || byte == '\n'.code) break
+        line.append(byte.toChar())
+    }
+    assertTrue("\"hello\"" in line, "$line")
 }

@@ -13,14 +13,28 @@ quarantined the same day (see CI).
 ## Layers
 
 1. **Unit tests, next to the code.** No network, no real clock (inject one),
-   temp dirs only.
+   temp dirs only. Nothing sleeps for a time and asserts what happened
+   meanwhile: move an injected clock (`TestServer(clock = …)`,
+   `BridgeClient(clock = …)`), or wait for a condition with a generous
+   deadline (10 s) and assert on the condition. `DebuggerTest`'s paused time
+   and `BridgeClientTest`'s giving up are the models.
    - `format`: `kotlin.test` in `commonTest`, run on **both JVM and JS**
      (`:format:allTests`). A test passing on both is how we know the editor
      and plugin agree.
    - `apps/plugin/runtime`: JUnit against the **fake `Platform`**
      (`FakePlatform`, in `:plugin:testkit`'s main sources so a project's own
      script tests can use it too), running real Lua 5.4 scripts in a temp
-     project through `TestServer` (see the plugin-runtime skill).
+     project through `TestServer` (see the plugin-runtime skill). A Lua
+     check is written with `LuaChecks` (`runtime/src/test/.../LuaChecks.kt`),
+     never a copy of its own: `check(label, got, want)`, `near(label, got,
+want[, tolerance])` and `fails(label, fn, message)` log `FAIL <label>: got
+…, want …` only for what's wrong, and the script logs `done` last, so
+     `assertEquals(LuaChecks.DONE, result)` fails naming each bad expression
+     and fails too when the script never ran. `LuaChecks.run(body, files,
+setup, after)` runs it as the console's `/run`, `runModuleBody` as a
+     module's body, `LuaChecks.command(body)` is the file for a server a test
+     builds itself, and `server.runChecks()` / `server.output()` (errors as
+     `ERROR …`, then logged lines) read the result.
    - **A project's own script tests** (`*_test.lua`, `nf.test`): `netherforge
 test` and the editor's Tests panel run them with `:plugin:test-runner`
      (`apps/plugin/test-runner`, the jar `NetherForgeTest-<version>.jar`). It
@@ -471,6 +485,43 @@ subclass per server says which one through `connect()`:
   server. `ContractScenario` boots a server with those three and reports
   each suite's test as its own, for every adapter.
 
+**Every suite runs on both, every test of it.** `ContractSuites` finds the
+suites from themselves (the abstract `PlatformContract`s in the fixtures'
+`contract` package and their `@Test` methods), so no list can forget one:
+`ContractSuitesTest` holds the fake to one subclass per suite, and the
+contract plugin reports its run through `ContractRun`, which names a suite's
+test by the suite (`WorldOpsContract > …`) and adds every expected test that
+never ran as `MISSING` (its first Paper run found `PauseOpsContract` missing
+from `PaperContracts.ALL`). `ContractScenario` fails on anything but a pass:
+a failure, an abort, a skip, or a missing test. A test only one server can
+run says so and why, `@OnlyOn(ContractTarget.FAKE, "…")` (disabled on the
+other, which the JUnit parameter `netherforge.contract.target` names: the
+contract plugin sets `PAPER`); `ContractScenario` reports it as skipped, with
+the reason. `ContractRunTest` checks the report itself.
+
+**What a player receives is checked on their client.** Players are bots on
+both servers, and a bot keeps what its client was sent:
+`screen(player)` (its `BotState`: boss bars, sidebar, dialog, packs, player
+list with each entry's name, order, listing and the line under its name
+tag), and its numbered events (`mark(player)` then `sentSince` or
+`awaitSent`: sounds and stops, particles, boss bars shown and hidden, packs).
+`awaitScreen` waits for the screen to show something; `settled()` lets a few
+ticks pass before asserting a bot was _not_ sent something. So the particle,
+sound, boss bar, sidebar, dialog, pack, team and player list suites pin what
+reaches a player, not only what an Ops call answers; the fake bots model
+Paper's ranges (particles 32 blocks, 512 forced, of particles the game has;
+a world's sound 16 blocks, times its volume above 1). A new thing players
+receive gets a `BotEvent` or `BotState` field in format's bot protocol,
+recorded by the Paper bots (`Bot.kt`, through `BotProtocol` where versions'
+packets differ) and by `FakeBots.sent`, and a contract case.
+
+Runtime tests may read the fake's call logs (`particles.sent`,
+`sounds.played`, `resourcePacks.sent`: what the runtime asked) and the fake's
+state that a contract pins on both servers through the screen above
+(`dialogs.showing`, `sidebars.showing`, `bossBars`, `teams.belowNames`); a
+read of anything else the fake models goes through the `Ops` interface
+(`playerList.isListed`, not its `unlisted` map).
+
 The contract server has no project, but it has biomes of its own: the contract plugin's `ContractBootstrap` (a
 Paper bootstrapper, with a `bootstrap` dependency on NetherForge for its classes) builds `ContractBiomes` (a featureless
 one, one with every field, one with features) through format's start-up datapack for the server's data pack format
@@ -567,8 +618,15 @@ the run), then tag the test with it:
   a step no later step builds on. Every normal run leaves it out; nightly runs
   `-Pnetherforge.integration.scope=quarantine` on its own, without failing,
   so a pass there says the fix worked.
-- **Unit tests (Kotlin, JUnit 5)**: `@Tag("quarantine")` with the issue's
-  URL in a comment above it (the runtime's tests use the same tag name).
+- **The runtime's and the test runner's tests**: `@Quarantined(issue =
+"https://github.com/<owner>/<repo>/issues/<n>")` (runtime test fixtures,
+  `dev.netherforge.plugin.Quarantined`, the same `quarantine` tag) on the test
+  method or class. Their `test` tasks leave it out; `quarantinedTest` runs
+  only it (`node tools/gradle.mjs :plugin:runtime:quarantinedTest`).
+  `QuarantineTest` (one in each) fails on a link that isn't an issue's URL
+  and on the tag put on by hand, without one.
+- **Other unit tests (Kotlin, JUnit 5)**: `@Tag("quarantine")` with the issue's
+  URL in a comment above it.
 - **vitest**: `it.skip('…', …)` (or `describe.skip`) with
   `// quarantined: <issue URL>` above it.
 - **Playwright**: `test.fixme('…', …)` (or `test.fixme()` inside the test)

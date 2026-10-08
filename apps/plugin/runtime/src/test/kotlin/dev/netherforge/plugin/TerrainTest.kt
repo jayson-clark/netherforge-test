@@ -1,6 +1,7 @@
 package dev.netherforge.plugin
 
 import dev.netherforge.format.terrain.TerrainBlock
+import dev.netherforge.plugin.LuaChecks.runChecks
 import dev.netherforge.plugin.testkit.FakePlatform
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -37,11 +38,6 @@ class TerrainTest {
     private fun manifest(worlds: String = "") =
         """{ "formatVersion": 1, "name": "Test", "namespace": "test", "version": "1.0.0", "minecraft": "26.3"$worlds }"""
 
-    private fun TestServer.run(): List<String> {
-        platform.commands.runConsole("run")
-        return errors.map { "ERROR ${it.message}" } + logs
-    }
-
     private fun server(extra: Map<String, Any> = emptyMap(), worlds: String = "") =
         TestServer(files + mapOf("netherforge.json" to manifest(worlds), "modules/t/init.lua" to module) + extra)
 
@@ -65,7 +61,7 @@ class TerrainTest {
     @Test
     fun `a script makes a world with one, and the world keeps it across a restart`() {
         server().use { server ->
-            assertEquals(listOf("made true"), server.run())
+            assertEquals(listOf("made true"), server.runChecks())
             val made = assertNotNull(server.platform.worldManager.created["realm"])
             assertEquals("hills", made.terrain)
             assertEquals("normal", made.generator)
@@ -78,7 +74,7 @@ class TerrainTest {
                 """nf.commands.register("run", function() log("loaded " .. tostring(nf.worlds.load("realm") ~= nil)) end)"""
             )
             server.restart()
-            assertEquals("loaded true", server.run().last())
+            assertEquals("loaded true", server.runChecks().last())
             assertEquals("realm normal hills", server.platform.worldManager.loads.last())
         }
     }
@@ -102,7 +98,7 @@ class TerrainTest {
                 """.trimIndent()
             )
         ).use { server ->
-            val out = server.run()
+            val out = server.runChecks()
             assertTrue(
                 out[0].startsWith("false ") && "\"moon\" isn't one of the project's terrains" in out[0] && "it has: hills" in out[0],
                 out[0]

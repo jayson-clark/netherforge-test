@@ -6,7 +6,7 @@ import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.ItemData
-import dev.netherforge.plugin.testkit.FakePlatform.BlockAt
+import dev.netherforge.plugin.testkit.BlockAt
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals

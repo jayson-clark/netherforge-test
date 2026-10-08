@@ -1,6 +1,7 @@
 package dev.netherforge.plugin
 
 import dev.netherforge.format.project.SpawnCategory
+import dev.netherforge.plugin.LuaChecks.runChecks
 import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.store.Store
@@ -17,41 +18,17 @@ import kotlin.test.assertTrue
  * what survives a reload or a restart, and the mistakes that are errors.
  */
 class WorldAdminTest {
-    private val helpers = """
-        local function check(label, got, want)
-          if got ~= want then
-            log("FAIL " .. label .. ": got " .. tostring(got) .. ", want " .. tostring(want))
-          end
-        end
-        local function fails(label, fn, message)
-          local ok, err = pcall(fn)
-          if ok or not tostring(err):find(message, 1, true) then
-            log("FAIL " .. label .. ": " .. tostring(err))
-          end
-        end
-    """.trimIndent()
-
-    /** A module whose `/run` runs [body], with `check` and `fails`. */
-    private fun module(body: String) = "$helpers\nnf.commands.register(\"run\", function(event)\n$body\nlog(\"done\")\nend)\n"
-
     private fun manifest(managed: String) =
         """{ "formatVersion": 1, "name": "Test", "namespace": "test", "version": "1.0.0", "minecraft": "26.3", "managedWorlds": [$managed] }"""
 
     private val arenaMap = mapOf("maps/arena/level.dat" to "a level", "maps/arena/region/r.0.0.mca" to "chunks")
-
-    private fun TestServer.run(): List<String> {
-        platform.commands.runConsole("run")
-        return output()
-    }
-
-    private fun TestServer.output() = errors.map { "ERROR ${it.message}" } + logs
 
     @Test
     fun `a project creates, loads and unloads its own worlds, and only those`() {
         TestServer(
             mapOf(
                 TestServer.MANIFEST to manifest("\"nether\""),
-                "modules/t/init.lua" to module(
+                "modules/t/init.lua" to LuaChecks.command(
                     """
                     local arena = nf.worlds.create("arena_1", { generator = "void", environment = "nether", seed = 7, structures = false })
                     check("created", arena:name(), "arena_1")
@@ -77,7 +54,7 @@ class WorldAdminTest {
         ).use { server ->
             server.platform.worlds.worldNames += "other"
             server.start()
-            assertEquals(listOf("done"), server.run())
+            assertEquals(listOf("done"), server.runChecks())
             val manager = server.platform.worldManager
             assertEquals(
                 "void nether 7 false false",
@@ -90,7 +67,7 @@ class WorldAdminTest {
             val alex = server.platform.players.add("Alex", Location("arena_1", 3.0, 70.0, 3.0))
             server.write(
                 "modules/t/init.lua",
-                module(
+                LuaChecks.command(
                     """
                     local arena = nf.worlds.get("arena_1")
                     check("unload", arena:unload({ move_players_to = nf.worlds.get("nether") }), true)
@@ -105,7 +82,7 @@ class WorldAdminTest {
                 )
             )
             server.reload("modules/t/init.lua")
-            assertEquals(listOf("done", "done"), server.run())
+            assertEquals(listOf("done", "done"), server.runChecks())
             assertEquals("nether", alex.location.world)
             assertEquals(listOf("arena_1 save=true", "arena_1 save=false"), manager.unloads)
             assertEquals(listOf("arena_1"), manager.deleted)
@@ -118,7 +95,7 @@ class WorldAdminTest {
     fun `a world the server keeps isn't unloaded`() {
         TestServer(
             mapOf(
-                "modules/t/init.lua" to module(
+                "modules/t/init.lua" to LuaChecks.command(
                     """
                     local arena = nf.worlds.create("kept")
                     check("kept", arena:unload(), false)
@@ -128,18 +105,18 @@ class WorldAdminTest {
             )
         ).use { server ->
             server.platform.worldManager.kept += "kept"
-            assertEquals(listOf("done"), server.run())
+            assertEquals(listOf("done"), server.runChecks())
         }
     }
 
     @Test
     fun `worlds a project created stay its own across restarts`() {
-        TestServer(mapOf("modules/t/init.lua" to module("nf.worlds.create(\"arena_1\")"))).use { server ->
-            assertEquals(listOf("done"), server.run())
+        TestServer(mapOf("modules/t/init.lua" to LuaChecks.command("nf.worlds.create(\"arena_1\")"))).use { server ->
+            assertEquals(listOf("done"), server.runChecks())
             assertEquals(mapOf("arena_1" to Store.OwnedWorld("normal")), server.runtime.store.worlds.of("test"))
-            server.write("modules/t/init.lua", module("check(\"managed\", nf.worlds.get(\"arena_1\"):is_managed(), true)"))
+            server.write("modules/t/init.lua", LuaChecks.command("check(\"managed\", nf.worlds.get(\"arena_1\"):is_managed(), true)"))
             server.restart()
-            assertEquals(listOf("done", "done"), server.run())
+            assertEquals(listOf("done", "done"), server.runChecks())
         }
     }
 
@@ -147,7 +124,7 @@ class WorldAdminTest {
     fun `a copy of a map arrives at its callback, on a later tick`() {
         TestServer(
             arenaMap + mapOf(
-                "modules/t/init.lua" to module(
+                "modules/t/init.lua" to LuaChecks.command(
                     """
                     local result = nf.worlds.copy("arena", "arena_2", function(world, err)
                       log("copied " .. world:name() .. " " .. tostring(world:is_managed()) .. " " .. tostring(err))
@@ -165,7 +142,7 @@ class WorldAdminTest {
                 )
             )
         ).use { server ->
-            assertEquals(listOf("done"), server.run())
+            assertEquals(listOf("done"), server.runChecks())
             server.tick()
             assertEquals(listOf("done", "copied arena_2 true nil"), server.output())
             val (folder, name) = server.platform.worldManager.copies.single()
@@ -183,7 +160,7 @@ class WorldAdminTest {
     fun `in a task, a copy waits and returns the world`() {
         TestServer(
             arenaMap + mapOf(
-                "modules/t/init.lua" to module(
+                "modules/t/init.lua" to LuaChecks.command(
                     """
                     nf.task(function()
                       local world, err = nf.worlds.copy("arena", "arena_2")
@@ -195,7 +172,7 @@ class WorldAdminTest {
                 )
             )
         ).use { server ->
-            assertEquals(listOf("done"), server.run())
+            assertEquals(listOf("done"), server.runChecks())
             assertEquals(listOf("done"), server.output())
             server.tick()
             assertEquals(listOf("done", "task got arena_2 nil"), server.output())
@@ -209,7 +186,7 @@ class WorldAdminTest {
     fun `a failed copy answers nil and why, and isn't the project's`() {
         TestServer(
             arenaMap + mapOf(
-                "modules/t/init.lua" to module(
+                "modules/t/init.lua" to LuaChecks.command(
                     """
                     nf.task(function()
                       local world, err = nf.worlds.copy("arena", "arena_2")
@@ -222,7 +199,7 @@ class WorldAdminTest {
             )
         ).use { server ->
             server.platform.worldManager.copyFailure = "disk full"
-            assertEquals(listOf("done"), server.run())
+            assertEquals(listOf("done"), server.runChecks())
             server.tick()
             val why = "couldn't copy map \"arena\" into world \"arena_2\": couldn't copy its files (disk full)"
             assertEquals(listOf("done", "got nil: $why", "callback got nil: ${why.replace("arena_2", "arena_3")}"), server.output())
@@ -240,18 +217,18 @@ class WorldAdminTest {
     fun `a script that stops before its copy is done isn't called, but the world is still made`() {
         TestServer(
             arenaMap + mapOf(
-                "modules/t/init.lua" to module(
+                "modules/t/init.lua" to LuaChecks.command(
                     """
                     nf.worlds.copy("arena", "arena_2", function(world) log("too late") end)
                     """
                 )
             )
         ).use { server ->
-            assertEquals(listOf("done"), server.run())
-            server.write("modules/t/init.lua", module("check(\"made\", nf.worlds.get(\"arena_2\"):is_managed(), true)"))
+            assertEquals(listOf("done"), server.runChecks())
+            server.write("modules/t/init.lua", LuaChecks.command("check(\"made\", nf.worlds.get(\"arena_2\"):is_managed(), true)"))
             server.reload("modules/t/init.lua")
             server.tick()
-            assertEquals(listOf("done", "done"), server.run())
+            assertEquals(listOf("done", "done"), server.runChecks())
         }
     }
 
@@ -259,7 +236,7 @@ class WorldAdminTest {
     fun `a cancelled task's copy is still made, and nothing wakes it`() {
         TestServer(
             arenaMap + mapOf(
-                "modules/t/init.lua" to module(
+                "modules/t/init.lua" to LuaChecks.command(
                     """
                     local task = nf.task(function()
                       nf.worlds.copy("arena", "arena_2")
@@ -271,7 +248,7 @@ class WorldAdminTest {
                 )
             )
         ).use { server ->
-            assertEquals(listOf("done"), server.run())
+            assertEquals(listOf("done"), server.runChecks())
             assertEquals(0, server.runtime.session.async.waits(server.runtime.session.scripts.scopes().single()))
             server.tick(2)
             assertEquals(listOf("done"), server.output())
@@ -283,7 +260,7 @@ class WorldAdminTest {
     fun `a whole-project reload during a copy drops what the old session waited for, leaving the copy to load`() {
         TestServer(
             arenaMap + mapOf(
-                "modules/t/init.lua" to module(
+                "modules/t/init.lua" to LuaChecks.command(
                     """
                     nf.worlds.copy("arena", "arena_2", function(world) log("too late") end)
                     nf.task(function() nf.worlds.copy("arena", "arena_3") log("task too late") end)
@@ -291,7 +268,7 @@ class WorldAdminTest {
                 )
             )
         ).use { server ->
-            assertEquals(listOf("done"), server.run())
+            assertEquals(listOf("done"), server.runChecks())
             server.reload(TestServer.MANIFEST)
             server.tick()
             assertEquals(listOf("done"), server.output())
@@ -299,12 +276,12 @@ class WorldAdminTest {
             assertFalse(server.platform.worlds.exists("arena_2"))
             server.write(
                 "modules/t/init.lua",
-                module(
+                LuaChecks.command(
                     "check(\"loaded\", nf.worlds.load(\"arena_2\"):is_managed(), true) check(\"and\", nf.worlds.load(\"arena_3\") ~= nil, true)"
                 )
             )
             server.reload("modules/t/init.lua")
-            assertEquals(listOf("done", "done"), server.run())
+            assertEquals(listOf("done", "done"), server.runChecks())
         }
     }
 
@@ -312,7 +289,7 @@ class WorldAdminTest {
     fun `a world's border`() {
         TestServer(
             mapOf(
-                "modules/t/init.lua" to module(
+                "modules/t/init.lua" to LuaChecks.command(
                     """
                     local border = nf.worlds.default():border()
                     check("same handle", nf.worlds.default():border(), border)
@@ -346,7 +323,7 @@ class WorldAdminTest {
                 )
             )
         ).use { server ->
-            assertEquals(listOf("done"), server.run())
+            assertEquals(listOf("done"), server.runChecks())
             assertEquals(listOf("World(name=world) 100.0 over 0", "World(name=world) 50.0 over 600"), server.platform.borders.sizes)
         }
     }
@@ -355,7 +332,7 @@ class WorldAdminTest {
     fun `a player's own border`() {
         TestServer(
             mapOf(
-                "modules/t/init.lua" to module(
+                "modules/t/init.lua" to LuaChecks.command(
                     """
                     local player = nf.players.get("Alex")
                     nf.worlds.default():border():set_size(500)
@@ -379,7 +356,7 @@ class WorldAdminTest {
         ).use { server ->
             server.player("Alex")
             server.start()
-            assertEquals(listOf("done"), server.run())
+            assertEquals(listOf("done"), server.runChecks())
         }
     }
 
@@ -389,7 +366,7 @@ class WorldAdminTest {
             mapOf(
                 "structures/house.nbt" to "size 2 1 1\n0 0 0 minecraft:oak_planks\n1 0 0 minecraft:glass",
                 "structures/broken.nbt" to "not a structure",
-                "modules/t/init.lua" to module(
+                "modules/t/init.lua" to LuaChecks.command(
                     """
                     local world = nf.worlds.default()
                     world:set_block(vec3(0, 70, 0), "minecraft:gold_block")
@@ -416,7 +393,7 @@ class WorldAdminTest {
                 )
             )
         ).use { server ->
-            assertEquals(listOf("done"), server.run())
+            assertEquals(listOf("done"), server.runChecks())
             val saved = server.project.resolve(".netherforge/data/.nf/structures/reset.nbt")
             assertTrue(Files.isRegularFile(saved), "saved outside the project's files")
             assertEquals(
@@ -435,16 +412,16 @@ class WorldAdminTest {
         TestServer(
             arenaMap + mapOf(
                 "structures/house.nbt" to "size 1 1 1\n0 0 0 minecraft:oak_planks",
-                "modules/t/init.lua" to module("nf.worlds.default():place_structure(\"house\", vec3(0, 90, 0))")
+                "modules/t/init.lua" to LuaChecks.command("nf.worlds.default():place_structure(\"house\", vec3(0, 90, 0))")
             )
         ).use { server ->
-            assertEquals(listOf("done"), server.run())
+            assertEquals(listOf("done"), server.runChecks())
             server.write("structures/house.nbt", "size 1 1 1\n0 0 0 minecraft:glass")
             val structure = server.reload("structures/house.nbt").resources.single()
             assertEquals("structure:house", structure.label)
             assertTrue(structure.ok)
             assertEquals(listOf(server.project.resolve("structures/house.nbt")), server.platform.structures.forgotten)
-            assertEquals(listOf("done", "done"), server.run())
+            assertEquals(listOf("done", "done"), server.runChecks())
             assertEquals("minecraft:glass", server.platform.worlds.state("world", 0, 90, 0))
 
             server.write("maps/arena/level.dat", "a new level")
@@ -467,7 +444,7 @@ class WorldAdminTest {
                          "arena_1": { "spawnLimits": { "animal": 0 } },
                          "elsewhere": { "spawnLimits": { "ambient": 1 } } }"""
                 ),
-                "modules/t/init.lua" to module(
+                "modules/t/init.lua" to LuaChecks.command(
                     """
                     local world = nf.worlds.default()
                     check("limit", world:spawn_limit("monster"), 30)
@@ -483,7 +460,7 @@ class WorldAdminTest {
                 )
             )
         ).use { server ->
-            assertEquals(listOf("done"), server.run())
+            assertEquals(listOf("done"), server.runChecks())
             val worlds = server.platform.worlds
             assertEquals(5, worlds.spawnLimit("world", SpawnCategory.MONSTER))
             server.write(
