@@ -58,7 +58,12 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
      snapshots. A `*.node.test.ts` runs in Node (type-checked by
      `tsconfig.node.json`): `core/luals/luals.node.test.ts` drives the real
      lua-language-server the way the editor sets it up.
-   - `apps/editor/src-tauri`: `cargo test` with temp dirs.
+   - `apps/editor/src-tauri`: `cargo test` with temp dirs, on every OS. A
+     test that needs a process runs `examples/fake_server.rs` (Java with Paper
+     or the test runner, lua-language-server, an orphaned server;
+     `testing::fake_server()`), never `/bin/sh`. No sleeps: wait on a condition
+     with `testing::until` (30 s `PATIENCE`), and know a watcher is live with
+     `watcher::until_watching` (a probe file's event) before relying on it.
 2. **Golden and contract tests.**
    - `examples/*` must load clean and be byte-for-byte canonical (JVM and JS),
      and hold a resource of every kind in format's registry (binary kinds
@@ -130,16 +135,23 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
      run against the fake here and against Paper in the integration test, so
      the fake can't say anything the real server doesn't.
    - **The editor's backend contract**: `apps/editor/src/core/backend/contract.json`,
-     one case list run on `MemoryBackend` (`contract.test.ts`, vitest) and on
-     the real Rust commands through Tauri's IPC on its mock runtime
-     (`src-tauri/src/commands/contract.rs`, `cargo test`). Its `repositories`
-     are real bare git repositories on the Rust side (`$GIT/<name>`) and
-     `gitRepos` on the memory backend; a step's `save` keeps its answer for
-     the steps after it (`$<name>`). Cases start with nothing trusted
-     (`trusted: []`), as the app does: one that runs the server or fetches
-     calls `project_trust` first. The memory backend
-     every UI test uses can't promise what the app doesn't do; Rust is the
-     truth when they disagree (see the tauri-backend skill).
+     one case list in the UI's terms (`Backend` calls, events listened to and
+     expected, another program's file changes, an agent's MCP request, fetching
+     the backend's URLs; the format is `contractRunner.ts`'s header), run on
+     `MemoryBackend` (`contract.test.ts`) and on `TauriBackend` with
+     `@tauri-apps/api`'s IPC mocked to forward to the Rust commands
+     (`contract.tauri.test.ts`, which starts the host in
+     `src-tauri/src/commands/contract.rs` with cargo). Both are vitest, so
+     `pnpm --filter @netherforge/editor test` builds the Rust backend once.
+     `contract.test.ts` also holds every `Backend` member to a case or to
+     `EXCLUDED` with a reason (those get `tauri.test.ts` and
+     `tauriMenu.test.ts`, plugin IPC mocked). Its `repositories` are real bare
+     git repositories on the Rust side (`$GIT/<name>`) and `gitRepos` on the
+     memory backend; a step's `save` keeps its answer for the steps after it
+     (`$<name>`). Cases start with nothing trusted (`trusted: []`), as the app
+     does: one that runs the server or fetches calls `trustProject` first. The
+     memory backend every UI test uses can't promise what the app doesn't do;
+     Rust is the truth when they disagree (see the tauri-backend skill).
 3. **Integration**: `pnpm test:integration` runs every scenario against
    every Paper adapter (`apps/plugin/integration`, `:plugin:integration`), each
    on a headless Paper of the adapter's own Minecraft version with its plugin

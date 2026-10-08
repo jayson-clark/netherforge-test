@@ -15,8 +15,9 @@ writes the UI's typed bindings from it (`apps/editor/src/core/backend/generated/
 
 | Module (`src/`)               | Owns                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `commands/*`                  | The Tauri commands. Thin: unpack args, find the open project, call a module. All `async`. `bindings.rs` is the one list of commands and events (and `export`, which `cargo run --example bindings` runs); `contract.rs` runs the backend contract suite.                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `state.rs`                    | `AppState`: dirs, the open project (+ its watcher), the `ServerManager`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `commands/*`                  | The Tauri commands. Thin: unpack args, find the open project, call a module. All `async`. `bindings.rs` is the one list of commands and events (and `export`, which `cargo run --example bindings` runs); `contract.rs` is the backend contract suite's host.                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `app/tools.rs`                | `Tools`, worked out once at startup and kept in `AppState`: where the plugin jars, the test runner, LuaLS, Java (`JavaEnv`), Paper (`PaperSource`) and the player's installs come from. Commands read it instead of looking things up, so the contract host hands the real commands stand-ins.                                                                                                                                                                                                                                                                                                                                                                         |
+| `state.rs`                    | `AppState`: dirs, `Tools`, the open project (+ its watcher), the `ServerManager`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `app/dirs.rs`                 | Config dir (`settings.json`, `recent.json`, `eula.json`) and data dir (`jdks/`, `paper/`, `minecraft/` the cache, `servers/<hash>/` each project's dev server).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `app/events.rs`               | `EventSink` (an `AppHandle` in the app, `RecordingSink` in tests) and the events with no other home. An event is its payload type, deriving `tauri_specta::Event` with its name.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `app/plugins.rs`              | Finding `NetherForge-<v>-paper-<mc>.jar` (one per Minecraft version; the project's target picks it) and its bots companion `NetherForgeBots-<v>-paper-<mc>.jar` beside it: bundled `resources/plugins/`, plus the repo's builds in dev.                                                                                                                                                                                                                                                                                                                                                                                                                                |
@@ -246,8 +247,9 @@ pub async fn`, returning `crate::error::Result<T>`. Payload types derive
    `commands.<name>(…)` through `call` (or `done` for a command answering
    nothing), and `MemoryBackend` (see the editor-ui skill).
 5. **Contract**: cases in `apps/editor/src/core/backend/contract.json` for
-   what both backends must do (results and error codes), and the command's
-   mapping in `contract.test.ts`'s `CALLS`. See "The contract suite".
+   what both backends must do (results, error codes, events), calling the
+   new `Backend` method; the guard in `contract.test.ts` fails until it's in
+   a case or in `EXCLUDED` with why. See "The contract suite".
 
 Bridge frames are relayed as text both ways, so a new request, notification
 or stream needs no Rust change: declare it in format's `Bridge.kt` and the UI
@@ -258,28 +260,40 @@ recorded session) or the backend's own requests.
 ## The contract suite
 
 `MemoryBackend` (the UI's tests run on it) is checked against these
-commands by one case list, `apps/editor/src/core/backend/contract.json`:
-each case is a fresh backend with a small project at `$ROOT` and steps
-that call a command by its Rust name with the arguments the UI sends,
-expecting a result (matched as a subset, `"$any"` for anything) or an
-error code. Two runners:
+commands by one case list, `apps/editor/src/core/backend/contract.json`, in
+the UI's terms: each case is a fresh backend with a small project at `$ROOT`
+and steps that call `Backend` methods, listen to its events and wait for
+one matching, change files as another program would, send an agent's MCP
+request, or fetch a URL the backend built (`contractRunner.ts` documents the
+format). Two runs, both vitest:
 
-- `commands/contract.rs` drives the real commands through Tauri's own IPC
-  (`tauri::test::get_ipc_response`) on the mock runtime, built with the
-  app's real context (`crate::context()`, so the capability and the
-  generated permission are checked too) and a real `AppState` over temp
-  dirs. Only the window is fake; the invoke handler, argument
-  deserialization and the serialized rejection are the app's.
-- `contract.test.ts` (vitest) runs the same cases on `MemoryBackend`.
+- `contract.test.ts` on `MemoryBackend`.
+- `contract.tauri.test.ts` on `TauriBackend`, with `@tauri-apps/api`'s IPC
+  mocked (`mockIPC`) to forward each command to the **contract host**, the
+  ignored test `commands::contract::host`, which it starts with `cargo test`
+  and which connects back over `NETHERFORGE_CONTRACT_HOST`. The host runs
+  each command through Tauri's own IPC (`tauri::test::get_ipc_response`) on
+  the mock runtime, built with the app's real context (`crate::context()`,
+  so the capability and the generated permission are checked too) and a real
+  `AppState` over temp dirs, and forwards every event the app emits (from
+  `bindings::event_names()`) for the UI's listeners. So `TauriBackend`'s
+  mapping onto commands, deserialization, the commands and the events are all
+  the app's. Only the window is fake, and what the app finds on the computer
+  (`app::tools::Tools`) are stand-ins: `examples/fake_server.rs` as the only
+  Java (so the dev server starts, its "plugin" says hello on the bridge, and
+  the test runner prints the case's report), an empty Paper jar, a plugin jar
+  for 26.3, no LuaLS, and a fixture home for installs. A case that listens to
+  `onFilesChanged` makes the host wait for the watcher to be live (a probe
+  file's event, never forwarded) after opening.
 
 When they disagree, **Rust is the truth**: fix the memory backend. Each case
 starts with nothing trusted, as the app does (`trusted: []` on the memory
 backend); a case that runs the server trusts the project first
-(`project_trust`). Cases
-cover what needs no network, Java or game install (files and path rules,
-projects, settings, the EULA, a stopped server, the cache, LuaLS
-unavailable); the lifecycle with a real server stays in the unix-only tests
-and `-- --ignored`.
+(`trustProject`). `contract.test.ts` holds every `Backend` member to a case or
+to `EXCLUDED` with a reason (native dialogs, the window, menus, zoom, the
+updater, the launcher, LuaLS's events); those have `tauri.test.ts` and
+`tauriMenu.test.ts` against mocked plugin IPC. A real Paper server stays in
+`-- --ignored` (`boots_real_paper`).
 
 ## The dev server lifecycle
 
@@ -527,7 +541,31 @@ plugins' JS API behind `Backend.checkForUpdate`/`installUpdate`.
 
 `cargo test --manifest-path apps/editor/src-tauri/Cargo.toml` (no network, temp
 dirs; synthetic PNGs and font JSON for glyph advances, fake launcher trees
-per OS; the unix-only lifecycle tests drive `/bin/sh` scripts as a fake
-server; the contract suite above). `-- --ignored` additionally downloads real Paper, lists the
-machine's Javas, and boots a real Paper server (needs network and Java 25).
-`pnpm lint` runs `cargo fmt --check` and `clippy --all-targets -D warnings`.
+per OS). They run on Linux, macOS and Windows alike:
+
+- **Processes** are `examples/fake_server.rs` (`testing::fake_server()`, which
+  `cargo test` builds before any test runs; `cargo test --lib` alone doesn't):
+  Java running Paper (prints Paper's lines, says hello on the dev bridge,
+  echoes the console, stops on `stop`), Java running the test runner (prints
+  the "jar", records its arguments), lua-language-server (echoes LSP frames,
+  exits on `{"method":"exit"}`), `ignore-stop`, `exit <code>`, `sleep`.
+  Symlink tests are the only unix-only ones.
+- **No sleeps**: wait on a condition with `testing::until` (`PATIENCE`, 30 s,
+  generous for slow CI runners and free when all is well). A real watcher
+  is live only once `watcher::until_watching` saw its probe file. A pending
+  future is polled once (`futures_util::poll!`) rather than slept on. A
+  "never happens" check is bounded by something later that does happen (a
+  third LuaLS's own exit after a stopped one), never by a timer.
+- **No warnings on any OS**: an import or helper used only under `cfg(unix)`
+  lives inside that cfg (`pnpm lint` runs clippy on Linux only).
+- The contract host above is an ignored test; without its environment it passes.
+
+`-- --ignored` additionally downloads real Paper, lists the machine's Javas,
+and boots a real Paper server (needs network and Java 25). `pnpm lint` runs
+`cargo fmt --check` and `clippy --all-targets -D warnings`.
+
+**Windows binaries need a manifest**: Tauri imports `TaskDialogIndirect`
+(Common Controls v6). tauri-build embeds its manifest in the app's binary
+only, so `build.rs` has the linker embed `windows-app-manifest.xml` into
+every binary, test executables and examples included; without it they exit
+with `STATUS_ENTRYPOINT_NOT_FOUND` (0xC0000139) before printing anything.

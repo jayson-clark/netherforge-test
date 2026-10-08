@@ -52,3 +52,20 @@ impl Tools {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_apps_tools_come_from_its_resources_first() {
+        let tmp = tempfile::tempdir().unwrap();
+        let resources = tmp.path().join("resources");
+        let tools = Tools::for_app(Some(&resources), &AppDirs::in_one(tmp.path()));
+        assert_eq!(tools.plugin_dirs[0], resources.join("plugins"));
+        assert_eq!(tools.test_runner_dirs[0], resources.join("test-runner"));
+        assert!(tools.luals[0].starts_with(resources.join(luals::FOLDER)));
+        assert_eq!(tools.java.managed_jdks, tmp.path().join("jdks"));
+        assert!(matches!(tools.paper, PaperSource::Fill));
+    }
+}
