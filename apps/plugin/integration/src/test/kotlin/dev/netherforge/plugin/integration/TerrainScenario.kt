@@ -220,10 +220,13 @@ class TerrainScenario : Scenario("terrain", "structures") {
         val found = editor.line("located")
         assertNotEquals("none", found[0], "a place of $other near the origin: ${found.drop(1)}")
         assertEquals(other, generator.biomeAt(found[0].toInt(), found[1].toInt()), "what the search found at ${found[0]},${found[1]}")
-        // A chunk nobody has been near, generated as it loads: the handler hears it and reads its blocks.
+        // A chunk nobody has been near, generated as it loads: the handler hears it and reads its blocks. The server
+        // loads it, not a script: generating a far chunk (and the structure starts round it) can take a slow machine
+        // longer than a script call may run.
         assertEquals(listOf("it_wg"), step("listen", "listening"))
-        editor.run("it-terrain load -300 300 0")
+        editor.run("execute in minecraft:it_wg run forceload add -4800 4800")
         val heard = (editor.next { it is Log && it.message.startsWith("generated\t-300\t300\t") } as Log).message.split('\t')
+        editor.run("execute in minecraft:it_wg run forceload remove -4800 4800")
         assertEquals(generator.biomeAt(-300 * 16 + 8, 300 * 16 + 8), heard[3])
     }
 }
