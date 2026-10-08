@@ -338,10 +338,10 @@ class PaperGameEventsTest : PlatformContract() {
             set(x0 + 1, ground + 1, z0 + 8, "minecraft:oak_leaves[persistent=false]")
         }
         rule(GameRules.RANDOM_TICK_SPEED, FAST_RANDOM_TICKS)
-        expect<GameEvent.BlockChange>("blockSpread", ticks = 400) { it.block.x == x0 + 1 && it.block.z == z0 + 1 }
-        expect<GameEvent.BlockChange>("blockGrow", ticks = 400) { it.block.x == x0 + 1 && it.block.z == z0 + 3 }
-        expect<GameEvent.BlockChange>("blockFade", ticks = 400) { it.block.x == x0 + 1 && it.block.z == z0 + 5 }
-        expect<GameEvent.Block>("leavesDecay", ticks = 400) { it.block.x == x0 + 1 && it.block.z == z0 + 8 }
+        expect<GameEvent.BlockChange>("blockSpread", ticks = RANDOM_TICK_PATIENCE) { it.block.x == x0 + 1 && it.block.z == z0 + 1 }
+        expect<GameEvent.BlockChange>("blockGrow", ticks = RANDOM_TICK_PATIENCE) { it.block.x == x0 + 1 && it.block.z == z0 + 3 }
+        expect<GameEvent.BlockChange>("blockFade", ticks = RANDOM_TICK_PATIENCE) { it.block.x == x0 + 1 && it.block.z == z0 + 5 }
+        expect<GameEvent.Block>("leavesDecay", ticks = RANDOM_TICK_PATIENCE) { it.block.x == x0 + 1 && it.block.z == z0 + 8 }
     }
 
     @Test
@@ -774,6 +774,13 @@ class PaperGameEventsTest : PlatformContract() {
 
         /** Random ticks enough that grass, wheat, ice and leaves change within seconds. */
         const val FAST_RANDOM_TICKS = 1000
+
+        /**
+         * How long a change random ticks make may take. Each is a chance, not a schedule (grass, for one, spreads only
+         * when a nearby grass block's tick happens to pick the dirt), so the limit is generous: a run that passes
+         * returns as soon as the change comes, and a short limit only fails on the unlucky ones.
+         */
+        const val RANDOM_TICK_PATIENCE = 2400
 
         /** A wooden tool's durability is 59: one more use breaks it. */
         const val WORN_OUT = 58

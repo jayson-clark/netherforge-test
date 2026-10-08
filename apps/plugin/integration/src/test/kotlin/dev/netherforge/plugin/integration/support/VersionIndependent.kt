@@ -13,13 +13,3 @@ import org.junit.jupiter.api.Tag
 @Retention(AnnotationRetention.RUNTIME)
 @Tag("version-independent")
 annotation class VersionIndependent
-
-/**
- * A flaky scenario or step taken out of the normal runs until [issue] (its GitHub issue's URL) is fixed: the
- * `quarantine` tag. Nightly runs quarantined tests on their own, without failing, so a fix shows. Quarantine a step
- * only when no later step builds on it; otherwise the whole scenario.
- */
-@Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION)
-@Retention(AnnotationRetention.RUNTIME)
-@Tag("quarantine")
-annotation class Quarantine(val issue: String)

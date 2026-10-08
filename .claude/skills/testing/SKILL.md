@@ -254,7 +254,7 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
    cron schedule for every minute fires on the real tick every second.
    - **Scopes** (`-Pnetherforge.integration.scope=full|pr|quarantine`,
      `full` by default): a scenario whose checks don't change with the
-     Minecraft version is `@VersionIndependent` (`support/Tags.kt`, the JUnit
+     Minecraft version is `@VersionIndependent` (`support/VersionIndependent.kt`, the JUnit
      tag `version-independent`): `ScheduleScenario`, `DebuggerScenario`,
      `SettingsScenario`, `SpawnRatesScenario`, `CutsceneScenario`,
      `TerrainScenario` (its version-sensitive parts are `MainWorldScenario`'s,
@@ -613,9 +613,10 @@ repository has GitHub Pages (see the release skill).
 never retried silently. Quarantining one: open an issue (what fails, a link to
 the run), then tag the test with it:
 
-- **Integration (Kotlin)**: `@Quarantine("https://github.com/<owner>/<repo>/issues/<n>")`
-  (`support/Tags.kt`, the JUnit tag `quarantine`) on the scenario class, or on
-  a step no later step builds on. Every normal run leaves it out; nightly runs
+- **Integration (Kotlin)**: `@Quarantined("https://github.com/<owner>/<repo>/issues/<n>")`
+  (the runtime test fixtures' annotation, below, the JUnit tag `quarantine`) on the
+  scenario class, or on a step no later step builds on; its `QuarantineTest`
+  holds the link to an issue's URL. Every normal run leaves it out; nightly runs
   `-Pnetherforge.integration.scope=quarantine` on its own, without failing,
   so a pass there says the fix worked.
 - **The runtime's and the test runner's tests**: `@Quarantined(issue =

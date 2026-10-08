@@ -37,6 +37,8 @@ dependencies {
     testImplementation(project(":format"))
     // Structure files read on the test's side, as the fake reads a project's (StructureFiles).
     testImplementation(project(":plugin:testkit"))
+    // @Quarantined, the one quarantine annotation every plugin build shares.
+    testImplementation(testFixtures(project(":plugin:runtime")))
     testImplementation(libs.serialization.json)
     // What the plugin keeps is read straight from its store.
     testImplementation(libs.sqlite.jdbc)
@@ -64,7 +66,7 @@ val oldest = adapters.keys.minWith(versionOrder)
 val newest = adapters.keys.maxWith(versionOrder)
 
 /*
- * Which scenarios run (`-Pnetherforge.integration.scope=<scope>`), by their JUnit tags (src/test/.../support/Tags.kt):
+ * Which scenarios run (`-Pnetherforge.integration.scope=<scope>`), by their JUnit tags (`VersionIndependent` in src/test/.../support/, and the runtime test fixtures' `Quarantined`):
  * - `full` (the default): every scenario on every version, quarantined ones left out. Nightly, `main` and releases.
  * - `pr`: on the newest version the same; on the others the `version-independent` scenarios are left out too, since
  *   what they check doesn't change with the version (the contract suites hold every adapter to the calls they make).
