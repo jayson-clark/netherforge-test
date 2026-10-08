@@ -12,9 +12,11 @@ import dev.netherforge.format.editor.TerrainSlice
  * questions a column answers by itself); the slice generates whole chunks.
  */
 object TerrainPreview {
-    /** The widest map or slice asked for in one call: the editor draws far less, and a mistake can't take long. */
+    /** The widest map asked for in one call: the editor draws far less, and a mistake can't take long. */
     const val MAX_CELLS = 256
-    const val MAX_SLICE = 512
+
+    /** The widest slice asked for in one call: 256 chunks, what `netherforge preview --width` allows. */
+    const val MAX_SLICE = 4096
 
     /** The most decoration tries a map works out: a close map's (a few hundred chunks); a far one shows none. */
     const val MAX_DECORATION_TRIES = 100_000L
@@ -106,14 +108,19 @@ object TerrainPreview {
         scriptErrors: () -> List<TerrainScriptError> = { emptyList() }
     ): TerrainSlice {
         val w = width.coerceIn(1, MAX_SLICE)
-        val chunks = HashMap<Int, ChunkBuffer>()
+        // A line's columns go through each chunk once, one after another, so only the chunk they're in is kept.
+        var chunk: ChunkBuffer? = null
+        var chunkAlong = 0
         val columns = ArrayList<List<Int>>(w)
         for (i in 0 until w) {
             val along = from + i
             val x = if (alongX) along else at
             val z = if (alongX) at else along
-            val key = ((x shr 4) shl 16) xor ((z shr 4) and 0xFFFF)
-            val buffer = chunks.getOrPut(key) { generator.generate(x shr 4, z shr 4) }
+            if (chunk == null || along shr 4 != chunkAlong) {
+                chunk = generator.generate(x shr 4, z shr 4)
+                chunkAlong = along shr 4
+            }
+            val buffer = chunk
             val start = buffer.columnStart(x and 15, z and 15)
             val runs = ArrayList<Int>()
             var current = buffer.blocks[start]

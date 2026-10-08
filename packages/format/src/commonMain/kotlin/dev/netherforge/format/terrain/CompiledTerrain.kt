@@ -71,8 +71,26 @@ data class CompiledCave(
     val maxY: Int,
     val depth: Int,
     /** The indexes in [CompiledTerrain.areas] of the areas it's carved in, sorted; empty for all. */
-    val areas: List<Int>
-)
+    val areas: List<Int>,
+    /** Blocks it narrows over at each end; 0 for a flat cut. */
+    val fade: Int = 0
+) {
+    /**
+     * The threshold at [y] (inside [minY]..[maxY]): [threshold] deeper than [fade] from both ends, tightening linearly
+     * towards them until the block at each end carves nothing (a cheese cave's 1, which the noise never passes; a
+     * spaghetti cave's 0).
+     */
+    fun thresholdAt(y: Int): Double {
+        if (fade == 0) return threshold
+        val inside = minOf(y - minY, maxY - y)
+        if (inside >= fade) return threshold
+        val open = inside.toDouble() / fade
+        return when (type) {
+            CaveType.CHEESE -> 1.0 - (1.0 - threshold) * open
+            CaveType.SPAGHETTI -> threshold * open
+        }
+    }
+}
 
 data class CompiledOre(
     val name: String,
@@ -107,11 +125,13 @@ data class CompiledDecoration(
     /** Null for the world's own bottom and top. */
     val minY: Int?,
     val maxY: Int?,
-    /** Block ids (canonical) it sits on, hangs from or replaces; empty for the default. */
+    /** Block ids (canonical) it sits on, hangs from or replaces; empty for the default (when [onCustom] is too). */
     val on: List<String>,
     val rotate: Boolean,
     /** The loot table its containers are filled from (an index into [CompiledTerrain.loot]), or -1 for none. */
-    val loot: Int = -1
+    val loot: Int = -1,
+    /** The project's blocks it sits on, hangs from or replaces besides [on], as [TerrainBlock.Custom] names them, sorted. */
+    val onCustom: List<String> = emptyList()
 )
 
 /**
@@ -428,11 +448,16 @@ object TerrainCompiler {
                     c.minYOrDefault,
                     c.maxYOrDefault,
                     c.depthOrDefault,
-                    areasOf(c.biomes)
+                    areasOf(c.biomes),
+                    c.fadeOrDefault
                 )
             },
             ores = file.ores.entries.sortedBy { it.key }.map { (name, o) ->
-                val replace = o.replace.map { palette.vanilla(it) }.ifEmpty { listOf(stone) }
+                val replace = (
+                    o.replace.map {
+                        palette.vanilla(it)
+                    } + o.replaceCustomBlocks.map { palette.custom(it.text) }
+                    ).ifEmpty { listOf(stone) }
                 CompiledOre(
                     name,
                     block(o, TerrainFile.AIR),
@@ -460,7 +485,8 @@ object TerrainCompiler {
                     d.maxY,
                     d.on.map { GameIds.normalize(it) }.distinct().sorted(),
                     d.structure != null && d.rotateOrDefault,
-                    d.loot?.let { loot.indexOf(it.text) } ?: -1
+                    d.loot?.let { loot.indexOf(it.text) } ?: -1,
+                    d.onCustomBlocks.map { it.text }.distinct().sorted()
                 )
             },
             temperature = file.climate.temperature ?: Climate.DEFAULT_NOISE,

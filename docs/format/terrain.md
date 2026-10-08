@@ -278,30 +278,35 @@ A layer and the stone need one; the floor's default is `minecraft:bedrock`.
 Caves are carved out of the ground by name. Each is a noise, a `type` and a `threshold`, between `minY` and `maxY`,
 and never within `depth` blocks of the surface (so caves don't open the whole ground).
 
-| Key         | Meaning                                                                                                                                                         | Default                             |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| `type`      | `cheese`: big rooms with pillars, carved where the noise is above `threshold`. `spaghetti`: winding tunnels, where two noises are both within `threshold` of 0. | `cheese`                            |
-| `noise`     | The pattern.                                                                                                                                                    | `openSimplex2`, 0.03, 2 octaves     |
-| `threshold` | `cheese`: -1 to 1, higher is smaller rooms. `spaghetti`: more than 0, at most 1, higher is wider tunnels.                                                       | 0.55 (`cheese`), 0.08 (`spaghetti`) |
-| `minY`      | The lowest it goes.                                                                                                                                             | -56                                 |
-| `maxY`      | The highest it goes.                                                                                                                                            | 56                                  |
-| `depth`     | How far below the surface it stays.                                                                                                                             | 4                                   |
-| `biomes`    | The [biome areas](#biomes), by name, whose columns it's carved in.                                                                                              | all of them                         |
+| Key         | Meaning                                                                                                                                                           | Default                             |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `type`      | `cheese`: big rooms with pillars, carved where the noise is above `threshold`. `spaghetti`: winding tunnels, where two noises are both within `threshold` of 0.   | `cheese`                            |
+| `noise`     | The pattern.                                                                                                                                                      | `openSimplex2`, 0.03, 2 octaves     |
+| `threshold` | `cheese`: -1 to 1, higher is smaller rooms. `spaghetti`: more than 0, at most 1, higher is wider tunnels.                                                         | 0.55 (`cheese`), 0.08 (`spaghetti`) |
+| `minY`      | The lowest it goes.                                                                                                                                               | -56                                 |
+| `maxY`      | The highest it goes.                                                                                                                                              | 56                                  |
+| `depth`     | How far below the surface it stays.                                                                                                                               | 4                                   |
+| `fade`      | How many blocks above `minY` and below `maxY` it narrows over, 0 to 256: rooms shrink and tunnels thin towards each end, so bands blend instead of stopping flat. | 0 (a flat cut)                      |
+| `biomes`    | The [biome areas](#biomes), by name, whose columns it's carved in.                                                                                                | all of them                         |
 
 ## `ores`
 
 Veins of a block, scattered through what the ground is made of, by name.
 
-| Key            | Meaning                                                                                                   | Default            |
-| -------------- | --------------------------------------------------------------------------------------------------------- | ------------------ |
-| `block`        | A vanilla block state. Exactly one of `block` and `customBlock`.                                          |                    |
-| `customBlock`  | One of the project's [blocks](block.md), by id: see [custom blocks](#custom-blocks-in-a-generated-world). |                    |
-| `replace`      | The block ids a vein may replace.                                                                         | the file's `stone` |
-| `size`         | Most blocks in a vein, 1 to 64.                                                                           | 8                  |
-| `veins`        | How many veins are tried in each chunk, 0 to 256.                                                         | 8                  |
-| `minY`, `maxY` | Where a vein may start.                                                                                   | -64, 64            |
-| `distribution` | `uniform`: equally likely at any height. `triangle`: likeliest halfway between `minY` and `maxY`.         | `uniform`          |
-| `biomes`       | The [biome areas](#biomes), by name, a vein may start in.                                                 | all of them        |
+| Key                   | Meaning                                                                                                   | Default            |
+| --------------------- | --------------------------------------------------------------------------------------------------------- | ------------------ |
+| `block`               | A vanilla block state. Exactly one of `block` and `customBlock`.                                          |                    |
+| `customBlock`         | One of the project's [blocks](block.md), by id: see [custom blocks](#custom-blocks-in-a-generated-world). |                    |
+| `replace`             | The block ids a vein may replace.                                                                         | the file's `stone` |
+| `replaceCustomBlocks` | The project's [blocks](block.md) a vein may replace too, by id (`ebonstone`).                             | none               |
+| `size`                | Most blocks in a vein, 1 to 64.                                                                           | 8                  |
+| `veins`               | How many veins are tried in each chunk, 0 to 256.                                                         | 8                  |
+| `minY`, `maxY`        | Where a vein may start.                                                                                   | -64, 64            |
+| `distribution`        | `uniform`: equally likely at any height. `triangle`: likeliest halfway between `minY` and `maxY`.         | `uniform`          |
+| `biomes`              | The [biome areas](#biomes), by name, a vein may start in.                                                 | all of them        |
+
+Without `replace` or `replaceCustomBlocks` a vein replaces the file's `stone`; with either, only what they list (so
+an ore in a project stone and the game's lists both).
 
 A vein is a clump of blocks grown from the one it starts in, never further than 15 blocks from it. Veins cross chunk
 edges: a chunk works out the veins that start in the chunks around it and keeps its own part.
@@ -321,21 +326,22 @@ between `minY` and `maxY`, and on a block `on` lists.
 }
 ```
 
-| Key            | Meaning                                                                                                                                                             | Default                                        |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `block`        | A block state of the game's. Exactly one of `block`, `customBlock` and `structure` (`terrain.one-block`).                                                           |                                                |
-| `customBlock`  | One of the project's [blocks](block.md): see [custom blocks](#custom-blocks-in-a-generated-world).                                                                  |                                                |
-| `structure`    | One of the project's structures (`structures/<id>.nbt`, or a package's `acme:tree`): its blocks, not its air, with its lowest layer at the place and centred on it. |                                                |
-| `placement`    | Where it goes (below).                                                                                                                                              | `surface`                                      |
-| `count`        | Places tried in each chunk, 0 to 256.                                                                                                                               | 1                                              |
-| `chance`       | How likely each place tried is kept, 0 to 1.                                                                                                                        | 1                                              |
-| `noise`        | A pattern that gathers it into patches: none where the noise is at most `threshold`, rising to `chance` where it's 1.                                               | none                                           |
-| `threshold`    | With a `noise`: where the patches start, -1 up to but not including 1.                                                                                              | 0                                              |
-| `biomes`       | The [biome areas](#biomes), by name, it's placed in.                                                                                                                | all of them                                    |
-| `minY`, `maxY` | The heights it's placed between.                                                                                                                                    | the bottom and top of the world                |
-| `on`           | Block ids it may sit on (`surface`, `underwater`, `caveFloor`), hang from (`caveCeiling`) or replace (`underground`).                                               | any ground (`underground`: the file's `stone`) |
-| `rotate`       | For a `structure`: whether each one is turned a random quarter turn (its blocks' facing turned with it).                                                            | true                                           |
-| `loot`         | One of the project's [loot tables](loot.md): the containers it places are filled from it. See [loot in generated containers](#loot-in-generated-containers).        | none                                           |
+| Key              | Meaning                                                                                                                                                             | Default                                        |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `block`          | A block state of the game's. Exactly one of `block`, `customBlock` and `structure` (`terrain.one-block`).                                                           |                                                |
+| `customBlock`    | One of the project's [blocks](block.md): see [custom blocks](#custom-blocks-in-a-generated-world).                                                                  |                                                |
+| `structure`      | One of the project's structures (`structures/<id>.nbt`, or a package's `acme:tree`): its blocks, not its air, with its lowest layer at the place and centred on it. |                                                |
+| `placement`      | Where it goes (below).                                                                                                                                              | `surface`                                      |
+| `count`          | Places tried in each chunk, 0 to 256.                                                                                                                               | 1                                              |
+| `chance`         | How likely each place tried is kept, 0 to 1.                                                                                                                        | 1                                              |
+| `noise`          | A pattern that gathers it into patches: none where the noise is at most `threshold`, rising to `chance` where it's 1.                                               | none                                           |
+| `threshold`      | With a `noise`: where the patches start, -1 up to but not including 1.                                                                                              | 0                                              |
+| `biomes`         | The [biome areas](#biomes), by name, it's placed in.                                                                                                                | all of them                                    |
+| `minY`, `maxY`   | The heights it's placed between.                                                                                                                                    | the bottom and top of the world                |
+| `on`             | Block ids it may sit on (`surface`, `underwater`, `caveFloor`), hang from (`caveCeiling`) or replace (`underground`).                                               | any ground (`underground`: the file's `stone`) |
+| `onCustomBlocks` | The project's [blocks](block.md), by id, it may sit on, hang from or replace too (`ebonstone`). With `on` or this, only what they list.                             | none                                           |
+| `rotate`         | For a `structure`: whether each one is turned a random quarter turn (its blocks' facing turned with it).                                                            | true                                           |
+| `loot`           | One of the project's [loot tables](loot.md): the containers it places are filled from it. See [loot in generated containers](#loot-in-generated-containers).        | none                                           |
 
 | `placement`   | Where                                                                                                                                                                                                        |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -522,7 +528,7 @@ made:
 | `customBlocks` | The project's [blocks](block.md) it places besides the file's, by id: plain cubes, as anywhere in the file.                                                                            |
 | `loot`         | The project's [loot tables](loot.md) it fills containers from (`chunk:set_loot`), by id. At most 64.                                                                                   |
 
-`"script": {}` is a script with nothing declared. Together `blocks` and `customBlocks` list at most 64.
+`"script": {}` is a script with nothing declared. Together `blocks` and `customBlocks` list at most 1024.
 
 The script's body runs once in each Lua state (see below) and returns its stages, any of six (`density`, `area` and
 `biome` are below):

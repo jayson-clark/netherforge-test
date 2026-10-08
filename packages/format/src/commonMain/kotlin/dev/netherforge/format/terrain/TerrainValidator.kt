@@ -323,6 +323,11 @@ object TerrainValidator {
                 }
             }
             heights(cave.minY, cave.maxY, cave.minYOrDefault, cave.maxYOrDefault, at, ProblemCodes.TERRAIN_CAVE)
+            cave.fade?.let {
+                if (it !in 0..TerrainFile.MAX_THICKNESS) {
+                    sink.report(ProblemCodes.TERRAIN_CAVE, "fade is from 0 to ${TerrainFile.MAX_THICKNESS} blocks, not $it", "$at.fade")
+                }
+            }
             cave.depth?.let {
                 if (it < 0 || it > TerrainFile.MAX_THICKNESS) {
                     sink.report(ProblemCodes.TERRAIN_CAVE, "depth is from 0 to ${TerrainFile.MAX_THICKNESS}", "$at.depth")
@@ -430,6 +435,9 @@ object TerrainValidator {
             )
             if (decoration.on.size > TerrainFile.MAX_ON) {
                 sink.report(ProblemCodes.TERRAIN_LIMIT, "`on` lists at most ${TerrainFile.MAX_ON} blocks", "$at.on")
+            }
+            if (decoration.onCustomBlocks.size > TerrainFile.MAX_ON) {
+                sink.report(ProblemCodes.TERRAIN_LIMIT, "`onCustomBlocks` lists at most ${TerrainFile.MAX_ON} blocks", "$at.onCustomBlocks")
             }
             blockIds(decoration.on, "$at.on")
             areaFilter(decoration.biomes, "$at.biomes")

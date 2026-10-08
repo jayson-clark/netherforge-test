@@ -221,6 +221,28 @@ describe('preview: slice', () => {
     expect(columns.some((x) => alpha(x, 150) === 255 && alpha(x, 120) === 0)).toBe(true)
   })
 
+  it('draws up to --top, the empty sky too, and refuses one outside the world', async () => {
+    const args = ['preview', file(), '--slice', 'x', '--width', '8', '--scale', '1', '--out', out]
+    const outcome = await run([...args, '--top', '319'], {})
+    expect(outcome.code).toBe(0)
+    expect(sliceTopOf(outcome.out[1]!)).toBe(319)
+    expect(picture().height).toBe(320 - WORLD_HEIGHT_OVERWORLD.minY)
+    // Nothing up there but air: the top row is transparent.
+    expect(pixel(picture(), 0, 0)[3]).toBe(0)
+    const outside = await run([...args, '--top', '320'], {})
+    expect(outside.code).toBe(2)
+    expect(outside.err.join('\n')).toContain('--top')
+  })
+
+  it('draws slices wider than 512 columns', async () => {
+    const outcome = await run(
+      ['preview', file(), '--slice', 'z', '--width', '600', '--scale', '1', '--out', out],
+      {},
+    )
+    expect(outcome.code).toBe(0)
+    expect(picture().width).toBe(600)
+  })
+
   it("draws a world of a project dimension type's heights", async () => {
     const outcome = await run(
       [

@@ -179,7 +179,10 @@ class TerrainGenerator internal constructor(
         BooleanArray(palette.size) { i ->
             val block = palette[i]
             when {
-                d.on.isNotEmpty() -> block is TerrainBlock.Vanilla && block.state.substringBefore('[') in d.on
+                d.on.isNotEmpty() || d.onCustom.isNotEmpty() -> when (block) {
+                    is TerrainBlock.Vanilla -> block.state.substringBefore('[') in d.on
+                    is TerrainBlock.Custom -> block.name in d.onCustom
+                }
                 d.placement == DecorationPlacement.UNDERGROUND -> i == terrain.stone
                 else -> i != 0 && i != terrain.fluid
             }
@@ -814,13 +817,7 @@ class TerrainGenerator internal constructor(
                     val to = minOf(cave.maxY, chunk.surface[lx * 16 + lz] - cave.depth, maxY - 2)
                     for (y in maxOf(cave.minY, minY + 1)..to) {
                         if (!column && !allowed[chunk.areaAt(lx, y, lz)]) continue
-                        val open = when (cave.type) {
-                            CaveType.CHEESE -> noise.getNoise(x, y.toDouble(), z) > cave.threshold
-                            CaveType.SPAGHETTI ->
-                                abs(noise.getNoise(x, y.toDouble(), z)) < cave.threshold &&
-                                    abs(second!!.getNoise(x, y.toDouble(), z)) < cave.threshold
-                        }
-                        if (open) buffer[lx, y, lz] = 0
+                        if (opens(cave, noise, second, x, y, z)) buffer[lx, y, lz] = 0
                     }
                 }
             }
@@ -851,18 +848,22 @@ class TerrainGenerator internal constructor(
                     for (y in maxY - 1 downTo from) {
                         val here = solid[start + y]
                         if (here && y <= to && above >= cave.depth && (column || allowed[chunk.areaAt(lx, y, lz)])) {
-                            val open = when (cave.type) {
-                                CaveType.CHEESE -> noise.getNoise(x, y.toDouble(), z) > cave.threshold
-                                CaveType.SPAGHETTI ->
-                                    abs(noise.getNoise(x, y.toDouble(), z)) < cave.threshold &&
-                                        abs(second!!.getNoise(x, y.toDouble(), z)) < cave.threshold
-                            }
-                            if (open) buffer.blocks[start + y] = 0
+                            if (opens(cave, noise, second, x, y, z)) buffer.blocks[start + y] = 0
                         }
                         above = if (here) above + 1 else 0
                     }
                 }
             }
+        }
+    }
+
+    /** Whether [cave] carves the block at [x], [y], [z], with its threshold there ([CompiledCave.thresholdAt]). */
+    private fun opens(cave: CompiledCave, noise: FastNoiseLite, second: FastNoiseLite?, x: Double, y: Int, z: Double): Boolean {
+        val threshold = cave.thresholdAt(y)
+        return when (cave.type) {
+            CaveType.CHEESE -> noise.getNoise(x, y.toDouble(), z) > threshold
+            CaveType.SPAGHETTI ->
+                abs(noise.getNoise(x, y.toDouble(), z)) < threshold && abs(second!!.getNoise(x, y.toDouble(), z)) < threshold
         }
     }
 

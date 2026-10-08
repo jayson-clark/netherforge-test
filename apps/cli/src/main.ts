@@ -32,15 +32,17 @@ Usage:
       a project with errors or an out-of-date netherforge.lock.
   netherforge preview terrain/<id>.json --out <file>.png [--seed <n>]
                      [--x <n>] [--z <n>] [--size <cells>] [--step <blocks>]
-                     [--scale <pixels>] [--slice x|z --at <n> [--width <n>]]
+                     [--scale <pixels>] [--slice x|z --at <n> [--width <n>] [--top <y>]]
                      [--min-y <n> --max-y <n> | --dimension-type <id>]
       Draw a terrain as the editor's preview does, from the same code:
       the top-down map (default), or with --slice x (along the x axis at z
       --at) or --slice z (along z at x --at) the ground through that line.
       --x and --z centre it (default 0, 0); the map is --size cells (96) of
       --step blocks (4), each --scale pixels (4; 3 for a slice); a slice is
-      --width columns (128). --seed is a whole number (1337). The world is
-      --min-y (-64) up to --max-y (320, one above its highest block), or the
+      --width columns (128, at most 4096), drawn up to its highest block
+      that isn't air, or up to --top (the highest y drawn). --seed is a
+      whole number (1337). The world is --min-y (-64) up to --max-y (320,
+      one above its highest block), or the
       heights of the project's dimension type --dimension-type (dimension_types/<id>.json).
       The structures its decorations place are read from structures/<name>.nbt,
       and a file with a script runs terrain/<id>.lua (and the modules it
@@ -87,6 +89,7 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env):
         slice: { type: 'string' },
         at: { type: 'string' },
         width: { type: 'string' },
+        top: { type: 'string' },
         'min-y': { type: 'string' },
         'max-y': { type: 'string' },
         'dimension-type': { type: 'string' },
@@ -123,7 +126,18 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env):
       return build(root, { out: values.out }, env)
     case 'preview': {
       const numbers: Record<string, number | undefined> = {}
-      for (const key of ['x', 'z', 'size', 'step', 'scale', 'at', 'width', 'min-y', 'max-y']) {
+      for (const key of [
+        'x',
+        'z',
+        'size',
+        'step',
+        'scale',
+        'at',
+        'width',
+        'top',
+        'min-y',
+        'max-y',
+      ]) {
         const text = values[key as keyof typeof values] as string | undefined
         if (text === undefined) continue
         // Whole numbers only: Number('') and Number('1e2') would pass for one.
@@ -142,6 +156,7 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env):
         slice: values.slice,
         at: numbers.at,
         width: numbers.width,
+        top: numbers.top,
         minY: numbers['min-y'],
         maxY: numbers['max-y'],
         dimensionType: values['dimension-type'],

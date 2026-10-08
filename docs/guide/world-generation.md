@@ -183,7 +183,8 @@ slice. Air in a slice is transparent.
 | `--step <blocks>`            | 4                  | Blocks a cell is across: a bigger one shows more ground, more coarsely.          |
 | `--scale <pixels>`           | 4 (map), 3 (slice) | Pixels a map cell or a slice block is across in the picture.                     |
 | `--slice x\|z`, `--at <n>`   | the map            | A slice instead of the map, along that axis, at that z (for `x`) or x (for `z`). |
-| `--width <n>`                | 128                | Columns in a slice.                                                              |
+| `--width <n>`                | 128                | Columns in a slice, at most 4096.                                                |
+| `--top <y>`                  | the highest block  | The highest y a slice draws: the empty sky above the ground too.                 |
 | `--min-y <n>`, `--max-y <n>` | -64, 320           | The world's lowest block, and one above its highest.                             |
 
 The structures its decorations place are read from the project's

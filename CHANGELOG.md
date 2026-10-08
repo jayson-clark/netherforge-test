@@ -90,6 +90,18 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Added
 
+- **Ores in the project's own ground.** An ore's `replaceCustomBlocks` lists
+  project blocks its veins may replace, besides `replace`'s game blocks, so an
+  ore can sit in a custom stone or layer. A decoration's `onCustomBlocks`
+  does the same for what it sits on, hangs from or replaces.
+- **Caves that fade out.** A cave's `fade` narrows it to nothing over that
+  many blocks at each end of its `minY`..`maxY` band instead of a flat cut, so
+  bands of caves blend.
+- **Bigger terrain previews and scripts.** `netherforge preview` draws slices
+  up to 4096 columns wide (they stopped at 512 whatever `--width` said), and
+  `--top <y>` draws a slice up to that height, the empty sky too. A terrain
+  script may declare up to 1024 blocks (was 64).
+
 - **Biomes that change with height.** A terrain's biome area with a `y`, `depth`
   or `surface` range is a volume inside the columns' areas: cave biomes under a
   forest, a sky biome high up, real ocean biomes. Sky, fog, music and mob

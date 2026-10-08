@@ -14,6 +14,7 @@ import dev.netherforge.format.terrain.TerrainBlock
 import dev.netherforge.format.terrain.TerrainCompiler
 import dev.netherforge.format.terrain.TerrainFile
 import dev.netherforge.format.terrain.TerrainPreview
+import dev.netherforge.format.terrain.TerrainScript
 import dev.netherforge.format.terrain.TerrainValidator
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -89,6 +90,14 @@ class TerrainTest {
             found.toSet()
         )
         assertEquals(3, found.count { it == "terrain.ore" }, "size and veins are each told, and the empty ore is the third")
+    }
+
+    @Test
+    fun aScriptListsUpToItsLimitOfBlocks() {
+        fun script(count: Int) = """{ "script": { "blocks": [${(0 until count).joinToString(",") { "\"minecraft:b$it\"" }}] } }"""
+        assertEquals(emptyList(), codes(script(300)))
+        assertEquals(emptyList(), codes(script(TerrainScript.MAX_BLOCKS)))
+        assertEquals(listOf("terrain.script"), codes(script(TerrainScript.MAX_BLOCKS + 1)))
     }
 
     @Test
@@ -226,6 +235,98 @@ class TerrainTest {
     }
 
     @Test
+    fun anOreReplacesTheProjectsBlocksItNames() {
+        // The ground is the project's ebonstone and a layer of the game's sand: the ore lists both and replaces only them.
+        val w = compile(
+            """{ "terrain": { "base": 64, "seaLevel": 0 }, "stone": { "customBlock": "ebonstone" },
+                "layers": [{ "block": "minecraft:sand", "thickness": 20 }],
+                "ores": { "demonite": { "customBlock": "demonite", "replace": ["minecraft:sand"], "replaceCustomBlocks": ["ebonstone"],
+                    "size": 12, "veins": 64, "minY": 20, "maxY": 60 } } }"""
+        )
+        val ebonstone = w.palette.indexOf(TerrainBlock.Custom("ebonstone"))
+        val sand = w.palette.indexOf(TerrainBlock.Vanilla("minecraft:sand"))
+        val demonite = w.palette.indexOf(TerrainBlock.Custom("demonite"))
+        assertEquals(listOf(ebonstone, sand).sorted(), w.ores.single().replace)
+        val buffer = w.bind(3L, -64, 320).generate(0, 0)
+        var inStone = 0
+        var inSand = 0
+        for (x in 0 until 16) {
+            for (z in 0 until 16) {
+                for (y in 20..44) if (buffer[x, y, z] == demonite) inStone++
+                for (y in 45..64) if (buffer[x, y, z] == demonite) inSand++
+                // Never into the air above the ground.
+                for (y in 65..80) assertEquals(0, buffer[x, y, z])
+            }
+        }
+        assertTrue(inStone > 0 && inSand > 0, "veins in the custom stone ($inStone) and in the sand ($inSand)")
+        // Naming only a project block leaves the file's stone alone: no default is added to what it lists.
+        val only = compile("""{ "ores": { "o": { "block": "minecraft:gold_ore", "replaceCustomBlocks": ["ebonstone"] } } }""")
+        assertEquals(listOf(only.palette.indexOf(TerrainBlock.Custom("ebonstone"))), only.ores.single().replace)
+    }
+
+    @Test
+    fun aDecorationGoesOnAndReplacesTheProjectsBlocksItNames() {
+        // Ground of the project's ebonstone under a layer of its corrupt grass.
+        val ground = """"terrain": { "base": 64, "seaLevel": 0 }, "stone": { "customBlock": "ebonstone" },
+            "layers": [{ "customBlock": "corrupt_grass" }]"""
+        val w = compile(
+            """{ $ground, "decorations": {
+                "thorns": { "block": "minecraft:dead_bush", "count": 64, "onCustomBlocks": ["corrupt_grass"] },
+                "nothing": { "block": "minecraft:poppy", "count": 64, "onCustomBlocks": ["ebonstone"] },
+                "gems": { "customBlock": "amethyst", "placement": "underground", "count": 64, "minY": 0, "maxY": 60,
+                    "onCustomBlocks": ["ebonstone"] } } }"""
+        )
+        fun index(block: TerrainBlock) = w.palette.indexOf(block)
+        val buffer = w.bind(5L, -64, 320).generate(0, 0)
+        val bushes = (0 until 16).sumOf { x ->
+            (0 until 16).count { z ->
+                buffer[x, 65, z] ==
+                    index(TerrainBlock.Vanilla("minecraft:dead_bush"))
+            }
+        }
+        assertTrue(bushes > 0, "on the custom grass: $bushes")
+        // The surface is grass, never ebonstone, so what sits only on ebonstone never goes there.
+        assertTrue(buffer.blocks.none { it == index(TerrainBlock.Vanilla("minecraft:poppy")) })
+        assertTrue(buffer.blocks.any { it == index(TerrainBlock.Custom("amethyst")) }, "replacing the custom stone")
+        // Naming a project block leaves out the default of any ground.
+        assertEquals(listOf("corrupt_grass"), w.decorations.first { it.name == "thorns" }.onCustom)
+        val limit = (0..TerrainFile.MAX_ON).joinToString(",") { "\"b$it\"" }
+        assertEquals(
+            listOf("terrain.limit"),
+            codes("""{ "decorations": { "d": { "block": "minecraft:stone", "onCustomBlocks": [$limit] } } }""")
+        )
+    }
+
+    @Test
+    fun aCaveWithAFadeNarrowsToNothingAtItsEnds() {
+        fun carved(fade: Int?): IntArray {
+            val w = compile(
+                """{ "terrain": { "base": 200 }, "caves": { "c": { "threshold": 0.0, "minY": 0, "maxY": 63, "depth": 0
+                    ${if (fade != null) ", \"fade\": $fade" else ""} } } }"""
+            )
+            val g = w.bind(11L, -64, 320)
+            val air = IntArray(64)
+            for ((cx, cz) in listOf(0 to 0, 1 to 0, 0 to 1, 1 to 1)) {
+                val b = g.generate(cx, cz)
+                for (x in 0 until 16) for (z in 0 until 16) for (y in 0..63) if (b[x, y, z] == 0) air[y]++
+            }
+            return air
+        }
+        val cut = carved(null)
+        val faded = carved(16)
+        // Without a fade the band is carved as much at its ends as in its middle; with one, nothing at the ends
+        // and less and less towards them, and the same as before deeper inside than the fade.
+        assertTrue(cut[0] > 100 && cut[63] > 100, "a flat cut: ${cut[0]}, ${cut[63]}")
+        assertEquals(0, faded[0])
+        assertEquals(0, faded[63])
+        assertTrue(faded[4] < faded[12], "narrower nearer the bottom: ${faded[4]} < ${faded[12]}")
+        assertTrue(faded[59] < faded[51], "and nearer the top: ${faded[59]} < ${faded[51]}")
+        for (y in 16..47) assertEquals(cut[y], faded[y], "untouched at $y")
+        assertEquals(cut.toList(), carved(0).toList(), "a fade of 0 is a flat cut")
+        assertEquals(listOf("terrain.cave"), codes("""{ "caves": { "c": { "fade": 300 } } }"""))
+    }
+
+    @Test
     fun biomesAreTheMostSpecificBoxThePointFitsOrTheNearest() {
         val w = compile(
             """{ "biomes": {
@@ -297,6 +398,13 @@ class TerrainTest {
             }
         }
         assertTrue(slice.palette.any { it.custom })
+    }
+
+    @Test
+    fun aSliceIsAsWideAsTheCommandAllows() {
+        val g = compile("{}").bind(1L, -64, 320)
+        assertEquals(1024, TerrainPreview.slice(g, alongX = true, at = 0, from = 0, width = 1024).columns.size)
+        assertEquals(TerrainPreview.MAX_SLICE, TerrainPreview.slice(g, alongX = true, at = 0, from = 0, width = 9999).width)
     }
 
     @Test

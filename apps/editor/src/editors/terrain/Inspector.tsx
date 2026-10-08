@@ -955,6 +955,16 @@ function CavesSection({ model, edit, gesture }: Parts) {
               onChange={(value) => change((c) => setKey(c, 'maxY', whole(value)))}
             />
             <NumberField
+              label="Fades over"
+              dataPath={fieldPath([...at, 'fade'])}
+              value={cave.fade}
+              placeholder="0"
+              step={1}
+              min={0}
+              {...gesture}
+              onChange={(value) => change((c) => setKey(c, 'fade', whole(value)))}
+            />
+            <NumberField
               label="Below the surface"
               dataPath={fieldPath([...at, 'depth'])}
               value={cave.depth}
@@ -1036,8 +1046,15 @@ function OresSection({ model, edit, gesture, blocks, customBlocks }: Parts) {
               label="Replaces"
               dataPath={fieldPath([...at, 'replace'])}
               value={ore.replace}
-              placeholder={stone}
+              placeholder={ore.replaceCustomBlocks?.length ? 'none' : stone}
               onChange={(ids) => change((o) => setKey(o, 'replace', ids))}
+            />
+            <IdListField
+              label="Replaces project blocks"
+              dataPath={fieldPath([...at, 'replaceCustomBlocks'])}
+              value={ore.replaceCustomBlocks}
+              placeholder="none"
+              onChange={(ids) => change((o) => setKey(o, 'replaceCustomBlocks', ids))}
             />
             <NumberField
               label="Vein size"
@@ -1267,8 +1284,27 @@ function DecorationsSection({
               }
               dataPath={fieldPath([...at, 'on'])}
               value={decoration.on}
-              placeholder={placement === 'underground' ? 'the stone' : 'any ground'}
+              placeholder={
+                decoration.onCustomBlocks?.length
+                  ? 'none'
+                  : placement === 'underground'
+                    ? 'the stone'
+                    : 'any ground'
+              }
               onChange={(ids) => change((it) => setKey(it, 'on', ids))}
+            />
+            <IdListField
+              label={
+                placement === 'underground'
+                  ? 'Replaces project blocks'
+                  : placement === 'caveCeiling'
+                    ? 'Hangs from project blocks'
+                    : 'On project blocks'
+              }
+              dataPath={fieldPath([...at, 'onCustomBlocks'])}
+              value={decoration.onCustomBlocks}
+              placeholder="none"
+              onChange={(ids) => change((it) => setKey(it, 'onCustomBlocks', ids))}
             />
             <NumberField
               label="Lowest"

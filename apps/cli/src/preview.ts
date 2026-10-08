@@ -54,6 +54,8 @@ export interface PreviewOptions {
   at?: number
   /** Columns in the slice. */
   width?: number
+  /** The highest y the slice draws. Default: the highest block that isn't air (or the sea's top). */
+  top?: number
   /** The world's lowest block, and one above its highest. */
   minY?: number
   maxY?: number
@@ -207,7 +209,10 @@ function render(
     defaults.terrain?.fluid ?? TERRAIN_DEFAULTS.fluid,
     defaults.stone?.block ?? TERRAIN_DEFAULTS.stone,
   )
-  const top = sliceTop(slice)
+  if (options.top !== undefined && (options.top < minY || options.top >= maxY)) {
+    throw new PreviewError(`--top is a height in the world, from ${minY} to ${maxY - 1}.`)
+  }
+  const top = options.top !== undefined ? options.top + 1 : sliceTop(slice)
   const drawn = slicePixels(slice, colors, top, options.scale ?? DEFAULTS.sliceScale)
   const legend = [
     `slice: ${columns} columns along ${alongX ? `x at z ${at}` : `z at x ${at}`}, from ${alongX ? 'x' : 'z'} ${from}; y ${slice.minY} to ${top - 1}; sea level ${slice.seaLevel}`,

@@ -292,7 +292,10 @@ enum class CaveType {
     SPAGHETTI
 }
 
-/** A kind of cave, carved from [minY] to [maxY] and never within [depth] blocks of the surface. */
+/**
+ * A kind of cave, carved from [minY] to [maxY] and never within [depth] blocks of the surface. With a [fade], it
+ * narrows to nothing over that many blocks at each end instead of stopping in a flat cut, so bands blend.
+ */
 @Serializable
 data class Cave(
     val type: CaveType? = null,
@@ -309,10 +312,16 @@ data class Cave(
     val maxY: Int? = null,
     /** How far below the surface it must stay, 0 or more, so caves don't open the ground everywhere. Default 4. */
     val depth: Int? = null,
+    /**
+     * How many blocks above [minY] and below [maxY] it narrows over, 0 (a flat cut) to [TerrainFile.MAX_THICKNESS]:
+     * rooms shrink and tunnels thin towards each end until none is carved there. Default 0.
+     */
+    val fade: Int? = null,
     /** The biome areas (by name) whose columns it's carved in. Default: all of them. */
     val biomes: List<String> = emptyList()
 ) {
     val typeOrDefault: CaveType get() = type ?: CaveType.CHEESE
+    val fadeOrDefault: Int get() = fade ?: 0
     val minYOrDefault: Int get() = minY ?: DEFAULT_MIN_Y
     val maxYOrDefault: Int get() = maxY ?: DEFAULT_MAX_Y
     val depthOrDefault: Int get() = depth ?: DEFAULT_DEPTH
@@ -346,14 +355,16 @@ enum class OreDistribution {
 /**
  * Veins of one block ([block]: a vanilla block state; [customBlock]: one of
  * the project's own, which must be a cube: one drawn by a centity can't be an
- * ore) scattered through the ground, replacing [replace] only.
+ * ore) scattered through the ground, replacing [replace] and [replaceCustomBlocks] only.
  */
 @Serializable
 data class Ore(
     override val block: String? = null,
     @Ref(RefKind.BLOCK) override val customBlock: ResourceRef? = null,
-    /** The blocks it may replace: block ids. Default: the [TerrainFile.stone]. */
+    /** The blocks it may replace: block ids. Default: the [TerrainFile.stone] (when [replaceCustomBlocks] is empty too). */
     val replace: List<String> = emptyList(),
+    /** The project's blocks it may replace, by id, besides [replace]: `ebonstone` in a layer, the stone or an area's ground. */
+    @Ref(RefKind.BLOCK) val replaceCustomBlocks: List<ResourceRef> = emptyList(),
     /** Most blocks in one vein, 1 to [TerrainFile.MAX_ORE_SIZE]. Default 8. */
     val size: Int? = null,
     /** Veins attempted in each chunk, 0 to [TerrainFile.MAX_ORE_VEINS]. Default 8. */
@@ -434,9 +445,12 @@ data class Decoration(
     val maxY: Int? = null,
     /**
      * Block ids it may be placed on (`surface`, `underwater`, `caveFloor`), hang from (`caveCeiling`) or replace
-     * (`underground`). Default: any block that isn't air or the sea (`underground`: the file's stone).
+     * (`underground`). Default: any block that isn't air or the sea (`underground`: the file's stone), when
+     * [onCustomBlocks] is empty too.
      */
     val on: List<String> = emptyList(),
+    /** The project's blocks, by id, it may be placed on, hang from or replace, besides [on]: `ebonstone`. */
+    @Ref(RefKind.BLOCK) val onCustomBlocks: List<ResourceRef> = emptyList(),
     /** For a [structure]: whether each one is turned a random quarter turn. Default true. */
     val rotate: Boolean? = null,
     /**
@@ -572,7 +586,7 @@ data class TerrainScript(
         const val DEFAULT_BUDGET = 1_000_000
         const val MIN_BUDGET = 1_000
         const val MAX_BUDGET = 100_000_000
-        const val MAX_BLOCKS = 64
+        const val MAX_BLOCKS = 1024
         const val MAX_LOOT = 64
 
         /** The extension of the script beside the file. */
