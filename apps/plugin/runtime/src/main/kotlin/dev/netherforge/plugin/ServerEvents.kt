@@ -15,6 +15,8 @@ import dev.netherforge.plugin.api.PlayerPickupItemEvent
 import dev.netherforge.plugin.api.PlayerUseItemEvent
 import dev.netherforge.plugin.api.entityHandle
 import dev.netherforge.plugin.api.livingHandle
+import dev.netherforge.plugin.loot.LootRoll
+import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.ClickButton
 import dev.netherforge.plugin.platform.DeathAnswer
@@ -23,6 +25,7 @@ import dev.netherforge.plugin.platform.DropsAnswer
 import dev.netherforge.plugin.platform.EntityTag
 import dev.netherforge.plugin.platform.GameEvents
 import dev.netherforge.plugin.platform.ItemData
+import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.platform.MenuClick
 import dev.netherforge.plugin.platform.PlatformEvents
 import dev.netherforge.plugin.platform.PlayerRef
@@ -34,6 +37,7 @@ import dev.netherforge.plugin.session.handle
 import dev.netherforge.plugin.session.listening
 import dev.netherforge.plugin.session.playerEvent
 import java.util.UUID
+import kotlin.random.Random
 
 /**
  * What the server tells the runtime ([PlatformEvents]), for as long as the
@@ -231,6 +235,24 @@ class ServerEvents internal constructor(private val runtime: NetherForgeRuntime)
         session.centities.click(entity, player, button, sight)
 
     override fun entitiesLoaded(tagged: Map<UUID, EntityTag>, untagged: List<UUID>) = session.entitiesLoaded(tagged, untagged)
+
+    override fun generatedLoot(table: String, player: UUID?, location: Location): List<ItemData>? {
+        if (!running) return null
+        val loot = session.loot
+        val id = loot.idOf(table)
+        if (id == null) {
+            runtime.log.warn(
+                "A generated container at ${location.world} ${location.x.toInt()} ${location.y.toInt()} ${location.z.toInt()} names the loot table \"$table\", which isn't running: it's left empty"
+            )
+            return emptyList()
+        }
+        return try {
+            loot.roll(id, LootRoll(player = player, location = location), Random.nextLong())
+        } catch (e: LuaApiException) {
+            runtime.log.warn("Rolling the loot table \"$table\" for a generated container failed: ${e.message}")
+            emptyList()
+        }
+    }
 
     override fun structureMarkersLoaded(markers: List<StructureMarker>) {
         if (running) session.structureMarkers(markers)

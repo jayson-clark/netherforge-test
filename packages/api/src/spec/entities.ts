@@ -112,7 +112,7 @@ const attributeFunctions: Fn[] = [
   },
   {
     name: 'add_attribute_modifier',
-    doc: `Adds a modifier to one of its attributes, replacing the project's modifier of the same id. Modifiers are saved with the entity, so give each a fixed id and remove it when it's done, rather than making new ones. The id is in the project's namespace (\`netherforge.json\`'s \`namespace\`): \`"slow_zone"\` is \`"${MODIFIER_NAMESPACE}:slow_zone"\`, so nothing else's modifiers can be replaced or removed. ${UNKNOWN_ATTRIBUTE}`,
+    doc: `Adds a modifier to one of its attributes, replacing the project's modifier of the same id. Modifiers are saved with the entity unless \`saved\` is \`false\`, so give each a fixed id and remove it when it's done, rather than making new ones. The id is in the project's namespace (\`netherforge.json\`'s \`namespace\`): \`"slow_zone"\` is \`"${MODIFIER_NAMESPACE}:slow_zone"\`, so nothing else's modifiers can be replaced or removed. ${UNKNOWN_ATTRIBUTE}`,
     params: [
       attributeParam,
       {
@@ -127,6 +127,12 @@ const attributeFunctions: Fn[] = [
         doc: 'How `amount` applies, as an item\'s `attribute_modifiers`: added; added times the base value; or the total multiplied by `1 + amount`. Default `"add_value"`.',
         optional: true,
       },
+      {
+        name: 'saved',
+        type: 'boolean',
+        doc: "Whether it's saved with the entity. `false` for one that's only while something lasts (a zone's gravity, a stance's speed): it's gone when the entity leaves the world or the server stops, so nothing is left on a player when the project changes. Default `true`.",
+        optional: true,
+      },
     ],
     returns: [
       {
@@ -134,8 +140,7 @@ const attributeFunctions: Fn[] = [
         doc: `\`false\` for an attribute it doesn't have, ${ONCE_GONE}.`,
       },
     ],
-    example:
-      'zombie:add_attribute_modifier("movement_speed", "slow_zone", -0.5, "add_multiplied_total")',
+    example: 'player:add_attribute_modifier("gravity", "space", -0.06, "add_value", false)',
   },
   {
     name: 'remove_attribute_modifier',

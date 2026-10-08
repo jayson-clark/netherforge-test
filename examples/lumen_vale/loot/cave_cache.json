@@ -1,0 +1,46 @@
+{
+  "$schema": "../.netherforge/schema/loot_table.schema.json",
+  "pools": {
+    "supplies": {
+      "rolls": {
+        "min": 2,
+        "max": 3
+      },
+      "entries": [
+        {
+          "type": "item",
+          "item": {
+            "item": "lumen_shard"
+          },
+          "count": {
+            "min": 1,
+            "max": 2
+          },
+          "weight": 3
+        },
+        {
+          "type": "item",
+          "item": {
+            "kind": "minecraft:torch"
+          },
+          "count": {
+            "min": 4,
+            "max": 8
+          },
+          "weight": 4
+        },
+        {
+          "type": "item",
+          "item": {
+            "kind": "minecraft:bread"
+          },
+          "count": {
+            "min": 1,
+            "max": 3
+          },
+          "weight": 2
+        }
+      ]
+    }
+  }
+}

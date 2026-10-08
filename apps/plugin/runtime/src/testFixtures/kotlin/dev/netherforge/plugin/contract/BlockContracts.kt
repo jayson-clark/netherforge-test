@@ -94,6 +94,29 @@ abstract class BlockOpsContract : PlatformContract() {
     }
 
     @Test
+    fun `a chunk's legend reads back, apart from its blocks' records, and clears`() {
+        main {
+            val (x, y, z) = block(at(6, 3, -6))
+            val cx = x shr 4
+            val cz = z shr 4
+            afterwards {
+                blocks.setLegend(world, cx, cz, null)
+                blocks.setRecord(world, x, y, z, null)
+            }
+            assertTrue(blocks.setLegend(world, cx, cz, null))
+            assertNull(blocks.legend(world, cx, cz))
+            assertTrue(blocks.setLegend(world, cx, cz, """{"a":"ore"}"""))
+            assertEquals("""{"a":"ore"}""", blocks.legend(world, cx, cz))
+            // It isn't one of the chunk's records, and a record isn't it.
+            assertTrue(blocks.records(world, cx, cz)!!.none { it.json == """{"a":"ore"}""" })
+            assertTrue(blocks.setRecord(world, x, y, z, """{"id":"ore"}"""))
+            assertEquals("""{"a":"ore"}""", blocks.legend(world, cx, cz))
+            assertTrue(blocks.setLegend(world, cx, cz, null))
+            assertNull(blocks.legend(world, cx, cz))
+        }
+    }
+
+    @Test
     fun `the blocks of some states in a chunk are found, with which state each is`() {
         main {
             val zombie = "minecraft:note_block[instrument=zombie,note=3,powered=false]"
@@ -185,6 +208,8 @@ abstract class BlockOpsContract : PlatformContract() {
             assertFalse(blocks.setData(world, x, 70, z, "{}"))
             assertFalse(blocks.setRecord(world, x, 70, z, "{}"))
             assertNull(blocks.records(world, cx, cz))
+            assertFalse(blocks.setLegend(world, cx, cz, "{}"))
+            assertNull(blocks.legend(world, cx, cz))
             assertNull(blocks.find(world, cx, cz, setOf("minecraft:stone")))
             assertFalse(blocks.canPlace(world, x, 70, z, "minecraft:stone"))
             assertNull(blocks.get(MISSING_WORLD, 0, 70, 0))

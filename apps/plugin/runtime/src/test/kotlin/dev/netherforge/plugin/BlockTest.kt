@@ -118,11 +118,13 @@ class BlockTest {
             assertEquals("lamp lamp 1", logs[3])
             assertEquals("all 2 nil", logs[4])
             assertEquals(server.custom().stateOf("ore"), server.state(4, 64, 4))
-            // What the server remembers: which block, and for the lamp which centity instance.
+            // What the server remembers: the lamp's record, naming its centity instance; the ore is known by its state,
+            // which the chunk's legend says is the ore.
             val records = server.platform.blocks.records.values.toList()
-            assertEquals(2, records.size)
-            assertTrue(records.any { it == """{"id":"ore"}""" }, records.toString())
-            assertTrue(records.any { it.startsWith("""{"id":"lamp","centity":""") }, records.toString())
+            assertEquals(1, records.size, records.toString())
+            assertTrue(records.single().startsWith("""{"id":"lamp","centity":"""), records.toString())
+            val legend = server.platform.blocks.legends[Triple("world", 0, 0)]!!
+            assertTrue(""""${server.custom().stateOf("ore")}":"ore"""" in legend, legend)
             val instance = server.runtime.session.centities.all().single()
             assertEquals(6.5, instance.anchor.x)
             assertEquals(64.0, instance.anchor.y)
@@ -309,7 +311,9 @@ class BlockTest {
             assertNull(server.custom().at("world", 40, 70, 40))
             server.platform.raise.chunkLoad(GameEvent.ChunkLoad("world", 2, 2, true))
             assertEquals("ore", server.custom().at("world", 40, 70, 40))
-            assertTrue(server.platform.blocks.records.any { (at, json) -> at.x == 40 && json == """{"id":"ore"}""" })
+            // Known by its state from now on: the chunk's legend, no record of its own.
+            assertEquals("""{"$state":"ore"}""", server.platform.blocks.legends[Triple("world", 2, 2)])
+            assertTrue(server.platform.blocks.records.none { (at, _) -> at.x == 40 })
 
             // It's one of the chunk's, so it ticks, and goes when the chunk does.
             server.runtime.events.game.chunkUnload(GameEvent.Chunk("world", 2, 2))
@@ -349,6 +353,56 @@ class BlockTest {
             assertNull(server.custom().at("world", 0, 64, 0))
             assertEquals(after, server.state(0, 64, 0))
             assertEquals(1, server.platform.blocks.records.size)
+        }
+    }
+
+    @Test
+    fun `a chunk full of generated blocks keeps one legend entry and no records`() {
+        server().use { server ->
+            val state = server.custom().stateOf("ore")!!
+            for (x in 32..47) for (z in 32..47) for (y in 0..9) server.platform.worlds.blocks[BlockAt("world", x, y, z)] = state
+            server.platform.raise.chunkLoad(GameEvent.ChunkLoad("world", 2, 2, true))
+            assertEquals("ore", server.custom().at("world", 40, 5, 40))
+            assertEquals(emptyMap(), server.platform.blocks.records.toMap())
+            assertEquals("""{"$state":"ore"}""", server.platform.blocks.legends[Triple("world", 2, 2)])
+        }
+    }
+
+    @Test
+    fun `blocks in a chunk that wasn't loaded follow their states when it is`() {
+        server().use { server ->
+            server.custom().place("ore", "world", 40, 64, 40)
+            val before = server.custom().stateOf("ore")!!
+            server.runtime.events.game.chunkUnload(GameEvent.Chunk("world", 2, 2))
+            server.platform.worlds.unloaded += Triple("world", 2, 2)
+            // A block named first moves every state on one, while the chunk isn't loaded: the ore's is the lamp's now.
+            server.write("blocks/amber/block.json", "{}")
+            assertTrue(server.reload("blocks/amber/block.json").resources.single().ok)
+            val after = server.custom().stateOf("ore")!!
+            assertEquals(before, server.custom().stateOf("lamp"))
+            server.platform.worlds.loadChunk("world", 2, 2)
+            server.platform.raise.chunkLoad(GameEvent.ChunkLoad("world", 2, 2, false))
+            // Still the ore, in the ore's state now: the legend said what it was placed as.
+            assertEquals("ore", server.custom().at("world", 40, 64, 40))
+            assertEquals(after, server.state(40, 64, 40))
+            assertEquals("""{"$after":"ore"}""", server.platform.blocks.legends[Triple("world", 2, 2)])
+        }
+    }
+
+    @Test
+    fun `a block with a table keeps a record once its chunk unloads, and an old record of a plain block goes`() {
+        server().use { server ->
+            server.custom().place("ore", "world", 40, 64, 40)
+            server.platform.blocks.data[BlockAt("world", 40, 64, 40)] = """{"age":1}"""
+            server.custom().place("ore", "world", 41, 64, 40)
+            server.runtime.events.game.chunkUnload(GameEvent.Chunk("world", 2, 2))
+            assertEquals(listOf(40), server.platform.blocks.records.keys.map { it.x })
+            // A record from before legends, of a block with no table: it goes when the chunk loads.
+            server.platform.blocks.records[BlockAt("world", 42, 64, 40)] = """{"id":"ore"}"""
+            server.platform.worlds.blocks[BlockAt("world", 42, 64, 40)] = server.custom().stateOf("ore")!!
+            server.platform.raise.chunkLoad(GameEvent.ChunkLoad("world", 2, 2, false))
+            assertEquals("ore", server.custom().at("world", 42, 64, 40))
+            assertEquals(listOf(40), server.platform.blocks.records.keys.map { it.x })
         }
     }
 

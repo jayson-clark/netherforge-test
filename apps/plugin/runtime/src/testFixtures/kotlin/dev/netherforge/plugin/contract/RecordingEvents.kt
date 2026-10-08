@@ -10,6 +10,7 @@ import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.GameEventFunnel
 import dev.netherforge.plugin.platform.GameEvents
 import dev.netherforge.plugin.platform.ItemData
+import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.platform.MenuClick
 import dev.netherforge.plugin.platform.PlatformEvents
 import dev.netherforge.plugin.platform.PlayerRef
@@ -69,6 +70,11 @@ class RecordingEvents : PlatformEvents {
         hear("playerInteract", player, button, block, face, item, hand)
 
     override fun playerUseItem(player: PlayerRef, item: ItemData, hand: String) = hear("playerUseItem", player, item, hand)
+
+    override fun generatedLoot(table: String, player: UUID?, location: Location): List<ItemData>? {
+        hear("generatedLoot", table, player, location)
+        return emptyList()
+    }
 
     override fun blockBreak(player: PlayerRef, block: BlockRef, drops: () -> List<ItemData>, experience: Int): DropsAnswer? =
         if (hear("blockBreak", player, block, experience)) null else DropsAnswer(null, experience)

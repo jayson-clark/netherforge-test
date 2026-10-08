@@ -375,6 +375,13 @@
     "target": "lumen_vale:lumen_pickaxe"
   },
   {
+    "file": "loot/cave_cache.json",
+    "path": "$.pools.supplies.entries[0].item.item",
+    "kind": "item",
+    "text": "lumen_shard",
+    "target": "lumen_vale:lumen_shard"
+  },
+  {
     "file": "loot/crystal_glass.json",
     "path": "$.pools.main.entries[0].item.item",
     "kind": "item",
@@ -663,6 +670,13 @@
   },
   {
     "file": "terrain/vale.json",
+    "path": "$.decorations.cave_caches.loot",
+    "kind": "loot_table",
+    "text": "cave_cache",
+    "target": "lumen_vale:cave_cache"
+  },
+  {
+    "file": "terrain/vale.json",
     "path": "$.decorations.cave_lumen.customBlock",
     "kind": "block",
     "text": "lumen_ore",
@@ -681,6 +695,13 @@
     "kind": "biome",
     "text": "crystal_grove",
     "target": "lumen_vale:crystal_grove"
+  },
+  {
+    "file": "terrain/vale.json",
+    "path": "$.biomes.hollows.biome",
+    "kind": "biome",
+    "text": "minecraft:lush_caves",
+    "target": "minecraft:lush_caves"
   },
   {
     "file": "terrain/vale.json",

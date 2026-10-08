@@ -58,16 +58,20 @@ import kotlin.random.Random
  * placed in a world.
  *
  * **What a block is in the world.** A note block state ([BlockCarriers]: the
- * resource pack draws it as the block), plus a **record** the server keeps
- * with its chunk saying which block it is (and, for a block a centity is
- * drawn over, which instance). The state is a function of the record and the
- * project's blocks: when a chunk loads, every record's block is put in the
- * state it has now, so adding or removing blocks never turns a placed one
- * into another. A carrier state with no record (a chunk a world generator
- * filled, a paste) is adopted as the block that state is. A position that
- * stops being a carrier (an explosion, a plugin, a script's `set_state`) is
- * forgotten, with its data and its centity, by the sweep (or at once, when
- * the runtime did it).
+ * resource pack draws it as the block). Which block a state is can change
+ * when the project's blocks do, so each chunk keeps a **legend** of the states
+ * its blocks were placed as (state to block, a few entries a chunk, however
+ * many blocks): when a chunk loads, every block is read from its state through
+ * the legend and put in the state it has now, so adding or removing blocks
+ * never turns a placed one into another, and a layer of ten thousand of them
+ * costs no more to keep than one. Only a block a centity is drawn over keeps a
+ * **record** of its own with its chunk, naming its instance (and a block the
+ * project no longer has keeps one, so its state is free for another). A
+ * carrier state the legend doesn't name (a chunk a world generator filled, a
+ * paste) is adopted as the block that state is now. A position that stops
+ * being a carrier (an explosion, a plugin, a script's `set_state`) is
+ * forgotten, with its data and its centity, by the sweep (or at once, when the
+ * runtime did it).
  *
  * **What it doesn't do.** The vanilla note block's part (tuning, sounding,
  * instruments) is the adapter's ([BlockOps.freezeNoteBlocks]); this service
@@ -107,7 +111,22 @@ internal class CustomBlocks(
     private class Record(val id: String, val centity: String? = null)
 
     /** A block in a loaded chunk. */
-    private class Placed(var name: String, var centity: UUID?, var next: Long)
+    private class Placed(var name: String, var centity: UUID?, var next: Long) {
+        /** Whether a block that needn't keep a record has one anyway (its table is kept by it). */
+        var pinned = false
+    }
+
+    /** Whether a block keeps a record of its own: one a centity is drawn over, which names the instance. */
+    private fun recorded(name: String): Boolean = defs[name]?.file?.centity != null
+
+    private fun readLegend(json: String?): Map<String, String> =
+        json?.let { runCatching { Json.decodeFromString<Map<String, String>>(it) }.getOrNull() }.orEmpty()
+
+    /** Writes a chunk's legend when it's changed (a chunk written to is saved again). */
+    private fun writeLegend(key: ChunkKey, before: String?, legend: Map<String, String>) {
+        val json = if (legend.isEmpty()) null else Json.encodeToString<Map<String, String>>(LinkedHashMap(legend.toSortedMap()))
+        if (json != before) platform.blocks.setLegend(key.world, key.x, key.z, json)
+    }
 
     private data class ChunkKey(val world: String, val x: Int, val z: Int)
 
@@ -276,8 +295,25 @@ internal class CustomBlocks(
 
     override fun chunkUnloading(world: String, chunkX: Int, chunkZ: Int) {
         val key = ChunkKey(world, chunkX, chunkZ)
+        chunks[key]?.let { pinData(world, it) }
         chunks.remove(key)
         ticking.remove(key)
+    }
+
+    override fun worldSaving(world: String) {
+        for ((key, blocks) in chunks) if (key.world == world) pinData(world, blocks)
+    }
+
+    /**
+     * A block known by its state alone that scripts gave a table keeps a record from now on: if something else takes
+     * its place while its chunk isn't loaded, the record is how its table is found to go.
+     */
+    private fun pinData(world: String, blocks: Map<BlockVector, Placed>) {
+        for ((at, placed) in blocks) {
+            if (placed.pinned || recorded(placed.name) || !blockData().has(world, at.x, at.y, at.z)) continue
+            platform.blocks.setRecord(world, at.x, at.y, at.z, record(placed.name, null))
+            placed.pinned = true
+        }
     }
 
     /**
@@ -289,7 +325,11 @@ internal class CustomBlocks(
     private fun reconcile(key: ChunkKey) {
         val plan = plan ?: return
         val records = platform.blocks.records(key.world, key.x, key.z) ?: return
-        val found = platform.blocks.find(key.world, key.x, key.z, byState.keys) ?: return
+        val legendText = platform.blocks.legend(key.world, key.x, key.z)
+        val legend = readLegend(legendText)
+        // The states blocks are held in now, and those the legend says they were placed in.
+        val found = platform.blocks.find(key.world, key.x, key.z, byState.keys + legend.keys) ?: return
+        val previous = chunks[key].orEmpty()
         val tracked = HashMap<BlockVector, Placed>()
         val recorded = HashSet<BlockVector>()
         val noteBlock = BlockCarriers.BLOCK
@@ -307,14 +347,14 @@ internal class CustomBlocks(
             when {
                 // A block the project has no longer (or has with errors): it stays as it was, inert, until it's back.
                 expected == null || read.id !in defs -> Unit
-                state == expected -> tracked[at] = placed(key, at, read.id, centity)
+                state == expected -> keep(key, at, read.id, centity, tracked)
                 else -> {
                     val now = platform.blocks.get(key.world, at.x, at.y, at.z)?.state
                     val parsed = now?.let(BlockState::parse)
                     if (parsed != null && parsed.id == noteBlock && plan.pool.isCarrier(parsed)) {
                         // The block's state moved with the project's blocks: put it right, quietly.
                         platform.blocks.set(key.world, at.x, at.y, at.z, expected, false)
-                        tracked[at] = placed(key, at, read.id, centity)
+                        keep(key, at, read.id, centity, tracked)
                     } else {
                         // Whatever it was, it isn't there now: its table and its centity go.
                         gone(key.world, at, centity)
@@ -325,13 +365,51 @@ internal class CustomBlocks(
         }
         for ((at, state) in found) {
             if (at in recorded) continue
-            val name = nameOfState(state) ?: continue
+            // What it was placed as, else (a generated chunk, a paste) what its state is now.
+            val name = legend[state] ?: byState[state] ?: continue
+            if (name !in defs) {
+                // A block the project has no longer (or has with errors): pinned by a record, inert, until it's back.
+                platform.blocks.setRecord(key.world, at.x, at.y, at.z, record(name, null))
+                continue
+            }
+            val expected = plan.stateOf(name)?.toString() ?: continue
+            // The block's state moved with the project's blocks: put it right, quietly.
+            if (expected != state) platform.blocks.set(key.world, at.x, at.y, at.z, expected, false)
             tracked[at] = placed(key, at, name, null)
-            adopted(key.world, at, name, tracked)
+            if (recorded(name)) adopted(key.world, at, name, tracked)
         }
+        // A block known by its state alone that something else replaced while its chunk was loaded: its table goes.
+        for ((at, placed) in previous) if (at !in found && at !in recorded) gone(key.world, at, placed.centity)
         for (at in tracked.keys.toList()) ensureCentity(key.world, at, tracked)
+        writeLegend(key, legendText, legendOf(plan, tracked))
         if (tracked.isEmpty()) chunks.remove(key) else chunks[key] = tracked
         refreshTicking()
+    }
+
+    /**
+     * A recorded block that's still there, tracked: one that needn't keep a record (one from before legends) and has
+     * no table to keep loses it, and the legend has it from now on.
+     */
+    private fun keep(key: ChunkKey, at: BlockVector, name: String, centity: UUID?, tracked: MutableMap<BlockVector, Placed>) {
+        val placed = placed(key, at, name, centity)
+        tracked[at] = placed
+        if (recorded(name) || centity != null) return
+        if (blockData().has(key.world, at.x, at.y, at.z)) {
+            placed.pinned = true
+        } else {
+            platform.blocks.setRecord(key.world, at.x, at.y, at.z, null)
+            placed.pinned = false
+        }
+    }
+
+    /** The legend of a chunk's [tracked] blocks that keep no record: each one's state now, to its name. */
+    private fun legendOf(plan: BlockCarriers.Plan, tracked: Map<BlockVector, Placed>): Map<String, String> {
+        val legend = HashMap<String, String>()
+        for (placed in tracked.values) {
+            if (recorded(placed.name)) continue
+            plan.stateOf(placed.name)?.let { legend[it.toString()] = placed.name }
+        }
+        return legend
     }
 
     /** The block already tracked at [at] if it's still [name] (its timer runs on), else a new one, first ticked an interval from now. */
@@ -411,7 +489,16 @@ internal class CustomBlocks(
         val placed = Placed(name, null, ticks() + (def.file.tick ?: 0))
         placed.centity = spawnCentity(world, at, def)
         blocks[at] = placed
-        platform.blocks.setRecord(world, at.x, at.y, at.z, record(name, placed.centity))
+        if (recorded(name)) {
+            platform.blocks.setRecord(world, at.x, at.y, at.z, record(name, placed.centity))
+        } else {
+            // Known by its state: the chunk's legend says which block that is (and a record of what was there goes).
+            platform.blocks.setRecord(world, at.x, at.y, at.z, null)
+            val state = stateOf(name)
+            val before = platform.blocks.legend(world, key.x, key.z)
+            val legend = readLegend(before)
+            if (state != null && legend[state] != name) writeLegend(key, before, legend + (state to name))
+        }
         if (def.file.tick != null) ticking += key
     }
 

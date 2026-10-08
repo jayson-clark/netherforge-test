@@ -113,9 +113,9 @@ Everything changing one of its attributes: the modifiers scripts added, and thos
 
 **Returns** `AttributeModifier[]?`
 
-## `living:add_attribute_modifier(attribute, id, amount, operation?)`
+## `living:add_attribute_modifier(attribute, id, amount, operation?, saved?)`
 
-Adds a modifier to one of its attributes, replacing the project's modifier of the same id. Modifiers are saved with the entity, so give each a fixed id and remove it when it's done, rather than making new ones. The id is in the project's namespace (`netherforge.json`'s `namespace`): `"slow_zone"` is `"<namespace>:slow_zone"`, so nothing else's modifiers can be replaced or removed. An attribute the server doesn't have is an error.
+Adds a modifier to one of its attributes, replacing the project's modifier of the same id. Modifiers are saved with the entity unless `saved` is `false`, so give each a fixed id and remove it when it's done, rather than making new ones. The id is in the project's namespace (`netherforge.json`'s `namespace`): `"slow_zone"` is `"<namespace>:slow_zone"`, so nothing else's modifiers can be replaced or removed. An attribute the server doesn't have is an error.
 
 | Parameter | Type | |
 | --- | --- | --- |
@@ -123,11 +123,12 @@ Adds a modifier to one of its attributes, replacing the project's modifier of th
 | `id` | `string` | What it's called, to remove it later: lowercase letters, digits, `_`, `-`, `.` and `/`. `"<namespace>:"` in front is allowed, and the same. |
 | `amount` | `number` | How much. |
 | `operation` (optional) | `"add_value"\|"add_multiplied_base"\|"add_multiplied_total"` | How `amount` applies, as an item's `attribute_modifiers`: added; added times the base value; or the total multiplied by `1 + amount`. Default `"add_value"`. |
+| `saved` (optional) | `boolean` | Whether it's saved with the entity. `false` for one that's only while something lasts (a zone's gravity, a stance's speed): it's gone when the entity leaves the world or the server stops, so nothing is left on a player when the project changes. Default `true`. |
 
 **Returns** `boolean`: `false` for an attribute it doesn't have, once it has gone (or while its chunk is unloaded).
 
 ```lua
-zombie:add_attribute_modifier("movement_speed", "slow_zone", -0.5, "add_multiplied_total")
+player:add_attribute_modifier("gravity", "space", -0.06, "add_value", false)
 ```
 
 ## `living:remove_attribute_modifier(attribute, id)`

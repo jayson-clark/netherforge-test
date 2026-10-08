@@ -13,6 +13,7 @@ import dev.netherforge.format.project.ProjectSnapshot
 import dev.netherforge.format.project.Projects
 import dev.netherforge.format.project.TemplateNeedsGame
 import dev.netherforge.format.ref.RefKind
+import dev.netherforge.format.terrain.GeneratedLoot
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -119,6 +120,27 @@ class DatapackTest {
         // A server it isn't written for gets none of it, nor one that refused it.
         assertEquals(emptyMap(), copies(StartupDatapack.build(snapshot, listOf(130, 0), text)))
         assertEquals(emptyMap(), copies(StartupDatapack.build(snapshot, minecraft263, text, passThrough = false)))
+    }
+
+    @Test
+    fun aTerrainThatFillsContainersBringsTheEmptyTableTheGameUnpacksThemWith() {
+        val loot = """{ "pools": { "main": { "entries": [{ "type": "item", "item": { "kind": "minecraft:stick" } }] } } }"""
+        val without = load(
+            "loot/junk.json" to loot,
+            "terrain/hills.json" to """{ "decorations": { "b": { "block": "minecraft:barrel" } } }"""
+        )
+        assertEquals(emptyList(), without.problems)
+        assertFalse(GeneratedLoot.DATAPACK_PATH in StartupDatapack.build(without, minecraft263, text))
+        val with = load(
+            "loot/junk.json" to loot,
+            "terrain/hills.json" to """{ "decorations": { "b": { "block": "minecraft:barrel", "loot": "junk" } } }"""
+        )
+        assertEquals(emptyList(), with.problems)
+        val entry = StartupDatapack.build(with, minecraft263, text).getValue(GeneratedLoot.DATAPACK_PATH)
+        assertEquals("{\"type\":\"minecraft:chest\",\"pools\":[]}", (entry as DatapackEntry.Text).text.replace(Regex("\\s"), ""))
+        // A table a terrain names is a reference like any.
+        val missing = load("terrain/hills.json" to """{ "decorations": { "b": { "block": "minecraft:barrel", "loot": "nope" } } }""")
+        assertEquals(listOf("reference.loot-table"), missing.problems.map { it.code })
     }
 
     @Test

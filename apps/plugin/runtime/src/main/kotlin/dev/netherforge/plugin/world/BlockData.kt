@@ -52,6 +52,9 @@ internal class BlockData(private val platform: Platform, private val log: Runtim
         return host.keepData(value).also { held[key] = Held(it, stored) }
     }
 
+    /** Whether scripts gave the block at a position a table: one is held, or one is stored. */
+    fun has(world: String, x: Int, y: Int, z: Int): Boolean = Key(world, x, y, z) in held || platform.blocks.data(world, x, y, z) != null
+
     /**
      * A custom block went: its table goes with it, from the world and from
      * what scripts hold (a script still holding the table keeps one that's no

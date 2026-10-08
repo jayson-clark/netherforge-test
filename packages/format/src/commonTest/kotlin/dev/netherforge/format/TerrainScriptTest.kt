@@ -204,7 +204,9 @@ class TerrainScriptTest {
         }
         assertEquals(listOf("load: terrain/t.lua:1: unexpected symbol near '+'"), failures("+"))
         assertEquals(
-            listOf("load: terrain/t.lua: \"heigth\" isn't a stage: a script's stages are height, density, terrain and decorate"),
+            listOf(
+                "load: terrain/t.lua: \"heigth\" isn't a stage: a script's stages are height, density, area, biome, terrain and decorate"
+            ),
             failures("return { heigth = function() end }")
         )
         assertEquals(

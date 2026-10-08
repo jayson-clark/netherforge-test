@@ -63,6 +63,7 @@ class MobTest {
             local alex = nf.players.get("Alex")
             check("a player's", alex:attribute("movement_speed"), 0.1)
             check("a player grows", alex:set_attribute_base("scale", 2) and alex:attribute("scale"), 2)
+            check("not saved", alex:add_attribute_modifier("scale", "shrink", -0.5, "add_value", false), true)
 
             zombie:remove()
             check("nil once gone", zombie:attribute("armor"), nil)
@@ -73,6 +74,8 @@ class MobTest {
                 // What reached the server: the project's namespace, the operation as given.
                 val alex = server.platform.players.byId.keys.single()
                 assertEquals(2.0, server.platform.attributes.byEntity.getValue(alex).getValue("minecraft:scale").base)
+                val space = server.platform.attributes.byEntity.getValue(alex).getValue("minecraft:scale").modifiers.getValue("test:shrink")
+                assertEquals(false, space.saved)
             }
         )
         assertEquals(listOf("done"), result)

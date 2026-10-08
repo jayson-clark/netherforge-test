@@ -91,13 +91,20 @@ internal class LivingImpl(private val session: ProjectSession) : LivingApi {
         return modifiers.sortedBy { it.id }.map { AttributeModifier(it.id, it.amount, it.operation.name.lowercase()) }
     }
 
-    override fun addAttributeModifier(self: LuaHandle.Living, attribute: String, id: String, amount: Double, operation: String?): Boolean {
+    override fun addAttributeModifier(
+        self: LuaHandle.Living,
+        attribute: String,
+        id: String,
+        amount: Double,
+        operation: String?,
+        saved: Boolean?
+    ): Boolean {
         val attributeId = attributeId(attribute)
         val modifier = modifierId(id)
         if (!amount.isFinite()) throw LuaApiException("amount must be a number, not $amount")
         val op = operation?.let { name -> AttributeOperation.entries.first { it.name.lowercase() == name } } ?: AttributeOperation.ADD_VALUE
         val entity = self.uuidOrNull() ?: return false
-        return attributes.addModifier(entity, attributeId, AttributeModifierData(modifier, amount, op))
+        return attributes.addModifier(entity, attributeId, AttributeModifierData(modifier, amount, op, saved ?: true))
     }
 
     override fun removeAttributeModifier(self: LuaHandle.Living, attribute: String, id: String): Boolean {

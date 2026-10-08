@@ -1972,13 +1972,14 @@ function Living:set_attribute_base(attribute, value) end
 ---@return AttributeModifier[]?
 function Living:attribute_modifiers(attribute) end
 
---- Adds a modifier to one of its attributes, replacing the project's modifier of the same id. Modifiers are saved with the entity, so give each a fixed id and remove it when it's done, rather than making new ones. The id is in the project's namespace (`netherforge.json`'s `namespace`): `"slow_zone"` is `"<namespace>:slow_zone"`, so nothing else's modifiers can be replaced or removed. An attribute the server doesn't have is an error.
+--- Adds a modifier to one of its attributes, replacing the project's modifier of the same id. Modifiers are saved with the entity unless `saved` is `false`, so give each a fixed id and remove it when it's done, rather than making new ones. The id is in the project's namespace (`netherforge.json`'s `namespace`): `"slow_zone"` is `"<namespace>:slow_zone"`, so nothing else's modifiers can be replaced or removed. An attribute the server doesn't have is an error.
 ---@param attribute string Its id: `"minecraft:scale"`, or `"scale"` for short.
 ---@param id string What it's called, to remove it later: lowercase letters, digits, `_`, `-`, `.` and `/`. `"<namespace>:"` in front is allowed, and the same.
 ---@param amount number How much.
 ---@param operation? "add_value"|"add_multiplied_base"|"add_multiplied_total" How `amount` applies, as an item's `attribute_modifiers`: added; added times the base value; or the total multiplied by `1 + amount`. Default `"add_value"`.
+---@param saved? boolean Whether it's saved with the entity. `false` for one that's only while something lasts (a zone's gravity, a stance's speed): it's gone when the entity leaves the world or the server stops, so nothing is left on a player when the project changes. Default `true`.
 ---@return boolean # `false` for an attribute it doesn't have, once it has gone (or while its chunk is unloaded).
-function Living:add_attribute_modifier(attribute, id, amount, operation) end
+function Living:add_attribute_modifier(attribute, id, amount, operation, saved) end
 
 --- Takes one of the project's modifiers off one of its attributes. An attribute the server doesn't have is an error.
 ---@param attribute string Its id: `"minecraft:scale"`, or `"scale"` for short.

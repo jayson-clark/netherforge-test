@@ -1,5 +1,6 @@
 package dev.netherforge.plugin
 
+import dev.netherforge.plugin.platform.Location
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -200,6 +201,20 @@ class LootTest {
         dev.netherforge.plugin.loot.LootRoll(),
         1
     ).first().def.kind
+
+    @Test
+    fun `a generated container is filled with one roll of the table its terrain named, for whoever opened it`() {
+        server("log(\"done\")").use { server ->
+            val alex = server.platform.players.byId.keys.single()
+            val at = Location("world", 3.0, 64.0, 3.0)
+            val items = server.runtime.events.generatedLoot("treasure", alex, at)!!
+            assertEquals("minecraft:diamond", items.first().def.kind)
+            assertTrue(items.any { it.def.kind == "minecraft:bread" }, "the player's pool, for whoever opened it: $items")
+            assertTrue(server.runtime.events.generatedLoot("treasure", null, at)!!.none { it.def.kind == "minecraft:bread" })
+            // A table that isn't there leaves it empty, and says so.
+            assertEquals(emptyList(), server.runtime.events.generatedLoot("nope", null, at))
+        }
+    }
 
     private companion object {
         const val CHECK = """

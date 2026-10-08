@@ -51,6 +51,10 @@ object ContractBiomes {
         "netherforge.json" to
             """{ "formatVersion": ${FormatVersion.CURRENT}, "name": "Contract", "namespace": "${ContractServer.NAMESPACE}", "version": "1.0.0", "minecraft": "1.21.11" }""",
         "biomes/$BARE.json" to "{}",
+        // A terrain that fills containers: the start-up datapack then has the empty table generated containers are given.
+        "loot/contract_loot.json" to
+            """{ "pools": { "main": { "entries": [{ "type": "item", "item": { "kind": "minecraft:stick" } }] } } }""",
+        "terrain/caches.json" to """{ "decorations": { "caches": { "block": "minecraft:barrel", "loot": "contract_loot" } } }""",
         "biomes/$RICH.json" to
             """
             { "climate": { "temperature": -0.5, "downfall": 0.9, "precipitation": true, "temperatureModifier": "frozen" },

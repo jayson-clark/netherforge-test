@@ -109,7 +109,9 @@ data class CompiledDecoration(
     val maxY: Int?,
     /** Block ids (canonical) it sits on, hangs from or replaces; empty for the default. */
     val on: List<String>,
-    val rotate: Boolean
+    val rotate: Boolean,
+    /** The loot table its containers are filled from (an index into [CompiledTerrain.loot]), or -1 for none. */
+    val loot: Int = -1
 )
 
 /**
@@ -128,11 +130,36 @@ data class CompiledArea(
     val humidityMax: Double,
     val layers: List<CompiledLayer>?,
     val underwater: List<CompiledLayer>?,
-    val terrain: CompiledAreaTerrain
+    val terrain: CompiledAreaTerrain,
+    /** Its range of each of the file's other climate values, in [CompiledTerrain.climate]'s order: min, max, min, max... */
+    val climate: List<Double> = emptyList(),
+    /** Where it is, when it's a volume inside the columns' areas; null for a column's own area. */
+    val volume: CompiledVolume? = null
 ) {
     /** How much climate the box covers: a smaller box is the more specific. */
-    val span: Double get() = (temperatureMax - temperatureMin) * (humidityMax - humidityMin)
+    val span: Double
+        get() {
+            var span = (temperatureMax - temperatureMin) * (humidityMax - humidityMin)
+            for (i in climate.indices step 2) span *= climate[i + 1] - climate[i]
+            return span
+        }
 }
+
+/** A volume area's ranges, both ends included: heights, blocks below the column's surface, and the column's surface. */
+data class CompiledVolume(
+    val minY: Int = Int.MIN_VALUE,
+    val maxY: Int = Int.MAX_VALUE,
+    val minDepth: Int = Int.MIN_VALUE,
+    val maxDepth: Int = Int.MAX_VALUE,
+    val minSurface: Int = Int.MIN_VALUE,
+    val maxSurface: Int = Int.MAX_VALUE
+) {
+    fun contains(y: Int, surface: Int): Boolean =
+        y in minY..maxY && (surface - y) in minDepth..maxDepth && surface in minSurface..maxSurface
+}
+
+/** One of the file's own climate values ([Climate.noises]). */
+data class CompiledClimateNoise(val name: String, val noise: NoiseDef)
 
 /**
  * A project structure's blocks as a decoration places them: [palette] block states in canonical text, and
@@ -140,13 +167,25 @@ data class CompiledArea(
  * reads a `structures/<id>.nbt` itself (it's Minecraft's binary format): the server reads it with the game's own
  * structure loader, the editor with its NBT reader, and each hands the result to [CompiledTerrain.withStructures].
  */
-class StructureTemplate(val sizeX: Int, val sizeY: Int, val sizeZ: Int, val palette: List<String>, val blocks: IntArray) {
+class StructureTemplate(
+    val sizeX: Int,
+    val sizeY: Int,
+    val sizeZ: Int,
+    val palette: List<String>,
+    val blocks: IntArray,
+    /**
+     * The indexes in [palette] of states the structure's file gives a block entity (a chest, a barrel): where a
+     * decoration's [loot][Decoration.loot] can go. Empty when the reader doesn't say.
+     */
+    val withEntity: Set<Int> = emptySet()
+) {
     override fun equals(other: Any?): Boolean = other is StructureTemplate &&
         sizeX == other.sizeX &&
         sizeY == other.sizeY &&
         sizeZ == other.sizeZ &&
         palette == other.palette &&
-        blocks.contentEquals(other.blocks)
+        blocks.contentEquals(other.blocks) &&
+        withEntity == other.withEntity
 
     override fun hashCode(): Int = ((sizeX * 31 + sizeY) * 31 + sizeZ) * 31 + palette.hashCode() * 31 + blocks.contentHashCode()
 
@@ -158,7 +197,15 @@ class StructureTemplate(val sizeX: Int, val sizeY: Int, val sizeZ: Int, val pale
  * from above) the palette entry each of its states becomes (turned: `facing`, `axis`, `rotation` and the four side
  * properties), 0 for the air it doesn't place.
  */
-class LinkedTemplate(val sizeX: Int, val sizeY: Int, val sizeZ: Int, val blocks: IntArray, val turns: List<IntArray>) {
+class LinkedTemplate(
+    val sizeX: Int,
+    val sizeY: Int,
+    val sizeZ: Int,
+    val blocks: IntArray,
+    val turns: List<IntArray>,
+    /** For each of the template's own palette entries, whether it holds a block entity ([StructureTemplate.withEntity]). */
+    val withEntity: BooleanArray = BooleanArray(0)
+) {
     override fun equals(other: Any?): Boolean = other is LinkedTemplate &&
         sizeX == other.sizeX &&
         sizeY == other.sizeY &&
@@ -212,8 +259,18 @@ data class CompiledTerrain(
     /** The file's 3D terrain, or null when a column is solid up to its height. */
     val density: CompiledDensity? = null,
     /** The structures linked in by [withStructures], by the name the file gives them. */
-    val templates: Map<String, LinkedTemplate> = emptyMap()
+    val templates: Map<String, LinkedTemplate> = emptyMap(),
+    /** The file's own climate values, sorted by name. */
+    val climate: List<CompiledClimateNoise> = emptyList(),
+    /** Every loot table it fills containers from (its decorations' and its script's), as the file names them, sorted. */
+    val loot: List<String> = emptyList()
 ) {
+    /** The areas that are a column's own (not volumes), as indexes into [areas]. */
+    val columnAreas: List<Int> get() = areas.indices.filter { areas[it].volume == null }
+
+    /** The volume areas, as indexes into [areas]. */
+    val volumeAreas: List<Int> get() = areas.indices.filter { areas[it].volume != null }
+
     /** Every biome the areas use, once each, in area order: what a world's biome provider offers. */
     val biomes: List<String> get() = areas.map { it.biome }.distinct()
 
@@ -255,7 +312,8 @@ data class CompiledTerrain(
                     if (BlockState.parse(state)?.id in NOT_PLACED) 0 else indexOf(StateTurns.turn(state, turn))
                 }
             }
-            linked[name] = LinkedTemplate(template.sizeX, template.sizeY, template.sizeZ, template.blocks.copyOf(), turns)
+            val withEntity = BooleanArray(template.palette.size) { it in template.withEntity }
+            linked[name] = LinkedTemplate(template.sizeX, template.sizeY, template.sizeZ, template.blocks.copyOf(), turns, withEntity)
         }
         return copy(palette = entries.toList(), templates = linked)
     }
@@ -306,6 +364,8 @@ object TerrainCompiler {
         val terrain = file.terrain
         val fluid = palette.vanilla(terrain.fluid ?: TerrainFile.DEFAULT_FLUID)
         val fileTerrain = CompiledAreaTerrain(terrain.baseOrDefault, 1.0, emptyList())
+        val climate = file.climate.noises.entries.sortedBy { it.key }.map { (name, noise) -> CompiledClimateNoise(name, noise) }
+        val loot = (file.decorations.values.mapNotNull { it.loot?.text } + file.script?.loot.orEmpty().map { it.text }).distinct().sorted()
         val areas = file.biomes.entries.sortedBy { it.key }.map { (name, area) ->
             CompiledArea(
                 name,
@@ -325,7 +385,20 @@ object TerrainCompiler {
                         it.density?.noises?.let(::densityNoises).orEmpty()
                     )
                 }
-                    ?: fileTerrain
+                    ?: fileTerrain,
+                climate.flatMap { listOf(area.climate[it.name]?.minOrDefault ?: -1.0, area.climate[it.name]?.maxOrDefault ?: 1.0) },
+                if (area.isVolume) {
+                    CompiledVolume(
+                        area.y?.min ?: Int.MIN_VALUE,
+                        area.y?.max ?: Int.MAX_VALUE,
+                        area.depth?.min ?: Int.MIN_VALUE,
+                        area.depth?.max ?: Int.MAX_VALUE,
+                        area.surface?.min ?: Int.MIN_VALUE,
+                        area.surface?.max ?: Int.MAX_VALUE
+                    )
+                } else {
+                    null
+                }
             )
         }.ifEmpty {
             listOf(CompiledArea("default", TerrainFile.DEFAULT_BIOME, -1.0, 1.0, -1.0, 1.0, null, null, fileTerrain))
@@ -386,7 +459,8 @@ object TerrainCompiler {
                     d.minY,
                     d.maxY,
                     d.on.map { GameIds.normalize(it) }.distinct().sorted(),
-                    d.structure != null && d.rotateOrDefault
+                    d.structure != null && d.rotateOrDefault,
+                    d.loot?.let { loot.indexOf(it.text) } ?: -1
                 )
             },
             temperature = file.climate.temperature ?: Climate.DEFAULT_NOISE,
@@ -396,6 +470,8 @@ object TerrainCompiler {
             blend = terrain.blendOrDefault,
             areas = areas,
             vanillaStructures = file.structures.vanillaOrDefault,
+            climate = climate,
+            loot = loot,
             density = terrain.density?.let { density ->
                 CompiledDensity(
                     densityNoises(density.noises),

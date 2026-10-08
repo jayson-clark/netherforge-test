@@ -276,7 +276,9 @@ not) is what players' note blocks live in; every other state is a **carrier**, l
 first (the last instruments, powered before not, the notes). `BlockCarriers.plan(blocks, home,
 game)` gives each block, in name order, the next carrier (a block that doesn't run is a null in
 its place so the others don't move while it's broken; more blocks than states is `overflow` and
-`block.carriers`). The plan is a pure function of the project and the game: the runtime's
+`block.carriers`). The plan is a pure function of the project and the game (so states move as blocks are added; the runtime keeps a
+per-chunk **legend**, `BlockOps.legend`, of which state each block was placed as, and records only blocks a centity is
+drawn over, blocks with a `data()` table and inert ones): the runtime's
 `CustomBlocks` and the resource pack's `PackLayout.build(..., blocks = plan)` compute it the same way,
 and `PackLayout` writes `assets/minecraft/blockstates/note_block.json` with **every** state's
 model explicit (the block's own for a carrier in use, `minecraft:block/note_block` for the
@@ -448,6 +450,32 @@ generate`, the glue (and a `host_*` if Kotlin must answer), a case in `TerrainSc
 - **Cost**: `TerrainDensityTimingTest` (jvmTest, only with `NETHERFORGE_BENCH=1`) prints chunk and map timings of `testdata/terrain/density.json`
   against the same file's heights (about 1.6x a chunk on the JVM, about 3x the map). Goldens:
   `testdata/terrain/density.txt` (JVM and JS, bit for bit).
+
+**Volumes, climate values, area and biome stages, plans, loot.** An area with `y`, `depth` or `surface`
+(`BlockRange`s) is a **volume** (`BiomeArea.isVolume`, `CompiledArea.volume`: `CompiledVolume`): never a column's area
+(`CompiledTerrain.columnAreas`/`volumeAreas`; `fileAreaAt` picks among column areas only), it's a place's.
+`pointAreaAt(x, y, z, sampler)` reads a place at its 4x4x4 cell's corner (the game keeps biomes per cell, and Paper
+asks the corner): the smallest-span volume whose ranges hold it and whose climate box holds the column's climate
+exactly (`climateCost == 0`), else the column's area, then the script's `biome` stage; `biomeAt(x, y, z)` is what the
+server's `BiomeProvider` answers (a thread-local `Sampler` per generator in `PaperWorldGenerators`). A chunk computes
+its cells once (`ChunkGeneration.cells`, only when `pointAreas`), and caves, ores and decorations match their
+`biomes` against the column's area **or** the place's (`allowedAt`), so files without volumes behave and hash exactly
+as before. `climate.noises` (`CompiledClimateNoise`, seeds `climate:noise:<name>`) add axes: `CompiledArea.climate`
+is min, max per axis; cost and span include them. `terrain.volume` covers what a volume can't have. Script stages
+`area(x, z, area)` (a column area's name; `Sampler.areaAt` caches it) and `biome(x, y, z, area)` (any area) run in
+Kotlin-called entry points `nf_area`/`nf_biome`; **a host function never calls back into the state that called it**:
+host functions use the state's own `Sampler` with no script state, so a script stage they need takes another state
+from the pool (luajava's and wasmoon's stacks aren't re-entrant through `call`). The glue's `running` stage name
+guards cycles (no `terrain.height`/`area` from `area`; no place reads from `height`, `density`, `biome`).
+`terrain.plan(name, size, make)` lives entirely in the glue: a per-state cache (256 cells), and `math.random` inside
+`make` is a splitmix64 of the cell (`current_rng`), so a cached or fresh plan never moves the stage's own numbers
+(`testdata/terrain/plans.txt` holds JVM and JS to the same bits). Loot: `CompiledTerrain.loot` (sorted names from
+decorations' `loot` and `script.loot`), `ChunkBuffer.loot` (buffer index → table index, `lootPlaces`), marked by
+block decorations, by a structure's entries in `StructureTemplate.withEntity` (the readers say which states have a
+block entity), and by `chunk:set_loot`; a failed script stage puts the marks back too. `TerrainKind.datapackAll`
+adds `GeneratedLoot`'s empty `netherforge:generated_container` table when any terrain has loot: the server gives
+containers that table plus the project's table name in their persistent data, and rolls the project's when the
+game unpacks it (`PaperGeneratedLoot`, `PlatformEvents.generatedLoot`).
 
 **The docs pages are checked against the format** (`docs/tests/format-docs.test.ts`, run by `pnpm test`): every
 `json` block in `docs/format/*.md` is a whole file and must validate as its kind (`canonicalize`, and `loadProject`

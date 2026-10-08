@@ -338,6 +338,19 @@ class FakeBlocks(private val platform: FakePlatform) : BlockOps {
         return true
     }
 
+    /** Each chunk's legend of its custom blocks, saved with it. */
+    val legends = LinkedHashMap<Triple<String, Int, Int>, String>()
+
+    override fun legend(world: String, chunkX: Int, chunkZ: Int): String? =
+        if (platform.worlds.isChunkLoaded(world, chunkX, chunkZ)) legends[Triple(world, chunkX, chunkZ)] else null
+
+    override fun setLegend(world: String, chunkX: Int, chunkZ: Int, json: String?): Boolean {
+        if (!platform.worlds.isChunkLoaded(world, chunkX, chunkZ)) return false
+        platform.worlds.touched += Triple(world, chunkX, chunkZ)
+        if (json == null) legends.remove(Triple(world, chunkX, chunkZ)) else legends[Triple(world, chunkX, chunkZ)] = json
+        return true
+    }
+
     override fun find(world: String, chunkX: Int, chunkZ: Int, states: Set<String>): Map<BlockVector, String>? {
         if (!platform.worlds.isChunkLoaded(world, chunkX, chunkZ)) return null
         return platform.worlds.blocks.filter { (at, state) ->

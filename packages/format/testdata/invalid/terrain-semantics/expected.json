@@ -576,5 +576,53 @@
     "file": "terrain/unused.lua",
     "message": "terrain/unused.json has no `script`, so this never runs: add one to hand it stages",
     "code": "terrain.script-unused"
+  },
+  {
+    "severity": "error",
+    "file": "terrain/volumes.json",
+    "message": "A project block holds no items to fill from a loot table",
+    "path": "$.decorations.caches.loot",
+    "code": "terrain.decoration"
+  },
+  {
+    "severity": "error",
+    "file": "terrain/volumes.json",
+    "message": "\"wild\" isn't one of the file's climate.noises (it declares evil)",
+    "path": "$.biomes.forest.climate.wild",
+    "code": "terrain.climate"
+  },
+  {
+    "severity": "error",
+    "file": "terrain/volumes.json",
+    "message": "min (40) is above max (10)",
+    "path": "$.biomes.caves.depth.min",
+    "code": "terrain.volume"
+  },
+  {
+    "severity": "error",
+    "file": "terrain/volumes.json",
+    "message": "An area limited by height gives its places a biome and nothing else: it has no layers",
+    "path": "$.biomes.caves.layers",
+    "code": "terrain.volume"
+  },
+  {
+    "severity": "error",
+    "file": "terrain/volumes.json",
+    "message": "Block \"lamp\" is drawn by the centity \"lamp\", so a terrain can't place it: use a block that's a plain cube",
+    "path": "$.decorations.caches.customBlock",
+    "code": "terrain.custom-block",
+    "related": [
+      {
+        "file": "blocks/lamp/block.json",
+        "path": "$.centity"
+      }
+    ]
+  },
+  {
+    "severity": "error",
+    "file": "terrain/volumes.json",
+    "message": "There's no loot table \"nope\" (loot/nope.json)",
+    "path": "$.decorations.caches.loot",
+    "code": "reference.loot-table"
   }
 ]

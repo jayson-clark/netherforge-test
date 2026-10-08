@@ -106,6 +106,15 @@
     }
   },
   "decorations": {
+    "cave_caches": {
+      "block": "minecraft:barrel[facing=up]",
+      "placement": "caveFloor",
+      "count": 1,
+      "chance": 0.2,
+      "biomes": ["hollows"],
+      "maxY": 16,
+      "loot": "cave_cache"
+    },
     "cave_crystals": {
       "block": "minecraft:amethyst_cluster[facing=up]",
       "placement": "caveFloor",
@@ -208,6 +217,15 @@
             "amplitude": 5
           }
         }
+      }
+    },
+    "hollows": {
+      "biome": "minecraft:lush_caves",
+      "y": {
+        "max": 24
+      },
+      "depth": {
+        "min": 40
       }
     },
     "meadows": {

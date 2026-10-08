@@ -527,7 +527,15 @@ object ProblemCodes {
         error(
             "terrain.climate",
             TERRAIN,
-            "A biome area's temperature or humidity range is outside -1 to 1, or its minimum is above its maximum."
+            "A biome area's temperature, humidity or other climate range is outside -1 to 1, its minimum is above its " +
+                "maximum, or it names a climate value the file's `climate.noises` doesn't declare."
+        )
+    val TERRAIN_VOLUME =
+        error(
+            "terrain.volume",
+            TERRAIN,
+            "A biome area limited by height (`y`, `depth` or `surface`) has layers or terrain of its own, its range is empty, " +
+                "the islands float over one, or every area of the file is one."
         )
     val TERRAIN_DENSITY =
         error(
@@ -537,7 +545,7 @@ object ProblemCodes {
                 "density in a file without one."
         )
     val TERRAIN_SCRIPT =
-        error("terrain.script", TERRAIN, "A file's `script` asks for a budget or more blocks than a script may have.")
+        error("terrain.script", TERRAIN, "A file's `script` asks for a budget or more blocks or loot tables than a script may have.")
     val TERRAIN_SCRIPT_MISSING =
         error("terrain.script-missing", TERRAIN, "A file has a `script`, but there's no `terrain/<id>.lua` beside it.")
     val TERRAIN_SCRIPT_UNUSED =

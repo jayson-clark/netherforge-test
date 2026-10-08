@@ -66,9 +66,14 @@ a custom block's. The blocks are given the rarest states first (the instruments
 the game lists last, which only a mob head above a note block gives), so a world
 that already has odd note blocks is unlikely to meet one.
 
-The server remembers which block each position is, not its state, and puts the
-state right when the chunk loads, so adding, removing or renaming a project's
-blocks moves their states without turning a placed block into another. A block
+Each chunk keeps a small legend of which state each of its blocks was placed as
+(one entry per kind of block in it, however many there are), and the server
+puts the states right when the chunk loads, so adding, removing or renaming a
+project's blocks moves their states without turning a placed block into
+another. A block is otherwise known by its state alone, so a chunk full of one
+costs no more to keep than a chunk with one. Only a block drawn by a centity
+(which names its instance), a block a script gave a `data()` table, and a block
+the project no longer has keep a record of their own. A block
 that has no state left (the project has more blocks than the game has states for) is an error
 (`block.carriers`) and can't be placed.
 

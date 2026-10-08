@@ -18,7 +18,8 @@ import org.bukkit.Location as BukkitLocation
  * [AttributeOps] with the Paper API: an entity's [AttributeInstance] for an
  * attribute from the server's registry, null when the entity hasn't got it.
  * Modifiers are keyed by their [NamespacedKey], and added the persistent
- * way, so they're saved with the entity.
+ * way, so they're saved with the entity, unless one says it isn't
+ * (a transient modifier, gone when the entity unloads).
  */
 class PaperAttributes(private val entities: PaperWorldEntities) : AttributeOps {
     private val registry get() = RegistryAccess.registryAccess().getRegistry(RegistryKey.ATTRIBUTE)
@@ -46,7 +47,8 @@ class PaperAttributes(private val entities: PaperWorldEntities) : AttributeOps {
         val instance = instance(id, attribute) ?: return false
         val key = NamespacedKey.fromString(modifier.id) ?: return false
         instance.removeModifier(key)
-        instance.addModifier(AttributeModifier(key, modifier.amount, modifier.operation.paper()))
+        val made = AttributeModifier(key, modifier.amount, modifier.operation.paper())
+        if (modifier.saved) instance.addModifier(made) else instance.addTransientModifier(made)
         return true
     }
 

@@ -2,6 +2,7 @@ package dev.netherforge.format.project
 
 import dev.netherforge.format.Location
 import dev.netherforge.format.ProblemCodes
+import dev.netherforge.format.datapack.DatapackCollection
 import dev.netherforge.format.game.GameData
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.noise.NoiseDef
@@ -13,6 +14,7 @@ import dev.netherforge.format.terrain.Cave
 import dev.netherforge.format.terrain.ClimateRange
 import dev.netherforge.format.terrain.CompiledTerrain
 import dev.netherforge.format.terrain.Decoration
+import dev.netherforge.format.terrain.GeneratedLoot
 import dev.netherforge.format.terrain.Layer
 import dev.netherforge.format.terrain.Ore
 import dev.netherforge.format.terrain.Terrain
@@ -131,6 +133,11 @@ object TerrainKind : DocumentResourceKind<TerrainFile, CompiledTerrain>(
     }
 
     override fun compile(id: String, value: TerrainFile, ctx: ResourceContext) = TerrainCompiler.compile(value, scriptPathOf(id))
+
+    /** Terrains that fill containers from loot tables need the empty table the game unpacks them with ([GeneratedLoot]). */
+    override val datapackAll = DatapackCollection<CompiledTerrain> { resources, _ ->
+        if (resources.values.none { it.loot.isNotEmpty() }) emptyMap() else mapOf(GeneratedLoot.DATAPACK_PATH to GeneratedLoot.entry)
+    }
 
     /**
      * Rolling hills and a flat sea, a grass and dirt top, caves, coal and

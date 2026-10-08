@@ -1768,12 +1768,12 @@ interface LivingApi {
 
     /**
      * Adds a modifier to one of its attributes, replacing the project's modifier of the same id. Modifiers
-     * are saved with the entity, so give each a fixed id and remove it when it's done, rather than making
-     * new ones. The id is in the project's namespace (`netherforge.json`'s `namespace`): `"slow_zone"` is
-     * `"<namespace>:slow_zone"`, so nothing else's modifiers can be replaced or removed. An attribute the
-     * server doesn't have is an error.
+     * are saved with the entity unless `saved` is `false`, so give each a fixed id and remove it when it's
+     * done, rather than making new ones. The id is in the project's namespace (`netherforge.json`'s
+     * `namespace`): `"slow_zone"` is `"<namespace>:slow_zone"`, so nothing else's modifiers can be
+     * replaced or removed. An attribute the server doesn't have is an error.
      */
-    fun addAttributeModifier(self: LuaHandle.Living, attribute: String, id: String, amount: Double, operation: String?): Boolean
+    fun addAttributeModifier(self: LuaHandle.Living, attribute: String, id: String, amount: Double, operation: String?, saved: Boolean?): Boolean
 
     /**
      * Takes one of the project's modifiers off one of its attributes. An attribute the server doesn't have

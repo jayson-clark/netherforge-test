@@ -28,7 +28,11 @@ object StructureFiles {
             block as Map<*, *>
             (block["pos"] as List<*>).map { (it as Number).toInt() } + (block["state"] as Number).toInt()
         }
-        return StructureTemplate(size[0], size[1], size[2], palette.map(::stateOf), blocks.toIntArray())
+        // A block saved with block data (`nbt`: a chest's items) holds a block entity.
+        val withEntity = (root["blocks"] as List<*>).map {
+            it as Map<*, *>
+        }.filter { "nbt" in it }.map { (it["state"] as Number).toInt() }.toSet()
+        return StructureTemplate(size[0], size[1], size[2], palette.map(::stateOf), blocks.toIntArray(), withEntity)
     }
 
     /** A palette entry as block state text: `Name`/`Properties` (or 26.x's `id`/`properties`), a bare id, or `{"": id}`. */

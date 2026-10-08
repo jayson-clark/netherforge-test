@@ -987,9 +987,9 @@ function Living.attribute_modifiers(self, attribute)
   return prim["Living.attribute_modifiers"](self_key, attribute)
 end
 
-function Living.add_attribute_modifier(self, attribute, id, amount, operation)
+function Living.add_attribute_modifier(self, attribute, id, amount, operation, saved)
   local self_key = self_of(self, "Living")
-  return prim["Living.add_attribute_modifier"](self_key, attribute, id, amount, operation)
+  return prim["Living.add_attribute_modifier"](self_key, attribute, id, amount, operation, saved)
 end
 
 function Living.remove_attribute_modifier(self, attribute, id)

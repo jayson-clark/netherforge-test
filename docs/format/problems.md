@@ -1014,7 +1014,11 @@ Error. A biome area's game biome isn't a biome id, or the target version has no 
 
 ### `terrain.climate` {#terrain-climate}
 
-Error. A biome area's temperature or humidity range is outside -1 to 1, or its minimum is above its maximum. See [format/terrain.md](terrain.md).
+Error. A biome area's temperature, humidity or other climate range is outside -1 to 1, its minimum is above its maximum, or it names a climate value the file's `climate.noises` doesn't declare. See [format/terrain.md](terrain.md).
+
+### `terrain.volume` {#terrain-volume}
+
+Error. A biome area limited by height (`y`, `depth` or `surface`) has layers or terrain of its own, its range is empty, the islands float over one, or every area of the file is one. See [format/terrain.md](terrain.md).
 
 ### `terrain.density` {#terrain-density}
 
@@ -1022,7 +1026,7 @@ Error. A 3D noise's squash or a scale is out of range, the islands' height, thic
 
 ### `terrain.script` {#terrain-script}
 
-Error. A file's `script` asks for a budget or more blocks than a script may have. See [format/terrain.md](terrain.md).
+Error. A file's `script` asks for a budget or more blocks or loot tables than a script may have. See [format/terrain.md](terrain.md).
 
 ### `terrain.script-missing` {#terrain-script-missing}
 

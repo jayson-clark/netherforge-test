@@ -438,7 +438,12 @@ data class Decoration(
      */
     val on: List<String> = emptyList(),
     /** For a [structure]: whether each one is turned a random quarter turn. Default true. */
-    val rotate: Boolean? = null
+    val rotate: Boolean? = null,
+    /**
+     * One of the project's loot tables: every chest, barrel and other container the decoration places is filled from
+     * it, rolled the first time it's opened (or broken, or a hopper takes from it). Default none.
+     */
+    @Ref(RefKind.LOOT_TABLE) val loot: ResourceRef? = null
 ) : BlockChoice {
     val placementOrDefault: DecorationPlacement get() = placement ?: DecorationPlacement.SURFACE
     val countOrDefault: Int get() = count ?: 1
@@ -454,11 +459,19 @@ data class Climate(
     val temperature: NoiseDef? = null,
     /** Default: as [temperature], with a pattern of its own. */
     val humidity: NoiseDef? = null,
+    /**
+     * More climate values, by name (`continentalness`, `evil`): each a noise of its own from the world's seed, read
+     * where [temperature] and [humidity] are, which areas pick ranges of in their [BiomeArea.climate].
+     */
+    val noises: Map<String, NoiseDef> = emptyMap(),
     /** How the borders between biome areas wander, so they aren't the climate's smooth curves. */
     val jitter: Jitter? = null
 ) {
     companion object {
         val DEFAULT_NOISE = NoiseDef(frequency = 0.002, octaves = 2)
+
+        /** Most climate values of a file's own ([noises]). */
+        const val MAX_NOISES = 8
     }
 }
 
@@ -488,12 +501,20 @@ data class ClimateRange(val min: Double? = null, val max: Double? = null) {
     val maxOrDefault: Double get() = max ?: 1.0
 }
 
+/** A range of heights, in blocks, both ends included: each end open when it's left out. */
+@Serializable
+data class BlockRange(val min: Int? = null, val max: Int? = null)
+
 /**
  * A kind of place: the vanilla [biome] it is, and which temperature and
- * humidity it's found at. Each place is the area whose ranges it fits best
- * (the one it's nearest the middle of), so areas needn't tile the climate
- * exactly. [layers] and [underwater] replace the file's for the columns in it,
- * and [terrain] shapes its ground.
+ * humidity (and the file's other climate values) it's found at. Each column is
+ * the area whose ranges it fits best (the one it's nearest the middle of), so
+ * areas needn't tile the climate exactly. [layers] and [underwater] replace the
+ * file's for the columns in it, and [terrain] shapes its ground.
+ *
+ * An area with a [y], [depth] or [surface] range is a **volume**: not a column's area but a biome inside the
+ * columns' (a cave biome under a forest, the sky over the mountains), at every place its ranges hold exactly. It
+ * gives those places its biome (their sky, fog, music and mobs) and nothing else, so it has no layers or terrain.
  */
 @Serializable
 data class BiomeArea(
@@ -503,13 +524,24 @@ data class BiomeArea(
     val temperature: ClimateRange? = null,
     /** Default: any humidity. */
     val humidity: ClimateRange? = null,
+    /** Ranges of the file's other climate values ([Climate.noises]), by name. Default: any of each. */
+    val climate: Map<String, ClimateRange> = emptyMap(),
+    /** A volume between these heights. */
+    val y: BlockRange? = null,
+    /** A volume this many blocks below the column's surface (0 is the top block, negative above it). */
+    val depth: BlockRange? = null,
+    /** A volume in columns whose surface is between these heights (an ocean's: below the sea). */
+    val surface: BlockRange? = null,
     /** Default: the file's [TerrainFile.layers]. */
     val layers: List<Layer>? = null,
     /** Default: the file's [TerrainFile.underwater]. */
     val underwater: List<Layer>? = null,
     /** Default: the file's terrain. */
     val terrain: AreaTerrain? = null
-)
+) {
+    /** Whether it's a volume inside the columns' areas rather than a column's own. */
+    val isVolume: Boolean get() = y != null || depth != null || surface != null
+}
 
 /**
  * The file's Lua stages: the script `terrain/<id>.lua` returns a table of stage functions (`height`, `terrain`,
@@ -530,7 +562,9 @@ data class TerrainScript(
     /** Block states of the game's the script places besides those the file names: `minecraft:cobblestone`. */
     val blocks: List<String> = emptyList(),
     /** The project's blocks the script places besides those the file names, by id: plain cubes, as anywhere in the file. */
-    @Ref(RefKind.BLOCK) val customBlocks: List<ResourceRef> = emptyList()
+    @Ref(RefKind.BLOCK) val customBlocks: List<ResourceRef> = emptyList(),
+    /** The project's loot tables the script fills containers from (`chunk:set_loot`), by id. */
+    @Ref(RefKind.LOOT_TABLE) val loot: List<ResourceRef> = emptyList()
 ) {
     val budgetOrDefault: Int get() = budget ?: DEFAULT_BUDGET
 
@@ -539,6 +573,7 @@ data class TerrainScript(
         const val MIN_BUDGET = 1_000
         const val MAX_BUDGET = 100_000_000
         const val MAX_BLOCKS = 64
+        const val MAX_LOOT = 64
 
         /** The extension of the script beside the file. */
         const val EXTENSION = ".lua"

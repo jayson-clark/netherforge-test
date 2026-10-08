@@ -32,6 +32,7 @@ class TerrainScriptApiTest {
         assertEquals(functions("Terrain"), defined("terrain"))
         assertEquals(functions("Noise"), defined("Noise"))
         assertEquals(functions("Chunk"), defined("Chunk"))
+        assertEquals(functions("Plan"), defined("Plan"))
     }
 
     @Test

@@ -335,6 +335,7 @@ between `minY` and `maxY`, and on a block `on` lists.
 | `minY`, `maxY` | The heights it's placed between.                                                                                                                                    | the bottom and top of the world                |
 | `on`           | Block ids it may sit on (`surface`, `underwater`, `caveFloor`), hang from (`caveCeiling`) or replace (`underground`).                                               | any ground (`underground`: the file's `stone`) |
 | `rotate`       | For a `structure`: whether each one is turned a random quarter turn (its blocks' facing turned with it).                                                            | true                                           |
+| `loot`         | One of the project's [loot tables](loot.md): the containers it places are filled from it. See [loot in generated containers](#loot-in-generated-containers).        | none                                           |
 
 | `placement`   | Where                                                                                                                                                                                                        |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -352,7 +353,23 @@ names. Decorations are placed in name order, each over what's there, so a later 
 The structures a terrain places are read by the server with the game's own structure loader (so a structure saved by
 an older version is brought up to date) when the project loads and whenever the structure's file is saved. One that
 can't be read isn't placed, and says so (`runtime.terrain`). A structure's entities and the data of its blocks
-(a chest's items) aren't placed: a decoration is blocks.
+(a chest's items) aren't placed: a decoration is blocks, and its containers are filled by its `loot`.
+
+### Loot in generated containers
+
+A decoration's `loot` fills the containers it places (chests, barrels, hoppers: any block whose structure file gives it
+block data, or the decoration's own `block`) from one of the project's loot tables, and a script's
+[`chunk:set_loot`](#script) fills any container it likes. Nothing is rolled while the world is made: the container
+remembers its table, and it's rolled the first time a player opens it, breaks it or a hopper takes from it, with that
+player as the roll's player (so a table's `player` conditions hear who found it), as the game's own chests are. A
+place the server finds holding no container once the chunk is made is left alone. Its items are rolled once: a table
+changed since is rolled as it is then.
+
+```json partial
+"decorations": {
+  "shrines": { "structure": "shrine", "count": 1, "chance": 0.02, "loot": "shrine_chest" }
+}
+```
 
 ## Custom blocks in a generated world
 
@@ -364,9 +381,8 @@ A project block is held in the world as a note block state (see [blocks](block.m
 writes that state into the chunk, and the plugin adopts it as the block as soon as the chunk loads, exactly as it does
 for blocks a world paste brings: the block's drops, `break` handlers and ticks all work in a generated one. The state a
 block has can move when the project's blocks change, which is no problem: the plugin sets the right one when a chunk
-loads. Every placed block of the project's is remembered with its chunk, so a layer of them is many to remember: a
-custom block in a thin layer, a vein or a decoration costs little, one in the `stone` (every block of the ground) a
-great deal.
+loads. A block is known by its state (each chunk keeps a legend of which state is which of its blocks, a few entries
+however many blocks), so a custom block costs the same in a thin vein as in the `stone` of every column.
 
 ## Biomes
 
@@ -376,6 +392,53 @@ pattern). Each **biome area** (by name) names a `biome` and the `temperature` an
 the most specific one (the smallest box) when several do, the nearest when none does. A file with no areas is `minecraft:plains`
 everywhere. An area's `layers` and `underwater` replace the file's for its columns, so a desert can be sand to a
 depth of its own, and its `terrain` shapes its ground.
+
+### More climate values
+
+Two values put every area somewhere on one map of temperature and humidity. `climate.noises` adds values of the
+file's own, by name (at most 8), each a [noise](#noise) with a pattern of its own read where the temperature is, and an
+area's `climate` gives its range of each (`min` and `max`, -1 to 1, default the whole range): an `evil` value spreads
+the corruption across every climate instead of one corner of it, a `continentalness` one puts the oceans where it's
+low. Areas are picked by every value at once, as by the first two: the smallest box that holds the column, else the
+nearest.
+
+```json partial
+"climate": { "noises": { "evil": { "frequency": 0.004 } } },
+"biomes": {
+  "forest": { "biome": "minecraft:forest", "climate": { "evil": { "max": 0.4 } } },
+  "corruption": { "biome": "corruption", "climate": { "evil": { "min": 0.4 } } }
+}
+```
+
+### Biomes that change with height
+
+An area with a `y`, `depth` or `surface` range is a **volume**: not a column's area, but a biome inside the columns'
+areas, as the game puts lush caves under a forest. A place is in the most specific volume (the smallest climate box)
+whose every range holds it and whose climate box holds its column's climate exactly; anywhere else it's in its column's
+area. Its biome is the place's: the sky and fog a player sees, the music they hear and the mobs that spawn there all
+follow where they stand, height included. A place is read at the corner of its 4x4x4 cell, as the game keeps biomes.
+
+| Key       | Meaning                                                                                                    |
+| --------- | ---------------------------------------------------------------------------------------------------------- |
+| `y`       | `{ "min", "max" }`: the heights it's between, both included; either end left out is open.                  |
+| `depth`   | `{ "min", "max" }`: how far below the column's surface (its top block is 0, the air above it is negative). |
+| `surface` | `{ "min", "max" }`: the heights of the surfaces of the columns it's in (an ocean's are below the sea).     |
+
+```json partial
+"biomes": {
+  "forest": { "biome": "minecraft:forest" },
+  "jungle_caves": { "biome": "underground_jungle", "depth": { "min": 24 }, "y": { "min": -40 }, "temperature": { "min": 0.3 } },
+  "underworld": { "biome": "underworld", "y": { "max": -40 } },
+  "space": { "biome": "space", "y": { "min": 260 } },
+  "ocean": { "biome": "minecraft:ocean", "surface": { "max": 55 }, "y": { "max": 62 } }
+}
+```
+
+A volume gives its places a biome and nothing else: it has no `layers`, `underwater` or `terrain`, islands don't
+float over one, and a file needs at least one area that isn't a volume (`terrain.volume`). The `biomes` filters of
+caves, ores and decorations take volumes too: a cave in `["jungle_caves"]` is carved only there, and one in
+`["forest"]` in the forest's columns, volumes and all. The script's [`biome` stage](#script) can change any place's
+area, and its [`area` stage](#script) any column's.
 
 ### Borders
 
@@ -457,10 +520,12 @@ made:
 | `noises`       | Noises the script samples by name (`terrain.noise("ridges")`), each a [noise](#noise) with a pattern of its own from the world's seed. Up to 16.                                       |
 | `blocks`       | The game's block states the script places besides those the file names (`minecraft:cobblestone`, properties too). A block the generator doesn't know is an error at the script's line. |
 | `customBlocks` | The project's [blocks](block.md) it places besides the file's, by id: plain cubes, as anywhere in the file.                                                                            |
+| `loot`         | The project's [loot tables](loot.md) it fills containers from (`chunk:set_loot`), by id. At most 64.                                                                                   |
 
 `"script": {}` is a script with nothing declared. Together `blocks` and `customBlocks` list at most 64.
 
-The script's body runs once in each Lua state (see below) and returns its stages, any of four (`density` is below):
+The script's body runs once in each Lua state (see below) and returns its stages, any of six (`density`, `area` and
+`biome` are below):
 
 ```lua
 ---@type Terrain
@@ -515,12 +580,62 @@ return stages
   end
   ```
 
+- **`area(x, z, area)`** picks a column's [biome area](#biomes), given the name of the one its climate picks: return
+  the name of one of the file's areas that isn't limited by height. Everything about the column follows it (its height,
+  its layers, the blending at its borders, the `biomes` filters), so this is how a world gets a layout no climate
+  makes: the dungeon always near the snow, the jungle on the far side. It's asked for every column, often: keep it
+  quick, and it can't ask `terrain.height` or `terrain.area` (they depend on it).
+
+  ```lua
+  -- Snow to the west of the spawn, jungle to the east, whatever the climate says between.
+  function stages.area(x, z, area)
+    if x < -3000 then return "snow" end
+    if x > 3000 then return "jungle" end
+    return area
+  end
+  ```
+
+- **`biome(x, y, z, area)`** picks the area of a place (the corner of each 4x4x4 cell, as the game keeps biomes),
+  given the one the file picks there: a [volume](#biomes-that-change-with-height), else the column's. Return the name
+  of any of the file's areas. It decides the place's biome (its sky, fog, music, mobs) and what `biomes` filters see
+  there, never the ground's shape. It can ask `terrain.height` and a column's `terrain.area`.
 - **`terrain(chunk)`** and **`decorate(chunk)`** change the chunk being made: `chunk:fill(x1, y1, z1, x2, y2, z2,
 block)` fills a box (world coordinates, clipped to the chunk), `chunk:set(x, y, z, block)` one block,
   `chunk:block(x, y, z)` reads one. A block is the game's id as the file writes it, or one of the project's by id.
+  `chunk:set_loot(x, y, z, table)` fills the container there from a loot table `script.loot` lists (see
+  [loot in generated containers](#loot-in-generated-containers)).
+
+**Plans** are for the big things a script draws across many chunks: a dungeon, a temple, a road. Each chunk it touches
+would otherwise work out the whole layout again. `terrain.plan(name, size, make)`, in the script's body, cuts the
+world into cells `size` blocks wide and works out a cell's plan once, the first time a chunk asks for it
+(`plan:get(cell_x, cell_z)`, or `plan:at(x, z)` for the cell a column is in), keeping the last 256 cells. `make` must
+depend on the cell alone; `math.random` in it gives numbers of the cell's own, the same whichever chunk made it.
+
+```lua
+local dungeons = terrain.plan("dungeon", 512, function(cell_x, cell_z)
+  local rooms = {}
+  for i = 1, math.random(4, 9) do
+    rooms[i] = { x = cell_x * 512 + math.random(64, 448), y = math.random(-40, 20), z = cell_z * 512 + math.random(64, 448) }
+  end
+  return rooms
+end)
+
+function stages.decorate(chunk)
+  local rooms = dungeons:at(chunk:min_x(), chunk:min_z())
+  for _, room in ipairs(rooms) do
+    chunk:fill(room.x - 4, room.y, room.z - 4, room.x + 4, room.y + 5, room.z + 4, "minecraft:air")
+    chunk:set(room.x, room.y, room.z, "minecraft:chest")
+    chunk:set_loot(room.x, room.y, room.z, "dungeon_chest")
+  end
+end
+```
+
+A room near a cell's edge can reach into the next cell's chunks, which ask for their own cell: look at the
+neighbouring cells' plans too when what you draw is wider than the margin you leave.
 
 The whole API (`terrain.seed()`, `min_y()`, `max_y()`, `sea_level()`, `noise(name)`, `height`, `area` and `biome` of a
-column, a noise's `:at(x, z)` and `:at(x, y, z)`) is the [terrain scripts reference](../reference/terrain-scripts.md).
+column or a place, `plan`, a noise's `:at(x, z)` and `:at(x, y, z)`) is the
+[terrain scripts reference](../reference/terrain-scripts.md).
 
 **It isn't a server script.** It runs where chunks are made, on the server's chunk threads (and in the editor's
 preview), in Lua states of its own: one for each thread making a chunk at once, never the server's state, so it has
@@ -530,7 +645,7 @@ that don't use `nf` work), and `io`, `os`, `debug`, `load` and `collectgarbage` 
 
 **The same blocks for a seed, every time.** Everything it's given depends only on the world's seed and where it's
 asked (the noises are the file's own noise, seeded from the world's), and `math.random` is seeded for each call from
-the world's seed and the column or chunk, so a chunk is the same whichever thread made it and in whichever order the
+the world's seed and the column, place or chunk (in a plan, the cell), so a chunk is the same whichever thread made it and in whichever order the
 world was explored, and the preview for a seed is that world.
 
 **A script that fails changes nothing.** A call that raises an error, or runs past its `budget` (a `pcall` can't catch

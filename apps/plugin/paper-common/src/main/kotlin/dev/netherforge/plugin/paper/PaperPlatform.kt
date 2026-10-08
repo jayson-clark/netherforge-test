@@ -146,6 +146,7 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
         this.events = PaperEvents(plugin, this, events).also { plugin.server.pluginManager.registerEvents(it, plugin) }
         plugin.server.pluginManager.registerEvents(borders, plugin)
         plugin.server.pluginManager.registerEvents(noteBlocks, plugin)
+        plugin.server.pluginManager.registerEvents(PaperGeneratedLoot(worldManager.generators, events, plugin.logger), plugin)
     }
 
     /** The plugin is being disabled: what it changed in the server's own settings is put back. */

@@ -16,6 +16,12 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Changed (breaking)
 
+- **Custom blocks are known by their state.** A placed project block keeps no
+  record of its own unless a centity is drawn over it or a script gave it a
+  `data()` table: each chunk keeps a legend of its blocks' states instead, so a
+  layer of them costs no more than one. Records from earlier sessions are
+  dropped as their chunks load.
+
 - **NetherKit is now NetherForge.** The project file is `netherforge.json`,
   the command is `netherforge`, the plugin is `NetherForge` (permission
   `netherforge.admin`), and the short prefix is `nf`: the Lua global is `nf`,
@@ -81,6 +87,28 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   [naming reference](docs/reference/naming.md).
 
 ### Added
+
+- **Biomes that change with height.** A terrain's biome area with a `y`, `depth`
+  or `surface` range is a volume inside the columns' areas: cave biomes under a
+  forest, a sky biome high up, real ocean biomes. Sky, fog, music and mob
+  spawns follow where a player stands, height included, and `biomes` filters
+  of caves, ores and decorations see a place's own area.
+- **More climate values.** `climate.noises` adds named climate values
+  (an `evil` value, `continentalness`), and an area's `climate` picks ranges of
+  them, for columns and volumes alike.
+- **`area` and `biome` script stages.** A terrain's script can choose any
+  column's area (its ground follows) and any place's biome area.
+  `terrain.area(x, y, z)` and `terrain.biome(x, y, z)` read a place's.
+- **Plans in terrain scripts.** `terrain.plan(name, size, make)` works out
+  something big once per grid cell, with numbers of the cell's own, and keeps
+  it for every chunk that asks: dungeons and temples cost one layout each.
+- **Loot in generated containers.** A decoration's `loot` and a script's
+  `chunk:set_loot(x, y, z, table)` fill chests and barrels a terrain places from
+  a project loot table, rolled the first time anyone opens, breaks or empties
+  one, for whoever does.
+- **Unsaved attribute modifiers.** `add_attribute_modifier`'s `saved` (default
+  `true`): `false` adds one the server never saves, for a zone's gravity or a
+  stance's speed.
 
 **World generation**
 

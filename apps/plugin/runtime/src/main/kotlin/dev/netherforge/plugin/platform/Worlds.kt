@@ -54,6 +54,15 @@ interface BlockOps {
     fun setRecord(world: String, x: Int, y: Int, z: Int, json: String?): Boolean
 
     /**
+     * What the runtime keeps about a whole chunk's custom blocks (which carrier state each of them was placed as,
+     * what [setLegend] stored, saved with the chunk), or null when there's none or the chunk isn't loaded.
+     */
+    fun legend(world: String, chunkX: Int, chunkZ: Int): String?
+
+    /** Stores (or with null, clears) a chunk's [legend]. False when the chunk isn't loaded. */
+    fun setLegend(world: String, chunkX: Int, chunkZ: Int, json: String?): Boolean
+
+    /**
      * Where in a loaded chunk's blocks any of [states] (canonical) is, and
      * which of them is there, or null when the chunk isn't loaded. Quick when
      * the chunk has none of them.

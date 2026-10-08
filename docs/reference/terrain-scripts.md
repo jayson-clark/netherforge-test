@@ -29,6 +29,8 @@ What a terrain's script returns: the stages it runs, each optional. A key that i
 | --- | --- | --- |
 | `height` | `fun(x: integer, z: integer, height: integer): number` | A column's height: the y of its top block, given the file's (`height`). Rounded down, and kept inside the world. Everything asks it (the terrain, the decorations, a spawn, the preview's map), so keep it quick. |
 | `density` | `fun(x: integer, y: integer, z: integer, value: number): number` | Only in a file with a `terrain.density`: the density at a point (above 0 is solid), given the file's (`value`, in blocks: the ground's height above or below the point, moved by its 3D noises, or the islands'). Asked at the points of a grid 4 blocks apart across and 8 up (`x` and `z` multiples of 4, `y` of 8), and blended between them for the blocks, so keep it smooth: what it changes is blended too. Every point of the world's height is asked, so a file with one draws its map more slowly. |
+| `area` | `fun(x: integer, z: integer, area: string): string` | A column's biome area, given the one its climate picks (`area`): the name of one of the file's areas that isn't limited by height. Everything about a column follows it (its height and layers, the blending at its borders, filters), so it's asked often: keep it quick, and it can't ask `terrain.height` or `terrain.area`. |
+| `biome` | `fun(x: integer, y: integer, z: integer, area: string): string` | The biome area of a place (the corner of a 4x4x4 cell), given the one the file picks there (`area`: a volume, else the column's): the name of any of the file's areas. It decides the place's biome (its sky, fog, music, mobs) and what the areas' filters see there, nothing about the ground's shape. Asked for every cell of every chunk. |
 | `terrain` | `fun(chunk: Chunk)` | After the file's terrain (its stone, layers and sea), before caves, the floor and ores: fills the chunk. |
 | `decorate` | `fun(chunk: Chunk)` | After the file's decorations, last: places blocks in the chunk. |
 
@@ -85,27 +87,91 @@ The y of a column's top block, as a chunk is generated with it: the file's heigh
 
 **Returns** `integer`
 
-### `terrain.area(x, z)`
+### `terrain.area(x, y, z?)`
 
-The name of the biome area a column is in (a key of the file's `biomes`), or `default` when the file has none.
+The name of the biome area a column is in (a key of the file's `biomes`), or `default` when the file has none: its climate's, then the script's `area` stage. With three numbers, the area at a place (`x`, `y`, `z`): a volume area there (one limited by `y`, `depth` or `surface`), else its column's, then the script's `biome` stage; a place is read at the corner of its 4x4x4 cell, as the game keeps biomes. Not from the `area` stage (an area depends on the areas), and a place's not from the `height`, `density` or `biome` stage (it depends on the heights).
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `x` | `integer` |  |
+| `y` | `integer` | The column's `z` when there are two numbers. |
+| `z` (optional) | `integer` | The place's `z`. |
+
+**Returns** `string`
+
+```lua
+local here = terrain.area(x, y, z)
+```
+
+### `terrain.biome(x, y, z?)`
+
+The biome of the area a column (two numbers) or a place (three) is in, as `area` finds it and the file writes it: `minecraft:plains`, or a project biome's id.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `x` | `integer` |  |
+| `y` | `integer` | The column's `z` when there are two numbers. |
+| `z` (optional) | `integer` | The place's `z`. |
+
+**Returns** `string`
+
+### `terrain.plan(name, size, make)`
+
+A plan: something big worked out once per cell of a grid (a dungeon's rooms, a temple's layout) rather than in every chunk it touches. `make(cell_x, cell_z)` is called the first time a cell's plan is asked for and its result kept (each Lua state keeps the last 256 cells of each plan), so it must depend on the cell alone: noises, `terrain.height`, `terrain.area` and `math.random`, which in a plan gives numbers of the cell's own (the same whenever it's made). Don't change the table it returns. Made in the script's body, once per name.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `name` | `string` | Its name, which its numbers are drawn from: two plans of one name are an error. |
+| `size` | `integer` | How wide a cell is, in blocks, 1 to 65536. |
+| `make` | `fun(cell_x: integer, cell_z: integer): any` | Works out a cell's plan: any value, `nil` for none. |
+
+**Returns** `Plan`
+
+```lua
+local dungeons = terrain.plan("dungeon", 512, function(cell_x, cell_z)
+  return { x = cell_x * 512 + math.random(0, 511), z = cell_z * 512 + math.random(0, 511) }
+end)
+```
+
+## Plan
+
+Something a script works out once per cell of a grid (`terrain.plan`), kept for the chunks that ask again.
+
+### `plan:get(cell_x, cell_z)`
+
+The plan of a cell, by the cell's place in the grid: `make`'s result, made the first time it's asked for.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `cell_x` | `integer` |  |
+| `cell_z` | `integer` |  |
+
+**Returns** `any`
+
+```lua
+local dungeon = dungeons:get(0, 0)
+```
+
+### `plan:at(x, z)`
+
+The plan of the cell a column is in, then that cell's place in the grid.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `x` | `integer` |  |
 | `z` | `integer` |  |
 
-**Returns** `string`
+**Returns** `any`, `integer`, `integer`
 
-### `terrain.biome(x, z)`
+```lua
+local dungeon, cell_x, cell_z = dungeons:at(chunk:min_x(), chunk:min_z())
+```
 
-The biome of the area a column is in, as the file writes it: `minecraft:plains`, or a project biome's id.
+### `plan:size()`
 
-| Parameter | Type | |
-| --- | --- | --- |
-| `x` | `integer` |  |
-| `z` | `integer` |  |
+How wide a cell is, in blocks.
 
-**Returns** `string`
+**Returns** `integer`
 
 ## Noise
 
@@ -183,6 +249,21 @@ Sets one block, as `fill` does a box.
 | `y` | `integer` |  |
 | `z` | `integer` |  |
 | `block` | `string` | A block id. |
+
+### `chunk:set_loot(x, y, z, table)`
+
+Fills the container at a place in the chunk (a chest, a barrel) from one of the project's loot tables, rolled the first time it's opened, broken or emptied by a hopper, for whoever does it. Put the container there first, in this stage or another: a place that holds no container once the chunk is made is left as it is. The table is one the file's `script.loot` lists. Outside the chunk, nothing.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `x` | `integer` |  |
+| `y` | `integer` |  |
+| `z` | `integer` |  |
+| `table` | `string` | A loot table, by id. |
+
+```lua
+chunk:set_loot(x, y, z, "dungeon_chest")
+```
 
 ### `chunk:block(x, y, z)`
 

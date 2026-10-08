@@ -41,7 +41,7 @@ object TerrainPreview {
                 val x = x0 + col * s
                 val z = z0 + row * s
                 heights += sampler.surfaceAt(x, z)
-                areas += generator.areaAt(x, z)
+                areas += sampler.areaAt(x, z)
             }
         }
         val terrain = generator.terrain

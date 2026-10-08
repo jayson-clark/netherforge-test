@@ -117,6 +117,14 @@ interface PlatformEvents {
      */
     fun entityDied(entity: UUID, killer: UUID?, drops: () -> List<ItemData>, experience: Int): DropsAnswer
 
+    /**
+     * A container a project terrain generated (`loot` on a decoration, a script's `chunk:set_loot`) is filled for
+     * the first time, at [location]: opened by [player], broken, or emptied by a hopper (no player). The answer is
+     * what one roll of the project's loot table [table] (as the terrain names it) gives; null when no project is
+     * running, which leaves the container as it is.
+     */
+    fun generatedLoot(table: String, player: UUID?, location: Location): List<ItemData>?
+
     /** A player right-clicked an entity that isn't one of NetherForge's, with `main_hand` or `off_hand`. True cancels it. */
     fun playerInteractEntity(player: PlayerRef, entity: UUID, hand: String): Boolean
 

@@ -287,6 +287,9 @@ class PaperBlocks(private val plugin: JavaPlugin, private val noteBlocks: PaperN
     private companion object {
         /** The persistent data key a custom block's record is kept under in its chunk, then `x_y_z`. */
         const val RECORDS = "custom_block/"
+
+        /** The chunk's legend of its custom blocks' states (not under [RECORDS]: it isn't a block's). */
+        const val LEGEND = "custom_block_legend"
     }
 
     /** The block, if its world exists and its chunk is loaded: never loads one. */
@@ -359,6 +362,17 @@ class PaperBlocks(private val plugin: JavaPlugin, private val noteBlocks: PaperN
         if (json == null) data.remove(recordKey(x, y, z)) else data.set(recordKey(x, y, z), PersistentDataType.STRING, json)
         return true
     }
+
+    override fun legend(world: String, chunkX: Int, chunkZ: Int): String? =
+        chunk(world, chunkX, chunkZ)?.persistentDataContainer?.get(legendKey, PersistentDataType.STRING)
+
+    override fun setLegend(world: String, chunkX: Int, chunkZ: Int, json: String?): Boolean {
+        val data = chunk(world, chunkX, chunkZ)?.persistentDataContainer ?: return false
+        if (json == null) data.remove(legendKey) else data.set(legendKey, PersistentDataType.STRING, json)
+        return true
+    }
+
+    private val legendKey by lazy { NamespacedKey(plugin, LEGEND) }
 
     private fun chunk(world: String, chunkX: Int, chunkZ: Int): org.bukkit.Chunk? {
         val w = Bukkit.getWorld(world) ?: return null

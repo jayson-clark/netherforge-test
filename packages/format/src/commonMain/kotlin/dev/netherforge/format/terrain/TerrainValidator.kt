@@ -26,7 +26,7 @@ object TerrainValidator {
     private val BLOCK = Rules.BlockStateCodes(ProblemCodes.TERRAIN_BLOCK, ProblemCodes.TERRAIN_BLOCK, ProblemCodes.TERRAIN_BLOCK)
 
     fun validate(file: TerrainFile, sink: ProblemSink, game: GameData?, height: WorldHeight = WorldHeight.LIMITS) {
-        val check = Check(sink, game, height, file.biomes.keys)
+        val check = Check(sink, game, height, file.biomes.keys, file.climate.noises.keys, file.biomes.filterValues { it.isVolume }.keys)
         check.terrain(file.terrain)
         file.terrain.density?.let { check.density(it, "$.terrain.density") }
         for ((name, area) in file.biomes) {
@@ -57,12 +57,28 @@ object TerrainValidator {
         file.climate.temperature?.let { check.noise(it, "$.climate.temperature") }
         file.climate.humidity?.let { check.noise(it, "$.climate.humidity") }
         file.climate.jitter?.let { check.jitter(it, "$.climate.jitter") }
+        check.named(file.climate.noises.keys, "$.climate.noises", "climate values", Climate.MAX_NOISES)
+        for ((name, noise) in file.climate.noises) check.noise(noise, CanonicalJson.childPath("$.climate.noises", name))
         check.named(file.biomes.keys, "$.biomes", "biome areas")
+        if (file.biomes.isNotEmpty() && file.biomes.values.all { it.isVolume }) {
+            sink.report(
+                ProblemCodes.TERRAIN_VOLUME,
+                "Every biome area here is limited by height, so no column has an area: add one without `y`, `depth` or `surface`",
+                "$.biomes"
+            )
+        }
         for ((name, area) in file.biomes) check.area(area, CanonicalJson.childPath("$.biomes", name))
         file.script?.let { check.script(it, "$.script") }
     }
 
-    private class Check(val sink: ProblemSink, val game: GameData?, val height: WorldHeight, val areas: Set<String>) {
+    private class Check(
+        val sink: ProblemSink,
+        val game: GameData?,
+        val height: WorldHeight,
+        val areas: Set<String>,
+        val climateNoises: Set<String>,
+        val volumes: Set<String>
+    ) {
         private val lowest = height.minY
         private val highest = height.maxY - 1
 
@@ -152,6 +168,15 @@ object TerrainValidator {
                 }
             }
             areaFilter(islands.biomes, "$at.biomes")
+            islands.biomes.forEachIndexed { i, name ->
+                if (name in volumes) {
+                    sink.report(
+                        ProblemCodes.TERRAIN_VOLUME,
+                        "\"$name\" is limited by height: islands float over columns' areas",
+                        "$at.biomes[$i]"
+                    )
+                }
+            }
         }
 
         private fun amplitude(amplitude: Double?, at: String) {
@@ -359,6 +384,9 @@ object TerrainValidator {
                     "$at.placement"
                 )
             }
+            if (decoration.loot != null && decoration.customBlock != null) {
+                sink.report(ProblemCodes.TERRAIN_DECORATION, "A project block holds no items to fill from a loot table", "$at.loot")
+            }
             if (decoration.structure == null && decoration.rotate != null) {
                 sink.report(ProblemCodes.TERRAIN_DECORATION, "Only a structure is turned", "$at.rotate")
             }
@@ -421,6 +449,34 @@ object TerrainValidator {
             }
             range(area.temperature, "$at.temperature")
             range(area.humidity, "$at.humidity")
+            for ((name, range) in area.climate) {
+                val path = CanonicalJson.childPath("$at.climate", name)
+                if (name !in climateNoises) {
+                    val known = if (climateNoises.isEmpty()) {
+                        "it declares none"
+                    } else {
+                        "it declares ${climateNoises.sorted().joinToString(
+                            ", "
+                        )}"
+                    }
+                    sink.report(ProblemCodes.TERRAIN_CLIMATE, "\"$name\" isn't one of the file's climate.noises ($known)", path)
+                }
+                range(range, path)
+            }
+            if (area.isVolume) {
+                blockRange(area.y, "$at.y", inWorld = true)
+                blockRange(area.depth, "$at.depth", inWorld = false)
+                blockRange(area.surface, "$at.surface", inWorld = true)
+                for ((value, key) in listOf(area.layers to "layers", area.underwater to "underwater", area.terrain to "terrain")) {
+                    if (value != null) {
+                        sink.report(
+                            ProblemCodes.TERRAIN_VOLUME,
+                            "An area limited by height gives its places a biome and nothing else: it has no $key",
+                            "$at.$key"
+                        )
+                    }
+                }
+            }
             area.layers?.let { layers(it, "$at.layers") }
             area.underwater?.let { layers(it, "$at.underwater") }
             area.terrain?.let { terrain ->
@@ -454,7 +510,32 @@ object TerrainValidator {
             if (script.blocks.size + script.customBlocks.size > TerrainScript.MAX_BLOCKS) {
                 sink.report(ProblemCodes.TERRAIN_SCRIPT, "A script lists at most ${TerrainScript.MAX_BLOCKS} blocks", at)
             }
+            if (script.loot.size > TerrainScript.MAX_LOOT) {
+                sink.report(ProblemCodes.TERRAIN_SCRIPT, "A script lists at most ${TerrainScript.MAX_LOOT} loot tables", "$at.loot")
+            }
             script.blocks.forEachIndexed { i, block -> Rules.blockState(block, "$at.blocks[$i]", BLOCK, sink, game) }
+        }
+
+        /** A volume's range: inside the world (a [depth][BiomeArea.depth] needn't be), and not empty. */
+        fun blockRange(range: BlockRange?, at: String, inWorld: Boolean) {
+            if (range == null) return
+            val limit = height.maxY - height.minY
+            for ((value, key) in listOf(range.min to "min", range.max to "max")) {
+                if (value == null) continue
+                val ok = if (inWorld) value in lowest..highest else value in -limit..limit
+                if (!ok) {
+                    val span = if (inWorld) "from $lowest to $highest" else "from -$limit to $limit"
+                    sink.report(ProblemCodes.TERRAIN_VOLUME, "$key must be $span, not $value", "$at.$key")
+                }
+            }
+            val min = range.min
+            val max = range.max
+            if (min != null &&
+                max != null &&
+                min > max
+            ) {
+                sink.report(ProblemCodes.TERRAIN_VOLUME, "min ($min) is above max ($max)", "$at.min")
+            }
         }
 
         fun range(range: ClimateRange?, at: String) {

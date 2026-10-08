@@ -1,5 +1,7 @@
 package dev.netherforge.plugin.paper
 
+import dev.netherforge.format.terrain.ChunkBuffer
+import dev.netherforge.format.terrain.CompiledTerrain
 import dev.netherforge.format.terrain.TerrainGenerator
 import dev.netherforge.plugin.platform.ProjectGenerator
 import org.bukkit.Bukkit
@@ -56,7 +58,49 @@ class PaperWorldGenerators(private val logger: Logger) {
 
     private data class WorldShape(val seed: Long, val minY: Int, val maxY: Int)
 
+    private class ThreadSampler(val generator: TerrainGenerator, val sampler: TerrainGenerator.Sampler, var uses: Int = 0)
+
+    private companion object {
+        /** How many places one thread's sampler answers before it's made again. */
+        const val SAMPLER_USES = 1 shl 14
+
+        /** How many generated chunks' containers wait for their chunk to load. */
+        const val PENDING_CHUNKS = 16384
+    }
+
     private val published = AtomicReference<Map<String, Prepared>>(emptyMap())
+
+    /** A container a generated chunk fills from a loot table: its place and the table, as the terrain names it. */
+    data class LootPlace(val x: Int, val y: Int, val z: Int, val table: String)
+
+    private data class ChunkAt(val world: String, val x: Int, val z: Int)
+
+    /**
+     * The containers of chunks made since the server started, from their blocks being made (a chunk thread) until
+     * the chunk first loads whole (the main thread), when they're given their tables ([takeLoot]). Only a terrain
+     * with loot keeps any, an empty list for a chunk with none, so a chunk that isn't here was made before a restart
+     * (or long ago) and is made again to find them. The oldest go first past [PENDING_CHUNKS].
+     */
+    private val pendingLoot = object : LinkedHashMap<ChunkAt, List<LootPlace>>() {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<ChunkAt, List<LootPlace>>?) = size > PENDING_CHUNKS
+    }
+
+    private fun lootOf(terrain: CompiledTerrain, buffer: ChunkBuffer, x: Int, z: Int) =
+        buffer.lootPlaces(x, z).map { LootPlace(it.x, it.y, it.z, terrain.loot[it.table]) }
+
+    /**
+     * The containers chunk ([x], [z]) of [world] fills from loot tables, once, as it first loads: what its making
+     * found, or (made before the server started) what making it again finds. Empty for a world that isn't a
+     * project terrain's, or a terrain that fills none. On the main thread.
+     */
+    fun takeLoot(world: World, x: Int, z: Int): List<LootPlace> {
+        val chunks = world.generator as? ProjectChunks ?: return emptyList()
+        synchronized(pendingLoot) { pendingLoot.remove(ChunkAt(world.name, x, z)) }?.let { return it }
+        val prepared = chunks.holder.current() ?: return emptyList()
+        if (prepared.project.terrain.loot.isEmpty()) return emptyList()
+        val buffer = prepared.boundTo(world.seed, world.minHeight, world.maxHeight).generate(x, z)
+        return lootOf(prepared.project.terrain, buffer, x, z)
+    }
 
     /** Publishes [generators] (on the main thread: block data is made here, once, not on the chunk threads). */
     fun publish(generators: Map<String, ProjectGenerator>) {
@@ -110,10 +154,14 @@ class PaperWorldGenerators(private val logger: Logger) {
         return ProjectChunks(holder, biomes) to biomes
     }
 
-    private inner class ProjectChunks(private val holder: Holder, private val biomes: ProjectBiomes) : ChunkGenerator() {
+    private inner class ProjectChunks(val holder: Holder, private val biomes: ProjectBiomes) : ChunkGenerator() {
         override fun generateNoise(info: WorldInfo, random: Random, chunkX: Int, chunkZ: Int, data: ChunkGenerator.ChunkData) {
             val prepared = holder.current() ?: return
             val buffer = prepared.boundTo(info.seed, data.minHeight, data.maxHeight).generate(chunkX, chunkZ)
+            if (prepared.project.terrain.loot.isNotEmpty()) {
+                val loot = if (buffer.loot.isEmpty()) emptyList() else lootOf(prepared.project.terrain, buffer, chunkX, chunkZ)
+                synchronized(pendingLoot) { pendingLoot[ChunkAt(info.name, chunkX, chunkZ)] = loot }
+            }
             val height = buffer.height
             for (lx in 0 until 16) {
                 for (lz in 0 until 16) {
@@ -186,9 +234,24 @@ class PaperWorldGenerators(private val logger: Logger) {
         @Volatile private var possible: Set<Biome>? = null
         private val outside = ConcurrentHashMap.newKeySet<Biome>()
 
+        /**
+         * What this thread last asked biomes of: one sampler per chunk thread, kept while it asks the same generator
+         * (the server asks every 4x4x4 cell of a chunk in turn, and a place's area needs its column's height), and
+         * started again now and then so what it keeps stays small.
+         */
+        private val samplers = ThreadLocal<ThreadSampler>()
+
+        private fun samplerFor(generator: TerrainGenerator): TerrainGenerator.Sampler {
+            val kept = samplers.get()
+            if (kept != null && kept.generator === generator && kept.uses++ < SAMPLER_USES) return kept.sampler
+            return ThreadSampler(generator, generator.sampler()).also(samplers::set).sampler
+        }
+
         override fun getBiome(info: WorldInfo, x: Int, y: Int, z: Int): Biome {
             val prepared = holder.current() ?: return Biome.PLAINS
-            val biome = prepared.biome(prepared.boundTo(info.seed, info.minHeight, info.maxHeight).biomeAt(x, z))
+            val generator = prepared.boundTo(info.seed, info.minHeight, info.maxHeight)
+            // The game asks the corner of each 4x4x4 cell: a place's own area (a volume, the script's biome stage), else its column's.
+            val biome = prepared.biome(generator.biomeAt(x, y, z, samplerFor(generator)))
             val started = possible ?: return biome
             if (biome in started) return biome
             if (outside.add(biome)) {

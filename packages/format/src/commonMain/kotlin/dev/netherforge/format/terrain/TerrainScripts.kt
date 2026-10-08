@@ -78,7 +78,7 @@ class TerrainScripts(val platform: LuaPlatform, val sources: Map<String, String>
 
 /**
  * A script that failed: its [file] (the script's, `terrain/<id>.lua`), the [stage] it failed in (`load` for its
- * body, `height`, `density`, `terrain` or `decorate`) and Lua's [message], which starts with the file and line it failed at
+ * body, `height`, `density`, `area`, `biome`, `terrain` or `decorate`) and Lua's [message], which starts with the file and line it failed at
  * when it knows them (a module's, if it failed in one). What it failed at is the file's own result.
  */
 data class TerrainScriptFailure(val file: String, val stage: String, val message: String) {
@@ -118,9 +118,15 @@ internal class ScriptRunner(val generator: TerrainGenerator, val script: Compile
     private val terrainSeed = TerrainSeeds.forRole(generator.seed, "script:terrain")
     private val decorateSeed = TerrainSeeds.forRole(generator.seed, "script:decorate")
     private val densitySeed = TerrainSeeds.forRole(generator.seed, "script:density")
+    private val areaSeed = TerrainSeeds.forRole(generator.seed, "script:area")
+    private val biomeSeed = TerrainSeeds.forRole(generator.seed, "script:biome")
+
+    /** The stages the first state made found, so asking [stages] doesn't make another while that one is in use. */
+    @Volatile internal var found: Set<String>? = null
 
     /** The stages the script returns (none when its body fails): the same in every state, so one state's say. */
     val stages: Set<String> by lazy {
+        found?.let { return@lazy it }
         val state = take()
         try {
             state.stages
@@ -156,19 +162,29 @@ internal class ScriptRunner(val generator: TerrainGenerator, val script: Compile
     /** What `math.random` is seeded with in the density at a point of the grid. */
     fun densitySeed(x: Int, y: Int, z: Int): Int = TerrainSeeds.mix(place(densitySeed, x, z) xor (y * 0x5BD1E995))
 
+    /** What `math.random` is seeded with in a column's area. */
+    fun areaSeed(x: Int, z: Int): Int = place(areaSeed, x, z)
+
+    /** What `math.random` is seeded with in a place's biome. */
+    fun biomeSeed(x: Int, y: Int, z: Int): Int = TerrainSeeds.mix(place(biomeSeed, x, z) xor (y * 0x5BD1E995))
+
     private fun place(role: Int, x: Int, z: Int): Int = TerrainSeeds.mix(TerrainSeeds.mix(role xor (x * 0x1B873593)) xor (z * 0x2C1B3C6D))
 
     companion object {
         const val TERRAIN = "terrain"
         const val DECORATE = "decorate"
         const val DENSITY = "density"
+        const val AREA = "area"
+        const val BIOME = "biome"
     }
 }
 
 /**
  * One Lua state running a generator's script, used by one thread at a time: the host functions the glue
  * ([TerrainScriptGlue]) calls, and the calls into its stages. The chunk being generated is [chunk] while a chunk
- * stage runs; heights asked outside one are a sampler's of its own.
+ * stage runs. What the script asks of other columns (heights, areas) is a sampler's of its own with no state of
+ * its own, so a script stage that answers it (the `area` stage of the column asked about) runs in another state:
+ * a host function never calls back into the state that called it.
  */
 internal class TerrainScriptState(private val runner: ScriptRunner) {
     private val generator = runner.generator
@@ -197,13 +213,16 @@ internal class TerrainScriptState(private val runner: ScriptRunner) {
                 runner.script.noises.joinToString("\n") { it.name },
                 terrain.areas.joinToString("\n") { it.name },
                 terrain.areas.joinToString("\n") { it.biome },
-                terrain.palette.joinToString("\n") { it.label }
+                terrain.palette.joinToString("\n") { it.label },
+                terrain.areas.filter { it.volume != null }.joinToString("\n") { it.name },
+                terrain.loot.joinToString("\n")
             ) as String
             names.split(',').filter { it.isNotEmpty() }.toSet()
         } catch (e: LuaFailure) {
             runner.failed("load", e.message)
             emptySet()
         }
+        if (runner.found == null) runner.found = stages
         if (ScriptRunner.DENSITY in stages && terrain.density == null) {
             runner.failed(
                 "load",
@@ -227,6 +246,22 @@ internal class TerrainScriptState(private val runner: ScriptRunner) {
         state.call("nf_density", x, y, z, value, runner.densitySeed(x, y, z)) as? Double
     } catch (e: LuaFailure) {
         runner.failed("density", e.message)
+        null
+    }
+
+    /** The area (an index in [CompiledTerrain.areas]) of column ([x], [z]) from the file's [file], or null when the stage failed there. */
+    fun area(x: Int, z: Int, file: Int): Int? = try {
+        (state.call("nf_area", x, z, file, runner.areaSeed(x, z)) as? Number)?.toInt()
+    } catch (e: LuaFailure) {
+        runner.failed(ScriptRunner.AREA, e.message)
+        null
+    }
+
+    /** The area of the place ([x], [y], [z]) from the file's [file], or null when the stage failed there. */
+    fun biome(x: Int, y: Int, z: Int, file: Int): Int? = try {
+        (state.call("nf_biome", x, y, z, file, runner.biomeSeed(x, y, z)) as? Number)?.toInt()
+    } catch (e: LuaFailure) {
+        runner.failed(ScriptRunner.BIOME, e.message)
         null
     }
 
@@ -274,11 +309,20 @@ internal class TerrainScriptState(private val runner: ScriptRunner) {
             val lz = int(args, 3) - at.minZ
             if (lx !in 0..15 || lz !in 0..15 || y < generator.minY || y >= generator.maxY) -1 else at.buffer[lx, y, lz]
         },
-        "host_file_height" to LuaHostFunction { args ->
-            (chunk?.sampler ?: sampler).fileHeight(int(args, 1), int(args, 2))
-        },
-        "host_area" to LuaHostFunction { args ->
-            (chunk?.sampler ?: sampler).areaAt(int(args, 1), int(args, 2))
+        "host_file_height" to LuaHostFunction { args -> sampler.fileHeight(int(args, 1), int(args, 2)) },
+        "host_area" to LuaHostFunction { args -> sampler.areaAt(int(args, 1), int(args, 2)) },
+        "host_point_area" to LuaHostFunction { args -> sampler.pointAreaAt(int(args, 1), int(args, 2), int(args, 3)) },
+        "host_set_loot" to LuaHostFunction { args ->
+            val at = current()
+            val lx = int(args, 1) - at.minX
+            val y = int(args, 2)
+            val lz = int(args, 3) - at.minZ
+            val table = int(args, 4)
+            if (table !in terrain.loot.indices) throw LuaFailure("no loot table $table")
+            if (lx in 0..15 && lz in 0..15 && y >= generator.minY && y < generator.maxY) {
+                at.buffer.loot[at.buffer.columnStart(lx, lz) + y - generator.minY] = table
+            }
+            null
         },
         "host_resolve" to LuaHostFunction { args -> resolve(args.string(1).orEmpty()) },
         "host_module_path" to LuaHostFunction { args ->

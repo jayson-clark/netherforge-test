@@ -18,6 +18,18 @@ class ChunkBuffer(val minY: Int, val maxY: Int) {
     /** Column by column (`x`, then `z`), each from the bottom up. */
     val blocks: IntArray = IntArray(16 * 16 * height)
 
+    /**
+     * The containers to fill from a loot table: a block's index in [blocks] to the table's in
+     * [CompiledTerrain.loot]. The server fills whichever of them is a container once the chunk's blocks are placed.
+     */
+    val loot: MutableMap<Int, Int> = HashMap()
+
+    /** Each container [loot] marks: its place (in the world's x and z for a chunk at [chunkX], [chunkZ]) and table. */
+    fun lootPlaces(chunkX: Int, chunkZ: Int): List<LootPlace> = loot.entries.sortedBy { it.key }.map { (index, table) ->
+        val column = index / height
+        LootPlace(chunkX * 16 + column / 16, minY + index % height, chunkZ * 16 + column % 16, table)
+    }
+
     fun columnStart(localX: Int, localZ: Int): Int = (localX * 16 + localZ) * height
 
     operator fun get(localX: Int, y: Int, localZ: Int): Int = blocks[columnStart(localX, localZ) + y - minY]
@@ -32,6 +44,9 @@ class ChunkBuffer(val minY: Int, val maxY: Int) {
         for (y in maxOf(fromY, minY)..minOf(toY, maxY - 1)) blocks[start + y] = block
     }
 }
+
+/** A container a generated chunk fills from loot table [table] (an index into [CompiledTerrain.loot]). */
+data class LootPlace(val x: Int, val y: Int, val z: Int, val table: Int)
 
 /** One chunk being generated, as each [GenerationStage] sees it. */
 class ChunkGeneration internal constructor(
@@ -53,10 +68,22 @@ class ChunkGeneration internal constructor(
     /** The state the file's script runs in for this chunk, when it has a script. */
     internal val script: TerrainScriptState? = null,
     /** With a density, which blocks the terrain makes solid, laid out as the [buffer]'s. */
-    internal val solid: BooleanArray? = null
+    internal val solid: BooleanArray? = null,
+    /**
+     * When a place's biome can differ from its column's: the area of each 4x4x4 cell (`(qx * 4 + qz) * cells + qy`,
+     * its corner's, as [TerrainGenerator.pointAreaAt] says), null otherwise.
+     */
+    internal val cells: IntArray? = null
 ) {
     val minX: Int get() = chunkX * 16
     val minZ: Int get() = chunkZ * 16
+
+    /** The area at a place in the chunk: its cell's when places differ from their column, else its column's. */
+    fun areaAt(localX: Int, y: Int, localZ: Int): Int {
+        val cells = cells ?: return areas[localX * 16 + localZ]
+        val height = (buffer.height + 3) / 4
+        return cells[((localX shr 2) * 4 + (localZ shr 2)) * height + ((y - buffer.minY) shr 2)]
+    }
 }
 
 /**
@@ -100,6 +127,11 @@ class TerrainGenerator internal constructor(
     scripts: TerrainScripts? = null
 ) {
     private val areas = terrain.areas
+    private val columnAreas: IntArray = terrain.columnAreas.toIntArray()
+    private val volumeAreas: IntArray = terrain.volumeAreas.toIntArray()
+    private val climateNoises: List<FastNoiseLite> = terrain.climate.map {
+        it.noise.build(TerrainSeeds.forRole(seed, "climate:noise:${it.name}"))
+    }
     private val heightNoises: List<FastNoiseLite> =
         terrain.noises.map { it.noise.build(TerrainSeeds.forRole(seed, "height:${it.name}")) }
     private val areaNoises: List<List<FastNoiseLite>> = areas.map { area ->
@@ -166,6 +198,12 @@ class TerrainGenerator internal constructor(
     /** The file's script, when it has one and was bound with what it runs with. */
     private val runner: ScriptRunner? = terrain.script?.let { script -> scripts?.let { ScriptRunner(this, script, it) } }
 
+    private val areaStage: Boolean by lazy { runner?.stages?.contains(ScriptRunner.AREA) == true }
+    private val biomeStage: Boolean by lazy { runner?.stages?.contains(ScriptRunner.BIOME) == true }
+
+    /** Whether a place's biome can differ from its column's: the file has volume areas, or its script a `biome` stage. */
+    val pointAreas: Boolean get() = volumeAreas.isNotEmpty() || biomeStage
+
     /** The file's 3D terrain, when it has a density. */
     private val density: DensityField? = terrain.density?.let { d ->
         DensityField(terrain, d, seed, minY, maxY) { runner?.stages?.contains(ScriptRunner.DENSITY) == true }
@@ -207,8 +245,34 @@ class TerrainGenerator internal constructor(
         private val lattice = HashMap<Long, Int>()
         private val grid = HashMap<Long, DoubleArray>()
         private val corners = HashMap<Long, CornerColumn>()
+        private val columnArea = HashMap<Long, Int>()
+        private val surfaces = HashMap<Long, Int>()
 
-        fun areaAt(x: Int, z: Int): Int = this@TerrainGenerator.areaAt(x, z)
+        /** The area of a column: its climate's, then the script's `area` stage. */
+        fun areaAt(x: Int, z: Int): Int {
+            if (!areaStage) return fileAreaAt(x, z)
+            val key = key(x, z)
+            columnArea[key]?.let { return it }
+            val area = areaAt(x, z, script)
+            if (columnArea.size >= CACHE_LIMIT) columnArea.clear()
+            columnArea[key] = area
+            return area
+        }
+
+        /** The area at a place: see [TerrainGenerator.pointAreaAt]. */
+        fun pointAreaAt(x: Int, y: Int, z: Int): Int = this@TerrainGenerator.pointAreaAt(x, y, z, this)
+
+        /** [surfaceAt], kept: what a volume's depth and surface are measured from. */
+        internal fun keptSurfaceAt(x: Int, z: Int): Int {
+            val key = key(x, z)
+            surfaces[key]?.let { return it }
+            val surface = surfaceAt(x, z)
+            if (surfaces.size >= CACHE_LIMIT) surfaces.clear()
+            surfaces[key] = surface
+            return surface
+        }
+
+        internal val scriptState: TerrainScriptState? get() = script
 
         /**
          * The y of the top block of the terrain at a column: its [baseHeight], or with a density the topmost solid
@@ -355,9 +419,26 @@ class TerrainGenerator internal constructor(
     /** The y of the top block of the terrain at a column. */
     fun surfaceAt(x: Int, z: Int): Int = Sampler().surfaceAt(x, z)
 
-    /** The index in [CompiledTerrain.areas] of the biome area at a column: the climate where the jitter moves the column to. */
-    fun areaAt(x: Int, z: Int): Int {
-        if (areas.size == 1) return 0
+    /**
+     * The index in [CompiledTerrain.areas] of the biome area at a column: the climate's, where the jitter moves the
+     * column to, then the script's `area` stage. A [Sampler] keeps what it's asked; this asks afresh.
+     */
+    fun areaAt(x: Int, z: Int): Int = areaAt(x, z, null)
+
+    internal fun areaAt(x: Int, z: Int, script: TerrainScriptState?): Int {
+        val file = fileAreaAt(x, z)
+        val runner = runner ?: return file
+        if (!areaStage) return file
+        val state = script ?: runner.take()
+        try {
+            return state.area(x, z, file) ?: file
+        } finally {
+            if (script == null) runner.give(state)
+        }
+    }
+
+    /** Where the climate is read for a column: the column, moved by the jitter. */
+    private fun climatePoint(x: Int, z: Int): Pair<Double, Double> {
         var cx = x.toDouble()
         var cz = z.toDouble()
         if (jittered) {
@@ -366,15 +447,55 @@ class TerrainGenerator internal constructor(
             cx += dx
             cz += dz
         }
-        val temperature = temperatureNoise.getNoise(cx, cz)
-        val humidity = humidityNoise.getNoise(cx, cz)
-        var best = 0
+        return cx to cz
+    }
+
+    /** The climate at a column: its temperature, its humidity, then each of the file's own values. */
+    fun climateAt(x: Int, z: Int): DoubleArray {
+        val (cx, cz) = climatePoint(x, z)
+        val out = DoubleArray(2 + climateNoises.size)
+        out[0] = temperatureNoise.getNoise(cx, cz)
+        out[1] = humidityNoise.getNoise(cx, cz)
+        for (i in climateNoises.indices) out[2 + i] = climateNoises[i].getNoise(cx, cz)
+        return out
+    }
+
+    /** How far [climate] is outside [area]'s box, squared: 0 inside it. */
+    private fun climateCost(area: CompiledArea, temperature: Double, humidity: Double, climate: DoubleArray?): Double {
+        val dt = outside(temperature, area.temperatureMin, area.temperatureMax)
+        val dh = outside(humidity, area.humidityMin, area.humidityMax)
+        var cost = dt * dt + dh * dh
+        if (climate != null) {
+            for (i in climateNoises.indices) {
+                val d = outside(climate[2 + i], area.climate[2 * i], area.climate[2 * i + 1])
+                cost += d * d
+            }
+        }
+        return cost
+    }
+
+    /** The column's area by its climate alone, before the script's `area` stage. */
+    fun fileAreaAt(x: Int, z: Int): Int {
+        if (columnAreas.size == 1) return columnAreas[0]
+        val climate: DoubleArray?
+        val temperature: Double
+        val humidity: Double
+        if (climateNoises.isEmpty()) {
+            val (cx, cz) = climatePoint(x, z)
+            temperature = temperatureNoise.getNoise(cx, cz)
+            humidity = humidityNoise.getNoise(cx, cz)
+            climate = null
+        } else {
+            climate = climateAt(x, z)
+            temperature = climate[0]
+            humidity = climate[1]
+        }
+        var best = columnAreas[0]
         var bestCost = Double.MAX_VALUE
         var bestSpan = Double.MAX_VALUE
-        for ((i, area) in areas.withIndex()) {
-            val dt = outside(temperature, area.temperatureMin, area.temperatureMax)
-            val dh = outside(humidity, area.humidityMin, area.humidityMax)
-            val cost = dt * dt + dh * dh
+        for (i in columnAreas) {
+            val area = areas[i]
+            val cost = climateCost(area, temperature, humidity, climate)
             val span = area.span
             if (cost < bestCost || (cost == bestCost && span < bestSpan)) {
                 best = i
@@ -384,6 +505,48 @@ class TerrainGenerator internal constructor(
         }
         return best
     }
+
+    /**
+     * The index in [CompiledTerrain.areas] of the biome area at a place: the most specific volume area whose ranges
+     * and climate box hold it exactly, else its column's area, then the script's `biome` stage. A place is read at the
+     * corner of its 4x4x4 cell (the game keeps biomes per cell): every place of a cell has the same area.
+     */
+    fun pointAreaAt(x: Int, y: Int, z: Int, sampler: Sampler = Sampler()): Int {
+        val qx = x and -4
+        val qy = y and -4
+        val qz = z and -4
+        val column = sampler.areaAt(qx, qz)
+        if (!pointAreas) return column
+        var chosen = column
+        if (volumeAreas.isNotEmpty()) {
+            val surface = sampler.keptSurfaceAt(qx, qz)
+            var climate: DoubleArray? = null
+            var bestSpan = Double.MAX_VALUE
+            for (i in volumeAreas) {
+                val area = areas[i]
+                if (!area.volume!!.contains(qy, surface)) continue
+                val at = climate ?: climateAt(qx, qz).also { climate = it }
+                if (climateCost(area, at[0], at[1], at) > 0.0) continue
+                if (area.span < bestSpan) {
+                    chosen = i
+                    bestSpan = area.span
+                }
+            }
+        }
+        val runner = runner
+        if (runner != null && biomeStage) {
+            val state = sampler.scriptState ?: runner.take()
+            try {
+                chosen = state.biome(qx, qy, qz, chosen) ?: chosen
+            } finally {
+                if (sampler.scriptState == null) runner.give(state)
+            }
+        }
+        return chosen
+    }
+
+    /** The biome at a place, as the file writes it: its [pointAreaAt]'s. */
+    fun biomeAt(x: Int, y: Int, z: Int, sampler: Sampler = Sampler()): String = areas[pointAreaAt(x, y, z, sampler)].biome
 
     /**
      * The column nearest ([x], [z]) whose terrain is above the sea, looked for in steps of 8 blocks
@@ -432,7 +595,7 @@ class TerrainGenerator internal constructor(
             for (lx in 0 until 16) {
                 for (lz in 0 until 16) {
                     base[lx * 16 + lz] = sampler.baseHeight(chunkX * 16 + lx, chunkZ * 16 + lz)
-                    areas[lx * 16 + lz] = areaAt(chunkX * 16 + lx, chunkZ * 16 + lz)
+                    areas[lx * 16 + lz] = sampler.areaAt(chunkX * 16 + lx, chunkZ * 16 + lz)
                 }
             }
             val solid = if (density != null) BooleanArray(buffer.blocks.size) else null
@@ -449,12 +612,31 @@ class TerrainGenerator internal constructor(
                     }
                 }
             }
-            val chunk = ChunkGeneration(this, chunkX, chunkZ, buffer, surface, base, areas, sampler, script, solid)
+            val cells = if (pointAreas) cellAreas(chunkX, chunkZ, sampler) else null
+            val chunk = ChunkGeneration(this, chunkX, chunkZ, buffer, surface, base, areas, sampler, script, solid, cells)
             for (stage in stages) stage.run(chunk)
         } finally {
             if (script != null) runner?.give(script)
         }
     }
+
+    /** The area of each 4x4x4 cell of a chunk, laid out as [ChunkGeneration.cells]. */
+    private fun cellAreas(chunkX: Int, chunkZ: Int, sampler: Sampler): IntArray {
+        val height = (maxY - minY + 3) / 4
+        val out = IntArray(16 * height)
+        for (qx in 0 until 4) {
+            for (qz in 0 until 4) {
+                for (qy in 0 until height) {
+                    out[(qx * 4 + qz) * height + qy] = pointAreaAt(chunkX * 16 + qx * 4, minY + qy * 4, chunkZ * 16 + qz * 4, sampler)
+                }
+            }
+        }
+        return out
+    }
+
+    /** Whether [mask] (null for every area) lets something be at a place in the chunk: its column's area or its own. */
+    private fun allowedAt(mask: BooleanArray?, chunk: ChunkGeneration, localX: Int, y: Int, localZ: Int): Boolean =
+        mask == null || mask[chunk.areas[localX * 16 + localZ]] || (chunk.cells != null && mask[chunk.areaAt(localX, y, localZ)])
 
     /** Marks a column's solid blocks in [solid] from [start] (the column's place in the buffer); answers its topmost one's y. */
     private fun solidColumn(column: DensityColumn, solid: BooleanArray, start: Int): Int {
@@ -482,7 +664,12 @@ class TerrainGenerator internal constructor(
         val script = chunk.script ?: return
         if (stage !in script.stages) return
         val before = chunk.buffer.blocks.copyOf()
-        if (!script.chunkStage(stage, chunk)) before.copyInto(chunk.buffer.blocks)
+        val loot = HashMap(chunk.buffer.loot)
+        if (!script.chunkStage(stage, chunk)) {
+            before.copyInto(chunk.buffer.blocks)
+            chunk.buffer.loot.clear()
+            chunk.buffer.loot.putAll(loot)
+        }
     }
 
     /** The layers of a column of [area], under the sea or not. */
@@ -565,11 +752,14 @@ class TerrainGenerator internal constructor(
             val allowed = caveAreas[i]
             for (lx in 0 until 16) {
                 for (lz in 0 until 16) {
-                    if (allowed != null && !allowed[chunk.areas[lx * 16 + lz]]) continue
+                    // The whole column when its area is allowed; with volumes, the places whose own area is.
+                    val column = allowed == null || allowed[chunk.areas[lx * 16 + lz]]
+                    if (!column && chunk.cells == null) continue
                     val x = (chunk.minX + lx).toDouble()
                     val z = (chunk.minZ + lz).toDouble()
                     val to = minOf(cave.maxY, chunk.surface[lx * 16 + lz] - cave.depth, maxY - 2)
                     for (y in maxOf(cave.minY, minY + 1)..to) {
+                        if (!column && !allowed[chunk.areaAt(lx, y, lz)]) continue
                         val open = when (cave.type) {
                             CaveType.CHEESE -> noise.getNoise(x, y.toDouble(), z) > cave.threshold
                             CaveType.SPAGHETTI ->
@@ -597,7 +787,8 @@ class TerrainGenerator internal constructor(
             if (from > to) continue
             for (lx in 0 until 16) {
                 for (lz in 0 until 16) {
-                    if (allowed != null && !allowed[chunk.areas[lx * 16 + lz]]) continue
+                    val column = allowed == null || allowed[chunk.areas[lx * 16 + lz]]
+                    if (!column && chunk.cells == null) continue
                     val x = (chunk.minX + lx).toDouble()
                     val z = (chunk.minZ + lz).toDouble()
                     val start = buffer.columnStart(lx, lz) - minY
@@ -605,7 +796,7 @@ class TerrainGenerator internal constructor(
                     var above = 0
                     for (y in maxY - 1 downTo from) {
                         val here = solid[start + y]
-                        if (here && y <= to && above >= cave.depth) {
+                        if (here && y <= to && above >= cave.depth && (column || allowed[chunk.areaAt(lx, y, lz)])) {
                             val open = when (cave.type) {
                                 CaveType.CHEESE -> noise.getNoise(x, y.toDouble(), z) > cave.threshold
                                 CaveType.SPAGHETTI ->
@@ -671,7 +862,12 @@ class TerrainGenerator internal constructor(
                             OreDistribution.TRIANGLE -> low + (random.nextInt(high - low + 1) + random.nextInt(high - low + 1) + 1) / 2
                         }
                         // A vein that doesn't start in its areas isn't grown (nor are its numbers drawn: every chunk skips it alike).
-                        if (allowed == null || allowed[chunk.sampler.areaAt(ox, oz)]) vein(chunk, buffer, ore, ox, oy, oz, random)
+                        if (allowed == null ||
+                            allowed[chunk.sampler.areaAt(ox, oz)] ||
+                            (pointAreas && allowed[chunk.sampler.pointAreaAt(ox, oy, oz)])
+                        ) {
+                            vein(chunk, buffer, ore, ox, oy, oz, random)
+                        }
                     }
                 }
             }
@@ -737,7 +933,9 @@ class TerrainGenerator internal constructor(
         if (roll >= chance) return null
         val area = sampler.areaAt(x, z)
         val allowed = decorationAreas[index]
-        if (allowed != null && !allowed[area]) return null
+        // With volumes, a place whose column isn't allowed may still be: its own area is asked once it has a height.
+        val column = allowed == null || allowed[area]
+        if (!column && !pointAreas) return null
         val low = maxOf(d.minY ?: minY, minY)
         val high = minOf(d.maxY ?: (maxY - 1), maxY - 1)
         val y = when (d.placement) {
@@ -754,6 +952,7 @@ class TerrainGenerator internal constructor(
                 pickY(low, minOf(high, sampler.surfaceAt(x, z) - 1), pick) ?: return null
         }
         if (y !in low..high) return null
+        if (!column && !allowed[sampler.pointAreaAt(x, y, z)]) return null
         return DecorationSite(x, y, z, if (d.rotate) turn else 0)
     }
 
@@ -772,7 +971,7 @@ class TerrainGenerator internal constructor(
                     repeat(d.count) {
                         val site = decorationSite(index, cx, cz, random, chunk.sampler)
                         if (site != null) {
-                            if (template != null) structure(chunk, template, site) else block(chunk, index, d, site)
+                            if (template != null) structure(chunk, template, site, d.loot) else block(chunk, index, d, site)
                         }
                     }
                 }
@@ -807,10 +1006,12 @@ class TerrainGenerator internal constructor(
             }
         } ?: return
         buffer[lx, y, lz] = d.block
+        val at = buffer.columnStart(lx, lz) + y - minY
+        if (d.loot >= 0) buffer.loot[at] = d.loot else buffer.loot.remove(at)
     }
 
     /** The part of a structure decoration at its site that's in this chunk: its lowest layer at the site, centred on it. */
-    private fun structure(chunk: ChunkGeneration, template: LinkedTemplate, site: DecorationSite) {
+    private fun structure(chunk: ChunkGeneration, template: LinkedTemplate, site: DecorationSite, loot: Int) {
         val turn = site.turn
         val width = if (turn % 2 == 0) template.sizeX else template.sizeZ
         val depth = if (turn % 2 == 0) template.sizeZ else template.sizeX
@@ -825,7 +1026,8 @@ class TerrainGenerator internal constructor(
             val bx = blocks[i]
             val by = blocks[i + 1]
             val bz = blocks[i + 2]
-            val state = states[blocks[i + 3]]
+            val entry = blocks[i + 3]
+            val state = states[entry]
             i += 4
             if (state == 0) continue
             val rx = when (turn) {
@@ -845,6 +1047,8 @@ class TerrainGenerator internal constructor(
             val y = site.y + by
             if (lx !in 0..15 || lz !in 0..15 || y < minY || y >= maxY) continue
             buffer[lx, y, lz] = state
+            val at = buffer.columnStart(lx, lz) + y - minY
+            if (loot >= 0 && template.withEntity.getOrElse(entry) { false }) buffer.loot[at] = loot else buffer.loot.remove(at)
         }
     }
 

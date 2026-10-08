@@ -19,6 +19,7 @@ import org.bukkit.World
 import org.bukkit.WorldBorder
 import org.bukkit.WorldCreator
 import org.bukkit.WorldType
+import org.bukkit.block.TileState
 import org.bukkit.block.structure.Mirror
 import org.bukkit.block.structure.StructureRotation
 import org.bukkit.event.EventHandler
@@ -48,7 +49,8 @@ import org.bukkit.util.BlockVector as BukkitBlockVector
 class PaperWorldManager(private val plugin: JavaPlugin, private val version: PaperVersion) : WorldManagerOps {
     private val storage: WorldStorage get() = version.worlds
 
-    private val generators = PaperWorldGenerators(plugin.logger)
+    /** The project's terrains as the server's chunk generators. */
+    val generators = PaperWorldGenerators(plugin.logger)
 
     /** Each unloaded world's data, kept from when it was loaded, for [delete]. */
     private val paths = HashMap<String, Path>()
@@ -283,13 +285,17 @@ class PaperStructures(private val entities: PaperEntities) : StructureOps {
         val palette = LinkedHashMap<String, Int>()
         val blocks = structure.palettes.firstOrNull()?.blocks.orEmpty()
         val out = IntArray(blocks.size * 4)
+        // States that hold a block entity (a chest, a barrel): where a decoration's loot can go.
+        val withEntity = HashSet<Int>()
         for ((i, block) in blocks.withIndex()) {
             out[i * 4] = block.x
             out[i * 4 + 1] = block.y
             out[i * 4 + 2] = block.z
-            out[i * 4 + 3] = palette.getOrPut(block.blockData.asString) { palette.size }
+            val entry = palette.getOrPut(block.blockData.asString) { palette.size }
+            out[i * 4 + 3] = entry
+            if (block is TileState) withEntity += entry
         }
-        return StructureTemplate(size.blockX, size.blockY, size.blockZ, palette.keys.toList(), out)
+        return StructureTemplate(size.blockX, size.blockY, size.blockZ, palette.keys.toList(), out, withEntity)
     }
 
     override fun place(file: Path, world: String, at: BlockVector, placement: StructurePlacement): Boolean {

@@ -5,6 +5,7 @@ import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.lua.LuajavaPlatform
 import dev.netherforge.format.project.BiomeKind
 import dev.netherforge.format.project.TerrainKind
+import dev.netherforge.format.terrain.GeneratedLoot
 import dev.netherforge.format.terrain.StructureTemplate
 import dev.netherforge.format.terrain.TerrainBlock
 import dev.netherforge.format.terrain.TerrainCompiler
@@ -144,6 +145,75 @@ class PaperWorldGeneratorsTest : PlatformContract() {
                 }
             }
             assertEquals(areas, found)
+        } finally {
+            drop(name)
+        }
+    }
+
+    @Test
+    fun `a volume area is the biome of the places its ranges hold, height and all`() {
+        val json = hills.replace(
+            """"warm": { "biome": "${ContractBiomes.BARE}", "temperature": { "min": 0.0 } } }""",
+            """"warm": { "biome": "${ContractBiomes.BARE}", "temperature": { "min": 0.0 } },
+               "deep": { "biome": "${ContractBiomes.BARE}", "y": { "max": -16 }, "temperature": { "max": 0.0 } } }"""
+        )
+        val project = generator(json, mapOf("ruby_ore" to rubyState))
+        main { manager.publishGenerators(mapOf("contract_volumes" to project)) }
+        val name = worldNamed()
+        create(name, "contract_volumes", 20260714L)
+        try {
+            val world = main { Bukkit.getWorld(name)!! }
+            val bound = project.terrain.bind(world.seed, world.minHeight, world.maxHeight)
+            // A cold column: the rich biome over the ground, the volume's below -16.
+            val (x, z) = (0 until 400).map { it * 37 to it * -11 }.first { (x, z) -> bound.biomeAt(x, z) == ContractBiomes.RICH }
+            val (above, below) = main {
+                assertTrue(platform.worlds.loadChunk(name, x shr 4, z shr 4))
+                platform.worlds.biome(name, x, 70, z) to platform.worlds.biome(name, x, -40, z)
+            }
+            assertEquals(project.biomes.getValue(ContractBiomes.RICH), above)
+            assertEquals(project.biomes.getValue(ContractBiomes.BARE), below)
+            assertEquals(project.biomes.getValue(bound.biomeAt(x, -40, z)), below)
+        } finally {
+            drop(name)
+        }
+    }
+
+    @Test
+    fun `a container a terrain generates is given the project's loot table as its chunk first loads`() {
+        val json = hills.replace(
+            """"floor": { "thickness": 3 },""",
+            """"floor": { "thickness": 3 },
+               "decorations": { "caches": { "block": "minecraft:barrel[facing=up]", "count": 6, "loot": "contract_loot" } },"""
+        )
+        val project = generator(json, mapOf("ruby_ore" to rubyState))
+        main { manager.publishGenerators(mapOf("contract_loot" to project)) }
+        val name = worldNamed()
+        create(name, "contract_loot", 20260714L)
+        try {
+            val world = main { Bukkit.getWorld(name)!! }
+            val bound = project.terrain.bind(world.seed, world.minHeight, world.maxHeight)
+            val (cx, cz, places) = (0 until 64).asSequence().map { it % 8 to it / 8 }
+                .map { (cx, cz) -> Triple(cx, cz, bound.generate(cx, cz).lootPlaces(cx, cz)) }
+                .first { it.third.isNotEmpty() }
+            val key = org.bukkit.NamespacedKey("netherforge", "loot")
+            val tables = main {
+                assertTrue(platform.worlds.loadChunk(name, cx, cz))
+                places.map { place ->
+                    val state = world.getBlockAt(place.x, place.y, place.z).state as org.bukkit.block.Container
+                    state.persistentDataContainer.get(key, org.bukkit.persistence.PersistentDataType.STRING)
+                }
+            }
+            assertEquals(places.map { "contract_loot" }, tables)
+            // The game unpacks it as its own chests (here, broken): the runtime is asked for the project's table.
+            val first = places.first()
+            main {
+                val state = world.getBlockAt(first.x, first.y, first.z).state as org.bukkit.loot.Lootable
+                assertEquals(GeneratedLoot.KEY, state.lootTable?.key?.toString())
+                world.getBlockAt(first.x, first.y, first.z).breakNaturally()
+            }
+            eventually("the runtime asked for the container's loot") {
+                events.of("generatedLoot").any { it[0] == "contract_loot" }
+            }
         } finally {
             drop(name)
         }

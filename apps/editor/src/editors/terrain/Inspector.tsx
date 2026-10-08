@@ -16,6 +16,7 @@ import {
   TERRAIN_DEFAULTS,
   TERRAIN_LIMITS,
   newTerrainScript,
+  type BlockRange,
   type CaveType,
   type ClimateRange,
   type DecorationPlacement,
@@ -82,6 +83,10 @@ const BIOMES_LIST = 'nf-terrain-biomes'
 
 const whole = (value: number | undefined) => (value === undefined ? undefined : Math.round(value))
 
+/** Whether a biome area is a volume: limited by `y`, `depth` or `surface`, a biome inside the columns' areas. */
+const isVolume = (area: { y?: unknown; depth?: unknown; surface?: unknown }) =>
+  area.y !== undefined || area.depth !== undefined || area.surface !== undefined
+
 /** Adds a named entry after asking its name; the name is checked against the ones taken. */
 async function askName(one: string, taken: string[], initial = ''): Promise<string | null> {
   return ask.prompt({
@@ -110,11 +115,12 @@ export function TerrainInspector({
   const biomes = biomeChoices(projectBiomes, gameData?.registries?.[BIOME_REGISTRY] ?? NO_IDS)
   const customBlocks = useWorkspace((s) => s.outline?.resources.block ?? NO_IDS)
   const structures = useWorkspace((s) => s.outline?.resources.structure ?? NO_IDS)
+  const lootTables = useWorkspace((s) => s.outline?.resources.loot_table ?? NO_IDS)
   const gesture = {
     onGestureStart: () => workspace.getState().beginGesture(path),
     onGestureEnd: () => workspace.getState().endGesture(path),
   }
-  const common = { edit, gesture, blocks, customBlocks, structures, biomes }
+  const common = { edit, gesture, blocks, customBlocks, structures, biomes, lootTables }
   return (
     <>
       <Datalist id={BLOCKS_LIST} values={blocks} />
@@ -142,6 +148,7 @@ interface Parts {
   customBlocks: string[]
   structures: string[]
   biomes: string[]
+  lootTables: string[]
 }
 
 // ---- blocks ---------------------------------------------------------------------------------------
@@ -1113,7 +1120,15 @@ const STRUCTURE_PLACEMENTS: readonly DecorationPlacement[] = [
   'underground',
 ]
 
-function DecorationsSection({ model, edit, gesture, blocks, customBlocks, structures }: Parts) {
+function DecorationsSection({
+  model,
+  edit,
+  gesture,
+  blocks,
+  customBlocks,
+  structures,
+  lootTables,
+}: Parts) {
   const names = namesOf(model, 'decorations')
   const add = async () => {
     const name = await askName('decoration', names, names.length ? '' : 'rocks')
@@ -1281,6 +1296,21 @@ function DecorationsSection({ model, edit, gesture, blocks, customBlocks, struct
                 onChange={(on) => change((it) => setKey(it, 'rotate', on ? undefined : false))}
               />
             )}
+            {blockKind(decoration) !== 'customBlock' && (
+              <SelectField
+                label="Containers filled from"
+                dataPath={fieldPath([...at, 'loot'])}
+                value={decoration.loot ?? ''}
+                options={[
+                  { value: '', label: 'no loot table' },
+                  ...lootTables.map((id) => ({ value: id, label: id })),
+                  ...(decoration.loot && !lootTables.includes(decoration.loot)
+                    ? [{ value: decoration.loot, label: `${decoration.loot} (missing)` }]
+                    : []),
+                ]}
+                onChange={(value) => change((it) => setKey(it, 'loot', value || undefined))}
+              />
+            )}
             <AreaFilter model={model} at={at} areas={decoration.biomes} change={change} />
           </FieldGroup>
         )
@@ -1334,6 +1364,58 @@ function RangeFields({
   )
 }
 
+/** A range of heights in blocks (a volume area's `y`, `depth` or `surface`), each end open when it's empty. */
+function BlockRangeFields({
+  label,
+  at,
+  range,
+  change,
+  gesture,
+}: {
+  label: string
+  at: (string | number)[]
+  range: BlockRange | undefined
+  change: (range: BlockRange | undefined) => void
+  gesture: Parts['gesture']
+}) {
+  const set = (key: 'min' | 'max', value: number | undefined) => {
+    const next: BlockRange = { ...range }
+    if (value === undefined) delete next[key]
+    else next[key] = Math.round(value)
+    change(Object.keys(next).length === 0 ? undefined : next)
+  }
+  return (
+    <>
+      <NumberField
+        label={`${label} from`}
+        dataPath={fieldPath([...at, 'min'])}
+        value={range?.min}
+        placeholder="any"
+        step={1}
+        {...gesture}
+        onChange={(value) => set('min', value)}
+      />
+      <NumberField
+        label={`${label} to`}
+        dataPath={fieldPath([...at, 'max'])}
+        value={range?.max}
+        placeholder="any"
+        step={1}
+        {...gesture}
+        onChange={(value) => set('max', value)}
+      />
+    </>
+  )
+}
+
+const VOLUME_KEYS = ['y', 'depth', 'surface'] as const
+
+const VOLUME_LABELS: Record<(typeof VOLUME_KEYS)[number], string> = {
+  y: 'Height',
+  depth: 'Depth below the surface',
+  surface: "Columns' surface",
+}
+
 function BiomesSection(parts: Parts) {
   const { model, edit, gesture, biomes } = parts
   const names = namesOf(model, 'biomes')
@@ -1342,6 +1424,15 @@ function BiomesSection(parts: Parts) {
     if (name) edit((d) => addEntry(d, 'biomes', name, newEntry('biomes', '')))
   }
   const climate = model.climate ?? {}
+  const climateNames = Object.keys(climate.noises ?? {}).sort()
+  const addClimate = async () => {
+    const name = await askName('climate value', climateNames, climateNames.length ? '' : 'evil')
+    if (name)
+      edit((d) => {
+        d.climate ??= {}
+        d.climate.noises = { ...d.climate.noises, [name]: {} }
+      })
+  }
   const setClimate = (key: 'temperature' | 'humidity', recipe: (noise: NoiseDef) => void) =>
     edit((d) => {
       d.climate ??= {}
@@ -1397,14 +1488,62 @@ function BiomesSection(parts: Parts) {
               gesture={gesture}
               change={(range) => change((a) => setKey(a, 'humidity', range))}
             />
-            <AreaLayers {...parts} name={name} area={area} />
-            <AreaTerrainFields
-              name={name}
-              area={area}
-              threeD={model.terrain?.density !== undefined}
-              edit={edit}
-              gesture={gesture}
+            {climateNames.map((value) => (
+              <RangeFields
+                key={value}
+                label={value}
+                at={[...at, 'climate', value]}
+                range={area.climate?.[value]}
+                gesture={gesture}
+                change={(range) =>
+                  change((a) => {
+                    a.climate ??= {}
+                    setKey(a.climate, value, range)
+                    if (Object.keys(a.climate).length === 0) delete a.climate
+                  })
+                }
+              />
+            ))}
+            <CheckField
+              label="Limited by height (a biome inside the columns' areas)"
+              dataPath={fieldPath([...at, 'y'])}
+              value={isVolume(area)}
+              onChange={(on) =>
+                change((a) => {
+                  if (on) {
+                    a.depth = { min: 16 }
+                    delete a.layers
+                    delete a.underwater
+                    delete a.terrain
+                  } else {
+                    for (const key of VOLUME_KEYS) delete a[key]
+                  }
+                })
+              }
             />
+            {isVolume(area) ? (
+              VOLUME_KEYS.map((key) => (
+                <BlockRangeFields
+                  key={key}
+                  label={VOLUME_LABELS[key]}
+                  at={[...at, key]}
+                  range={area[key]}
+                  gesture={gesture}
+                  change={(range) => change((a) => setKey(a, key, range))}
+                />
+              ))
+            ) : (
+              <>
+                <AreaLayers {...parts} name={name} area={area} />
+                <AreaTerrainFields
+                  name={name}
+                  area={area}
+                  threeD={model.terrain?.density !== undefined}
+                  edit={edit}
+                  gesture={gesture}
+                />
+              </>
+            )}
           </FieldGroup>
         )
       })}
@@ -1423,6 +1562,52 @@ function BiomesSection(parts: Parts) {
           />
         </FieldGroup>
       ))}
+      {climateNames.map((value) => (
+        <FieldGroup
+          key={value}
+          data-path={fieldPath(['climate', 'noises', value])}
+          header={
+            <span style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+              <strong>{value}</strong>
+              <Button
+                onClick={() =>
+                  edit((d) => {
+                    if (!d.climate?.noises) return
+                    delete d.climate.noises[value]
+                    if (Object.keys(d.climate.noises).length === 0) delete d.climate.noises
+                    for (const area of Object.values(d.biomes ?? {})) {
+                      if (!area.climate) continue
+                      delete area.climate[value]
+                      if (Object.keys(area.climate).length === 0) delete area.climate
+                    }
+                  })
+                }
+              >
+                Remove
+              </Button>
+            </span>
+          }
+        >
+          <NoiseFields
+            noise={climate.noises?.[value] ?? {}}
+            at={['climate', 'noises', value]}
+            gesture={gesture}
+            change={(recipe) =>
+              edit((d) => {
+                d.climate ??= {}
+                d.climate.noises ??= {}
+                d.climate.noises[value] ??= {}
+                recipe(d.climate.noises[value]!)
+              })
+            }
+          />
+        </FieldGroup>
+      ))}
+      <Hint>
+        More climate values (an &ldquo;evil&rdquo; one, oceans&apos; continentalness): each area
+        picks a range of each.
+      </Hint>
+      <Button onClick={addClimate}>Add a climate value</Button>
       <FieldGroup data-path="climate.jitter" header={<strong>Borders</strong>}>
         <Hint>How far the borders between areas wander, so they aren&apos;t smooth curves.</Hint>
         <NumberField

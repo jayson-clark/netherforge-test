@@ -248,6 +248,7 @@ export type {
   OreDistribution,
   BiomeArea,
   ClimateRange,
+  BlockRange,
   StructureRules,
   Stone,
   AreaTerrain,

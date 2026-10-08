@@ -18,8 +18,11 @@ internal object TerrainScriptGlue {
         """
 local host_noise, host_fill, host_block = host_noise, host_fill, host_block
 local host_file_height, host_area, host_resolve = host_file_height, host_area, host_resolve
+local host_point_area, host_set_loot = host_point_area, host_set_loot
 local host_module_path, host_load = host_module_path, host_load
-for _, name in ipairs({ "noise", "fill", "block", "file_height", "area", "resolve", "module_path", "load" }) do
+for _, name in ipairs({
+  "noise", "fill", "block", "file_height", "area", "point_area", "set_loot", "resolve", "module_path", "load",
+}) do
   _G["host_" .. name] = nil
 end
 
@@ -31,7 +34,7 @@ local tointeger, floor, huge = math.tointeger, math.floor, math.huge
 local random, randomseed = math.random, math.randomseed
 local create, resume = coroutine.create, coroutine.resume
 local pack, unpack, sort, concat = table.pack, table.unpack, table.sort, table.concat
-local sub, format, gmatch, rep = string.sub, string.format, string.gmatch, string.rep
+local sub, format, gmatch, rep, byte = string.sub, string.format, string.gmatch, string.rep, string.byte
 
 local HOOK_EVERY = 1000
 local MAX_STRING = 16 * 1024 * 1024
@@ -139,10 +142,16 @@ env.utf8 = copy(utf8)
 
 -- math.random is seeded for each call in from the world's seed and where it is (the chunk, the column), the
 -- first time it's asked, so the same place always gets the same numbers.
+-- A plan is made with numbers of its own (current_rng), whenever it's first asked for, so it doesn't move the
+-- numbers of the stage that asked.
 local call_seed, seeded = 0, true
+local current_rng = nil
 env.math = copy(math)
 env.math.randomseed = nil
 env.math.random = function(...)
+  if current_rng ~= nil then
+    return current_rng(...)
+  end
   if not seeded then
     randomseed(call_seed)
     seeded = true
@@ -277,8 +286,11 @@ end
 
 local stages = nil
 local seed, min_y, max_y, sea_level = 0, 0, 0, 0
-local area_names, biome_names = {}, {}
+local area_names, biome_names, area_index, volume_set = {}, {}, {}, {}
+local loot_index = {}
 local in_height = false
+-- The stage Kotlin called in ("load", "height", "area"...), while it runs.
+local running = nil
 
 local Noise = { __metatable = false }
 Noise.__index = Noise
@@ -351,6 +363,19 @@ function Chunk.set(self, x, y, z, block)
   host_fill(x, y, z, x, y, z, block_index(block, 4, "set"))
 end
 
+function Chunk.set_loot(self, x, y, z, table_name)
+  want_chunk(self, "set_loot")
+  x, y, z = want_integer(x, 1, "set_loot"), want_integer(y, 2, "set_loot"), want_integer(z, 3, "set_loot")
+  if type(table_name) ~= "string" then
+    error(format("bad argument #4 to 'set_loot' (loot table expected, got %s)", name_of(table_name)), 2)
+  end
+  local index = loot_index[table_name]
+  if index == nil then
+    error(format("\"%s\" isn't a loot table this generator fills: list it in the file's script.loot", table_name), 2)
+  end
+  host_set_loot(x, y, z, index)
+end
+
 function Chunk.block(self, x, y, z)
   want_chunk(self, "block")
   local index = host_block(want_integer(x, 1, "block"), want_integer(y, 2, "block"), want_integer(z, 3, "block"))
@@ -410,6 +435,9 @@ function terrain.height(x, z)
   if in_height then
     error("terrain.height can't be asked from the height stage: use the height the stage is given", 2)
   end
+  if running == "area" then
+    error("terrain.height can't be asked from the area stage: a column's height depends on the areas", 2)
+  end
   local height = tointeger(host_file_height(x, z))
   local stage = stages and stages.height
   if stage ~= nil then
@@ -423,27 +451,165 @@ function terrain.height(x, z)
   return clamp(height)
 end
 
-function terrain.area(x, z)
-  return area_names[host_area(want_integer(x, 1, "area"), want_integer(z, 2, "area")) + 1]
+-- The area of a column (x, z), or with three numbers of a place (x, y, z), as an index in the file's areas.
+local function area_of(x, y, z, function_name)
+  if running == "area" then
+    error(format("terrain.%s can't be asked from the area stage: use the area the stage is given", function_name), 3)
+  end
+  if z == nil then
+    return host_area(want_integer(x, 1, function_name), want_integer(y, 2, function_name))
+  end
+  if in_height or running == "height" or running == "density" or running == "biome" then
+    error(
+      format(
+        "terrain.%s of a place (x, y, z) can't be asked from the %s stage: a place's area depends on the heights",
+        function_name,
+        running == "biome" and "biome" or (running == "density" and "density" or "height")
+      ),
+      3
+    )
+  end
+  return host_point_area(want_integer(x, 1, function_name), want_integer(y, 2, function_name), want_integer(z, 3, function_name))
 end
 
-function terrain.biome(x, z)
-  return biome_names[host_area(want_integer(x, 1, "biome"), want_integer(z, 2, "biome")) + 1]
+function terrain.area(x, y, z)
+  return area_names[area_of(x, y, z, "area") + 1]
+end
+
+function terrain.biome(x, y, z)
+  return biome_names[area_of(x, y, z, "biome") + 1]
+end
+
+-- ---- plans: what a big structure is, worked out once per cell rather than in every chunk it touches ----------
+
+-- 64-bit mixing (splitmix64's), the same in every Lua 5.4: integers wrap.
+local function mix64(z)
+  z = (z ~ (z >> 30)) * 0xbf58476d1ce4e5b9
+  z = (z ~ (z >> 27)) * 0x94d049bb133111eb
+  return z ~ (z >> 31)
+end
+
+local function hash_name(text)
+  local h = 0xcbf29ce484222325
+  for i = 1, #text do
+    h = (h ~ byte(text, i)) * 0x100000001b3
+  end
+  return h
+end
+
+-- math.random's three forms, from numbers of the plan's own.
+local function make_random(state)
+  return function(m, n)
+    state = state + 0x9e3779b97f4a7c15
+    local r = mix64(state)
+    if m == nil then
+      return (r >> 11) * (1.0 / 9007199254740992.0)
+    end
+    m = want_integer(m, 1, "random")
+    if n == nil then
+      m, n = 1, m
+    else
+      n = want_integer(n, 2, "random")
+    end
+    local span = n - m + 1
+    if span <= 0 then
+      error("bad argument to 'random' (interval is empty)", 2)
+    end
+    return m + (r >> 1) % span
+  end
+end
+
+local PLAN_CACHE = 256
+local NONE = {}
+local Plan = { __metatable = false }
+Plan.__index = Plan
+local plan_data = setmetatable({}, { __mode = "k" })
+local plans_by_name = {}
+
+local function plan_of(self, function_name)
+  local data = plan_data[self]
+  if data == nil then
+    error(format("call %s with ':' on a plan: plan:%s(...)", function_name, function_name), 3)
+  end
+  return data
+end
+
+local function plan_cell(data, cell_x, cell_z)
+  local key = cell_x .. "," .. cell_z
+  local cached = data.cache[key]
+  if cached ~= nil then
+    if cached == NONE then
+      return nil
+    end
+    return cached
+  end
+  local saved = current_rng
+  current_rng = make_random(mix64(data.seed ~ mix64(cell_x * 0x1B873593) ~ mix64(cell_z * 0x2C1B3C6D)))
+  local ok, result = pcall(data.make, cell_x, cell_z)
+  current_rng = saved
+  if not ok then
+    error(result, 0)
+  end
+  if data.count >= PLAN_CACHE then
+    data.cache, data.count = {}, 0
+  end
+  data.cache[key] = result == nil and NONE or result
+  data.count = data.count + 1
+  return result
+end
+
+function Plan.get(self, cell_x, cell_z)
+  local data = plan_of(self, "get")
+  return plan_cell(data, want_integer(cell_x, 1, "get"), want_integer(cell_z, 2, "get"))
+end
+
+function Plan.at(self, x, z)
+  local data = plan_of(self, "at")
+  local cell_x, cell_z = want_integer(x, 1, "at") // data.size, want_integer(z, 2, "at") // data.size
+  return plan_cell(data, cell_x, cell_z), cell_x, cell_z
+end
+
+function Plan.size(self)
+  return plan_of(self, "size").size
+end
+
+function terrain.plan(name, size, make)
+  if running ~= "load" then
+    error("terrain.plan is made in the script's body, once, not in a stage", 2)
+  end
+  if type(name) ~= "string" or name == "" then
+    error(format("bad argument #1 to 'plan' (a plan's name expected, got %s)", name_of(name)), 2)
+  end
+  if plans_by_name[name] then
+    error(format("there's already a plan called \"%s\"", name), 2)
+  end
+  size = want_integer(size, 2, "plan")
+  if size < 1 or size > 65536 then
+    error(format("bad argument #2 to 'plan' (a cell's size is from 1 to 65536 blocks, not %d)", size), 2)
+  end
+  if type(make) ~= "function" then
+    error(format("bad argument #3 to 'plan' (function expected, got %s)", name_of(make)), 2)
+  end
+  local plan = setmetatable({}, Plan)
+  plan_data[plan] = { size = size, make = make, seed = mix64(seed ~ hash_name(name)), cache = {}, count = 0 }
+  plans_by_name[name] = true
+  return plan
 end
 
 -- ---- what Kotlin calls --------------------------------------------------------------------------------------
 -- Kotlin passes whole numbers as plain numbers (a 64-bit integer is slow to make in JS), so each is made an
 -- integer here before a script sees it; a height goes back as a float for the same reason.
 
-local function begin(seed_of_call)
+local function begin(seed_of_call, stage)
   used, step, failure, check_memory = 0, HOOK_EVERY, nil, false
-  call_seed, seeded = tointeger(seed_of_call), false
+  call_seed, seeded, current_rng = tointeger(seed_of_call), false, nil
+  running = stage
   debug_sethook(hook, "", HOOK_EVERY)
 end
 
 local function finish(ok, result)
   debug_sethook()
-  in_chunk, in_height = false, false
+  in_chunk, in_height, running, current_rng = false, false, nil, nil
   if failure ~= nil then
     error(failure, 0)
   end
@@ -453,14 +619,23 @@ local function finish(ok, result)
   return result
 end
 
-local STAGES = { height = true, density = true, terrain = true, decorate = true }
+local STAGES = { height = true, density = true, area = true, biome = true, terrain = true, decorate = true }
 
 -- Loads the script at [path] and runs its body; answers the stages it has, "height,terrain" (sorted).
-function nf_load(path, budget_of_call, memory, seed_text, lowest, highest, sea, noise_names, areas, biomes, palette)
+function nf_load(path, budget_of_call, memory, seed_text, lowest, highest, sea, noise_names, areas, biomes, palette, volumes, loot)
   budget, memory_mb = tointeger(budget_of_call), tointeger(memory)
   memory_kb = memory_mb * 1024
   seed, min_y, max_y, sea_level = tonumber(seed_text), tointeger(lowest), tointeger(highest), tointeger(sea)
   area_names, biome_names = lines(areas), lines(biomes)
+  for index, name in ipairs(area_names) do
+    area_index[name] = index - 1
+  end
+  for _, name in ipairs(lines(volumes)) do
+    volume_set[name] = true
+  end
+  for index, name in ipairs(lines(loot)) do
+    loot_index[name] = index - 1
+  end
   for index, label in ipairs(lines(palette)) do
     labels[index - 1] = label
   end
@@ -472,16 +647,22 @@ function nf_load(path, budget_of_call, memory, seed_text, lowest, highest, sea, 
   sentinel()
   local body = host_load(path)
   debug_setupvalue(body, 1, env)
-  begin(0)
+  begin(0, "load")
   local ok, result = pcall(body, terrain)
   result = finish(ok, result)
   if type(result) ~= "table" then
-    error(path .. ": the script must return a table of its stages (height, density, terrain, decorate), not " .. type(result), 0)
+    error(
+      path .. ": the script must return a table of its stages (height, density, area, biome, terrain, decorate), not " .. type(result),
+      0
+    )
   end
   local names = {}
   for key, value in next, result do
     if not STAGES[key] then
-      error(path .. ": \"" .. tostring(key) .. "\" isn't a stage: a script's stages are height, density, terrain and decorate", 0)
+      error(
+        path .. ": \"" .. tostring(key) .. "\" isn't a stage: a script's stages are height, density, area, biome, terrain and decorate",
+        0
+      )
     end
     if type(value) ~= "function" then
       error(path .. ": the stage " .. key .. " must be a function, not " .. type(value), 0)
@@ -492,6 +673,8 @@ function nf_load(path, budget_of_call, memory, seed_text, lowest, highest, sea, 
   stages = {
     height = rawget(result, "height"),
     density = rawget(result, "density"),
+    area = rawget(result, "area"),
+    biome = rawget(result, "biome"),
     terrain = rawget(result, "terrain"),
     decorate = rawget(result, "decorate"),
   }
@@ -500,7 +683,7 @@ end
 
 -- The height of column ([x], [z]) from the file's [height]: a whole number, as a float.
 function nf_height(x, z, height, seed_of_call)
-  begin(seed_of_call)
+  begin(seed_of_call, "height")
   in_height = true
   local ok, result = pcall(stages.height, tointeger(x), tointeger(z), tointeger(height))
   result = finish(ok, result)
@@ -513,7 +696,7 @@ end
 
 -- The density at the grid's point ([x], [y], [z]) from the file's [value] there: a float.
 function nf_density(x, y, z, value, seed_of_call)
-  begin(seed_of_call)
+  begin(seed_of_call, "density")
   local ok, result = pcall(stages.density, tointeger(x), tointeger(y), tointeger(z), value + 0.0)
   result = finish(ok, result)
   if not finite(result) then
@@ -523,9 +706,36 @@ function nf_density(x, y, z, value, seed_of_call)
   return result + 0.0
 end
 
+-- What an area stage returned, as an index in the file's areas: [columns] when it must be a column's own.
+local function area_result(stage, result, columns)
+  local index = type(result) == "string" and area_index[result] or nil
+  if index == nil or (columns and volume_set[result]) then
+    local info = debug_getinfo(stage, "S")
+    local given = type(result) == "string" and format("\"%s\"", result) or name_of(result)
+    local which = columns and "one of the file's biome areas that isn't limited by height" or "one of the file's biome areas"
+    error(format("%s:%d: the %s stage must return the name of %s, not %s", info.short_src, info.linedefined,
+      columns and "area" or "biome", which, given), 0)
+  end
+  return index + 0.0
+end
+
+-- The area of column ([x], [z]) from the file's (an index): an index, as a float.
+function nf_area(x, z, file, seed_of_call)
+  begin(seed_of_call, "area")
+  local ok, result = pcall(stages.area, tointeger(x), tointeger(z), area_names[tointeger(file) + 1])
+  return area_result(stages.area, finish(ok, result), true)
+end
+
+-- The area of the place ([x], [y], [z]) from the file's: an index, as a float.
+function nf_biome(x, y, z, file, seed_of_call)
+  begin(seed_of_call, "biome")
+  local ok, result = pcall(stages.biome, tointeger(x), tointeger(y), tointeger(z), area_names[tointeger(file) + 1])
+  return area_result(stages.biome, finish(ok, result), false)
+end
+
 -- Runs the chunk stage [stage] on chunk ([x], [z]).
 function nf_chunk(stage, x, z, seed_of_call)
-  begin(seed_of_call)
+  begin(seed_of_call, stage)
   chunk_x, chunk_z, in_chunk = tointeger(x), tointeger(z), true
   finish(pcall(stages[stage], chunk))
 end
