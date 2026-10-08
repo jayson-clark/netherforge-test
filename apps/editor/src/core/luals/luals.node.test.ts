@@ -187,8 +187,13 @@ describe.skipIf(!binary)('lua-language-server, as the editor runs it', () => {
       // Already gone.
     }
     connection?.dispose()
-    child?.kill()
-    rmSync(work, { recursive: true, force: true })
+    // Windows keeps a folder busy while a process in it lives, so the server must be gone first.
+    if (child && child.exitCode === null && child.signalCode === null) {
+      const exited = new Promise((resolve) => child.once('exit', resolve))
+      child.kill()
+      await exited
+    }
+    rmSync(work, { recursive: true, force: true, maxRetries: 10 })
   })
 
   it('flags a typo with a diagnostic', async () => {
