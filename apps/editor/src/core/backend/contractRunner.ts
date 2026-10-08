@@ -113,6 +113,11 @@ export function substitute(value: unknown, vars: Record<string, string | number>
   if (typeof value === 'string') {
     const whole = value.startsWith('$') ? vars[value.slice(1)] : undefined
     if (whole !== undefined) return whole
+    // A path under the root is spelled with the root's own separator, as the backend answers it
+    // (`C:\…\project\new` on Windows), so `$ROOT/new` means the same file on every OS.
+    const root = vars.ROOT
+    if (value.startsWith('$ROOT/') && typeof root === 'string' && root.includes('\\'))
+      return root + value.slice('$ROOT'.length).replaceAll('/', '\\')
     // Longest names first, so `$PORT` never eats into `$MCP_PORT`'s value.
     return Object.entries(vars)
       .sort(([a], [b]) => b.length - a.length)
@@ -151,6 +156,19 @@ export function matches(expected: unknown, actual: unknown): boolean {
 }
 
 type Method = (...args: unknown[]) => unknown
+
+/** What each subscription heard, for a failure to show what did happen (the server's output with it). */
+function heard(events: Map<string, unknown[]>): string {
+  return [...events]
+    .map(
+      ([key, list]) =>
+        `  ${key}: ${list
+          .slice(-20)
+          .map((it) => JSON.stringify(it))
+          .join('\n    ')}`,
+    )
+    .join('\n')
+}
 
 /** Runs [testCase]'s steps on [world]. */
 export async function runCase(world: ContractWorld, testCase: ContractCase): Promise<void> {
@@ -225,7 +243,8 @@ export async function runCase(world: ContractWorld, testCase: ContractCase): Pro
       while (!list!.slice(from).some((event) => matches(want, event))) {
         if (Date.now() > deadline)
           expect.fail(
-            `${at}: no event matching ${JSON.stringify(want)}; got ${JSON.stringify(list!.slice(from))}`,
+            `${at}: no event matching ${JSON.stringify(want)}; got ${JSON.stringify(list!.slice(from))}` +
+              `\nEvery event the case heard (the last 20 of each):\n${heard(events)}`,
           )
         await new Promise((resolve) => setTimeout(resolve, 10))
       }

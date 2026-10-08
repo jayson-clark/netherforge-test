@@ -59,6 +59,13 @@ describe.skipIf(!binary)('lua-language-server, as the editor runs it', () => {
   const work = mkdtempSync(path.join(tmpdir(), 'netherforge-luals-it-'))
   const project = path.join(work, 'basic')
   const uri = (file: string) => pathToFileURL(path.join(project, file)).href
+  // One file whichever way its URI is spelled: LuaLS answers Windows paths as `file:///c%3A/…`
+  // (as vscode's Uri does), Node writes `file:///C:/…`, escaping differently.
+  const same = (it: string) =>
+    decodeURIComponent(it).replace(
+      /^file:\/\/\/([A-Za-z]):/,
+      (_, drive: string) => `file:///${drive.toLowerCase()}:`,
+    )
   const diagnostics = new Map<string, Diagnostic[]>()
   let child: ChildProcess
   let connection: MessageConnection
@@ -69,9 +76,9 @@ describe.skipIf(!binary)('lua-language-server, as the editor runs it', () => {
     })
 
   async function diagnosticsOf(file: string): Promise<Diagnostic[]> {
-    for (let i = 0; i < 300 && !diagnostics.has(uri(file)); i++)
+    for (let i = 0; i < 300 && !diagnostics.has(same(uri(file))); i++)
       await new Promise((resolve) => setTimeout(resolve, 100))
-    return diagnostics.get(uri(file)) ?? []
+    return diagnostics.get(same(uri(file))) ?? []
   }
 
   beforeAll(async () => {
@@ -144,7 +151,7 @@ describe.skipIf(!binary)('lua-language-server, as the editor runs it', () => {
       new StreamMessageWriter(child.stdin!),
     )
     connection.onNotification('textDocument/publishDiagnostics', (params) => {
-      diagnostics.set(params.uri, params.diagnostics)
+      diagnostics.set(same(params.uri), params.diagnostics)
     })
     connection.onRequest('workspace/configuration', (params: { items: { section?: string }[] }) =>
       params.items.map((item) => (item.section === 'Lua' ? settings : null)),
@@ -244,7 +251,7 @@ describe.skipIf(!binary)('lua-language-server, as the editor runs it', () => {
       position: { line, character: lines[line]!.indexOf('hello') },
     })) as Location[]
     const stub = `${AGENT_FILES.luals}/packages/library/greetings/init.lua`
-    expect(found.map((it) => it.uri)).toEqual([uri(stub)])
+    expect(found.map((it) => same(it.uri))).toEqual([same(uri(stub))])
     const target = readFileSync(path.join(project, stub), 'utf8')
     expect(target.split('\n')[found[0]!.range.start.line]).toContain(
       'function greetings.hello(name)',
@@ -262,7 +269,7 @@ describe.skipIf(!binary)('lua-language-server, as the editor runs it', () => {
       textDocument: { uri: uri(file) },
       position: { line, character },
     })) as Location[]
-    expect(found.map((it) => it.uri)).toEqual([uri('centities/tower/turns.lua')])
+    expect(found.map((it) => same(it.uri))).toEqual([same(uri('centities/tower/turns.lua'))])
     const target = readFileSync(path.join(project, 'centities/tower/turns.lua'), 'utf8')
     expect(target.split('\n')[found[0]!.range.start.line]).toContain('function turns.spin()')
   }, 60_000)

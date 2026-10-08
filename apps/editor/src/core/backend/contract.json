@@ -1,5 +1,5 @@
 {
-  "$comment": "The backend contract: what MemoryBackend and the Rust backend must both do. Run by contract.test.ts (MemoryBackend) and src-tauri/src/commands/contract.rs (the real commands, through Tauri's IPC on its mock runtime). Each case starts from a fresh backend with `project` (project path -> text) at $ROOT, opened first unless `open` is false. A step calls a command by its Rust name with the arguments the UI sends, and expects `ok` (matched as a subset: every key given must match, \"$any\" matches anything, arrays match element by element) or an `error` code. \"$ROOT\" in a string is the project's absolute root. Each of `repositories` is a git repository at \"$GIT/<name>\" (a file:// URL), its files committed on main and tagged v1. A step with `save` keeps its answer (a string) as \"$<save>\" for the steps after it.",
+  "$comment": "The backend contract: what MemoryBackend and the Rust backend must both do, in the UI's terms (Backend calls, subscriptions, events). Run on MemoryBackend by contract.test.ts and on the real TauriBackend over the Rust commands by contract.tauri.test.ts. contractRunner.ts documents the step kinds, the matchers and the $variables.",
   "project": {
     "netherforge.json": "{ \"name\": \"Contract\", \"namespace\": \"contract\", \"minecraft\": \"26.3\" }\n",
     "modules/shop/init.lua": "return {}\n",
