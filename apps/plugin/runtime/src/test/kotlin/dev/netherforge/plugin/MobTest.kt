@@ -101,7 +101,7 @@ class MobTest {
                 assertEquals(Vec3(10.0, 64.0, 10.0) to 1.5, paths.paths[zombie])
                 server.tick()
                 // Still on its way: nothing yet.
-                assertEquals(listOf("done"), server.logs)
+                assertEquals(LuaChecks.DONE, server.output())
                 paths.arrive(zombie)
                 server.tick()
                 assertEquals(listOf("done", "path_end true true"), server.logs)

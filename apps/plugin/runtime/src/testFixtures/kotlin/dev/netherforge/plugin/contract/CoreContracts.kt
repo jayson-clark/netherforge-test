@@ -92,8 +92,11 @@ abstract class PauseOpsContract : PlatformContract() {
     }
 
     @Test
-    fun `holding with nobody online is fine`() {
+    fun `holding with nobody online shows nothing, even to who joins after`() {
         main { platform.pause.hold("Paused at modules/shop/init.lua:12") }
+        val player = join()
+        settled()
+        assertNull(screen(player).actionBar, "held before they came")
     }
 }
 

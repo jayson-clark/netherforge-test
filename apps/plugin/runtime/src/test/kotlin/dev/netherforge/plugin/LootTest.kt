@@ -58,7 +58,7 @@ class LootTest {
             check("no player, no tool", count, 0)
             log("done")
             """
-        ).use { server -> assertEquals(listOf("done"), server.logs) }
+        ).use { server -> assertEquals(LuaChecks.DONE, server.output()) }
     }
 
     @Test
@@ -83,7 +83,7 @@ class LootTest {
             log("done")
             """
         ).use { server ->
-            assertEquals(listOf("done"), server.logs)
+            assertEquals(LuaChecks.DONE, server.output())
             assertEquals(2, server.platform.loot.rolls.size)
         }
     }
@@ -107,7 +107,7 @@ class LootTest {
             check("gone", nf.loot.fill("treasure", chest), nil)
             log("done")
             """
-        ).use { server -> assertEquals(listOf("done"), server.logs) }
+        ).use { server -> assertEquals(LuaChecks.DONE, server.output()) }
     }
 
     @Test
@@ -191,7 +191,7 @@ class LootTest {
         TestServer(files).use { server ->
             assertEquals(emptyList(), server.runtime.currentProblems().map { it.message })
             assertEquals(emptyList(), server.errors.map { it.message })
-            assertEquals(listOf("done"), server.logs)
+            assertEquals(LuaChecks.DONE, server.output())
         }
     }
 

@@ -190,7 +190,8 @@ class TaskTest {
             assertEquals(listOf("shockwave"), server.runtime.session.particles.all().map { it.kind })
             assertFalse(door.animations.isPlaying("open"))
             server.tick(30)
-            assertTrue(server.platform.particles.sent.isNotEmpty())
+            val toAlex = server.platform.particles.sent.filter { (_, spawns, viewers) -> spawns.isNotEmpty() && alex.ref in viewers }
+            assertTrue(toAlex.isNotEmpty(), "the shockwave reached Alex: ${server.platform.particles.sent}")
             assertEquals(emptyList(), server.runtime.session.particles.all())
             assertTrue(door.animations.isPlaying("open"))
             server.tick(20)

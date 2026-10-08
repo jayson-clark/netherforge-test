@@ -109,7 +109,7 @@ class MobGoalTest {
             """,
             after = { server ->
                 server.tick(2)
-                assertEquals(listOf("done"), server.logs, "should_start said no")
+                assertEquals(LuaChecks.DONE, server.output(), "should_start said no")
                 server.platform.commands.runConsole("want")
                 server.tick()
                 server.platform.commands.runConsole("running")

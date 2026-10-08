@@ -2041,7 +2041,12 @@ paperweight-userdev), through `BotProtocol` where versions differ:
   container and its contents (with the state id clicks need), the dialog,
   boss bars, the sidebar (objectives, scores and teams added up as the
   client does), titles, resource packs, and the entities it has been sent (so a
-  hidden entity is absent, and clicking it is refused).
+  hidden entity is absent, and clicking it is refused). Its events record
+  what passes without staying on screen: chat, titles, sounds and sound
+  stops, particles (`BotEvent.Particle`: the particle, where, how many,
+  spread, speed and whether forced; 26.3's packet is a record with a speed
+  per axis, so `BotProtocol.particleMotion` reads it per version), boss bars
+  coming and going, blocks, equipment, the camera.
 - **`BotDialogs`** presses a dialog button as the client's screen does:
   each input's value (given or initial) as an `Action.ValueGetter`, the
   button's `Action.createAction`, then the click event (custom click packet,
@@ -2197,6 +2202,30 @@ watched), the way the real server would, and tests may call them on
   fixtures, one per `Ops` interface; see the testing skill) run against it and
   against `PaperPlatform` inside a real server, so it can't drift from Paper:
   where they disagree, Paper is the truth and the fake is fixed.
+  **Its files**, one per `Ops` area, each group a top-level class taking the
+  platform (`FakeWorlds(platform)`), never an inner class:
+  `FakePlatform.kt` (the groups, `bind`, `raise`, `stack`, `tickWorld`, the
+  `GAME` fixture), `FakeWorlds.kt` (`BlockAt`, worlds, blocks),
+  `FakeEntities.kt` (NetherForge's displays and hitboxes, structure markers),
+  `FakeWorldEntities.kt` (`FakeBody`, vanilla entities), `FakePlayers.kt`
+  (`FakePlayer`, players), `FakeInventories.kt`, `FakeScoreboards.kt` (boss
+  bars, sidebars, teams, the player list), `FakeMenus.kt` (`FakeWindow`,
+  menus, dialogs), `FakeCommands.kt` (with `FakeBrigadier.kt`),
+  `FakeEffects.kt` (particles, sounds, resource packs), `FakeItems.kt`
+  (project items, recipes, loot), `FakeServer.kt` (scheduler, log,
+  performance, text, the start-up datapack, pause), and beside them
+  `FakeMobs.kt`, `FakeWorldAdmin.kt`, `FakePlayerAdmin.kt`, `FakeInterop.kt`
+  and `FakeBots.kt`. A new group goes in its area's file.
+- **The fake bots' client**: each bot online has one (`FakeBots`), as a real
+  bot does, so the contract suites can check what a player receives on both
+  servers: its numbered events (`FakeBots.sent(player) { seq -> BotEvent }`,
+  called where Paper would send the packet: sounds and stops, particles,
+  boss bars shown and hidden, resource packs) and, in `state`, its boss bars,
+  sidebar, packs and player list read off the fake's own groups as plain
+  text. What it receives follows Paper's rules (a particle within 32 blocks,
+  512 forced, of a particle the game has; a world's sound within 16 blocks,
+  times the volume above 1), so a runtime test reading the fake's state reads
+  what a player would.
 - `TestServer` (runtime tests) writes a project to a temp dir and runs a
   `NetherForgeRuntime` on `FakePlatform` (its services are
   `server.runtime.session.x`, the server's events `server.runtime.events.x`), which records entities, poses,
@@ -2208,7 +2237,7 @@ watched), the way the real server would, and tests may call them on
   (`platform.scheduler`: a bot's join) and the mobs' AI; `server.runMain()`
   runs what the bridge handed the main thread without a tick. The pool,
   lanes, the thread check and completions are `ThreadingTest`'s. Lua behaviour is tested with real
-  scripts: see `SandboxTest`, `CentityTest`, `ModuleTest`, `ReloadTest`, and
+  scripts that check themselves with `LuaChecks` (`check`, `near`, `fails`, then `done`; see the testing skill): see `SandboxTest`, `CentityTest`, `ModuleTest`, `ReloadTest`, and
   `ServerEventTest` for the server events, and
   `EventTest` for the event core (event objects, custom events, lifetimes,
   the error policy). The fake raises what a server would: `menus.click`
