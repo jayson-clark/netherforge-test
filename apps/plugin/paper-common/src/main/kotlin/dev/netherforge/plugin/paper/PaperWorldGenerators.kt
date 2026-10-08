@@ -17,6 +17,8 @@ import org.bukkit.generator.ChunkGenerator
 import org.bukkit.generator.WorldInfo
 import java.util.Random
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import java.util.logging.Logger
 
@@ -66,6 +68,14 @@ class PaperWorldGenerators(private val logger: Logger) {
 
         /** How many generated chunks' containers wait for their chunk to load. */
         const val PENDING_CHUNKS = 16384
+
+        /** The game's `/locate biome`: how far it looks, how far apart its columns are, and its heights. */
+        const val LOCATE_RADIUS = 6400
+        const val LOCATE_STEP = 32
+        const val LOCATE_HEIGHT_STEP = 64
+
+        /** How many columns a search hands its threads at once (whole rings, so the first found is the game's). */
+        const val LOCATE_BATCH = 512
     }
 
     private val published = AtomicReference<Map<String, Prepared>>(emptyMap())
@@ -144,6 +154,75 @@ class PaperWorldGenerators(private val logger: Logger) {
                 return now
             }
             return last
+        }
+    }
+
+    /** Where a `/locate biome` found its biome, or that it didn't (null [at]), or that it was stopped ([stopped]). */
+    class Located(val at: Triple<Int, Int, Int>?, val stopped: Boolean = false)
+
+    /**
+     * A `/locate biome` of [biome] in [world], made on the main thread, or null when the world isn't a project
+     * terrain's (the game's own command does). [Locator.search] runs off it.
+     */
+    fun locator(world: World, biome: Biome): Locator? {
+        val chunks = world.generator as? ProjectChunks ?: return null
+        val prepared = chunks.holder.current() ?: return null
+        val generator = prepared.boundTo(world.seed, world.minHeight, world.maxHeight)
+        return ProjectLocator(chunks.holder, prepared, generator, generator.areasWhere { prepared.biome(it) == biome })
+    }
+
+    /** A `/locate biome` of one world: see [locator]. */
+    interface Locator {
+        /** Looks around ([x], [y], [z]) with [threads] of [pool]; [stop] ends it, as a generator published since it started does (its states are going). */
+        fun search(x: Int, y: Int, z: Int, pool: ExecutorService, threads: Int, stop: () -> Boolean): Located
+    }
+
+    /**
+     * Looks for a biome as the game's `/locate biome` does: columns [LOCATE_STEP] blocks apart, ring by ring out to
+     * [LOCATE_RADIUS], each from the asker's height outwards every [LOCATE_HEIGHT_STEP], the first found in that order
+     * winning. A project's stages can take minutes over that many places, so it isn't the main thread's: the caller's
+     * thread hands each batch of rings to a pool, each of whose threads takes one run of columns (neighbours share the
+     * areas their heights are blended from).
+     */
+    private inner class ProjectLocator(
+        private val holder: Holder,
+        private val prepared: Prepared,
+        private val generator: TerrainGenerator,
+        private val wanted: BooleanArray
+    ) : Locator {
+        override fun search(x: Int, y: Int, z: Int, pool: ExecutorService, threads: Int, stop: () -> Boolean): Located {
+            if (wanted.none { it }) return Located(null)
+            val ys = generator.locateHeights(y, LOCATE_HEIGHT_STEP)
+            var r = 0
+            while (r <= LOCATE_RADIUS) {
+                val batch = ArrayList<Pair<Int, Int>>()
+                while (r <= LOCATE_RADIUS && batch.size < LOCATE_BATCH) {
+                    batch += TerrainGenerator.locateRing(r, LOCATE_STEP)
+                    r += LOCATE_STEP
+                }
+                val best = AtomicInteger(Int.MAX_VALUE)
+                val found = arrayOfNulls<Int>(batch.size)
+                val run = (batch.size + threads - 1) / threads
+                val tasks = (batch.indices step run).map { start ->
+                    pool.submit {
+                        generator.sampling { sampler ->
+                            for (i in start until minOf(start + run, batch.size)) {
+                                if (i > best.get() || stop()) return@sampling
+                                val (dx, dz) = batch[i]
+                                val at = sampler.firstWhere(x + dx, z + dz, ys, wanted) ?: continue
+                                found[i] = at
+                                best.accumulateAndGet(i, ::minOf)
+                                return@sampling
+                            }
+                        }
+                    }
+                }
+                for (task in tasks) task.get()
+                val i = best.get()
+                if (i != Int.MAX_VALUE) return Located(Triple(x + batch[i].first, found[i]!!, z + batch[i].second))
+                if (stop() || holder.current() !== prepared) return Located(null, stopped = true)
+            }
+            return Located(null)
         }
     }
 

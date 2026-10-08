@@ -74,8 +74,10 @@ abstract class BlockOpsContract : PlatformContract() {
             assertTrue(blocks.setData(world, x, y, z, """{"a":1}"""))
             assertEquals("""{"a":1}""", blocks.data(world, x, y, z))
             assertNull(blocks.data(world, x + 1, y, z), "only that position")
+            assertTrue(dev.netherforge.plugin.platform.BlockVector(x, y, z) in blocks.withData(world, x shr 4, z shr 4)!!)
             assertTrue(blocks.setData(world, x, y, z, null))
             assertNull(blocks.data(world, x, y, z))
+            assertFalse(dev.netherforge.plugin.platform.BlockVector(x, y, z) in blocks.withData(world, x shr 4, z shr 4)!!)
         }
     }
 
@@ -125,18 +127,21 @@ abstract class BlockOpsContract : PlatformContract() {
             val two = block(at(8, 3, -6))
             place(at(7, 3, -6), zombie)
             place(at(8, 3, -6), skeleton)
-            val found = blocks.find(world, one.first shr 4, one.third shr 4, setOf(zombie, skeleton))!!
-            assertEquals(zombie, found[dev.netherforge.plugin.platform.BlockVector(one.first, one.second, one.third)])
-            assertEquals(skeleton, found[dev.netherforge.plugin.platform.BlockVector(two.first, two.second, two.third)])
+            val found = blocks.find(world, one.first shr 4, one.third shr 4, listOf(zombie, skeleton))!!
+            assertEquals(1, found[one.first and 15, one.second, one.third and 15])
+            assertEquals(2, found[two.first and 15, two.second, two.third and 15])
+            assertEquals(2, found.size)
             val other = blocks.find(
                 world,
                 one.first shr 4,
                 one.third shr 4,
-                setOf("minecraft:note_block[instrument=creeper,note=1,powered=false]")
+                listOf("minecraft:note_block[instrument=creeper,note=1,powered=false]")
             )!!
-            assertEquals(emptyMap(), other)
-            val only = blocks.find(world, one.first shr 4, one.third shr 4, setOf(skeleton))!!
-            assertEquals(setOf(dev.netherforge.plugin.platform.BlockVector(two.first, two.second, two.third)), only.keys)
+            assertTrue(other.isEmpty())
+            val only = blocks.find(world, one.first shr 4, one.third shr 4, listOf(skeleton))!!
+            assertEquals(0, only[one.first and 15, one.second, one.third and 15])
+            assertEquals(1, only[two.first and 15, two.second, two.third and 15])
+            assertEquals(1, only.size)
         }
     }
 
@@ -210,7 +215,8 @@ abstract class BlockOpsContract : PlatformContract() {
             assertNull(blocks.records(world, cx, cz))
             assertFalse(blocks.setLegend(world, cx, cz, "{}"))
             assertNull(blocks.legend(world, cx, cz))
-            assertNull(blocks.find(world, cx, cz, setOf("minecraft:stone")))
+            assertNull(blocks.find(world, cx, cz, listOf("minecraft:stone")))
+            assertNull(blocks.withData(world, cx, cz))
             assertFalse(blocks.canPlace(world, x, 70, z, "minecraft:stone"))
             assertNull(blocks.get(MISSING_WORLD, 0, 70, 0))
             assertFalse(blocks.set(MISSING_WORLD, 0, 70, 0, "minecraft:stone", false))

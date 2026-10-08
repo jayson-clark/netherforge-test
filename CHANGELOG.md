@@ -20,7 +20,9 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   record of its own unless a centity is drawn over it or a script gave it a
   `data()` table: each chunk keeps a legend of its blocks' states instead, so a
   layer of them costs no more than one. Records from earlier sessions are
-  dropped as their chunks load.
+  dropped as their chunks load. In memory too, a loaded chunk a world
+  generator filled with them takes a few kilobytes a section, and finding them
+  when it loads no longer writes every block's state out as text.
 
 - **NetherKit is now NetherForge.** The project file is `netherforge.json`,
   the command is `netherforge`, the plugin is `NetherForge` (permission
@@ -99,6 +101,11 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 - **`area` and `biome` script stages.** A terrain's script can choose any
   column's area (its ground follows) and any place's biome area.
   `terrain.area(x, y, z)` and `terrain.biome(x, y, z)` read a place's.
+- **`/locate biome` in a project terrain's world** looks at the places the
+  game's would, in its order, on threads of its own: a script's stages can take
+  minutes over them, which on the main thread the watchdog took for a hung
+  server. `terrain.height` and a column's file height are kept per column, so a
+  biome stage asking it all the way up a column asks once.
 - **Plans in terrain scripts.** `terrain.plan(name, size, make)` works out
   something big once per grid cell, with numbers of the cell's own, and keeps
   it for every chunk that asks: dungeons and temples cost one layout each.

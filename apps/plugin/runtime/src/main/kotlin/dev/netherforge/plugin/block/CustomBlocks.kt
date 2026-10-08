@@ -29,6 +29,7 @@ import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.AttributeModifierData
 import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.BlockVector
+import dev.netherforge.plugin.platform.ChunkGrid
 import dev.netherforge.plugin.platform.ClickButton
 import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.ItemData
@@ -110,14 +111,64 @@ internal class CustomBlocks(
     @Serializable
     private class Record(val id: String, val centity: String? = null)
 
-    /** A block in a loaded chunk. */
-    private class Placed(var name: String, var centity: UUID?, var next: Long) {
+    /**
+     * A block in a loaded chunk. [kept] is whether it's the one [ChunkBlocks.kept] has; one that isn't is made
+     * afresh from its name each time it's looked up.
+     */
+    private class Placed(var name: String, var centity: UUID?, var next: Long, val kept: Boolean = true) {
         /** Whether a block that needn't keep a record has one anyway (its table is kept by it). */
         var pinned = false
     }
 
+    /**
+     * The project's blocks in a loaded chunk: every one's name (its [number]) where it is, and a [Placed] only for
+     * the few with more to them, which is what lets a chunk a world generator filled with them cost kilobytes.
+     */
+    private class ChunkBlocks {
+        val names = ChunkGrid()
+
+        /** The blocks that tick, are drawn over by a centity or keep a record for their table. */
+        val kept = HashMap<BlockVector, Placed>()
+
+        fun isEmpty() = names.isEmpty()
+    }
+
+    /** Every name a block of the project's has had this session, by its number less one. */
+    private val names = ArrayList<String>()
+    private val numbers = HashMap<String, Int>()
+
+    private fun number(name: String): Int = numbers.getOrPut(name) {
+        names += name
+        names.size
+    }
+
     /** Whether a block keeps a record of its own: one a centity is drawn over, which names the instance. */
     private fun recorded(name: String): Boolean = defs[name]?.file?.centity != null
+
+    private fun ticks(name: String): Boolean = defs[name]?.file?.tick != null
+
+    /** Whether a block needs a [Placed] of its own to be tracked: a timer, a centity or a pin. */
+    private fun keeps(placed: Placed): Boolean = placed.pinned || placed.centity != null || recorded(placed.name) || ticks(placed.name)
+
+    /** Tracks [placed] at [at] in [blocks], kept if it [keeps] anything. */
+    private fun put(blocks: ChunkBlocks, at: BlockVector, placed: Placed) {
+        blocks.names[at.x and 15, at.y, at.z and 15] = number(placed.name)
+        if (keeps(placed)) blocks.kept[at] = placed else blocks.kept.remove(at)
+    }
+
+    /** Stops tracking the block at [at] in [blocks]: what it was, or null when there was none. */
+    private fun take(blocks: ChunkBlocks, at: BlockVector): Placed? {
+        val number = blocks.names.set(at.x and 15, at.y, at.z and 15, 0)
+        if (number == 0) return null
+        return blocks.kept.remove(at) ?: Placed(names[number - 1], null, 0, kept = false)
+    }
+
+    /** The block tracked at [at] in [blocks], or null. */
+    private fun get(blocks: ChunkBlocks, at: BlockVector): Placed? {
+        val number = blocks.names[at.x and 15, at.y, at.z and 15]
+        if (number == 0) return null
+        return blocks.kept[at] ?: Placed(names[number - 1], null, 0, kept = false)
+    }
 
     private fun readLegend(json: String?): Map<String, String> =
         json?.let { runCatching { Json.decodeFromString<Map<String, String>>(it) }.getOrNull() }.orEmpty()
@@ -142,7 +193,7 @@ internal class CustomBlocks(
     private var byState: Map<String, String> = emptyMap()
 
     /** The blocks of every loaded chunk this service has looked at. */
-    private val chunks = HashMap<ChunkKey, MutableMap<BlockVector, Placed>>()
+    private val chunks = HashMap<ChunkKey, ChunkBlocks>()
 
     /** The chunks holding a block that ticks. */
     private val ticking = LinkedHashSet<ChunkKey>()
@@ -186,6 +237,8 @@ internal class CustomBlocks(
     override fun stop() {
         for (def in defs.values) stopScript(def)
         for (player in mining.toList()) stopMining(player)
+        // Before the tables are saved and let go (block data stops after this service).
+        for ((key, blocks) in chunks) pinData(key, blocks)
         chunks.clear()
         ticking.clear()
         sweepQueue.clear()
@@ -213,10 +266,21 @@ internal class CustomBlocks(
     fun at(world: String, x: Int, y: Int, z: Int): String? = placedAt(world, x, y, z)?.name
 
     private fun placedAt(world: String, x: Int, y: Int, z: Int): Placed? =
-        chunks[ChunkKey(world, x shr 4, z shr 4)]?.get(BlockVector(x, y, z))
+        chunks[ChunkKey(world, x shr 4, z shr 4)]?.let { get(it, BlockVector(x, y, z)) }
+
+    /** Whether [placed] (from [placedAt]) is still the block at a position: the same one, or for one that isn't kept, one of its name. */
+    private fun still(world: String, x: Int, y: Int, z: Int, placed: Placed): Boolean {
+        val now = placedAt(world, x, y, z) ?: return false
+        return now === placed || (!placed.kept && !now.kept && now.name == placed.name)
+    }
 
     /** Every placed block of [name] in a loaded chunk, for what reloading it tells a script. */
-    private fun countOf(name: String) = chunks.values.sumOf { blocks -> blocks.values.count { it.name == name } }
+    private fun countOf(name: String): Int {
+        val number = numbers[name] ?: return 0
+        var count = 0
+        for (blocks in chunks.values) blocks.names.forEach { _, _, _, it -> if (it == number) count++ }
+        return count
+    }
 
     private fun replan(blocks: Map<String, BlockFile?>, home: String) {
         val next = if (blocks.isEmpty()) null else BlockCarriers.plan(blocks, home, platform.game)
@@ -282,8 +346,7 @@ internal class CustomBlocks(
         val def = Def(id, next)
         defs = defs + (id to def)
         startScript(def)
-        for (blocks in chunks.values) for (placed in blocks.values) if (placed.name == id) placed.next = ticks() + (next.tick ?: 0)
-        refreshTicking()
+        for (blocks in chunks.values) for (placed in blocks.kept.values) if (placed.name == id) placed.next = ticks() + (next.tick ?: 0)
         return countOf(id)
     }
 
@@ -295,24 +358,26 @@ internal class CustomBlocks(
 
     override fun chunkUnloading(world: String, chunkX: Int, chunkZ: Int) {
         val key = ChunkKey(world, chunkX, chunkZ)
-        chunks[key]?.let { pinData(world, it) }
+        chunks[key]?.let { pinData(key, it) }
         chunks.remove(key)
         ticking.remove(key)
     }
 
     override fun worldSaving(world: String) {
-        for ((key, blocks) in chunks) if (key.world == world) pinData(world, blocks)
+        for ((key, blocks) in chunks) if (key.world == world) pinData(key, blocks)
     }
 
     /**
      * A block known by its state alone that scripts gave a table keeps a record from now on: if something else takes
      * its place while its chunk isn't loaded, the record is how its table is found to go.
      */
-    private fun pinData(world: String, blocks: Map<BlockVector, Placed>) {
-        for ((at, placed) in blocks) {
-            if (placed.pinned || recorded(placed.name) || !blockData().has(world, at.x, at.y, at.z)) continue
-            platform.blocks.setRecord(world, at.x, at.y, at.z, record(placed.name, null))
+    private fun pinData(key: ChunkKey, blocks: ChunkBlocks) {
+        for (at in blockData().tablesIn(key.world, key.x, key.z)) {
+            val placed = get(blocks, at) ?: continue
+            if (placed.pinned || recorded(placed.name)) continue
+            platform.blocks.setRecord(key.world, at.x, at.y, at.z, record(placed.name, null))
             placed.pinned = true
+            put(blocks, at, placed)
         }
     }
 
@@ -328,9 +393,11 @@ internal class CustomBlocks(
         val legendText = platform.blocks.legend(key.world, key.x, key.z)
         val legend = readLegend(legendText)
         // The states blocks are held in now, and those the legend says they were placed in.
-        val found = platform.blocks.find(key.world, key.x, key.z, byState.keys + legend.keys) ?: return
-        val previous = chunks[key].orEmpty()
-        val tracked = HashMap<BlockVector, Placed>()
+        val states = (byState.keys + legend.keys).toList()
+        val found = platform.blocks.find(key.world, key.x, key.z, states) ?: return
+        fun stateAt(at: BlockVector): String? = found[at.x and 15, at.y, at.z and 15].takeIf { it != 0 }?.let { states[it - 1] }
+        val previous = chunks[key]
+        val tracked = ChunkBlocks()
         val recorded = HashSet<BlockVector>()
         val noteBlock = BlockCarriers.BLOCK
         for (record in records) {
@@ -342,7 +409,7 @@ internal class CustomBlocks(
                 continue
             }
             val expected = plan.stateOf(read.id)?.toString()
-            val state = found[at]
+            val state = stateAt(at)
             val centity = read.centity?.let { runCatching { UUID.fromString(it) }.getOrNull() }
             when {
                 // A block the project has no longer (or has with errors): it stays as it was, inert, until it's back.
@@ -363,58 +430,73 @@ internal class CustomBlocks(
                 }
             }
         }
-        for ((at, state) in found) {
-            if (at in recorded) continue
-            // What it was placed as, else (a generated chunk, a paste) what its state is now.
-            val name = legend[state] ?: byState[state] ?: continue
+        // What each state found is: the block it was placed as, else (a generated chunk, a paste) the one it is now.
+        val nameOf = states.map { legend[it] ?: byState[it] }
+        val expectedOf = nameOf.map { name -> name?.let { plan.stateOf(it)?.toString() } }
+        found.forEach { x, y, z, i ->
+            val name = nameOf[i - 1] ?: return@forEach
+            val at = BlockVector(key.x * 16 + x, y, key.z * 16 + z)
+            if (at in recorded) return@forEach
             if (name !in defs) {
                 // A block the project has no longer (or has with errors): pinned by a record, inert, until it's back.
                 platform.blocks.setRecord(key.world, at.x, at.y, at.z, record(name, null))
-                continue
+                return@forEach
             }
-            val expected = plan.stateOf(name)?.toString() ?: continue
+            val expected = expectedOf[i - 1] ?: return@forEach
             // The block's state moved with the project's blocks: put it right, quietly.
-            if (expected != state) platform.blocks.set(key.world, at.x, at.y, at.z, expected, false)
-            tracked[at] = placed(key, at, name, null)
-            if (recorded(name)) adopted(key.world, at, name, tracked)
+            if (expected != states[i - 1]) platform.blocks.set(key.world, at.x, at.y, at.z, expected, false)
+            if (recorded(name) || ticks(name)) {
+                put(tracked, at, placed(key, at, name, null))
+                if (recorded(name)) adopted(key.world, at, name, tracked)
+            } else {
+                tracked.names[x, y, z] = number(name)
+            }
         }
         // A block known by its state alone that something else replaced while its chunk was loaded: its table goes.
-        for ((at, placed) in previous) if (at !in found && at !in recorded) gone(key.world, at, placed.centity)
-        for (at in tracked.keys.toList()) ensureCentity(key.world, at, tracked)
+        previous?.names?.forEach { x, y, z, _ ->
+            if (found[x, y, z] != 0) return@forEach
+            val at = BlockVector(key.x * 16 + x, y, key.z * 16 + z)
+            if (at !in recorded) gone(key.world, at, previous.kept[at]?.centity)
+        }
+        for (at in tracked.kept.keys.toList()) ensureCentity(key.world, at, tracked)
         writeLegend(key, legendText, legendOf(plan, tracked))
         if (tracked.isEmpty()) chunks.remove(key) else chunks[key] = tracked
-        refreshTicking()
+        refreshTicking(key)
     }
 
     /**
      * A recorded block that's still there, tracked: one that needn't keep a record (one from before legends) and has
      * no table to keep loses it, and the legend has it from now on.
      */
-    private fun keep(key: ChunkKey, at: BlockVector, name: String, centity: UUID?, tracked: MutableMap<BlockVector, Placed>) {
+    private fun keep(key: ChunkKey, at: BlockVector, name: String, centity: UUID?, tracked: ChunkBlocks) {
         val placed = placed(key, at, name, centity)
-        tracked[at] = placed
-        if (recorded(name) || centity != null) return
-        if (blockData().has(key.world, at.x, at.y, at.z)) {
-            placed.pinned = true
-        } else {
-            platform.blocks.setRecord(key.world, at.x, at.y, at.z, null)
-            placed.pinned = false
+        if (!recorded(name) && centity == null) {
+            if (blockData().has(key.world, at.x, at.y, at.z)) {
+                placed.pinned = true
+            } else {
+                platform.blocks.setRecord(key.world, at.x, at.y, at.z, null)
+                placed.pinned = false
+            }
         }
+        put(tracked, at, placed)
     }
 
     /** The legend of a chunk's [tracked] blocks that keep no record: each one's state now, to its name. */
-    private fun legendOf(plan: BlockCarriers.Plan, tracked: Map<BlockVector, Placed>): Map<String, String> {
+    private fun legendOf(plan: BlockCarriers.Plan, tracked: ChunkBlocks): Map<String, String> {
+        val present = BooleanArray(names.size + 1)
+        tracked.names.forEach { _, _, _, number -> present[number] = true }
         val legend = HashMap<String, String>()
-        for (placed in tracked.values) {
-            if (recorded(placed.name)) continue
-            plan.stateOf(placed.name)?.let { legend[it.toString()] = placed.name }
+        for (number in 1..names.size) {
+            val name = names[number - 1]
+            if (!present[number] || recorded(name)) continue
+            plan.stateOf(name)?.let { legend[it.toString()] = name }
         }
         return legend
     }
 
     /** The block already tracked at [at] if it's still [name] (its timer runs on), else a new one, first ticked an interval from now. */
     private fun placed(key: ChunkKey, at: BlockVector, name: String, centity: UUID?): Placed {
-        val known = chunks[key]?.get(at)?.takeIf { it.name == name }
+        val known = chunks[key]?.kept?.get(at)?.takeIf { it.name == name }
         if (known != null) {
             known.centity = centity
             return known
@@ -423,15 +505,15 @@ internal class CustomBlocks(
     }
 
     /** A carrier state nobody recorded: now a block of the project, as if it had been placed. */
-    private fun adopted(world: String, at: BlockVector, name: String, tracked: MutableMap<BlockVector, Placed>) {
-        val placed = tracked.getValue(at)
+    private fun adopted(world: String, at: BlockVector, name: String, tracked: ChunkBlocks) {
+        val placed = tracked.kept.getValue(at)
         placed.centity = spawnCentity(world, at, defs[name] ?: return)
         platform.blocks.setRecord(world, at.x, at.y, at.z, record(name, placed.centity))
     }
 
     /** A block drawn by a centity whose instance is missing gets a new one. */
-    private fun ensureCentity(world: String, at: BlockVector, tracked: MutableMap<BlockVector, Placed>) {
-        val placed = tracked[at] ?: return
+    private fun ensureCentity(world: String, at: BlockVector, tracked: ChunkBlocks) {
+        val placed = tracked.kept[at] ?: return
         val def = defs[placed.name] ?: return
         if (def.file.centity == null) return
         val id = placed.centity
@@ -458,9 +540,9 @@ internal class CustomBlocks(
         blockData().discard(world, at.x, at.y, at.z)
     }
 
-    private fun refreshTicking() {
-        ticking.clear()
-        for ((key, blocks) in chunks) if (blocks.values.any { defs[it.name]?.file?.tick != null }) ticking += key
+    /** Whether the chunk at [key] holds a block that ticks: only kept blocks can. */
+    private fun refreshTicking(key: ChunkKey) {
+        if (chunks[key]?.kept?.values?.any { ticks(it.name) } == true) ticking += key else ticking -= key
     }
 
     // ---- placing and removing -------------------------------------------------------
@@ -484,11 +566,11 @@ internal class CustomBlocks(
     private fun register(name: String, world: String, at: BlockVector) {
         val def = defs.getValue(name)
         val key = ChunkKey(world, at.x shr 4, at.z shr 4)
-        val blocks = chunks.getOrPut(key) { HashMap() }
-        blocks.remove(at)?.let { gone(world, at, it.centity) }
+        val blocks = chunks.getOrPut(key) { ChunkBlocks() }
+        take(blocks, at)?.let { gone(world, at, it.centity) }
         val placed = Placed(name, null, ticks() + (def.file.tick ?: 0))
         placed.centity = spawnCentity(world, at, def)
-        blocks[at] = placed
+        put(blocks, at, placed)
         if (recorded(name)) {
             platform.blocks.setRecord(world, at.x, at.y, at.z, record(name, placed.centity))
         } else {
@@ -506,7 +588,7 @@ internal class CustomBlocks(
     private fun forget(world: String, at: BlockVector): Placed? {
         val key = ChunkKey(world, at.x shr 4, at.z shr 4)
         val blocks = chunks[key]
-        val placed = blocks?.remove(at) ?: return null
+        val placed = blocks?.let { take(it, at) } ?: return null
         if (blocks.isEmpty()) {
             chunks.remove(key)
             ticking.remove(key)
@@ -615,7 +697,7 @@ internal class CustomBlocks(
             rolled
         }
         // A script may have replaced it meanwhile.
-        if (placedAt(block.world, at.x, at.y, at.z) !== placed) return true
+        if (!still(block.world, at.x, at.y, at.z, placed)) return true
         stopMining(player.uuid)
         remove(block.world, at, def, drops, true)
         return true
@@ -815,11 +897,11 @@ internal class CustomBlocks(
         val now = ticks()
         for (key in ticking.toList()) {
             val blocks = chunks[key] ?: continue
-            for ((at, placed) in blocks.entries.toList()) {
+            for ((at, placed) in blocks.kept.entries.toList()) {
                 val interval = defs[placed.name]?.file?.tick ?: continue
                 if (now < placed.next) continue
                 placed.next = now + interval
-                if (blocks[at] !== placed) continue
+                if (blocks.kept[at] !== placed) continue
                 val target = LuaHandle.ProjectBlock(placed.name)
                 if (!scripts.listening(target, Events.PROJECTBLOCK_TICK)) continue
                 scripts.emit(

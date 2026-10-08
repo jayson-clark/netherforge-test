@@ -147,10 +147,17 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
         plugin.server.pluginManager.registerEvents(borders, plugin)
         plugin.server.pluginManager.registerEvents(noteBlocks, plugin)
         plugin.server.pluginManager.registerEvents(PaperGeneratedLoot(worldManager.generators, events, plugin.logger), plugin)
+        plugin.server.pluginManager.registerEvents(locate, plugin)
     }
 
-    /** The plugin is being disabled: what it changed in the server's own settings is put back. */
-    fun close() = noteBlocks.release()
+    /** `/locate biome` in a project terrain's world, off the main thread. */
+    private val locate by lazy { PaperLocate(plugin, worldManager.generators) }
+
+    /** The plugin is being disabled: what it changed in the server's own settings is put back, and its searches stop. */
+    fun close() {
+        noteBlocks.release()
+        locate.close()
+    }
 
     override fun watch(event: WatchedEvent, listening: Boolean) {
         events?.watch(event, listening)

@@ -289,6 +289,8 @@ local seed, min_y, max_y, sea_level = 0, 0, 0, 0
 local area_names, biome_names, area_index, volume_set = {}, {}, {}, {}
 local loot_index = {}
 local in_height = false
+-- The heights terrain.height gave, by column (the game asks a column's biome all the way up it), started again past HEIGHTS_KEPT.
+local heights, kept_heights, HEIGHTS_KEPT = {}, 0, 16384
 -- The stage Kotlin called in ("load", "height", "area"...), while it runs.
 local running = nil
 
@@ -438,6 +440,11 @@ function terrain.height(x, z)
   if running == "area" then
     error("terrain.height can't be asked from the area stage: a column's height depends on the areas", 2)
   end
+  local key = x * 134217728 + z
+  local kept = heights[key]
+  if kept ~= nil then
+    return kept
+  end
   local height = tointeger(host_file_height(x, z))
   local stage = stages and stages.height
   if stage ~= nil then
@@ -448,7 +455,12 @@ function terrain.height(x, z)
       height = floor(result)
     end
   end
-  return clamp(height)
+  height = clamp(height)
+  if kept_heights >= HEIGHTS_KEPT then
+    heights, kept_heights = {}, 0
+  end
+  heights[key], kept_heights = height, kept_heights + 1
+  return height
 end
 
 -- The area of a column (x, z), or with three numbers of a place (x, y, z), as an index in the file's areas.

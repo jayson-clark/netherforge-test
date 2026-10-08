@@ -17,6 +17,7 @@ import dev.netherforge.plugin.platform.BlockOps
 import dev.netherforge.plugin.platform.BlockRecord
 import dev.netherforge.plugin.platform.BlockSnapshot
 import dev.netherforge.plugin.platform.BlockVector
+import dev.netherforge.plugin.platform.ChunkGrid
 import dev.netherforge.plugin.platform.GameRuleType
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.Location
@@ -290,6 +291,9 @@ class PaperBlocks(private val plugin: JavaPlugin, private val noteBlocks: PaperN
 
         /** The chunk's legend of its custom blocks' states (not under [RECORDS]: it isn't a block's). */
         const val LEGEND = "custom_block_legend"
+
+        /** The persistent data key a block's script data is kept under in its chunk, then `x_y_z`. */
+        const val DATA = "block_data/"
     }
 
     /** The block, if its world exists and its chunk is loaded: never loads one. */
@@ -327,7 +331,7 @@ class PaperBlocks(private val plugin: JavaPlugin, private val noteBlocks: PaperN
         return if (stack != null) block.breakNaturally(stack) else block.breakNaturally()
     }
 
-    private fun key(x: Int, y: Int, z: Int) = NamespacedKey(plugin, "block_data/${x}_${y}_$z")
+    private fun key(x: Int, y: Int, z: Int) = NamespacedKey(plugin, "$DATA${x}_${y}_$z")
 
     override fun data(world: String, x: Int, y: Int, z: Int): String? =
         block(world, x, y, z)?.chunk?.persistentDataContainer?.get(key(x, y, z), PersistentDataType.STRING)
@@ -337,6 +341,16 @@ class PaperBlocks(private val plugin: JavaPlugin, private val noteBlocks: PaperN
         val data = chunk.persistentDataContainer
         if (json == null) data.remove(key(x, y, z)) else data.set(key(x, y, z), PersistentDataType.STRING, json)
         return true
+    }
+
+    override fun withData(world: String, chunkX: Int, chunkZ: Int): List<BlockVector>? {
+        val chunk = chunk(world, chunkX, chunkZ) ?: return null
+        return chunk.persistentDataContainer.keys.mapNotNull { key ->
+            if (key.namespace != plugin.name.lowercase() || !key.key.startsWith(DATA)) return@mapNotNull null
+            val (x, y, z) = key.key.removePrefix(DATA).split('_').map { it.toIntOrNull() ?: return@mapNotNull null }
+                .takeIf { it.size == 3 } ?: return@mapNotNull null
+            BlockVector(x, y, z)
+        }
     }
 
     // ---- custom blocks ----
@@ -379,21 +393,26 @@ class PaperBlocks(private val plugin: JavaPlugin, private val noteBlocks: PaperN
         return if (w.isChunkLoaded(chunkX, chunkZ)) w.getChunkAt(chunkX, chunkZ) else null
     }
 
-    override fun find(world: String, chunkX: Int, chunkZ: Int, states: Set<String>): Map<BlockVector, String>? {
+    override fun find(world: String, chunkX: Int, chunkZ: Int, states: List<String>): ChunkGrid? {
         val chunk = chunk(world, chunkX, chunkZ) ?: return null
-        val wanted = states.mapNotNull { state -> runCatching { Bukkit.createBlockData(state) }.getOrNull()?.let { it to state } }
+        // Block data is equal by the state it holds: no state is written out as text, however many blocks there are.
+        val wanted = HashMap<BukkitBlockData, Int>()
+        states.forEachIndexed { i, state -> data(state)?.let { wanted.putIfAbsent(it, i + 1) } }
+        val found = ChunkGrid()
         // The chunk's palettes say at once whether any of them is there.
-        if (wanted.none { (data, _) -> chunk.contains(data) }) return emptyMap()
-        val found = LinkedHashMap<BlockVector, String>()
+        if (wanted.keys.none(chunk::contains)) return found
+        val materials = wanted.keys.mapTo(HashSet()) { it.material }
         val snapshot = chunk.getChunkSnapshot(false, false, false)
-        val canonical = wanted.associate { (data, state) -> data.asString to state }
-        for (y in chunk.world.minHeight until chunk.world.maxHeight) {
-            for (x in 0..15) {
+        val bottom = chunk.world.minHeight shr 4
+        for (section in bottom until (chunk.world.maxHeight shr 4)) {
+            if (snapshot.isSectionEmpty(section - bottom)) continue
+            for (y in section * 16 until section * 16 + 16) {
                 for (z in 0..15) {
-                    val data = snapshot.getBlockData(x, y, z)
-                    if (data.material != Material.NOTE_BLOCK) continue
-                    val state = canonical[data.asString] ?: stateOf(data).takeIf { it in states } ?: continue
-                    found[BlockVector(chunkX * 16 + x, y, chunkZ * 16 + z)] = state
+                    for (x in 0..15) {
+                        if (snapshot.getBlockType(x, y, z) !in materials) continue
+                        val state = wanted[snapshot.getBlockData(x, y, z)] ?: continue
+                        found[x, y, z] = state
+                    }
                 }
             }
         }

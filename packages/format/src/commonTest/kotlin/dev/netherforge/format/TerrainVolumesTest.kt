@@ -7,9 +7,11 @@ import dev.netherforge.format.terrain.CompiledTerrain
 import dev.netherforge.format.terrain.StructureTemplate
 import dev.netherforge.format.terrain.TerrainCompiler
 import dev.netherforge.format.terrain.TerrainFile
+import dev.netherforge.format.terrain.TerrainGenerator
 import dev.netherforge.format.terrain.TerrainScriptFailure
 import dev.netherforge.format.terrain.TerrainScripts
 import dev.netherforge.format.terrain.TerrainValidator
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -279,6 +281,63 @@ class TerrainVolumesTest {
         assertEquals("minecraft:desert", generator.biomeAt(8, 200, 8))
         assertEquals("minecraft:lush_caves", generator.biomeAt(8, -40, 8))
         generator.generate(0, 0)
+        generator.close()
+        assertEquals(emptyList(), run.failures)
+    }
+
+    // ---- looking for a biome ------------------------------------------------------------------------------
+
+    @Test
+    fun aLocateRingIsItsSquaresEdgeInTheGamesOrder() {
+        assertEquals(listOf(0 to 0), TerrainGenerator.locateRing(0, 32))
+        val ring = TerrainGenerator.locateRing(64, 32)
+        assertEquals(16, ring.size)
+        assertEquals(16, ring.toSet().size)
+        assertTrue(ring.all { (dx, dz) -> maxOf(abs(dx), abs(dz)) == 64 })
+        // The west side first, south to north, then each x's two ends, then the east side.
+        assertEquals(listOf(-64 to -64, -64 to -32, -64 to 0, -64 to 32, -64 to 64, -32 to -64, -32 to 64), ring.take(7))
+        assertEquals(64 to 64, ring.last())
+    }
+
+    @Test
+    fun aColumnIsLookedAtFromTheAskersHeightOutwards() {
+        val generator = compile(caves).bind(1, -64, 320)
+        assertContentEquals(intArrayOf(64, 128, 0, 192, -64, 256), generator.locateHeights(64, 64))
+        // A height outside the world is the nearest inside it.
+        assertEquals(319, generator.locateHeights(1000, 64).first())
+    }
+
+    @Test
+    fun aVolumeIsFoundAtTheFirstHeightOfAColumnItHolds() {
+        val generator = compile(caves).bind(1, -64, 320)
+        val deep = generator.areasWhere { it == "minecraft:lush_caves" }
+        val plains = generator.areasWhere { it == "minecraft:plains" }
+        generator.sampling { sampler ->
+            assertEquals(0, sampler.firstWhere(5, 5, generator.locateHeights(64, 64), deep))
+            assertEquals(64, sampler.firstWhere(5, 5, generator.locateHeights(64, 64), plains))
+            assertEquals(null, sampler.firstWhere(5, 5, intArrayOf(64, 128), deep))
+        }
+    }
+
+    @Test
+    fun theBiomeStageIsWhatALocateFinds(): LuaTest = withLua { lua ->
+        val run = Run()
+        val source = """
+            local terrain = ...
+            return {
+              biome = function(x, y, z, area)
+                if x >= 64 and y > terrain.height(x, z) + 50 then return "west" end
+                return area
+              end,
+            }
+        """
+        val generator = compile(scripted()).bind(1, -64, 320, scripts(lua, source, run))
+        val desert = generator.areasWhere { it == "minecraft:desert" }
+        val ys = generator.locateHeights(64, 64)
+        generator.sampling { sampler ->
+            assertEquals(null, sampler.firstWhere(0, 0, ys, desert))
+            assertEquals(128, sampler.firstWhere(64, 0, ys, desert))
+        }
         generator.close()
         assertEquals(emptyList(), run.failures)
     }

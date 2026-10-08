@@ -5,6 +5,7 @@ import dev.netherforge.plugin.api.parseJson
 import dev.netherforge.plugin.data.ScriptData
 import dev.netherforge.plugin.lua.LuaHost
 import dev.netherforge.plugin.lua.LuaRef
+import dev.netherforge.plugin.platform.BlockVector
 import dev.netherforge.plugin.platform.Platform
 import dev.netherforge.plugin.session.RuntimeService
 import kotlinx.serialization.json.JsonArray
@@ -54,6 +55,16 @@ internal class BlockData(private val platform: Platform, private val log: Runtim
 
     /** Whether scripts gave the block at a position a table: one is held, or one is stored. */
     fun has(world: String, x: Int, y: Int, z: Int): Boolean = Key(world, x, y, z) in held || platform.blocks.data(world, x, y, z) != null
+
+    /** The positions in a loaded chunk that scripts gave a table, as [has] says: held, or stored. */
+    fun tablesIn(world: String, chunkX: Int, chunkZ: Int): Set<BlockVector> {
+        val found = LinkedHashSet<BlockVector>()
+        for (key in held.keys) {
+            if (key.world == world && key.x shr 4 == chunkX && key.z shr 4 == chunkZ) found += BlockVector(key.x, key.y, key.z)
+        }
+        platform.blocks.withData(world, chunkX, chunkZ)?.let(found::addAll)
+        return found
+    }
 
     /**
      * A custom block went: its table goes with it, from the world and from

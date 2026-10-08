@@ -13,6 +13,7 @@ import dev.netherforge.plugin.platform.BlockRecord
 import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.BlockSnapshot
 import dev.netherforge.plugin.platform.BlockVector
+import dev.netherforge.plugin.platform.ChunkGrid
 import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.GameRuleType
 import dev.netherforge.plugin.platform.ItemData
@@ -322,6 +323,11 @@ class FakeBlocks(private val platform: FakePlatform) : BlockOps {
         return true
     }
 
+    override fun withData(world: String, chunkX: Int, chunkZ: Int): List<BlockVector>? {
+        if (!platform.worlds.isChunkLoaded(world, chunkX, chunkZ)) return null
+        return data.keys.filter { it.world == world && it.x shr 4 == chunkX && it.z shr 4 == chunkZ }.map { BlockVector(it.x, it.y, it.z) }
+    }
+
     /** Each custom block's record, saved with its chunk. */
     val records = LinkedHashMap<BlockAt, String>()
 
@@ -351,11 +357,15 @@ class FakeBlocks(private val platform: FakePlatform) : BlockOps {
         return true
     }
 
-    override fun find(world: String, chunkX: Int, chunkZ: Int, states: Set<String>): Map<BlockVector, String>? {
+    override fun find(world: String, chunkX: Int, chunkZ: Int, states: List<String>): ChunkGrid? {
         if (!platform.worlds.isChunkLoaded(world, chunkX, chunkZ)) return null
-        return platform.worlds.blocks.filter { (at, state) ->
-            at.world == world && at.x shr 4 == chunkX && at.z shr 4 == chunkZ && state in states
-        }.entries.associate { (at, state) -> BlockVector(at.x, at.y, at.z) to state }
+        val found = ChunkGrid()
+        for ((at, state) in platform.worlds.blocks) {
+            if (at.world != world || at.x shr 4 != chunkX || at.z shr 4 != chunkZ) continue
+            val i = states.indexOf(state)
+            if (i >= 0) found[at.x and 15, at.y, at.z and 15] = i + 1
+        }
+        return found
     }
 
     /** What a state's hardness is, by block id, where a test says; a few of the game's, else 1. */

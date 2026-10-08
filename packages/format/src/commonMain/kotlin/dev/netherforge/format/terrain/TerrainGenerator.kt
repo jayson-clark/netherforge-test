@@ -247,6 +247,7 @@ class TerrainGenerator internal constructor(
         private val corners = HashMap<Long, CornerColumn>()
         private val columnArea = HashMap<Long, Int>()
         private val surfaces = HashMap<Long, Int>()
+        private val fileHeights = HashMap<Long, Int>()
 
         /** The area of a column: its climate's, then the script's `area` stage. */
         fun areaAt(x: Int, z: Int): Int {
@@ -261,6 +262,16 @@ class TerrainGenerator internal constructor(
 
         /** The area at a place: see [TerrainGenerator.pointAreaAt]. */
         fun pointAreaAt(x: Int, y: Int, z: Int): Int = this@TerrainGenerator.pointAreaAt(x, y, z, this)
+
+        /**
+         * The first of [ys] at column ([x], [z]) whose place's area ([pointAreaAt]) is one [wanted] has, or null. Without
+         * volume areas or a biome stage every place of a column is its column's area, so that's all it asks.
+         */
+        fun firstWhere(x: Int, z: Int, ys: IntArray, wanted: BooleanArray): Int? {
+            if (!pointAreas) return ys.firstOrNull()?.takeIf { wanted[areaAt(x, z)] }
+            for (y in ys) if (wanted[pointAreaAt(x, y, z)]) return y
+            return null
+        }
 
         /** [surfaceAt], kept: what a volume's depth and surface are measured from. */
         internal fun keptSurfaceAt(x: Int, z: Int): Int {
@@ -344,6 +355,16 @@ class TerrainGenerator internal constructor(
 
         /** The y of the top block the file's terrain puts at a column, before the script's height stage, and not kept inside the world. */
         fun fileHeight(x: Int, z: Int): Int {
+            // The game asks a column's biome at every 4 blocks of its height, and a biome stage may ask its height each time.
+            val key = key(x, z)
+            fileHeights[key]?.let { return it }
+            val height = newFileHeight(x, z)
+            if (fileHeights.size >= CACHE_LIMIT) fileHeights.clear()
+            fileHeights[key] = height
+            return height
+        }
+
+        private fun newFileHeight(x: Int, z: Int): Int {
             val dx = x.toDouble()
             val dz = z.toDouble()
             var fileSum = 0.0
@@ -547,6 +568,39 @@ class TerrainGenerator internal constructor(
 
     /** The biome at a place, as the file writes it: its [pointAreaAt]'s. */
     fun biomeAt(x: Int, y: Int, z: Int, sampler: Sampler = Sampler()): String = areas[pointAreaAt(x, y, z, sampler)].biome
+
+    // ---- looking for a biome, as `/locate biome` does --------------------------------
+
+    /** Which areas (by index in [CompiledTerrain.areas]) have a biome [wanted] says yes to. */
+    fun areasWhere(wanted: (String) -> Boolean): BooleanArray = BooleanArray(areas.size) { wanted(areas[it].biome) }
+
+    /**
+     * Runs [block] with a sampler of its own Lua state (the script's, when it has one), given back after: what a
+     * thread asking many places in a row uses, so each stage it runs doesn't take a state of the pool's and give it back.
+     */
+    fun <T> sampling(block: (Sampler) -> T): T {
+        val runner = runner ?: return block(Sampler())
+        val state = runner.take()
+        try {
+            return block(Sampler(state))
+        } finally {
+            runner.give(state)
+        }
+    }
+
+    /** The heights a column is looked at: [y] first (kept inside the world), then [step] above and below it in turn, out to the world's top and bottom. */
+    fun locateHeights(y: Int, step: Int): IntArray {
+        val origin = y.coerceIn(minY, maxY - 1)
+        return buildList {
+            add(origin)
+            var d = step
+            while (origin + d < maxY || origin - d >= minY) {
+                if (origin + d < maxY) add(origin + d)
+                if (origin - d >= minY) add(origin - d)
+                d += step
+            }
+        }.toIntArray()
+    }
 
     /**
      * The column nearest ([x], [z]) whose terrain is above the sea, looked for in steps of 8 blocks
@@ -1071,6 +1125,22 @@ class TerrainGenerator internal constructor(
     private fun unpackZ(packed: Int): Int = (packed and 0xFF) - 64
 
     companion object {
+        /**
+         * The columns of ring [r] (a square [r] blocks out, [step] blocks apart) as offsets, in the order the game's
+         * `/locate biome` looks at them: x from west to east, each x's whole column of z on the ring's west and
+         * east sides and its two ends between.
+         */
+        fun locateRing(r: Int, step: Int): List<Pair<Int, Int>> = buildList {
+            if (r == 0) {
+                add(0 to 0)
+                return@buildList
+            }
+            for (dx in -r..r step step) {
+                val side = abs(dx) == r
+                for (dz in -r..r step step) if (side || abs(dz) == r) add(dx to dz)
+            }
+        }
+
         /** How far a vein reaches from where it starts along any axis: less than a chunk, which is what lets neighbours be generated alone. */
         private const val REACH = 15
 

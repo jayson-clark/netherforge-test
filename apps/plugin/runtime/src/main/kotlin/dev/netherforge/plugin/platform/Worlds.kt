@@ -42,6 +42,9 @@ interface BlockOps {
     /** Stores (or with null, clears) a block position's JSON. False when its chunk isn't loaded. */
     fun setData(world: String, x: Int, y: Int, z: Int, json: String?): Boolean
 
+    /** The positions in a loaded chunk with JSON stored, or null when the chunk isn't loaded. */
+    fun withData(world: String, chunkX: Int, chunkZ: Int): List<BlockVector>?
+
     // ---- custom blocks (W4.1): what the runtime needs of the server to hold a block as a note block state ----
 
     /**
@@ -64,10 +67,11 @@ interface BlockOps {
 
     /**
      * Where in a loaded chunk's blocks any of [states] (canonical) is, and
-     * which of them is there, or null when the chunk isn't loaded. Quick when
-     * the chunk has none of them.
+     * which of them is there (its index in [states] plus one), or null when
+     * the chunk isn't loaded. Quick when the chunk has none of them, and
+     * cheap however many it has.
      */
-    fun find(world: String, chunkX: Int, chunkZ: Int, states: Set<String>): Map<BlockVector, String>?
+    fun find(world: String, chunkX: Int, chunkZ: Int, states: List<String>): ChunkGrid?
 
     /** The block state [state]'s hardness: how long the game takes to mine it. Null for a state the server doesn't have. */
     fun hardness(state: String): Double?
