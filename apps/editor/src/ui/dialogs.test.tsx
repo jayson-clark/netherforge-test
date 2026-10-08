@@ -71,7 +71,9 @@ describe('ask.prompt', () => {
     expect(document.activeElement).toBe(input)
     await user.clear(input)
     await user.type(input, 'Bad{Enter}')
-    expect(screen.getByText('Lowercase letters and _')).toBeTruthy()
+    expect(screen.getByText('Lowercase letters and _').id).toBe(
+      input.getAttribute('aria-describedby'),
+    )
     expect(screen.getByRole('button', { name: 'OK' })).toHaveProperty('disabled', true)
     await user.clear(input)
     await user.type(input, 'barrel{Enter}')

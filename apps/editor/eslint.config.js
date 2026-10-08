@@ -67,11 +67,12 @@ export default tseslint.config(
               from: { element: { type: layer } },
               allow: { to: { element: { types: { anyOf: LAYERS.slice(0, index + 1) } } } },
             })),
-            // Fixtures are built with what they stand in for.
+            // Fixtures are built with what they stand in for; the shared set-up
+            // (testing/workspace.ts) makes the app's stores.
             {
               from: { element: { type: 'testing' } },
               allow: {
-                to: { element: { types: { anyOf: ['core', 'minecraft', 'testing'] } } },
+                to: { element: { types: { anyOf: ['core', 'state', 'minecraft', 'testing'] } } },
               },
             },
             {

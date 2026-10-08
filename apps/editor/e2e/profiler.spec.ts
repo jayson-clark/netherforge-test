@@ -17,24 +17,13 @@ test('the profiler shows where the dev server’s ticks go and opens a handler a
   const functions = page.getByRole('table', { name: 'Functions' })
   const tower = functions.getByRole('row').filter({ hasText: 'centity tower' })
   await expect(tower.first()).toBeVisible()
-  await expect(page.getByRole('img', { name: /The last \d+ ticks, by step/ })).toBeVisible()
-  await expect(page.getByText(/\d+ ticks, [\d.]+ ms a tick on average/)).toBeVisible()
 
-  // Sorting by the worst call marks its column.
-  await functions.getByRole('button', { name: /Max ms/ }).click()
-  await expect(functions.getByRole('columnheader', { name: /Max ms/ })).toHaveAttribute(
-    'aria-sort',
-    'descending',
-  )
-
+  // Sorting, the tick chart and the scopes are Profiler.test.tsx's; opening Monaco at a line is here.
   await tower.first().getByRole('button', { name: 'Open centities/tower/script.lua:9' }).click()
   await expect(page.getByRole('tab', { name: 'script.lua' })).toHaveAttribute(
     'aria-selected',
     'true',
   )
   await expect(page.locator('.monaco-editor .line-numbers.active-line-number')).toHaveText('9')
-
-  await page.getByRole('button', { name: 'Scopes' }).click()
-  await expect(page.getByRole('table', { name: 'Scopes' }).getByText('centity tower')).toBeVisible()
   expect(errors).toEqual([])
 })

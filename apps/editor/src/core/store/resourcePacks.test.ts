@@ -1,22 +1,20 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
 import type { ResourcePackFile } from '@/core/format'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
+import { EXAMPLE_ROOT } from '@/testing/fixtures'
+import { exampleWorkspace } from '@/testing/workspace'
 import { createResourcePacks, type ResourcePacksStore } from './resourcePacks'
-import { createWorkspace, type WorkspaceStore } from './workspace'
+import type { WorkspaceStore } from './workspace'
 
 const PACK = 'resource_packs/ui/pack.json'
-const settle = () => new Promise((resolve) => setTimeout(resolve, 5))
 
 let workspace: WorkspaceStore
 let packs: ResourcePacksStore
 
 beforeEach(async () => {
-  const backend = new MemoryBackend({ projects: exampleProjects() })
-  workspace = createWorkspace(backend)
-  packs = createResourcePacks(workspace, backend)
+  const example = exampleWorkspace()
+  workspace = example.workspace
+  packs = createResourcePacks(workspace, example.backend)
   await workspace.getState().openProject(EXAMPLE_ROOT)
-  await settle()
 })
 
 describe('the packs store', () => {

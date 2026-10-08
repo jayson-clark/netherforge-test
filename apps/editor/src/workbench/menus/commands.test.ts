@@ -1,9 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createApp, type AppStores } from '@/state/providers'
-import { MemoryBackend } from '@/core/backend/memory'
+import type { AppStores } from '@/state/providers'
 import type { AppMenu, MenuEntry } from '@/core/backend/types'
 import { parseShortcut } from '@/core/shortcut'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
 import {
   buildMenus,
   commandForKey,
@@ -11,6 +9,7 @@ import {
   runCommand,
   type CommandContext,
 } from './commands'
+import { openExampleApp } from '@/testing/workspace'
 
 const TOWER = 'centities/tower/centity.json'
 
@@ -19,8 +18,7 @@ let app: AppStores
 beforeEach(async () => {
   // The layout (docks shown, the outline) is remembered per project: no test starts from another's.
   localStorage.clear()
-  app = createApp(new MemoryBackend({ projects: exampleProjects() }))
-  await app.workspace.getState().openProject(EXAMPLE_ROOT)
+  ;({ app } = await openExampleApp())
 })
 
 afterEach(async () => {

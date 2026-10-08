@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
 import type { ResourcePackFile } from '@/core/format'
 import { validationWorker, type ValidationClient } from '@/core/validation/client'
 import type { ValidationRequest } from '@/core/validation/requests'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
-import { createWorkspace, type WorkspaceStore } from './workspace'
+import { EXAMPLE_ROOT } from '@/testing/fixtures'
+import { openExampleWorkspace } from '@/testing/workspace'
+import type { WorkspaceStore } from './workspace'
 
 const PACK = 'resource_packs/ui/pack.json'
 const ITEM = 'items/ruby/item.json'
@@ -32,9 +32,7 @@ function watchedWorker(): ValidationClient {
 beforeEach(async () => {
   sent = []
   validated = []
-  const backend = new MemoryBackend({ projects: exampleProjects() })
-  store = createWorkspace(backend, { validation: watchedWorker })
-  await ws().openProject(EXAMPLE_ROOT)
+  ;({ workspace: store } = await openExampleWorkspace({ validation: watchedWorker }))
 })
 
 describe('validation in the worker', () => {

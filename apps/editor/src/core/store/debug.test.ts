@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
+import type { MemoryBackend } from '@/core/backend/memory'
 import { createApp, type AppStores } from '@/state/providers'
+import { EXAMPLE_ROOT } from '@/testing/fixtures'
+import { exampleBackend, openExampleApp, settle } from '@/testing/workspace'
 import { createDebug } from './debug'
 import type { LayoutStorage } from './layout'
 
@@ -11,13 +12,10 @@ const TURNS = 'centities/tower/turns.lua'
 let backend: MemoryBackend
 let app: AppStores
 
-const settle = () => vi.advanceTimersByTimeAsync(10)
 const commands = () => backend.dapLog.map((it) => it.command)
 
 async function connected() {
-  backend = new MemoryBackend({ projects: exampleProjects() })
-  app = createApp(backend)
-  await app.workspace.getState().openProject(EXAMPLE_ROOT)
+  ;({ backend, app } = await openExampleApp())
   await app.run.getState().connect()
   await app.debug.getState().connect()
 }
@@ -268,7 +266,7 @@ describe('the debug store', () => {
       get: (key) => kept.get(key) ?? null,
       set: (key, value) => void kept.set(key, value),
     }
-    backend = new MemoryBackend({ projects: exampleProjects() })
+    backend = exampleBackend()
     app = createApp(backend)
     const debug = createDebug(backend, app.workspace, storage)
     await debug.getState().connect()

@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { MemoryBackend, type MemoryBackendOptions } from '@/core/backend/memory'
-import { createApp, type AppStores } from '@/state/providers'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { MemoryBackend, MemoryBackendOptions } from '@/core/backend/memory'
+import { BackendError } from '@/core/backend/types'
+import type { AppStores } from '@/state/providers'
+import { advanceUntil, openExampleApp, settle } from '@/testing/workspace'
 import type { Tool } from '@modelcontextprotocol/sdk/types.js'
 
 const TOOL_NAMES = [
@@ -27,20 +28,20 @@ let backend: MemoryBackend
 let app: AppStores
 
 async function open(options: MemoryBackendOptions = {}) {
-  backend = new MemoryBackend({
-    projects: exampleProjects(),
-    serverDelayMs: 0,
-    ...options,
-  })
-  app = createApp(backend)
+  ;({ backend, app } = await openExampleApp({ backend: { serverDelayMs: 0, ...options } }))
   await app.run.getState().connect()
-  await app.workspace.getState().openProject(EXAMPLE_ROOT)
 }
 
-beforeEach(() => open())
+// Tools wait for the server on timers (a reload's settling, a bot's): the fake clock, moved on
+// by `call` until the answer comes.
+beforeEach(async () => {
+  vi.useFakeTimers()
+  await open()
+})
+afterEach(() => vi.useRealTimers())
 
 /** Calls a tool the way an agent does and returns its parsed text, or the error text. */
-async function call(name: string, args: Record<string, unknown> = {}) {
+async function request(name: string, args: Record<string, unknown> = {}) {
   const response = await backend.testMcpCall('tools/call', { name, arguments: args })
   if (response.error) throw new Error(`protocol error: ${response.error.message}`)
   const result = response.result as { content: { text: string }[]; isError?: boolean }
@@ -48,10 +49,15 @@ async function call(name: string, args: Record<string, unknown> = {}) {
   return result.isError ? { error: text } : JSON.parse(text)
 }
 
+/** [request], with the clock moving until it's answered. */
+const call = (name: string, args: Record<string, unknown> = {}) => advanceUntil(request(name, args))
+
 describe('MCP tools on an untrusted project', () => {
   it('refuses every call until the project is trusted, and nothing reaches the tools', async () => {
     await open({ trusted: [] })
-    const refused = await backend.testMcpCall('tools/call', { name: 'get_status', arguments: {} })
+    const refused = await advanceUntil(
+      backend.testMcpCall('tools/call', { name: 'get_status', arguments: {} }),
+    )
     expect(refused.error?.code).toBe(-32001)
     expect(refused.error?.message).toMatch(/isn't trusted/)
     await app.workspace.getState().trustProject(true)
@@ -141,14 +147,13 @@ describe('MCP tools', () => {
 
   it('reloads, and returns the errors the server logged meanwhile', async () => {
     backend.testConnect()
-    const pending = call('reload', { paths: ['modules/greeter/init.lua'] })
-    // The server logs the error while it reloads.
-    await vi.waitFor(() =>
-      expect(backend.bridgeLog).toContainEqual({
-        method: 'reload',
-        params: { paths: ['modules/greeter/init.lua'] },
-      }),
-    )
+    const pending = request('reload', { paths: ['modules/greeter/init.lua'] })
+    // The server logs the error while it reloads, before the tool's settling time is up.
+    await settle()
+    expect(backend.bridgeLog).toContainEqual({
+      method: 'reload',
+      params: { paths: ['modules/greeter/init.lua'] },
+    })
     backend.testBridgeEvent('console', {
       items: [
         {
@@ -158,7 +163,7 @@ describe('MCP tools', () => {
         },
       ],
     })
-    const result = await pending
+    const result = await advanceUntil(pending)
     expect(result.resources).toEqual([
       { package: 'basic', kind: 'module', id: 'greeter', ok: true, reattached: 0 },
     ])
@@ -180,9 +185,8 @@ describe('MCP tools', () => {
       params: { paths: ['advancements/treasure_hunter.json'] },
     })
     // It was stopped and started again.
-    await vi.waitFor(() =>
-      expect(backend.serverState().then((it) => it.phase)).resolves.toBe('running'),
-    )
+    await settle()
+    expect((await backend.serverState()).phase).toBe('running')
     const lines = app.run
       .getState()
       .console.lines()
@@ -327,5 +331,85 @@ describe('MCP tools', () => {
     await app.workspace.getState().closeProject()
     expect((await call('get_problems')).error).toMatch(/No project/)
     expect((await call('get_status')).project).toBeNull()
+  })
+})
+
+describe('MCP tools: what an agent sees of the server meanwhile, and of failures', () => {
+  it('gives the newest lines of the console up to a limit, saying it cut the rest', async () => {
+    for (const n of [1, 2, 3]) backend.testServerOutput(`[12:00:0${n} INFO]: line ${n}`)
+    const two = await call('get_console', { limit: 2 })
+    expect(two.lines.map((it: { text: string }) => it.text)).toEqual([
+      '[12:00:02 INFO]: line 2',
+      '[12:00:03 INFO]: line 3',
+    ])
+    expect(two.truncated).toBe(true)
+    expect((await call('get_console', { limit: 3 })).truncated).toBe(false)
+  })
+
+  it("returns what the console printed while a command ran, not the editor's own echo", async () => {
+    backend.testConnect()
+    const pending = request('run_command', { command: 'nf list' })
+    await settle()
+    backend.testServerOutput('[12:00:00 INFO]: 1 centity alive')
+    const { output } = await advanceUntil(pending)
+    expect(output.map((it: { text: string }) => it.text)).toEqual([
+      '[12:00:00 INFO]: 1 centity alive',
+    ])
+    // The editor's console shows the agent ran it.
+    expect(
+      app.run
+        .getState()
+        .console.lines()
+        .map((it) => it.text),
+    ).toContain('> nf list (from a coding agent)')
+  })
+
+  it("returns a bot's events and the script errors its action caused", async () => {
+    backend.testConnect()
+    await call('bot_join', { name: 'Tester' })
+    const pending = request('bot_act', { name: 'Tester', action: { type: 'chat', message: 'hi' } })
+    // Within the default settling time.
+    await settle()
+    backend.testBridgeEvent('console', {
+      items: [
+        {
+          type: 'script_error',
+          message: 'attempt to index a nil value',
+          source: { file: 'modules/greeter/init.lua', line: 5 },
+        },
+      ],
+    })
+    const acted = await advanceUntil(pending)
+    expect(acted.events).toEqual([{ type: 'chat', seq: 1, text: '<Tester> hi' }])
+    expect(acted.errors).toEqual([
+      expect.objectContaining({ source: { file: 'modules/greeter/init.lua', line: 5 } }),
+    ])
+  })
+
+  it('says a dev server already up is running, without starting another', async () => {
+    backend.testConnect()
+    const started = await call('start_server')
+    expect(started).toMatchObject({ alreadyRunning: true, server: { bridgeConnected: true } })
+  })
+
+  it('says why the server refused, and that a server without bots has none', async () => {
+    backend.testConnect()
+    const bridge = vi.spyOn(backend, 'bridgeRequest')
+    bridge.mockRejectedValueOnce(new BackendError('plugin', 'reload is busy'))
+    expect((await call('reload')).error).toBe('Reload failed: reload is busy')
+    bridge.mockRejectedValueOnce(new BackendError('plugin', 'no centity "nope"'))
+    expect((await call('spawn_centity', { centity: 'nope' })).error).toBe(
+      'Couldn\'t spawn nope: no centity "nope"',
+    )
+    bridge.mockRejectedValueOnce(new BackendError('unknownMethod', 'Unknown method "bots/join"'))
+    expect((await call('bot_join', { name: 'Tester' })).error).toMatch(/has no bots/)
+  })
+
+  it('opens a file the agent just wrote, before the watcher says so', async () => {
+    backend.testWriteMissed('modules/greeter/notes.lua', '-- new\n')
+    expect(await call('open_in_editor', { path: 'modules/greeter/notes.lua', line: 1 })).toEqual({
+      opened: 'modules/greeter/notes.lua',
+    })
+    expect(app.workspace.getState().activeTab).toBe('script:modules/greeter/notes.lua')
   })
 })

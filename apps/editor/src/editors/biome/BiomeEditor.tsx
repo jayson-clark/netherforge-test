@@ -467,6 +467,8 @@ function SpawnsSection({ model, edit }: { model: BiomeFile; edit: Edit }) {
               return (
                 <FieldGroup
                   key={index}
+                  role="group"
+                  aria-label={`${category} spawn ${index + 1}`}
                   header={
                     <span className={styles.entryHeader}>
                       <span>{spawn.entity || 'a mob'}</span>

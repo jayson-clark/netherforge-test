@@ -3,7 +3,7 @@ import { filesOf, openCentity, openExample, outside, showPanel, test } from './h
 
 const TOWER = 'centities/tower/script.lua'
 
-test('a breakpoint from F9 stops the dev server; the Debug panel shows the stack and variables, and continues', async ({
+test('F9 in the editor sets a breakpoint, a save while paused reloads once it continues, and a rename takes the breakpoint along', async ({
   page,
 }) => {
   const errors = await openExample(page)
@@ -24,18 +24,11 @@ test('a breakpoint from F9 stops the dev server; the Debug panel shows the stack
   await showPanel(page, 'Debug')
   await expect(page.getByRole('list', { name: 'Breakpoints' })).toContainText(`${TOWER}:9`)
 
-  // The plugin stops there: the Debug panel comes forward with the stack and the locals.
+  // The plugin stops there. (What the Debug panel shows of a stop is Debug.test.tsx's.)
   await outside(page, (backend) => backend.testDebugStop(), null)
   await expect(page.getByRole('status', { name: 'Debugger status' })).toHaveText(
     `Paused on a breakpoint at ${TOWER}:9`,
   )
-  await expect(page.getByRole('list', { name: 'Call stack' })).toContainText('on_click')
-  const variables = page.getByRole('treegrid', { name: 'Variables' })
-  await expect(variables.getByRole('row', { name: 'player' })).toContainText('Player Steve')
-
-  // A table opens on demand.
-  await variables.getByRole('row', { name: 'settings' }).locator('[data-twisty]').click()
-  await expect(variables.getByRole('row', { name: 'colors' })).toBeVisible()
 
   // Saving while paused waits: the plugin would refuse the reload until it runs again.
   await page.locator('.monaco-editor .view-line').last().click()

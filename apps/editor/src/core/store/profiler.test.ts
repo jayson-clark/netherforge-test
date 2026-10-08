@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ProfileSample } from '@netherforge/format/types'
-import { MemoryBackend } from '@/core/backend/memory'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
-import { createApp } from '@/state/providers'
+import { openExampleApp, settle } from '@/testing/workspace'
 import { addSample, emptyProfile, handlerKey, sortRows, TIMELINE_TICKS } from './profiler'
 
 const tick = (n: number, nanos = 1_000) => ({ tick: n, nanos, phases: { timers: nanos } })
@@ -83,16 +81,15 @@ describe('the profiler store', () => {
 
   it('subscribes when the bridge comes up and adds what the dev server streams', async () => {
     vi.useFakeTimers()
-    const backend = new MemoryBackend({ projects: exampleProjects(), profileEveryMs: 1000 })
-    const app = createApp(backend)
-    await app.workspace.getState().openProject(EXAMPLE_ROOT)
+    const { backend, app } = await openExampleApp({ backend: { profileEveryMs: 1000 } })
     await app.run.getState().connect()
     await app.profiler.getState().connect()
     backend.testConnect()
-    await vi.advanceTimersByTimeAsync(0)
+    await settle()
     expect(backend.bridgeLog).toContainEqual({ method: 'profiler_subscribe', params: { on: true } })
     expect(app.profiler.getState().subscribed).toBe(true)
 
+    // A batch a second, of 20 ticks each.
     await vi.advanceTimersByTimeAsync(2000)
     const state = app.profiler.getState()
     expect(state.measured).toBe(40)

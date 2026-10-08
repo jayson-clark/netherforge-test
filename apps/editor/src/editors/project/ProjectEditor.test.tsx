@@ -1,8 +1,9 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
-import { AppProvider, createApp, type AppStores } from '@/state/providers'
-import { EXAMPLE_ROOT, exampleFiles, exampleProject, exampleProjects } from '@/testing/fixtures'
+import type { MemoryBackend } from '@/core/backend/memory'
+import { AppProvider, type AppStores } from '@/state/providers'
+import { exampleFiles, exampleProject } from '@/testing/fixtures'
+import { openExampleApp } from '@/testing/workspace'
 import { ProjectEditor } from './ProjectEditor'
 
 const MANIFEST = 'netherforge.json'
@@ -20,11 +21,7 @@ function bare(): string {
 }
 
 beforeEach(async () => {
-  backend = new MemoryBackend({
-    projects: exampleProjects(EXAMPLE_ROOT, { ...exampleProject, [MANIFEST]: bare() }),
-  })
-  app = createApp(backend)
-  await app.workspace.getState().openProject(EXAMPLE_ROOT)
+  ;({ backend, app } = await openExampleApp({ project: { ...exampleProject, [MANIFEST]: bare() } }))
   await app.workspace.getState().openFile(MANIFEST)
 })
 

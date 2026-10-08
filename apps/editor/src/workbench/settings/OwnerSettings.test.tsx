@@ -1,17 +1,15 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
-import { AppProvider, createApp, type AppStores } from '@/state/providers'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
+import type { MemoryBackend } from '@/core/backend/memory'
+import { AppProvider, type AppStores } from '@/state/providers'
 import { OwnerSettings } from './OwnerSettings'
+import { openExampleApp } from '@/testing/workspace'
 
 let backend: MemoryBackend
 let app: AppStores
 
 beforeEach(async () => {
-  backend = new MemoryBackend({ projects: exampleProjects() })
-  app = createApp(backend)
-  await app.workspace.getState().openProject(EXAMPLE_ROOT)
+  ;({ backend, app } = await openExampleApp())
   await app.run.getState().connect()
 })
 

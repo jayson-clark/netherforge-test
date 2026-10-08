@@ -17,38 +17,23 @@ const canonical = (kind: string, path: string, text: string) =>
 
 const items = (page: Page) => page.getByRole('listbox', { name: 'Items' })
 
-test('edits a project item, opens a recipe that uses it, renames it everywhere, and undoes the rename', async ({
+test('opens a recipe from the item it uses, renames the item everywhere, and undoes the rename', async ({
   page,
 }) => {
   await openExampleWithAssets(page)
   await openResource(page, 'ruby', 'Items')
-  const inspector = page.getByRole('complementary', { name: 'Inspector' })
-  // A project item is what every stack of it looks like: no count or damage of its own.
-  await expect(inspector.getByLabel('Item', { exact: true })).toHaveValue('minecraft:paper')
-  await expect(inspector.getByRole('textbox', { name: 'Count' })).toHaveCount(0)
-  await expect(inspector.getByRole('textbox', { name: 'Damage' })).toHaveCount(0)
-  // Its pack model draws the big picture.
+  // Its fields, the tooltip and the recipes list are ItemScreen.test.tsx's: here, its pack
+  // model drawn from the client's assets, and a recipe that uses it opened from it.
   await expect(page.getByLabel('Item preview').locator('img')).toHaveCount(1)
-
-  const name = inspector.getByRole('textbox', { name: 'Name' })
-  await name.fill('<dark_red>Ruby')
-  await name.press('Enter')
-  await inspector.getByRole('combobox', { name: 'Rarity' }).selectOption('epic')
-  await expect(page.getByLabel('Tooltip preview').first()).toContainText('Ruby')
-  await save(page, 'ruby')
-  const written = (await files(page))[RUBY]!
-  expect(JSON.parse(written)).toMatchObject({ name: '<dark_red>Ruby', rarity: 'epic' })
-  expect(written).toBe(canonical('item', RUBY, written))
-
-  // The recipes that make or take it, each a way into its recipe.
   const recipes = page.getByRole('region', { name: 'Recipes', exact: true }).last()
-  await expect(recipes.getByRole('button')).toHaveText(['ruby', 'ruby_dust', 'ruby_sword'])
   await recipes.getByRole('button', { name: 'ruby_sword' }).click()
   await expect(page.getByRole('tab', { name: 'ruby_sword' })).toHaveAttribute(
     'aria-selected',
     'true',
   )
   await expect(page.getByRole('button', { name: 'Square 2: ruby' })).toBeVisible()
+
+  const written = (await files(page))[RUBY]!
 
   // Renaming the item follows it into every file that names it.
   // In place, in the project explorer: F2, type, Enter.

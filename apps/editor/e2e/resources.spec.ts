@@ -90,51 +90,13 @@ test('drags an item to another slot as one undo step', async ({ page }) => {
   expect((await files(page))[SHOP]).not.toBe(before)
 })
 
-test('puts a dialog on the pause screen or the quick actions key', async ({ page }) => {
+// The dialog's fields (its keys, type, buttons, where it shows) are DialogEditor.test.tsx's;
+// this is swapping its script, which opens the new one in a tab, and the file saved clean.
+test('gives a dialog a new script, opened in its tab, and saves it canonically', async ({
+  page,
+}) => {
   await openExample(page)
   await openResource(page, 'welcome')
-  // The example's welcome dialog is on the pause screen.
-  const pause = page.getByRole('checkbox', { name: 'On the pause screen' })
-  const quick = page.getByRole('checkbox', { name: 'On the quick actions key' })
-  await expect(pause).toBeChecked()
-  await expect(quick).not.toBeChecked()
-  await pause.uncheck()
-  await quick.check()
-  await save(page, 'welcome')
-
-  const project = await files(page)
-  const dialog = JSON.parse(project[WELCOME]!)
-  // Off is no key at all, so an unchanged file is never a diff.
-  expect(dialog).not.toHaveProperty('pauseMenu')
-  expect(dialog.quickActions).toBe(true)
-  expect(project[WELCOME]).toBe(canonical('dialog', WELCOME, project[WELCOME]!))
-})
-
-test('adds a dialog button and gives the dialog a new script', async ({ page }) => {
-  await openExample(page)
-  await openResource(page, 'welcome')
-  // A body element's key, which scripts and problems name it by.
-  await page
-    .getByRole('list', { name: 'Body' })
-    .getByRole('button', { name: 'Message: Tell us what to call you', exact: true })
-    .click()
-  const key = page.getByRole('textbox', { name: 'Key' })
-  await expect(key).toHaveValue('prompt')
-  await key.fill('intro')
-  await key.press('Enter')
-  await expect(page.getByRole('button', { name: 'Add button' })).toBeDisabled()
-  await page.getByRole('combobox', { name: 'Type' }).selectOption('confirmation')
-  await page.getByRole('button', { name: 'Add button' }).click()
-
-  const label = page.getByRole('textbox', { name: 'Label' })
-  await label.fill('Not now')
-  await label.press('Enter')
-  await expect(
-    page
-      .getByRole('region', { name: 'Dialog preview' })
-      .getByRole('button', { name: 'Button button' }),
-  ).toContainText('Not now')
-
   // One script per dialog: swap the example's for a new one.
   await page.getByRole('button', { name: 'Unlink' }).click()
   await page.getByRole('button', { name: 'New script' }).click()
@@ -150,11 +112,7 @@ test('adds a dialog button and gives the dialog a new script', async ({ page }) 
   await save(page, 'welcome')
 
   const project = await files(page)
-  const dialog = JSON.parse(project[WELCOME]!)
-  expect(dialog.type).toBe('confirmation')
-  expect(dialog.buttons[1]).toEqual({ key: 'button', label: 'Not now' })
-  expect(dialog.body[0].key).toBe('intro')
-  expect(dialog.script).toEqual({ file: 'script_2.lua' })
+  expect(JSON.parse(project[WELCOME]!).script).toEqual({ file: 'script_2.lua' })
   const script = project['dialogs/welcome/script_2.lua']!
   expect(script.startsWith('local this = this --[[@as Dialog]]\n')).toBe(true)
   expect(script).toContain('this:on("press", function(event)')

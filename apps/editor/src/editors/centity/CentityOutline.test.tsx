@@ -1,21 +1,19 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
 import { modelOf } from '@/core/store/documents'
 import type { CentityFile } from '@/core/format'
 import { viewOf } from '@/editors/views'
-import { AppProvider, createApp, type AppStores } from '@/state/providers'
-import { EXAMPLE_ROOT, exampleProject } from '@/testing/fixtures'
+import { AppProvider, type AppStores } from '@/state/providers'
 import { CentityOutline } from './CentityOutline'
+import { openExampleApp } from '@/testing/workspace'
 
 const TOWER = 'centities/tower/centity.json'
 
 let app: AppStores
 
 beforeEach(async () => {
-  app = createApp(new MemoryBackend({ projects: { [EXAMPLE_ROOT]: exampleProject } }))
-  await app.workspace.getState().openProject(EXAMPLE_ROOT)
+  ;({ app } = await openExampleApp())
   await app.workspace.getState().openFile(TOWER)
 })
 

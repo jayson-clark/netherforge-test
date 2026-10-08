@@ -56,7 +56,10 @@ test('previews a structure, then captures it again from the dev server', async (
   await expect(counts.getByRole('row').first()).toHaveText('minecraft:stone_bricks9')
   await expect(counts).toContainText('minecraft:oak_stairs1')
   // The preview drew the fixture's models: the bricks' hidden faces are left out.
-  await expect(page.getByLabel('Faces drawn')).toContainText('hidden ones left out')
+  // The first draw is the preview's heaviest work, which a loaded machine slows.
+  await expect(page.getByLabel('Faces drawn')).toContainText('hidden ones left out', {
+    timeout: 15_000,
+  })
   await expect(page.getByLabel('Structure preview').locator('canvas')).toBeVisible()
 
   await openResource(page, 'big', 'Structures')

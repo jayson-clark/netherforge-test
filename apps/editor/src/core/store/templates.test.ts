@@ -5,8 +5,10 @@ import { TEMPLATES, templateLocation } from '@/core/templates'
 import { createWorkspace } from './workspace'
 
 const ROOT = '/memory/fresh'
-const settle = () => new Promise((resolve) => setTimeout(resolve, 20))
-/** Until the store's revalidation has read [namespace]'s package (a fixed wait loses to a loaded machine). */
+/**
+ * Until the store's revalidation has read [namespace]'s package. Reading one hashes it
+ * (WebCrypto, off the JS thread), so it's waited for as state, not on a clock.
+ */
 const packageLoaded = (
   ws: () => ReturnType<ReturnType<typeof createWorkspace>['getState']>,
   namespace: string,
@@ -16,7 +18,6 @@ async function openFresh() {
   const backend = new MemoryBackend({ projects: { [ROOT]: newProjectFiles('Fresh', '26.3') } })
   const store = createWorkspace(backend)
   await store.getState().openProject(ROOT)
-  await settle()
   return { backend, store, ws: () => store.getState() }
 }
 

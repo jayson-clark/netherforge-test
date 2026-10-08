@@ -1,16 +1,14 @@
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { AppProvider, createApp, type AppStores } from '@/state/providers'
-import { MemoryBackend } from '@/core/backend/memory'
+import { AppProvider, type AppStores } from '@/state/providers'
 import { MANIFEST_FILE } from '@/core/format'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
 import { EditorArea } from './EditorArea'
+import { openExampleApp } from '@/testing/workspace'
 
 let app: AppStores
 
 beforeEach(async () => {
-  app = createApp(new MemoryBackend({ projects: exampleProjects() }))
-  await app.workspace.getState().openProject(EXAMPLE_ROOT)
+  ;({ app } = await openExampleApp())
   await app.workspace.getState().openFile(MANIFEST_FILE)
 })
 

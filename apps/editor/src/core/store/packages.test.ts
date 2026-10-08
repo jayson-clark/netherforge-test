@@ -1,24 +1,34 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryBackend, type FileContents } from '@/core/backend/memory'
 import { LOCK_FILE, MANIFEST_FILE, type ItemFile } from '@/core/format'
-import { EXAMPLE_ROOT, exampleProject, exampleProjects, libraryProject } from '@/testing/fixtures'
+import { EXAMPLE_ROOT, exampleProject, libraryProject } from '@/testing/fixtures'
+import { exampleWorkspace, settle } from '@/testing/workspace'
 import { directDependencies, fileUrl, packageText } from './packages'
 import { readOnlyReason } from './project'
+import { VALIDATE_DELAY_MS } from './validation'
 import { createWorkspace } from './workspace'
 
-const settle = () => new Promise((resolve) => setTimeout(resolve, 20))
-/** Past the store's validation delay. */
-const revalidated = () => new Promise((resolve) => setTimeout(resolve, 300))
+/** Past the store's validation delay: a change on disk has been read and validated. */
+const revalidated = () => settle(VALIDATE_DELAY_MS)
+
+/**
+ * Until [check] holds, moving the fake clock on as it polls. Reading a package hashes its
+ * files with WebCrypto, which answers off the JS thread rather than on the fake clock, so
+ * what follows a package being read is waited for as state.
+ */
+const eventually = (check: () => void) => vi.waitFor(check, { timeout: 5000, interval: 20 })
 
 const LOCK = exampleProject[LOCK_FILE] as string
 
+beforeEach(() => vi.useFakeTimers())
+afterEach(() => vi.useRealTimers())
+
 async function open(project: Record<string, FileContents> = exampleProject) {
-  const backend = new MemoryBackend({ projects: exampleProjects(EXAMPLE_ROOT, project) })
+  const { backend, workspace, ws } = exampleWorkspace({ project })
   const writes = vi.spyOn(backend, 'writeText')
-  const store = createWorkspace(backend)
-  await store.getState().openProject(EXAMPLE_ROOT)
+  await ws().openProject(EXAMPLE_ROOT)
   await settle()
-  return { backend, store, ws: () => store.getState(), writes }
+  return { backend, store: workspace, ws, writes }
 }
 
 describe('packages', () => {
@@ -44,8 +54,7 @@ describe('packages', () => {
     expect(stale).not.toBe(LOCK)
     const { backend, ws } = await open({ ...exampleProject, [LOCK_FILE]: stale })
     expect(backend.testFiles()[LOCK_FILE]).toBe(LOCK)
-    await revalidated()
-    expect(ws().problems).toEqual([])
+    await eventually(() => expect(ws().problems).toEqual([]))
   })
 
   it('writes a missing lock, and removes one once nothing is depended on', async () => {
@@ -58,10 +67,8 @@ describe('packages', () => {
     delete manifest.dependencies
     // As git or another editor would change it.
     await backend.writeText(MANIFEST_FILE, JSON.stringify(manifest, null, 2))
-    await revalidated()
-    await revalidated()
-    expect(backend.testFiles()[LOCK_FILE]).toBeUndefined()
-    expect(ws().outline?.packages ?? {}).toEqual({})
+    await eventually(() => expect(backend.testFiles()[LOCK_FILE]).toBeUndefined())
+    await eventually(() => expect(ws().outline?.packages ?? {}).toEqual({}))
   })
 
   it('reports a dependency that points nowhere, without a lock to write', async () => {
@@ -157,10 +164,15 @@ describe('git packages', () => {
       gitRepos: { [url]: repo },
     })
     const store = createWorkspace(backend)
-    await store.getState().openProject(EXAMPLE_ROOT)
-    await settle()
-    await revalidated()
-    return { backend, repo, ws: () => store.getState() }
+    const ws = () => store.getState()
+    await ws().openProject(EXAMPLE_ROOT)
+    // Fetched, locked, read again at the locked commit and validated.
+    await eventually(() => {
+      expect(backend.testFiles()[LOCK_FILE]).toBeDefined()
+      expect(ws().outline?.packages?.library?.location).toBe(`git:${first}`)
+      expect(ws().problems).toEqual([])
+    })
+    return { backend, repo, ws }
   }
 
   const lockedSource = (backend: MemoryBackend) =>
@@ -192,9 +204,10 @@ describe('git packages', () => {
     await revalidated()
     expect(ws().outline?.packages?.library?.location).toBe(`git:${first}`)
     expect(await ws().updatePackages()).toBe(true)
-    await revalidated()
-    expect(lockedSource(backend)).toMatchObject({ commit: second })
-    expect(ws().outline?.packages?.library?.location).toBe(`git:${second}`)
+    await eventually(() => {
+      expect(lockedSource(backend)).toMatchObject({ commit: second })
+      expect(ws().outline?.packages?.library?.location).toBe(`git:${second}`)
+    })
     expect(ws().problems).toEqual([])
   })
 
@@ -203,10 +216,9 @@ describe('git packages', () => {
     const manifest = JSON.parse(backend.testFiles()[MANIFEST_FILE]!) as Record<string, unknown>
     manifest.dependencies = { library: { git: 'https://example.com/gone.git' } }
     await backend.writeText(MANIFEST_FILE, JSON.stringify(manifest, null, 2))
-    await revalidated()
-    await revalidated()
-    const problem = ws().problems.find((it) => it.code === 'package.git')
-    expect(problem?.message).toContain('gone.git')
+    await eventually(() =>
+      expect(ws().problems.find((it) => it.code === 'package.git')?.message).toContain('gone.git'),
+    )
     expect(lockedSource(backend)).toMatchObject({ commit: first })
     expect(await ws().updatePackages()).toBe(false)
   })

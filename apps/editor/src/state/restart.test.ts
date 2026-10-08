@@ -1,15 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
-import { createApp } from '@/state/providers'
-import { EXAMPLE_ROOT, exampleProjects } from '@/testing/fixtures'
+import { openExampleApp } from '@/testing/workspace'
 
 const FILE = 'advancements/treasure_hunter.json'
 
 async function open() {
-  const backend = new MemoryBackend({ projects: exampleProjects(), serverDelayMs: 0 })
-  const app = createApp(backend)
+  const { backend, app } = await openExampleApp({ backend: { serverDelayMs: 0 } })
   await app.run.getState().connect()
-  await app.workspace.getState().openProject(EXAMPLE_ROOT)
   backend.testConnect()
   return { backend, app }
 }
