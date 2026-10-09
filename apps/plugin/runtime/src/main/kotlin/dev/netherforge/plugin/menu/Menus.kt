@@ -12,6 +12,8 @@ import dev.netherforge.plugin.api.MenuClickEvent
 import dev.netherforge.plugin.api.MenuDragEvent
 import dev.netherforge.plugin.api.MenuEvent
 import dev.netherforge.plugin.lua.LuaRef
+import dev.netherforge.plugin.platform.InventoryOps
+import dev.netherforge.plugin.platform.InventoryRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.MenuClick
 import dev.netherforge.plugin.platform.MenuOps
@@ -50,6 +52,15 @@ import java.util.UUID
  * tick: while a close is being handled the closing player can still count as a
  * viewer.
  *
+ * A slot of a window that isn't shared can be **bound** to a slot of a
+ * player's storage ([InventoryRef.Storage], kept in their own save data): it's
+ * a view of it from then on, and whatever goes in or out of it is written
+ * there as it happens. A click or drag the game applies is heard straight
+ * after ([changed]), before the server can save anyone; a script's writes to
+ * either side write the other. So an item is only ever in the storage or out
+ * of it, never in the window alone, which is just a picture of it: unbinding
+ * empties the slot, and so does the storage's player leaving.
+ *
  * A script can also make a menu from a table (`nf.menus.create`): a
  * [Template], which has no file and no script. Its windows are like
  * any other window (one per opening, never shared), and every event on one
@@ -59,6 +70,7 @@ import java.util.UUID
  */
 class Menus(
     private val ops: MenuOps,
+    private val inventories: InventoryOps,
     private val scripts: Scripts,
     private val readSource: (String) -> String?,
     /**
@@ -76,6 +88,9 @@ class Menus(
     private val byUuid = HashMap<UUID, Window>()
     private val retiring = LinkedHashSet<Window>()
     private val templates = LinkedHashMap<String, Template>()
+
+    /** Which slot of a storage a window's slot shows. */
+    data class Binding(val storage: InventoryRef.Storage, val index: Int)
 
     /** A menu a script made: what its windows start as, for as long as the scope [owner] lasts. */
     class Template(val id: String, val definition: CompiledMenu, val owner: Int)
@@ -102,6 +117,9 @@ class Menus(
 
         /** The menu's script's scope on this window, while it runs. */
         var scope: Scope? = null
+
+        /** Its slots bound to a storage's, by slot. */
+        internal val bindings = HashMap<Int, Binding>()
 
         /** What the server was last told the title is, skin included. */
         internal var pushedTitle: String = ""
@@ -320,7 +338,9 @@ class Menus(
             templateOf(window)?.let { Events.MENUTEMPLATE_CLICK to it },
             Events.NF_MENU_CLICK to null
         )
-        return scripts.emit(path, event, precancelled = window.locked && click.movesItems)
+        // A locked window's bound slots are still the player's to put things in and take them out of, by hand.
+        val byHand = click.top && click.slot != null && click.slot in window.bindings && click.click != "double"
+        return scripts.emit(path, event, precancelled = window.locked && click.movesItems && !byHand)
     }
 
     /** A drag of [cursor] over [slots] of the window. A locked window starts it already cancelled. True means cancel. */
@@ -329,7 +349,77 @@ class Menus(
         val menu = LuaHandle.Menu(window.id)
         val event = MenuDragEvent(playerHandle(player), menu, slots.map { it.toLong() }, cursor, window.context)
         val path = listOfNotNull(Events.MENU_DRAG to menu, templateOf(window)?.let { Events.MENUTEMPLATE_DRAG to it })
-        return scripts.emit(path, event, precancelled = window.locked && slots.isNotEmpty())
+        return scripts.emit(path, event, precancelled = window.locked && slots.isNotEmpty() && !slots.all { it in window.bindings })
+    }
+
+    // ---- storage bindings ------------------------------------------------------
+
+    /**
+     * Makes [slot] of [window] show slot [index] of [storage], with what's there now. False when the window is gone or
+     * the storage's player is offline. The caller has checked the window isn't shared and the slots are in range.
+     */
+    fun bind(window: Window, slot: Int, storage: InventoryRef.Storage, index: Int): Boolean {
+        if (window.gone) return false
+        val held = inventories.contents(storage) ?: return false
+        window.bindings[slot] = Binding(storage, index)
+        ops.setItem(window.uuid, slot, held[index])
+        return true
+    }
+
+    /** Stops [slot] showing a storage's, and empties it: what it showed is still in the storage. False when it wasn't bound. */
+    fun unbind(window: Window, slot: Int): Boolean {
+        window.bindings.remove(slot) ?: return false
+        ops.setItem(window.uuid, slot, null)
+        return true
+    }
+
+    fun binding(window: Window, slot: Int): Binding? = window.bindings[slot]
+
+    /** The game moved items in [slots] of [uuid]: what the bound ones hold now is the storage's. */
+    fun changed(uuid: UUID, slots: Set<Int>) {
+        val window = windowOf(uuid) ?: return
+        for (slot in slots) {
+            val binding = window.bindings[slot] ?: continue
+            if (!inventories.setItem(binding.storage, binding.index, ops.item(uuid, slot))) unbind(window, slot)
+        }
+    }
+
+    /** A script changed [storage]: every slot bound to it shows what it has now. */
+    fun storageChanged(storage: InventoryRef.Storage) {
+        val contents = inventories.contents(storage)
+        for (window in windows.values) {
+            for ((slot, binding) in window.bindings.entries.toList()) {
+                if (!binding.storage.same(storage)) continue
+                val held = binding.storage.takeIf { it.size == storage.size }?.let { contents } ?: inventories.contents(binding.storage)
+                ops.setItem(window.uuid, slot, held?.getOrNull(binding.index))
+            }
+        }
+    }
+
+    /** Who's looking at a window with a slot bound to [storage]. */
+    fun viewersOf(storage: InventoryRef.Storage): List<UUID> = windows.values.filter { window ->
+        window.bindings.values.any { it.storage.same(storage) }
+    }.flatMap { ops.viewers(it.uuid) }.distinct()
+
+    /** A script wrote [slot] of [window] (already written): when it's bound, the storage holds it too. */
+    private fun wroteThrough(window: Window, slot: Int) {
+        val binding = window.bindings[slot] ?: return
+        if (!inventories.setItem(binding.storage, binding.index, ops.item(window.uuid, slot))) unbind(window, slot)
+    }
+
+    /** Puts every bound slot of [window] back as its storage has it: after it was rebuilt. */
+    private fun showBound(window: Window) {
+        for ((slot, binding) in window.bindings.entries.toList()) {
+            val held = inventories.contents(binding.storage)
+            if (held == null) unbind(window, slot) else ops.setItem(window.uuid, slot, held[binding.index])
+        }
+    }
+
+    /** [player] left: every slot bound to one of their storages stops showing it. */
+    override fun playerQuit(player: PlayerRef) {
+        for (window in windows.values) {
+            for ((slot, binding) in window.bindings.entries.toList()) if (binding.storage.player == player.uuid) unbind(window, slot)
+        }
     }
 
     // ---- reload --------------------------------------------------------------
@@ -372,6 +462,8 @@ class Menus(
                 window.skin = next.skin?.text
                 window.locked = next.locked
                 build(window)
+                window.bindings.keys.removeAll { it >= next.size }
+                showBound(window)
                 for (viewer in viewers) ops.open(window.uuid, viewer)
             } else {
                 window.definition = next
@@ -379,6 +471,8 @@ class Menus(
                 if (previous.skin != next.skin) window.skin = next.skin?.text
                 if (previous.locked != next.locked) window.locked = next.locked
                 for (slot in (previous.slots.keys + next.slots.keys).toSortedSet()) {
+                    // A bound slot shows its storage's, whatever the file says.
+                    if (slot in window.bindings) continue
                     val before = previous.slots[slot]?.item
                     val after = next.slots[slot]?.item
                     if (before != after) ops.setItem(window.uuid, slot, after?.let { ItemData(it) })
@@ -405,22 +499,26 @@ class Menus(
 
     fun item(window: Window, slot: Int): ItemData? = ops.item(window.uuid, slot)
 
-    /** Writes a slot; null empties it. False when the item can't be built, or the window is gone. */
-    fun setItem(window: Window, slot: Int, item: ItemData?): Boolean = ops.setItem(window.uuid, slot, item)
+    /** Writes a slot (and the storage slot it's bound to); null empties it. False when the item can't be built, or the window is gone. */
+    fun setItem(window: Window, slot: Int, item: ItemData?): Boolean {
+        if (!ops.setItem(window.uuid, slot, item)) return false
+        wroteThrough(window, slot)
+        return true
+    }
 
-    /** Puts [item] wherever it fits. Returns how many didn't (all of them when the window is gone). */
+    /** Puts [item] wherever it fits (bound slots too, and so their storage). Returns how many didn't (all of them when the window is gone). */
     fun add(window: Window?, item: ItemData): Int {
         if (window == null) return item.def.count ?: 1
-        return ops.add(window.uuid, item)
+        return ops.add(window.uuid, item).also { for (slot in window.bindings.keys.toList()) wroteThrough(window, slot) }
     }
 
     /** Every filled slot. */
     fun items(window: Window): Map<Int, ItemData> =
         (0 until window.size).mapNotNull { slot -> ops.item(window.uuid, slot)?.let { slot to it } }.toMap()
 
-    /** Empties one slot, or every slot when [slot] is null. */
+    /** Empties one slot, or every slot when [slot] is null (and the storage slots they're bound to). */
     fun clear(window: Window, slot: Int?): Boolean {
-        for (each in slot?.let { listOf(it) } ?: (0 until window.size)) ops.setItem(window.uuid, each, null)
+        for (each in slot?.let { listOf(it) } ?: (0 until window.size)) setItem(window, each, null)
         return true
     }
 
@@ -511,6 +609,8 @@ class Menus(
         stopScripts(window)
         scripts.dropTarget(LuaHandle.Menu(window.id))
         window.gone = true
+        // Only a picture of the storage: nothing to write.
+        window.bindings.clear()
         windows.remove(window.id)
         byUuid.remove(window.uuid)
         retiring.remove(window)

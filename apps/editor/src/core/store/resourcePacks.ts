@@ -33,11 +33,28 @@ export interface ResourcePacks {
    */
   images: Record<string, ImageInfo>
   compiled: ResourcePacksPreview
+  /**
+   * Each pack's model files (`models/<path>.json`) that parse, by pack id
+   * then path under `models/`, and the textures under its `textures/`
+   * folder (`gems/ruby.png`), which a model's plain texture paths name.
+   */
+  models: Record<string, PackModels>
+}
+
+/**
+ * One pack's model files, parsed (the game's JSON model, which `minecraft/client/model`'s
+ * `RawModel` reads), and its texture files, for drawing the models.
+ */
+export interface PackModels {
+  files: Record<string, { textures?: Record<string, unknown> }>
+  textures: string[]
 }
 
 export type ResourcePacksStore = StoreApi<ResourcePacks>
 
 const RESOURCE_PACK_FILE = /^resource_packs\/([^/]+)\/pack\.json$/
+const RESOURCE_PACK_MODEL = /^resource_packs\/([^/]+)\/models\/(.+\.json)$/
+const RESOURCE_PACK_TEXTURE = /^resource_packs\/([^/]+)\/textures\/(.+\.png)$/
 
 /** An open pack's text per model: models are immutable, and this runs on every store change. */
 const modelTexts = new WeakMap<object, string>()
@@ -75,6 +92,41 @@ export function resourcePackTexts(s: Workspace): Record<string, string> {
       if (match && text != null) out[`${namespace}:${match[1]!}`] = text
     }
   }
+  return out
+}
+
+/** Every pack's model files and textures, from open documents first, then disk; then each package's, as `ns:id`. */
+export function resourcePackModels(s: Workspace): Record<string, PackModels> {
+  const out: Record<string, PackModels> = {}
+  const of = (pack: string) => (out[pack] ??= { files: {}, textures: [] })
+  const read = (pack: string, path: string, text: string | undefined) => {
+    if (text === undefined) return
+    try {
+      const json: unknown = JSON.parse(text)
+      if (json && typeof json === 'object' && !Array.isArray(json))
+        of(pack).files[path] = json as { textures?: Record<string, unknown> }
+    } catch {
+      // Problems will say what's wrong with it.
+    }
+  }
+  for (const path of s.files) {
+    const texture = RESOURCE_PACK_TEXTURE.exec(path)
+    if (texture) of(texture[1]!).textures.push(texture[2]!)
+    const model = RESOURCE_PACK_MODEL.exec(path)
+    if (!model) continue
+    const doc = s.docs[path]
+    read(model[1]!, model[2]!, doc && !doc.deleted && !isModel(doc) ? doc.text : s.diskTexts[path])
+  }
+  for (const [namespace, pkg] of Object.entries(s.outline?.packages ?? {})) {
+    const folder = s.packages.folders[pkg.location]
+    for (const [path, text] of Object.entries(folder?.files ?? {})) {
+      const texture = RESOURCE_PACK_TEXTURE.exec(path)
+      if (texture) of(`${namespace}:${texture[1]!}`).textures.push(texture[2]!)
+      const model = RESOURCE_PACK_MODEL.exec(path)
+      if (model && text != null) read(`${namespace}:${model[1]!}`, model[2]!, text)
+    }
+  }
+  for (const pack of Object.values(out)) pack.textures.sort()
   return out
 }
 
@@ -129,6 +181,7 @@ export function createResourcePacks(
     files: {},
     images: {},
     compiled: { resourcePacks: {}, problems: [] },
+    models: {},
   }))
 
   // Which pictures were last measured, at which file stamps; and which load is current.
@@ -164,6 +217,9 @@ export function createResourcePacks(
   }
 
   const update = (state: Workspace) => {
+    const models = resourcePackModels(state)
+    if (JSON.stringify(models) !== JSON.stringify(store.getState().models))
+      store.setState({ models })
     const texts = resourcePackTexts(state)
     const namespace = state.outline?.namespace ?? ''
     const current = store.getState()

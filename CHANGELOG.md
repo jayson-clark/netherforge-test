@@ -90,6 +90,58 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Added
 
+- **Items a player keeps.** `player:storage(name, size)` is an inventory of
+  the project's own saved in the player's own save data, with their
+  inventory in the same write, so a crash can't duplicate or lose an item
+  between the two. `slot:bind(storage, index)` shows one of its slots in a
+  menu window. What players move in or out is saved the moment the game
+  moves it, so closing, leaving, dying or reloading never leaves an item in
+  the window alone. Bound slots stay usable in a locked window.
+- **A HUD of the project's own.** A resource pack's `hud` hides any of the
+  game's health, hunger, armour, air and experience bars for every player,
+  and adds bars, rows of icons and lines of text at GUI-pixel positions
+  around the hotbar, which scripts fill in per player: `player:hud()` and
+  its `fill_bar`, `set_icons` and `set_text`. It's drawn in the action bar,
+  as a font of the pack's own, and shares the line with
+  `player:send_actionbar`. Hiding the game's elements takes the names of its
+  HUD sprites, which the editor writes into `client/vanilla.json` from your
+  Minecraft (import it again if you imported it before this release).
+- **Block carriers.** A block's `carrier` picks the game block it's held as,
+  which decides its physics: `note_block` (a solid opaque cube, as before),
+  `tripwire` (no collision, hides nothing: plants and decorations) or
+  `leaves` (a solid cube the neighbours show through: glass, crystals,
+  pots). With a model look, a block can be any shape the pack can draw,
+  placed by players and terrains alike. Each carrier is held still only once
+  the project uses it (tripwire hooks don't trip while it is), and the
+  editor writes `client/vanilla.json` (the game's own look of string)
+  from your Minecraft so the pack keeps drawing vanilla tripwire.
+- **3D models.** A resource pack's `models/` folder holds the game's JSON
+  models with elements, as Blockbench exports them; an item look or a block
+  look names one with `model`. Format checks what the game would refuse
+  (corners outside -16..32, rotations, faces, texture variables) and warns
+  about display transforms it clamps; a texture the model names by path is
+  the pack's own. Every supported version takes any rotation angle, on one
+  axis or as x/y/z angles. The editor draws them in slots and the viewport.
+- **Model displays.** A centity node can show a resource pack look,
+  `{ "type": "model", "model": "mobs/wing" }`: one display entity per part,
+  however complex. `node:set_model("mobs/wing_2")` swaps the look on the same
+  entity (a metadata update, no respawn), for flipbook animation;
+  `node:model()` reads it back.
+- **Adventure-mode tools that know the project's blocks.** An item's
+  `canBreak` and `canPlaceOn` (in item files, menus, dialogs, loot, and items
+  scripts make) take the project's blocks by id (a package's as `ns:id`),
+  `#tags` of blocks (the game's, or one a project datapack defines in
+  `data/<ns>/tags/block/`, which now pass through), and `*` for any block. A
+  project block is matched by the state the server holds it in, and stacks
+  are rewritten when the project's blocks change and the states move.
+  **Breaking:** a plain id there is now one of the project's blocks; the
+  game's are written `minecraft:stone`.
+- **Spawning by time, moon, weather and script conditions.** A centity's
+  `spawning` takes `time` (`"day"`, `"night"`, or `{ "min", "max" }` ticks of
+  the day, running through midnight when `min` is above `max`), `moonPhase`,
+  `weather` (`clear`, `rain`, `thunder`) and `when`: the name of a condition a
+  module registers with `nf.spawning.condition(name, callback)`, asked last
+  for each place. `World:moon_phase()` tells scripts tonight's moon.
 - **Ores in the project's own ground.** An ore's `replaceCustomBlocks` lists
   project blocks its veins may replace, besides `replace`'s game blocks, so an
   ore can sit in a custom stone or layer. A decoration's `onCustomBlocks`

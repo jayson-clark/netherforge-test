@@ -3,6 +3,7 @@ package dev.netherforge.plugin.api
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.menu.Menus
+import dev.netherforge.plugin.platform.InventoryRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.session.ProjectSession
 import java.util.UUID
@@ -192,6 +193,33 @@ internal class SlotImpl(private val session: ProjectSession) : SlotApi {
     override fun setItem(self: LuaHandle.Slot, item: ItemData?): Boolean {
         val window = session.window(self.menu) ?: return false
         return menus.setItem(window, slotIn(window, self.index), item)
+    }
+
+    override fun bind(self: LuaHandle.Slot, storage: LuaHandle.Inventory, index: Long?): Boolean {
+        val ref = InventoryKeys.ref(storage) as? InventoryRef.Storage
+            ?: throw LuaApiException("only a player's storage (player:storage) can be bound to a menu slot")
+        val at = index ?: self.index
+        if (at !in 0 until ref.size) {
+            throw LuaApiException("slot $at is outside this storage: it has ${ref.size} slots, 0 to ${ref.size - 1}")
+        }
+        val window = session.window(self.menu) ?: return false
+        if (window.shared) {
+            throw LuaApiException(
+                "a shared menu's window can't show a storage: everyone would see one player's items (bind a window of their own)"
+            )
+        }
+        return menus.bind(window, slotIn(window, self.index), ref, at.toInt())
+    }
+
+    override fun unbind(self: LuaHandle.Slot): Boolean {
+        val window = session.window(self.menu) ?: return false
+        return menus.unbind(window, slotIn(window, self.index))
+    }
+
+    override fun binding(self: LuaHandle.Slot): SlotBinding? {
+        val window = session.window(self.menu) ?: return null
+        val binding = menus.binding(window, slotIn(window, self.index)) ?: return null
+        return SlotBinding(InventoryKeys.of(binding.storage), binding.index.toLong())
     }
 }
 

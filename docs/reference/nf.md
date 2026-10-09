@@ -2,7 +2,7 @@
 
 # nf
 
-Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
+Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
 
 A table of functions: call them with a dot.
 

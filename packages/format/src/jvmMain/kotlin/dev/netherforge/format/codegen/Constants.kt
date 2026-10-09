@@ -6,6 +6,8 @@ import dev.netherforge.format.biome.BiomeColors
 import dev.netherforge.format.biome.BiomeMusic
 import dev.netherforge.format.biome.BiomeSpawn
 import dev.netherforge.format.biome.MoodSound
+import dev.netherforge.format.block.BlockCarriers
+import dev.netherforge.format.block.VanillaFile
 import dev.netherforge.format.centity.ResolvedPhysics
 import dev.netherforge.format.centity.SpawningDef
 import dev.netherforge.format.centity.TextDisplay
@@ -105,6 +107,12 @@ internal object Constants {
         append("export const RESOURCE_PACK_SOUND_KEY_RULE = ${str(PackSounds.KEY_RULE)}\n")
         append("/** The default font's advances, which the editor writes from the imported client for the server to measure text. */\n")
         append("export const DEFAULT_FONT_FILE = ${str(DefaultFontFile.FILE)}\n")
+        append(
+            "/** The game's own blockstate files of the blocks custom blocks are held in, which the editor writes from the imported client. */\n"
+        )
+        append("export const VANILLA_FILE = ${str(VanillaFile.FILE)}\n")
+        append("/** The blocks whose states only the client's blockstate file can draw, which that file holds: tripwire. */\n")
+        append("export const VANILLA_LOOK_BLOCKS = [${str(BlockCarriers.TRIPWIRE)}] as const\n")
         append("/** The shape of game data the editor reads (`GameDataBundle.schema`): a cached export of another is stale. */\n")
         append("export const GAME_DATA_SCHEMA = ${GameDataBundle.SCHEMA}\n")
         append("/** The oldest Minecraft version a project may target. */\n")

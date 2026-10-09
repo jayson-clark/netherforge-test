@@ -4,8 +4,12 @@ import dev.netherforge.format.centity.BlockDisplay
 import dev.netherforge.format.centity.CentityCompiler
 import dev.netherforge.format.centity.CentityFile
 import dev.netherforge.format.centity.CentityValidator
+import dev.netherforge.format.centity.DayPeriod
+import dev.netherforge.format.centity.MoonPhase
 import dev.netherforge.format.centity.NodeDef
 import dev.netherforge.format.centity.SpawnRange
+import dev.netherforge.format.centity.SpawnTime
+import dev.netherforge.format.centity.SpawnWeather
 import dev.netherforge.format.centity.SpawningDef
 import dev.netherforge.format.game.BlockInfo
 import dev.netherforge.format.game.GameDataBundle
@@ -14,6 +18,7 @@ import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.project.CentityKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -128,5 +133,73 @@ class CentitySpawningTest {
         assertEquals(true, CentityCompiler.compile("c", file).spawning?.keepOnInteract)
         // Absent stays out of the file.
         assertTrue("keepOnInteract" !in CentityKind.write(CentityFile(nodes = nodes, spawning = SpawningDef())))
+    }
+
+    private fun parse(spawning: String): CanonicalJson.Parsed<CentityFile> =
+        CentityKind.parse("""{ "nodes": { "root": {} }, "spawning": $spawning }""", "centities/c/centity.json")
+
+    @Test
+    fun timeIsADayHalfOrARangeOfTicksThatMayRunThroughMidnight() {
+        val night = (parse("""{ "time": "night" }""") as CanonicalJson.Parsed.Ok).value.spawning!!.time!!
+        assertEquals(DayPeriod.NIGHT, night.period)
+        assertTrue(13_000 in night && 22_999 in night)
+        assertFalse(23_000 in night || 12_999 in night || 6000 in night)
+        val day = SpawnTime(period = DayPeriod.DAY)
+        assertTrue(23_000 in day && 0 in day && 12_999 in day, "day runs through midnight, from sunrise")
+        assertFalse(13_000 in day)
+        // Every tick is in exactly one half.
+        assertTrue((0..SpawnTime.LAST_TICK).all { (it in day) != (it in night) })
+
+        val late = (parse("""{ "time": { "min": 22000, "max": 2000 } }""") as CanonicalJson.Parsed.Ok).value.spawning!!.time!!
+        assertTrue(22_000 in late && 23_999 in late && 0 in late && 2000 in late)
+        assertFalse(2001 in late || 21_999 in late)
+        val evening = SpawnTime(range = SpawnRange(min = 12_000))
+        assertTrue(12_000 in evening && SpawnTime.LAST_TICK in evening)
+        assertFalse(0 in evening)
+
+        // Written back as it was read.
+        for (time in listOf("\"day\"", "\"night\"", "{ \"min\": 22000, \"max\": 2000 }", "{ \"max\": 500 }")) {
+            val parsed = parse("""{ "time": $time }""") as CanonicalJson.Parsed.Ok
+            val text = CentityKind.write(parsed.value)
+            assertEquals(
+                parsed.value.spawning,
+                (CentityKind.parse(text, "centities/c/centity.json") as CanonicalJson.Parsed.Ok).value.spawning
+            )
+        }
+        assertTrue("\"time\": \"night\"" in CentityKind.write(CentityFile(nodes = nodes, spawning = SpawningDef(time = night))))
+
+        for (bad in listOf("\"dusk\"", "1000", "{ \"min\": 1, \"start\": 2 }", "[\"day\"]")) {
+            assertTrue(parse("""{ "time": $bad }""") is CanonicalJson.Parsed.Failed, bad)
+        }
+    }
+
+    @Test
+    fun ticksOutsideTheDayAndConditionsThatArentNamesAreProblems() {
+        assertEquals(
+            listOf("centity.spawning-time" to "$.spawning.time.min", "centity.spawning-time" to "$.spawning.time.max"),
+            problems(SpawningDef(time = SpawnTime(range = SpawnRange(min = -1, max = 24_000))))
+        )
+        assertTrue(problems(SpawningDef(time = SpawnTime(range = SpawnRange(min = 23_999, max = 0)))).isEmpty())
+        for (good in listOf("blood_moon", "acme:blood_moon")) assertTrue(problems(SpawningDef(condition = good)).isEmpty(), good)
+        for (bad in listOf("Blood Moon", "a:b:c", ":x", "")) {
+            assertEquals(listOf("centity.spawning-when" to "$.spawning.when"), problems(SpawningDef(condition = bad)), bad)
+        }
+    }
+
+    @Test
+    fun moonAndWeatherAreSortedListsAndWhenIsWrittenAsWhen() {
+        val file = CentityFile(
+            nodes = nodes,
+            spawning = SpawningDef(
+                moonPhase = listOf(MoonPhase.NEW_MOON, MoonPhase.FULL_MOON, MoonPhase.NEW_MOON),
+                weather = listOf(SpawnWeather.THUNDER, SpawnWeather.CLEAR),
+                condition = "blood_moon"
+            )
+        )
+        val text = CentityKind.write(file)
+        assertTrue("\"moonPhase\": [\"full_moon\", \"new_moon\"]" in text, text)
+        assertTrue("\"weather\": [\"clear\", \"thunder\"]" in text, text)
+        assertTrue("\"when\": \"blood_moon\"" in text, text)
+        assertEquals("blood_moon", (CentityKind.parse(text, "c") as CanonicalJson.Parsed.Ok).value.spawning?.condition)
     }
 }

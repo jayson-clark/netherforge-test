@@ -2,7 +2,7 @@
 
 # nf.blocks
 
-The project's blocks (`blocks/<id>/`): blocks of its own, drawn by its resource pack, with their own hardness, drops and sounds, held in the world as note block states. A player places one with an item whose `block` names it, or a script with `ProjectBlock:place`.
+The project's blocks (`blocks/<id>/`): blocks of its own, drawn by its resource pack, with their own hardness, drops and sounds, held in the world as states of the game's blocks (their carriers: note blocks, tripwire, leaves). A player places one with an item whose `block` names it, or a script with `ProjectBlock:place`.
 
 A table of functions: call them with a dot.
 

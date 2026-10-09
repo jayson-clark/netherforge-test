@@ -164,6 +164,7 @@ const PAGES: Record<(typeof DOCUMENT_KINDS)[number], string[]> = {
   netherforge: ['project.md', 'packages.md', 'settings.md', 'worlds.md', 'terrain.md'],
   lock: ['packages.md'],
   default_font: ['project.md'],
+  vanilla: ['project.md'],
   structure_generation: ['worlds.md'],
   resource_pack: ['resource-pack.md'],
   particle_effect: ['particle-effect.md', ...STACK],

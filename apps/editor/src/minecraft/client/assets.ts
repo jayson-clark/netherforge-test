@@ -13,6 +13,8 @@ export interface ClientIndex {
   blockstates: string[]
   items: string[]
   fonts: string[]
+  /** The HUD's GUI sprites (`hud/heart/full`); missing from imports before the editor listed them. */
+  sprites?: string[]
 }
 
 export interface ClientAssets extends AssetLoader {

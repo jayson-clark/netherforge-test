@@ -134,6 +134,18 @@ export const worldClass: LuaClass = {
       returns: [{ type: 'integer?' }],
     },
     {
+      name: 'moon_phase',
+      doc: "Tonight's moon, or `nil` once the world has gone. It moves on a phase each day: full, waning gibbous, last quarter, waning crescent, new, waxing crescent, first quarter, waxing gibbous, then full again.",
+      params: [],
+      returns: [
+        {
+          type: '"full_moon"|"waning_gibbous"|"last_quarter"|"waning_crescent"|"new_moon"|"waxing_crescent"|"first_quarter"|"waxing_gibbous"|nil',
+        },
+      ],
+      example:
+        'if world:moon_phase() == "full_moon" then\n  nf.server.broadcast("<red>The moon is full tonight.")\nend',
+    },
+    {
       name: 'weather',
       doc: 'The weather now, or `nil` once the world has gone. Thunder always comes with rain.',
       params: [],

@@ -66,6 +66,7 @@ internal class NfLootImpl(private val session: ProjectSession) : NfLootApi {
         is InventoryRef.Block -> Location(ref.world, ref.x + 0.5, ref.y + 0.5, ref.z + 0.5)
         is InventoryRef.Player -> session.platform.players.location(ref.player)
         is InventoryRef.EnderChest -> session.platform.players.location(ref.player)
+        is InventoryRef.Storage -> session.platform.players.location(ref.player)
         is InventoryRef.Entity -> session.platform.worldEntities.info(ref.entity)?.location
     }
 

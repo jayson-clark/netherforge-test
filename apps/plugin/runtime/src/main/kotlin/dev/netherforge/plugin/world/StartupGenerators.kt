@@ -2,12 +2,12 @@ package dev.netherforge.plugin.world
 
 import dev.netherforge.format.Problem
 import dev.netherforge.format.ProblemCodes
-import dev.netherforge.format.block.BlockCarriers
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.project.BlockKind
 import dev.netherforge.format.project.ProjectManifest
 import dev.netherforge.format.project.ProjectSnapshot
 import dev.netherforge.format.project.TerrainKind
+import dev.netherforge.format.project.plan
 import dev.netherforge.format.terrain.TerrainScriptFailure
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.platform.Platform
@@ -64,8 +64,7 @@ class StartupGenerators(private val platform: Platform, private val source: Proj
             )
             return null
         }
-        val blocks = snapshot.everywhere(BlockKind).mapValues { it.value.compiled }
-        val plan = if (blocks.isEmpty()) null else BlockCarriers.plan(blocks, snapshot.namespace, platform.game)
+        val plan = BlockKind.plan(snapshot.everywhere(BlockKind), snapshot.namespace, platform.game)
         val generators = WorldGenerators.resolveGenerators(
             snapshot.running(TerrainKind),
             snapshot.namespace,

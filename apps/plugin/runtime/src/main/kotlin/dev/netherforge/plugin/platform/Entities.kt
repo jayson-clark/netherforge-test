@@ -230,12 +230,28 @@ sealed interface InventoryRef {
     data class Entity(val entity: UUID) : InventoryRef
 
     data class Block(val world: String, val x: Int, val y: Int, val z: Int) : InventoryRef
+
+    /**
+     * A storage of the project's that [player] keeps (`player:storage`), [name] namespaced (`basic:trinkets`),
+     * kept in their own save data, so it's saved with their inventory in the one write. [size] slots of it are
+     * this inventory; a slot past it keeps its item.
+     */
+    data class Storage(val player: UUID, val name: String, val size: Int) : InventoryRef {
+        /** Another size of the same storage is the same items. */
+        fun same(other: Storage) = player == other.player && name == other.name
+
+        companion object {
+            /** The most slots a storage has. */
+            const val MAX_SIZE = 256
+        }
+    }
 }
 
 /**
  * Real inventories. Everything answers null or false for one that isn't
  * there: a player offline, a block that isn't a container (or in an unloaded
- * chunk), an entity without one.
+ * chunk), an entity without one. A [InventoryRef.Storage] is never on anyone's
+ * screen by itself ([viewers] none, [open] false): menus show it, slot by slot.
  */
 interface InventoryOps {
     /** `player`, `ender_chest`, `chest`, `barrel`, …: the inventory's type, lowercase. */

@@ -1,6 +1,7 @@
 package dev.netherforge.format
 
 import dev.netherforge.format.datapack.DatapackEntry
+import dev.netherforge.format.datapack.DatapackLayout
 import dev.netherforge.format.datapack.PackFormat
 import dev.netherforge.format.datapack.StartupDatapack
 import dev.netherforge.format.datapack.TextJson
@@ -70,6 +71,18 @@ class DatapackTest {
         assertTrue("\"min_format\": 121" in meta && "\"max_format\": 121" in meta, meta)
         assertEquals(emptyList(), load(*files.toList().toTypedArray(), game = game).problems)
         assertFailsWith<TemplateNeedsGame> { DatapackKind.template("trees", null) }
+    }
+
+    @Test
+    fun blockTagsPassThroughBesideWorldgen() {
+        val placed = DatapackLayout.place("data/basic/tags/block/tools/soft.json", emptySet()) as DatapackLayout.Placed.Ok
+        assertEquals("block", placed.path.registry)
+        assertEquals("tools/soft", placed.path.path)
+        assertTrue(placed.path.tag)
+        assertEquals("data/basic/tags/block/tools/soft.json", placed.path.target)
+        // A block itself isn't the datapack's to add, and other registries' tags don't pass.
+        assertTrue(DatapackLayout.place("data/basic/block/soft.json", emptySet()) is DatapackLayout.Placed.Wrong)
+        assertTrue(DatapackLayout.place("data/basic/tags/item/soft.json", emptySet()) is DatapackLayout.Placed.Wrong)
     }
 
     @Test

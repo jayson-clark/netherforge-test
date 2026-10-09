@@ -74,7 +74,7 @@ describe('the item screen', () => {
       within(block)
         .getAllByRole('option')
         .map((it) => it.textContent)
-    expect(options()).toEqual(['(none)', 'floating_lamp', 'ruby_ore'])
+    expect(options()).toEqual(['(none)', 'floating_lamp', 'ruby_crystal', 'ruby_ore'])
     fireEvent.change(block, { target: { value: 'ruby_ore' } })
     expect(ruby().block).toBe('ruby_ore')
     fireEvent.change(block, { target: { value: '' } })

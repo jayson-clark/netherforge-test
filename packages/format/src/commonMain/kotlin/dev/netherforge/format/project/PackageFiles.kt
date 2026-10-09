@@ -96,7 +96,7 @@ object PackageHash {
     fun isContent(path: String): Boolean {
         if (path.split('/').any { it.startsWith(".") }) return false
         val at = Kinds.classify(path) ?: return false
-        return at.kind != null || at.document == ManifestKind.id || at.document == DefaultFontKind.id
+        return at.kind != null || at.document == ManifestKind.id || at.document == DefaultFontKind.id || at.document == VanillaKind.id
     }
 
     /** The text whose SHA-256 is the hash, from every file's hex SHA-256 by path (files that aren't content are left out). */

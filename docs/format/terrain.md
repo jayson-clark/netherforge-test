@@ -383,7 +383,7 @@ Any block a terrain places (in a layer, the stone, the floor, an ore or a decora
 [blocks](block.md), as `customBlock`. It must be a plain cube: a block drawn by a centity can't be generated, since the
 terrain can't spawn its centity (`terrain.custom-block`).
 
-A project block is held in the world as a note block state (see [blocks](block.md#held-as-a-note-block)). A terrain
+A project block is held in the world as a state of its carrier (see [blocks](block.md#carriers)). A terrain
 writes that state into the chunk, and the plugin adopts it as the block as soon as the chunk loads, exactly as it does
 for blocks a world paste brings: the block's drops, `break` handlers and ticks all work in a generated one. The state a
 block has can move when the project's blocks change, which is no problem: the plugin sets the right one when a chunk

@@ -37,7 +37,7 @@
   {
     "severity": "error",
     "file": "datapacks/main/data/case/loot_table/chest.json",
-    "message": "Only worldgen passes through: entries go in data/case/worldgen/<registry>/, tags of them in data/case/tags/worldgen/<registry>/",
+    "message": "Only worldgen passes through, and tags of blocks: entries go in data/case/worldgen/<registry>/, tags of them in data/case/tags/worldgen/<registry>/, and block tags in data/case/tags/block/",
     "code": "datapack.file"
   },
   {

@@ -68,5 +68,19 @@
     "message": "\"Not A Biome\" isn't a reference to a biome: write <id>, or <namespace>:<id> for another package's, or minecraft:<id> for the game's",
     "path": "$.spawning.biomes[0]",
     "code": "reference.syntax"
+  },
+  {
+    "severity": "error",
+    "file": "centities/bad_time/centity.json",
+    "message": "A time of day is a tick from 0 to 23999 (a min above the max runs through midnight)",
+    "path": "$.spawning.time.max",
+    "code": "centity.spawning-time"
+  },
+  {
+    "severity": "error",
+    "file": "centities/bad_time/centity.json",
+    "message": "\"Blood Moon\" isn't a condition's name: lowercase letters, digits and _, starting with a letter or digit, at most 64 characters, or `ns:name` for a package's",
+    "path": "$.spawning.when",
+    "code": "centity.spawning-when"
   }
 ]

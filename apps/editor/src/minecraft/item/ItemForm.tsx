@@ -245,7 +245,7 @@ export function ItemEditor({
         multiline
         dataPath={at('canBreak')}
         value={blocksToText(item.canBreak)}
-        placeholder="Block kinds, one per row (adventure mode)"
+        placeholder="One per row: ruby_ore, minecraft:stone, #minecraft:logs, * (adventure mode)"
         onChange={(text) => set('canBreak', blocksFromText(text))}
       />
       <TextField
@@ -253,7 +253,7 @@ export function ItemEditor({
         multiline
         dataPath={at('canPlaceOn')}
         value={blocksToText(item.canPlaceOn)}
-        placeholder="Block kinds, one per row (adventure mode)"
+        placeholder="One per row: ruby_ore, minecraft:stone, #minecraft:logs, * (adventure mode)"
         onChange={(text) => set('canPlaceOn', blocksFromText(text))}
       />
       <NumberField

@@ -176,11 +176,18 @@ interface Platform {
      * the item model `shop:ui/gem`, the recipe `shop:ruby_sword`, a modifier's
      * default id `shop:attack_damage_0`), and reads them back the same way,
      * the project's own without the namespace.
+     *
+     * [blocks] is the block state one of the project's blocks is held as now (canonical text,
+     * `minecraft:note_block[instrument=bit,note=3,powered=true]`), by the name the server knows it by
+     * (`ruby_ore`, `library:gem_ore`), or null for a block it doesn't hold: an item's `canBreak` and
+     * `canPlaceOn` name the project's blocks, and the adapter writes their states. They can move when the
+     * project's blocks change, which is when [ProjectItemOps.refresh] finds a stack stale.
      */
     fun bind(
         events: PlatformEvents,
         glyphs: (reference: String) -> String?,
         items: (reference: String) -> ItemLook?,
+        blocks: (name: String) -> String?,
         namespace: () -> String
     )
 
@@ -311,6 +318,9 @@ interface WorldOps {
 
     /** `clear`, `rain` or `thunder`. */
     fun weather(world: String): String?
+
+    /** Tonight's moon as the server works it out: 0 full, 1 waning gibbous, … 4 new, … 7 waxing gibbous. */
+    fun moonPhase(world: String): Int?
 
     /** Changes the weather for [ticks], or for as long as the game picks when null. */
     fun setWeather(world: String, weather: String, ticks: Int?): Boolean
@@ -622,7 +632,11 @@ data class ItemLook(val def: ItemDef, val hash: String)
  * reads only its stamp, so a whole inventory of current stacks costs little.
  */
 interface ProjectItemOps {
-    /** Rewrites the stale stacks in [inventory]. How many it rewrote; 0 for one that isn't there. */
+    /**
+     * Rewrites the stale stacks in [inventory]: a project item's from before its look changed, and any stack
+     * whose `canBreak` or `canPlaceOn` names a project block held in another state than it was. How many it
+     * rewrote; 0 for one that isn't there.
+     */
     fun refresh(inventory: InventoryRef): Int
 }
 

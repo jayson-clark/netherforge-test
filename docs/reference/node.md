@@ -232,9 +232,9 @@ end)
 
 ## `node:display_kind()`
 
-What it draws: `"block"`, `"item"` or `"text"`, or `nil` for a node that draws nothing (a pivot, a hitbox alone) or once its centity is removed.
+What it draws: `"block"`, `"item"`, `"model"` (a resource pack look) or `"text"`, or `nil` for a node that draws nothing (a pivot, a hitbox alone) or once its centity is removed.
 
-**Returns** `"block"\|"item"\|"text"?`
+**Returns** `"block"\|"item"\|"model"\|"text"?`
 
 ## `node:display_block()`
 
@@ -286,6 +286,32 @@ Changes the item an item display shows: any `Item`, so a name, `item_model` or `
 
 ```lua
 this:node("sword"):set_display_item({ kind = "minecraft:diamond_sword", glint = true })
+```
+
+## `node:model()`
+
+The resource pack look a model display shows (`<pack>/<key>`, as the calling script names it), or `nil` when the node isn't a model display.
+
+**Returns** `string?`
+
+## `node:set_model(model)`
+
+Changes the look a model display shows: another entry of a resource pack's `items`, a model with elements or not. The display entity stays and only its item changes, which costs one small update to each player who sees it, so swapping models every few ticks animates a node frame by frame (a flipbook), alongside the transform tracks. A look the project's resource packs don't have is an error.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `model` | `string` | `<pack>/<key>`: an entry of a resource pack's `items` (a package's as `ns:<pack>/<key>`). |
+
+**Returns** `boolean`: `false` when the node isn't a model display.
+
+```lua
+local frames = { "mobs/wing_1", "mobs/wing_2", "mobs/wing_3", "mobs/wing_2" }
+local wing = assert(this:node("wing"))
+local frame = 1
+nf.every(3, function()
+  frame = frame % #frames + 1
+  wing:set_model(frames[frame])
+end)
 ```
 
 ## `node:display_text_style()`

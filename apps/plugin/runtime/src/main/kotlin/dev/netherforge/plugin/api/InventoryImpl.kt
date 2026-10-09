@@ -14,14 +14,16 @@ import java.util.UUID
 
 /**
  * An `Inventory` handle's one key value, where the inventory is:
- * `player/<uuid>`, `ender_chest/<uuid>`, `entity/<uuid>` or
- * `block/<x>/<y>/<z>/<world>` (the world last, so its name may hold anything).
+ * `player/<uuid>`, `ender_chest/<uuid>`, `storage/<uuid>/<size>/<ns:name>`,
+ * `entity/<uuid>` or `block/<x>/<y>/<z>/<world>` (the world last, so its name
+ * may hold anything).
  */
 internal object InventoryKeys {
     fun of(ref: InventoryRef): LuaHandle.Inventory = LuaHandle.Inventory(
         when (ref) {
             is InventoryRef.Player -> "player/${ref.player}"
             is InventoryRef.EnderChest -> "ender_chest/${ref.player}"
+            is InventoryRef.Storage -> "storage/${ref.player}/${ref.size}/${ref.name}"
             is InventoryRef.Entity -> "entity/${ref.entity}"
             is InventoryRef.Block -> "block/${ref.x}/${ref.y}/${ref.z}/${ref.world}"
         }
@@ -33,6 +35,11 @@ internal object InventoryKeys {
         return when (parts[0]) {
             "player" -> uuid()?.let { InventoryRef.Player(it) }
             "ender_chest" -> uuid()?.let { InventoryRef.EnderChest(it) }
+            "storage" -> {
+                val size = parts.getOrNull(2)?.toIntOrNull()
+                val name = handle.holder.split('/', limit = 4).getOrNull(3)
+                if (size == null || name == null) null else uuid()?.let { InventoryRef.Storage(it, name, size) }
+            }
             "entity" -> uuid()?.let { InventoryRef.Entity(it) }
             "block" -> if (parts.size == 5) {
                 val (x, y, z) = parts.subList(1, 4).map { it.toIntOrNull() ?: return null }
@@ -66,6 +73,7 @@ internal class InventoryImpl(private val session: ProjectSession) : InventoryApi
         return when (ref) {
             is InventoryRef.Player -> session.platform.players.get(ref.player)?.let(::playerHandle)
             is InventoryRef.EnderChest -> session.platform.players.get(ref.player)?.let(::playerHandle)
+            is InventoryRef.Storage -> session.platform.players.get(ref.player)?.let(::playerHandle)
             is InventoryRef.Entity -> session.entityHandle(ref.entity)
             is InventoryRef.Block -> blockHandle(ref.world, ref.x, ref.y, ref.z)
         }
@@ -88,7 +96,12 @@ internal class InventoryImpl(private val session: ProjectSession) : InventoryApi
     override fun setItem(self: LuaHandle.Inventory, index: Long, item: ItemData?): Boolean {
         val ref = InventoryKeys.ref(self) ?: return false
         val size = inventories.size(ref) ?: return false
-        return inventories.setItem(ref, slot(index, size), item)
+        return inventories.setItem(ref, slot(index, size), item).also { changed(ref) }
+    }
+
+    /** A storage changed: the menu slots bound to it show what it has now. */
+    private fun changed(ref: InventoryRef) {
+        if (ref is InventoryRef.Storage) session.menus.storageChanged(ref)
     }
 
     override fun items(self: LuaHandle.Inventory): Map<Long, ItemData> {
@@ -98,7 +111,7 @@ internal class InventoryImpl(private val session: ProjectSession) : InventoryApi
 
     override fun addItem(self: LuaHandle.Inventory, item: ItemData): Long {
         val ref = InventoryKeys.ref(self)
-        return (ref?.let { inventories.add(it, item) } ?: (item.def.count ?: 1)).toLong()
+        return (ref?.let { inventories.add(it, item)?.also { _ -> changed(ref) } } ?: (item.def.count ?: 1)).toLong()
     }
 
     override fun removeItem(self: LuaHandle.Inventory, match: StringOrItemMatch, count: Long?): Long {
@@ -107,7 +120,9 @@ internal class InventoryImpl(private val session: ProjectSession) : InventoryApi
         val ref = InventoryKeys.ref(self) ?: return 0
         val contents = inventories.contents(ref) ?: return 0
         val limit = count?.coerceAtMost(Int.MAX_VALUE.toLong())?.toInt()
-        return ItemSlots.remove(contents, matching, limit) { slot, item -> inventories.setItem(ref, slot, item) }.toLong()
+        return ItemSlots.remove(contents, matching, limit) { slot, item ->
+            inventories.setItem(ref, slot, item)
+        }.toLong().also { changed(ref) }
     }
 
     override fun countItem(self: LuaHandle.Inventory, match: StringOrItemMatch): Long {
@@ -125,11 +140,16 @@ internal class InventoryImpl(private val session: ProjectSession) : InventoryApi
         return ItemSlots.first(contents, matching)?.toLong()
     }
 
-    override fun clear(self: LuaHandle.Inventory): Boolean = InventoryKeys.ref(self)?.let(inventories::clear) == true
+    override fun clear(self: LuaHandle.Inventory): Boolean {
+        val ref = InventoryKeys.ref(self) ?: return false
+        return inventories.clear(ref).also { changed(ref) }
+    }
 
     override fun viewers(self: LuaHandle.Inventory): List<LuaHandle.Player> {
         val ref = InventoryKeys.ref(self) ?: return emptyList()
-        return inventories.viewers(ref).mapNotNull { session.platform.players.get(it) }.map(::playerHandle)
+        // A storage is on screen only where a menu shows it.
+        val viewers = if (ref is InventoryRef.Storage) session.menus.viewersOf(ref) else inventories.viewers(ref)
+        return viewers.mapNotNull { session.platform.players.get(it) }.map(::playerHandle)
     }
 }
 
@@ -149,6 +169,8 @@ internal fun ProjectSession.itemMatch(match: StringOrItemMatch): ItemMatch = whe
  */
 internal fun ProjectSession.itemMatch(table: JsonElement, spelled: String? = null): ItemMatch {
     val fields = table as? JsonObject ?: throw LuaApiException("a match is an item kind or a table like { kind = \"minecraft:paper\" }")
-    val item = LuaItems.read(names.item(fields, spelled), platform.game, partial = true) { items.look(it)?.def }
+    val item = LuaItems.read(names.item(fields, spelled), platform.game, partial = true, projectBlock = customBlocks::has) {
+        items.look(it)?.def
+    }
     return ItemMatch.of(item, fields.keys)
 }

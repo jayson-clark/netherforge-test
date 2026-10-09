@@ -2,12 +2,27 @@ package dev.netherforge.format.centity
 
 import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.Box
+import dev.netherforge.format.json.CanonicalJson
+import dev.netherforge.format.project.Names
 import dev.netherforge.format.ref.Ref
 import dev.netherforge.format.ref.RefKind
+import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.format.script.ScriptDef
 import dev.netherforge.format.text.MiniMessage
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+import kotlinx.serialization.descriptors.element
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonEncoder
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 
 /**
  * `centities/<id>/centity.json`: a composed, scripted entity, as authored.
@@ -69,7 +84,18 @@ data class SpawningDef(
     /** How far from every player a natural one is removed, in blocks. Default [DEFAULT_DESPAWN_DISTANCE]. */
     val despawnDistance: Int? = null,
     /** Whether a player interacting with (clicking) a natural one keeps it, as `keep()` does. Default false. */
-    val keepOnInteract: Boolean? = null
+    val keepOnInteract: Boolean? = null,
+    /** The time of day: `"day"`, `"night"`, or `{ "min": 13000, "max": 23000 }` in ticks of the day. Absent: any time. */
+    val time: SpawnTime? = null,
+    /** The moon phases it may appear in. Absent: any. */
+    val moonPhase: List<MoonPhase>? = null,
+    /** The weather it may appear in: `clear`, `rain` (thunderstorms too) or `thunder`. Absent: any. */
+    val weather: List<SpawnWeather>? = null,
+    /**
+     * A condition a script decides (`nf.spawning.condition(name, callback)`): it appears only while the
+     * callback answers true for the place. The project's own by name, a package's as `ns:name`. Absent: no condition.
+     */
+    @SerialName("when") val condition: String? = null
 ) {
     val weightOrDefault: Int get() = weight ?: DEFAULT_WEIGHT
     val capOrDefault: Int get() = cap ?: DEFAULT_CAP
@@ -87,6 +113,12 @@ data class SpawningDef(
         const val MIN_LIGHT = 0
         const val MAX_LIGHT = 15
 
+        /** Whether [name] can name a spawn condition: an id (the package's own), or `ns:id` (another package's). */
+        fun isConditionName(name: String): Boolean {
+            val parts = name.split(':')
+            return parts.size <= 2 && parts.all(Names::isId)
+        }
+
         /** How near a player the spawner places one, and how far: the ring it picks from. */
         const val MIN_DISTANCE = 24
         const val MAX_DISTANCE = 48
@@ -96,6 +128,121 @@ data class SpawningDef(
 /** An inclusive range with either end optional: `{ "min": 0, "max": 7 }`. */
 @Serializable
 data class SpawnRange(val min: Int? = null, val max: Int? = null)
+
+/**
+ * When in the day a centity may appear: a [period] (`"day"` or `"night"`), or a [range] of ticks of the
+ * day (0 to 23999, either end optional), which runs through midnight when its `min` is above its `max`
+ * (`{ "min": 22000, "max": 2000 }`). Exactly one is set.
+ */
+@Serializable(with = SpawnTimeSerializer::class)
+data class SpawnTime(val period: DayPeriod? = null, val range: SpawnRange? = null) {
+    /** The first tick of the day it allows. */
+    val start: Int get() = period?.start ?: range?.min ?: 0
+
+    /** The last tick of the day it allows. */
+    val end: Int get() = period?.end ?: range?.max ?: LAST_TICK
+
+    /** Whether [timeOfDay] (0 to 23999) is in it. */
+    operator fun contains(timeOfDay: Int): Boolean = if (start <= end) timeOfDay in start..end else timeOfDay >= start || timeOfDay <= end
+
+    companion object {
+        /** The serial name the contract generator knows this union by. */
+        const val SERIAL_NAME = "dev.netherforge.format.centity.SpawnTime"
+
+        /** Ticks in a day. */
+        const val DAY_TICKS = 24_000
+
+        const val LAST_TICK = DAY_TICKS - 1
+    }
+}
+
+/**
+ * The two halves of the day, by the ticks `/time set` uses: night from dusk (13000, `/time set night`)
+ * to sunrise (23000), day the rest.
+ */
+@Serializable
+enum class DayPeriod(val start: Int, val end: Int) {
+    @SerialName("day")
+    DAY(23_000, 12_999),
+
+    @SerialName("night")
+    NIGHT(13_000, 22_999)
+}
+
+/** A [SpawnTime] as JSON: `"day"`, `"night"`, or `{ "min": …, "max": … }`. */
+object SpawnTimeSerializer : KSerializer<SpawnTime> {
+    override val descriptor: SerialDescriptor = buildClassSerialDescriptor(SpawnTime.SERIAL_NAME) {
+        element<Int>("min", isOptional = true)
+        element<Int>("max", isOptional = true)
+    }
+
+    override fun serialize(encoder: Encoder, value: SpawnTime) {
+        val json = encoder as? JsonEncoder ?: throw SerializationException("Spawn times are JSON only")
+        val element = value.period?.let { JsonPrimitive(CanonicalJson.serialName(it)) } ?: buildJsonObject {
+            value.range?.min?.let { put("min", JsonPrimitive(it)) }
+            value.range?.max?.let { put("max", JsonPrimitive(it)) }
+        }
+        json.encodeJsonElement(element)
+    }
+
+    override fun deserialize(decoder: Decoder): SpawnTime {
+        val json = decoder as? JsonDecoder ?: throw SerializationException("Spawn times are JSON only")
+        return when (val element = json.decodeJsonElement()) {
+            is JsonPrimitive -> {
+                if (!element.isString) throw SerializationException(MESSAGE)
+                val period = DayPeriod.entries.firstOrNull { CanonicalJson.serialName(it) == element.content }
+                    ?: throw SerializationException(MESSAGE)
+                SpawnTime(period = period)
+            }
+            is JsonObject -> SpawnTime(range = json.json.decodeFromJsonElement(SpawnRange.serializer(), element))
+            else -> throw SerializationException(MESSAGE)
+        }
+    }
+
+    private const val MESSAGE = "A time is \"day\", \"night\" or { \"min\": 13000, \"max\": 23000 } in ticks of the day"
+}
+
+/** The moon's phases, in the order the game goes through them (one a night). */
+@Serializable
+enum class MoonPhase {
+    @SerialName("full_moon")
+    FULL_MOON,
+
+    @SerialName("waning_gibbous")
+    WANING_GIBBOUS,
+
+    @SerialName("last_quarter")
+    LAST_QUARTER,
+
+    @SerialName("waning_crescent")
+    WANING_CRESCENT,
+
+    @SerialName("new_moon")
+    NEW_MOON,
+
+    @SerialName("waxing_crescent")
+    WAXING_CRESCENT,
+
+    @SerialName("first_quarter")
+    FIRST_QUARTER,
+
+    @SerialName("waxing_gibbous")
+    WAXING_GIBBOUS
+}
+
+/** A world's weather, as natural spawning asks it. */
+@Serializable
+enum class SpawnWeather {
+    @SerialName("clear")
+    CLEAR,
+
+    /** Any rain: a thunderstorm is rain too. */
+    @SerialName("rain")
+    RAIN,
+
+    @SerialName("thunder")
+    THUNDER
+}
 
 /**
  * One node of the tree. Every field is optional: a node with nothing but a
@@ -147,6 +294,26 @@ data class ItemDisplay(
     /** How the item is posed (Minecraft's item display context). */
     val itemTransform: ItemTransform? = null
 ) : DisplayDef
+
+/**
+ * One of the project's resource pack looks, shown as an item display: an entry of a pack's `items`
+ * (`<pack>/<key>`), whatever it's drawn as, a model with elements included. One display entity draws the
+ * whole model however complex, and a script swaps it for another cheaply (`node:set_model`, the same
+ * entity showing another look), which is how a flipbook animates.
+ */
+@Serializable
+@SerialName("model")
+data class ModelDisplay(
+    /** `<pack>/<key>`: the look, an entry of a resource pack's `items`. */
+    @Ref(RefKind.ITEM_MODEL) val model: ResourceRef,
+    /** Which of the model's `display` transforms applies. Default [ItemTransform.NONE]: as it was modelled. */
+    val itemTransform: ItemTransform? = null
+) : DisplayDef {
+    companion object {
+        /** The item kind the display holds under the look, which replaces its model: never seen. */
+        const val CARRIER = "minecraft:paper"
+    }
+}
 
 /** Minecraft's item display contexts: how an item display poses its item. */
 @Serializable

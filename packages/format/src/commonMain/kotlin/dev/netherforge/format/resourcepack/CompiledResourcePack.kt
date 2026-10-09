@@ -1,6 +1,8 @@
 package dev.netherforge.format.resourcepack
 
 import dev.netherforge.format.block.BlockCarriers
+import dev.netherforge.format.block.VanillaBlockStates
+import dev.netherforge.format.block.VanillaFile
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.project.ImageInfo
 import dev.netherforge.format.project.PackagePaths
@@ -12,6 +14,9 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
+
+/** A pack as it builds: its `pack.json`, and the model files its looks name, read ([PackModels.read]), by path under `models/`. */
+class ResourcePackRead(val file: ResourcePackFile, val models: Map<String, PackModels.Model> = emptyMap())
 
 /**
  * A validated pack with every character settled. [id] is the pack's folder
@@ -41,7 +46,11 @@ class CompiledResourcePack(
     /** Every sound event by key, in key order ([PackSounds.events]). */
     val sounds: Map<String, PackSounds.Sound> = emptyMap(),
     /** How the project names the pack, which says where its files are: its [id], or `ns:id` for a package's. */
-    val key: String = id
+    val key: String = id,
+    /** The model files its looks name, read, by path under `models/`. */
+    val models: Map<String, PackModels.Model> = emptyMap(),
+    /** Its HUD elements, their pictures numbered in its own HUD font; null for a pack with no `hud`. */
+    val hud: CompiledHud? = null
 ) {
     /**
      * [advance] is the skin character's advance in pixels
@@ -90,13 +99,21 @@ class CompiledResourcePack(
         items.values.forEach { item ->
             item.texture?.let(::add)
             item.guiTexture?.let(::add)
+            item.model?.let { models[it] }?.let { addAll(it.packTextures) }
         }
         tooltips.values.forEach { tooltip ->
             tooltip.background?.let(::add)
             tooltip.frame?.let(::add)
         }
-        blocks.values.forEach { addAll(it.textures()) }
+        blocks.values.forEach { block ->
+            addAll(block.textures())
+            block.model?.let { models[it] }?.let { addAll(it.packTextures) }
+        }
+        hud?.pieces?.forEach { add(it.texture) }
     }
+
+    /** The texture breaking block look [block] throws up: a model's particle, or the faces' ([BlockModelDef.particle]). */
+    fun particleOf(block: BlockModelDef): String? = block.model?.let { models[it]?.particle } ?: block.particle()
 
     /** Every sound file (under `sounds/`) this pack's events play. */
     fun soundFiles(): Set<String> = sounds.values.flatMap { it.files }.sorted().toSet()
@@ -117,6 +134,7 @@ class CompiledResourcePack(
             namespace: String,
             files: Map<String, ResourcePackFile>,
             soundFiles: Map<String, Set<String>> = emptyMap(),
+            models: Map<String, Map<String, PackModels.Model>> = emptyMap(),
             image: (projectPath: String) -> ImageInfo? = { null }
         ): Map<String, CompiledResourcePack> {
             var nextGlyph = 0
@@ -124,7 +142,7 @@ class CompiledResourcePack(
             // so its glyphs keep the characters the editor previews them with.
             return files.entries.sortedWith(compareBy({ ':' in it.key }, { it.key })).associate { (key, file) ->
                 val (pkg, id) = PackagePaths.split(key)
-                val pack = compile(pkg ?: namespace, id, key, file, nextGlyph, soundFiles[key].orEmpty(), image)
+                val pack = compile(pkg ?: namespace, id, key, file, nextGlyph, soundFiles[key].orEmpty(), image, models[key].orEmpty())
                 nextGlyph += file.glyphs.size
                 key to pack
             }
@@ -144,7 +162,8 @@ class CompiledResourcePack(
             file: ResourcePackFile,
             glyphStart: Int,
             soundFiles: Set<String>,
-            image: (String) -> ImageInfo?
+            image: (String) -> ImageInfo?,
+            models: Map<String, PackModels.Model>
         ): CompiledResourcePack {
             fun advance(texture: String, drawnHeight: Int): Int? = image(texturePath(key, texture))
                 ?.takeIf { it.height > 0 }
@@ -171,7 +190,13 @@ class CompiledResourcePack(
                 file.equipment.entries.sortedBy { it.key }.associate { it.key to it.value },
                 file.blocks.entries.sortedBy { it.key }.associate { it.key to it.value },
                 PackSounds.events(file, soundFiles),
-                key
+                key,
+                models,
+                file.hud?.let { hud ->
+                    CompiledHud.compile(namespace, id, hud) { texture ->
+                        image(texturePath(key, texture))?.takeIf { it.height > 0 }?.let { it.height to it.opaqueWidth }
+                    }
+                }
             )
         }
     }
@@ -199,18 +224,38 @@ object PackLayout {
 
         /** Copy a project file (a PNG) verbatim. */
         data class Copy(val projectPath: String) : Entry
+
+        /** Bytes of the build's own: the blank picture a hidden HUD sprite is replaced with. */
+        class Bytes(val bytes: ByteArray) : Entry {
+            override fun equals(other: Any?) = other is Bytes && bytes.contentEquals(other.bytes)
+
+            override fun hashCode() = bytes.contentHashCode()
+        }
     }
+
+    /** A one-pixel PNG, fully transparent: what a hidden HUD sprite draws. */
+    val BLANK_PNG: ByteArray = intArrayOf(
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
+        0x89, 0x00, 0x00, 0x00, 0x0B, 0x49, 0x44, 0x41, 0x54, 0x78, 0xDA, 0x63, 0x60, 0x00, 0x02, 0x00,
+        0x00, 0x05, 0x00, 0x01, 0xE9, 0xFA, 0xDC, 0xD8, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44,
+        0xAE, 0x42, 0x60, 0x82
+    ).map { it.toByte() }.toByteArray()
 
     /**
      * [format] is the target version's resource pack format as `[major, minor]`,
      * which comes from game data. [textureSize] answers a texture's pixel
      * dimensions (for nine-slice tooltip sprites), or null if unknown.
+     * [blocks] says which states the project's blocks are held in, and
+     * [vanilla] how the game draws the other states of a carrier that takes
+     * more than one model (`client/vanilla.json`).
      */
     fun build(
         packs: List<CompiledResourcePack>,
         format: List<Int>,
         description: String,
         blocks: BlockCarriers.Plan? = null,
+        vanilla: VanillaFile? = null,
         textureSize: (projectPath: String) -> Pair<Int, Int>?
     ): Map<String, Entry> {
         val out = LinkedHashMap<String, Entry>()
@@ -257,14 +302,33 @@ object PackLayout {
                 defaultFontProviders += bitmap("$ns:$id/${glyph.def.texture}", glyph.height, glyph.ascent, glyph.char)
             }
 
+            // The HUD's pictures, each at its height on the screen, and the moves that put them across it.
+            pack.hud?.takeIf { it.pieces.isNotEmpty() }?.let { hud ->
+                val providers = buildJsonArray {
+                    for (piece in hud.pieces) add(bitmap("$ns:$id/${piece.texture}", piece.height, piece.ascent, piece.char))
+                    add(
+                        buildJsonObject {
+                            put("type", "space")
+                            putJsonObject("advances") { PackFonts.advances().forEach { (c, px) -> put(c, px) } }
+                        }
+                    )
+                }
+                out["assets/$ns/font/$id/${CompiledHud.FONT}.json"] = json(buildJsonObject { put("providers", providers) })
+            }
+
             for ((key, item) in pack.items) {
                 val model = "$ns:item/$id/$key"
                 // A block look is the block's model as the item's parent, which holds the game's block display
                 // transforms (3D in slots and the hand); its textures are the block's, already in the blocks atlas.
+                val shaped = item.model?.let { pack.models[it] }
                 out["assets/$ns/models/item/$id/$key.json"] = json(
-                    when (val block = item.block?.resolve(ns)) {
-                        null -> itemModel(item.parent, resource(item.texture!!)).also { itemSprites += resource(item.texture) }
-                        else -> buildJsonObject { put("parent", "${block.namespace}:block/${block.path}") }
+                    when {
+                        // A model of its own: as written, its textures the pack's.
+                        shaped != null -> PackModels.write(shaped, ::resource).also { itemSprites += shaped.packTextures.map(::resource) }
+                        item.block != null -> buildJsonObject {
+                            put("parent", "${item.block.resolve(ns)!!.let { "${it.namespace}:block/${it.path}" }}")
+                        }
+                        else -> itemModel(item.parent, resource(item.texture!!)).also { itemSprites += resource(item.texture) }
                     }
                 )
                 item.guiTexture?.let { itemSprites += resource(it) }
@@ -318,11 +382,14 @@ object PackLayout {
             for ((key, block) in pack.blocks) {
                 // `model: "<id>/<key>"` on a block is the model `<ns>:block/<id>/<key>`: a cube, or (for a block a
                 // centity is drawn over) only the texture its particles take, which the server keeps from showing.
-                out["assets/$ns/models/block/$id/$key.json"] = json(cubeModel(block, ::resource))
-                block.particle()?.let { blockSprites += resource(it) }
+                val shaped = block.model?.let { pack.models[it] }
+                out["assets/$ns/models/block/$id/$key.json"] =
+                    json(shaped?.let { PackModels.write(it, ::resource) } ?: cubeModel(block, ::resource))
+                pack.particleOf(block)?.let { blockSprites += resource(it) }
                 block.faces().orEmpty().values.forEach { blockSprites += resource(it) }
+                shaped?.packTextures?.forEach { blockSprites += resource(it) }
                 if (blocks?.uses.orEmpty().any { it.hidden && it.pack == pack.key && it.entry == key }) {
-                    out["assets/$ns/models/block/$id/${key}_$HIDDEN.json"] = json(hiddenModel(block, ::resource))
+                    out["assets/$ns/models/block/$id/${key}_$HIDDEN.json"] = json(hiddenModel(pack.particleOf(block), ::resource))
                 }
             }
 
@@ -367,8 +434,13 @@ object PackLayout {
             }
         }
 
+        // The game's own HUD elements the packs hide: every sprite that draws one, blank.
+        val hidden = packs.flatMap { it.hud?.hide.orEmpty() }.toSet()
+        for (sprite in vanilla?.sprites.orEmpty()) {
+            if (hidden.any { it.draws(sprite) }) out["assets/minecraft/textures/gui/sprites/$sprite.png"] = Entry.Bytes(BLANK_PNG)
+        }
         if (blocks != null) {
-            blockStates(blocks, packs)?.let { (path, states) -> out[path] = states }
+            for ((path, states) in blockStates(blocks, packs, vanilla)) out[path] = states
             // A block drawn by a centity that has no look of its own shows nothing and throws up no particles.
             if (blocks.uses.any { use -> use.hidden && packs.none { it.key == use.pack && use.entry in it.blocks } }) {
                 out["assets/${blocks.home}/models/block/$HIDDEN.json"] = json(buildJsonObject { putJsonObject("textures") {} })
@@ -395,13 +467,15 @@ object PackLayout {
     private const val HIDDEN = "hidden"
 
     /**
-     * The blockstate file that draws the carrier block: every state as the
-     * game draws it, but the ones a custom block holds, which are that block's
-     * model. Explicit for every state, so no state's look is left to which
-     * entry of a partial list the game matches first.
+     * The blockstate file of each of the game's blocks a custom block is held
+     * in: every state as the game draws it, but the ones a custom block holds,
+     * which are that block's model. Explicit for every state, so no state's
+     * look is left to which entry of a partial list the game matches first. A
+     * carrier whose states the game draws with more than one model takes how
+     * from [vanilla]; without it there, its file is left out (its blocks look
+     * like the game's block, which `block.vanilla-looks` warns about).
      */
-    private fun blockStates(plan: BlockCarriers.Plan, packs: List<CompiledResourcePack>): Pair<String, Entry>? {
-        val (namespace, path) = BlockCarriers.BLOCK.split(':', limit = 2)
+    private fun blockStates(plan: BlockCarriers.Plan, packs: List<CompiledResourcePack>, vanilla: VanillaFile?): List<Pair<String, Entry>> {
         val models = plan.uses.mapNotNull { use ->
             val pack = packs.firstOrNull { it.key == use.pack && use.entry in it.blocks }
             val model = when {
@@ -411,13 +485,32 @@ object PackLayout {
             }
             use.state.toString() to model
         }.toMap()
-        val variants = buildJsonObject {
-            for (state in plan.pool.all) {
-                val key = state.properties.entries.sortedBy { it.key }.joinToString(",") { "${it.key}=${it.value}" }
-                putJsonObject(key) { put("model", models[state.toString()] ?: BlockCarriers.VANILLA_MODEL) }
+        // Only the game's blocks some custom block is held in: a leaves block nobody uses keeps the game's own file.
+        val used = plan.uses.map { it.state.id }.toSet()
+        val out = mutableListOf<Pair<String, Entry>>()
+        for (pool in plan.pools.values) {
+            for ((block, states) in pool.blocks) {
+                if (block !in used) continue
+                val single = pool.vanillaModel(block)
+                val client = vanilla?.blockstates?.get(block)
+                if (single == null && client == null) continue
+                val variants = buildJsonObject {
+                    for (state in states) {
+                        val key = state.properties.entries.sortedBy { it.key }.joinToString(",") { "${it.key}=${it.value}" }
+                        val own = models[state.toString()]
+                        when {
+                            own != null -> putJsonObject(key) { put("model", own) }
+                            single != null -> putJsonObject(key) { put("model", single) }
+                            // As the client draws it; a state its file has nothing for is left to the game's missing model.
+                            else -> client?.let { VanillaBlockStates.variant(it, state) }?.let { put(key, it) }
+                        }
+                    }
+                }
+                val (namespace, path) = block.split(':', limit = 2)
+                out += "assets/$namespace/blockstates/$path.json" to json(buildJsonObject { put("variants", variants) })
             }
         }
-        return "assets/$namespace/blockstates/$path.json" to json(buildJsonObject { put("variants", variants) })
+        return out.sortedBy { it.first }
     }
 
     /**
@@ -453,8 +546,8 @@ object PackLayout {
     }
 
     /** What a block drawn by a centity shows in the world: nothing, with the texture its particles take. */
-    private fun hiddenModel(block: BlockModelDef, resource: (String) -> String) = buildJsonObject {
-        putJsonObject("textures") { block.particle()?.let { put("particle", resource(it)) } }
+    private fun hiddenModel(particle: String?, resource: (String) -> String) = buildJsonObject {
+        putJsonObject("textures") { particle?.let { put("particle", resource(it)) } }
     }
 
     private fun bitmap(file: String, height: Int, ascent: Int, char: String) = buildJsonObject {

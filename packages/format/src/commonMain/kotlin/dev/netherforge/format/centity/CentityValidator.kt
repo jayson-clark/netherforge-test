@@ -99,6 +99,26 @@ object CentityValidator {
         for ((field, value) in listOf("weight" to spawning.weight, "cap" to spawning.cap, "despawnDistance" to spawning.despawnDistance)) {
             if (value != null && value < 1) sink.report(ProblemCodes.CENTITY_SPAWNING_NUMBER, "$field must be positive", "$at.$field")
         }
+        spawning.time?.range?.let { range ->
+            for ((end, value) in listOf("min" to range.min, "max" to range.max)) {
+                if (value != null && value !in 0..SpawnTime.LAST_TICK) {
+                    sink.report(
+                        ProblemCodes.CENTITY_SPAWNING_TIME,
+                        "A time of day is a tick from 0 to ${SpawnTime.LAST_TICK} (a min above the max runs through midnight)",
+                        "$at.time.$end"
+                    )
+                }
+            }
+        }
+        spawning.condition?.let { condition ->
+            if (!SpawningDef.isConditionName(condition)) {
+                sink.report(
+                    ProblemCodes.CENTITY_SPAWNING_WHEN,
+                    "\"$condition\" isn't a condition's name: ${Names.ID_RULE}, or `ns:name` for a package's",
+                    "$at.when"
+                )
+            }
+        }
         if (spawning.despawnDistance != null && spawning.despawnDistance in 1..SpawningDef.MAX_DISTANCE) {
             sink.report(
                 ProblemCodes.CENTITY_SPAWNING_DESPAWN,
@@ -175,6 +195,8 @@ object CentityValidator {
                     sink.report(ProblemCodes.CENTITY_UNKNOWN_ITEM, "Minecraft ${game.minecraftVersion} has no item \"$id\"", "$at.item")
                 }
             }
+            // Its look is a reference, which the loader checks.
+            is ModelDisplay -> {}
             is TextDisplay -> {
                 if (display.background != null && !ARGB.matches(display.background)) {
                     sink.report(ProblemCodes.CENTITY_BACKGROUND, "background must be #AARRGGBB", "$at.background")
@@ -228,7 +250,7 @@ object CentityValidator {
     fun fitKey(display: DisplayDef?): String? = when (display) {
         is BlockDisplay -> BlockState.parse(display.block)?.toString() ?: display.block
         is TextDisplay -> "text:" + display.text
-        is ItemDisplay -> null
+        is ItemDisplay, is ModelDisplay -> null
         null -> null
     }
 

@@ -6,8 +6,14 @@ import {
   setKeepOnInteract,
   setList,
   setNumber,
+  setCondition,
   setRangeEnd,
   setSpawning,
+  setTimeEnd,
+  setTimeMode,
+  timeEnd,
+  timeMode,
+  toggleChoice,
 } from './spawning'
 
 const file = (): CentityFile => ({ nodes: { root: {} } })
@@ -74,5 +80,47 @@ describe("a centity's spawning edits", () => {
     setRangeEnd(f, 'group', 'min', 2)
     setKeepOnInteract(f, true)
     expect(f).toEqual(file())
+  })
+
+  it('gives the time as a half of the day or a range of ticks, and clears it', () => {
+    const f = file()
+    setSpawning(f, true)
+    expect(timeMode(f.spawning?.time)).toBe('any')
+    setTimeMode(f, 'night')
+    expect(f.spawning?.time).toBe('night')
+    setTimeMode(f, 'range')
+    expect(f.spawning?.time).toEqual({ min: 13000, max: 22999 })
+    expect(timeMode(f.spawning?.time)).toBe('range')
+    setTimeEnd(f, 'max', 2000.4)
+    expect(timeEnd(f.spawning?.time, 'max')).toBe(2000)
+    setTimeEnd(f, 'min', undefined)
+    setTimeEnd(f, 'max', undefined)
+    expect(f.spawning).toEqual({})
+    setTimeMode(f, 'day')
+    setTimeMode(f, 'any')
+    expect(f.spawning).toEqual({})
+  })
+
+  it('toggles moon phases and weather, and an empty list goes', () => {
+    const f = file()
+    setSpawning(f, true)
+    toggleChoice(f, 'moonPhase', 'full_moon', true)
+    toggleChoice(f, 'moonPhase', 'new_moon', true)
+    toggleChoice(f, 'moonPhase', 'full_moon', true)
+    expect(f.spawning?.moonPhase).toEqual(['full_moon', 'new_moon'])
+    toggleChoice(f, 'weather', 'rain', true)
+    toggleChoice(f, 'weather', 'rain', false)
+    toggleChoice(f, 'moonPhase', 'full_moon', false)
+    toggleChoice(f, 'moonPhase', 'new_moon', false)
+    expect(f.spawning).toEqual({})
+  })
+
+  it('names a script condition, and an empty box removes it', () => {
+    const f = file()
+    setSpawning(f, true)
+    setCondition(f, ' blood_moon ')
+    expect(f.spawning?.when).toBe('blood_moon')
+    setCondition(f, '')
+    expect(f.spawning).toEqual({})
   })
 })

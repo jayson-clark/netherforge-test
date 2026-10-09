@@ -7,7 +7,14 @@
  */
 import * as THREE from 'three'
 import type { ClientAssets } from './assets'
-import { blockLookGeometry, itemGeometry, type ItemGeometry } from './render'
+import type { RawModel } from './model'
+import {
+  blockLookGeometry,
+  isUrl,
+  itemGeometry,
+  packModelGeometry,
+  type ItemGeometry,
+} from './render'
 
 const SIZE = 64
 
@@ -125,5 +132,21 @@ export function blockLookPicture(
 ): Promise<string | null> {
   return cached(assets, `look:${JSON.stringify(faces)}`, async () =>
     draw(await blockLookGeometry(assets, faces, 'gui'), (url) => url),
+  )
+}
+
+/**
+ * A picture of a pack's own model file as the inventory draws its item: [bound] binds its
+ * texture variables that are the pack's to URLs; null when it can't be drawn.
+ */
+export function packModelPicture(
+  assets: ClientAssets,
+  model: RawModel,
+  bound: Record<string, string>,
+): Promise<string | null> {
+  return cached(assets, `pack:${JSON.stringify(model)}|${JSON.stringify(bound)}`, async () =>
+    draw(await packModelGeometry(assets, model, bound, 'gui'), (texture) =>
+      isUrl(texture) ? texture : assets.textureUrl(texture),
+    ),
   )
 }

@@ -297,3 +297,50 @@ export function FilesPane({
     </Pane>
   )
 }
+
+/**
+ * A single-file resource's files (a terrain's `.json` and the `.lua` beside
+ * it): both open in tabs. They're the resource itself, so renaming, moving
+ * and deleting them is the explorer's, which keeps the two together.
+ */
+export function CompanionFilesPane({ file, companion }: { file: string; companion: string }) {
+  const { workspace } = useApp()
+  const files = useWorkspace((s) => s.files)
+  const docs = useWorkspace((s) => s.docs)
+  const problems = useWorkspace((s) => s.problems)
+  const activePath = useWorkspace((s) => s.tabs.find((it) => it.id === s.activeTab)?.path ?? null)
+  const pane = usePane('files')
+  const shown = [file, companion].filter((it) => files.includes(it))
+  const nodes: TreeNode[] = shown.map((path) => ({
+    id: path,
+    label: basename(path),
+    icon: iconFor(path, false, false),
+    dirty: docs[path]?.dirty,
+    errors: problems.filter((it) => it.severity === 'error' && it.file === path).length,
+    fixed: true,
+    title: path,
+  }))
+  const open = (path: string) => void workspace.getState().openFile(path)
+  return (
+    <Pane title="Files" {...pane}>
+      <Tree
+        label={`Files of ${basename(file)}`}
+        nodes={nodes}
+        selected={activePath && shown.includes(activePath) ? activePath : null}
+        isExpanded={() => false}
+        onExpand={() => {}}
+        onSelect={open}
+        onOpen={open}
+        menu={(id) =>
+          id
+            ? [
+                { label: 'Open', shortcut: 'Enter', run: () => open(id) },
+                { label: 'Copy Path', run: () => void navigator.clipboard?.writeText(id) },
+              ]
+            : []
+        }
+        empty={<Empty>No files.</Empty>}
+      />
+    </Pane>
+  )
+}

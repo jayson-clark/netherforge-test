@@ -1,11 +1,15 @@
 package dev.netherforge.format
 
+import dev.netherforge.format.block.BlockCarrier
 import dev.netherforge.format.block.BlockCarriers
 import dev.netherforge.format.block.BlockFile
 import dev.netherforge.format.block.BlockTool
+import dev.netherforge.format.block.VanillaBlockStates
+import dev.netherforge.format.block.VanillaFile
 import dev.netherforge.format.game.BlockInfo
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.GameDataBundle
+import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.project.BlockKind
 import dev.netherforge.format.project.MapProjectSource
 import dev.netherforge.format.project.Projects
@@ -46,7 +50,7 @@ class BlockTest {
 
     @Test
     fun theRarestStatesAreTheCarriersAndTheDefaultInstrumentIsVanillas() {
-        val pool = assertNotNull(BlockCarriers.pool(game()))
+        val pool = assertNotNull(BlockCarriers.pool(game())) as BlockCarriers.NoteBlocks
         assertEquals("harp", pool.vanillaInstrument)
         // 3 instruments besides the default, 5 notes, powered or not.
         assertEquals(30, pool.carriers.size)
@@ -78,19 +82,19 @@ class BlockTest {
         )
         val plan = assertNotNull(BlockCarriers.plan(blocks, "test", game()))
         assertEquals(listOf("lamp", "library:gem", "plain", "ruby_ore", "stone"), plan.uses.map { it.name })
-        assertEquals(plan.pool.carriers.take(5), plan.uses.map { it.state })
+        assertEquals(plan.pool!!.carriers.take(5), plan.uses.map { it.state })
         assertEquals("ui", plan.uses.single { it.name == "ruby_ore" }.pack)
         assertEquals("library:gems", plan.uses.single { it.name == "library:gem" }.pack)
         assertEquals("gem", plan.uses.single { it.name == "library:gem" }.entry)
         assertNull(plan.uses.single { it.name == "plain" }.pack)
         assertTrue(plan.uses.single { it.name == "lamp" }.hidden)
         assertEquals("ruby_ore", plan.nameOf(plan.stateOf("ruby_ore").toString()))
-        assertNull(plan.nameOf(plan.pool.carriers.last().toString()))
+        assertNull(plan.nameOf(plan.pool!!.carriers.last().toString()))
         assertEquals(emptyList(), plan.overflow)
 
         // A game whose note block has only two states for blocks: the rest take none.
         val tight = assertNotNull(BlockCarriers.plan(blocks, "test", game("harp", "zombie")))
-        assertEquals(10, tight.pool.carriers.size)
+        assertEquals(10, tight.pool!!.carriers.size)
         val many = (1..12).associate { "b${it.toString().padStart(2, '0')}" to block() }
         val over = assertNotNull(BlockCarriers.plan(many, "test", game("harp", "zombie")))
         assertEquals(listOf("b11", "b12"), over.overflow)
@@ -169,7 +173,7 @@ class BlockTest {
             (files.getValue("assets/minecraft/blockstates/note_block.json") as PackLayout.Entry.Text).text
         )
             .jsonObject.getValue("variants").jsonObject
-        assertEquals(plan.pool.all.size, variants.size)
+        assertEquals(plan.pool!!.all.size, variants.size)
         val state = { name: String ->
             variants.getValue(
                 plan.stateOf(name)!!.properties.entries.sortedBy {
@@ -181,7 +185,7 @@ class BlockTest {
         assertEquals("test:block/ui/log_hidden", state("lamp"))
         assertEquals("test:block/hidden", state("bare"))
         val models = variants.values.map { it.jsonObject.getValue("model").jsonPrimitive.content }
-        assertEquals(plan.pool.all.size - 3, models.count { it == BlockCarriers.VANILLA_MODEL })
+        assertEquals(plan.pool!!.all.size - 3, models.count { it == BlockCarriers.VANILLA_MODEL })
         assertTrue("instrument=harp,note=3,powered=true" in variants)
         assertEquals(
             BlockCarriers.VANILLA_MODEL,
@@ -259,5 +263,152 @@ class BlockTest {
             BlockKind.write(file).substringAfter("\$schema\": \"${BlockFile.SCHEMA}\",\n  ").substringBefore("\n}")
         )
         assertEquals("{\n  \"\$schema\": \"${BlockFile.SCHEMA}\"\n}\n", BlockKind.write(BlockFile()))
+    }
+
+    /** A game with note blocks, tripwire and two kinds of leaves (the `leaves` tag lists them). */
+    private fun carriers() = game().let { base ->
+        val bool = listOf("true", "false")
+        val leaves = BlockInfo(
+            properties = mapOf("distance" to (1..7).map { "$it" }, "persistent" to bool, "waterlogged" to bool),
+            defaults = mapOf("distance" to "7", "persistent" to "false", "waterlogged" to "false")
+        )
+        base.copy(
+            blocks = base.blocks + mapOf(
+                BlockCarriers.TRIPWIRE to BlockInfo(
+                    properties = listOf("attached", "disarmed", "east", "north", "powered", "south", "west").associateWith { bool },
+                    defaults = listOf("attached", "disarmed", "east", "north", "powered", "south", "west").associateWith { "false" }
+                ),
+                "minecraft:oak_leaves" to leaves,
+                "minecraft:birch_leaves" to leaves
+            ),
+            registries = mapOf(RegistryKey.BLOCK.id to listOf("minecraft:birch_leaves", "minecraft:oak_leaves")),
+            tags = mapOf(
+                RegistryKey.BLOCK.id to mapOf(BlockCarriers.LEAVES_TAG to listOf("minecraft:oak_leaves", "minecraft:birch_leaves"))
+            )
+        )
+    }
+
+    @Test
+    fun tripwireKeepsWhatStringIsInAndGivesBlocksThePoweredAndDisarmed() {
+        val pool = assertNotNull(BlockCarriers.pool(carriers(), BlockCarrier.TRIPWIRE))
+        assertEquals(128, pool.all.size)
+        assertEquals(96, pool.carriers.size)
+        val first = pool.carriers.first()
+        assertEquals("true", first.properties["disarmed"])
+        assertEquals("true", first.properties["powered"])
+        assertEquals("false", first.properties["attached"], "unattached first: it selects taller")
+        // Neither powered nor disarmed: what a frozen server places string in, and what the game's traps are.
+        assertTrue(
+            pool.isVanilla(
+                BlockState(
+                    BlockCarriers.TRIPWIRE,
+                    pool.all.first().properties + mapOf("disarmed" to "false", "powered" to "false")
+                )
+            )
+        )
+        assertTrue(pool.carriers.none(pool::isVanilla))
+        assertNull(pool.vanillaModel(BlockCarriers.TRIPWIRE), "its states draw different models: only the client says which")
+    }
+
+    @Test
+    fun leavesGiveBlocksTheirPersistentDryStatesNearerThanTheFarthest() {
+        val pool = assertNotNull(BlockCarriers.pool(carriers(), BlockCarrier.LEAVES))
+        assertEquals(setOf("minecraft:birch_leaves", "minecraft:oak_leaves"), pool.blocks.keys)
+        // Six distances of each, persistent and dry.
+        assertEquals(12, pool.carriers.size)
+        assertTrue(pool.carriers.all { it.properties["persistent"] == "true" && it.properties["waterlogged"] == "false" })
+        assertTrue(pool.carriers.none { it.properties["distance"] == "7" })
+        assertEquals("minecraft:block/oak_leaves", pool.vanillaModel("minecraft:oak_leaves"))
+        assertNull(BlockCarriers.pool(game(), BlockCarrier.LEAVES), "a game without the tag has none")
+    }
+
+    @Test
+    fun eachCarrierHandsOutItsOwnStatesAndDrawsItsOwnFile() {
+        val blocks = mapOf(
+            "rose" to BlockFile(carrier = BlockCarrier.TRIPWIRE),
+            "fern" to BlockFile(carrier = BlockCarrier.TRIPWIRE),
+            "glass" to BlockFile(carrier = BlockCarrier.LEAVES),
+            "ore" to BlockFile()
+        )
+        val plan = assertNotNull(BlockCarriers.plan(blocks, "test", carriers()))
+        assertEquals(BlockCarriers.TRIPWIRE, plan.stateOf("fern")?.id)
+        assertEquals(plan.pools.getValue(BlockCarrier.TRIPWIRE).carriers[1], plan.stateOf("rose"), "after fern, by name")
+        assertEquals("minecraft:birch_leaves", plan.stateOf("glass")?.id)
+        assertEquals(BlockCarriers.BLOCK, plan.stateOf("ore")?.id)
+        assertEquals(setOf(BlockCarrier.NOTE_BLOCK, BlockCarrier.TRIPWIRE, BlockCarrier.LEAVES), plan.carriers)
+        // A block that doesn't run keeps its place in the carrier its file names.
+        val broken = BlockCarriers.plan(blocks - "fern" + ("fern" to null), "test", carriers(), mapOf("fern" to BlockCarrier.TRIPWIRE))!!
+        assertEquals(plan.stateOf("rose"), broken.stateOf("rose"))
+
+        // The game's tripwire look, as the editor writes it from the client: a variant per shape (its sides and whether
+        // it's attached), whatever it's powered or disarmed. Made up for the test: the plain one, and the attached ones turned.
+        val shapes = listOf("false", "true").flatMap { a ->
+            (0 until 16).map { bits ->
+                val sides = listOf("east", "north", "south", "west").withIndex().joinToString(",") { (i, side) ->
+                    "$side=${bits shr i and 1 == 1}"
+                }
+                val variant = if (a ==
+                    "true"
+                ) {
+                    """{ "model": "minecraft:block/tripwire_attached_ns", "y": 90 }"""
+                } else {
+                    """{ "model": "minecraft:block/tripwire_ns" }"""
+                }
+                "\"attached=$a,$sides\": $variant"
+            }
+        }
+        val tripwire = Json.parseToJsonElement("""{ "variants": { ${shapes.joinToString(", ")} } }""")
+        val vanilla = VanillaFile(minecraft = "26.3", blockstates = mapOf(BlockCarriers.TRIPWIRE to tripwire))
+        fun variants(files: Map<String, PackLayout.Entry>, block: String) =
+            Json.parseToJsonElement((files.getValue("assets/minecraft/blockstates/$block.json") as PackLayout.Entry.Text).text)
+                .jsonObject.getValue("variants").jsonObject
+        val files = PackLayout.build(emptyList(), listOf(75, 0), "Test", plan, vanilla) { null }
+        val wires = variants(files, "tripwire")
+        assertEquals(128, wires.size, "every state, explicitly")
+        val plain = "attached=false,disarmed=false,east=false,north=false,powered=false,south=false,west=false"
+        assertEquals("minecraft:block/tripwire_ns", wires.getValue(plain).jsonObject.getValue("model").jsonPrimitive.content)
+        val hooked = "attached=true,disarmed=false,east=false,north=true,powered=false,south=true,west=false"
+        assertEquals("90", wires.getValue(hooked).jsonObject.getValue("y").jsonPrimitive.content, "as the client draws it")
+        // Only the leaves some block is held in are redrawn; the rest keep the game's own file.
+        assertEquals(28, variants(files, "birch_leaves").size)
+        assertTrue("assets/minecraft/blockstates/oak_leaves.json" !in files)
+        assertEquals(
+            "minecraft:block/birch_leaves",
+            variants(
+                files,
+                "birch_leaves"
+            ).getValue("distance=7,persistent=true,waterlogged=false").jsonObject.getValue("model").jsonPrimitive.content
+        )
+        // Without the game's tripwire look there's no telling how to draw string: its file is left out.
+        assertTrue("assets/minecraft/blockstates/tripwire.json" !in PackLayout.build(emptyList(), listOf(75, 0), "Test", plan) { null })
+        assertEquals(setOf(BlockCarriers.TRIPWIRE), VanillaBlockStates.needed(plan))
+    }
+
+    @Test
+    fun aTripwireBlockAsksForTheGamesLookOfTripwireAndSaysWhatItIgnores() {
+        val files = mapOf(
+            "netherforge.json" to testManifest(),
+            "blocks/rose/block.json" to """{ "carrier": "tripwire", "hardness": 2 }"""
+        )
+        assertEquals(
+            listOf("block.carrier" to "$.hardness", "block.vanilla-looks" to "$.carrier"),
+            Projects.load(MapProjectSource(files), carriers()).problems.map { it.code to it.path }
+        )
+        val written =
+            files + (VanillaFile.FILE to """{ "minecraft": "26.3", "blockstates": { "minecraft:tripwire": { "variants": {} } } }""")
+        assertEquals(
+            listOf("block.carrier" to "$.hardness"),
+            Projects.load(MapProjectSource(written), carriers()).problems.map {
+                it.code to
+                    it.path
+            }
+        )
+        val stale = files + (VanillaFile.FILE to """{ "minecraft": "26.1", "blockstates": { "minecraft:tripwire": { "variants": {} } } }""")
+        assertTrue(
+            Projects.load(MapProjectSource(stale), carriers()).problems.any {
+                it.code == "block.vanilla-looks" &&
+                    it.file == VanillaFile.FILE
+            }
+        )
     }
 }

@@ -37,13 +37,6 @@
   {
     "severity": "error",
     "file": "menus/bag/menu.json",
-    "message": "\"not a block\" isn't a block id",
-    "path": "$.slots[\"4\"].item.canBreak[0]",
-    "code": "item.block"
-  },
-  {
-    "severity": "error",
-    "file": "menus/bag/menu.json",
     "message": "nutrition can't be negative",
     "path": "$.slots[\"5\"].item.food.nutrition",
     "code": "item.food"
@@ -75,6 +68,13 @@
     "message": "\"Not An Enchantment\" isn't an enchantment id",
     "path": "$.slots[\"8\"].item.enchantments[\"Not An Enchantment\"]",
     "code": "item.enchantment"
+  },
+  {
+    "severity": "error",
+    "file": "menus/bag/menu.json",
+    "message": "\"not a block\" isn't a reference to a block: write <id>, or <namespace>:<id> for another package's, or minecraft:<id> for the game's, or a #tag, or * for any",
+    "path": "$.slots[\"4\"].item.canBreak[0]",
+    "code": "reference.syntax"
   },
   {
     "severity": "warning",

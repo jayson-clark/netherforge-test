@@ -522,7 +522,7 @@ What [ProjectBlock](projectblock.md) listens for.
 
 | Event | Payload | Cancellable | |
 | --- | --- | --- | --- |
-| `place` | [ProjectBlockPlaceEvent](events.md#projectblockplaceevent) | yes | A block of this kind is about to be placed: by a player right-clicking with an item that places it (`event.player`, `event.item`), or by a script (`project_block:place`, neither set). `event:cancel()` stops it. It is heard before the world's own `block_place`, which a player's placing also raises (with the block's note block state as `state`). |
+| `place` | [ProjectBlockPlaceEvent](events.md#projectblockplaceevent) | yes | A block of this kind is about to be placed: by a player right-clicking with an item that places it (`event.player`, `event.item`), or by a script (`project_block:place`, neither set). `event:cancel()` stops it. It is heard before the world's own `block_place`, which a player's placing also raises (with the state of the game block it's held as, its carrier's, as `state`). |
 | `break` | [BlockBreakEvent](events.md#blockbreakevent) | yes | A player is breaking a block of this kind: before the world's own `block_break`, then `nf.on("block_break")`, with the same event, so `event:cancel()` here stops it. `event.drops` is what its loot table rolled for the tool they hold (none when `requiresTool` and it isn't the right one); assign it, and `event.experience`, to change what drops. Breaking it by a script (`break_naturally`) or an explosion rolls the same drops without this event. Writable: `drops`, `experience`. |
 | `click` | [ProjectBlockClickEvent](events.md#projectblockclickevent) | yes | A player clicked a block of this kind: `event.click` is `"left"` (hitting it, which also starts breaking it) or `"right"`. It is heard after the player's own `interact` and `nf.on("player_interact")`, so one of them cancelling the click keeps it from here. `event:cancel()` stops what the click would do, which for a right click is placing something against it. |
 | `tick` | [ProjectBlockTickEvent](events.md#projectblocktickevent) |  | Every `tick` ticks (the block's `tick` in `block.json`; without it nothing ticks) for each block of this kind in a loaded chunk. Blocks in chunks that aren't loaded are not ticked, and a block placed or loaded is first ticked a full interval later. Keep per-block state in `event.block:data()`. |
@@ -1956,6 +1956,15 @@ How far a player is with an advancement, by its criteria's names as the advancem
 | `done` | `string[]` | The criteria they've met. |
 | `remaining` | `string[]` | The criteria left. |
 
+## SlotBinding
+
+Which slot of a storage a menu slot shows: `slot:binding()`.
+
+| Field | Type | |
+| --- | --- | --- |
+| `storage` | `Inventory` | The storage (`player:storage`). |
+| `index` | `integer` | Its slot, from 0. |
+
 ## Item
 
 An item stack as a plain table: what `menu:item` returns and what `menu:set_item` takes. Only `kind` is required, or `item` instead. Read one, change a field and write it back, and nothing else about it changes: whatever the stack carries that these fields can't say (a book's pages, another plugin's data) rides along in `raw`, which you never write yourself. A field that isn't one of these is an error.
@@ -1980,8 +1989,8 @@ An item stack as a plain table: what `menu:item` returns and what `menu:set_item
 | `max_stack_size` | `integer?` | How many fit in one stack, 1 to 99, instead of the kind's own. More than 1 on an item that takes damage (a sword, armour) is an error. |
 | `rarity` | `"common"\|"uncommon"\|"rare"\|"epic"?` | The colour of its name when it has no colour of its own: white, yellow, aqua or light purple. |
 | `attribute_modifiers` | `ItemAttributeModifier[]?` | What it changes about whoever wears or holds it: `{ { attribute = "minecraft:attack_damage", amount = 6, operation = "add_value", slot = "main_hand" } }`. These replace the kind's own (a sword's damage) rather than adding to them. |
-| `can_break` | `string[]?` | Block kinds a player in adventure mode can break with it: `{ "minecraft:stone" }`. |
-| `can_place_on` | `string[]?` | Block kinds a player in adventure mode can place it on. |
+| `can_break` | `string[]?` | The blocks a player in adventure mode can break with it: the project's by id (`"ruby_ore"`, a package's `"acme:gem_ore"`), the game's with their namespace (`"minecraft:stone"`), `#tags` of blocks (`"#minecraft:logs"`, or one a project datapack defines), or `"*"` for any block: `{ "ruby_ore", "#minecraft:logs" }`. A project block it names that the project doesn't have is an error. |
+| `can_place_on` | `string[]?` | The blocks a player in adventure mode can place it on, written as `can_break`'s: `{ "*" }` is anywhere. |
 | `food` | `ItemFood?` | What eating it does. Any item with `food` can be eaten, even one that isn't food: `{ nutrition = 4, saturation = 2.4 }`. |
 | `cooldown` | `ItemCooldown?` | A cooldown after using it (an ender pearl's): `{ seconds = 2 }`. Items with the same `group` share one. |
 | `data` | `table<string, any>?` | Your script's own data, saved on the stack itself (its persistent data container), so it goes wherever the item goes: tag a coin with `data = { coin = true }`. A table keyed by strings, holding what a `data()` table may: strings, numbers, booleans, tables of them, `Vec3`s, `Location`s, `Item` tables, and `Player` and `Centity` handles, which come back as the same types. Absent when the stack carries none. Anything else (a function, a `Menu` window) is an error, naming where it was. |
@@ -2142,8 +2151,8 @@ A partial `Item` that picks stacks: a stack matches when every field given match
 | `max_stack_size` | `integer?` | How many fit in one stack, 1 to 99, instead of the kind's own. More than 1 on an item that takes damage (a sword, armour) is an error. |
 | `rarity` | `"common"\|"uncommon"\|"rare"\|"epic"?` | The colour of its name when it has no colour of its own: white, yellow, aqua or light purple. |
 | `attribute_modifiers` | `ItemAttributeModifier[]?` | What it changes about whoever wears or holds it: `{ { attribute = "minecraft:attack_damage", amount = 6, operation = "add_value", slot = "main_hand" } }`. These replace the kind's own (a sword's damage) rather than adding to them. |
-| `can_break` | `string[]?` | Block kinds a player in adventure mode can break with it: `{ "minecraft:stone" }`. |
-| `can_place_on` | `string[]?` | Block kinds a player in adventure mode can place it on. |
+| `can_break` | `string[]?` | The blocks a player in adventure mode can break with it: the project's by id (`"ruby_ore"`, a package's `"acme:gem_ore"`), the game's with their namespace (`"minecraft:stone"`), `#tags` of blocks (`"#minecraft:logs"`, or one a project datapack defines), or `"*"` for any block: `{ "ruby_ore", "#minecraft:logs" }`. A project block it names that the project doesn't have is an error. |
+| `can_place_on` | `string[]?` | The blocks a player in adventure mode can place it on, written as `can_break`'s: `{ "*" }` is anywhere. |
 | `food` | `ItemFood?` | What eating it does. Any item with `food` can be eaten, even one that isn't food: `{ nutrition = 4, saturation = 2.4 }`. |
 | `cooldown` | `ItemCooldown?` | A cooldown after using it (an ender pearl's): `{ seconds = 2 }`. Items with the same `group` share one. |
 | `data` | `table<string, any>?` | Your script's own data, saved on the stack itself (its persistent data container), so it goes wherever the item goes: tag a coin with `data = { coin = true }`. A table keyed by strings, holding what a `data()` table may: strings, numbers, booleans, tables of them, `Vec3`s, `Location`s, `Item` tables, and `Player` and `Centity` handles, which come back as the same types. Absent when the stack carries none. Anything else (a function, a `Menu` window) is an error, naming where it was. |
@@ -2388,6 +2397,25 @@ What `nf.loot.roll` and `nf.loot.fill` roll with: who and what the roll is for, 
 | `looted` | `Entity?` | The entity whose loot this is, which a game table for a mob needs. Default none. |
 | `location` | `Location?` | Where a game table is rolled. Default the player's place, else the looted entity's. |
 | `seed` | `integer?` | Rolls with this seed give the same items every time, on the server and in the editor. Default a new one each roll. |
+
+## HudBar
+
+What a HUD bar shows: `hud:bar(name)`.
+
+| Field | Type | |
+| --- | --- | --- |
+| `value` | `number` | How much of it is full, as set. |
+| `max` | `number` | Out of how much. |
+
+## SpawnCheck
+
+What a spawn condition (`nf.spawning.condition`) is asked about: one centity at one place.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `string` | Which centity, as the project names it: its folder name under `centities/` (`wisp`), or `acme:wisp` for one a package brings. |
+| `location` | `Location` | Where it would stand: the block its feet would be in. |
+| `player` | `Player` | The player it would appear near. |
 
 ## ProjectBlockPlaceEvent
 

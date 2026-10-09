@@ -2,7 +2,7 @@
 
 # CustomBlock
 
-A block of the project's own at a position, which is a `Block` like any other: it reads the world live, so one kept from earlier turns into whatever is there now (`block:custom()` says whether it still is one). The game holds it as a note block state its resource pack draws as the block, so `kind()` and `state()` answer that; `id()` and `project()` say which block it is. `data()` is its own table: it starts empty when the block is placed and is gone when the block is, whatever replaced it. `break_naturally` rolls its loot table; replacing or filling over it with `set_state` or `world:fill_blocks` removes it without drops.
+A block of the project's own at a position, which is a `Block` like any other: it reads the world live, so one kept from earlier turns into whatever is there now (`block:custom()` says whether it still is one). The game holds it as a state of its carrier (a note block's, tripwire's or a leaves block's) its resource pack draws as the block, so `kind()` and `state()` answer that; `id()` and `project()` say which block it is. `data()` is its own table: it starts empty when the block is placed and is gone when the block is, whatever replaced it. `break_naturally` rolls its loot table; replacing or filling over it with `set_state` or `world:fill_blocks` removes it without drops.
 
 A handle: call its methods with a colon, `customblock:method()`.
 

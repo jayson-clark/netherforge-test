@@ -10,7 +10,6 @@ import dev.netherforge.format.bridge.SourceRef
 import dev.netherforge.format.datapack.StartupDatapack
 import dev.netherforge.format.game.MinecraftVersion
 import dev.netherforge.format.project.CentityKind
-import dev.netherforge.format.project.DefaultFontKind
 import dev.netherforge.format.project.DialogKind
 import dev.netherforge.format.project.ItemKind
 import dev.netherforge.format.project.KindSpec
@@ -40,6 +39,7 @@ import dev.netherforge.plugin.data.PlayerPermissions
 import dev.netherforge.plugin.data.ScriptData
 import dev.netherforge.plugin.dialog.Dialogs
 import dev.netherforge.plugin.http.HttpClient
+import dev.netherforge.plugin.hud.Huds
 import dev.netherforge.plugin.interop.Placeholders
 import dev.netherforge.plugin.interop.Plugins
 import dev.netherforge.plugin.item.Items
@@ -203,7 +203,7 @@ class ProjectSession internal constructor(
             config.stateDirectory.resolve("settings"),
             scripts,
             log,
-            restart = { resources -> reload(resources, fontChanged = false) },
+            restart = { resources -> reload(resources, emptySet()) },
             changed = { runtime.settingsChanged() },
             problemsChanged = ::problemsChanged,
             home = { namespace }
@@ -221,6 +221,14 @@ class ProjectSession internal constructor(
 
     /** The `%<namespace>_<key>%` placeholders scripts offer PlaceholderAPI, each its script's. */
     internal val placeholders = service(Placeholders(platform, scripts, log))
+    internal val huds = service(
+        Huds(
+            platform,
+            { snapshot.compiledResourcePacks.mapNotNull { (pack, compiled) -> compiled.hud?.let { pack to it } }.toMap() },
+            ::measureText,
+            { ticks }
+        )
+    )
 
     /** The tables `block:data()` hands out, saved with their chunks. */
     internal val blockData = service(BlockData(platform, log) { scripts.host })
@@ -326,7 +334,7 @@ class ProjectSession internal constructor(
     val advancements = service(Advancements { namespace })
 
     /** Menu windows and their scripts: shared ones exist before any module's body runs. */
-    val menus = service(Menus(platform.menus, scripts, source::read, packs::skinTitle, ::measureText))
+    val menus = service(Menus(platform.menus, platform.inventories, scripts, source::read, packs::skinTitle, ::measureText))
 
     val dialogs = service(Dialogs(platform.dialogs, scripts, source::read, { namespace }) { log.warn(it) })
 
@@ -534,8 +542,8 @@ class ProjectSession internal constructor(
         for (service in services) service.entitiesUnloading(entities)
     }
 
-    internal fun chunkLoaded(world: String, chunkX: Int, chunkZ: Int) {
-        for (service in services) service.chunkLoaded(world, chunkX, chunkZ)
+    internal fun chunkLoaded(world: String, chunkX: Int, chunkZ: Int, generated: Boolean) {
+        for (service in services) service.chunkLoaded(world, chunkX, chunkZ, generated)
     }
 
     internal fun chunkUnloading(world: String, chunkX: Int, chunkZ: Int) {
@@ -566,13 +574,14 @@ class ProjectSession internal constructor(
     /**
      * Reloads [resources], each once, kind by kind in the registry's order
      * ([Kinds.all]), each kind by the service that reloads it and then told to
-     * those that follow it. [fontChanged]: the default font was saved, which
-     * services built from it hear first. The project is read again either way.
+     * those that follow it. [documents]: the project documents that were
+     * saved (the default font, the game's block looks), which services built
+     * from them hear first. The project is read again either way.
      */
-    internal fun reload(resources: List<Resource>, fontChanged: Boolean): ReloadResult {
+    internal fun reload(resources: List<Resource>, documents: Set<String>): ReloadResult {
         snapshot = load()
         val batch = ReloadBatch(snapshot, this)
-        if (fontChanged) for (service in followers[DefaultFontKind.id].orEmpty()) service.followed(DefaultFontKind.id, emptySet(), batch)
+        for (document in documents) for (service in followers[document].orEmpty()) service.followed(document, emptySet(), batch)
         if (resources.isEmpty()) return ReloadResult(emptyList())
         for (resource in resources) batch.add(resource)
         var startup = false

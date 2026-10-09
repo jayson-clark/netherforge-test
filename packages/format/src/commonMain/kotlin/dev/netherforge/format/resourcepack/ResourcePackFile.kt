@@ -45,7 +45,9 @@ data class ResourcePackFile(
      * Sound events that need more than their one file, keyed by the event's
      * key (`menu/open`). Every `.ogg` under `sounds/` is already an event.
      */
-    val sounds: Map<String, SoundDef> = emptyMap()
+    val sounds: Map<String, SoundDef> = emptyMap(),
+    /** What it does to the HUD: the game's elements it hides, and elements of its own scripts fill in ([HudDef]). */
+    val hud: HudDef? = null
 ) {
     companion object {
         const val FILE_NAME = "pack.json"
@@ -64,6 +66,9 @@ data class ResourcePackFile(
             "a $TEXTURE_EXTENSION path of letters, digits, _, - and . inside this resource pack's $TEXTURES/ folder"
 
         fun isTexturePath(path: String): Boolean = TEXTURE_PATH.matches(path)
+
+        /** A model file's path in a pack's folder, from its path under `models/`. */
+        fun modelFile(path: String) = "${PackModels.FOLDER}/$path"
     }
 }
 
@@ -111,14 +116,20 @@ data class GlyphDef(
 
 /**
  * One custom item look, reached through the `item_model` component; no vanilla item is replaced.
- * Either a flat picture ([texture]) or a pack block's cube ([block]), drawn the way the game
- * draws a block item: in 3D, in slots and in the hand.
+ * One of: a flat picture ([texture]), a pack block's look ([block]), drawn the way the game
+ * draws a block item (in 3D, in slots and in the hand), or a [model] of its own shape.
  */
 @Serializable
 data class ItemModelDef(
     @Ref(RefKind.TEXTURE) val texture: String? = null,
     /** A pack's block look (`ui/ruby_ore`) this item is drawn as, instead of a [texture]. */
     @Ref(RefKind.BLOCK_MODEL) val block: ResourceRef? = null,
+    /**
+     * A model file under `models/` (`crystal.json`): the game's JSON model with elements, as Blockbench
+     * exports one, its textures in this pack's `textures/` ([PackModels]). Its own `display` transforms say
+     * how it's held, worn and shown in slots and on a centity.
+     */
+    @Ref(RefKind.MODEL) val model: String? = null,
     /** How a [texture] is held. Default [ItemModelParent.GENERATED]. */
     val parent: ItemModelParent? = null,
     /** A different picture used only in GUIs. */
@@ -146,6 +157,12 @@ enum class ItemModelParent {
  */
 @Serializable
 data class BlockModelDef(
+    /**
+     * A model file under `models/` (`crystal.json`), for a block that isn't a plain cube, instead of
+     * textures. A block held in a note block hides its neighbours' faces as a full cube does, so a model
+     * that isn't one wants another `carrier` (see the block format).
+     */
+    @Ref(RefKind.MODEL) val model: String? = null,
     /** Path under `textures/`: every face that has no texture of its own. */
     @Ref(RefKind.TEXTURE) val texture: String? = null,
     @Ref(RefKind.TEXTURE) val top: String? = null,

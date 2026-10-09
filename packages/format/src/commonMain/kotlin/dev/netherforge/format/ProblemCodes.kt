@@ -297,6 +297,10 @@ object ProblemCodes {
         error("centity.spawning-range", CENTITY, "A `spawning` range has its `min` above its `max`, or a light level outside 0 to 15.")
     val CENTITY_SPAWNING_NUMBER =
         error("centity.spawning-number", CENTITY, "`spawning`'s `weight`, `cap`, `group` or `despawnDistance` isn't positive.")
+    val CENTITY_SPAWNING_TIME =
+        error("centity.spawning-time", CENTITY, "A tick of the day in `spawning.time` is outside 0 to 23999.")
+    val CENTITY_SPAWNING_WHEN =
+        error("centity.spawning-when", CENTITY, "`spawning.when` isn't a condition's name: an id, or `ns:id` for a package's.")
     val CENTITY_SPAWNING_DESPAWN =
         warning(
             "centity.spawning-despawn",
@@ -353,9 +357,9 @@ object ProblemCodes {
     val ITEM_UNKNOWN_ATTRIBUTE = error("item.unknown-attribute", ITEM, "A modifier's attribute is one the target version doesn't have.")
     val ITEM_ATTRIBUTE_ID = error("item.attribute-id", ITEM, "A modifier's `id` isn't a namespaced id, or two modifiers share one.")
     val ITEM_ATTRIBUTE_AMOUNT = error("item.attribute-amount", ITEM, "A modifier's `amount` isn't a number.")
-    val ITEM_BLOCK = error("item.block", ITEM, "An entry of `canBreak` or `canPlaceOn` isn't a block id.")
+    val ITEM_BLOCK = error("item.block", ITEM, "An entry of `canBreak` or `canPlaceOn` isn't a block, a `#tag` of blocks or `*`.")
     val ITEM_UNKNOWN_BLOCK =
-        error("item.unknown-block", ITEM, "An entry of `canBreak` or `canPlaceOn` is a block the target version doesn't have.")
+        error("item.unknown-block", ITEM, "An entry of `canBreak` or `canPlaceOn` is a block or block tag the target version doesn't have.")
     val ITEM_FOOD = error("item.food", ITEM, "A `food` value is out of range.")
     val ITEM_COOLDOWN = error("item.cooldown", ITEM, "A cooldown's `seconds` isn't more than 0.")
     val ITEM_COOLDOWN_GROUP = error("item.cooldown-group", ITEM, "A cooldown's `group` isn't a namespaced id.")
@@ -406,7 +410,20 @@ object ProblemCodes {
     val BLOCK_TICK = error("block.tick", BLOCK, "A block's `tick` isn't a whole number of ticks from 1 to an hour.")
     val BLOCK_REQUIRES_TOOL =
         warning("block.requires-tool", BLOCK, "A block `requiresTool` but names no `tool`, so no tool is the right one and nothing drops.")
-    val BLOCK_CARRIERS = error("block.carriers", BLOCK, "The project has more blocks than the game has note block states to hold them in.")
+    val BLOCK_CARRIERS =
+        error("block.carriers", BLOCK, "The project has more blocks of one carrier than the game has states of it to hold them in.")
+    val BLOCK_CARRIER =
+        warning(
+            "block.carrier",
+            BLOCK,
+            "Something about a block its carrier doesn't do: a hardness tripwire ignores, or a model a note block hides its neighbours' faces around."
+        )
+    val BLOCK_VANILLA_LOOKS =
+        warning(
+            "block.vanilla-looks",
+            BLOCK,
+            "`client/vanilla.json` lacks the game's look of a block custom blocks are held in, or is another version's."
+        )
 
     // ---- migrations -------------------------------------------------------------
 
@@ -730,13 +747,43 @@ object ProblemCodes {
         error(
             "resource_pack.item-look",
             RESOURCE_PACK,
-            "An item look needs one of `texture` and `block`, and `parent` only goes with a texture."
+            "An item look needs one of `texture`, `block` and `model`, and `parent` only goes with a texture."
         )
+    val RESOURCE_PACK_HUD =
+        error(
+            "resource_pack.hud",
+            RESOURCE_PACK,
+            "A `hud` element's key is taken by another, or its place, segments or icons aren't ones it can be drawn with."
+        )
+    val RESOURCE_PACK_HUD_HIDE =
+        warning(
+            "resource_pack.hud-hide",
+            RESOURCE_PACK,
+            "`hud.hide` needs the game's HUD sprites, which `client/vanilla.json` lacks or has from another version."
+        )
+    val RESOURCE_PACK_MODEL_FILE =
+        error(
+            "resource_pack.model-file",
+            RESOURCE_PACK,
+            "A `model` names a file that isn't in the resource pack's `models/` folder, or isn't a JSON model."
+        )
+    val RESOURCE_PACK_MODEL =
+        error("resource_pack.model", RESOURCE_PACK, "A model file's element, rotation, face or display isn't one the game reads.")
+    val RESOURCE_PACK_MODEL_BOUNDS =
+        error("resource_pack.model-bounds", RESOURCE_PACK, "A model's element reaches outside -16 to 32, which the game refuses.")
+    val RESOURCE_PACK_MODEL_TEXTURE =
+        error(
+            "resource_pack.model-texture",
+            RESOURCE_PACK,
+            "A model's face names a texture variable the model doesn't give, or a texture in a namespace nothing serves."
+        )
+    val RESOURCE_PACK_MODEL_DISPLAY =
+        warning("resource_pack.model-display", RESOURCE_PACK, "A model's display translation or scale is past what the game clamps it to.")
     val RESOURCE_PACK_BLOCK_FACES =
         error(
             "resource_pack.block-faces",
             RESOURCE_PACK,
-            "A block look has no texture for some face: give it a texture, or one for each face."
+            "A block look has no texture for some face (give it a texture, or one for each face), or has a model and textures both."
         )
     val RESOURCE_PACK_SOUND_KEY = error("resource_pack.sound-key", RESOURCE_PACK, "A key in `sounds` isn't a sound key.")
     val RESOURCE_PACK_SOUND_NAME =
@@ -796,7 +843,7 @@ object ProblemCodes {
         error(
             "runtime.blocks",
             BLOCK,
-            "The server can't hold the project's blocks: it has no note block states for them, or won't stop working them out itself."
+            "The server can't hold the project's blocks: it has no states of their carrier for them, or won't stop working them out itself."
         )
     val RUNTIME_TERRAIN =
         warning(

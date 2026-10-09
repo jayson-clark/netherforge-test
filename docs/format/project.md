@@ -237,6 +237,44 @@ text that uses them can't be measured. Without the file, nothing that measures
 text on the server can work; the editor warns when it can't write it (no client
 import for the target version).
 
+## `client/vanilla.json`
+
+What only the client knows and the built resource pack needs. The game's own
+blockstate files of the blocks the project's [blocks](block.md#carriers) are
+held in, where only the client knows how the game draws their states:
+tripwire, which draws a model per shape of string. The built resource pack
+replaces the carrier's file, so it needs these to keep drawing string as the
+game does. And the names of the game's HUD sprites, which a resource pack's
+[`hud.hide`](resource-pack.md#hiding-the-games-elements) replaces with empty
+ones. Like `fonts/default.json`, the editor writes it from your imported
+Minecraft client whenever a tripwire block or `hud.hide` needs it and it's
+missing or out of date: you never edit it, but you commit it.
+
+```json
+{
+  "$schema": "../.netherforge/schema/vanilla.schema.json",
+  "minecraft": "26.3",
+  "blockstates": {
+    "minecraft:tripwire": {
+      "variants": {
+        "attached=false,east=false,north=false,south=false,west=false": {
+          "model": "minecraft:block/tripwire_ns"
+        }
+      }
+    }
+  },
+  "sprites": ["hud/air", "hud/armor_full", "hud/food_full", "hud/heart/full"]
+}
+```
+
+| Key           | Meaning                                                                                                                            |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `minecraft`   | The version whose client it was read from. When it isn't the project's `minecraft`, the file is stale (`block.vanilla-looks`).     |
+| `blockstates` | Each block's blockstate file as the client has it, by block id.                                                                    |
+| `sprites`     | The HUD's GUI sprites (`textures/gui/sprites/hud/`), by name. An import from before the editor listed them has none: import again. |
+
+Without it, tripwire blocks look like string (`block.vanilla-looks`, at each tripwire block), and `hud.hide` hides nothing (`resource_pack.hud-hide`).
+
 ## How files are written
 
 Every JSON file has one canonical form, and the editor always writes it:

@@ -34,6 +34,22 @@ class FakeInventories(private val platform: FakePlatform) : InventoryOps {
             val kind = state?.substringBefore('[')
             if (kind in containerKinds) containers.getOrPut(BlockAt(ref.world, ref.x, ref.y, ref.z)) { arrayOfNulls(27) } else null
         }
+        // A copy: written back by [written].
+        is InventoryRef.Storage -> storage(ref)?.let { held -> Array(ref.size) { held[it] } }
+    }
+
+    /** A storage's slots, while its player is online. */
+    private fun storage(ref: InventoryRef.Storage): MutableMap<Int, ItemData>? =
+        platform.players.byId[ref.player]?.storages?.getOrPut(ref.name) { LinkedHashMap() }
+
+    /** Writes [slots] (of [slots]) back to [ref] when it's a storage, whose [slots] is a copy; slots past its size keep theirs. */
+    private fun written(ref: InventoryRef, slots: Array<ItemData?>) {
+        if (ref !is InventoryRef.Storage) return
+        val held = storage(ref) ?: return
+        for (slot in slots.indices) {
+            val item = slots[slot]
+            if (item == null) held.remove(slot) else held[slot] = item
+        }
     }
 
     override fun kind(ref: InventoryRef): String? {
@@ -41,6 +57,7 @@ class FakeInventories(private val platform: FakePlatform) : InventoryOps {
         return when (ref) {
             is InventoryRef.Player -> "player"
             is InventoryRef.EnderChest -> "ender_chest"
+            is InventoryRef.Storage -> "storage"
             is InventoryRef.Entity -> "chest"
             is InventoryRef.Block -> platform.worlds.state(ref.world, ref.x, ref.y, ref.z).substringBefore('[').substringAfter(':')
         }
@@ -53,6 +70,7 @@ class FakeInventories(private val platform: FakePlatform) : InventoryOps {
     override fun setItem(ref: InventoryRef, slot: Int, item: ItemData?): Boolean {
         val slots = slots(ref) ?: return false
         slots[slot] = item?.let { platform.stack(it) ?: return false }
+        written(ref, slots)
         return true
     }
 
@@ -78,19 +96,21 @@ class FakeInventories(private val platform: FakePlatform) : InventoryOps {
             slots[slot] = item.copy(def = item.def.copy(count = moved))
             left -= moved
         }
+        written(ref, slots)
         return left
     }
 
     override fun clear(ref: InventoryRef): Boolean {
         val slots = slots(ref) ?: return false
         slots.fill(null)
+        written(ref, slots)
         return true
     }
 
     override fun viewers(ref: InventoryRef) = open.filterValues { it == ref }.keys.toList()
 
     override fun open(ref: InventoryRef, player: UUID): Boolean {
-        if (slots(ref) == null || player !in platform.players.byId) return false
+        if (ref is InventoryRef.Storage || slots(ref) == null || player !in platform.players.byId) return false
         platform.menus.closeAny(player)
         open[player] = ref
         return true

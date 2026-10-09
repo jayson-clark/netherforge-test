@@ -96,15 +96,20 @@ class FakePlatform(
     /** The project's namespace, as a real adapter names what it stamps and registers. */
     var namespace: () -> String = { "" }
 
+    /** The state each project block is held as now, as a real adapter writes an item's `canBreak` with. */
+    var blockStates: (String) -> String? = { null }
+
     override fun bind(
         events: PlatformEvents,
         glyphs: (reference: String) -> String?,
         items: (reference: String) -> ItemLook?,
+        blocks: (name: String) -> String?,
         namespace: () -> String
     ) {
         this.events = events
         this.glyphs = glyphs
         this.itemLooks = items
+        this.blockStates = blocks
         this.namespace = namespace
     }
 
@@ -225,6 +230,17 @@ class FakePlatform(
             "black", "light_gray", "light_blue", "pink", "lime", "magenta", "cyan", "gray"
         ).map { "minecraft:${it}_concrete" }
 
+        private val TRIPWIRE_PROPERTIES = listOf("attached", "disarmed", "east", "north", "powered", "south", "west")
+
+        private val LEAVES = BlockInfo(
+            properties = mapOf(
+                "distance" to (1..7).map { "$it" },
+                "persistent" to listOf("true", "false"),
+                "waterlogged" to listOf("true", "false")
+            ),
+            defaults = mapOf("distance" to "7", "persistent" to "false", "waterlogged" to "false")
+        )
+
         private val FACING = mapOf(
             "facing" to listOf("north", "east", "south", "west", "up", "down"),
             "waterlogged" to listOf("true", "false")
@@ -292,6 +308,13 @@ class FakePlatform(
                     ),
                     defaults = mapOf("instrument" to "harp", "note" to "0", "powered" to "false")
                 ),
+                // The other blocks custom blocks are held as: tripwire, and leaves (the `leaves` tag lists them).
+                "minecraft:tripwire" to BlockInfo(
+                    properties = TRIPWIRE_PROPERTIES.associateWith { listOf("true", "false") },
+                    defaults = TRIPWIRE_PROPERTIES.associateWith { "false" }
+                ),
+                "minecraft:oak_leaves" to LEAVES,
+                "minecraft:birch_leaves" to LEAVES,
                 "minecraft:oak_slab" to BlockInfo(
                     properties = mapOf("type" to listOf("top", "bottom", "double"), "waterlogged" to listOf("true", "false")),
                     defaults = mapOf("type" to "bottom", "waterlogged" to "false")
@@ -323,6 +346,8 @@ class FakePlatform(
                     "minecraft:redstone",
                     "minecraft:stick",
                     "minecraft:iron_sword",
+                    // examples/basic's ruby pick.
+                    "minecraft:iron_pickaxe",
                     // What examples/basic's loot tables give and ask for.
                     "minecraft:diamond_sword",
                     // What examples/basic's advancements show, and a new one's template.
@@ -423,7 +448,9 @@ class FakePlatform(
                 RegistryKey.ITEM.id to mapOf("minecraft:planks" to listOf("minecraft:dark_oak_planks", "minecraft:oak_planks")),
                 RegistryKey.BLOCK.id to mapOf(
                     "minecraft:mineable/pickaxe" to listOf("minecraft:stone", "minecraft:stone_bricks"),
-                    "minecraft:mineable/axe" to listOf("minecraft:oak_planks", "minecraft:note_block")
+                    "minecraft:mineable/axe" to listOf("minecraft:oak_planks", "minecraft:note_block"),
+                    "minecraft:planks" to listOf("minecraft:oak_planks"),
+                    "minecraft:leaves" to listOf("minecraft:birch_leaves", "minecraft:oak_leaves")
                 ),
                 RegistryKey.BIOME.id to mapOf(
                     "minecraft:is_end" to listOf("minecraft:the_end"),

@@ -35,15 +35,20 @@ class PaperInventories(private val entities: PaperWorldEntities) : InventoryOps 
                 (world.getBlockAt(ref.x, ref.y, ref.z).getState(false) as? Container)?.inventory
             }
         }
+        // Not a Bukkit inventory: the player's persistent data.
+        is InventoryRef.Storage -> null
     }
 
-    override fun kind(ref: InventoryRef): String? = inventory(ref)?.type?.name?.lowercase()
+    override fun kind(ref: InventoryRef): String? =
+        if (ref is InventoryRef.Storage) PaperStorage.kind(ref) else inventory(ref)?.type?.name?.lowercase()
 
-    override fun size(ref: InventoryRef): Int? = inventory(ref)?.size
+    override fun size(ref: InventoryRef): Int? = if (ref is InventoryRef.Storage) PaperStorage.size(ref) else inventory(ref)?.size
 
-    override fun contents(ref: InventoryRef): List<ItemData?>? = inventory(ref)?.contents?.map(PaperItems::toItem)
+    override fun contents(ref: InventoryRef): List<ItemData?>? =
+        if (ref is InventoryRef.Storage) PaperStorage.contents(ref) else inventory(ref)?.contents?.map(PaperItems::toItem)
 
     override fun setItem(ref: InventoryRef, slot: Int, item: ItemData?): Boolean {
+        if (ref is InventoryRef.Storage) return PaperStorage.setItem(ref, slot, item)
         val inventory = inventory(ref) ?: return false
         if (slot !in 0 until inventory.size) return false
         if (item == null) {
@@ -55,12 +60,14 @@ class PaperInventories(private val entities: PaperWorldEntities) : InventoryOps 
     }
 
     override fun add(ref: InventoryRef, item: ItemData): Int? {
+        if (ref is InventoryRef.Storage) return PaperStorage.add(ref, item)
         val inventory = inventory(ref) ?: return null
         val stack = PaperItems.toStack(item) ?: return item.def.count ?: 1
         return inventory.addItem(stack).values.sumOf { it.amount }
     }
 
     override fun clear(ref: InventoryRef): Boolean {
+        if (ref is InventoryRef.Storage) return PaperStorage.clear(ref)
         val inventory = inventory(ref) ?: return false
         inventory.clear()
         return true

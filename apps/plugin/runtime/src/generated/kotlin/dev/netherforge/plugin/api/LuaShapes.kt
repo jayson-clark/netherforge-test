@@ -3397,6 +3397,33 @@ data class AdvancementProgress(val done: List<String>, val remaining: List<Strin
     }
 }
 
+/** Which slot of a storage a menu slot shows: `slot:binding()`. */
+data class SlotBinding(val storage: LuaHandle.Inventory, val index: Long) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<SlotBinding>("SlotBinding") {
+        val storageCodec = LuaHandle.Inventory.Codec
+        val indexCodec = LuaCodecs.INTEGER
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "storage" to storageCodec,
+            "index" to indexCodec
+        )
+
+        override fun read(fields: ShapeReader) = SlotBinding(
+            storage = fields.field("storage", storageCodec),
+            index = fields.field("index", indexCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: SlotBinding) {
+            fields.field("storage", value.storage, storageCodec)
+            fields.field("index", value.index, indexCodec)
+        }
+    }
+}
+
 /** What `player:open_menu` opens a window with. */
 data class MenuOpenOptions(val context: LuaValue? = null) : LuaShape {
     override fun push(call: LuaCall) = Codec.push(call, this)
@@ -4412,6 +4439,33 @@ data class LootContext(val player: LuaHandle.Player? = null, val tool: ItemData?
             fields.field("looted", value.looted, lootedCodec)
             fields.field("location", value.location, locationCodec)
             fields.field("seed", value.seed, seedCodec)
+        }
+    }
+}
+
+/** What a HUD bar shows: `hud:bar(name)`. */
+data class HudBar(val value: Double, val max: Double) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<HudBar>("HudBar") {
+        val valueCodec = LuaCodecs.NUMBER
+        val maxCodec = LuaCodecs.NUMBER
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "value" to valueCodec,
+            "max" to maxCodec
+        )
+
+        override fun read(fields: ShapeReader) = HudBar(
+            value = fields.field("value", valueCodec),
+            max = fields.field("max", maxCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: HudBar) {
+            fields.field("value", value.value, valueCodec)
+            fields.field("max", value.max, maxCodec)
         }
     }
 }

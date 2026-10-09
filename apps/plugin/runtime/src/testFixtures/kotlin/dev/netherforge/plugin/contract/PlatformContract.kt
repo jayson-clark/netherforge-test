@@ -73,6 +73,7 @@ abstract class PlatformContract {
         }
         for (player in joined.toList()) leave(player)
         server.itemLooks.clear()
+        server.blockStates.clear()
     }
 
     protected fun <T> main(block: () -> T): T = server.main(block)

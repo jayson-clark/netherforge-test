@@ -114,8 +114,8 @@ with `<glyph:<pack>/<key>>` (see [Glyphs](resource-pack.md#glyphs)):
 | `maxStackSize`       | How many stack, 1–99. More than 1 can't go with durability.                                                                                                                  |
 | `rarity`             | `common`, `uncommon`, `rare` or `epic`: the colour of its name.                                                                                                              |
 | `attributeModifiers` | What wearing or holding it changes. See below.                                                                                                                               |
-| `canBreak`           | Block kinds it can break in adventure mode.                                                                                                                                  |
-| `canPlaceOn`         | Block kinds it can be placed on in adventure mode.                                                                                                                           |
+| `canBreak`           | The blocks it can break in adventure mode. See below.                                                                                                                        |
+| `canPlaceOn`         | The blocks it can be placed on in adventure mode. See below.                                                                                                                 |
 | `food`               | `{ "nutrition", "saturation", "canAlwaysEat"?, "eatSeconds"? }`. See below.                                                                                                  |
 | `cooldown`           | `{ "seconds", "group"? }`: a cooldown after using it.                                                                                                                        |
 | `data`               | Your scripts' own data, a JSON object saved on the stack.                                                                                                                    |
@@ -136,6 +136,38 @@ attribute id (`minecraft:attack_damage`, `minecraft:movement_speed`, …);
 which defaults to `<namespace>:<attribute>_<index>` (`shop:attack_damage_0` in a project whose namespace is `shop`);
 two with the same id are an error (`item.attribute-id`). The list replaces the
 kind's own modifiers (a sword's damage) rather than adding to them.
+
+`canBreak` and `canPlaceOn` are what an adventure-mode player may do with the
+item, the tool system of an adventure server. Each is a list of:
+
+- **the project's blocks** by id (`ruby_ore`), a package's as `ns:id`: the item
+  breaks every placed and generated one, whatever state the server holds it in
+  (it follows the blocks as the project's change: a stack names the state its
+  blocks were in, and is rewritten when the player joins or opens an
+  inventory after they move);
+- **the game's blocks**, with their namespace (`minecraft:stone`), and
+  **`#tags`** of them (`#minecraft:logs`; a bare `#logs` is the game's);
+- **a tag a project datapack defines**, as `#<namespace>:<path>`
+  (`#basic:soft`, in a [datapack's](datapack.md) `data/basic/tags/block/soft.json`);
+- **`*`**: any block. `"canPlaceOn": ["*"]` lets the item be placed
+  anywhere.
+
+```json partial
+{
+  "kind": "minecraft:iron_pickaxe",
+  "canBreak": ["ruby_ore", "#minecraft:logs"],
+  "canPlaceOn": ["*"]
+}
+```
+
+A plain id is always one of the project's blocks (`reference.block` says how
+the game's are written when there's none: `stone` is `minecraft:stone`), a
+game block or tag the target version doesn't have is `item.unknown-block`, one
+that isn't shaped like an id is `item.block`, and a project datapack's tag no
+datapack defines is `reference.block`. A project block's state is what's
+matched, and a tag only holds the game's blocks: a tag can't name a project
+block, and `minecraft:note_block` in one matches every project block held in a
+note block too.
 
 `food` makes any item edible, not just food: it also gives the item
 Minecraft's `consumable` component, eaten over `eatSeconds` (1.6 by default).

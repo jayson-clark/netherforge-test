@@ -13,6 +13,7 @@ import { nfHttp } from './http.ts'
 import { nfLoot } from './loot.ts'
 import { nfTeams } from './teams.ts'
 import { nfSchedule } from './schedule.ts'
+import { nfSpawning } from './spawning.ts'
 import { nfEconomy, nfPlaceholders } from './interop.ts'
 import { nfMath, nfRandom, nfTime } from './utilities.ts'
 import { nfTest } from './test.ts'
@@ -381,6 +382,7 @@ const namespaces = [
   nfWorlds,
   nfStructures,
   nfCentities,
+  nfSpawning,
   nfMenus,
   nfDialogs,
   nfItems,

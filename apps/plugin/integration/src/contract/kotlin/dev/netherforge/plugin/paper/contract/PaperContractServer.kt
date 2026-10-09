@@ -25,6 +25,7 @@ class PaperContractServer(
     override val platform: PaperPlatform,
     override val events: RecordingEvents,
     override val itemLooks: MutableMap<String, ItemLook>,
+    override val blockStates: MutableMap<String, String>,
     override val origin: Location,
     private val files: Path
 ) : ContractServer {

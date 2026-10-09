@@ -64,7 +64,13 @@ internal class PlayerImpl(private val session: ProjectSession) : PlayerApi {
 
     override fun sendMessage(self: LuaHandle.Player, text: String): Boolean = self.uuidOrNull()?.let { players.message(it, text) } == true
 
-    override fun sendActionbar(self: LuaHandle.Player, text: String): Boolean = online(self)?.let { players.actionbar(it, text) } == true
+    /** Shown with their HUD while they have one, which would otherwise draw over it within a second. */
+    override fun sendActionbar(self: LuaHandle.Player, text: String): Boolean {
+        val player = online(self) ?: return false
+        return session.huds.message(player, text) || players.actionbar(player, text)
+    }
+
+    override fun hud(self: LuaHandle.Player): LuaHandle.Hud = LuaHandle.Hud(self.id)
 
     override fun sendTitle(self: LuaHandle.Player, title: String, subtitle: String?, options: TitleOptions?): Boolean {
         fun ticks(value: Long?, default: Int, name: String): Int {
@@ -185,6 +191,16 @@ internal class PlayerImpl(private val session: ProjectSession) : PlayerApi {
 
     override fun enderChest(self: LuaHandle.Player): LuaHandle.Inventory? = online(self)?.let {
         InventoryKeys.of(InventoryRef.EnderChest(it))
+    }
+
+    override fun storage(self: LuaHandle.Player, name: String, size: Long): LuaHandle.Inventory? {
+        if (!Names.isId(name)) throw LuaApiException("\"$name\" isn't a storage name (${Names.ID_RULE})")
+        if (size !in 1..InventoryRef.Storage.MAX_SIZE) {
+            throw LuaApiException("a storage has 1 to ${InventoryRef.Storage.MAX_SIZE} slots, not $size")
+        }
+        val uuid = online(self) ?: return null
+        // The calling script's namespace: a package's storages are its own.
+        return InventoryKeys.of(InventoryRef.Storage(uuid, "${session.names.calling()}:$name", size.toInt()))
     }
 
     override fun heldItem(self: LuaHandle.Player): ItemData? = online(self)?.let { entities.equipment(it, "main_hand") }

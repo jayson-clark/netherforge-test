@@ -1,0 +1,5 @@
+{
+  "kind": "minecraft:wooden_pickaxe",
+  "canBreak": ["ruby_ore", "#minecraft:logs", "#logs", "#case:soft", "*", "stone", "#case:hard", "minecraft:Bad", "#Bad Tag"],
+  "canPlaceOn": ["*", "#other:soft", "other:gem"]
+}

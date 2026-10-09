@@ -9,6 +9,7 @@ import type { ReloadResult } from '@netherforge/format/types'
 import type { AppInfo, CacheStatus, ProjectInfo, Unlisten } from '@/core/backend/types'
 import { agentDocFiles } from '@/core/agentDocs'
 import { DEFAULT_FONT_FILE, defaultFontToWrite, defaultFontWriteFailed } from '@/core/defaultFont'
+import { clientJson, VANILLA_FILE, vanillaLooks, vanillaToWrite } from '@/core/vanilla'
 import {
   AGENT_FILES,
   MANIFEST_FILE,
@@ -114,6 +115,12 @@ export interface ProjectActions {
    */
   syncDefaultFont(): Promise<void>
   /**
+   * Writes `client/vanilla.json` from the import when a tripwire block or a
+   * pack's `hud.hide` needs it and it's missing or differs (see `core/vanilla.ts`),
+   * never over unsaved edits.
+   */
+  syncVanilla(): Promise<void>
+  /**
    * Adds AGENTS.md and CLAUDE.md to the open project, each only if it's
    * missing, and the editor's MCP server (its port and token) to `.mcp.json`
    * (created, merged into or brought up to date); returns the paths it wrote.
@@ -154,6 +161,7 @@ export function projectSlice({ backend, get, set }: SliceArgs): ProjectState & P
   let unlistenCache: Unlisten | null = null
   let hooks: RunHooks = { bridgeConnected: () => false, reloaded: () => {} }
   let writingFont = false
+  let writingBlockStates = false
 
   const writeSchemas = async () => {
     await Promise.all(
@@ -332,6 +340,28 @@ export function projectSlice({ backend, get, set }: SliceArgs): ProjectState & P
         writingFont = false
       }
       get().validateSoon()
+    },
+
+    async syncVanilla() {
+      const { project, minecraft, diskTexts, docs } = get()
+      if (!project || !minecraft || writingBlockStates || docs[VANILLA_FILE]?.dirty) return
+      writingBlockStates = true
+      try {
+        const looks = await vanillaLooks(clientJson(backend, minecraft))
+        const text = vanillaToWrite(minecraft, looks, diskTexts[VANILLA_FILE])
+        if (text === null) return
+        await backend.writeText(VANILLA_FILE, text)
+        set({
+          diskTexts: { ...get().diskTexts, [VANILLA_FILE]: text },
+          fileStamps: { ...get().fileStamps, [VANILLA_FILE]: nextNonce() },
+        })
+        await get().refreshFiles()
+        get().validateSoon()
+      } catch (error) {
+        get().notify('error', `Couldn't write ${VANILLA_FILE}: ${errorText(error)}`)
+      } finally {
+        writingBlockStates = false
+      }
     },
 
     setReadOnly(path, reason) {

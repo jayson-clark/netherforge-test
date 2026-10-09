@@ -35,6 +35,9 @@ import { usePrimary, useSelection, useView, useViewState } from '@/editors/views
 
 /** A block or item display's row shows what it displays, as the inventory draws it. */
 function displayItem(display: DisplayDef | undefined) {
+  // A model display is drawn as its look, which is what a stack of it would show.
+  if (display?.type === 'model')
+    return <ItemIcon item={{ kind: '', itemModel: display.model }} size={16} />
   const kind =
     display?.type === 'block'
       ? parseBlockState(display.block).id

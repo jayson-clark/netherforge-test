@@ -17,6 +17,12 @@
     }
   },
   "items": {
+    "crystal": {
+      "model": "crystal.json"
+    },
+    "crystal_lit": {
+      "model": "crystal_lit.json"
+    },
     "ruby": {
       "texture": "item/ruby.png"
     },
@@ -37,8 +43,28 @@
     }
   },
   "blocks": {
+    "ruby_crystal": {
+      "model": "crystal.json"
+    },
     "ruby_ore": {
       "texture": "block/ruby_ore.png"
+    }
+  },
+  "hud": {
+    "bars": {
+      "treasure": {
+        "full": "hud/treasure_full.png",
+        "empty": "hud/treasure_empty.png",
+        "segments": 3,
+        "x": -91,
+        "y": 52,
+        "gap": 1
+      }
+    },
+    "texts": {
+      "treasure_label": {
+        "x": -91
+      }
     }
   }
 }

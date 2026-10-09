@@ -1,5 +1,6 @@
 package dev.netherforge.format.project
 
+import dev.netherforge.format.block.VanillaFile
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.text.DefaultFontFile
 import kotlinx.serialization.KSerializer
@@ -78,4 +79,13 @@ object DefaultFontKind : DocumentKind<DefaultFontFile> {
     override val schemaRef = DefaultFontFile.SCHEMA
 
     override fun canonical(value: DefaultFontFile) = value.copy(schema = schemaRef)
+}
+
+/** `client/vanilla.json`: the game's own blockstate files of the blocks custom blocks are held in, which the editor writes from the imported client. */
+object VanillaKind : DocumentKind<VanillaFile> {
+    override val id = "vanilla"
+    override val serializer = VanillaFile.serializer()
+    override val schemaRef = VanillaFile.SCHEMA
+
+    override fun canonical(value: VanillaFile) = value.copy(schema = schemaRef)
 }

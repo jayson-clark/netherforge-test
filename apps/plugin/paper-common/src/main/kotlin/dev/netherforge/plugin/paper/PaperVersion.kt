@@ -70,6 +70,15 @@ interface PaperVersion {
     fun setNoteBlockUpdatesDisabled(disabled: Boolean): Boolean
 
     /**
+     * Whether Paper's `disable-tripwire-updates` (`paper-global.yml`) is on: then the server places string in its
+     * default state and never changes a tripwire's (no hooks attaching it, nothing powering or disarming it).
+     */
+    fun tripwireUpdatesDisabled(): Boolean
+
+    /** Turns `disable-tripwire-updates` on or off for as long as the server runs. False when this server can't. */
+    fun setTripwireUpdatesDisabled(disabled: Boolean): Boolean
+
+    /**
      * The instrument the game gives a note block at [block]: the one of what's
      * above it when that's a mob head, else the one of what's below.
      */
@@ -87,6 +96,14 @@ interface PaperVersion {
         face: org.bukkit.block.BlockFace,
         point: org.bukkit.util.Vector
     ): Boolean
+
+    /**
+     * Calls [changed] with the slots of the window [player] has open (those of its top inventory: below [size]) that
+     * the game changes, as it sends them to their client: straight after it applies a click or a drag of theirs,
+     * before it does anything else (so before it could save anyone), and on the next tick for a change made otherwise.
+     * For as long as they have it open; the watch goes with it. (The game's `ContainerListener`, past the API.)
+     */
+    fun watchSlots(player: Player, size: Int, changed: (Set<Int>) -> Unit)
 
     /** Sounds the note block at [block] with its state's note (and the instrument [noteInstrument] says, in `NotePlayEvent`), as a player's hit does. */
     fun playNote(block: org.bukkit.block.Block)

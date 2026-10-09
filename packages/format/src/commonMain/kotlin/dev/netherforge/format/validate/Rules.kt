@@ -12,6 +12,7 @@ import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.recipe.Ingredient
+import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.script.ScriptDef
 
 /** Checks shared by every resource kind that holds scripts and items. */
@@ -116,18 +117,7 @@ object Rules {
             }
         }
         for ((field, blocks) in listOf("canBreak" to item.canBreak, "canPlaceOn" to item.canPlaceOn)) {
-            blocks?.forEachIndexed { index, block ->
-                val path = "$at.$field[$index]"
-                if (!GameIds.isValid(block)) {
-                    sink.report(ProblemCodes.ITEM_BLOCK, "\"$block\" isn't a block id", path)
-                } else if (game != null && game.block(GameIds.normalize(block)) == null) {
-                    sink.report(
-                        ProblemCodes.ITEM_UNKNOWN_BLOCK,
-                        "Minecraft ${game.minecraftVersion} has no block \"${GameIds.normalize(block)}\"",
-                        path
-                    )
-                }
-            }
+            blocks?.forEachIndexed { index, block -> adventureBlock(block, "$at.$field[$index]", sink, game) }
         }
         item.food?.let { food ->
             if (food.nutrition < 0) sink.report(ProblemCodes.ITEM_FOOD, "nutrition can't be negative", "$at.food.nutrition")
@@ -145,6 +135,43 @@ object Rules {
             if (cooldown.group != null && !GameIds.isValid(cooldown.group)) {
                 sink.report(ProblemCodes.ITEM_COOLDOWN_GROUP, "\"${cooldown.group}\" isn't a namespaced id", "$at.cooldown.group")
             }
+        }
+    }
+
+    /**
+     * One entry of an item's `canBreak` or `canPlaceOn` ([RefKind.ADVENTURE_BLOCK]): the game's blocks and
+     * tags are checked here (against game data, when there is any); the project's blocks and the tags its
+     * datapacks define are references, which the loader checks (and a script's item, its reader).
+     */
+    private fun adventureBlock(block: String, path: String, sink: ProblemSink, game: GameData?) {
+        val kind = RefKind.ADVENTURE_BLOCK
+        // `*`, and the references: a project block, or a tag a project datapack defines.
+        if (block == kind.any || !kind.isGame(block)) return
+        val tag = block.startsWith("#")
+        val id = block.removePrefix("#")
+        if (!GameIds.isValid(id)) {
+            sink.report(
+                ProblemCodes.ITEM_BLOCK,
+                "\"$block\" isn't a block: write a project block (ruby_ore), the game's (${GameIds.NAMESPACE}:stone), " +
+                    "a #tag of blocks, or ${kind.any} for any block",
+                path
+            )
+            return
+        }
+        if (game == null) return
+        val normal = GameIds.normalize(id)
+        val missing = if (tag) {
+            game.registry(RegistryKey.BLOCK) != null && game.tag(RegistryKey.BLOCK, normal) == null
+        } else {
+            game.block(normal) ==
+                null
+        }
+        if (missing) {
+            sink.report(
+                ProblemCodes.ITEM_UNKNOWN_BLOCK,
+                "Minecraft ${game.minecraftVersion} has no block ${if (tag) "tag \"#$normal\"" else "\"$normal\""}",
+                path
+            )
         }
     }
 

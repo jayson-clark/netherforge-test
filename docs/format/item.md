@@ -38,8 +38,8 @@ that describe its look and behaviour. What one stack holds (`count`, `damage`,
 | `maxStackSize`       | How many stack, 1–99.                                                                                           |
 | `rarity`             | `common`, `uncommon`, `rare` or `epic`.                                                                         |
 | `attributeModifiers` | What wearing or holding it changes.                                                                             |
-| `canBreak`           | Block kinds it can break in adventure mode.                                                                     |
-| `canPlaceOn`         | Block kinds it can be placed on in adventure mode.                                                              |
+| `canBreak`           | The blocks it can break in adventure mode: [the project's, the game's, tags, or `*`](menu.md#items).            |
+| `canPlaceOn`         | The blocks it can be placed on in adventure mode, written as `canBreak`'s.                                      |
 | `food`               | Eating it.                                                                                                      |
 | `cooldown`           | A cooldown after using it.                                                                                      |
 | `block`              | `<id>`: a [block](block.md) of the project's that a right click with it places.                                 |

@@ -58,6 +58,9 @@ class FakePlayer(val ref: PlayerRef, location: Location) : FakeBody(ref.uuid, "m
     /** Hotbar 0-8, main 9-35, armour 36-39 (feet to head), offhand 40, body armour 41 and saddle 42, as on Paper. */
     val inventorySlots = arrayOfNulls<ItemData>(43)
     val enderChest = arrayOfNulls<ItemData>(27)
+
+    /** Their storages (`player:storage`), by namespaced name: each filled slot's item, past the size too. */
+    val storages = LinkedHashMap<String, MutableMap<Int, ItemData>>()
     var kicked: String? = null
 
     override val eyeHeight get() = 1.62

@@ -1,5 +1,6 @@
 package dev.netherforge.plugin
 
+import dev.netherforge.format.bridge.Log
 import dev.netherforge.plugin.centity.Instance
 import dev.netherforge.plugin.platform.ClickButton
 import dev.netherforge.plugin.platform.Location
@@ -326,6 +327,122 @@ class NaturalSpawningTest {
                 server.platform.entities.spawned - before <= 2 * 4 * 2,
                 "${server.platform.entities.spawned - before} entities in one tick"
             )
+        }
+    }
+
+    @Test
+    fun `time of day, moon and weather are the world's, asked before any place is looked at`() {
+        TestServer(
+            project(
+                "owl" to """{ "time": "night" }""",
+                "lark" to """{ "time": { "min": 1000, "max": 2000 } }""",
+                "wolf" to """{ "moonPhase": ["full_moon"], "time": "night" }""",
+                "frog" to """{ "weather": ["rain"] }""",
+                "storm" to """{ "weather": ["thunder"] }"""
+            )
+        ).use { server ->
+            server.seeded()
+            server.alex()
+            val worlds = server.platform.worlds
+            worlds.fullTimes["world"] = 6000L
+            server.tick(300)
+            assertEquals(emptySet(), server.naturals().map { it.centity }.toSet(), "noon, clear: none of them")
+
+            worlds.fullTimes["world"] = 1500L
+            server.tick(200)
+            assertEquals(setOf("lark"), server.naturals().map { it.centity }.toSet())
+
+            // Night of the second day: a waning gibbous moon, not a full one.
+            worlds.fullTimes["world"] = 24_000L + 14_000L
+            server.tick(200)
+            assertTrue("owl" in server.naturals().map { it.centity })
+            assertFalse("wolf" in server.naturals().map { it.centity })
+            assertEquals(1, worlds.moonPhase("world"))
+
+            // Eight days on, the moon is full again.
+            worlds.fullTimes["world"] = 8 * 24_000L + 14_000L
+            server.tick(400)
+            assertTrue("wolf" in server.naturals().map { it.centity })
+
+            // A thunderstorm is rain too, but rain isn't a thunderstorm.
+            worlds.weathers["world"] = "rain" to null
+            server.tick(400)
+            assertTrue("frog" in server.naturals().map { it.centity })
+            assertFalse("storm" in server.naturals().map { it.centity })
+            worlds.weathers["world"] = "thunder" to null
+            server.tick(400)
+            assertTrue("storm" in server.naturals().map { it.centity })
+        }
+    }
+
+    @Test
+    fun `a when condition is asked last, by its name in the centity's package, and nothing appears without it`() {
+        val events = """
+                local blood_moon = false
+                nf.spawning.condition("blood_moon", function(check)
+                  log("checked", check.centity, check.player:name(), check.location.world:name(), check.location.position.y)
+                  return blood_moon
+                end)
+        """.trimIndent()
+        TestServer(
+            project(
+                "ghoul" to """{ "when": "blood_moon", "blocks": ["stone"] }""",
+                "lost" to """{ "when": "nobody_registered_this" }""",
+                "never" to """{ "when": "blood_moon", "blocks": ["minecraft:sand"] }""",
+                more = mapOf("modules/events/init.lua" to events)
+            )
+        ).use { server ->
+            server.seeded()
+            server.alex()
+            server.tick(200)
+            assertEquals(0, server.naturals().size, "the condition says no")
+            val checked = server.logs.filter { it.startsWith("checked") }
+            assertTrue(checked.isNotEmpty() && checked.all { it == "checked\tghoul\tAlex\tworld\t64.0" }, "$checked")
+            val warnings = server.sent.filterIsInstance<Log>().map { it.message }.filter { "nobody_registered_this" in it }
+            assertEquals(1, warnings.size, "a missing condition is said once: $warnings")
+
+            server.write("modules/events/init.lua", events.replace("local blood_moon = false", "local blood_moon = true"))
+            server.reload("modules/events/init.lua")
+            server.tick(200)
+            assertEquals(setOf("ghoul"), server.naturals().map { it.centity }.toSet(), "a rule that doesn't fit is never asked about")
+        }
+    }
+
+    @Test
+    fun `a condition that errors counts as no, and one registered twice or badly named is an error`() {
+        val events = """
+                nf.spawning.condition("broken", function(check) error("boom") end)
+                local ok, err = pcall(nf.spawning.condition, "broken", function() return true end)
+                log("twice", ok, err)
+                ok, err = pcall(nf.spawning.condition, "Bad Name", function() return true end)
+                log("named", ok, err)
+        """.trimIndent()
+        TestServer(project("a" to """{ "when": "broken" }""", more = mapOf("modules/events/init.lua" to events))).use { server ->
+            server.seeded()
+            server.alex()
+            server.tick(200)
+            assertEquals(0, server.naturals().size)
+            assertTrue(server.errors.any { "boom" in it.message }, "${server.errors}")
+            val twice = server.logs.single { it.startsWith("twice") }
+            assertTrue("already registered" in twice, twice)
+            val named = server.logs.single { it.startsWith("named") }
+            assertTrue("can't name a spawn condition" in named, named)
+        }
+    }
+
+    @Test
+    fun `a condition goes with the script that registered it`() {
+        val events = """nf.spawning.condition("open", function() return true end)"""
+        TestServer(project("a" to """{ "when": "open", "cap": 1 }""", more = mapOf("modules/events/init.lua" to events))).use { server ->
+            server.seeded()
+            server.alex()
+            server.tick(200)
+            assertEquals(1, server.naturals().size)
+            server.write("modules/events/init.lua", "-- no condition any more")
+            server.reload("modules/events/init.lua")
+            server.runtime.session.centities.remove(server.naturals().single())
+            server.tick(200)
+            assertEquals(0, server.naturals().size)
         }
     }
 }

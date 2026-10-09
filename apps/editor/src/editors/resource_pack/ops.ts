@@ -166,7 +166,22 @@ export function unusedTextures(pack: ResourcePackFile, textures: string[]): stri
       for (const texture of entryTextures(kind, def)) used.add(texture)
     }
   }
+  for (const texture of hudTextures(pack)) used.add(texture)
   return textures.filter((it) => !used.has(it))
+}
+
+/** The pictures of the pack's HUD elements: its bars' and rows of icons'. */
+export function hudTextures(pack: ResourcePackFile): string[] {
+  const hud = pack.hud
+  if (!hud) return []
+  return [
+    ...Object.values(hud.bars ?? {}).flatMap((bar) => [
+      bar.full,
+      bar.empty,
+      ...(bar.half ? [bar.half] : []),
+    ]),
+    ...Object.values(hud.icons ?? {}).flatMap((row) => Object.values(row.icons)),
+  ]
 }
 
 /** A new entry of [kind] drawn from [texture]. */

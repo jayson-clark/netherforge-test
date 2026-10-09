@@ -31,10 +31,14 @@ export interface RawFace {
   cullface?: string
 }
 
+/** One axis and an angle, or (since the game takes it, 1.21.11 on) any angles about all three, turned X, Y, then Z. */
 export interface ElementRotation {
   origin: V3
-  axis: 'x' | 'y' | 'z'
-  angle: number
+  axis?: 'x' | 'y' | 'z'
+  angle?: number
+  x?: number
+  y?: number
+  z?: number
   rescale?: boolean
 }
 
@@ -52,7 +56,7 @@ export interface DisplayEntry {
   scale?: V3
 }
 
-interface RawModel {
+export interface RawModel {
   parent?: string
   textures?: Record<string, string>
   elements?: RawElement[]

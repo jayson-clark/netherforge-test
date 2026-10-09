@@ -2,21 +2,28 @@ package dev.netherforge.plugin.centity
 
 import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.CompiledCentity
+import dev.netherforge.format.centity.SpawnTime
+import dev.netherforge.format.centity.SpawnWeather
 import dev.netherforge.format.centity.SpawningDef
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.GameData
 import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.project.BiomeKind
+import dev.netherforge.format.project.Names
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.api.CentityNaturalSpawnEvent
 import dev.netherforge.plugin.api.Events
 import dev.netherforge.plugin.api.LuaHandle
 import dev.netherforge.plugin.api.LuaLocation
+import dev.netherforge.plugin.lua.CallResult
+import dev.netherforge.plugin.lua.LuaApiException
+import dev.netherforge.plugin.lua.LuaFunction
 import dev.netherforge.plugin.platform.BlockSnapshot
 import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.platform.Platform
 import dev.netherforge.plugin.platform.PlayerRef
+import dev.netherforge.plugin.script.Scope
 import dev.netherforge.plugin.script.Scripts
 import dev.netherforge.plugin.session.RuntimeService
 import dev.netherforge.plugin.session.TickPhase
@@ -39,10 +46,13 @@ import kotlin.random.Random
  * height for somewhere to stand ([findSpot]): block reads are the cost, and
  * they're bounded by `PLAYERS_PER_TICK * ATTEMPTS * SEARCH`.
  *
- * Which centities may appear at a place is each rule's filter (world, height,
- * light, biome, the block stood on) and its cap near this player; one is
- * chosen by weight, then a group of them, each member asked of
- * `nf.on("centity_natural_spawn")` first, which may refuse it or move it.
+ * Which centities may appear at a place is each rule's filter (world, the
+ * world's time, moon and weather, height, light, biome, the block stood on),
+ * its `when` condition (a script's, asked last: see [registerCondition]) and
+ * its cap near this player; one is chosen by weight, then a group of them,
+ * each member asked of `nf.on("centity_natural_spawn")` first, which may
+ * refuse it or move it. What only depends on the world (its time, moon and
+ * weather) is asked once a pass, before any block is read.
  * Natural instances are temporary (see [Instance.natural]); a pass over them
  * every [PASS_INTERVAL] ticks removes any with no player within its
  * `despawnDistance`.
@@ -71,6 +81,46 @@ class NaturalSpawner(
 
     /** What each centity's `spawning` block means, resolved once against the game and kept while the definition is the same. */
     private val rules = HashMap<String, Pair<CompiledCentity, Rule>>()
+
+    /** A condition a script registered for `spawning.when`: [callback] is kept until [scope] goes. */
+    private class Condition(val scope: Scope, val name: String, val callback: LuaFunction)
+
+    /** Every live condition, by its full name (`<namespace>:<name>`). */
+    private val conditions = HashMap<String, Condition>()
+
+    /** Conditions a rule named that no script had registered, by `<centity> <condition>`: each logged once. */
+    private val missing = HashSet<String>()
+
+    /**
+     * `nf.spawning.condition`: [name] in [scope]'s package, asked for every place a rule naming it fits. A
+     * mistake is a [LuaApiException], and [callback] is let go of when one is thrown.
+     */
+    fun registerCondition(scope: Scope, name: String, callback: LuaFunction) {
+        try {
+            if (!Names.isId(name)) {
+                throw LuaApiException("bad argument 'name' (\"$name\" can't name a spawn condition: ${Names.ID_RULE})")
+            }
+            val key = "${scope.namespace}:$name"
+            conditions[key]?.let { throw LuaApiException("the spawn condition \"$name\" is already registered by ${it.scope.owner.label}") }
+            conditions[key] = Condition(scope, name, callback)
+        } catch (e: LuaApiException) {
+            scripts.unref(callback.ref)
+            throw e
+        }
+    }
+
+    override fun scopeReleased(scope: Scope) {
+        val gone = conditions.filterValues { it.scope == scope }
+        for ((key, condition) in gone) {
+            conditions.remove(key)
+            scripts.unref(condition.callback.ref)
+        }
+    }
+
+    override fun stop() {
+        for (condition in conditions.values) scripts.unref(condition.callback.ref)
+        conditions.clear()
+    }
 
     override fun tick(phase: TickPhase) {
         if (phase != TickPhase.WORLD) return
@@ -104,7 +154,8 @@ class NaturalSpawner(
             due[player.uuid] = ticks + PASS_INTERVAL
             passes++
             val where = platform.players.location(player.uuid) ?: continue
-            val here = all.filter { it.allowsWorld(where.world) }
+            val sky = sky(where.world) ?: continue
+            val here = all.filter { it.allowsWorld(where.world) && it.allowsSky(sky) }
             if (here.isEmpty()) continue
             val instances = natural ?: centities().naturals().also { natural = it }
             pass(player, where, here, instances)
@@ -124,7 +175,7 @@ class NaturalSpawner(
         repeat(ATTEMPTS) {
             if (remaining.isEmpty()) return
             val spot = findSpot(where) ?: return@repeat
-            val fits = remaining.keys.filter { it.fits(spot) }
+            val fits = remaining.keys.filter { it.fits(spot) && holds(it, spot, player) }
             if (fits.isEmpty()) return@repeat
             val rule = choose(fits)
             val wanted = rule.groupMin + random.nextInt(rule.groupMax - rule.groupMin + 1)
@@ -132,7 +183,7 @@ class NaturalSpawner(
             var spawned = 0
             for (member in 0 until count) {
                 // The first is where the place was found; the rest stand near it, wherever they fit.
-                val place = if (member == 0) spot else around(spot, rule) ?: continue
+                val place = if (member == 0) spot else around(spot, rule, player) ?: continue
                 if (spawnOne(rule, place, player)) spawned++
             }
             if (spawned > 0) remaining[rule] = remaining.getValue(rule) - spawned
@@ -195,14 +246,59 @@ class NaturalSpawner(
     }
 
     /** A spot within a few blocks of [spot], for the rest of a group. */
-    private fun around(spot: Spot, rule: Rule): Spot? {
+    private fun around(spot: Spot, rule: Rule, player: PlayerRef): Spot? {
         repeat(GROUP_TRIES) {
             val x = spot.x + random.nextInt(-GROUP_RADIUS, GROUP_RADIUS + 1)
             val z = spot.z + random.nextInt(-GROUP_RADIUS, GROUP_RADIUS + 1)
             val found = spotIn(spot.world, x, z, spot.y + random.nextInt(-1, 2))
-            if (found != null && rule.fits(found)) return found
+            if (found != null && rule.fits(found) && holds(rule, found, player)) return found
         }
         return null
+    }
+
+    /** What a world's sky is now: what time, moon and weather rules are asked. Null for a world that's gone. */
+    internal class Sky(val timeOfDay: Int, val moonPhase: Int, val weather: SpawnWeather)
+
+    private fun sky(world: String): Sky? {
+        val time = platform.worlds.fullTime(world) ?: return null
+        val moon = platform.worlds.moonPhase(world) ?: return null
+        val weather = when (platform.worlds.weather(world)) {
+            "thunder" -> SpawnWeather.THUNDER
+            "rain" -> SpawnWeather.RAIN
+            else -> SpawnWeather.CLEAR
+        }
+        return Sky(Math.floorMod(time, SpawnTime.DAY_TICKS.toLong()).toInt(), moon, weather)
+    }
+
+    /**
+     * Whether [rule]'s `when` condition holds at [spot]: true without one. A condition no script has
+     * registered is false (logged once per centity), and so is one that fails or answers anything but true.
+     */
+    private fun holds(rule: Rule, spot: Spot, player: PlayerRef): Boolean {
+        val key = rule.condition ?: return true
+        val condition = conditions[key]
+        if (condition == null) {
+            if (missing.add("${rule.id} $key")) {
+                log.warn(
+                    "Centity ${nameOf(rule.id)} spawns only when \"${key.substringAfter(':')}\" holds, and no script has registered " +
+                        "that condition (nf.spawning.condition in the $key's package), so it doesn't appear"
+                )
+            }
+            return false
+        }
+        val check = mapOf(
+            "centity" to nameOf(rule.id),
+            "location" to LuaLocation(LuaHandle.World(spot.world), Vec3(spot.x + 0.5, spot.y.toDouble(), spot.z + 0.5)),
+            "player" to LuaHandle.Player(player.uuid.toString())
+        )
+        return when (val result = scripts.callKept<Any?>(condition.scope, condition.callback.ref, listOf(check), "spawn condition")) {
+            is CallResult.Ok -> result.value == true
+            is CallResult.Failed -> {
+                scripts.handlerFailed(condition.scope, "spawn condition \"${condition.name}\"", result.failure, false)
+                false
+            }
+            CallResult.Absent -> false
+        }
     }
 
     /** Searches down from [from] in one column for air over something solid: null when that isn't within [SEARCH] blocks or its chunk isn't loaded. */
@@ -270,7 +366,10 @@ class NaturalSpawner(
             val rule = if (cached != null && cached.first === definition) {
                 cached.second
             } else {
-                Rule.of(id, spawning, platform.game, home()).also { rules[id] = definition to it }
+                Rule.of(id, spawning, platform.game, home()).also {
+                    rules[id] = definition to it
+                    missing.removeAll { entry -> entry.startsWith("$id ") }
+                }
             }
             out += rule
         }
@@ -292,9 +391,25 @@ class NaturalSpawner(
         val groupMin: Int,
         val groupMax: Int,
         val cap: Int,
-        val despawnDistance: Int
+        val despawnDistance: Int,
+        private val time: SpawnTime? = null,
+        private val moonPhases: Set<Int>? = null,
+        private val weather: Set<SpawnWeather>? = null,
+        /** The `when` condition's full name (`<namespace>:<name>`), or null for none. */
+        val condition: String? = null
     ) {
         fun allowsWorld(world: String) = worlds == null || world in worlds
+
+        /** Whether the world's time, moon and weather allow it: one answer for every place in the world. */
+        fun allowsSky(sky: Sky): Boolean {
+            if (time != null && sky.timeOfDay !in time) return false
+            if (moonPhases != null && sky.moonPhase !in moonPhases) return false
+            // A thunderstorm is rain too.
+            if (weather != null && sky.weather !in weather && !(sky.weather == SpawnWeather.THUNDER && SpawnWeather.RAIN in weather)) {
+                return false
+            }
+            return true
+        }
 
         fun fits(spot: Spot): Boolean {
             if (!allowsWorld(spot.world)) return false
@@ -321,7 +436,12 @@ class NaturalSpawner(
                 groupMin = def.groupMin,
                 groupMax = def.groupMax,
                 cap = def.capOrDefault,
-                despawnDistance = def.despawnDistanceOrDefault
+                despawnDistance = def.despawnDistanceOrDefault,
+                time = def.time,
+                moonPhases = def.moonPhase?.takeIf { it.isNotEmpty() }?.map { it.ordinal }?.toSet(),
+                weather = def.weather?.takeIf { it.isNotEmpty() }?.toSet(),
+                // A bare name is the centity's own package's: the project's, or `acme`'s for `acme:wisp`.
+                condition = def.condition?.let { name -> if (':' in name) name else "${id.substringBefore(':', home)}:$name" }
             )
 
             /** Ids and `#tag`s as the set of ids they name; null (anything) for no list. A tag the game doesn't have names nothing. */

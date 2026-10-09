@@ -373,6 +373,7 @@ const ACTION_VERBS: Record<string, string> = {
   reset: "`player:reset_border()` gives a player their world's border back",
   stop: '`effect:stop()` ends a playing effect, `mob:stop_pathing()` a walk',
   unban: '`player:unban()` lifts a ban',
+  unbind: '`slot:unbind()` stops a menu slot showing a storage',
 }
 
 /** Every name a script writes, with where it is: functions, parameters, fields and events. */

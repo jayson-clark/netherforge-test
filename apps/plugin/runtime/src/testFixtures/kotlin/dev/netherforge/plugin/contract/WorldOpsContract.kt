@@ -61,6 +61,9 @@ abstract class WorldOpsContract : PlatformContract() {
             assertEquals("clear", worlds.weather(world))
             assertNull(worlds.fullTime(MISSING_WORLD))
             assertNull(worlds.weather(MISSING_WORLD))
+            // How a version turns the moon is its own (26.x keeps it on the world's clock): only the phase's range is promised.
+            assertTrue(assertNotNull(worlds.moonPhase(world)) in 0..7)
+            assertNull(worlds.moonPhase(MISSING_WORLD))
             assertFalse(worlds.setFullTime(MISSING_WORLD, 0))
             assertFalse(worlds.setWeather(MISSING_WORLD, "rain", null))
         }

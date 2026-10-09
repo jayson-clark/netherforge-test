@@ -4,6 +4,7 @@ import dev.netherforge.format.ProblemSink
 import dev.netherforge.format.Severity
 import dev.netherforge.format.game.GameData
 import dev.netherforge.format.game.GameIds
+import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.item.AttributeModifierDef
 import dev.netherforge.format.item.AttributeOperation
 import dev.netherforge.format.item.AttributeSlot
@@ -13,6 +14,7 @@ import dev.netherforge.format.item.EquipmentDef
 import dev.netherforge.format.item.FoodDef
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.item.ItemRarity
+import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.format.validate.Rules
 import dev.netherforge.plugin.api.luaSpelling
@@ -69,8 +71,17 @@ object LuaItems {
      * item's (the platform fills in what the table leaves out when it builds
      * the stack). A [partial] item is an item match ([ItemMatch]): `kind` may
      * be left out (it reads as `""`), and `count` and `raw` have no place in it.
+     *
+     * [projectBlock] says whether the project has a block by the name the server knows it by (`ruby_ore`,
+     * `library:gem_ore`): what `can_break` and `can_place_on` name besides the game's blocks and tags.
      */
-    fun read(value: JsonElement, game: GameData?, partial: Boolean = false, projectItem: (id: String) -> ItemDef? = { null }): ItemData {
+    fun read(
+        value: JsonElement,
+        game: GameData?,
+        partial: Boolean = false,
+        projectBlock: (name: String) -> Boolean = { false },
+        projectItem: (id: String) -> ItemDef? = { null }
+    ): ItemData {
         val table = value as? JsonObject ?: throw LuaApiException("an item is a table like { kind = \"minecraft:bread\", count = 4 }")
         for (key in table.keys) {
             if (key !in FIELDS) throw LuaApiException("items have no field \"$key\" (fields: ${FIELDS.joinToString()})")
@@ -188,6 +199,9 @@ object LuaItems {
         val kindless = partial && def.kind.isEmpty()
         sink.problems.firstOrNull { it.severity == Severity.ERROR && !(kindless && it.path == "item.kind") }
             ?.let { throw LuaApiException(luaSpelling(it.message)) }
+        for ((key, blocks) in listOf("can_break" to def.canBreak, "can_place_on" to def.canPlaceOn)) {
+            blocks?.forEachIndexed { index, block -> checkBlock(block, "item.$key[${index + 1}]", game, projectBlock) }
+        }
         if (item != null) {
             val look = projectItem(item) ?: throw LuaApiException("item.item: there's no item \"$item\"")
             if (def.kind.isNotEmpty() && GameIds.normalize(def.kind) != GameIds.normalize(look.kind)) {
@@ -197,6 +211,29 @@ object LuaItems {
             }
         }
         return ItemData(def, string("raw"))
+    }
+
+    /**
+     * What [Rules.item] leaves to whoever knows the project: a project block must be one of its blocks, and
+     * a `#tag` in another namespace than the game's one the server has (the start-up datapack gave it the
+     * project's datapacks' tags).
+     */
+    private fun checkBlock(block: String, where: String, game: GameData?, projectBlock: (String) -> Boolean) {
+        val kind = RefKind.ADVENTURE_BLOCK
+        when {
+            kind.isGame(block) -> {}
+            kind.isDatapackTag(block) -> {
+                val id = block.removePrefix("#")
+                if (!GameIds.isValid(id)) throw LuaApiException("$where: \"$block\" isn't a tag: write #<namespace>:<path>")
+                if (game?.registry(RegistryKey.BLOCK) != null && game.tag(RegistryKey.BLOCK, GameIds.normalize(id)) == null) {
+                    throw LuaApiException("$where: the server has no block tag \"$block\" (a project datapack's data/<ns>/tags/block/)")
+                }
+            }
+            !projectBlock(block) -> throw LuaApiException(
+                "$where: there's no block \"$block\" (the game's are written \"${GameIds.NAMESPACE}:${block.substringAfter(':')}\", " +
+                    "a tag \"#${GameIds.NAMESPACE}:…\", any block \"${kind.any}\")"
+            )
+        }
     }
 
     /** An item as the table a script gets: only the fields that are set. */

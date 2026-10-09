@@ -203,6 +203,19 @@ class PackageNames internal constructor(private val session: ProjectSession) {
             }
             if (renamed != asset) changed["equipment"] = JsonObject(equipment + ("asset" to JsonPrimitive(renamed)))
         }
+        for (key in ADVENTURE) {
+            val list = table[key] as? JsonArray ?: continue
+            val renamed = list.mapIndexed { index, entry ->
+                val block = (entry as? JsonPrimitive)?.takeIf { it.isString }?.content
+                if (block == null || !isProjectBlock(block)) return@mapIndexed entry
+                try {
+                    JsonPrimitive(stackName(RefKind.ADVENTURE_BLOCK, block, from))
+                } catch (e: LuaApiException) {
+                    throw LuaApiException("item.$key[${index + 1}]: ${e.message}")
+                }
+            }
+            if (renamed != list) changed[key] = JsonArray(renamed)
+        }
         named("name") { text(it, from) }
         (table["lore"] as? JsonArray)?.let { lore ->
             val lines = lore.map { line ->
@@ -315,6 +328,8 @@ class PackageNames internal constructor(private val session: ProjectSession) {
                 itemModel = def.itemModel?.spelled(),
                 tooltipStyle = def.tooltipStyle?.spelled(),
                 equipment = def.equipment?.let { it.copy(asset = it.asset.spelled()) },
+                canBreak = def.canBreak?.map { if (isProjectBlock(it)) respell(it, to) else it },
+                canPlaceOn = def.canPlaceOn?.map { if (isProjectBlock(it)) respell(it, to) else it },
                 name = def.name?.let { spellText(it, to) },
                 lore = def.lore?.map { spellText(it, to) }
             )
@@ -324,6 +339,12 @@ class PackageNames internal constructor(private val session: ProjectSession) {
     private companion object {
         /** What [definition] leaves to [item]. */
         val ITEMS = setOf(ItemDef.serializer().descriptor.serialName)
+
+        /** An item table's lists of blocks, whose project blocks are names like its `item`'s. */
+        val ADVENTURE = listOf("can_break", "can_place_on")
+
+        /** Whether an entry of those lists names a project block: not the game's, `*`, or a `#tag`. */
+        fun isProjectBlock(entry: String) = !entry.startsWith("#") && !RefKind.ADVENTURE_BLOCK.isGame(entry)
     }
 }
 

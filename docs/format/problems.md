@@ -438,6 +438,14 @@ Error. A `spawning` range has its `min` above its `max`, or a light level outsid
 
 Error. `spawning`'s `weight`, `cap`, `group` or `despawnDistance` isn't positive. See [centities](centity.md).
 
+### `centity.spawning-time` {#centity-spawning-time}
+
+Error. A tick of the day in `spawning.time` is outside 0 to 23999. See [centities](centity.md).
+
+### `centity.spawning-when` {#centity-spawning-when}
+
+Error. `spawning.when` isn't a condition's name: an id, or `ns:id` for a package's. See [centities](centity.md).
+
 ### `centity.spawning-despawn` {#centity-spawning-despawn}
 
 Warning. `spawning.despawnDistance` is within the spawner's reach, so a natural centity may go as it appears. See [centities](centity.md).
@@ -614,11 +622,11 @@ Error. A modifier's `amount` isn't a number. See [items](item.md).
 
 ### `item.block` {#item-block}
 
-Error. An entry of `canBreak` or `canPlaceOn` isn't a block id. See [items](item.md).
+Error. An entry of `canBreak` or `canPlaceOn` isn't a block, a `#tag` of blocks or `*`. See [items](item.md).
 
 ### `item.unknown-block` {#item-unknown-block}
 
-Error. An entry of `canBreak` or `canPlaceOn` is a block the target version doesn't have. See [items](item.md).
+Error. An entry of `canBreak` or `canPlaceOn` is a block or block tag the target version doesn't have. See [items](item.md).
 
 ### `item.food` {#item-food}
 
@@ -748,7 +756,15 @@ Warning. A block `requiresTool` but names no `tool`, so no tool is the right one
 
 ### `block.carriers` {#block-carriers}
 
-Error. The project has more blocks than the game has note block states to hold them in. See [blocks](block.md).
+Error. The project has more blocks of one carrier than the game has states of it to hold them in. See [blocks](block.md).
+
+### `block.carrier` {#block-carrier}
+
+Warning. Something about a block its carrier doesn't do: a hardness tripwire ignores, or a model a note block hides its neighbours' faces around. See [blocks](block.md).
+
+### `block.vanilla-looks` {#block-vanilla-looks}
+
+Warning. `client/vanilla.json` lacks the game's look of a block custom blocks are held in, or is another version's. See [blocks](block.md).
 
 ## migration
 
@@ -1236,11 +1252,39 @@ Warning. An equipment look has no layer, so nothing is drawn when it's worn. See
 
 ### `resource_pack.item-look` {#resource_pack-item-look}
 
-Error. An item look needs one of `texture` and `block`, and `parent` only goes with a texture. See [resource packs](resource-pack.md).
+Error. An item look needs one of `texture`, `block` and `model`, and `parent` only goes with a texture. See [resource packs](resource-pack.md).
+
+### `resource_pack.hud` {#resource_pack-hud}
+
+Error. A `hud` element's key is taken by another, or its place, segments or icons aren't ones it can be drawn with. See [resource packs](resource-pack.md).
+
+### `resource_pack.hud-hide` {#resource_pack-hud-hide}
+
+Warning. `hud.hide` needs the game's HUD sprites, which `client/vanilla.json` lacks or has from another version. See [resource packs](resource-pack.md).
+
+### `resource_pack.model-file` {#resource_pack-model-file}
+
+Error. A `model` names a file that isn't in the resource pack's `models/` folder, or isn't a JSON model. See [resource packs](resource-pack.md).
+
+### `resource_pack.model` {#resource_pack-model}
+
+Error. A model file's element, rotation, face or display isn't one the game reads. See [resource packs](resource-pack.md).
+
+### `resource_pack.model-bounds` {#resource_pack-model-bounds}
+
+Error. A model's element reaches outside -16 to 32, which the game refuses. See [resource packs](resource-pack.md).
+
+### `resource_pack.model-texture` {#resource_pack-model-texture}
+
+Error. A model's face names a texture variable the model doesn't give, or a texture in a namespace nothing serves. See [resource packs](resource-pack.md).
+
+### `resource_pack.model-display` {#resource_pack-model-display}
+
+Warning. A model's display translation or scale is past what the game clamps it to. See [resource packs](resource-pack.md).
 
 ### `resource_pack.block-faces` {#resource_pack-block-faces}
 
-Error. A block look has no texture for some face: give it a texture, or one for each face. See [resource packs](resource-pack.md).
+Error. A block look has no texture for some face (give it a texture, or one for each face), or has a model and textures both. See [resource packs](resource-pack.md).
 
 ### `resource_pack.sound-key` {#resource_pack-sound-key}
 
@@ -1298,7 +1342,7 @@ Warning. The server doesn't say which resource pack format it uses, so no resour
 
 ### `runtime.blocks` {#runtime-blocks}
 
-Error. The server can't hold the project's blocks: it has no note block states for them, or won't stop working them out itself. See [blocks](block.md).
+Error. The server can't hold the project's blocks: it has no states of their carrier for them, or won't stop working them out itself. See [blocks](block.md).
 
 ### `runtime.terrain` {#runtime-terrain}
 

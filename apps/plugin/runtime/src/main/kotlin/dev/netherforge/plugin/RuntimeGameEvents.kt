@@ -56,7 +56,7 @@ internal class RuntimeGameEvents(private val runtime: NetherForgeRuntime) : Game
 
     /** The services first: the blocks in it are the project's, tracked, before a script asks. */
     override fun chunkLoad(event: GameEvent.ChunkLoad) {
-        if (session.running) session.chunkLoaded(event.world, event.x, event.z)
+        if (session.running) session.chunkLoaded(event.world, event.x, event.z, event.generated)
         super.chunkLoad(event)
     }
 

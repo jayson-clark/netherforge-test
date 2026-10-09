@@ -3,7 +3,7 @@
  * to, whether that's its own editor or one of its scripts.
  */
 import { KINDS, type KindId } from '@/core/format'
-import { isBinaryKind, locationOf, mainFileOf, resourceOf } from '@/core/paths'
+import { companionOf, isBinaryKind, locationOf, mainFileOf, resourceOf } from '@/core/paths'
 
 export interface OutlineSubject {
   kind: KindId
@@ -14,6 +14,8 @@ export interface OutlineSubject {
   main: string | null
   /** Whether its files are worth listing (a map's are the game's own; a single-file kind has none beside it). */
   hasFiles: boolean
+  /** A single-file kind's file beside its one file (a terrain's `.lua`), listed with it; null for the rest. */
+  companion: string | null
 }
 
 export function subjectOf(path: string | null): OutlineSubject | null {
@@ -27,5 +29,6 @@ export function subjectOf(path: string | null): OutlineSubject | null {
     location: locationOf(kind, id),
     main: where.contents === 'json' ? mainFileOf(kind, id) : null,
     hasFiles: where.layout === 'folder' && !isBinaryKind(kind),
+    companion: isBinaryKind(kind) ? null : companionOf(kind, id),
   }
 }

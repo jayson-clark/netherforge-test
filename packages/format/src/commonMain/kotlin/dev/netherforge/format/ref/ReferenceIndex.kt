@@ -116,6 +116,7 @@ class ReferenceIndex internal constructor(
      */
     fun check(kind: RefKind, text: String): BrokenRef? {
         if (kind.scope == RefScope.FILE || kind.isGame(text)) return null
+        if (kind.isDatapackTag(text)) return checkTag(kind, text)
         val key = resolve(kind, text)
             ?: return BrokenRef(ProblemCodes.REFERENCE_SYNTAX, "\"$text\" isn't a reference to ${kind.aNoun}: write ${kind.shape}")
         val all = namespaces[key.namespace] ?: return unknownNamespace(key.namespace, home)
@@ -178,6 +179,27 @@ class ReferenceIndex internal constructor(
             }
             RefScope.FILE -> null
         }
+    }
+
+    /**
+     * Why `#tag` [text] of [kind]'s [RefKind.tagRegistry] names nothing: it's in a namespace that is
+     * neither the project's nor a package's, or no datapack there defines it (each namespace's tags are
+     * its names of [kind] that start with `#`).
+     */
+    private fun checkTag(kind: RefKind, text: String): BrokenRef? {
+        val registry = kind.tagRegistry!!
+        val key = ResourceRef(text.removePrefix("#")).resolve(home)
+            ?: return BrokenRef(ProblemCodes.REFERENCE_SYNTAX, "\"$text\" isn't a tag: write #<namespace>:<path>")
+        val all = namespaces[key.namespace] ?: return unknownNamespace(key.namespace, home)
+        val name = "#${key.path}"
+        if (name in all.visible.names[kind].orEmpty()) return null
+        if (name in all.names[kind].orEmpty()) return notExported(key.namespace, "datapack defining \"#$key\"")
+        val where = if (key.namespace == home) {
+            " (${DatapackLayout.entryFile(key, registry, tag = true)} in one of ${DatapackKind.folder}/)"
+        } else {
+            " in \"${key.namespace}\"'s datapacks"
+        }
+        return BrokenRef(ProblemCodes.missing(kind), "There's no ${kind.noun} tag \"#$key\"$where")
     }
 
     /** Why [use] names nothing, as [check] says, its message naming the tag for a glyph in text. */

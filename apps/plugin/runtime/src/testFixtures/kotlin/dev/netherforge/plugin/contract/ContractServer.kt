@@ -26,6 +26,9 @@ interface ContractServer {
     /** The project item looks the platform resolves stacks against (`Platform.bind`'s `items`), by id in [NAMESPACE]. */
     val itemLooks: MutableMap<String, ItemLook>
 
+    /** The state each project block is held as (`Platform.bind`'s `blocks`), by name. */
+    val blockStates: MutableMap<String, String>
+
     /**
      * Where the suites work: a spot standing on the ground of the default
      * world, in open, flat air, whose chunk and the two around it each way

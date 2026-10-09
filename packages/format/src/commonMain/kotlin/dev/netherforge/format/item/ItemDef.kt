@@ -63,10 +63,14 @@ data class ItemDef(
     val rarity: ItemRarity? = null,
     /** Attribute changes while it's worn or held (the `attribute_modifiers` component), in order. */
     val attributeModifiers: List<AttributeModifierDef>? = null,
-    /** Block kinds it can break in adventure mode (the `can_break` component). */
-    val canBreak: List<String>? = null,
-    /** Block kinds it can be placed on in adventure mode (the `can_place_on` component). */
-    val canPlaceOn: List<String>? = null,
+    /**
+     * The blocks it can break in adventure mode (the `can_break` component): the project's (`ruby_ore`,
+     * a package's `acme:gem_ore`), the game's (`minecraft:stone`), `#tags` of blocks (the game's, or one a
+     * project datapack defines: `#basic:soft`), or `*` for any block.
+     */
+    @Ref(RefKind.ADVENTURE_BLOCK) val canBreak: List<String>? = null,
+    /** The blocks it can be placed on in adventure mode (the `can_place_on` component), written as [canBreak]'s. */
+    @Ref(RefKind.ADVENTURE_BLOCK) val canPlaceOn: List<String>? = null,
     /** Eating it (the `food` component, plus `consumable` so it can be eaten at all). */
     val food: FoodDef? = null,
     /** A cooldown after using it (the `use_cooldown` component). */

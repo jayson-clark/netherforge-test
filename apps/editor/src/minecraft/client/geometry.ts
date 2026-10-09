@@ -100,8 +100,24 @@ function defaultUv(face: FaceName, from: V3, to: V3): [number, number, number, n
 
 function elementMatrix(element: RawElement): THREE.Matrix4 | null {
   const rotation = element.rotation
-  if (!rotation || !rotation.angle) return null
+  if (!rotation) return null
   const origin = new THREE.Vector3(...rotation.origin)
+  if (rotation.axis === undefined) {
+    // Angles about all three axes, turned X, then Y, then Z.
+    const [x, y, z] = [rotation.x ?? 0, rotation.y ?? 0, rotation.z ?? 0]
+    if (!x && !y && !z) return null
+    const euler = new THREE.Euler(
+      THREE.MathUtils.degToRad(x),
+      THREE.MathUtils.degToRad(y),
+      THREE.MathUtils.degToRad(z),
+      'XYZ',
+    )
+    return new THREE.Matrix4()
+      .makeTranslation(origin.x, origin.y, origin.z)
+      .multiply(new THREE.Matrix4().makeRotationFromEuler(euler))
+      .multiply(new THREE.Matrix4().makeTranslation(-origin.x, -origin.y, -origin.z))
+  }
+  if (!rotation.angle) return null
   const radians = THREE.MathUtils.degToRad(rotation.angle)
   const axis = new THREE.Vector3(
     rotation.axis === 'x' ? 1 : 0,

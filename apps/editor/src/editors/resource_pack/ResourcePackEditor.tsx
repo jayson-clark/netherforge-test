@@ -69,6 +69,7 @@ import {
 import {
   useCompiledResourcePacks,
   useResourcePackFiles,
+  useResourcePackModels,
   useProjectFileUrl,
 } from '@/state/useResourcePacks'
 import { useGlyphMap } from '@/minecraft/text/glyphs'
@@ -578,6 +579,7 @@ function EntryInspector({
 }) {
   const { workspace } = useApp()
   const packs = useResourcePackFiles()
+  const packModels = useResourcePackModels()
   const at = (key: string) => `${kind}.${entryKey}.${key}`
   const editDef = <D extends EntryDef>(recipe: (draft: D) => void) =>
     edit((draft) => {
@@ -609,6 +611,10 @@ function EntryInspector({
   const blockRefs = Object.entries(packs)
     .flatMap(([key, file]) => Object.keys(file.blocks ?? {}).map((entry) => `${key}/${entry}`))
     .sort()
+  // An item or block drawn as a model file has no textures of its own in pack.json: the model names them.
+  const shaped =
+    kind === 'items' || kind === 'blocks' ? (def as { model?: string }).model : undefined
+  const modelFiles = Object.keys(packModels[pack]?.files ?? {}).sort()
 
   return (
     <Section
@@ -661,8 +667,38 @@ function EntryInspector({
           }
         />
       )}
+      {(kind === 'items' || kind === 'blocks') && !block && (
+        <SelectField
+          label="Model file"
+          dataPath={at('model')}
+          value={shaped ?? ''}
+          options={[
+            {
+              value: '',
+              label: kind === 'items' ? '(none: a texture)' : '(none: a cube of textures)',
+            },
+            ...modelFiles.map((it) => ({ value: it, label: `models/${it}` })),
+            ...(shaped && !modelFiles.includes(shaped)
+              ? [{ value: shaped, label: `models/${shaped} (missing)` }]
+              : []),
+          ]}
+          onChange={(next) =>
+            editDef<Record<string, unknown>>((d) => {
+              if (!next) {
+                delete d.model
+                return
+              }
+              d.model = next
+              // A model's own textures draw it: the look keeps only what isn't a texture of the shape.
+              for (const key of TEXTURE_FIELDS[kind]) if (key !== 'guiTexture') delete d[key]
+              delete d.parent
+            })
+          }
+        />
+      )}
       {TEXTURE_FIELDS[kind]
         .filter((key) => !(block && key === 'texture'))
+        .filter((key) => !(shaped && key !== 'guiTexture'))
         .map((key) =>
           textureField(
             key,
@@ -704,7 +740,7 @@ function EntryInspector({
       {kind === 'glyphs' && <GlyphPreview pack={pack} entryKey={entryKey} />}
       {kind === 'items' && (
         <>
-          {!block && (
+          {!block && !shaped && (
             <SelectField
               label="Held like"
               dataPath={at('parent')}

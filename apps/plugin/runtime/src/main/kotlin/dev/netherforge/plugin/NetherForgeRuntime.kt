@@ -12,6 +12,7 @@ import dev.netherforge.format.project.DefaultFontKind
 import dev.netherforge.format.project.Kinds
 import dev.netherforge.format.project.LockKind
 import dev.netherforge.format.project.ManifestKind
+import dev.netherforge.format.project.VanillaKind
 import dev.netherforge.plugin.api.VersionGates
 import dev.netherforge.plugin.async.Completions
 import dev.netherforge.plugin.async.MainThread
@@ -226,7 +227,13 @@ class NetherForgeRuntime(val platform: Platform, val config: RuntimeConfig) {
                 }
             }
         }
-        platform.bind(events, packs::textGlyph, { current?.items?.look(it) }, { current?.namespace.orEmpty() })
+        platform.bind(
+            events,
+            packs::textGlyph,
+            { current?.items?.look(it) },
+            { current?.customBlocks?.stateOf(it) },
+            { current?.namespace.orEmpty() }
+        )
         config.bridge?.let { settings ->
             val connection = BridgeService(this, settings)
             debugger = Debugger(this, connection::dap)
@@ -304,15 +311,16 @@ class NetherForgeRuntime(val platform: Platform, val config: RuntimeConfig) {
         val resources = paths.mapNotNull { Resource.of(it) }.distinct()
         // The manifest, or the lock the editor rewrote: a dependency changed, so everything starts again.
         val project = found.any { it.document == ManifestKind.id || it.document == LockKind.id }
-        // The default font's advances place skins on centred titles; nothing else on the server reads them.
-        val fontChanged = found.any { it.document == DefaultFontKind.id }
+        // The default font's advances place skins on centred titles, and the game's looks of the blocks custom
+        // blocks are held in draw their other states in the pack: the services built from them hear of a change.
+        val documents = found.mapNotNull { it.document }.filter { it in FOLLOWED_DOCUMENTS }.toSet()
         if (resources.isEmpty() && !project) {
-            if (fontChanged && session.running) session.reload(emptyList(), fontChanged = true)
+            if (documents.isNotEmpty() && session.running) session.reload(emptyList(), documents)
             return ReloadResult(emptyList())
         }
         if (project || !session.running) return reloadAll()
         platform.particles.forget()
-        return session.reload(resources, fontChanged)
+        return session.reload(resources, documents)
     }
 
     /** Disposes the session and starts a new one on the project read afresh. Spawned centities reattach to the new definitions. */
@@ -482,6 +490,9 @@ class NetherForgeRuntime(val platform: Platform, val config: RuntimeConfig) {
     }
 
     companion object {
+        /** The project documents that aren't resources whose saving some service follows. */
+        private val FOLLOWED_DOCUMENTS = setOf(DefaultFontKind.id, VanillaKind.id)
+
         const val PERMISSION = "netherforge.admin"
 
         private const val STATUS_EVERY = 20L

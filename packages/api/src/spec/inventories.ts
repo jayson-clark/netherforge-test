@@ -18,7 +18,7 @@ const match = { name: 'match', type: 'string|ItemMatch', doc: MATCH_DOC }
 /** A real inventory: a player's, a container block's, an entity's. */
 export const inventoryClass: LuaClass = {
   name: 'Inventory',
-  doc: "A real inventory: a player's (`player:inventory()`), their ender chest, a container block's (`block:inventory()`: a chest, a barrel, a hopper, a furnace) or an entity's (a chest boat, a donkey, a villager). Its item methods work like `Menu`'s. The handle is where the inventory is, so it reads live; once that's gone (a chest broken, a player offline, a chunk unloaded) its methods answer `nil`, `false` or nothing. Slots are numbered from 0. A player's: the hotbar 0 to 8, the rest of the main inventory 9 to 35, armour 36 (feet), 37 (legs), 38 (chest) and 39 (head), the offhand 40, then body armour 41 and a saddle 42 (what the game keeps there for any entity). A double chest's inventory is both halves, 0 to 53.",
+  doc: "A real inventory: a player's (`player:inventory()`), their ender chest, a storage of the project's that they keep (`player:storage(name, size)`), a container block's (`block:inventory()`: a chest, a barrel, a hopper, a furnace) or an entity's (a chest boat, a donkey, a villager). Its item methods work like `Menu`'s. The handle is where the inventory is, so it reads live; once that's gone (a chest broken, a player offline, a chunk unloaded) its methods answer `nil`, `false` or nothing. Slots are numbered from 0. A player's: the hotbar 0 to 8, the rest of the main inventory 9 to 35, armour 36 (feet), 37 (legs), 38 (chest) and 39 (head), the offhand 40, then body armour 41 and a saddle 42 (what the game keeps there for any entity). A double chest's inventory is both halves, 0 to 53.",
   methods: true,
   // Where it is, as one string: `player/<uuid>`, `ender_chest/<uuid>`, `entity/<uuid>` or `block/<x>/<y>/<z>/<world>`.
   handle: { key: [{ name: 'holder', type: 'string' }] },
@@ -32,7 +32,7 @@ export const inventoryClass: LuaClass = {
     },
     {
       name: 'kind',
-      doc: 'What kind of inventory it is: `"player"`, `"ender_chest"`, `"chest"`, `"barrel"`, `"shulker_box"`, `"hopper"`, `"dispenser"`, `"dropper"`, `"furnace"`, `"brewing"`, … `nil` once it\'s gone.',
+      doc: 'What kind of inventory it is: `"player"`, `"ender_chest"`, `"storage"`, `"chest"`, `"barrel"`, `"shulker_box"`, `"hopper"`, `"dispenser"`, `"dropper"`, `"furnace"`, `"brewing"`, … `nil` once it\'s gone.',
       params: [],
       returns: [{ type: 'string?' }],
     },
@@ -44,7 +44,7 @@ export const inventoryClass: LuaClass = {
     },
     {
       name: 'holder',
-      doc: "Whose it is: the `Player` (for a player's inventory and ender chest), the `Entity`, or the `Block`. `nil` once it's gone.",
+      doc: "Whose it is: the `Player` (for a player's inventory, ender chest and storage), the `Entity`, or the `Block`. `nil` once it's gone.",
       params: [],
       returns: [{ type: 'Entity|Block|nil' }],
     },
@@ -129,7 +129,7 @@ export const inventoryClass: LuaClass = {
     },
     {
       name: 'viewers',
-      doc: "The players who have it open on their screen now. (A player's own inventory, open in their own inventory screen, doesn't count: the server can't tell.)",
+      doc: "The players who have it open on their screen now: for a storage, those looking at a window with a slot bound to it. (A player's own inventory, open in their own inventory screen, doesn't count: the server can't tell.)",
       params: [],
       returns: [{ type: 'Player[]' }],
     },

@@ -103,10 +103,11 @@ and every other piece of paper is untouched.
 | ------------ | ---------------------------------------------------------------------------------------------------------------- | -------------------------- |
 | `texture`    | The picture, drawn flat.                                                                                         |                            |
 | `block`      | A [block look](#block-models) (`ui/ruby_ore`) to draw instead: a cube in slots and the hand, as a block item is. |                            |
+| `model`      | A [model file](#models) (`crystal.json`, under `models/`): a shape of its own, drawn as modelled.                |                            |
 | `parent`     | With a `texture`: `minecraft:item/generated` (a flat sprite) or `minecraft:item/handheld` (held like a tool)     | `minecraft:item/generated` |
 | `guiTexture` | A different picture shown only in inventories and item frames.                                                   |                            |
 
-A look has a `texture` or a `block`, not both, and `parent` only goes with a
+A look has one of `texture`, `block` and `model`, and `parent` only goes with a
 `texture` (`resource_pack.item-look`). The item that places a [block](block.md) usually
 takes the block's look:
 
@@ -123,6 +124,74 @@ the built resource pack adds the looks' textures to it
 (`assets/minecraft/atlases/items.json`). A texture a block look uses too goes
 in the `blocks` atlas only: the game wants each texture in one atlas.
 
+## Models
+
+A shape of your own: a JSON model with elements, the game's own format, as
+[Blockbench](https://www.blockbench.net/) exports one (File → Export → Export
+Block/Item Model). Put it in the resource pack's `models/` folder, and the
+textures it uses in `textures/`:
+
+```
+resource_packs/mobs/
+  pack.json
+  models/wing.json
+  textures/wing.png
+```
+
+```json partial
+"items": { "wing": { "model": "wing.json" } }
+```
+
+An item look (`"itemModel": "mobs/wing"` on an item, held, worn and shown in
+slots as the model's own `display` transforms say) or a
+[centity node](centity.md#display) (`{ "type": "model", "model": "mobs/wing" }`)
+shows it. A block look can be a model too (`"blocks": { "crystal": { "model":
+"crystal.json" } }`); see [blocks](block.md) for which blocks can draw a shape
+that isn't a cube.
+
+**Textures.** A texture the model names by a path (`"0": "wing"`, as Blockbench
+writes a texture saved beside the model) is the pack's own when there's such a
+file under `textures/` (`textures/wing.png`), and the built pack names it as its
+own. Anything else is the game's (`block/stone`, `minecraft:item/stick`), as
+written. A texture in another namespace (`"mypack:item/wing"`, which Blockbench
+writes when the project names one) is in nothing the client has, so it's an
+error (`resource_pack.model-texture`): name the pack's textures by their path
+under `textures/`. A face naming a texture variable the model doesn't give
+(`"#3"` with no `"3"` in `textures`) is the same error, unless the model has a
+`parent`, which may give it.
+
+**What the game takes**, checked as you save (`resource_pack.model`,
+`resource_pack.model-bounds`), the same on every supported version (1.21.11
+and every 26.x):
+
+- An element's `from` and `to` are three numbers each, in sixteenths of a
+  block, every one from **-16 to 32**: a model fits within a box three blocks
+  wide, centred on its block. One coordinate past that and the game refuses
+  the whole model (it draws as the missing model).
+- An element's `rotation` is either **one axis at any angle**
+  (`{ "origin": [8, 0, 8], "axis": "y", "angle": 37.5 }`; any angle, not only
+  the 22.5° steps older versions took) or **any angles about all three axes**
+  (`{ "origin": [8, 0, 8], "x": 10, "y": 30, "z": -5 }`, turned about X, then
+  Y, then Z). `rescale: true` stretches a rotated face back to the size of
+  the box it was cut from.
+- Faces are `down`, `up`, `north`, `south`, `west` and `east`, each with a
+  `texture` and optionally `uv` (four numbers), `rotation` (0, 90, 180 or
+  270), `cullface` and `tintindex`. An element may also have `shade` and
+  `light_emission` (0 to 15: drawn as if lit to that level).
+- A `display` transform's `translation` is clamped to ±80 and its `scale` to
+  ±4 by the game (`resource_pack.model-display`, a warning).
+
+Keys the game ignores (Blockbench's `groups`, `texture_size`, `credit`) are
+kept as they are.
+
+**A model bigger than three blocks** doesn't fit the bounds. Model it smaller
+and scale it up where it's shown: a centity node's `transform.scale` (or the
+model's `display` transform, up to 4 times, for the context it's shown in)
+draws it as big as you like, at the cost of its pixels growing with it. Or
+split it into parts, each its own model within the bounds, on nodes of their
+own: a creature's limbs as separate models is also what lets each move with
+the centity's animation tracks.
+
 ## Tooltips
 
 A custom tooltip frame and/or backing, through an item's `tooltipStyle`. Both
@@ -135,9 +204,10 @@ are nine-slice sprites, so one style fits any tooltip size.
 
 ## Block models
 
-How a [block](block.md)'s cube looks, through the block's `model`. A block
+How a [block](block.md) looks, through the block's `model`. A block
 whose `model` is `ui/ruby_ore` is drawn as the resource pack's block model
-`<namespace>:block/ui/ruby_ore`, a cube with these textures:
+`<namespace>:block/ui/ruby_ore`: a [model file](#models) of its own shape
+(`{ "model": "crystal.json" }`), or a cube with these textures:
 
 | Key       | Meaning                                                                 |
 | --------- | ----------------------------------------------------------------------- |
@@ -150,14 +220,18 @@ whose `model` is `ui/ruby_ore` is drawn as the resource pack's block model
 A face takes the first of its own texture, `side` (for the four sides) and
 `texture`, and every face needs one: `{ "texture": "block/ore.png" }` is a cube
 of one picture, `{ "top": …, "bottom": …, "side": … }` a log. A look that
-leaves a face out is an error (`resource_pack.block-faces`). Breaking the block throws
-up the first of `texture`, `side` and `top` that's set.
+leaves a face out is an error (`resource_pack.block-faces`), and so is a look
+with a `model` and textures both. Breaking the block throws up the first of
+`texture`, `side` and `top` that's set, or a model's `particle` texture (else
+its first).
 
 In the built resource pack the look is `assets/<namespace>/models/block/ui/ruby_ore.json`
-(a child of the game's `block/cube`), and the project's blocks are drawn by one
-more file the build writes, `assets/minecraft/blockstates/note_block.json`, which
-draws each note block state a custom block holds as its model and every other
-as the game does. See [blocks](block.md#held-as-a-note-block).
+(a child of the game's `block/cube`, or the model file as written), and the
+project's blocks are drawn by one more file the build writes per game block
+they're held in (`assets/minecraft/blockstates/note_block.json`,
+`tripwire.json`, `oak_leaves.json`…), which draws each state a custom block
+holds as its model and every other as the game does. See
+[blocks](block.md#carriers).
 A block model's textures are added to the game's `blocks` atlas in the same way
 (`assets/minecraft/atlases/blocks.json`).
 
@@ -227,6 +301,91 @@ several files. It's keyed by the event's key, and every key is optional:
 Each file listed in `files` is still a sound event of its own. In the built
 resource pack the files go to `assets/<namespace>/sounds/<id>/` and the
 events, every resource pack's, into `assets/<namespace>/sounds.json`.
+
+## HUD
+
+`hud` changes what players see around the hotbar: it hides any of the game's
+own HUD elements, for every player, and adds elements of the pack's own that
+scripts fill in per player through [`player:hud()`](../reference/hud.md): bars of a
+value out of a max, rows of icons, and lines of text.
+
+```json partial
+"hud": {
+  "hide": ["health", "food"],
+  "bars": {
+    "health": { "full": "hud/heart.png", "half": "hud/heart_half.png", "empty": "hud/heart_empty.png", "segments": 10, "x": -91, "y": 30 },
+    "mana": { "full": "hud/mana.png", "empty": "hud/mana_empty.png", "segments": 10, "x": 10, "y": 30, "reverse": true }
+  },
+  "icons": { "effects": { "icons": { "poison": "hud/poison.png", "regeneration": "hud/regen.png" }, "x": -91, "y": 42 } },
+  "texts": { "mana_label": { "x": 50, "align": "center" } }
+}
+```
+
+```lua
+local hud = player:hud()
+hud:fill_bar("ui/health", player:health(), player:max_health())
+hud:fill_bar("ui/mana", mana, 100)
+hud:set_icons("ui/effects", { "poison" })
+hud:set_text("ui/mana_label", "<aqua>" .. mana .. "/100")
+```
+
+### Hiding the game's elements
+
+`hide` lists any of `health` (every kind of heart, a mount's too), `food`,
+`armor`, `air` and `experience` (the bar; the level number is text the game
+draws while it's above 0). The built pack replaces the sprites that draw them
+with empty ones, so it's for the whole project: a resource pack is the same
+for every player, so one player can't see them while another doesn't.
+
+Which sprites there are is the client's to say, so the editor writes their
+names into [`client/vanilla.json`](project.md#clientvanillajson) from your
+imported Minecraft. Until it has (`resource_pack.hud-hide`), nothing is
+hidden. Mods that draw these elements themselves still draw them.
+
+### Placing elements
+
+Positions are GUI pixels, so they scale with the player's GUI scale like the
+game's own HUD. `x` is from the middle of the screen (negative to the left) to
+the element's left edge, within ±1000. `y` is from the bottom of the screen up
+to its bottom edge, from 0 to 65. For reference, the game's own rows: the
+hotbar's top at 22, the experience bar 24 to 29, hearts and hunger 30 to 39
+(hearts from x -91, hunger ending at x 91), armour 40 to 49.
+
+| Bar key    | Meaning                                                                                                           | Default |
+| ---------- | ----------------------------------------------------------------------------------------------------------------- | ------- |
+| `full`     | The picture of a full segment.                                                                                    |         |
+| `empty`    | The picture of an empty one.                                                                                      |         |
+| `half`     | The picture of a half one: with it, the bar shows to the nearest half segment, and without, to the nearest whole. | none    |
+| `segments` | How many, 1 to 64.                                                                                                |         |
+| `x`, `y`   | Where its left and bottom edges are.                                                                              |         |
+| `gap`      | Pixels between segments. Each segment takes the width of the widest picture.                                      | 0       |
+| `reverse`  | Fill from the right, like the game's hunger bar.                                                                  | `false` |
+
+A row of `icons` has its pictures by key, an `x`, a `y` and a `gap` (1): a
+script says which it shows, in what order, and they're drawn left to right
+from `x`. A line of `texts` has an `x` and an `align` (`left`, `center` or
+`right`: which part of the text is at `x`); it's drawn on the action bar's own
+line, in the game's font, in its own colours and shadow.
+
+Every key is unique across the pack's bars, icons and texts, since scripts
+name them `<pack>/<key>` whatever kind they are (`resource_pack.hud`).
+
+### How it's drawn
+
+The elements are characters of a font of the pack's own (`<namespace>:<pack>/hud`),
+drawn in the player's action bar: each picture's ascent puts it at its height,
+and moves of the cursor put it across, so the line takes no width and the
+game's centring leaves everything where it says. Pictures are drawn as they
+are, untinted and without the text shadow. So:
+
+- The HUD and `player:send_actionbar` share the line: a message is shown with
+  the HUD for a few seconds, then the HUD alone.
+- The server sends the line again every second, as the game fades the action
+  bar out after a few. A player with a slow connection may see it flicker.
+- Lines of text are measured with the game's font (`fonts/default.json`) to be
+  placed; one the server can't measure isn't drawn.
+- Elements are above other screens' contents only as the action bar is: they
+  hide with the HUD (F1) and under a chat that's open.
 
 ## How it reaches players
 

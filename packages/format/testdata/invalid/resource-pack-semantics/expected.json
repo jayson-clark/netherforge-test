@@ -64,21 +64,21 @@
   {
     "severity": "error",
     "file": "resource_packs/ui/pack.json",
-    "message": "Give this item a texture, or a block it's drawn as",
+    "message": "Give this item a texture, a block it's drawn as, or a model",
     "path": "$.items.bare",
     "code": "resource_pack.item-look"
   },
   {
     "severity": "error",
     "file": "resource_packs/ui/pack.json",
-    "message": "An item is drawn as a texture or as a block, not both",
+    "message": "An item is drawn as one of a texture, a block and a model: it has texture and block",
     "path": "$.items.both.block",
     "code": "resource_pack.item-look"
   },
   {
     "severity": "error",
     "file": "resource_packs/ui/pack.json",
-    "message": "An item drawn as a block is held as a block: drop `parent`",
+    "message": "Only a texture is held as `parent` says: a block or model is held as it is, so drop `parent`",
     "path": "$.items.held.parent",
     "code": "resource_pack.item-look"
   },

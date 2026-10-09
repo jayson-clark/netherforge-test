@@ -14,6 +14,8 @@ import {
   splitId,
   spriteLayers,
   type DisplayEntry,
+  type RawModel,
+  type ResolvedModel,
 } from './model'
 
 /**
@@ -131,6 +133,46 @@ export function blockLookGeometry(
   return pending
 }
 
+/** A flat picture ([url], a project file) as an item drawn flat, centred, as a texture look is. */
+export function pictureGeometry(url: string): ItemGeometry {
+  return { groups: buildSprite([url]), matrix: itemMatrix(undefined) }
+}
+
+/**
+ * One of a resource pack's own model files (`models/<path>.json`, as written)
+ * as an item in display [context]: its parent chain from the client's assets,
+ * as the game resolves one, with [bound] (texture variable → a project file's
+ * URL) for the textures that are the pack's own.
+ */
+export function packModelGeometry(
+  assets: ClientAssets,
+  model: RawModel,
+  bound: Record<string, string>,
+  context: string,
+): Promise<ItemGeometry | null> {
+  const cache = cacheFor(items, assets)
+  const key = `pack:${JSON.stringify(model)}|${JSON.stringify(bound)}#${context}`
+  let pending = cache.get(key)
+  if (!pending) {
+    pending = (async () => {
+      const parent = model.parent ? await resolveModel(assets, model.parent) : null
+      const resolved: ResolvedModel = {
+        chain: parent?.chain ?? [],
+        textures: { ...parent?.textures, ...model.textures, ...bound },
+        elements: model.elements ?? parent?.elements ?? [],
+        display: { ...parent?.display, ...model.display },
+      }
+      const groups = isSpriteModel(resolved)
+        ? buildSprite(spriteLayers(resolved))
+        : buildElements(resolved.elements, resolved.textures)
+      if (groups.length === 0) return null
+      return { groups, matrix: itemMatrix(resolved.display[context]) }
+    })()
+    cache.set(key, pending)
+  }
+  return pending
+}
+
 /**
  * Vanilla applies the display transform about the model centre, then draws
  * the item centred on the entity: the transform, then a half-block shift.
@@ -156,6 +198,9 @@ function itemMatrix(entry: DisplayEntry | undefined): THREE.Matrix4 {
   }
   return matrix.multiply(new THREE.Matrix4().makeTranslation(-0.5, -0.5, -0.5))
 }
+
+/** Whether a model's texture is a URL already (a project file a pack model draws) rather than a client texture id. */
+export const isUrl = (texture: string) => /^[a-z][a-z0-9+.-]*:\/\//i.test(texture)
 
 const textures = new Map<string, THREE.Texture>()
 let missing: THREE.Texture | null = null
@@ -188,7 +233,8 @@ function pixelated(texture: THREE.Texture): THREE.Texture {
 
 /** A texture with Minecraft's filtering; animated strips show their first frame. */
 export function loadTexture(assets: ClientAssets, textureId: string): THREE.Texture {
-  const url = assets.textureUrl(textureId)
+  // A project file's URL (a pack's own texture) is loaded as it is; anything else is the client's.
+  const url = isUrl(textureId) ? textureId : assets.textureUrl(textureId)
   const existing = textures.get(url)
   if (existing) return existing
   const texture = new THREE.TextureLoader().load(

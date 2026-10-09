@@ -9,7 +9,7 @@
 //! - `assets/minecraft/lang/en_us.json` (the only language inside the jar)
 //!
 //! Plus three files we write: `index.json` (ids of blockstates, item
-//! definitions and fonts, so the UI can fill pickers without listing folders),
+//! definitions and fonts, and the HUD's GUI sprites, so the UI can fill pickers without listing folders),
 //! `glyph-advances.json` (the default font's advances, see [super::fonts]) and
 //! `.import.json` (the marker `mc_cache_status` checks). The import goes to
 //! a temp folder first and is swapped in at the end, so a failed import never
@@ -147,6 +147,8 @@ struct Index {
     blockstates: Vec<String>,
     items: Vec<String>,
     fonts: Vec<String>,
+    /// The HUD's sprites (`hud/heart/full`), which a resource pack's `hud.hide` blanks.
+    sprites: Vec<String>,
 }
 
 impl Index {
@@ -162,11 +164,22 @@ impl Index {
             self.items.push(id);
         } else if let Some(id) = id("assets/minecraft/font/") {
             self.fonts.push(id);
+        } else if let Some(sprite) = name
+            .strip_prefix("assets/minecraft/textures/gui/sprites/")
+            .filter(|rest| rest.starts_with("hud/"))
+            .and_then(|rest| rest.strip_suffix(".png"))
+        {
+            self.sprites.push(sprite.to_string());
         }
     }
 
     fn write(mut self, dir: &Path, minecraft: &str) -> Result<()> {
-        for list in [&mut self.blockstates, &mut self.items, &mut self.fonts] {
+        for list in [
+            &mut self.blockstates,
+            &mut self.items,
+            &mut self.fonts,
+            &mut self.sprites,
+        ] {
             list.sort();
         }
         let index = json!({
@@ -174,6 +187,7 @@ impl Index {
             "blockstates": self.blockstates,
             "items": self.items,
             "fonts": self.fonts,
+            "sprites": self.sprites,
         });
         write_atomic(&dir.join(INDEX), serde_json::to_string(&index)?.as_bytes())
     }
@@ -192,6 +206,10 @@ pub(crate) mod tests {
         let entries: &[(&str, &[u8])] = &[
             ("net/minecraft/client/Main.class", b"\xca\xfe"),
             ("assets/minecraft/textures/block/test_block.png", b"\x89PNG"),
+            (
+                "assets/minecraft/textures/gui/sprites/hud/heart/full.png",
+                b"\x89PNG",
+            ),
             (
                 "assets/minecraft/textures/block/test_block.png.mcmeta",
                 b"{}",
@@ -228,9 +246,9 @@ pub(crate) mod tests {
 
         let mut calls = Vec::new();
         let count = import_client(&jar, "26.3", &client, |d, t| calls.push((d, t))).unwrap();
-        assert_eq!(count, 8);
-        assert_eq!(calls.first(), Some(&(0, 8)));
-        assert_eq!(calls.last(), Some(&(8, 8)));
+        assert_eq!(count, 9);
+        assert_eq!(calls.first(), Some(&(0, 9)));
+        assert_eq!(calls.last(), Some(&(9, 9)));
 
         let mut files: Vec<String> = walkdir::WalkDir::new(&client)
             .into_iter()
@@ -257,6 +275,7 @@ pub(crate) mod tests {
                 "assets/minecraft/particles/flame.json",
                 "assets/minecraft/textures/block/test_block.png",
                 "assets/minecraft/textures/block/test_block.png.mcmeta",
+                "assets/minecraft/textures/gui/sprites/hud/heart/full.png",
                 "glyph-advances.json",
                 "index.json",
             ]
@@ -265,6 +284,7 @@ pub(crate) mod tests {
             serde_json::from_slice(&std::fs::read(client.join(INDEX)).unwrap()).unwrap();
         assert_eq!(index["blockstates"], json!(["minecraft:test_block"]));
         assert_eq!(index["items"], json!(["minecraft:test_item"]));
+        assert_eq!(index["sprites"], json!(["hud/heart/full"]));
         // The fake font has no providers, so no advances, but the file is there.
         assert_eq!(
             std::fs::read_to_string(client.join(super::super::fonts::ADVANCES)).unwrap(),

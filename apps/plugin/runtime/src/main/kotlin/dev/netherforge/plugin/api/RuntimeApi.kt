@@ -2,10 +2,12 @@ package dev.netherforge.plugin.api
 
 import dev.netherforge.format.game.MinecraftVersion
 import dev.netherforge.format.item.ItemDef
+import dev.netherforge.plugin.centity.NfSpawningImpl
 import dev.netherforge.plugin.command.NfCommandsImpl
 import dev.netherforge.plugin.cutscene.CutsceneImpl
 import dev.netherforge.plugin.cutscene.NfCutscenesImpl
 import dev.netherforge.plugin.data.ScriptData
+import dev.netherforge.plugin.hud.HudImpl
 import dev.netherforge.plugin.interop.NfEconomyImpl
 import dev.netherforge.plugin.interop.NfPlaceholdersImpl
 import dev.netherforge.plugin.item.ItemMatch
@@ -101,6 +103,8 @@ internal class RuntimeApi(private val session: ProjectSession) :
     override val nfBossbars = NfBossbarsImpl(session)
     override val nfTeams = NfTeamsImpl(session)
     override val nfSchedule = NfScheduleImpl(session)
+    override val nfSpawning = NfSpawningImpl(session)
+    override val hud = HudImpl(session)
     override val schedule = ScheduleImpl(session)
     override val nfEconomy = NfEconomyImpl(session)
     override val nfPlaceholders = NfPlaceholdersImpl(session)
@@ -181,7 +185,8 @@ internal class RuntimeApi(private val session: ProjectSession) :
     override fun item(json: JsonElement): ItemData = readItem(session.names.item(json))
 
     /** An item table whose names are as the server knows them. */
-    private fun readItem(json: JsonElement): ItemData = LuaItems.read(json, session.platform.game) { session.items.look(it)?.def }
+    private fun readItem(json: JsonElement): ItemData =
+        LuaItems.read(json, session.platform.game, projectBlock = session.customBlocks::has) { session.items.look(it)?.def }
 
     /** A stack as a table, its names as the reading script's package writes them. */
     override fun pushItem(lua: Lua, item: ItemData) {

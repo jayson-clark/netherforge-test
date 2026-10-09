@@ -2,10 +2,10 @@ package dev.netherforge.plugin.pack
 
 import dev.netherforge.format.Problem
 import dev.netherforge.format.ProblemCodes
-import dev.netherforge.format.block.BlockCarriers
 import dev.netherforge.format.project.BlockKind
 import dev.netherforge.format.project.ProjectSnapshot
 import dev.netherforge.format.project.ResourcePackKind
+import dev.netherforge.format.project.plan
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.ref.ResourceRef
@@ -100,18 +100,17 @@ class Packs(
             return listOf(ProblemCodes.RUNTIME_PACK_FORMAT.at(ResourcePackKind.folder, message))
         }
         val description = snapshot.manifest?.name?.takeIf { it.isNotBlank() } ?: "NetherForge"
-        // The note block states the project's blocks are held as: drawn as their models, everything else as the game draws it.
-        val blocks = BlockCarriers.plan(
-            snapshot.everywhere(BlockKind).mapValues { it.value.compiled },
-            snapshot.namespace,
-            platform.game
-        )
-        val layout = PackLayout.build(compiled.values.toList(), format, description, blocks) { path -> readBytes(path)?.let(::pngSize) }
+        // The states the project's blocks are held as: drawn as their models, everything else as the game draws it.
+        val blocks = BlockKind.plan(snapshot.everywhere(BlockKind), snapshot.namespace, platform.game)
+        val layout = PackLayout.build(compiled.values.toList(), format, description, blocks, snapshot.vanilla) { path ->
+            readBytes(path)?.let(::pngSize)
+        }
         val files = LinkedHashMap<String, ByteArray>()
         for ((path, entry) in layout) {
             files[path] = when (entry) {
                 is PackLayout.Entry.Text -> entry.text.encodeToByteArray()
                 is PackLayout.Entry.Copy -> readBytes(entry.projectPath) ?: continue
+                is PackLayout.Entry.Bytes -> entry.bytes
             }
         }
         val bytes = PackZip.zip(files)

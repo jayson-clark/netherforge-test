@@ -54,10 +54,10 @@ data class ItemFile(
     val rarity: ItemRarity? = null,
     /** Attribute changes while it's worn or held. */
     val attributeModifiers: List<AttributeModifierDef>? = null,
-    /** Block kinds it can break in adventure mode. */
-    val canBreak: List<String>? = null,
-    /** Block kinds it can be placed on in adventure mode. */
-    val canPlaceOn: List<String>? = null,
+    /** Blocks it can break in adventure mode: project blocks, the game's, `#tags` of blocks, or `*`. */
+    @Ref(RefKind.ADVENTURE_BLOCK) val canBreak: List<String>? = null,
+    /** Blocks it can be placed on in adventure mode, written as [canBreak]'s. */
+    @Ref(RefKind.ADVENTURE_BLOCK) val canPlaceOn: List<String>? = null,
     /** Eating it. */
     val food: FoodDef? = null,
     /** A cooldown after using it. */

@@ -6,6 +6,7 @@
 import { createContext, useContext, useMemo } from 'react'
 import type { ResourcePackFile, ResourcePacksPreview } from '@/core/format'
 import { fileUrl } from '@/core/store/packages'
+import type { PackModels } from '@/core/store/resourcePacks'
 import { useApp, useResourcePacks, useWorkspace } from './providers'
 
 /** Every pack that parses, by id (the app's packs store; see store/resourcePacks.ts). */
@@ -31,6 +32,10 @@ export function useReferenceNamespace(): string {
   const home = useHomeNamespace()
   return document ?? home
 }
+
+/** Each pack's model files and textures, by pack id: what a model look is drawn from. */
+export const useResourcePackModels = (): Record<string, PackModels> =>
+  useResourcePacks((s) => s.models)
 
 /** Every pack's skins and glyphs as the server will place them. */
 export const useCompiledResourcePacks = (): ResourcePacksPreview =>

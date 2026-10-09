@@ -14,7 +14,7 @@ What `projectblock:on(event, handler)` listens for. See [Events](events.md) for 
 
 | Event | Payload | Cancellable | |
 | --- | --- | --- | --- |
-| `place` | [ProjectBlockPlaceEvent](events.md#projectblockplaceevent) | yes | A block of this kind is about to be placed: by a player right-clicking with an item that places it (`event.player`, `event.item`), or by a script (`project_block:place`, neither set). `event:cancel()` stops it. It is heard before the world's own `block_place`, which a player's placing also raises (with the block's note block state as `state`). |
+| `place` | [ProjectBlockPlaceEvent](events.md#projectblockplaceevent) | yes | A block of this kind is about to be placed: by a player right-clicking with an item that places it (`event.player`, `event.item`), or by a script (`project_block:place`, neither set). `event:cancel()` stops it. It is heard before the world's own `block_place`, which a player's placing also raises (with the state of the game block it's held as, its carrier's, as `state`). |
 | `break` | [BlockBreakEvent](events.md#blockbreakevent) | yes | A player is breaking a block of this kind: before the world's own `block_break`, then `nf.on("block_break")`, with the same event, so `event:cancel()` here stops it. `event.drops` is what its loot table rolled for the tool they hold (none when `requiresTool` and it isn't the right one); assign it, and `event.experience`, to change what drops. Breaking it by a script (`break_naturally`) or an explosion rolls the same drops without this event. Writable: `drops`, `experience`. |
 | `click` | [ProjectBlockClickEvent](events.md#projectblockclickevent) | yes | A player clicked a block of this kind: `event.click` is `"left"` (hitting it, which also starts breaking it) or `"right"`. It is heard after the player's own `interact` and `nf.on("player_interact")`, so one of them cancelling the click keeps it from here. `event:cancel()` stops what the click would do, which for a right click is placing something against it. |
 | `tick` | [ProjectBlockTickEvent](events.md#projectblocktickevent) |  | Every `tick` ticks (the block's `tick` in `block.json`; without it nothing ticks) for each block of this kind in a loaded chunk. Blocks in chunks that aren't loaded are not ticked, and a block placed or loaded is first ticked a full interval later. Keep per-block state in `event.block:data()`. |
@@ -33,7 +33,7 @@ Whether the project still has it.
 
 ## `projectblock:place(location)`
 
-Places one at the block position a location is in, as `world:set_block` would: whatever is there is replaced, and nothing drops. Its `place` handlers are not asked (a script placing a block isn't a player placing one), and it isn't a `block_place` either. If the block has a centity, it's spawned over the block. `nil` when the chunk isn't loaded, or when the game has no note block state left to hold the block in (the project has more blocks than that).
+Places one at the block position a location is in, as `world:set_block` would: whatever is there is replaced, and nothing drops. Its `place` handlers are not asked (a script placing a block isn't a player placing one), and it isn't a `block_place` either. If the block has a centity, it's spawned over the block. `nil` when the chunk isn't loaded, or when the game has no state of its carrier left to hold the block in (the project has more blocks of that carrier than that).
 
 | Parameter | Type | |
 | --- | --- | --- |

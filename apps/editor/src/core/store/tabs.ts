@@ -4,7 +4,14 @@
  * a tab shows it (or, for a resource's main file, a file inside it).
  */
 import { KINDS, type BinaryKindId, type EditedKind } from '@/core/format'
-import { isBinaryKind, locationOf, mainFileOf, opensAs, resourceOf } from '@/core/paths'
+import {
+  isBinaryKind,
+  locationOf,
+  mainFileOf,
+  MODULE_ENTRY,
+  opensAs,
+  resourceOf,
+} from '@/core/paths'
 import { docKind, type Doc } from './documents'
 import { nextNonce, type SliceArgs } from './slice'
 
@@ -129,6 +136,18 @@ export function tabsSlice({ get, set }: SliceArgs): TabsState & TabsActions {
       // A problem about a resource folder rather than a file: a module opens on the file it runs first.
       if (resource?.role === 'folder')
         return get().openFile(opensAs(resource.kind, resource.id), at)
+      // A module without an `init.lua` opens on one of the files it does have.
+      if (resource && KINDS[resource.kind].contents === 'lua' && resource.rest === MODULE_ENTRY) {
+        const { files } = get()
+        if (!files.includes(path)) {
+          const folder = `${locationOf(resource.kind, resource.id)}/`
+          const lua = files.filter((it) => it.startsWith(folder) && it.endsWith('.lua'))
+          // Its top-level files before those in subfolders, each in order.
+          const depth = (it: string) => it.split('/').length
+          const first = lua.sort((a, b) => depth(a) - depth(b) || a.localeCompare(b))[0]
+          if (first) return get().openFile(first, at)
+        }
+      }
       const doc = await get().loadDoc(path)
       if (!doc) return
       const type = tabTypeFor(path)

@@ -1,10 +1,12 @@
 package dev.netherforge.plugin.api
 
 import dev.netherforge.format.Vec3
+import dev.netherforge.format.centity.MoonPhase
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.game.has
+import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.project.SpawnCategory
 import dev.netherforge.plugin.async.WorkFailed
 import dev.netherforge.plugin.lua.LuaApiException
@@ -87,6 +89,9 @@ internal class WorldImpl(private val session: ProjectSession) : WorldApi {
     override fun dayCount(self: LuaHandle.World): Long? = live(self)?.let(worlds::fullTime)?.let { Math.floorDiv(it, DAY) }
 
     override fun weather(self: LuaHandle.World): String? = live(self)?.let(worlds::weather)
+
+    override fun moonPhase(self: LuaHandle.World): String? =
+        live(self)?.let(worlds::moonPhase)?.let { MoonPhase.entries.getOrNull(it) }?.let { CanonicalJson.serialName(it) }
 
     override fun setWeather(self: LuaHandle.World, weather: String, options: WeatherOptions?): Boolean {
         val ticks = options?.ticks

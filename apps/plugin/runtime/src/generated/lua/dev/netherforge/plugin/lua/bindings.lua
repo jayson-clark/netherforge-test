@@ -460,6 +460,16 @@ function Node.set_display_item(self, item)
   return prim["Node.set_display_item"](self_key, item)
 end
 
+function Node.model(self)
+  local self_key = self_of(self, "Node")
+  return prim["Node.model"](self_key)
+end
+
+function Node.set_model(self, model)
+  local self_key = self_of(self, "Node")
+  return prim["Node.set_model"](self_key, model)
+end
+
 function Node.display_text_style(self)
   local self_key = self_of(self, "Node")
   return prim["Node.display_text_style"](self_key)
@@ -1396,6 +1406,16 @@ function Player.ender_chest(self)
   return prim["Player.ender_chest"](self_key)
 end
 
+function Player.storage(self, name, size)
+  local self_key = self_of(self, "Player")
+  return prim["Player.storage"](self_key, name, size)
+end
+
+function Player.hud(self)
+  local self_key = self_of(self, "Player")
+  return prim["Player.hud"](self_key)
+end
+
 function Player.held_item(self)
   local self_key = self_of(self, "Player")
   return prim["Player.held_item"](self_key)
@@ -1754,6 +1774,11 @@ end
 function World.day_count(self)
   local self_key = self_of(self, "World")
   return prim["World.day_count"](self_key)
+end
+
+function World.moon_phase(self)
+  local self_key = self_of(self, "World")
+  return prim["World.moon_phase"](self_key)
 end
 
 function World.weather(self)
@@ -2806,6 +2831,21 @@ function Slot.set_item(self, item)
   return prim["Slot.set_item"](self_key, item)
 end
 
+function Slot.bind(self, storage, index)
+  local self_key = self_of(self, "Slot")
+  return prim["Slot.bind"](self_key, storage, index)
+end
+
+function Slot.unbind(self)
+  local self_key = self_of(self, "Slot")
+  return prim["Slot.unbind"](self_key)
+end
+
+function Slot.binding(self)
+  local self_key = self_of(self, "Slot")
+  return prim["Slot.binding"](self_key)
+end
+
 function Slot.on(self, event, handler, options)
   self_of(self, "Slot")
   want(event, "string", "event")
@@ -3429,6 +3469,65 @@ function Random.weighted(self, weights)
   return hand.Random.weighted(self, weights)
 end
 
+-- Hud -----------------------------------------------------------------------
+
+local Hud = class("Hud")
+
+function new.Hud(player)
+  return prim["handles.new"]("Hud", player)
+end
+
+---@param handle table
+---@return string player
+function keys.Hud(handle)
+  return prim["handles.key"](handle)
+end
+
+function Hud.player(self)
+  local self_key = self_of(self, "Hud")
+  return prim["Hud.player"](self_key)
+end
+
+function Hud.fill_bar(self, name, value, max)
+  local self_key = self_of(self, "Hud")
+  return prim["Hud.fill_bar"](self_key, name, value, max)
+end
+
+function Hud.bar(self, name)
+  local self_key = self_of(self, "Hud")
+  return prim["Hud.bar"](self_key, name)
+end
+
+function Hud.set_icons(self, name, icons)
+  local self_key = self_of(self, "Hud")
+  return prim["Hud.set_icons"](self_key, name, icons)
+end
+
+function Hud.icons(self, name)
+  local self_key = self_of(self, "Hud")
+  return prim["Hud.icons"](self_key, name)
+end
+
+function Hud.set_text(self, name, text)
+  local self_key = self_of(self, "Hud")
+  return prim["Hud.set_text"](self_key, name, text)
+end
+
+function Hud.text(self, name)
+  local self_key = self_of(self, "Hud")
+  return prim["Hud.text"](self_key, name)
+end
+
+function Hud.remove(self, name)
+  local self_key = self_of(self, "Hud")
+  return prim["Hud.remove"](self_key, name)
+end
+
+function Hud.clear(self)
+  local self_key = self_of(self, "Hud")
+  prim["Hud.clear"](self_key)
+end
+
 -- Vec3 ----------------------------------------------------------------------
 
 function values.Vec3.length(self)
@@ -3562,6 +3661,7 @@ local function fill_nf(scope, nf)
   nf.worlds = {}
   nf.structures = {}
   nf.centities = {}
+  nf.spawning = {}
   nf.menus = {}
   nf.dialogs = {}
   nf.items = {}
@@ -3778,6 +3878,10 @@ local function fill_nf(scope, nf)
 
   function nf.centities.all(filter)
     return prim["nf.centities.all"](scope, filter)
+  end
+
+  function nf.spawning.condition(name, callback)
+    prim["nf.spawning.condition"](scope, name, callback)
   end
 
   function nf.menus.shared(menu)

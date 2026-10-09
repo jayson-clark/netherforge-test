@@ -1,6 +1,7 @@
 package dev.netherforge.plugin.contract
 
 import dev.netherforge.format.Vec3
+import dev.netherforge.format.block.BlockCarrier
 import dev.netherforge.format.bridge.BotEvent
 import dev.netherforge.plugin.platform.BlockOps
 import dev.netherforge.plugin.platform.ParticleOps
@@ -166,6 +167,8 @@ abstract class BlockOpsContract : PlatformContract() {
         main {
             val feet = block(origin)
             assertFalse(blocks.canPlace(world, feet.first, feet.second, feet.third, "minecraft:stone"))
+            // String goes where anything stands: nothing collides with it.
+            assertTrue(blocks.canPlace(world, feet.first, feet.second, feet.third, "minecraft:tripwire"))
             val free = block(at(4, 0, 4))
             assertTrue(blocks.canPlace(world, free.first, free.second, free.third, "minecraft:stone"))
             assertFalse(blocks.canPlace("nf_no_such_world", 0, 70, 0, "minecraft:stone"))
@@ -196,8 +199,10 @@ abstract class BlockOpsContract : PlatformContract() {
     @Test
     fun `the server is asked to leave note blocks alone, and agrees, again and again`() {
         main {
-            assertTrue(blocks.freezeNoteBlocks())
-            assertTrue(blocks.freezeNoteBlocks())
+            for (carrier in BlockCarrier.entries) {
+                assertTrue(blocks.freeze(carrier), "$carrier")
+                assertTrue(blocks.freeze(carrier), "$carrier, again")
+            }
         }
     }
 

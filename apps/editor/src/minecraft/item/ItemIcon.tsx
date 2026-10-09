@@ -7,13 +7,14 @@
  */
 import { useEffect, useState } from 'react'
 import type { ItemDef } from '@/core/format'
-import { blockLookPicture, itemPicture } from '@/minecraft/client/iconRender'
+import { blockLookPicture, itemPicture, packModelPicture } from '@/minecraft/client/iconRender'
 import { useClientAssets } from '@/minecraft/client/useClientAssets'
 import {
   useCompiledResourcePacks,
   useHomeNamespace,
   useProjectFileUrl,
   useResourcePackFiles,
+  useResourcePackModels,
   useReferenceNamespace,
 } from '@/state/useResourcePacks'
 import { cx } from '@/ui/cx'
@@ -31,16 +32,17 @@ function useItemPicture(item: Pick<ItemDef, 'kind' | 'itemModel'>): Picture {
   const home = useHomeNamespace()
   const assets = useClientAssets()
   const projectUrl = useProjectFileUrl()
+  const models = useResourcePackModels()
   const [state, setState] = useState<{
     key: string
     source: IconSource
     rendered?: string | null
   }>()
-  const key = `${item.kind}|${item.itemModel ?? ''}|${assets?.version ?? ''}|${namespace}|${home}|${JSON.stringify(packs)}|${JSON.stringify(compiled.resourcePacks)}`
+  const key = `${item.kind}|${item.itemModel ?? ''}|${assets?.version ?? ''}|${namespace}|${home}|${JSON.stringify(packs)}|${JSON.stringify(compiled.resourcePacks)}|${JSON.stringify(models)}`
 
   useEffect(() => {
     let live = true
-    void iconSource(item, packs, compiled, namespace, assets, home).then(async (source) => {
+    void iconSource(item, packs, compiled, namespace, assets, home, models).then(async (source) => {
       if (!live) return
       setState({ key, source })
       if (source.kind === 'model' && assets) {
@@ -52,6 +54,13 @@ function useItemPicture(item: Pick<ItemDef, 'kind' | 'itemModel'>): Picture {
           Object.entries(source.faces).map(([face, path]) => [face, projectUrl(path)]),
         )
         const rendered = await blockLookPicture(assets, urls)
+        if (live) setState({ key, source, rendered })
+      }
+      if (source.kind === 'shape' && assets) {
+        const bound = Object.fromEntries(
+          Object.entries(source.textures).map(([name, path]) => [name, projectUrl(path)]),
+        )
+        const rendered = await packModelPicture(assets, source.model, bound)
         if (live) setState({ key, source, rendered })
       }
     })
@@ -72,6 +81,7 @@ function useItemPicture(item: Pick<ItemDef, 'kind' | 'itemModel'>): Picture {
       return assets ? { layers: source.textures.map((it) => assets.textureUrl(it)) } : { label }
     case 'model':
     case 'block':
+    case 'shape':
       return state.rendered ? { layers: [state.rendered] } : { label }
     case 'none':
       return { label }

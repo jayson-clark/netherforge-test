@@ -1,0 +1,46 @@
+{
+  "$schema": "../../.netherforge/schema/centity.schema.json",
+  "name": "Ruby crystal",
+  "nodes": {
+    "gem": {
+      "transform": {
+        "translation": [0.5, 0.5, 0.5]
+      },
+      "display": {
+        "type": "model",
+        "model": "ui/crystal"
+      },
+      "hitbox": {
+        "boxes": [
+          {
+            "min": [-0.4, -0.5, -0.4],
+            "max": [0.4, 0.5, 0.4]
+          }
+        ]
+      }
+    }
+  },
+  "animations": {
+    "spin": {
+      "loop": "loop",
+      "autoplay": true,
+      "tracks": {
+        "gem": {
+          "rotation": [
+            {
+              "time": 0,
+              "value": [0, 0, 0]
+            },
+            {
+              "time": 4,
+              "value": [0, 360, 0]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "script": {
+    "file": "script.lua"
+  }
+}

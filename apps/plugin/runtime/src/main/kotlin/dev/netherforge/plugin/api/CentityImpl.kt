@@ -6,6 +6,7 @@ import dev.netherforge.format.centity.BlockDisplay
 import dev.netherforge.format.centity.Channel
 import dev.netherforge.format.centity.ItemDisplay
 import dev.netherforge.format.centity.LoopMode
+import dev.netherforge.format.centity.ModelDisplay
 import dev.netherforge.format.centity.TextAlignment
 import dev.netherforge.format.centity.TextDisplay
 import dev.netherforge.format.game.BlockState
@@ -13,6 +14,8 @@ import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.math.Matrix4
 import dev.netherforge.format.math.degreesToRadians
 import dev.netherforge.format.math.radiansToDegrees
+import dev.netherforge.format.ref.RefKind
+import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.centity.Centities
 import dev.netherforge.plugin.centity.CentityPaths
 import dev.netherforge.plugin.centity.Instance
@@ -458,9 +461,24 @@ internal class NodeImpl(private val session: ProjectSession) : NodeApi {
         return when (instance.display(index)) {
             is BlockDisplay -> "block"
             is ItemDisplay -> "item"
+            is ModelDisplay -> "model"
             is TextDisplay -> "text"
             null -> null
         }
+    }
+
+    override fun model(self: LuaHandle.Node): String? {
+        val (instance, index) = node(self) ?: return null
+        return (instance.display(index) as? ModelDisplay)?.model?.text?.let(session.names::spell)
+    }
+
+    override fun setModel(self: LuaHandle.Node, model: String): Boolean {
+        val (instance, index) = node(self) ?: return false
+        val current = instance.display(index) as? ModelDisplay ?: return false
+        // Named as the calling script's package names it; the server holds it as the project spells it.
+        val name = session.names.entryName(RefKind.ITEM_MODEL, model)
+        if (name != current.model.text) instance.setDisplay(index, current.copy(model = ResourceRef(name)))
+        return true
     }
 
     override fun displayBlock(self: LuaHandle.Node): String? {

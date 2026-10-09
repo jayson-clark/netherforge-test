@@ -2,7 +2,7 @@
 
 # Inventory
 
-A real inventory: a player's (`player:inventory()`), their ender chest, a container block's (`block:inventory()`: a chest, a barrel, a hopper, a furnace) or an entity's (a chest boat, a donkey, a villager). Its item methods work like `Menu`'s. The handle is where the inventory is, so it reads live; once that's gone (a chest broken, a player offline, a chunk unloaded) its methods answer `nil`, `false` or nothing. Slots are numbered from 0. A player's: the hotbar 0 to 8, the rest of the main inventory 9 to 35, armour 36 (feet), 37 (legs), 38 (chest) and 39 (head), the offhand 40, then body armour 41 and a saddle 42 (what the game keeps there for any entity). A double chest's inventory is both halves, 0 to 53.
+A real inventory: a player's (`player:inventory()`), their ender chest, a storage of the project's that they keep (`player:storage(name, size)`), a container block's (`block:inventory()`: a chest, a barrel, a hopper, a furnace) or an entity's (a chest boat, a donkey, a villager). Its item methods work like `Menu`'s. The handle is where the inventory is, so it reads live; once that's gone (a chest broken, a player offline, a chunk unloaded) its methods answer `nil`, `false` or nothing. Slots are numbered from 0. A player's: the hotbar 0 to 8, the rest of the main inventory 9 to 35, armour 36 (feet), 37 (legs), 38 (chest) and 39 (head), the offhand 40, then body armour 41 and a saddle 42 (what the game keeps there for any entity). A double chest's inventory is both halves, 0 to 53.
 
 A handle: call its methods with a colon, `inventory:method()`.
 
@@ -17,7 +17,7 @@ Whether it's there now: the player online, the container still a container, the 
 
 ## `inventory:kind()`
 
-What kind of inventory it is: `"player"`, `"ender_chest"`, `"chest"`, `"barrel"`, `"shulker_box"`, `"hopper"`, `"dispenser"`, `"dropper"`, `"furnace"`, `"brewing"`, … `nil` once it's gone.
+What kind of inventory it is: `"player"`, `"ender_chest"`, `"storage"`, `"chest"`, `"barrel"`, `"shulker_box"`, `"hopper"`, `"dispenser"`, `"dropper"`, `"furnace"`, `"brewing"`, … `nil` once it's gone.
 
 **Returns** `string?`
 
@@ -29,7 +29,7 @@ How many slots it has: 43 for a player, 27 for a chest, 54 for a double chest. 0
 
 ## `inventory:holder()`
 
-Whose it is: the `Player` (for a player's inventory and ender chest), the `Entity`, or the `Block`. `nil` once it's gone.
+Whose it is: the `Player` (for a player's inventory, ender chest and storage), the `Entity`, or the `Block`. `nil` once it's gone.
 
 **Returns** `Entity\|Block\|nil`
 
@@ -130,6 +130,6 @@ Empties every slot. To empty one, `set_item(index, nil)`.
 
 ## `inventory:viewers()`
 
-The players who have it open on their screen now. (A player's own inventory, open in their own inventory screen, doesn't count: the server can't tell.)
+The players who have it open on their screen now: for a storage, those looking at a window with a slot bound to it. (A player's own inventory, open in their own inventory screen, doesn't count: the server can't tell.)
 
 **Returns** `Player[]`

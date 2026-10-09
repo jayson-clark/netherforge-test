@@ -401,6 +401,7 @@ class ConformanceTest {
         h.Living = h.World:spawn_entity("minecraft:armor_stand", vec3(6, 64, 6))
         h.DroppedItem = h.World:spawn_item(vec3(8, 64, 8), { kind = "minecraft:bread" })
         h.Inventory = h.Player:inventory()
+        h.Hud = h.Player:hud()
         h.BossBar = nf.bossbars.create()
         h.Sidebar = h.Player:sidebar()
         h.Team = nf.teams.create("smoke")
@@ -767,6 +768,7 @@ class ConformanceTest {
                 h.Living = h.World:spawn_entity("minecraft:armor_stand", vec3(6, 64, 6))
                 h.DroppedItem = h.World:spawn_item(vec3(8, 64, 8), { kind = "minecraft:bread" })
                 h.Inventory = h.Player:inventory()
+                h.Hud = h.Player:hud()
                 samples = {}
                 ${crossing.joinToString("\n") { (name, _, sample) -> "samples.$name = $sample" }}
                 """.trimIndent()

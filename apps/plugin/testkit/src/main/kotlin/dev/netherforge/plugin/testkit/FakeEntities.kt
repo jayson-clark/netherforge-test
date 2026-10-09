@@ -19,6 +19,7 @@ import java.util.UUID
 class FakeEntity(val id: UUID, val role: EntityRole, var display: DisplayDef?, var location: Location, val tag: EntityTag) {
     var pose: DisplayPose? = null
     var poses = 0
+    var teleports = 0
     var width = 0.0
     var height = 0.0
     var look: DisplayLook? = null
@@ -92,7 +93,10 @@ class FakeEntities(private val platform: FakePlatform) : EntityOps {
     }
 
     override fun teleport(id: UUID, to: Location) {
-        all[id]?.location = to
+        all[id]?.let {
+            it.location = to
+            it.teleports++
+        }
         platform.playerViews.cameraMoved(id, to)
     }
 

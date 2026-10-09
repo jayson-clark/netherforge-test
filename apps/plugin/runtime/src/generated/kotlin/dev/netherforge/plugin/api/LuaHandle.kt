@@ -55,6 +55,7 @@ sealed interface LuaHandle {
             "Task" -> Task(keyValues[0] as Long)
             "Schedule" -> Schedule(keyValues[0] as Long)
             "Random" -> Random(keyValues[0] as Long)
+            "Hud" -> Hud(keyValues[0] as String)
             else -> throw IllegalArgumentException("no handle class $luaClass at the top of a chain")
         }
     }
@@ -244,9 +245,9 @@ sealed interface LuaHandle {
     }
 
     /**
-     * A real inventory: a player's (`player:inventory()`), their ender chest, a container block's
-     * (`block:inventory()`: a chest, a barrel, a hopper, a furnace) or an entity's (a chest boat, a
-     * donkey, a villager).
+     * A real inventory: a player's (`player:inventory()`), their ender chest, a storage of the project's
+     * that they keep (`player:storage(name, size)`), a container block's (`block:inventory()`: a chest, a
+     * barrel, a hopper, a furnace) or an entity's (a chest boat, a donkey, a villager).
      */
     class Inventory(val holder: String) : LuaHandle {
         override val luaClass: String get() = "Inventory"
@@ -558,6 +559,25 @@ sealed interface LuaHandle {
 
         /** Random handles. */
         object Codec : HandleCodec<Random>("Random", setOf("Random"))
+    }
+
+    /**
+     * One player's HUD: the elements of the project's resource packs (`hud` in `pack.json`: bars, rows of
+     * icons, lines of text, each at its place on the screen), shown with what a script sets here.
+     */
+    class Hud(val player: String) : LuaHandle {
+        override val luaClass: String get() = "Hud"
+
+        override val keyValues: List<Any> get() = listOf(player)
+
+        override fun equals(other: Any?): Boolean = other is Hud && other.player == player
+
+        override fun hashCode(): Int = 31 * "Hud".hashCode() + player.hashCode()
+
+        override fun toString(): String = "$luaClass($player)"
+
+        /** Hud handles. */
+        object Codec : HandleCodec<Hud>("Hud", setOf("Hud"))
     }
 }
 

@@ -3,7 +3,7 @@
  * React like the rest of `ops.ts`: the inspector's section calls these
  * through `workspace.edit`, and the tests call them on plain objects.
  */
-import type { CentityFile, SpawnRange } from '@/core/format'
+import type { CentityFile, MoonPhase, SpawnRange, SpawnTime, SpawnWeather } from '@/core/format'
 
 /** The lists a `spawning` block has, edited as comma-separated text. */
 export type SpawningList = 'worlds' | 'biomes' | 'blocks'
@@ -65,4 +65,62 @@ export function setRangeEnd(
   else range[end] = Math.round(value)
   if (range.min === undefined && range.max === undefined) delete spawning[key]
   else spawning[key] = range
+}
+
+/** How the time of day is given: not at all, a half of the day, or a range of ticks. */
+export type SpawnTimeMode = 'any' | 'day' | 'night' | 'range'
+
+export function timeMode(time: SpawnTime | undefined): SpawnTimeMode {
+  if (time === undefined) return 'any'
+  return typeof time === 'string' ? time : 'range'
+}
+
+/** Switches how the time is given; a range starts at night's ticks, so it means something at once. */
+export function setTimeMode(file: CentityFile, mode: SpawnTimeMode): void {
+  const spawning = file.spawning
+  if (!spawning) return
+  if (mode === 'any') delete spawning.time
+  else if (mode === 'range')
+    spawning.time = typeof spawning.time === 'object' ? spawning.time : { min: 13000, max: 22999 }
+  else spawning.time = mode
+}
+
+/** One end of a time range: either end may go, but a range with neither is no time at all. */
+export function setTimeEnd(file: CentityFile, end: 'min' | 'max', value: number | undefined): void {
+  const spawning = file.spawning
+  if (!spawning) return
+  const range = typeof spawning.time === 'object' ? { ...spawning.time } : {}
+  if (value === undefined) delete range[end]
+  else range[end] = Math.round(value)
+  if (range.min === undefined && range.max === undefined) delete spawning.time
+  else spawning.time = range
+}
+
+/** Ticks one end of a time range is at, if the time is a range. */
+export function timeEnd(time: SpawnTime | undefined, end: 'min' | 'max'): number | undefined {
+  return typeof time === 'object' ? time[end] : undefined
+}
+
+/** Adds or takes away one value of a list of choices (moon phases, weather); an empty list goes. */
+export function toggleChoice<K extends 'moonPhase' | 'weather'>(
+  file: CentityFile,
+  key: K,
+  value: K extends 'moonPhase' ? MoonPhase : SpawnWeather,
+  on: boolean,
+): void {
+  const spawning = file.spawning
+  if (!spawning) return
+  const current = (spawning[key] ?? []) as string[]
+  const next = on ? [...new Set([...current, value])] : current.filter((it) => it !== value)
+  if (next.length === 0) delete spawning[key]
+  else (spawning as Record<string, unknown>)[key] = next
+}
+
+/** The script condition's name; an empty box removes it. */
+export function setCondition(file: CentityFile, name: string): void {
+  const spawning = file.spawning
+  if (!spawning) return
+  const trimmed = name.trim()
+  if (trimmed === '') delete spawning.when
+  else spawning.when = trimmed
 }

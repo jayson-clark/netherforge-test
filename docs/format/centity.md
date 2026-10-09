@@ -90,6 +90,18 @@ space.
 `thirdperson_righthand`, `firstperson_lefthand`, `firstperson_righthand`, `head`,
 `gui`, `ground` or `fixed`.
 
+**Model**: `{ "type": "model", "model": "mobs/wing", "itemTransform": "none" }`.
+`model` is one of the project's [resource pack looks](resource-pack.md#item-models)
+(`<pack>/<key>`, an entry of a pack's `items`): usually a [model file](resource-pack.md#models)
+with elements, drawn whole by one display entity however complex it is, so a
+creature is a display per moving part rather than dozens of block displays.
+`itemTransform` picks which of the model's `display` transforms applies, as for
+an item; the default, `none`, draws it as modelled (16 of its units to a
+block, centred on the node). A script swaps the look with
+`node:set_model("mobs/wing_2")`: the same entity shows the new model, one
+small update to each player who sees it, so a few frames swapped every few
+ticks animate it as a flipbook, alongside the animation tracks.
+
 **Text**: `{ "type": "text", "text": "<gold>Hello" }`, with optional keys:
 
 | Key          | Meaning                                                                                                         |
@@ -190,7 +202,11 @@ can't reach them (`script.file-name`, a warning). See
   "group": { "min": 1, "max": 3 },
   "cap": 6,
   "despawnDistance": 80,
-  "keepOnInteract": true
+  "keepOnInteract": true,
+  "time": "night",
+  "moonPhase": ["full_moon"],
+  "weather": ["clear"],
+  "when": "blood_moon"
 }
 ```
 
@@ -198,18 +214,22 @@ A centity with a `spawning` block appears by itself near players, the way
 mobs do. Every field is optional; a block with none lets it appear anywhere a
 player is, so say where.
 
-| Key               | Meaning                                                                                                                              | Default |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------- |
-| `worlds`          | World names it may appear in                                                                                                         | any     |
-| `biomes`          | Biomes: the game's (`minecraft:plains`) or `#tags` of them (`#minecraft:is_forest`), or the project's [own](biome.md) (`ruby_grove`) | any     |
-| `blocks`          | The block it stands on: block ids, or `#tags` of blocks                                                                              | any     |
-| `light`           | `{ "min", "max" }`: the light level at the spot, 0 to 15 (the brighter of block and sky light)                                       | 0 to 15 |
-| `height`          | `{ "min", "max" }`: the block `y` it may appear at                                                                                   | any     |
-| `weight`          | How likely it is against the other centities that may appear at the same spot                                                        | 10      |
-| `group`           | `{ "min", "max" }`: how many appear together                                                                                         | 1       |
-| `cap`             | The most of this centity that may be natural and near one player at once                                                             | 4       |
-| `despawnDistance` | How far from every player a natural one is removed, in blocks                                                                        | 96      |
-| `keepOnInteract`  | `true`: a player clicking a natural one keeps it, as `keep()` does                                                                   | `false` |
+| Key               | Meaning                                                                                                                                               | Default |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `worlds`          | World names it may appear in                                                                                                                          | any     |
+| `biomes`          | Biomes: the game's (`minecraft:plains`) or `#tags` of them (`#minecraft:is_forest`), or the project's [own](biome.md) (`ruby_grove`)                  | any     |
+| `blocks`          | The block it stands on: block ids, or `#tags` of blocks                                                                                               | any     |
+| `light`           | `{ "min", "max" }`: the light level at the spot, 0 to 15 (the brighter of block and sky light)                                                        | 0 to 15 |
+| `height`          | `{ "min", "max" }`: the block `y` it may appear at                                                                                                    | any     |
+| `weight`          | How likely it is against the other centities that may appear at the same spot                                                                         | 10      |
+| `group`           | `{ "min", "max" }`: how many appear together                                                                                                          | 1       |
+| `cap`             | The most of this centity that may be natural and near one player at once                                                                              | 4       |
+| `despawnDistance` | How far from every player a natural one is removed, in blocks                                                                                         | 96      |
+| `keepOnInteract`  | `true`: a player clicking a natural one keeps it, as `keep()` does                                                                                    | `false` |
+| `time`            | The time of day: `"day"`, `"night"`, or `{ "min", "max" }` in ticks of the day (0 to 23999)                                                           | any     |
+| `moonPhase`       | The moon's phases: `full_moon`, `waning_gibbous`, `last_quarter`, `waning_crescent`, `new_moon`, `waxing_crescent`, `first_quarter`, `waxing_gibbous` | any     |
+| `weather`         | The world's weather: `clear`, `rain` (a thunderstorm is rain too) or `thunder`                                                                        | any     |
+| `when`            | A condition a script decides: the name it was given with `nf.spawning.condition` (a package's as `ns:name`)                                           | none    |
 
 An empty list is the same as leaving the key out, and either end of a range
 may be left out. A `weight`, `cap`, `despawnDistance` and group size must be
@@ -218,6 +238,34 @@ positive (`centity.spawning-number`), a range's `min` can't be above its `max`
 biomes and blocks (`centity.spawning-biome`, `centity.spawning-block`). A plain
 biome id is one of the project's biomes (`reference.biome` when there's none);
 the game's are written with their namespace.
+
+**Time, moon and weather** are the world's, asked as each place is tried. `"night"`
+is from dusk to sunrise, ticks 13000 to 22999 of the day (what `/time set night`
+sets is its start), and `"day"` the rest, 23000 through 12999. A range is
+inclusive at both ends, and one whose `min` is above its `max` runs through
+midnight: `{ "min": 22000, "max": 2000 }`. Leaving out an end runs from the
+day's first tick or to its last. A tick outside 0 to 23999 is
+`centity.spawning-time`. Weather is the world's, not the biome's: `rain`
+lets one appear in a desert while it rains elsewhere.
+
+**`when`** names a condition a module registers:
+
+```lua
+-- modules/events/init.lua
+local blood_moon = false
+nf.spawning.condition("blood_moon", function(check)
+  return blood_moon
+end)
+```
+
+The condition is asked last, after every other key fits the place, with the
+centity, the place and the player it's near, and the centity appears only
+when it answers `true`. A bare name is the centity's own package's condition;
+another package's is `ns:name`. A name that isn't an id is
+`centity.spawning-when`. Nothing appears while no script has registered the
+condition (the server logs that once), and a condition that errors counts as
+`false`. It's cheaper and clearer than refusing spawns in
+`centity_natural_spawn`, which only hears a spawn after the place was chosen.
 
 The spawner runs every second or so on the server's main thread. Around each
 player it picks places 24 to 48 blocks away in loaded chunks, finds the

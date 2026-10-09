@@ -44,7 +44,7 @@ class PaperNoteBlocksTest : PlatformContract() {
         return heard
     }
 
-    private fun frozen() = main { assertTrue(platform.blocks.freezeNoteBlocks()) }
+    private fun frozen() = main { assertTrue(platform.blocks.freeze(dev.netherforge.format.block.BlockCarrier.NOTE_BLOCK)) }
 
     private fun noteAt(x: Int, y: Int, z: Int) = main { Bukkit.getWorld(world)!!.getBlockAt(x, y, z).blockData as NoteBlock }
 

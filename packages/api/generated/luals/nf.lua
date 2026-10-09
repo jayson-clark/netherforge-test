@@ -46,7 +46,7 @@
 --- MiniMessage a player reads, like `"<green>Done!"`: a string. A `<glyph:pack/key>` tag in it names a glyph the way the script's own files would: one of its own package's resource packs bare, or `<glyph:namespace:pack/key>` for one a package it depends on exports. The tag means that glyph wherever and whenever the text is shown, whoever shows it; one naming a glyph the script can't use draws nothing, and the server log says why. Text handed back to a script names its glyphs the same way.
 ---@alias Text string
 
---- Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
+--- Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
 ---@class nf
 ---@field server nf.server The server itself: its clock, its performance, its version, its settings (players, message of the day, whitelist), and saying or running things as the console.
 ---@field commands nf.commands Slash commands a module adds to the server for as long as it runs, with typed arguments, tab completion and usage messages from their declaration.
@@ -54,10 +54,11 @@
 ---@field worlds nf.worlds The server's worlds: finding them, and making, loading and copying them.
 ---@field structures nf.structures Structures: saved boxes of blocks that `world:place_structure` places. The project's are `structures/<id>.nbt`; scripts save more with `world:save_structure`.
 ---@field centities nf.centities Centity instances: spawning new ones and finding live ones.
+---@field spawning nf.spawning Natural spawning (a centity's `spawning` block in `centity.json`): conditions a script decides, which a `spawning` block names with `when`.
 ---@field menus nf.menus The project's menus (`menus/<id>/`), and menus scripts make.
 ---@field dialogs nf.dialogs The project's dialogs (`dialogs/<id>/`), and dialogs scripts make.
 ---@field items nf.items The project's items (`items/<id>/`): item kinds of its own, whose stacks the server can always tell apart from any other stack of the same Minecraft kind.
----@field blocks nf.blocks The project's blocks (`blocks/<id>/`): blocks of its own, drawn by its resource pack, with their own hardness, drops and sounds, held in the world as note block states. A player places one with an item whose `block` names it, or a script with `ProjectBlock:place`.
+---@field blocks nf.blocks The project's blocks (`blocks/<id>/`): blocks of its own, drawn by its resource pack, with their own hardness, drops and sounds, held in the world as states of the game's blocks (their carriers: note blocks, tripwire, leaves). A player places one with an item whose `block` names it, or a script with `ProjectBlock:place`.
 ---@field recipes nf.recipes The project's recipes: those in `recipes/<id>.json`, and those scripts register. A recipe can take the project's own items as ingredients (`{ item = "ruby" }`), which only a stack of that item fits, however it looks; and a recipe takes a project item only where it names it, so a ruby built on paper never crafts as paper. Players see a recipe in their recipe book once they've discovered it (`player:discover_recipe`), but can craft it either way.
 ---@field loot nf.loot Loot tables: the project's own (`loot/<id>.json`) and the game's. A roll picks from each of a table's pools, weighing its entries against each other, and gives the items it picked. The same `seed` always gives the same items (the editor rolls the same way). A table the project doesn't have, or that the game doesn't, is an error; so is a game table that needs something the roll doesn't say (a mob's table needs the mob, as `looted`).
 ---@field bossbars nf.bossbars Boss bars: bars across the top of players' screens.
@@ -716,6 +717,15 @@ function nf.centities.get(id) end
 ---@return Centity[]
 function nf.centities.all(filter) end
 
+--- Natural spawning (a centity's `spawning` block in `centity.json`): conditions a script decides, which a `spawning` block names with `when`.
+---@class nf.spawning
+nf.spawning = {}
+
+--- Registers a condition a centity's `spawning.when` can name: the spawner asks `callback` about each place where every other `spawning` rule of that centity fits, and the centity appears there only when it answers `true`. Anything else (`false`, `nil`, an error) is no. It belongs to the script that registered it and goes when that script unloads (a reload, the server stopping), so register it in a module's body. A centity names it bare when it's in the same package as the registering script, `ns:name` from another. A name another live script already registered is an error, and so is one that isn't an id.
+---@param name string What `spawning.when` names: lowercase letters, digits and `_`, like `"blood_moon"`.
+---@param callback fun(check: SpawnCheck): boolean Answers whether the centity may appear at `check.location`. Keep it quick: it runs on the main thread, for every place the spawner tries. An error in it is logged with its file and line and counts as `false`.
+function nf.spawning.condition(name, callback) end
+
 --- The project's menus (`menus/<id>/`), and menus scripts make.
 ---@class nf.menus
 nf.menus = {}
@@ -768,7 +778,7 @@ function nf.items.get(item) end
 ---@return ProjectItem[]
 function nf.items.all() end
 
---- The project's blocks (`blocks/<id>/`): blocks of its own, drawn by its resource pack, with their own hardness, drops and sounds, held in the world as note block states. A player places one with an item whose `block` names it, or a script with `ProjectBlock:place`.
+--- The project's blocks (`blocks/<id>/`): blocks of its own, drawn by its resource pack, with their own hardness, drops and sounds, held in the world as states of the game's blocks (their carriers: note blocks, tripwire, leaves). A player places one with an item whose `block` names it, or a script with `ProjectBlock:place`.
 ---@class nf.blocks
 nf.blocks = {}
 
@@ -1464,8 +1474,8 @@ function Node:is_clickable() end
 ---@param clickable boolean
 function Node:set_clickable(clickable) end
 
---- What it draws: `"block"`, `"item"` or `"text"`, or `nil` for a node that draws nothing (a pivot, a hitbox alone) or once its centity is removed.
----@return "block"|"item"|"text"?
+--- What it draws: `"block"`, `"item"`, `"model"` (a resource pack look) or `"text"`, or `nil` for a node that draws nothing (a pivot, a hitbox alone) or once its centity is removed.
+---@return "block"|"item"|"model"|"text"?
 function Node:display_kind() end
 
 --- The block state a block display shows, like `"minecraft:oak_slab[type=top]"`, or `nil` when the node isn't a block display.
@@ -1494,6 +1504,15 @@ function Node:display_item() end
 ---@param item Item
 ---@return boolean # `false` when the node isn't an item display.
 function Node:set_display_item(item) end
+
+--- The resource pack look a model display shows (`<pack>/<key>`, as the calling script names it), or `nil` when the node isn't a model display.
+---@return string?
+function Node:model() end
+
+--- Changes the look a model display shows: another entry of a resource pack's `items`, a model with elements or not. The display entity stays and only its item changes, which costs one small update to each player who sees it, so swapping models every few ticks animates a node frame by frame (a flipbook), alongside the transform tracks. A look the project's resource packs don't have is an error.
+---@param model string `<pack>/<key>`: an entry of a resource pack's `items` (a package's as `ns:<pack>/<key>`).
+---@return boolean # `false` when the node isn't a model display.
+function Node:set_model(model) end
 
 --- How a text display's text is drawn, every field filled in (`background` is `nil` for Minecraft's own grey), or `nil` when the node isn't a text display. Change a field and hand it to `set_display_text_style`.
 ---@return TextStyle?
@@ -2405,6 +2424,16 @@ function Player:set_whitelisted(whitelisted) end
 ---@return Inventory?
 function Player:ender_chest() end
 
+--- A set of item slots of the project's own that they keep: extra equipment, a backpack, a bank. It's saved in the player's own save data, with their inventory, in the same file and the same write, so a crash or a restart can't duplicate an item between the two or lose one. Shown in a menu by binding slots to it (`slot:bind`), where what players move in and out is saved at once. Dying doesn't drop it. An `Inventory` of kind `"storage"`: its item methods work as on any other, and it answers `nil` and `false` while they're offline (it can't be changed then). `nil` when they're offline. A name that isn't an id is an error, and so is a size outside 1 to 256.
+---@param name string Lowercase letters, digits and `_`: the project's own (a package's scripts keep theirs apart, under their namespace). Scripts that use one name share one storage.
+---@param size integer How many slots it has, numbered from 0. Changing it later keeps every item: a slot past the size isn't shown, but its item is kept, and comes back with a bigger size.
+---@return Inventory?
+function Player:storage(name, size) end
+
+--- Their HUD: the resource packs' HUD elements, filled in for them (bars, icons, text). A handle like this one: fine to keep, and it answers `false` or `nil` while they're offline.
+---@return Hud
+function Player:hud() end
+
 --- What's in their main hand (the selected hotbar slot), or `nil` for nothing or when they're offline.
 ---@return Item?
 function Player:held_item() end
@@ -2499,7 +2528,7 @@ function Player:menu() end
 ---@return boolean # `false` when they're offline or have no menu of ours open.
 function Player:close_menu() end
 
---- Shows them a real inventory, as if they'd opened it: a chest's, another player's, their ender chest. Whatever was on their screen closes.
+--- Shows them a real inventory, as if they'd opened it: a chest's, another player's, their ender chest. Whatever was on their screen closes. A storage (`player:storage`) is shown in a menu instead, by binding slots to it (`slot:bind`): opening one is `false`.
 ---@param inventory Inventory
 ---@return boolean # `false` when they're offline, or the inventory has gone.
 function Player:open_inventory(inventory) end
@@ -2825,6 +2854,10 @@ function World:set_time_of_day(ticks) end
 --- How many whole days have gone by in this world, or `nil` once it has gone.
 ---@return integer?
 function World:day_count() end
+
+--- Tonight's moon, or `nil` once the world has gone. It moves on a phase each day: full, waning gibbous, last quarter, waning crescent, new, waxing crescent, first quarter, waxing gibbous, then full again.
+---@return "full_moon"|"waning_gibbous"|"last_quarter"|"waning_crescent"|"new_moon"|"waxing_crescent"|"first_quarter"|"waxing_gibbous"|nil
+function World:moon_phase() end
 
 --- The weather now, or `nil` once the world has gone. Thunder always comes with rain.
 ---@return "clear"|"rain"|"thunder"|nil
@@ -3221,7 +3254,7 @@ function Block:biome() end
 ---@return table?
 function Block:data() end
 
---- A block of the project's own at a position, which is a `Block` like any other: it reads the world live, so one kept from earlier turns into whatever is there now (`block:custom()` says whether it still is one). The game holds it as a note block state its resource pack draws as the block, so `kind()` and `state()` answer that; `id()` and `project()` say which block it is. `data()` is its own table: it starts empty when the block is placed and is gone when the block is, whatever replaced it. `break_naturally` rolls its loot table; replacing or filling over it with `set_state` or `world:fill_blocks` removes it without drops.
+--- A block of the project's own at a position, which is a `Block` like any other: it reads the world live, so one kept from earlier turns into whatever is there now (`block:custom()` says whether it still is one). The game holds it as a state of its carrier (a note block's, tripwire's or a leaves block's) its resource pack draws as the block, so `kind()` and `state()` answer that; `id()` and `project()` say which block it is. `data()` is its own table: it starts empty when the block is placed and is gone when the block is, whatever replaced it. `break_naturally` rolls its loot table; replacing or filling over it with `set_state` or `world:fill_blocks` removes it without drops.
 ---@class CustomBlock: Block
 local CustomBlock = {}
 
@@ -3245,7 +3278,7 @@ function ProjectBlock:id() end
 ---@return boolean
 function ProjectBlock:exists() end
 
---- Places one at the block position a location is in, as `world:set_block` would: whatever is there is replaced, and nothing drops. Its `place` handlers are not asked (a script placing a block isn't a player placing one), and it isn't a `block_place` either. If the block has a centity, it's spawned over the block. `nil` when the chunk isn't loaded, or when the game has no note block state left to hold the block in (the project has more blocks than that).
+--- Places one at the block position a location is in, as `world:set_block` would: whatever is there is replaced, and nothing drops. Its `place` handlers are not asked (a script placing a block isn't a player placing one), and it isn't a `block_place` either. If the block has a centity, it's spawned over the block. `nil` when the chunk isn't loaded, or when the game has no state of its carrier left to hold the block in (the project has more blocks of that carrier than that).
 ---@param location Location Where.
 ---@return CustomBlock?
 function ProjectBlock:place(location) end
@@ -3271,7 +3304,7 @@ function ProjectBlock:on(event, handler, options) end
 ---@overload fun(self: ProjectBlock, event: "tick", handler: fun(event: ProjectBlockTickEvent)): Subscription
 function ProjectBlock:once(event, handler) end
 
---- A real inventory: a player's (`player:inventory()`), their ender chest, a container block's (`block:inventory()`: a chest, a barrel, a hopper, a furnace) or an entity's (a chest boat, a donkey, a villager). Its item methods work like `Menu`'s. The handle is where the inventory is, so it reads live; once that's gone (a chest broken, a player offline, a chunk unloaded) its methods answer `nil`, `false` or nothing. Slots are numbered from 0. A player's: the hotbar 0 to 8, the rest of the main inventory 9 to 35, armour 36 (feet), 37 (legs), 38 (chest) and 39 (head), the offhand 40, then body armour 41 and a saddle 42 (what the game keeps there for any entity). A double chest's inventory is both halves, 0 to 53.
+--- A real inventory: a player's (`player:inventory()`), their ender chest, a storage of the project's that they keep (`player:storage(name, size)`), a container block's (`block:inventory()`: a chest, a barrel, a hopper, a furnace) or an entity's (a chest boat, a donkey, a villager). Its item methods work like `Menu`'s. The handle is where the inventory is, so it reads live; once that's gone (a chest broken, a player offline, a chunk unloaded) its methods answer `nil`, `false` or nothing. Slots are numbered from 0. A player's: the hotbar 0 to 8, the rest of the main inventory 9 to 35, armour 36 (feet), 37 (legs), 38 (chest) and 39 (head), the offhand 40, then body armour 41 and a saddle 42 (what the game keeps there for any entity). A double chest's inventory is both halves, 0 to 53.
 ---@class Inventory
 local Inventory = {}
 
@@ -3279,7 +3312,7 @@ local Inventory = {}
 ---@return boolean
 function Inventory:exists() end
 
---- What kind of inventory it is: `"player"`, `"ender_chest"`, `"chest"`, `"barrel"`, `"shulker_box"`, `"hopper"`, `"dispenser"`, `"dropper"`, `"furnace"`, `"brewing"`, … `nil` once it's gone.
+--- What kind of inventory it is: `"player"`, `"ender_chest"`, `"storage"`, `"chest"`, `"barrel"`, `"shulker_box"`, `"hopper"`, `"dispenser"`, `"dropper"`, `"furnace"`, `"brewing"`, … `nil` once it's gone.
 ---@return string?
 function Inventory:kind() end
 
@@ -3287,7 +3320,7 @@ function Inventory:kind() end
 ---@return integer
 function Inventory:size() end
 
---- Whose it is: the `Player` (for a player's inventory and ender chest), the `Entity`, or the `Block`. `nil` once it's gone.
+--- Whose it is: the `Player` (for a player's inventory, ender chest and storage), the `Entity`, or the `Block`. `nil` once it's gone.
 ---@return Entity|Block|nil
 function Inventory:holder() end
 
@@ -3337,7 +3370,7 @@ function Inventory:first_slot(match) end
 ---@return boolean # `false` once it's gone.
 function Inventory:clear() end
 
---- The players who have it open on their screen now. (A player's own inventory, open in their own inventory screen, doesn't count: the server can't tell.)
+--- The players who have it open on their screen now: for a storage, those looking at a window with a slot bound to it. (A player's own inventory, open in their own inventory screen, doesn't count: the server can't tell.)
 ---@return Player[]
 function Inventory:viewers() end
 
@@ -3754,6 +3787,20 @@ function Slot:item() end
 ---@param item? Item Leave it out (or `nil`) to empty the slot.
 ---@return boolean # `false` once the window is gone.
 function Slot:set_item(item) end
+
+--- Makes this slot a view of a slot of a player's `storage`: it shows what's there, and whatever goes in or out of it, by a click, a drag, a shift-click or a script's `set_item` on either, is saved in the storage at once, as the game moves it. So the item is only ever in one place, whatever happens next: the window closing, the player leaving or dying, the server stopping or the project reloading. In a locked window players can still put items in and take them out of a bound slot by hand (shift-clicking from their own inventory and double-click gathering stay locked); its `click` handlers can still refuse what doesn't belong (`event:cancel()`). Binding a slot again moves it to the new place. Only a window of a menu that isn't `shared` can be bound, and only to a storage (`player:storage`): another inventory, or a slot outside the storage, is an error.
+---@param storage Inventory From `player:storage(name, size)`.
+---@param index? integer Which of its slots, from 0. Default the same number as this slot.
+---@return boolean # `false` once the window is gone, or the storage's player is offline.
+function Slot:bind(storage, index) end
+
+--- Stops showing a storage's slot here. The slot is emptied, since what it showed is still in the storage. Its player leaving unbinds every slot bound to their storage.
+---@return boolean # `false` when it wasn't bound, or the window is gone.
+function Slot:unbind() end
+
+--- Which storage slot this slot shows, or `nil` when it shows none.
+---@return SlotBinding?
+function Slot:binding() end
 
 --- Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
 ---@param event Slot.Event The event's name.
@@ -4210,6 +4257,56 @@ function Random:shuffle(list) end
 ---@param weights table<any, number> Each choice, with its weight.
 ---@return any
 function Random:weighted(weights) end
+
+--- One player's HUD: the elements of the project's resource packs (`hud` in `pack.json`: bars, rows of icons, lines of text, each at its place on the screen), shown with what a script sets here. An element nobody set isn't drawn. It's drawn in their action bar, sent again whenever something changes and every second, so `player:send_actionbar` shows its line alongside it while the HUD is up (on its own for a moment, when the server can't measure it). What it shows is the server's to remember, not saved: set it again when they join. A name that isn't one of the packs' elements, or is another kind of element, is an error.
+---@class Hud
+local Hud = {}
+
+--- Whose HUD it is.
+---@return Player
+function Hud:player() end
+
+--- Fills a bar: `value` out of `max`, shown as that much of its segments (to the nearest half segment, for a bar with a half picture). A `value` past `max` or below 0 is shown full or empty; a `max` of 0 or less is an error.
+---@param name string The bar, as `<pack>/<key>`: a key of a resource pack's `hud.bars` (a package's as `ns:<pack>/<key>`).
+---@param value number
+---@param max number
+---@return boolean # `false` when they're offline.
+function Hud:fill_bar(name, value, max) end
+
+--- What a bar shows, or `nil` when nothing set it (or they're offline).
+---@param name string The bar, as `<pack>/<key>`: a key of a resource pack's `hud.bars` (a package's as `ns:<pack>/<key>`).
+---@return HudBar?
+function Hud:bar(name) end
+
+--- Shows these of a row's icons, in this order: status effects, buffs, keys held. An empty list shows none. An icon the row doesn't have is an error.
+---@param name string The row of icons, as `<pack>/<key>`: a key of a resource pack's `hud.icons` (a package's as `ns:<pack>/<key>`).
+---@param icons string[] Keys of the row's `icons`.
+---@return boolean # `false` when they're offline.
+function Hud:set_icons(name, icons) end
+
+--- The icons a row shows, in order, or `nil` when nothing set it (or they're offline).
+---@param name string The row of icons, as `<pack>/<key>`: a key of a resource pack's `hud.icons` (a package's as `ns:<pack>/<key>`).
+---@return string[]?
+function Hud:icons(name) end
+
+--- Sets a line of text, on the action bar's own line where the line's `x` and `align` put it. The server measures it with the game's font (`fonts/default.json`) to put it there; one it can't measure isn't drawn.
+---@param name string The line of text, as `<pack>/<key>`: a key of a resource pack's `hud.texts` (a package's as `ns:<pack>/<key>`).
+---@param text Text MiniMessage; glyphs are fine.
+---@return boolean # `false` when they're offline.
+function Hud:set_text(name, text) end
+
+--- A line's text, or `nil` when nothing set it (or they're offline).
+---@param name string The line of text, as `<pack>/<key>`: a key of a resource pack's `hud.texts` (a package's as `ns:<pack>/<key>`).
+---@return Text?
+function Hud:text(name) end
+
+--- Stops drawing one element (any kind), until something sets it again.
+---@param name string A HUD element, `<pack>/<key>`.
+---@return boolean # `false` when they're offline, or nothing was drawn for it.
+function Hud:remove(name) end
+
+--- Stops drawing every element: their action bar is the game's again.
+function Hud:clear() end
 
 --- Three numbers: a position, an offset, a velocity, a direction or a scale. Every place the API takes or gives one of those, it's a `Vec3`. Build one with `vec3(x, y, z)`. Vectors are immutable: methods and operators return a new vector, and assigning to `v.x` is an error. `a == b` compares the numbers exactly, and `tostring(v)` is `"vec3(1, 2, 3)"`.
 ---@class Vec3
@@ -4996,6 +5093,11 @@ function Event:uncancel() end
 ---@field done string[] The criteria they've met.
 ---@field remaining string[] The criteria left.
 
+--- Which slot of a storage a menu slot shows: `slot:binding()`.
+---@class SlotBinding
+---@field storage Inventory The storage (`player:storage`).
+---@field index integer Its slot, from 0.
+
 --- An item stack as a plain table: what `menu:item` returns and what `menu:set_item` takes. Only `kind` is required, or `item` instead. Read one, change a field and write it back, and nothing else about it changes: whatever the stack carries that these fields can't say (a book's pages, another plugin's data) rides along in `raw`, which you never write yourself. A field that isn't one of these is an error.
 ---@class Item
 ---@field kind string? The item type: `"minecraft:diamond_sword"`, or `"diamond_sword"`. Required unless `item` names a project item, whose kind it then is; an item read from the server always has it.
@@ -5016,8 +5118,8 @@ function Event:uncancel() end
 ---@field max_stack_size integer? How many fit in one stack, 1 to 99, instead of the kind's own. More than 1 on an item that takes damage (a sword, armour) is an error.
 ---@field rarity "common"|"uncommon"|"rare"|"epic"? The colour of its name when it has no colour of its own: white, yellow, aqua or light purple.
 ---@field attribute_modifiers ItemAttributeModifier[]? What it changes about whoever wears or holds it: `{ { attribute = "minecraft:attack_damage", amount = 6, operation = "add_value", slot = "main_hand" } }`. These replace the kind's own (a sword's damage) rather than adding to them.
----@field can_break string[]? Block kinds a player in adventure mode can break with it: `{ "minecraft:stone" }`.
----@field can_place_on string[]? Block kinds a player in adventure mode can place it on.
+---@field can_break string[]? The blocks a player in adventure mode can break with it: the project's by id (`"ruby_ore"`, a package's `"acme:gem_ore"`), the game's with their namespace (`"minecraft:stone"`), `#tags` of blocks (`"#minecraft:logs"`, or one a project datapack defines), or `"*"` for any block: `{ "ruby_ore", "#minecraft:logs" }`. A project block it names that the project doesn't have is an error.
+---@field can_place_on string[]? The blocks a player in adventure mode can place it on, written as `can_break`'s: `{ "*" }` is anywhere.
 ---@field food ItemFood? What eating it does. Any item with `food` can be eaten, even one that isn't food: `{ nutrition = 4, saturation = 2.4 }`.
 ---@field cooldown ItemCooldown? A cooldown after using it (an ender pearl's): `{ seconds = 2 }`. Items with the same `group` share one.
 ---@field data table<string, any>? Your script's own data, saved on the stack itself (its persistent data container), so it goes wherever the item goes: tag a coin with `data = { coin = true }`. A table keyed by strings, holding what a `data()` table may: strings, numbers, booleans, tables of them, `Vec3`s, `Location`s, `Item` tables, and `Player` and `Centity` handles, which come back as the same types. Absent when the stack carries none. Anything else (a function, a `Menu` window) is an error, naming where it was.
@@ -5120,8 +5222,8 @@ function Event:uncancel() end
 ---@field max_stack_size integer? How many fit in one stack, 1 to 99, instead of the kind's own. More than 1 on an item that takes damage (a sword, armour) is an error.
 ---@field rarity "common"|"uncommon"|"rare"|"epic"? The colour of its name when it has no colour of its own: white, yellow, aqua or light purple.
 ---@field attribute_modifiers ItemAttributeModifier[]? What it changes about whoever wears or holds it: `{ { attribute = "minecraft:attack_damage", amount = 6, operation = "add_value", slot = "main_hand" } }`. These replace the kind's own (a sword's damage) rather than adding to them.
----@field can_break string[]? Block kinds a player in adventure mode can break with it: `{ "minecraft:stone" }`.
----@field can_place_on string[]? Block kinds a player in adventure mode can place it on.
+---@field can_break string[]? The blocks a player in adventure mode can break with it: the project's by id (`"ruby_ore"`, a package's `"acme:gem_ore"`), the game's with their namespace (`"minecraft:stone"`), `#tags` of blocks (`"#minecraft:logs"`, or one a project datapack defines), or `"*"` for any block: `{ "ruby_ore", "#minecraft:logs" }`. A project block it names that the project doesn't have is an error.
+---@field can_place_on string[]? The blocks a player in adventure mode can place it on, written as `can_break`'s: `{ "*" }` is anywhere.
 ---@field food ItemFood? What eating it does. Any item with `food` can be eaten, even one that isn't food: `{ nutrition = 4, saturation = 2.4 }`.
 ---@field cooldown ItemCooldown? A cooldown after using it (an ender pearl's): `{ seconds = 2 }`. Items with the same `group` share one.
 ---@field data table<string, any>? Your script's own data, saved on the stack itself (its persistent data container), so it goes wherever the item goes: tag a coin with `data = { coin = true }`. A table keyed by strings, holding what a `data()` table may: strings, numbers, booleans, tables of them, `Vec3`s, `Location`s, `Item` tables, and `Player` and `Centity` handles, which come back as the same types. Absent when the stack carries none. Anything else (a function, a `Menu` window) is an error, naming where it was.
@@ -5278,6 +5380,17 @@ function Event:uncancel() end
 ---@field looted Entity? The entity whose loot this is, which a game table for a mob needs. Default none.
 ---@field location Location? Where a game table is rolled. Default the player's place, else the looted entity's.
 ---@field seed integer? Rolls with this seed give the same items every time, on the server and in the editor. Default a new one each roll.
+
+--- What a HUD bar shows: `hud:bar(name)`.
+---@class HudBar
+---@field value number How much of it is full, as set.
+---@field max number Out of how much.
+
+--- What a spawn condition (`nf.spawning.condition`) is asked about: one centity at one place.
+---@class SpawnCheck
+---@field centity string Which centity, as the project names it: its folder name under `centities/` (`wisp`), or `acme:wisp` for one a package brings.
+---@field location Location Where it would stand: the block its feet would be in.
+---@field player Player The player it would appear near.
 
 --- A block is about to be placed.
 ---@class ProjectBlockPlaceEvent: Event

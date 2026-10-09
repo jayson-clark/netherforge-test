@@ -17,7 +17,7 @@ import { idProblem, resourceActions } from '../resourceActions'
 import { TAB_VIEWS } from '../contributions'
 import { Icon } from '@/ui/Icon'
 import type { TabView } from '@/editors/contributions'
-import { FilesPane } from './FilesPane'
+import { CompanionFilesPane, FilesPane } from './FilesPane'
 import styles from './OutlineDock.module.css'
 import { subjectOf, type OutlineSubject } from './subject'
 
@@ -87,9 +87,11 @@ function SubjectOutline({ subject }: { subject: OutlineSubject }) {
   }, [subject.main, KindOutline, workspace])
 
   const open = () => void ws().openFile(folder.openPath(subject.id))
-  const files = subject.hasFiles && (
+  const files = subject.hasFiles ? (
     <FilesPane root={subject.location} kind={subject.kind} main={subject.main} />
-  )
+  ) : subject.companion ? (
+    <CompanionFilesPane file={subject.location} companion={subject.companion} />
+  ) : null
 
   return (
     <>

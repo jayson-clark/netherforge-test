@@ -1259,7 +1259,7 @@ object Events {
      * A block of this kind is about to be placed: by a player right-clicking with an item that places it
      * (`event.player`, `event.item`), or by a script (`project_block:place`, neither set).
      * `event:cancel()` stops it. It is heard before the world's own `block_place`, which a player's
-     * placing also raises (with the block's note block state as `state`).
+     * placing also raises (with the state of the game block it's held as, its carrier's, as `state`).
      */
     val PROJECTBLOCK_PLACE = EventType<ProjectBlockPlaceEvent>("ProjectBlock", "place", payload = ProjectBlockPlaceEvent.Codec, cancellable = true, bubbles = false, writable = emptyList(), local = false, since = null)
 

@@ -144,6 +144,10 @@ class RecordingEvents : PlatformEvents {
         hear("menuClosed", window, player)
     }
 
+    override fun menuChanged(window: UUID, slots: Set<Int>) {
+        hear("menuChanged", window, slots)
+    }
+
     override fun dialogPressed(player: PlayerRef, dialog: String, button: String, values: Map<String, Any>) {
         hear("dialogPressed", player, dialog, button, values)
     }

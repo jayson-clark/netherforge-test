@@ -97,6 +97,18 @@ How many whole days have gone by in this world, or `nil` once it has gone.
 
 **Returns** `integer?`
 
+## `world:moon_phase()`
+
+Tonight's moon, or `nil` once the world has gone. It moves on a phase each day: full, waning gibbous, last quarter, waning crescent, new, waxing crescent, first quarter, waxing gibbous, then full again.
+
+**Returns** `"full_moon"\|"waning_gibbous"\|"last_quarter"\|"waning_crescent"\|"new_moon"\|"waxing_crescent"\|"first_quarter"\|"waxing_gibbous"\|nil`
+
+```lua
+if world:moon_phase() == "full_moon" then
+  nf.server.broadcast("<red>The moon is full tonight.")
+end
+```
+
 ## `world:weather()`
 
 The weather now, or `nil` once the world has gone. Thunder always comes with rain.

@@ -30,6 +30,8 @@ import { databaseClass, databaseShapes } from './db.ts'
 import { httpShapes } from './http.ts'
 import { blockShapes, customBlockClass, projectBlockClass } from './blocks.ts'
 import { lootShapes } from './loot.ts'
+import { hudClass, hudShapes } from './hud.ts'
+import { spawningShapes } from './spawning.ts'
 import { projectItemClass } from './items.ts'
 import { playerShapes } from './players.ts'
 import { blockClass, worldBorderClass, worldClass, worldShapes } from './worlds.ts'
@@ -109,6 +111,7 @@ const classes = [
   taskClass,
   scheduleClass,
   randomClass,
+  hudClass,
 ]
 
 /** The NetherForge Lua API. The runtime's conformance test holds the plugin to exactly this; see the lua-api skill. */
@@ -152,6 +155,8 @@ export const api: ApiSpec = {
     ...worldShapes,
     ...inventoryShapes,
     ...lootShapes,
+    ...hudShapes,
+    ...spawningShapes,
     ...blockShapes,
     ...teamShapes,
     ...scheduleShapes,

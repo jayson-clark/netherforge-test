@@ -10,7 +10,7 @@ const hand = {
 const blockEvents: EventSpec[] = [
   {
     name: 'place',
-    doc: "A block of this kind is about to be placed: by a player right-clicking with an item that places it (`event.player`, `event.item`), or by a script (`project_block:place`, neither set). `event:cancel()` stops it. It is heard before the world's own `block_place`, which a player's placing also raises (with the block's note block state as `state`).",
+    doc: "A block of this kind is about to be placed: by a player right-clicking with an item that places it (`event.player`, `event.item`), or by a script (`project_block:place`, neither set). `event:cancel()` stops it. It is heard before the world's own `block_place`, which a player's placing also raises (with the state of the game block it's held as, its carrier's, as `state`).",
     payload: 'ProjectBlockPlaceEvent',
     cancellable: true,
     example:
@@ -65,7 +65,7 @@ export const projectBlockClass: LuaClass = {
     },
     {
       name: 'place',
-      doc: "Places one at the block position a location is in, as `world:set_block` would: whatever is there is replaced, and nothing drops. Its `place` handlers are not asked (a script placing a block isn't a player placing one), and it isn't a `block_place` either. If the block has a centity, it's spawned over the block. `nil` when the chunk isn't loaded, or when the game has no note block state left to hold the block in (the project has more blocks than that).",
+      doc: "Places one at the block position a location is in, as `world:set_block` would: whatever is there is replaced, and nothing drops. Its `place` handlers are not asked (a script placing a block isn't a player placing one), and it isn't a `block_place` either. If the block has a centity, it's spawned over the block. `nil` when the chunk isn't loaded, or when the game has no state of its carrier left to hold the block in (the project has more blocks of that carrier than that).",
       params: [{ name: 'location', type: 'Location', doc: 'Where.' }],
       returns: [{ type: 'CustomBlock?' }],
       example:
@@ -82,7 +82,7 @@ export const projectBlockClass: LuaClass = {
 /** A custom block placed in a world. */
 export const customBlockClass: LuaClass = {
   name: 'CustomBlock',
-  doc: "A block of the project's own at a position, which is a `Block` like any other: it reads the world live, so one kept from earlier turns into whatever is there now (`block:custom()` says whether it still is one). The game holds it as a note block state its resource pack draws as the block, so `kind()` and `state()` answer that; `id()` and `project()` say which block it is. `data()` is its own table: it starts empty when the block is placed and is gone when the block is, whatever replaced it. `break_naturally` rolls its loot table; replacing or filling over it with `set_state` or `world:fill_blocks` removes it without drops.",
+  doc: "A block of the project's own at a position, which is a `Block` like any other: it reads the world live, so one kept from earlier turns into whatever is there now (`block:custom()` says whether it still is one). The game holds it as a state of its carrier (a note block's, tripwire's or a leaves block's) its resource pack draws as the block, so `kind()` and `state()` answer that; `id()` and `project()` say which block it is. `data()` is its own table: it starts empty when the block is placed and is gone when the block is, whatever replaced it. `break_naturally` rolls its loot table; replacing or filling over it with `set_state` or `world:fill_blocks` removes it without drops.",
   methods: true,
   extends: 'Block',
   fields: [],
@@ -105,7 +105,7 @@ export const customBlockClass: LuaClass = {
 /** `nf.blocks`: the project's blocks. */
 export const nfBlocks: LuaClass = {
   name: 'nf.blocks',
-  doc: "The project's blocks (`blocks/<id>/`): blocks of its own, drawn by its resource pack, with their own hardness, drops and sounds, held in the world as note block states. A player places one with an item whose `block` names it, or a script with `ProjectBlock:place`.",
+  doc: "The project's blocks (`blocks/<id>/`): blocks of its own, drawn by its resource pack, with their own hardness, drops and sounds, held in the world as states of the game's blocks (their carriers: note blocks, tripwire, leaves). A player places one with an item whose `block` names it, or a script with `ProjectBlock:place`.",
   methods: false,
   fields: [],
   functions: [

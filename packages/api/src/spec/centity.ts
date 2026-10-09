@@ -696,9 +696,9 @@ export const nodeClass: LuaClass = {
     },
     {
       name: 'display_kind',
-      doc: 'What it draws: `"block"`, `"item"` or `"text"`, or `nil` for a node that draws nothing (a pivot, a hitbox alone) or once its centity is removed.',
+      doc: 'What it draws: `"block"`, `"item"`, `"model"` (a resource pack look) or `"text"`, or `nil` for a node that draws nothing (a pivot, a hitbox alone) or once its centity is removed.',
       params: [],
-      returns: [{ type: '"block"|"item"|"text"?' }],
+      returns: [{ type: '"block"|"item"|"model"|"text"?' }],
     },
     {
       name: 'display_block',
@@ -748,6 +748,26 @@ export const nodeClass: LuaClass = {
       returns: [{ type: 'boolean', doc: "`false` when the node isn't an item display." }],
       example:
         'this:node("sword"):set_display_item({ kind = "minecraft:diamond_sword", glint = true })',
+    },
+    {
+      name: 'model',
+      doc: "The resource pack look a model display shows (`<pack>/<key>`, as the calling script names it), or `nil` when the node isn't a model display.",
+      params: [],
+      returns: [{ type: 'string?' }],
+    },
+    {
+      name: 'set_model',
+      doc: "Changes the look a model display shows: another entry of a resource pack's `items`, a model with elements or not. The display entity stays and only its item changes, which costs one small update to each player who sees it, so swapping models every few ticks animates a node frame by frame (a flipbook), alongside the transform tracks. A look the project's resource packs don't have is an error.",
+      params: [
+        {
+          name: 'model',
+          type: 'string',
+          doc: "`<pack>/<key>`: an entry of a resource pack's `items` (a package's as `ns:<pack>/<key>`).",
+        },
+      ],
+      returns: [{ type: 'boolean', doc: "`false` when the node isn't a model display." }],
+      example:
+        'local frames = { "mobs/wing_1", "mobs/wing_2", "mobs/wing_3", "mobs/wing_2" }\nlocal wing = assert(this:node("wing"))\nlocal frame = 1\nnf.every(3, function()\n  frame = frame % #frames + 1\n  wing:set_model(frames[frame])\nend)',
     },
     {
       name: 'display_text_style',

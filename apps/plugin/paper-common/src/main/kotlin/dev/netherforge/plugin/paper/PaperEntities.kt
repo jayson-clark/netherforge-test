@@ -5,6 +5,7 @@ import dev.netherforge.format.centity.BlockDisplay
 import dev.netherforge.format.centity.DisplayDef
 import dev.netherforge.format.centity.ItemDisplay
 import dev.netherforge.format.centity.ItemTransform
+import dev.netherforge.format.centity.ModelDisplay
 import dev.netherforge.format.centity.TextAlignment
 import dev.netherforge.format.centity.TextDisplay
 import dev.netherforge.format.math.Matrix4
@@ -89,6 +90,14 @@ class PaperEntities(private val plugin: Plugin) : EntityOps {
                     it.itemDisplayTransform = itemTransform(display.itemTransform)
                 }
             }
+            is ModelDisplay -> {
+                val stack = modelStack(display) ?: return null
+                world.spawn(location, BukkitItemDisplay::class.java) {
+                    stamp(it, tag)
+                    it.setItemStack(stack)
+                    it.itemDisplayTransform = itemTransform(display.itemTransform ?: ItemTransform.NONE)
+                }
+            }
             is TextDisplay -> world.spawn(location, BukkitTextDisplay::class.java) {
                 stamp(it, tag)
                 apply(it, display)
@@ -122,6 +131,12 @@ class PaperEntities(private val plugin: Plugin) : EntityOps {
                 if (entity !is BukkitItemDisplay) return false
                 itemStack(display.item)?.let { entity.setItemStack(it) }
                 entity.itemDisplayTransform = itemTransform(display.itemTransform)
+            }
+            // A new look is a new item on the same entity: one metadata update, nothing respawned.
+            is ModelDisplay -> {
+                if (entity !is BukkitItemDisplay) return false
+                modelStack(display)?.let { if (it != entity.itemStack) entity.setItemStack(it) }
+                entity.itemDisplayTransform = itemTransform(display.itemTransform ?: ItemTransform.NONE)
             }
             is TextDisplay -> {
                 if (entity !is BukkitTextDisplay) return false
@@ -160,6 +175,13 @@ class PaperEntities(private val plugin: Plugin) : EntityOps {
     }
 
     private fun itemStack(id: String): ItemStack? = Material.matchMaterial(id)?.takeIf { it.isItem }?.let { ItemStack(it) }
+
+    /** What a model display holds: a stack drawn as its look (the `item_model`, in the project's namespace). */
+    private fun modelStack(display: ModelDisplay): ItemStack? {
+        val look =
+            PaperItems.resolve(display.model)?.let { runCatching { NamespacedKey(it.namespace, it.path) }.getOrNull() } ?: return null
+        return itemStack(ModelDisplay.CARRIER)?.apply { editMeta { it.itemModel = look } }
+    }
 
     private fun itemTransform(transform: ItemTransform?): BukkitItemDisplay.ItemDisplayTransform = when (transform) {
         ItemTransform.NONE -> BukkitItemDisplay.ItemDisplayTransform.NONE

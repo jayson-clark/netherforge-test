@@ -117,6 +117,17 @@ describe('workspace', () => {
     expect(ws().tabs[0]).toMatchObject({ type: 'structure', path: 'structures/hut.nbt' })
   })
 
+  it('opens a module without an init.lua on the files it has', async () => {
+    await ws().createFile('modules/helpers/util.lua', 'return {}\n')
+    await ws().createFile('modules/helpers/lib/deep.lua', 'return {}\n')
+    await ws().openFile('modules/helpers/init.lua')
+    expect(ws().tabs.map((it) => it.path)).toEqual(['modules/helpers/util.lua'])
+    // So does a problem about the module's folder.
+    ws().closeTab(ws().tabs[0]!.id)
+    await ws().openFile('modules/helpers')
+    expect(ws().tabs.map((it) => it.path)).toEqual(['modules/helpers/util.lua'])
+  })
+
   it('opens the editor settings as a tab of their own, on the page asked for, reading no file', async () => {
     await ws().openProject(EXAMPLE_ROOT)
     await ws().openFile(TOWER)
@@ -527,7 +538,7 @@ describe('workspace', () => {
     expect(backend.testFiles()['items/wand/item.json']).toContain('"name": "Wand"')
     await ws().validateNow()
     expect(ws().problems).toEqual([])
-    expect(ws().outline?.resources.item).toEqual(['crown', 'ruby', 'ruby_ore', 'wand'])
+    expect(ws().outline?.resources.item).toEqual(['crown', 'ruby', 'ruby_ore', 'ruby_pick', 'wand'])
   })
 
   it('creates, renames and deletes a recipe, which is one file rather than a folder', async () => {
@@ -559,12 +570,22 @@ describe('workspace', () => {
     expect(backend.testFiles()['blocks/amethyst/block.json']).toContain('block.schema.json')
     await ws().validateNow()
     expect(ws().problems).toEqual([])
-    expect(ws().outline?.resources.block).toEqual(['amethyst', 'floating_lamp', 'ruby_ore'])
+    expect(ws().outline?.resources.block).toEqual([
+      'amethyst',
+      'floating_lamp',
+      'ruby_crystal',
+      'ruby_ore',
+    ])
 
     await ws().renamePath('blocks/amethyst', 'blocks/geode')
     expect(ws().activeTab).toBe('block:blocks/geode/block.json')
     await ws().validateNow()
-    expect(ws().outline?.resources.block).toEqual(['floating_lamp', 'geode', 'ruby_ore'])
+    expect(ws().outline?.resources.block).toEqual([
+      'floating_lamp',
+      'geode',
+      'ruby_crystal',
+      'ruby_ore',
+    ])
 
     await ws().deletePath('blocks/geode')
     expect(ws().files).not.toContain('blocks/geode/block.json')
@@ -657,6 +678,7 @@ describe('workspace', () => {
     expect([...new Set(users.map((it) => it.file))].sort()).toEqual([
       'advancements/treasure_hunter.json',
       'loot/junk.json',
+      'loot/ruby_crystal.json',
       'loot/ruby_ore.json',
       'loot/treasure.json',
       'menus/shop/menu.json',

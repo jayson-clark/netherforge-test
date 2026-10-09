@@ -44,6 +44,36 @@ Puts an item in it, replacing what was there, or empties it. An item table with 
 
 **Returns** `boolean`: `false` once the window is gone.
 
+## `slot:bind(storage, index?)`
+
+Makes this slot a view of a slot of a player's `storage`: it shows what's there, and whatever goes in or out of it, by a click, a drag, a shift-click or a script's `set_item` on either, is saved in the storage at once, as the game moves it. So the item is only ever in one place, whatever happens next: the window closing, the player leaving or dying, the server stopping or the project reloading. In a locked window players can still put items in and take them out of a bound slot by hand (shift-clicking from their own inventory and double-click gathering stay locked); its `click` handlers can still refuse what doesn't belong (`event:cancel()`). Binding a slot again moves it to the new place. Only a window of a menu that isn't `shared` can be bound, and only to a storage (`player:storage`): another inventory, or a slot outside the storage, is an error.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `storage` | `Inventory` | From `player:storage(name, size)`. |
+| `index` (optional) | `integer` | Which of its slots, from 0. Default the same number as this slot. |
+
+**Returns** `boolean`: `false` once the window is gone, or the storage's player is offline.
+
+```lua
+local trinkets = event.player:storage("trinkets", 4)
+for i = 0, 3 do
+  this:slot(10 + i):bind(trinkets, i)
+end
+```
+
+## `slot:unbind()`
+
+Stops showing a storage's slot here. The slot is emptied, since what it showed is still in the storage. Its player leaving unbinds every slot bound to their storage.
+
+**Returns** `boolean`: `false` when it wasn't bound, or the window is gone.
+
+## `slot:binding()`
+
+Which storage slot this slot shows, or `nil` when it shows none.
+
+**Returns** `SlotBinding?`
+
 ## `slot:on(event, handler, options?)`
 
 Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.

@@ -1,5 +1,6 @@
 package dev.netherforge.format.project
 
+import dev.netherforge.format.block.VanillaFile
 import dev.netherforge.format.text.DefaultFontFile
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -49,7 +50,7 @@ object Kinds {
      * each JSON kind's, then a bundle's manifest (which no project holds).
      */
     val documents: List<DocumentKind<*>> =
-        listOf(ManifestKind, LockKind, DefaultFontKind, StructureGenerationKind) +
+        listOf(ManifestKind, LockKind, DefaultFontKind, VanillaKind, StructureGenerationKind) +
             all.filterIsInstance<DocumentResourceKind<*, *>>() + BundleKind
 
     private val byFolder = all.associateBy { it.folder }
@@ -88,6 +89,7 @@ object Kinds {
             ProjectManifest.FILE_NAME -> return ClassifiedPath(role = PathRole.PROJECT, document = ManifestKind.id)
             LockFile.FILE_NAME -> return ClassifiedPath(role = PathRole.PROJECT, document = LockKind.id)
             DefaultFontFile.FILE -> return ClassifiedPath(role = PathRole.PROJECT, document = DefaultFontKind.id)
+            VanillaFile.FILE -> return ClassifiedPath(role = PathRole.PROJECT, document = VanillaKind.id)
         }
         val parts = normalized.split('/')
         val kind = byFolder[parts[0]] ?: return null

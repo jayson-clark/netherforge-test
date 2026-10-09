@@ -21,6 +21,7 @@ interface LuaApi {
     val nfWorlds: NfWorldsApi
     val nfStructures: NfStructuresApi
     val nfCentities: NfCentitiesApi
+    val nfSpawning: NfSpawningApi
     val nfMenus: NfMenusApi
     val nfDialogs: NfDialogsApi
     val nfItems: NfItemsApi
@@ -69,16 +70,17 @@ interface LuaApi {
     val cutscene: CutsceneApi
     val file: FileApi
     val schedule: ScheduleApi
+    val hud: HudApi
 }
 
 /**
  * Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data,
  * the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`,
- * `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.menus`, `nf.dialogs`,
- * `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`,
- * `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.json`,
- * `nf.http`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them
- * with a dot: `nf.players.online()`.
+ * `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`,
+ * `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`,
+ * `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`,
+ * `nf.files`, `nf.text`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain
+ * functions on tables, so call them with a dot: `nf.players.online()`.
  */
 interface NfApi {
     /**
@@ -303,6 +305,23 @@ interface NfCentitiesApi {
     fun all(caller: Caller, filter: CentityFilter?): List<LuaHandle.Centity>
 }
 
+/**
+ * Natural spawning (a centity's `spawning` block in `centity.json`): conditions a script decides,
+ * which a `spawning` block names with `when`.
+ */
+interface NfSpawningApi {
+    /**
+     * Registers a condition a centity's `spawning.when` can name: the spawner asks `callback` about each
+     * place where every other `spawning` rule of that centity fits, and the centity appears there only
+     * when it answers `true`. Anything else (`false`, `nil`, an error) is no. It belongs to the script
+     * that registered it and goes when that script unloads (a reload, the server stopping), so register it
+     * in a module's body. A centity names it bare when it's in the same package as the registering script,
+     * `ns:name` from another. A name another live script already registered is an error, and so is one
+     * that isn't an id.
+     */
+    fun condition(caller: Caller, name: String, callback: LuaFunction)
+}
+
 /** The project's menus (`menus/<id>/`), and menus scripts make. */
 interface NfMenusApi {
     /**
@@ -384,8 +403,9 @@ interface NfItemsApi {
 
 /**
  * The project's blocks (`blocks/<id>/`): blocks of its own, drawn by its resource pack, with their own
- * hardness, drops and sounds, held in the world as note block states. A player places one with an item
- * whose `block` names it, or a script with `ProjectBlock:place`.
+ * hardness, drops and sounds, held in the world as states of the game's blocks (their carriers: note
+ * blocks, tripwire, leaves). A player places one with an item whose `block` names it, or a script with
+ * `ProjectBlock:place`.
  */
 interface NfBlocksApi {
     /**
@@ -1248,8 +1268,8 @@ interface NodeApi {
     fun setClickable(self: LuaHandle.Node, clickable: Boolean)
 
     /**
-     * What it draws: `"block"`, `"item"` or `"text"`, or `nil` for a node that draws nothing (a pivot, a
-     * hitbox alone) or once its centity is removed.
+     * What it draws: `"block"`, `"item"`, `"model"` (a resource pack look) or `"text"`, or `nil` for a
+     * node that draws nothing (a pivot, a hitbox alone) or once its centity is removed.
      */
     fun displayKind(self: LuaHandle.Node): String?
 
@@ -1280,6 +1300,21 @@ interface NodeApi {
      * the server doesn't have, is an error.
      */
     fun setDisplayItem(self: LuaHandle.Node, item: ItemData): Boolean
+
+    /**
+     * The resource pack look a model display shows (`<pack>/<key>`, as the calling script names it), or
+     * `nil` when the node isn't a model display.
+     */
+    fun model(self: LuaHandle.Node): String?
+
+    /**
+     * Changes the look a model display shows: another entry of a resource pack's `items`, a model with
+     * elements or not. The display entity stays and only its item changes, which costs one small update to
+     * each player who sees it, so swapping models every few ticks animates a node frame by frame (a
+     * flipbook), alongside the transform tracks. A look the project's resource packs don't have is an
+     * error.
+     */
+    fun setModel(self: LuaHandle.Node, model: String): Boolean
 
     /**
      * How a text display's text is drawn, every field filled in (`background` is `nil` for Minecraft's own
@@ -2106,6 +2141,23 @@ interface PlayerApi {
     /** Their ender chest, as an `Inventory`, or `nil` when they're offline. */
     fun enderChest(self: LuaHandle.Player): LuaHandle.Inventory?
 
+    /**
+     * A set of item slots of the project's own that they keep: extra equipment, a backpack, a bank. It's
+     * saved in the player's own save data, with their inventory, in the same file and the same write, so a
+     * crash or a restart can't duplicate an item between the two or lose one. Shown in a menu by binding
+     * slots to it (`slot:bind`), where what players move in and out is saved at once. Dying doesn't drop
+     * it. An `Inventory` of kind `"storage"`: its item methods work as on any other, and it answers `nil`
+     * and `false` while they're offline (it can't be changed then). `nil` when they're offline. A name
+     * that isn't an id is an error, and so is a size outside 1 to 256.
+     */
+    fun storage(self: LuaHandle.Player, name: String, size: Long): LuaHandle.Inventory?
+
+    /**
+     * Their HUD: the resource packs' HUD elements, filled in for them (bars, icons, text). A handle like
+     * this one: fine to keep, and it answers `false` or `nil` while they're offline.
+     */
+    fun hud(self: LuaHandle.Player): LuaHandle.Hud
+
     /** What's in their main hand (the selected hotbar slot), or `nil` for nothing or when they're offline. */
     fun heldItem(self: LuaHandle.Player): ItemData?
 
@@ -2200,7 +2252,8 @@ interface PlayerApi {
 
     /**
      * Shows them a real inventory, as if they'd opened it: a chest's, another player's, their ender chest.
-     * Whatever was on their screen closes.
+     * Whatever was on their screen closes. A storage (`player:storage`) is shown in a menu instead, by
+     * binding slots to it (`slot:bind`): opening one is `false`.
      */
     fun openInventory(self: LuaHandle.Player, inventory: LuaHandle.Inventory): Boolean
 
@@ -2443,6 +2496,13 @@ interface WorldApi {
 
     /** How many whole days have gone by in this world, or `nil` once it has gone. */
     fun dayCount(self: LuaHandle.World): Long?
+
+    /**
+     * Tonight's moon, or `nil` once the world has gone. It moves on a phase each day: full, waning
+     * gibbous, last quarter, waning crescent, new, waxing crescent, first quarter, waxing gibbous, then
+     * full again.
+     */
+    fun moonPhase(self: LuaHandle.World): String?
 
     /** The weather now, or `nil` once the world has gone. Thunder always comes with rain. */
     fun weather(self: LuaHandle.World): String?
@@ -2823,11 +2883,11 @@ interface BlockApi {
 /**
  * A block of the project's own at a position, which is a `Block` like any other: it reads the world
  * live, so one kept from earlier turns into whatever is there now (`block:custom()` says whether it
- * still is one). The game holds it as a note block state its resource pack draws as the block, so
- * `kind()` and `state()` answer that; `id()` and `project()` say which block it is. `data()` is its
- * own table: it starts empty when the block is placed and is gone when the block is, whatever replaced
- * it. `break_naturally` rolls its loot table; replacing or filling over it with `set_state` or
- * `world:fill_blocks` removes it without drops.
+ * still is one). The game holds it as a state of its carrier (a note block's, tripwire's or a leaves
+ * block's) its resource pack draws as the block, so `kind()` and `state()` answer that; `id()` and
+ * `project()` say which block it is. `data()` is its own table: it starts empty when the block is
+ * placed and is gone when the block is, whatever replaced it. `break_naturally` rolls its loot table;
+ * replacing or filling over it with `set_state` or `world:fill_blocks` removes it without drops.
  */
 interface CustomBlockApi {
     /**
@@ -2858,21 +2918,22 @@ interface ProjectBlockApi {
      * Places one at the block position a location is in, as `world:set_block` would: whatever is there is
      * replaced, and nothing drops. Its `place` handlers are not asked (a script placing a block isn't a
      * player placing one), and it isn't a `block_place` either. If the block has a centity, it's spawned
-     * over the block. `nil` when the chunk isn't loaded, or when the game has no note block state left to
-     * hold the block in (the project has more blocks than that).
+     * over the block. `nil` when the chunk isn't loaded, or when the game has no state of its carrier left
+     * to hold the block in (the project has more blocks of that carrier than that).
      */
     fun place(self: LuaHandle.ProjectBlock, location: LuaLocation): LuaHandle.CustomBlock?
 }
 
 /**
- * A real inventory: a player's (`player:inventory()`), their ender chest, a container block's
- * (`block:inventory()`: a chest, a barrel, a hopper, a furnace) or an entity's (a chest boat, a
- * donkey, a villager). Its item methods work like `Menu`'s. The handle is where the inventory is, so
- * it reads live; once that's gone (a chest broken, a player offline, a chunk unloaded) its methods
- * answer `nil`, `false` or nothing. Slots are numbered from 0. A player's: the hotbar 0 to 8, the rest
- * of the main inventory 9 to 35, armour 36 (feet), 37 (legs), 38 (chest) and 39 (head), the offhand
- * 40, then body armour 41 and a saddle 42 (what the game keeps there for any entity). A double chest's
- * inventory is both halves, 0 to 53.
+ * A real inventory: a player's (`player:inventory()`), their ender chest, a storage of the project's
+ * that they keep (`player:storage(name, size)`), a container block's (`block:inventory()`: a chest, a
+ * barrel, a hopper, a furnace) or an entity's (a chest boat, a donkey, a villager). Its item methods
+ * work like `Menu`'s. The handle is where the inventory is, so it reads live; once that's gone (a
+ * chest broken, a player offline, a chunk unloaded) its methods answer `nil`, `false` or nothing.
+ * Slots are numbered from 0. A player's: the hotbar 0 to 8, the rest of the main inventory 9 to 35,
+ * armour 36 (feet), 37 (legs), 38 (chest) and 39 (head), the offhand 40, then body armour 41 and a
+ * saddle 42 (what the game keeps there for any entity). A double chest's inventory is both halves, 0
+ * to 53.
  */
 interface InventoryApi {
     /**
@@ -2882,8 +2943,9 @@ interface InventoryApi {
     fun exists(self: LuaHandle.Inventory): Boolean
 
     /**
-     * What kind of inventory it is: `"player"`, `"ender_chest"`, `"chest"`, `"barrel"`, `"shulker_box"`,
-     * `"hopper"`, `"dispenser"`, `"dropper"`, `"furnace"`, `"brewing"`, … `nil` once it's gone.
+     * What kind of inventory it is: `"player"`, `"ender_chest"`, `"storage"`, `"chest"`, `"barrel"`,
+     * `"shulker_box"`, `"hopper"`, `"dispenser"`, `"dropper"`, `"furnace"`, `"brewing"`, … `nil` once it's
+     * gone.
      */
     fun kind(self: LuaHandle.Inventory): String?
 
@@ -2891,8 +2953,8 @@ interface InventoryApi {
     fun size(self: LuaHandle.Inventory): Long
 
     /**
-     * Whose it is: the `Player` (for a player's inventory and ender chest), the `Entity`, or the `Block`.
-     * `nil` once it's gone.
+     * Whose it is: the `Player` (for a player's inventory, ender chest and storage), the `Entity`, or the
+     * `Block`. `nil` once it's gone.
      */
     fun holder(self: LuaHandle.Inventory): LuaHandle?
 
@@ -2930,8 +2992,9 @@ interface InventoryApi {
     fun clear(self: LuaHandle.Inventory): Boolean
 
     /**
-     * The players who have it open on their screen now. (A player's own inventory, open in their own
-     * inventory screen, doesn't count: the server can't tell.)
+     * The players who have it open on their screen now: for a storage, those looking at a window with a
+     * slot bound to it. (A player's own inventory, open in their own inventory screen, doesn't count: the
+     * server can't tell.)
      */
     fun viewers(self: LuaHandle.Inventory): List<LuaHandle.Player>
 }
@@ -3346,6 +3409,28 @@ interface SlotApi {
      * or an item id the server doesn't have, is an error.
      */
     fun setItem(self: LuaHandle.Slot, item: ItemData?): Boolean
+
+    /**
+     * Makes this slot a view of a slot of a player's `storage`: it shows what's there, and whatever goes
+     * in or out of it, by a click, a drag, a shift-click or a script's `set_item` on either, is saved in
+     * the storage at once, as the game moves it. So the item is only ever in one place, whatever happens
+     * next: the window closing, the player leaving or dying, the server stopping or the project reloading.
+     * In a locked window players can still put items in and take them out of a bound slot by hand
+     * (shift-clicking from their own inventory and double-click gathering stay locked); its `click`
+     * handlers can still refuse what doesn't belong (`event:cancel()`). Binding a slot again moves it to
+     * the new place. Only a window of a menu that isn't `shared` can be bound, and only to a storage
+     * (`player:storage`): another inventory, or a slot outside the storage, is an error.
+     */
+    fun bind(self: LuaHandle.Slot, storage: LuaHandle.Inventory, index: Long?): Boolean
+
+    /**
+     * Stops showing a storage's slot here. The slot is emptied, since what it showed is still in the
+     * storage. Its player leaving unbinds every slot bound to their storage.
+     */
+    fun unbind(self: LuaHandle.Slot): Boolean
+
+    /** Which storage slot this slot shows, or `nil` when it shows none. */
+    fun binding(self: LuaHandle.Slot): SlotBinding?
 }
 
 /**
@@ -3632,4 +3717,53 @@ interface ScheduleApi {
      * writes it as a date). `nil` once it has ended.
      */
     fun nextRun(self: LuaHandle.Schedule): Long?
+}
+
+/**
+ * One player's HUD: the elements of the project's resource packs (`hud` in `pack.json`: bars, rows of
+ * icons, lines of text, each at its place on the screen), shown with what a script sets here. An
+ * element nobody set isn't drawn. It's drawn in their action bar, sent again whenever something
+ * changes and every second, so `player:send_actionbar` shows its line alongside it while the HUD is up
+ * (on its own for a moment, when the server can't measure it). What it shows is the server's to
+ * remember, not saved: set it again when they join. A name that isn't one of the packs' elements, or
+ * is another kind of element, is an error.
+ */
+interface HudApi {
+    /** Whose HUD it is. */
+    fun player(self: LuaHandle.Hud): LuaHandle.Player
+
+    /**
+     * Fills a bar: `value` out of `max`, shown as that much of its segments (to the nearest half segment,
+     * for a bar with a half picture). A `value` past `max` or below 0 is shown full or empty; a `max` of 0
+     * or less is an error.
+     */
+    fun fillBar(self: LuaHandle.Hud, name: String, value: Double, max: Double): Boolean
+
+    /** What a bar shows, or `nil` when nothing set it (or they're offline). */
+    fun bar(self: LuaHandle.Hud, name: String): HudBar?
+
+    /**
+     * Shows these of a row's icons, in this order: status effects, buffs, keys held. An empty list shows
+     * none. An icon the row doesn't have is an error.
+     */
+    fun setIcons(self: LuaHandle.Hud, name: String, icons: List<String>): Boolean
+
+    /** The icons a row shows, in order, or `nil` when nothing set it (or they're offline). */
+    fun icons(self: LuaHandle.Hud, name: String): List<String>?
+
+    /**
+     * Sets a line of text, on the action bar's own line where the line's `x` and `align` put it. The
+     * server measures it with the game's font (`fonts/default.json`) to put it there; one it can't measure
+     * isn't drawn.
+     */
+    fun setText(self: LuaHandle.Hud, name: String, text: String): Boolean
+
+    /** A line's text, or `nil` when nothing set it (or they're offline). */
+    fun text(self: LuaHandle.Hud, name: String): String?
+
+    /** Stops drawing one element (any kind), until something sets it again. */
+    fun remove(self: LuaHandle.Hud, name: String): Boolean
+
+    /** Stops drawing every element: their action bar is the game's again. */
+    fun clear(self: LuaHandle.Hud)
 }

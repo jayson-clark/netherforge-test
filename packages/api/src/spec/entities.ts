@@ -1063,6 +1063,32 @@ export const playerClass: LuaClass = {
       "Their ender chest, as an `Inventory`, or `nil` when they're offline.",
       'Inventory?',
     ),
+    {
+      name: 'storage',
+      doc: "A set of item slots of the project's own that they keep: extra equipment, a backpack, a bank. It's saved in the player's own save data, with their inventory, in the same file and the same write, so a crash or a restart can't duplicate an item between the two or lose one. Shown in a menu by binding slots to it (`slot:bind`), where what players move in and out is saved at once. Dying doesn't drop it. An `Inventory` of kind `\"storage\"`: its item methods work as on any other, and it answers `nil` and `false` while they're offline (it can't be changed then). `nil` when they're offline. A name that isn't an id is an error, and so is a size outside 1 to 256.",
+      params: [
+        {
+          name: 'name',
+          type: 'string',
+          doc: "Lowercase letters, digits and `_`: the project's own (a package's scripts keep theirs apart, under their namespace). Scripts that use one name share one storage.",
+        },
+        {
+          name: 'size',
+          type: 'integer',
+          doc: "How many slots it has, numbered from 0. Changing it later keeps every item: a slot past the size isn't shown, but its item is kept, and comes back with a bigger size.",
+        },
+      ],
+      returns: [{ type: 'Inventory?' }],
+      example:
+        'local trinkets = player:storage("trinkets", 4)\nif trinkets and trinkets:has_item({ kind = "ruby_ring" }) then\n  player:send_message("Your ring glows.")\nend',
+    },
+    {
+      name: 'hud',
+      doc: "Their HUD: the resource packs' HUD elements, filled in for them (bars, icons, text). A handle like this one: fine to keep, and it answers `false` or `nil` while they're offline.",
+      params: [],
+      returns: [{ type: 'Hud' }],
+      example: 'player:hud():fill_bar("ui/mana", 40, 100)',
+    },
     getter(
       'held_item',
       "What's in their main hand (the selected hotbar slot), or `nil` for nothing or when they're offline.",
@@ -1172,7 +1198,7 @@ export const playerClass: LuaClass = {
     },
     {
       name: 'open_inventory',
-      doc: "Shows them a real inventory, as if they'd opened it: a chest's, another player's, their ender chest. Whatever was on their screen closes.",
+      doc: "Shows them a real inventory, as if they'd opened it: a chest's, another player's, their ender chest. Whatever was on their screen closes. A storage (`player:storage`) is shown in a menu instead, by binding slots to it (`slot:bind`): opening one is `false`.",
       params: [{ name: 'inventory', type: 'Inventory', doc: '' }],
       returns: [
         { type: 'boolean', doc: "`false` when they're offline, or the inventory has gone." },

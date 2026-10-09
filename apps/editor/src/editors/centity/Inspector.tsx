@@ -13,7 +13,9 @@ import {
   newSiblingFile,
   BillboardValues,
   ItemTransformValues,
+  MoonPhaseValues,
   PHYSICS_DEFAULTS,
+  SpawnWeatherValues,
   SPAWNING_DEFAULTS,
   TEXT_DEFAULTS,
   TextAlignmentValues,
@@ -23,6 +25,7 @@ import {
   type HitboxDef,
   type NodeDef,
   type PhysicsDef,
+  type ProjectOutline,
   type Vec3,
 } from '@/core/format'
 import { useClientAssets } from '@/minecraft/client/useClientAssets'
@@ -41,6 +44,7 @@ import {
   TriStateField,
   Vec3Field,
   CheckField,
+  Check,
   FieldGroup,
 } from '@/ui/fields'
 import { Button, IconButton } from '@/ui/Button'
@@ -48,6 +52,7 @@ import { Empty, Hint } from '@/ui/text'
 import { InspectorPanel } from '@/editors/shared/docks'
 import { ScriptField } from '@/editors/shared/ScriptField'
 import { glyphAdvancesOf, useGlyphMap } from '@/minecraft/text/glyphs'
+import { resourcePackRefs } from '@/minecraft/item/item'
 import { blockModelBoxes, canFit, fitKey, fittedHitbox, textDisplayBoxes } from './fit'
 import { channelDefault, descendantsOf, renameNode, reparent, setChannel } from './ops'
 import {
@@ -56,7 +61,14 @@ import {
   setNumber,
   setRangeEnd,
   setKeepOnInteract,
+  setCondition,
   setSpawning,
+  setTimeEnd,
+  setTimeMode,
+  timeEnd,
+  timeMode,
+  toggleChoice,
+  type SpawnTimeMode,
   type SpawningList,
   type SpawningNumber,
   type SpawningRange,
@@ -241,6 +253,61 @@ function SpawningSection({ path, model }: { path: string; model: CentityFile }) 
               onChange={(value) => edit((draft) => setNumber(draft, key, value))}
             />
           ))}
+          <SelectField<SpawnTimeMode>
+            label="Time of day"
+            dataPath="centity.spawning.time"
+            value={timeMode(spawning.time)}
+            options={[
+              { value: 'any', label: 'any time' },
+              { value: 'day', label: 'day (23000–12999)' },
+              { value: 'night', label: 'night (13000–22999)' },
+              { value: 'range', label: 'ticks of the day' },
+            ]}
+            onChange={(mode) => edit((draft) => setTimeMode(draft, mode))}
+          />
+          {timeMode(spawning.time) === 'range' && (
+            <FieldGroup header="Ticks of the day">
+              {(['min', 'max'] as const).map((end) => (
+                <NumberField
+                  key={end}
+                  label={`Time ${end}`}
+                  dataPath={`centity.spawning.time.${end}`}
+                  value={timeEnd(spawning.time, end)}
+                  placeholder={end === 'min' ? '0' : '23999'}
+                  step={1}
+                  min={0}
+                  onChange={(value) => edit((draft) => setTimeEnd(draft, end, value))}
+                />
+              ))}
+            </FieldGroup>
+          )}
+          <FieldGroup header="Moon phase" data-path="centity.spawning.moonPhase">
+            {MoonPhaseValues.map((phase) => (
+              <Check
+                key={phase}
+                label={phase.replace(/_/g, ' ')}
+                checked={spawning.moonPhase?.includes(phase) ?? false}
+                onChange={(on) => edit((draft) => toggleChoice(draft, 'moonPhase', phase, on))}
+              />
+            ))}
+          </FieldGroup>
+          <FieldGroup header="Weather" data-path="centity.spawning.weather">
+            {SpawnWeatherValues.map((weather) => (
+              <Check
+                key={weather}
+                label={weather}
+                checked={spawning.weather?.includes(weather) ?? false}
+                onChange={(on) => edit((draft) => toggleChoice(draft, 'weather', weather, on))}
+              />
+            ))}
+          </FieldGroup>
+          <TextField
+            label="Only when"
+            dataPath="centity.spawning.when"
+            value={spawning.when ?? ''}
+            placeholder="none (a condition from nf.spawning.condition)"
+            onChange={(text) => edit((draft) => setCondition(draft, text))}
+          />
           <CheckField
             label="Interaction keeps one"
             dataPath="centity.spawning.keepOnInteract"
@@ -284,17 +351,22 @@ function CentitySettings({ path, model }: { path: string; model: CentityFile }) 
   )
 }
 
+const NO_RESOURCE_PACKS: NonNullable<ProjectOutline>['resourcePacks'] = {}
+
 function DisplaySection({ node, editNode }: { node: NodeDef; editNode: EditNode }) {
   const gameData = useWorkspace((s) => s.gameData)
   const display = node.display
   const type = display?.type ?? 'none'
   const { blocks, items } = usePickerIds()
+  const packs = useWorkspace((s) => s.outline?.resourcePacks ?? NO_RESOURCE_PACKS)
+  const looks = resourcePackRefs(packs, 'items')
 
   const switchType = (next: string) =>
     editNode((target) => {
       if (next === 'none') delete target.display
       else if (next === 'block') target.display = { type: 'block', block: 'minecraft:stone' }
       else if (next === 'item') target.display = { type: 'item', item: 'minecraft:stick' }
+      else if (next === 'model') target.display = { type: 'model', model: looks[0] ?? '' }
       else target.display = { type: 'text', text: 'Text' }
     })
 
@@ -309,7 +381,7 @@ function DisplaySection({ node, editNode }: { node: NodeDef; editNode: EditNode 
         label="Type"
         dataPath="display"
         value={type}
-        options={['none', 'block', 'item', 'text'] as const}
+        options={['none', 'block', 'item', 'model', 'text'] as const}
         onChange={switchType}
       />
       {display?.type === 'block' && (
@@ -358,6 +430,38 @@ function DisplaySection({ node, editNode }: { node: NodeDef; editNode: EditNode 
               editDisplay<typeof display>((d) => setKey(d, 'itemTransform', value || undefined))
             }
           />
+        </>
+      )}
+      {display?.type === 'model' && (
+        <>
+          <SelectField
+            label="Look"
+            dataPath="display.model"
+            value={display.model}
+            options={[
+              ...looks,
+              ...(looks.includes(display.model)
+                ? []
+                : [{ value: display.model, label: `${display.model || '(none)'} (missing)` }]),
+            ]}
+            onChange={(model) => editDisplay<typeof display>((d) => (d.model = model))}
+          />
+          <SelectField
+            label="Item transform"
+            dataPath="display.itemTransform"
+            value={display.itemTransform ?? ''}
+            options={[
+              { value: '', label: 'Default (none: as modelled)' },
+              ...ItemTransformValues.map((it) => ({ value: it, label: it })),
+            ]}
+            onChange={(value) =>
+              editDisplay<typeof display>((d) => setKey(d, 'itemTransform', value || undefined))
+            }
+          />
+          <Hint>
+            An entry of a resource pack&apos;s items: a model file, a block look or a picture. A
+            script swaps it with node:set_model.
+          </Hint>
         </>
       )}
       {display?.type === 'text' && (

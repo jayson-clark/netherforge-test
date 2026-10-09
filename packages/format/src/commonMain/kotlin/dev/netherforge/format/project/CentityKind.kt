@@ -23,7 +23,9 @@ object CentityKind : DocumentResourceKind<CentityFile, CompiledCentity>(
             spawning.copy(
                 worlds = spawning.worlds?.distinct()?.sorted(),
                 biomes = spawning.biomes?.distinct()?.sorted(),
-                blocks = spawning.blocks?.distinct()?.sorted()
+                blocks = spawning.blocks?.distinct()?.sorted(),
+                moonPhase = spawning.moonPhase?.distinct()?.sorted(),
+                weather = spawning.weather?.distinct()?.sorted()
             )
         },
         animations = value.animations.mapValues { (_, clip) ->

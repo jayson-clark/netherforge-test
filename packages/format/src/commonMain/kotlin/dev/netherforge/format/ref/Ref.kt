@@ -51,6 +51,9 @@ enum class RefScope {
  * those aren't the project's to check, so the loader leaves them to the
  * kind's validator (against game data), and find usages and renames never
  * match them. Everything else is the project's or a package's, as for any kind.
+ * A kind with a [tagRegistry] also names `#tags` a project datapack defines (`#basic:soft`, under
+ * `data/<ns>/tags/<tagRegistry>/`): a tag in the game's namespace (or none) is the game's, any other the
+ * project's or a package's, checked like any reference. A kind with [any] takes that one word for "anything".
  */
 @Serializable
 enum class RefKind(
@@ -61,7 +64,11 @@ enum class RefKind(
     val folder: String? = null,
     val game: Boolean = false,
     /** The game's registry, as a datapack's folder under `data/<ns>/` (`worldgen/biome`), whose entries a project datapack defines for it. */
-    val registry: String? = null
+    val registry: String? = null,
+    /** The game's registry whose tags a project datapack defines and this kind names (`block`: `data/<ns>/tags/block/`). */
+    val tagRegistry: String? = null,
+    /** The word that stands for anything of the kind (`*`), which is the game's to understand. */
+    val any: String? = null
 ) {
     @SerialName("item")
     ITEM("item", RefScope.RESOURCE, resourceKind = "item"),
@@ -77,6 +84,13 @@ enum class RefKind(
 
     @SerialName("block")
     BLOCK("block", RefScope.RESOURCE, resourceKind = "block"),
+
+    /**
+     * A block an item's `canBreak` or `canPlaceOn` names: one of the project's (`ruby_ore`), the game's
+     * (`minecraft:stone`), a `#tag` of blocks (the game's, or one a project datapack defines), or `*`.
+     */
+    @SerialName("adventure_block")
+    ADVENTURE_BLOCK("block", RefScope.RESOURCE, resourceKind = "block", game = true, tagRegistry = "block", any = "*"),
 
     @SerialName("centity")
     CENTITY("centity", RefScope.RESOURCE, resourceKind = "centity"),
@@ -118,11 +132,19 @@ enum class RefKind(
     @SerialName("sound")
     SOUND("sound", RefScope.RESOURCE_PACK, resourcePackEntries = "sounds"),
 
+    /** An element of a resource pack's `hud` (a bar, a row of icons, a line of text), which scripts fill in. */
+    @SerialName("hud")
+    HUD("HUD element", RefScope.RESOURCE_PACK, resourcePackEntries = "hud"),
+
     @SerialName("texture")
     TEXTURE("texture", RefScope.FILE, folder = "textures/"),
 
     @SerialName("sound_file")
     SOUND_FILE("sound file", RefScope.FILE, folder = "sounds/"),
+
+    /** A model file of a resource pack, by its path under `models/`. */
+    @SerialName("model")
+    MODEL("model", RefScope.FILE, folder = "models/"),
 
     @SerialName("script")
     SCRIPT("script", RefScope.FILE, folder = "");
@@ -140,7 +162,18 @@ enum class RefKind(
     }
 
     /** Whether [text], a reference of this kind, names one of the game's own (see [game]). */
-    fun isGame(text: String): Boolean = game && (text.startsWith("#") || ResourceRef(text).namespace == GameIds.NAMESPACE)
+    fun isGame(text: String): Boolean {
+        if (!game) return false
+        if (any != null && text == any) return true
+        if (text.startsWith("#")) {
+            return tagRegistry == null ||
+                ResourceRef(text.removePrefix("#")).namespace.let { it == null || it == GameIds.NAMESPACE }
+        }
+        return ResourceRef(text).namespace == GameIds.NAMESPACE
+    }
+
+    /** Whether [text] is a `#tag` of [tagRegistry] that isn't the game's: one a project datapack defines. */
+    fun isDatapackTag(text: String): Boolean = tagRegistry != null && text.startsWith("#") && !isGame(text)
 
     /** [noun] with its article, for messages: `an item model`. */
     val aNoun: String get() = (if (noun.first() in "aeiou") "an " else "a ") + noun
@@ -149,7 +182,10 @@ enum class RefKind(
     val shape: String
         get() = when (scope) {
             RefScope.RESOURCE, RefScope.DATAPACK ->
-                "<id>, or <namespace>:<id> for another package's" + if (game) ", or ${GameIds.NAMESPACE}:<id> for the game's" else ""
+                "<id>, or <namespace>:<id> for another package's" +
+                    (if (game) ", or ${GameIds.NAMESPACE}:<id> for the game's" else "") +
+                    (if (tagRegistry != null) ", or a #tag" else "") +
+                    (if (any != null) ", or $any for any" else "")
             RefScope.RESOURCE_PACK -> "<pack>/<key>, or <namespace>:<pack>/<key> for another package's"
             RefScope.FILE -> "a path inside the resource's folder"
         }

@@ -7,6 +7,7 @@
 import { setKey } from '@/core/draft'
 import {
   BlockToolValues,
+  type BlockCarrier,
   newScript,
   newSiblingFile,
   type BlockFile,
@@ -97,7 +98,7 @@ export function BlockEditor({ path }: { path: string }) {
                   ? look
                     ? 'The look has no texture for some face.'
                     : `There's no look "${model.model}" in the project's packs.`
-                  : 'No look yet: it is drawn as the note block it is held as.'}
+                  : 'No look yet: it is drawn as the game block it is held as.'}
               </Muted>
             </div>
           )}
@@ -117,9 +118,20 @@ export function BlockEditor({ path }: { path: string }) {
             options={options(
               resourcePackRefs(packs, 'blocks'),
               model.model,
-              '(a plain note block)',
+              '(the plain game block)',
             )}
             onChange={(value) => set('model', value || undefined)}
+          />
+          <SelectField
+            label="Held as"
+            dataPath="carrier"
+            value={model.carrier ?? ''}
+            options={[
+              { value: '', label: 'note block (default): a solid, opaque cube' },
+              { value: 'tripwire', label: 'tripwire: no collision, for plants and decorations' },
+              { value: 'leaves', label: 'leaves: a solid cube you see through' },
+            ]}
+            onChange={(value) => set('carrier', (value || undefined) as BlockCarrier | undefined)}
           />
           <NumberField
             label="Hardness"

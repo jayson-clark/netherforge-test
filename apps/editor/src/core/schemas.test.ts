@@ -24,6 +24,7 @@ describe('schemas', () => {
       'resource_pack.schema.json',
       'structure_generation.schema.json',
       'terrain.schema.json',
+      'vanilla.schema.json',
     ])
     for (const text of Object.values(schemaFiles)) expect(() => JSON.parse(text)).not.toThrow()
   })

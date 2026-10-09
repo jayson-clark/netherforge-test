@@ -127,6 +127,14 @@ export function validationSlice(
           outline,
           problems: fontProblem === null ? outline.problems : [...outline.problems, fontProblem],
         })
+        // A tripwire block wants the game's own look of tripwire, and hiding the HUD its sprites' names, which only the import has.
+        if (
+          outline.problems.some(
+            (it) => it.code === 'block.vanilla-looks' || it.code === 'resource_pack.hud-hide',
+          )
+        ) {
+          void get().syncVanilla()
+        }
       } catch (error) {
         if (asked !== generation) return
         // The worker may not have taken the request: tell it everything next time.

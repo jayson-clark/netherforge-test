@@ -3,6 +3,7 @@ package dev.netherforge.plugin.paper
 import dev.netherforge.format.menu.MenuType
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.MenuOps
+import dev.netherforge.plugin.platform.PlatformEvents
 import dev.netherforge.plugin.platform.WindowSpec
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
@@ -32,8 +33,16 @@ class WindowHolder(val window: UUID) : InventoryHolder {
  * Opening and closing a window from inside a click handler is unsafe in
  * Bukkit (the click is still modifying the view), so while one is being
  * handled ([PaperEvents] sets [inClick]) those are deferred to the next tick.
+ *
+ * Every viewer's view of a window is watched ([PaperVersion.watchSlots]): what
+ * the game changes in it for a click or a drag reaches the runtime
+ * ([PlatformEvents.menuChanged]) as the game sends it to them, straight after
+ * it applies it, so a slot bound to a player's storage is saved with it.
  */
-class PaperMenus(private val plugin: Plugin) : MenuOps {
+class PaperMenus(private val plugin: Plugin, private val version: PaperVersion) : MenuOps {
+    /** Where what the game changes in a window goes; set when the runtime binds. */
+    var events: PlatformEvents? = null
+
     private val mini = PaperText.mini
     private val windows = HashMap<UUID, Inventory>()
 
@@ -49,6 +58,14 @@ class PaperMenus(private val plugin: Plugin) : MenuOps {
 
     private fun later(task: () -> Unit) {
         if (inClick) Bukkit.getScheduler().runTask(plugin, Runnable(task)) else task()
+    }
+
+    /** Shows [inventory] (the window [window]) to [who], and watches what the game changes in it for them. */
+    private fun show(who: Player, window: UUID, inventory: Inventory) {
+        who.openInventory(inventory)
+        // Another plugin may have refused it.
+        if (who.openInventory.topInventory !== inventory) return
+        version.watchSlots(who, inventory.size) { slots -> events?.menuChanged(window, slots) }
     }
 
     private fun make(window: UUID, spec: WindowSpec): Inventory {
@@ -105,7 +122,7 @@ class PaperMenus(private val plugin: Plugin) : MenuOps {
         later {
             rebuilding += window
             try {
-                for (viewer in viewers) viewer.openInventory(next)
+                for (viewer in viewers) show(viewer, window, next)
             } finally {
                 rebuilding -= window
             }
@@ -135,7 +152,7 @@ class PaperMenus(private val plugin: Plugin) : MenuOps {
     override fun open(window: UUID, player: UUID): Boolean {
         val inventory = windows[window] ?: return false
         val who = player(player) ?: return false
-        later { who.openInventory(inventory) }
+        later { show(who, window, inventory) }
         return true
     }
 

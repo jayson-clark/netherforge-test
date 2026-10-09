@@ -1,5 +1,6 @@
 package dev.netherforge.plugin
 
+import dev.netherforge.format.block.BlockCarrier
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.ref.ResourceRef
@@ -454,6 +455,61 @@ class BlockTest {
             assertFalse(server.custom().usable)
             assertFalse(server.custom().place("ore", "world", 0, 64, 0))
             assertTrue(server.runtime.session.problems().any { it.code == "runtime.blocks" })
+        }
+    }
+
+    private val carrierFiles = files + mapOf(
+        "blocks/rose/block.json" to """{ "carrier": "tripwire" }""",
+        "blocks/glass/block.json" to """{ "carrier": "leaves" }""",
+        "items/rose_item/item.json" to """{ "kind": "minecraft:paper", "block": "rose" }""",
+        "items/glass_item/item.json" to """{ "kind": "minecraft:paper", "block": "glass" }"""
+    )
+
+    @Test
+    fun `each carrier a block is held in is held still, and its blocks take that carrier's states`() {
+        server(
+            carrierFiles - "blocks/rose/block.json" - "items/rose_item/item.json" - "blocks/glass/block.json" - "items/glass_item/item.json"
+        ).use { server ->
+            assertEquals(setOf(BlockCarrier.NOTE_BLOCK), server.platform.blocks.frozenCarriers, "only what the project uses")
+        }
+        server(carrierFiles).use { server ->
+            assertEquals(setOf(BlockCarrier.NOTE_BLOCK, BlockCarrier.TRIPWIRE, BlockCarrier.LEAVES), server.platform.blocks.frozenCarriers)
+            val rose = BlockState.parse(assertNotNull(server.custom().stateOf("rose")))!!
+            assertEquals("minecraft:tripwire", rose.id)
+            assertEquals("true", rose.properties["disarmed"])
+            val glass = BlockState.parse(assertNotNull(server.custom().stateOf("glass")))!!
+            assertEquals("minecraft:birch_leaves", glass.id)
+            assertEquals(mapOf("distance" to "1", "persistent" to "true", "waterlogged" to "false"), glass.properties)
+            // The note blocks' states are where they were: other carriers take none of theirs.
+            assertEquals("minecraft:note_block", BlockState.parse(server.custom().stateOf("ore")!!)!!.id)
+
+            // An item places one as it places any block, and breaking it is the project's: its drops, no string.
+            val roseItem = ItemData(ItemDef(kind = "minecraft:paper", item = ResourceRef("rose_item"), count = 2))
+            server.hold(roseItem)
+            assertTrue(server.runtime.events.playerInteract(server.alex.ref, ClickButton.RIGHT, ground, "up", roseItem, "main_hand"))
+            assertEquals(server.custom().stateOf("rose"), server.state(0, 64, 0))
+            assertEquals("rose", server.custom().at("world", 0, 64, 0))
+            assertTrue(server.breaks(server.alex, BlockRef("world", 0, 64, 0, server.state(0, 64, 0)!!, "minecraft:tripwire")))
+            assertEquals("minecraft:air", server.state(0, 64, 0))
+        }
+    }
+
+    @Test
+    fun `leaves states are adopted only in a chunk just generated or a world the project generates, never a player's leaves`() {
+        server(carrierFiles).use { server ->
+            val glass = server.custom().stateOf("glass")!!
+            // A player's hedge near a log, from before the project had leaves blocks: the very state a leaves block takes.
+            server.platform.worlds.blocks[BlockAt("world", 40, 70, 40)] = glass
+            server.platform.raise.chunkLoad(GameEvent.ChunkLoad("world", 2, 2, false))
+            assertNull(server.custom().at("world", 40, 70, 40), "an old chunk's leaves are the player's")
+            // The same state in a chunk the server just generated is a generator's block.
+            server.platform.worlds.blocks[BlockAt("world", 72, 70, 40)] = glass
+            server.platform.raise.chunkLoad(GameEvent.ChunkLoad("world", 4, 2, true))
+            assertEquals("glass", server.custom().at("world", 72, 70, 40))
+            // Tripwire and note blocks are adopted anywhere, as before.
+            server.platform.worlds.blocks[BlockAt("world", 104, 70, 40)] = server.custom().stateOf("rose")!!
+            server.platform.raise.chunkLoad(GameEvent.ChunkLoad("world", 6, 2, false))
+            assertEquals("rose", server.custom().at("world", 104, 70, 40))
         }
     }
 }

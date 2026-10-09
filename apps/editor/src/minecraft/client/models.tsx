@@ -12,7 +12,16 @@ import { useAsync } from '@/ui/useAsync'
 import type { ClientAssets } from './assets'
 import type { BuiltGroup } from './geometry'
 import { parseBlockState } from './model'
-import { blockGeometry, itemGeometry, loadTexture, type ItemGeometry } from './render'
+import {
+  blockGeometry,
+  blockLookGeometry,
+  itemGeometry,
+  loadTexture,
+  packModelGeometry,
+  pictureGeometry,
+  type ItemGeometry,
+} from './render'
+import type { IconSource } from '@/minecraft/item/icon'
 
 /** A stable colour per id, so placeholders are told apart. */
 function placeholderColor(id: string): THREE.Color {
@@ -102,6 +111,49 @@ export function ItemModel({
   )
   if (!assets || !geometry)
     return <Placeholder id={item} size={[0.5, 0.5, 1 / 16]} offset={[0, 0, 0]} />
+  return (
+    <group matrixAutoUpdate={false} matrix={geometry.matrix}>
+      <Groups groups={geometry.groups} assets={assets} side={THREE.DoubleSide} />
+    </group>
+  )
+}
+
+/**
+ * One of the project's resource pack looks as an item in display [context], centred:
+ * a model file, a block look's cube or a flat picture ([look], as `resourcePackItemLook`
+ * resolves it; [urlOf] makes a project path a URL). A placeholder for [id] when there's
+ * no such look or nothing to draw it with.
+ */
+export function PackLookModel({
+  id,
+  look,
+  urlOf,
+  context,
+  assets,
+}: {
+  id: string
+  look: Extract<IconSource, { kind: 'project' | 'block' | 'shape' }> | null
+  urlOf: (path: string) => string
+  context: string
+  assets: ClientAssets | null
+}) {
+  const urls = (paths: Record<string, string>) =>
+    Object.fromEntries(Object.entries(paths).map(([name, path]) => [name, urlOf(path)]))
+  const geometry = useAsync<ItemGeometry | null>(
+    `${assetsKey(assets)}|pack|${JSON.stringify(look)}|${context}|${look?.kind === 'project' ? urlOf(look.path) : ''}`,
+    async () => {
+      if (!assets || !look) return null
+      switch (look.kind) {
+        case 'shape':
+          return packModelGeometry(assets, look.model, urls(look.textures), context)
+        case 'block':
+          return blockLookGeometry(assets, urls(look.faces), context)
+        case 'project':
+          return pictureGeometry(urlOf(look.path))
+      }
+    },
+  )
+  if (!assets || !geometry) return <Placeholder id={id} size={[0.5, 0.5, 0.5]} offset={[0, 0, 0]} />
   return (
     <group matrixAutoUpdate={false} matrix={geometry.matrix}>
       <Groups groups={geometry.groups} assets={assets} side={THREE.DoubleSide} />

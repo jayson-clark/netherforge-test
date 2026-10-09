@@ -267,6 +267,10 @@ class ServerEvents internal constructor(private val runtime: NetherForgeRuntime)
         if (running) session.menus.closed(window, player)
     }
 
+    override fun menuChanged(window: UUID, slots: Set<Int>) {
+        if (running) session.menus.changed(window, slots)
+    }
+
     override fun dialogPressed(player: PlayerRef, dialog: String, button: String, values: Map<String, Any>) {
         if (running) session.dialogs.pressed(player, dialog, button, values)
     }

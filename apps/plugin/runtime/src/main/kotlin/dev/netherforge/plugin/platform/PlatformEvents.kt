@@ -145,6 +145,13 @@ interface PlatformEvents {
     fun menuClosed(window: UUID, player: PlayerRef)
 
     /**
+     * The game changed what's in [slots] of [window] for a viewer's click or drag, heard as soon as it's done, before
+     * the server can do anything else (save a player, stop): what a slot bound to a storage moved is saved with it.
+     * Not for what the runtime itself wrote ([MenuOps.setItem], [MenuOps.add]).
+     */
+    fun menuChanged(window: UUID, slots: Set<Int>)
+
+    /**
      * A dialog button was pressed. [values] holds every input's answer by key:
      * a String for text, an option's id, or a checkbox (its `onTrue`/`onFalse`
      * string); a Double for a slider.

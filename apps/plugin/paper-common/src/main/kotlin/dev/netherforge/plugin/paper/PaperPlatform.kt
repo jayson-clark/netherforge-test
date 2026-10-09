@@ -59,7 +59,8 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
 
     /** The vanilla note blocks' part, taken over once the project has blocks that are held as note block states. */
     private val noteBlocks = PaperNoteBlocks(plugin, version)
-    override val blocks = PaperBlocks(plugin, noteBlocks)
+    private val carriers = PaperCarriers(plugin, version, noteBlocks)
+    override val blocks = PaperBlocks(plugin, carriers)
     override val particles = PaperParticles()
     override val sounds = PaperSounds()
 
@@ -111,7 +112,7 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
 
         override fun strip(miniMessage: String): String = PaperText.mini.stripTags(miniMessage)
     }
-    override val menus = PaperMenus(plugin)
+    override val menus = PaperMenus(plugin, version)
     override val dialogs = PaperDialogs(plugin, plugin.logger)
 
     private var events: PaperEvents? = null
@@ -136,13 +137,16 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
         events: PlatformEvents,
         glyphs: (reference: String) -> String?,
         items: (reference: String) -> ItemLook?,
+        blocks: (name: String) -> String?,
         namespace: () -> String
     ) {
         PaperText.glyphs = glyphs
         PaperItems.looks = items
+        PaperItems.blockStates = blocks
         PaperItems.namespace = namespace
         plugin.server.pluginManager.registerEvents(recipes, plugin)
         dialogs.events = events
+        menus.events = events
         this.events = PaperEvents(plugin, this, events).also { plugin.server.pluginManager.registerEvents(it, plugin) }
         plugin.server.pluginManager.registerEvents(borders, plugin)
         plugin.server.pluginManager.registerEvents(noteBlocks, plugin)
@@ -155,7 +159,7 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
 
     /** The plugin is being disabled: what it changed in the server's own settings is put back, and its searches stop. */
     fun close() {
-        noteBlocks.release()
+        carriers.release()
         locate.close()
     }
 

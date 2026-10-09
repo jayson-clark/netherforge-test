@@ -3,14 +3,18 @@ package dev.netherforge.plugin.block
 import dev.netherforge.format.Problem
 import dev.netherforge.format.ProblemCodes
 import dev.netherforge.format.Vec3
+import dev.netherforge.format.block.BlockCarrier
 import dev.netherforge.format.block.BlockCarriers
 import dev.netherforge.format.block.BlockFile
 import dev.netherforge.format.block.BlockTool
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.item.AttributeOperation
+import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.project.BlockKind
 import dev.netherforge.format.project.KindSpec
+import dev.netherforge.format.project.Loaded
+import dev.netherforge.format.project.plan
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.api.BlockBreakEvent
 import dev.netherforge.plugin.api.BlockPosition
@@ -58,8 +62,9 @@ import kotlin.random.Random
  * The project's blocks (`blocks/<id>/block.json`) and every one of them
  * placed in a world.
  *
- * **What a block is in the world.** A note block state ([BlockCarriers]: the
- * resource pack draws it as the block). Which block a state is can change
+ * **What a block is in the world.** A state of its carrier ([BlockCarriers]:
+ * a note block's, tripwire's or a leaves block's, which the resource pack
+ * draws as the block). Which block a state is can change
  * when the project's blocks do, so each chunk keeps a **legend** of the states
  * its blocks were placed as (state to block, a few entries a chunk, however
  * many blocks): when a chunk loads, every block is read from its state through
@@ -74,9 +79,16 @@ import kotlin.random.Random
  * forgotten, with its data and its centity, by the sweep (or at once, when the
  * runtime did it).
  *
- * **What it doesn't do.** The vanilla note block's part (tuning, sounding,
- * instruments) is the adapter's ([BlockOps.freezeNoteBlocks]); this service
- * only holds blocks.
+ * **What it doesn't do.** Holding the carriers still, and the vanilla note
+ * block's part (tuning, sounding, instruments), are the adapter's
+ * ([BlockOps.freeze]); this service only holds blocks.
+ *
+ * **Adopting leaves.** A player's leaves near a log are in the very states
+ * leaves blocks take, so a world that had leaves before the project had leaves
+ * blocks holds them. Only a chunk generated while the project runs, or one of
+ * a world the project generates itself, adopts leaves states nobody recorded:
+ * elsewhere they stay the player's leaves (and a paste of leaves blocks there
+ * isn't taken up).
  *
  * **For code that isn't a script** (world generation, W5.2): [stateOf] is the
  * note block state a block is held as (to put in chunk data), [place] sets a
@@ -184,8 +196,11 @@ internal class CustomBlocks(
     private var defs: Map<String, Def> = emptyMap()
     private var plan: BlockCarriers.Plan? = null
 
-    /** Whether the server stopped working note blocks out: only then are the plan's states safe to hold blocks in. */
+    /** Whether the server holds every carrier the plan uses still: only then are the plan's states safe to hold blocks in. */
     private var held = false
+
+    /** The worlds the project generates itself (a terrain in `netherforge.json`), where leaves states are adopted. */
+    private var generatedWorlds: Set<String> = emptySet()
 
     /** Whether the project has blocks the server can hold. */
     val usable: Boolean get() = held && plan != null
@@ -212,16 +227,25 @@ internal class CustomBlocks(
 
     override fun define(project: SessionProject) {
         defs = project.running(BlockKind).mapValues { (id, file) -> Def(id, file) }
-        replan(project.everywhere(BlockKind).mapValues { it.value.compiled }, project.snapshot.namespace)
+        generatedWorlds = project.snapshot.manifest?.worlds.orEmpty().filterValues { it.terrain != null }.keys
+        replan(project.everywhere(BlockKind), project.snapshot.namespace)
         // Before any script runs: a module's body may place blocks.
-        if (plan != null) {
-            held = platform.blocks.freezeNoteBlocks()
-            if (!held) {
-                val message = "This server won't stop working note blocks out itself, so the project's blocks can't be held in them"
-                log.error(message)
-                problems = problems + ProblemCodes.RUNTIME_BLOCKS.at(BlockKind.folder, message)
-            }
+        holdCarriers()
+    }
+
+    /** Asks the server to hold still every carrier the plan uses: a carrier it won't is a problem, and [held] says whether all are. */
+    private fun holdCarriers() {
+        val plan = plan ?: return
+        var all = true
+        for (carrier in plan.carriers.ifEmpty { setOf(BlockCarrier.NOTE_BLOCK) }) {
+            if (platform.blocks.freeze(carrier)) continue
+            all = false
+            val noun = CanonicalJson.serialName(carrier).replace('_', ' ')
+            val message = "This server won't stop working $noun states out itself, so the project's blocks can't be held in them"
+            log.error(message)
+            problems = problems + ProblemCodes.RUNTIME_BLOCKS.at(BlockKind.folder, message)
         }
+        held = all
     }
 
     override fun start() {
@@ -232,6 +256,8 @@ internal class CustomBlocks(
                 for ((x, z) in platform.worlds.loadedChunks(world)) reconcile(ChunkKey(world, x, z))
             }
         }
+        // The states may have moved since the stacks players hold named them (a restart, a full reload).
+        if (plan != null) items().refreshOnline()
     }
 
     override fun stop() {
@@ -282,8 +308,8 @@ internal class CustomBlocks(
         return count
     }
 
-    private fun replan(blocks: Map<String, BlockFile?>, home: String) {
-        val next = if (blocks.isEmpty()) null else BlockCarriers.plan(blocks, home, platform.game)
+    private fun replan(blocks: Map<String, Loaded<BlockFile, BlockFile>>, home: String) {
+        val next = BlockKind.plan(blocks, home, platform.game)
         plan = next
         byState = next?.uses?.associate { it.state.toString() to it.name }.orEmpty()
         problems = buildList {
@@ -291,16 +317,28 @@ internal class CustomBlocks(
                 add(
                     ProblemCodes.RUNTIME_BLOCKS.at(
                         BlockKind.folder,
-                        "This server's game has no note block states to hold the project's blocks in"
+                        "This server's game has none of the blocks to hold the project's blocks in"
+                    )
+                )
+            }
+            for (name in next?.unheld.orEmpty()) {
+                val noun = CanonicalJson.serialName(blocks[name]?.value?.carrierOrDefault ?: BlockCarrier.NOTE_BLOCK).replace('_', ' ')
+                add(
+                    ProblemCodes.RUNTIME_BLOCKS.at(
+                        BlockKind.pathOf(name),
+                        "This server's game has no $noun states to hold this block in",
+                        "$.carrier"
                     )
                 )
             }
             for (name in next?.overflow.orEmpty()) {
-                val capacity = next?.pool?.carriers?.size ?: 0
+                val carrier = blocks[name]?.value?.carrierOrDefault ?: BlockCarrier.NOTE_BLOCK
+                val noun = CanonicalJson.serialName(carrier).replace('_', ' ')
+                val capacity = next?.pools?.get(carrier)?.carriers?.size ?: 0
                 add(
                     ProblemCodes.BLOCK_CARRIERS.at(
                         BlockKind.pathOf(name),
-                        "The game has $capacity note block states to hold blocks in, and the project has more blocks than that",
+                        "The game has $capacity $noun states to hold blocks in, and the project has more $noun blocks than that",
                         "$"
                     )
                 )
@@ -331,9 +369,14 @@ internal class CustomBlocks(
                 reload(id, next)
             }
         }
-        replan(batch.snapshot.everywhere(BlockKind).mapValues { it.value.compiled }, batch.snapshot.namespace)
+        val before = byState
+        replan(batch.snapshot.everywhere(BlockKind), batch.snapshot.namespace)
+        // A carrier a block took up only now is held still from now on.
+        holdCarriers()
         problemsChanged()
         if (usable) for (key in chunks.keys.toList()) reconcile(key)
+        // Stacks whose canBreak or canPlaceOn names a block whose state moved break the wrong blocks until rewritten.
+        if (byState != before) items().refreshOnline()
     }
 
     private fun reload(id: String, next: BlockFile?): Int {
@@ -352,8 +395,8 @@ internal class CustomBlocks(
 
     // ---- chunks: what's placed in the world ---------------------------------------
 
-    override fun chunkLoaded(world: String, chunkX: Int, chunkZ: Int) {
-        if (usable) reconcile(ChunkKey(world, chunkX, chunkZ))
+    override fun chunkLoaded(world: String, chunkX: Int, chunkZ: Int, generated: Boolean) {
+        if (usable) reconcile(ChunkKey(world, chunkX, chunkZ), generated)
     }
 
     override fun chunkUnloading(world: String, chunkX: Int, chunkZ: Int) {
@@ -385,9 +428,10 @@ internal class CustomBlocks(
      * Brings what the server remembers of a chunk, what's in its blocks and
      * what the project's blocks are into agreement: each record's block is in
      * its state now, a record whose block has gone is forgotten, and a carrier
-     * state with no record is adopted.
+     * state with no record is adopted (a leaves state only in a chunk just
+     * [generated], or in a world the project generates).
      */
-    private fun reconcile(key: ChunkKey) {
+    private fun reconcile(key: ChunkKey, generated: Boolean = false) {
         val plan = plan ?: return
         val records = platform.blocks.records(key.world, key.x, key.z) ?: return
         val legendText = platform.blocks.legend(key.world, key.x, key.z)
@@ -399,7 +443,7 @@ internal class CustomBlocks(
         val previous = chunks[key]
         val tracked = ChunkBlocks()
         val recorded = HashSet<BlockVector>()
-        val noteBlock = BlockCarriers.BLOCK
+        val adoptsLeaves = generated || key.world in generatedWorlds
         for (record in records) {
             val at = BlockVector(record.x, record.y, record.z)
             recorded += at
@@ -418,7 +462,7 @@ internal class CustomBlocks(
                 else -> {
                     val now = platform.blocks.get(key.world, at.x, at.y, at.z)?.state
                     val parsed = now?.let(BlockState::parse)
-                    if (parsed != null && parsed.id == noteBlock && plan.pool.isCarrier(parsed)) {
+                    if (parsed != null && plan.isCarrier(parsed)) {
                         // The block's state moved with the project's blocks: put it right, quietly.
                         platform.blocks.set(key.world, at.x, at.y, at.z, expected, false)
                         keep(key, at, read.id, centity, tracked)
@@ -431,7 +475,9 @@ internal class CustomBlocks(
             }
         }
         // What each state found is: the block it was placed as, else (a generated chunk, a paste) the one it is now.
-        val nameOf = states.map { legend[it] ?: byState[it] }
+        val nameOf = states.map { state ->
+            legend[state] ?: byState[state]?.takeIf { adoptsLeaves || plan.stateOf(it)?.let(::isLeaves) != true }
+        }
         val expectedOf = nameOf.map { name -> name?.let { plan.stateOf(it)?.toString() } }
         found.forEach { x, y, z, i ->
             val name = nameOf[i - 1] ?: return@forEach
@@ -493,6 +539,9 @@ internal class CustomBlocks(
         }
         return legend
     }
+
+    /** Whether [state] is a leaves block's: what's only adopted where it can't be a player's leaves. */
+    private fun isLeaves(state: BlockState): Boolean = plan?.pools?.get(BlockCarrier.LEAVES)?.blocks?.containsKey(state.id) == true
 
     /** The block already tracked at [at] if it's still [name] (its timer runs on), else a new one, first ticked an interval from now. */
     private fun placed(key: ChunkKey, at: BlockVector, name: String, centity: UUID?): Placed {

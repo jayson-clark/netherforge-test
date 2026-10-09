@@ -7,6 +7,9 @@ import io.papermc.paper.configuration.GlobalConfiguration
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
 import net.minecraft.world.InteractionHand
+import net.minecraft.world.inventory.AbstractContainerMenu
+import net.minecraft.world.inventory.ContainerListener
+import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.context.UseOnContext
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument
@@ -41,12 +44,32 @@ class Version : PaperVersion {
     // The same on every supported server: a static `tick()` that sets its last tick to now.
     override fun holdWatchdog() = WatchdogThread.tick()
 
+    override fun watchSlots(player: Player, size: Int, changed: (Set<Int>) -> Unit) {
+        (player as CraftPlayer).handle.containerMenu.addSlotListener(
+            object : ContainerListener {
+                override fun slotChanged(menu: AbstractContainerMenu, slot: Int, stack: ItemStack) {
+                    if (slot in 0 until size) changed(setOf(slot))
+                }
+
+                override fun dataChanged(menu: AbstractContainerMenu, id: Int, value: Int) {}
+            }
+        )
+    }
+
     // Paper's own switch, the same on every supported server: `block-updates.disable-noteblock-updates`.
     override fun noteBlockUpdatesDisabled(): Boolean = GlobalConfiguration.get().blockUpdates.disableNoteblockUpdates
 
     override fun setNoteBlockUpdatesDisabled(disabled: Boolean): Boolean {
         GlobalConfiguration.get().blockUpdates.disableNoteblockUpdates = disabled
         return GlobalConfiguration.get().blockUpdates.disableNoteblockUpdates == disabled
+    }
+
+    // Paper's own switch beside it: `block-updates.disable-tripwire-updates`.
+    override fun tripwireUpdatesDisabled(): Boolean = GlobalConfiguration.get().blockUpdates.disableTripwireUpdates
+
+    override fun setTripwireUpdatesDisabled(disabled: Boolean): Boolean {
+        GlobalConfiguration.get().blockUpdates.disableTripwireUpdates = disabled
+        return GlobalConfiguration.get().blockUpdates.disableTripwireUpdates == disabled
     }
 
     /** What the note block's own `setInstrument` works out: a mob head above plays its own, else what's below (a base block, or the harp when that's a head). */

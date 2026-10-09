@@ -2,6 +2,7 @@ package dev.netherforge.plugin.paper
 
 import com.destroystokyo.paper.ParticleBuilder
 import dev.netherforge.format.Vec3
+import dev.netherforge.format.block.BlockCarrier
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.Box
 import dev.netherforge.format.item.ItemDef
@@ -124,6 +125,8 @@ class PaperWorlds : WorldOps {
             else -> "clear"
         }
     }
+
+    override fun moonPhase(world: String): Int? = world(world)?.moonPhase?.ordinal
 
     override fun setWeather(world: String, weather: String, ticks: Int?): Boolean {
         val w = world(world) ?: return false
@@ -284,7 +287,7 @@ class PaperWorlds : WorldOps {
 }
 
 /** [BlockOps] with the Paper API. A block's script data is JSON in its chunk's persistent data. */
-class PaperBlocks(private val plugin: JavaPlugin, private val noteBlocks: PaperNoteBlocks) : BlockOps {
+class PaperBlocks(private val plugin: JavaPlugin, private val carriers: PaperCarriers) : BlockOps {
     private companion object {
         /** The persistent data key a custom block's record is kept under in its chunk, then `x_y_z`. */
         const val RECORDS = "custom_block/"
@@ -431,6 +434,8 @@ class PaperBlocks(private val plugin: JavaPlugin, private val noteBlocks: PaperN
         val block = block(world, x, y, z) ?: return false
         val data = data(state) ?: return false
         if (!block.canPlace(data)) return false
+        // A block nothing collides with goes where anything stands, as string does.
+        if (!data.material.isSolid) return true
         // Nothing stands where it goes that a block can't be put into, as for a player placing one.
         val box = org.bukkit.util.BoundingBox.of(block)
         return block.world.getNearbyEntities(box).none { entity ->
@@ -448,7 +453,13 @@ class PaperBlocks(private val plugin: JavaPlugin, private val noteBlocks: PaperN
         block.setBlockData(data, false)
         // As the server raises it for a player placing a block: protection plugins and scripts may refuse it.
         val event = BlockPlaceEvent(block, replaced, clicked, who.inventory.getItem(slot), who, true, slot)
-        Bukkit.getPluginManager().callEvent(event)
+        // A custom block in a leaves state is the runtime's to place, not a player's leaves to move out of the way.
+        carriers.leaves.placing = true
+        try {
+            Bukkit.getPluginManager().callEvent(event)
+        } finally {
+            carriers.leaves.placing = false
+        }
         if (event.isCancelled || !event.canBuild()) {
             replaced.update(true, false)
             return false
@@ -456,7 +467,7 @@ class PaperBlocks(private val plugin: JavaPlugin, private val noteBlocks: PaperN
         return true
     }
 
-    override fun freezeNoteBlocks(): Boolean = noteBlocks.freeze()
+    override fun freeze(carrier: BlockCarrier): Boolean = carriers.freeze(carrier)
 }
 
 /**

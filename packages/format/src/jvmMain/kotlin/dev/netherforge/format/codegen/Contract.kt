@@ -7,6 +7,8 @@ import dev.netherforge.format.bridge.Bridge
 import dev.netherforge.format.bridge.BridgeEvent
 import dev.netherforge.format.bridge.BridgeMethod
 import dev.netherforge.format.bridge.BridgeStream
+import dev.netherforge.format.centity.DayPeriod
+import dev.netherforge.format.centity.SpawnTime
 import dev.netherforge.format.editor.CanonicalResult
 import dev.netherforge.format.editor.CutsceneResult
 import dev.netherforge.format.editor.EffectStepResult
@@ -218,6 +220,34 @@ private class Schema(root: SerialDescriptor, val kindId: String) {
                 )
             }
         }
+        if (descriptor.serialName.removeSuffix("?") == SpawnTime.SERIAL_NAME) {
+            // A half of the day by name, or a range of ticks of the day.
+            return buildJsonObject {
+                put(
+                    "oneOf",
+                    buildJsonArray {
+                        add(
+                            buildJsonObject {
+                                putJsonArray("enum") { DayPeriod.entries.forEach { add(JsonPrimitive(CanonicalJson.serialName(it))) } }
+                            }
+                        )
+                        add(
+                            buildJsonObject {
+                                put("type", "object")
+                                put("additionalProperties", false)
+                                put(
+                                    "properties",
+                                    buildJsonObject {
+                                        put("min", buildJsonObject { put("type", "integer") })
+                                        put("max", buildJsonObject { put("type", "integer") })
+                                    }
+                                )
+                            }
+                        )
+                    }
+                )
+            }
+        }
         if (descriptor.serialName.removeSuffix("?") == VEC3_SERIAL_NAME) {
             return buildJsonObject {
                 put("type", "array")
@@ -291,6 +321,7 @@ private class TypeScript {
         if (descriptor.serialName.removeSuffix("?") == VEC3_SERIAL_NAME) return "Vec3"
         if (descriptor.serialName.removeSuffix("?") == Ingredient.SERIAL_NAME) return "string | { item: string }"
         if (descriptor.serialName.removeSuffix("?") == LootRange.SERIAL_NAME) return "LootRange"
+        if (descriptor.serialName.removeSuffix("?") == SpawnTime.SERIAL_NAME) return "SpawnTime"
         if (descriptor.serialName.removeSuffix("?") == JSON_ELEMENT) return "unknown"
         return when (descriptor.kind) {
             PrimitiveKind.STRING -> "string"
@@ -346,6 +377,12 @@ private class TypeScript {
         append("export type Vec3 = [number, number, number]\n\n")
         append("/** A whole number, or a range of them (both ends included). */\n")
         append("export type LootRange = number | { min: number; max: number }\n\n")
+        append("/** A half of the day, or a range of ticks of the day (a min above the max runs through midnight). */\n")
+        append(
+            "export type SpawnTime = ${DayPeriod.entries.joinToString(" | ") {
+                "'${CanonicalJson.serialName(it)}'"
+            }} | { min?: number; max?: number }\n\n"
+        )
         for (body in declared.values) {
             append(body)
             append('\n')

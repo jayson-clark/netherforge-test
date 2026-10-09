@@ -43,7 +43,8 @@ class ContractPlugin : JavaPlugin() {
         val platform = PaperPlatform(this, netherForge.version)
         val events = RecordingEvents()
         val looks = ConcurrentHashMap<String, ItemLook>()
-        platform.bind(events, { null }, ContractServer.lookup(looks)) { ContractServer.NAMESPACE }
+        val states = ConcurrentHashMap<String, String>()
+        platform.bind(events, { null }, ContractServer.lookup(looks), states::get) { ContractServer.NAMESPACE }
 
         val world = server.worlds.first()
         world.setGameRule(GameRules.ADVANCE_TIME, false)
@@ -57,7 +58,8 @@ class ContractPlugin : JavaPlugin() {
         world.isThundering = false
         for (x in -CHUNKS..CHUNKS) for (z in -CHUNKS..CHUNKS) world.addPluginChunkTicket(x, z, this)
         val origin = Location(world.name, 0.5, world.getHighestBlockYAt(0, 0) + 1.0, 0.5)
-        PaperContractServer.current = PaperContractServer(this, platform, events, looks, origin, dataFolder.toPath().resolve("files"))
+        PaperContractServer.current =
+            PaperContractServer(this, platform, events, looks, states, origin, dataFolder.toPath().resolve("files"))
 
         // Once the server ticks: the suites wait on ticks and hand their calls to this thread.
         server.scheduler.runTask(

@@ -18,10 +18,11 @@ class FakeContractServer : ContractServer {
     override val platform = FakePlatform()
     override val events = RecordingEvents()
     override val itemLooks: MutableMap<String, ItemLook> = ConcurrentHashMap()
+    override val blockStates: MutableMap<String, String> = ConcurrentHashMap()
     override val origin = Location("world", 0.5, 64.0, 0.5)
 
     init {
-        platform.bind(events, { null }, ContractServer.lookup(itemLooks)) { ContractServer.NAMESPACE }
+        platform.bind(events, { null }, ContractServer.lookup(itemLooks), blockStates::get) { ContractServer.NAMESPACE }
         platform.worldManager.storage = directory()
     }
 

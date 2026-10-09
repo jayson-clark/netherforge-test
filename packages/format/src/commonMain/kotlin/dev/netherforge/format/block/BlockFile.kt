@@ -12,10 +12,12 @@ import kotlinx.serialization.Serializable
  * place, mine and click, and whose script hears them.
  *
  * It's drawn by the resource pack ([model]: an entry of a pack's `blocks`)
- * and held in the world as an unused note block state ([BlockCarriers]): the
- * server keeps a note block, the pack draws it as this block. A block that
- * isn't a cube names a [centity] whose displays are drawn over it instead,
- * and keeps the block's solid cube as its collision.
+ * and held in the world as an unused state of one of the game's blocks, its
+ * [carrier] ([BlockCarriers]): the server keeps that block, the pack draws it
+ * as this one, and the carrier decides how it behaves physically (a solid
+ * opaque cube, no collision, a see-through cube). A block can also name a
+ * [centity] whose displays are drawn over it, keeping the carrier's
+ * collision.
  *
  * Its one [script] runs once for the block (not per placed block), and hears
  * what players do with any of them.
@@ -30,6 +32,8 @@ data class BlockFile(
      * drawn as the plain note block it is held as, until it has a look.
      */
     @Ref(RefKind.BLOCK_MODEL) val model: ResourceRef? = null,
+    /** What it's held as, which decides how it behaves physically ([BlockCarrier]). Default [BlockCarrier.NOTE_BLOCK]. */
+    val carrier: BlockCarrier? = null,
     /**
      * How long it takes to mine, in the game's units (stone is 1.5, dirt 0.5,
      * obsidian 50): the time is this, divided by how well the tool mines it
@@ -57,6 +61,8 @@ data class BlockFile(
     /** Whether it drops nothing without the right tool. */
     val requiresToolOrDefault: Boolean get() = requiresTool ?: false
 
+    val carrierOrDefault: BlockCarrier get() = carrier ?: BlockCarrier.NOTE_BLOCK
+
     companion object {
         const val FILE_NAME = "block.json"
         const val SCHEMA = "../../.netherforge/schema/block.schema.json"
@@ -69,6 +75,37 @@ data class BlockFile(
         /** The most ticks between `tick` events: an hour. */
         const val MAX_TICK = 72_000
     }
+}
+
+/**
+ * What a block is held as in the world: the game's block whose states carry it ([BlockCarriers]). That block is
+ * what the game knows, so it decides the block's collision, what a player selects, whether the faces of the blocks
+ * beside it are drawn, and how it's lit; the resource pack decides only how it looks.
+ */
+@Serializable
+enum class BlockCarrier {
+    /**
+     * A note block: a solid, opaque full cube. The faces of the blocks beside it aren't drawn, so a look that isn't
+     * a whole cube leaves see-through holes. Up to 600 or so blocks (the states left of the game's note block).
+     */
+    @SerialName("note_block")
+    NOTE_BLOCK,
+
+    /**
+     * Tripwire: nothing to collide with and nothing it hides, for plants, flowers and flat decorations. It breaks at
+     * once, whatever its hardness, and selects as a low slab. Up to 96 blocks.
+     */
+    @SerialName("tripwire")
+    TRIPWIRE,
+
+    /**
+     * Leaves: a solid full cube the neighbours' faces show through, for glassy and leafy blocks and for shapes
+     * that sit in a block (crystals, pots, altars), which collide as the cube. Up to six blocks per kind of leaves the
+     * game has. The game draws falling-leaf and dripping particles from leaves, and players on Fast graphics see
+     * leaves (and so these blocks) without their see-through parts.
+     */
+    @SerialName("leaves")
+    LEAVES
 }
 
 /** What a block sounds like. Each is a sound of one of the project's packs; the carrier's own wood sounds play for the rest (walking, hitting). */

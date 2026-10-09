@@ -123,6 +123,17 @@ class FakeMenus(private val platform: FakePlatform) : MenuOps {
         return platform.events!!.menuClicked(window, MenuClick(player.ref, slot, top, click, null, held, null, moves))
     }
 
+    /**
+     * The game moves items for a click [player] made that wasn't cancelled: each of [slots] of the window they have
+     * open now holds its item (null empties it), and the runtime hears it straight away, as the adapter's does.
+     */
+    fun moved(player: FakePlayer, slots: Map<Int, ItemData?>) {
+        val window = viewing(player.ref.uuid) ?: error("${player.ref.name} has no window open")
+        val it = windows.getValue(window)
+        for ((slot, item) in slots) it.slots[slot] = item?.let { given -> platform.stack(given) }
+        platform.events!!.menuChanged(window, slots.keys)
+    }
+
     /** A player drags [cursor] across [slots] of the window they have open; true when it was cancelled. */
     fun drag(player: FakePlayer, slots: List<Int>, cursor: ItemData? = null): Boolean {
         val window = viewing(player.ref.uuid) ?: error("${player.ref.name} has no window open")

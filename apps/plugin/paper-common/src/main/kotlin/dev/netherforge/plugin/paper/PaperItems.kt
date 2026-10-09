@@ -1,5 +1,6 @@
 package dev.netherforge.plugin.paper
 
+import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.item.AttributeModifierDef
 import dev.netherforge.format.item.AttributeSlot
@@ -9,11 +10,11 @@ import dev.netherforge.format.item.EquipmentDef
 import dev.netherforge.format.item.FoodDef
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.item.ProjectItems
+import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.ItemLook
-import io.papermc.paper.block.BlockPredicate
 import io.papermc.paper.datacomponent.DataComponentType
 import io.papermc.paper.datacomponent.DataComponentTypes
 import io.papermc.paper.datacomponent.item.Consumable
@@ -22,13 +23,14 @@ import io.papermc.paper.datacomponent.item.FoodProperties
 import io.papermc.paper.datacomponent.item.ItemAdventurePredicate
 import io.papermc.paper.datacomponent.item.ItemAttributeModifiers
 import io.papermc.paper.datacomponent.item.UseCooldown
+import io.papermc.paper.persistence.PersistentDataContainerView
 import io.papermc.paper.registry.RegistryAccess
 import io.papermc.paper.registry.RegistryKey
-import io.papermc.paper.registry.TypedKey
-import io.papermc.paper.registry.set.RegistrySet
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.TextDecoration
 import org.bukkit.Bukkit
@@ -48,6 +50,7 @@ import org.bukkit.inventory.meta.SkullMeta
 import org.bukkit.persistence.PersistentDataType
 import java.util.Base64
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * [ItemData] and Paper's `ItemStack`, both ways.
@@ -77,6 +80,13 @@ import java.util.UUID
  * item keeps it: a script that reads a stale stack and writes it back hasn't
  * given it the new look, so [restyled] must still find it stale.
  *
+ * `canBreak` and `canPlaceOn` are the game's block predicates, one per entry: the game's block or `#tag`
+ * as it is, `*` the predicate that matches every block, and a project block the state it's held as now
+ * ([blockStates], `{ blocks: "minecraft:note_block", state: { … } }`). Paper's predicate API can't say a
+ * state, so the component is parsed from the game's own item syntax ([predicate]). What the lists said
+ * is kept beside it under `netherforge:adventure`, with the states they resolved to, so the stack reads
+ * back as it was written and [restyled] finds it stale when a block's state has moved.
+ *
  * Item and enchantment types come from the live registries, never a table.
  * Names and lore are MiniMessage both ways, with the italics Minecraft puts
  * on custom names turned off.
@@ -87,10 +97,15 @@ object PaperItems {
     private val DATA_KEY = NamespacedKey("netherforge", "data")
     private val ITEM_KEY = NamespacedKey("netherforge", "item")
     private val LOOK_KEY = NamespacedKey("netherforge", "item_look")
+    private val ADVENTURE_KEY = NamespacedKey("netherforge", "adventure")
 
     /** Each project item's current look, by reference: the runtime's answer, set when it binds. Any thread may ask. */
     @Volatile
     var looks: (String) -> ItemLook? = { null }
+
+    /** The state each project block is held as now, by the name the server knows it by: the runtime's answer, set when it binds. */
+    @Volatile
+    var blockStates: (String) -> String? = { null }
 
     /** The project's namespace, set when the runtime binds. */
     @Volatile
@@ -153,6 +168,12 @@ object PaperItems {
                 container.set(DATA_KEY, PersistentDataType.STRING, Json.encodeToString(JsonObject.serializer(), JsonObject(data)))
             }
         }
+        if (def.canBreak != null || def.canPlaceOn != null) {
+            // Left out is left alone, as for every field: the other list stays as the stack had it.
+            val kept = adventureOf(meta.persistentDataContainer)
+            val lists = Adventure(def.canBreak ?: kept?.canBreak, def.canPlaceOn ?: kept?.canPlaceOn)
+            meta.persistentDataContainer.set(ADVENTURE_KEY, PersistentDataType.STRING, lists.stamp())
+        }
         def.item?.let(::resolve)?.toString()?.let { id ->
             val container = meta.persistentDataContainer
             val stamped = container.get(ITEM_KEY, PersistentDataType.STRING) == id && container.has(LOOK_KEY)
@@ -181,8 +202,8 @@ object PaperItems {
             }
             stack.setData(DataComponentTypes.ATTRIBUTE_MODIFIERS, builder.build())
         }
-        def.canBreak?.let { stack.setData(DataComponentTypes.CAN_BREAK, predicate(it)) }
-        def.canPlaceOn?.let { stack.setData(DataComponentTypes.CAN_PLACE_ON, predicate(it)) }
+        def.canBreak?.let { stack.setData(DataComponentTypes.CAN_BREAK, predicate(DataComponentTypes.CAN_BREAK, it)) }
+        def.canPlaceOn?.let { stack.setData(DataComponentTypes.CAN_PLACE_ON, predicate(DataComponentTypes.CAN_PLACE_ON, it)) }
         def.food?.let { food ->
             stack.setData(
                 DataComponentTypes.FOOD,
@@ -210,11 +231,92 @@ object PaperItems {
         }
     }
 
-    private fun predicate(blocks: List<String>): ItemAdventurePredicate {
-        val keys = blocks.mapNotNull(::key).map { TypedKey.create(RegistryKey.BLOCK, it) }
-        return ItemAdventurePredicate.itemAdventurePredicate()
-            .addPredicate(BlockPredicate.predicate().blocks(RegistrySet.keySet(RegistryKey.BLOCK, keys)).build())
-            .build()
+    /** Each list's predicates, by the component and the game's text for them: the same lists are parsed once. */
+    private val predicates = ConcurrentHashMap<String, ItemAdventurePredicate>()
+
+    /**
+     * The component for [blocks] (an item's `canBreak` or `canPlaceOn`): a predicate per entry the game can
+     * say, parsed from the game's item syntax, which unlike Paper's API takes block states. An entry the
+     * server can't hold (a project block with no state, a tag it doesn't have) matches nothing; with none
+     * left, the item breaks or goes on nothing.
+     */
+    private fun predicate(type: DataComponentType.Valued<ItemAdventurePredicate>, blocks: List<String>): ItemAdventurePredicate {
+        val entries = blocks.mapNotNull(::predicateText)
+        if (entries.isEmpty()) return ItemAdventurePredicate.itemAdventurePredicate().build()
+        val component = type.key().value()
+        val text = entries.joinToString(",", "[", "]")
+        predicates["$component=$text"]?.let { return it }
+        val parsed = runCatching { Bukkit.getItemFactory().createItemStack("${GameIds.NAMESPACE}:stone[$component=$text]").getData(type) }
+            .getOrNull()
+            // One entry the server refuses (a tag it doesn't have) shouldn't cost the others theirs.
+            ?: return entries.mapNotNull { single(type, component, it) }
+                .fold(ItemAdventurePredicate.itemAdventurePredicate()) { builder, it -> builder.addPredicates(it.predicates()) }
+                .build()
+        predicates["$component=$text"] = parsed
+        return parsed
+    }
+
+    private fun single(type: DataComponentType.Valued<ItemAdventurePredicate>, component: String, entry: String): ItemAdventurePredicate? =
+        predicates.getOrPut("$component=[$entry]") {
+            runCatching { Bukkit.getItemFactory().createItemStack("${GameIds.NAMESPACE}:stone[$component=[$entry]]").getData(type) }
+                .getOrNull() ?: return null
+        }
+
+    /** One entry as the game's block predicate: null for a project block the server holds in no state. */
+    private fun predicateText(entry: String): String? {
+        val kind = RefKind.ADVENTURE_BLOCK
+        return when {
+            entry == kind.any -> "{}"
+            entry.startsWith("#") -> "{blocks:\"#${GameIds.normalize(entry.removePrefix("#"))}\"}"
+            kind.isGame(entry) -> "{blocks:\"${GameIds.normalize(entry)}\"}"
+            else -> {
+                val state = blockStates(entry)?.let(BlockState::parse) ?: return null
+                val properties = state.properties.entries.sortedBy { it.key }.joinToString(",") { "${it.key}:\"${it.value}\"" }
+                "{blocks:\"${state.id}\",state:{$properties}}"
+            }
+        }
+    }
+
+    /** What an item's lists of blocks said, and the states its project blocks resolved to then ([states]). */
+    private data class Adventure(val canBreak: List<String>?, val canPlaceOn: List<String>?, val states: String? = null) {
+        /** The states its project blocks are held as now, one text for all of them, to tell a stale stack by. */
+        fun statesNow(): String = (canBreak.orEmpty() + canPlaceOn.orEmpty())
+            .filter { !it.startsWith("#") && !RefKind.ADVENTURE_BLOCK.isGame(it) }
+            .distinct()
+            .joinToString(";") { "$it=${blockStates(it) ?: ""}" }
+
+        fun stamp(): String = Json.encodeToString(
+            JsonObject.serializer(),
+            JsonObject(
+                buildMap {
+                    canBreak?.let { put("can_break", JsonArray(it.map(::JsonPrimitive))) }
+                    canPlaceOn?.let { put("can_place_on", JsonArray(it.map(::JsonPrimitive))) }
+                    put("states", JsonPrimitive(statesNow()))
+                }
+            )
+        )
+    }
+
+    /** The lists stamped on a stack, or null for none (or a stamp that isn't one). */
+    private fun adventureOf(container: PersistentDataContainerView): Adventure? {
+        val text = container.get(ADVENTURE_KEY, PersistentDataType.STRING) ?: return null
+        val json = runCatching { Json.parseToJsonElement(text) as? JsonObject }.getOrNull() ?: return null
+        fun list(key: String) = (json[key] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }
+        return Adventure(list("can_break"), list("can_place_on"), (json["states"] as? JsonPrimitive)?.content)
+    }
+
+    /**
+     * [stack] with its `canBreak` and `canPlaceOn` written for the states its project blocks are held as
+     * now, or null when they're current (or it has none).
+     */
+    private fun readapted(stack: ItemStack): ItemStack? {
+        val lists = adventureOf(stack.persistentDataContainer) ?: return null
+        if (lists.states == lists.statesNow()) return null
+        val fresh = stack.clone()
+        lists.canBreak?.let { fresh.setData(DataComponentTypes.CAN_BREAK, predicate(DataComponentTypes.CAN_BREAK, it)) }
+        lists.canPlaceOn?.let { fresh.setData(DataComponentTypes.CAN_PLACE_ON, predicate(DataComponentTypes.CAN_PLACE_ON, it)) }
+        fresh.editPersistentDataContainer { it.set(ADVENTURE_KEY, PersistentDataType.STRING, lists.stamp()) }
+        return fresh
     }
 
     private fun slotGroup(slot: AttributeSlot?): EquipmentSlotGroup =
@@ -305,12 +407,13 @@ object PaperItems {
     fun restyled(stack: ItemStack): ItemStack? {
         if (stack.isEmpty || !stack.hasItemMeta()) return null
         val stamps = stack.persistentDataContainer
-        val id = stamps.get(ITEM_KEY, PersistentDataType.STRING) ?: return null
-        val look = looks(id) ?: return null
-        if (stamps.get(LOOK_KEY, PersistentDataType.STRING) == look.hash) return null
+        val id = stamps.get(ITEM_KEY, PersistentDataType.STRING)
+        val look = id?.let(looks)
+        if (look == null || stamps.get(LOOK_KEY, PersistentDataType.STRING) == look.hash) return readapted(stack)
         val fresh = toStack(ItemData(ProjectItems.restyle(describe(stack), reference(id), look.def))) ?: return null
         fresh.editPersistentDataContainer { stamps.copyTo(it, false) }
-        return fresh
+        // The look's lists were just written; any it doesn't have, the stack kept, for the states of now.
+        return readapted(fresh) ?: fresh
     }
 
     /** The script data a stack carries, or null for none (or text that isn't a JSON object). */
@@ -321,6 +424,7 @@ object PaperItems {
 
     private fun describe(stack: ItemStack): ItemDef {
         val meta = stack.itemMeta
+        val adventure = meta?.persistentDataContainer?.let(::adventureOf)
         return ItemDef(
             kind = stack.type.key.toString(),
             count = stack.amount,
@@ -345,8 +449,8 @@ object PaperItems {
             rarity = stack.takeIf { it.isDataOverridden(DataComponentTypes.RARITY) }?.getData(DataComponentTypes.RARITY)
                 ?.let { rarity -> dev.netherforge.format.item.ItemRarity.valueOf(rarity.name) },
             attributeModifiers = modifiersOf(stack),
-            canBreak = blocksOf(stack, DataComponentTypes.CAN_BREAK),
-            canPlaceOn = blocksOf(stack, DataComponentTypes.CAN_PLACE_ON),
+            canBreak = adventure?.canBreak ?: blocksOf(stack, DataComponentTypes.CAN_BREAK),
+            canPlaceOn = adventure?.canPlaceOn ?: blocksOf(stack, DataComponentTypes.CAN_PLACE_ON),
             food = foodOf(stack),
             cooldown = cooldownOf(stack),
             equipment = equipmentOf(stack),

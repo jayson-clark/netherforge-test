@@ -15,6 +15,20 @@
   },
   {
     "file": "resource_packs/ui/pack.json",
+    "path": "$.items.crystal.model",
+    "kind": "model",
+    "text": "crystal.json",
+    "target": "resource_packs/ui/models/crystal.json"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
+    "path": "$.items.crystal_lit.model",
+    "kind": "model",
+    "text": "crystal_lit.json",
+    "target": "resource_packs/ui/models/crystal_lit.json"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
     "path": "$.items.ruby.texture",
     "kind": "texture",
     "text": "item/ruby.png",
@@ -57,10 +71,31 @@
   },
   {
     "file": "resource_packs/ui/pack.json",
+    "path": "$.blocks.ruby_crystal.model",
+    "kind": "model",
+    "text": "crystal.json",
+    "target": "resource_packs/ui/models/crystal.json"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
     "path": "$.blocks.ruby_ore.texture",
     "kind": "texture",
     "text": "block/ruby_ore.png",
     "target": "resource_packs/ui/textures/block/ruby_ore.png"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
+    "path": "$.hud.bars.treasure.full",
+    "kind": "texture",
+    "text": "hud/treasure_full.png",
+    "target": "resource_packs/ui/textures/hud/treasure_full.png"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
+    "path": "$.hud.bars.treasure.empty",
+    "kind": "texture",
+    "text": "hud/treasure_empty.png",
+    "target": "resource_packs/ui/textures/hud/treasure_empty.png"
   },
   {
     "file": "items/crown/item.json",
@@ -105,6 +140,25 @@
     "target": "basic:ruby_ore"
   },
   {
+    "file": "items/ruby_pick/item.json",
+    "path": "$.canBreak[0]",
+    "kind": "adventure_block",
+    "text": "ruby_ore",
+    "target": "basic:ruby_ore"
+  },
+  {
+    "file": "items/ruby_pick/item.json",
+    "path": "$.canBreak[1]",
+    "kind": "adventure_block",
+    "text": "#minecraft:planks"
+  },
+  {
+    "file": "items/ruby_pick/item.json",
+    "path": "$.canPlaceOn[0]",
+    "kind": "adventure_block",
+    "text": "*"
+  },
+  {
     "file": "recipes/ruby.json",
     "path": "$.result.item",
     "kind": "item",
@@ -128,6 +182,13 @@
   {
     "file": "loot/junk.json",
     "path": "$.pools.main.entries[2].conditions[1].tool.item",
+    "kind": "item",
+    "text": "ruby",
+    "target": "basic:ruby"
+  },
+  {
+    "file": "loot/ruby_crystal.json",
+    "path": "$.pools.main.entries[0].item.item",
     "kind": "item",
     "text": "ruby",
     "target": "basic:ruby"
@@ -173,6 +234,20 @@
     "kind": "centity",
     "text": "lamp",
     "target": "basic:lamp"
+  },
+  {
+    "file": "blocks/ruby_crystal/block.json",
+    "path": "$.model",
+    "kind": "block_model",
+    "text": "ui/ruby_crystal",
+    "target": "basic:ui/ruby_crystal"
+  },
+  {
+    "file": "blocks/ruby_crystal/block.json",
+    "path": "$.drops",
+    "kind": "loot_table",
+    "text": "ruby_crystal",
+    "target": "basic:ruby_crystal"
   },
   {
     "file": "blocks/ruby_ore/block.json",
@@ -377,6 +452,20 @@
     "kind": "script",
     "text": "script.lua",
     "target": "centities/crate/script.lua"
+  },
+  {
+    "file": "centities/crystal/centity.json",
+    "path": "$.nodes.gem.display.model",
+    "kind": "item_model",
+    "text": "ui/crystal",
+    "target": "basic:ui/crystal"
+  },
+  {
+    "file": "centities/crystal/centity.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "centities/crystal/script.lua"
   },
   {
     "file": "centities/door/centity.json",

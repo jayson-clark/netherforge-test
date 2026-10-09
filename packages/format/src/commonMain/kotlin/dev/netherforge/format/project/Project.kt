@@ -5,6 +5,7 @@ import dev.netherforge.format.Problem
 import dev.netherforge.format.ProblemCode
 import dev.netherforge.format.ProblemCodes
 import dev.netherforge.format.ProblemSink
+import dev.netherforge.format.block.VanillaFile
 import dev.netherforge.format.datapack.DatapackLayout
 import dev.netherforge.format.datapack.PackMeta
 import dev.netherforge.format.game.FeatureTable
@@ -20,6 +21,7 @@ import dev.netherforge.format.ref.ReferenceIndex
 import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.resourcepack.CompiledResourcePack
 import dev.netherforge.format.resourcepack.ResourcePackFile
+import dev.netherforge.format.resourcepack.ResourcePackRead
 import dev.netherforge.format.script.ScriptDef
 import dev.netherforge.format.settings.SettingsValidator
 import dev.netherforge.format.terrain.TerrainValidator
@@ -91,6 +93,8 @@ class ProjectSnapshot internal constructor(
     val references: ReferenceIndex,
     /** `fonts/default.json`, when it's there and parses: the default font's advances, for measuring text (`TextWidth`). */
     val defaultFont: DefaultFontFile?,
+    /** `client/vanilla.json`, when it's there and parses: the game's own looks of the blocks custom blocks are held in. */
+    val vanilla: VanillaFile?,
     val resources: Map<String, Map<String, Loaded<*, *>>>,
     /**
      * Every pack, the packages' included ([everywhere]'s keys), compiled
@@ -302,6 +306,7 @@ object Projects {
         val manifest: ProjectManifest?,
         val home: String,
         val defaultFont: DefaultFontFile?,
+        val vanilla: VanillaFile?,
         val pending: List<Pending<*, *>>,
         val problems: MutableList<Problem>
     ) {
@@ -330,14 +335,18 @@ object Projects {
             fun entries(keys: (String, ResourcePackFile, Set<String>) -> Collection<String>) =
                 packs.flatMap { (pack, read) -> keys(pack, read.first, read.second).map { "$pack/$it" } }.toSet()
             // What the datapacks define in this namespace, by registry: a biome's or a placed feature's names.
-            val datapacks = pending.filter { it.kind == DatapackKind && include(DatapackKind, it.id) }
+            val datapackFiles = pending.filter { it.kind == DatapackKind && include(DatapackKind, it.id) }
                 .flatMap { DatapackLayout.entries(it.value as PackMeta, it.files) }
-                .filter { !it.tag && it.namespace == home }
-                .groupBy({ it.registry }, { it.path })
+                .filter { it.namespace == home }
+            val datapacks = datapackFiles.filter { !it.tag }.groupBy({ it.registry }, { it.path })
+            val datapackTags = datapackFiles.filter { it.tag }.groupBy({ it.registry }, { it.path })
             fun entries(registry: String?) = registry?.let { datapacks[it] }.orEmpty().toSet()
+
+            // A kind that names tags too has them among its names, each after a `#`.
+            fun tags(registry: String?) = registry?.let { datapackTags[it] }.orEmpty().map { "#$it" }.toSet()
             // A resource kind's names are its ids, whichever kind it is, and a datapack's entries of its registry.
             val resources = RefKind.entries.filter { it.scope == RefScope.RESOURCE }.associateWith {
-                ids(Kinds.byId(it.resourceKind!!)!!) + entries(it.registry)
+                ids(Kinds.byId(it.resourceKind!!)!!) + entries(it.registry) + tags(it.tagRegistry)
             }
             val entries = RefKind.entries.filter { it.scope == RefScope.DATAPACK }.associateWith { entries(it.registry) }
             return resources + entries + mapOf(
@@ -347,6 +356,7 @@ object Projects {
                 RefKind.TOOLTIP to entries { _, file, _ -> file.tooltips.keys },
                 RefKind.EQUIPMENT to entries { _, file, _ -> file.equipment.keys },
                 RefKind.BLOCK_MODEL to entries { _, file, _ -> file.blocks.keys },
+                RefKind.HUD to entries { _, file, _ -> file.hud?.keys.orEmpty() },
                 RefKind.SOUND to entries { pack, file, files -> ResourcePackKind.sounds(pack, file, files).keys }
             )
         }
@@ -417,6 +427,14 @@ object Projects {
             else -> cache.keep(DefaultFontFile.FILE, fontText, manifest?.minecraft) { loadDefaultFont(fontText, manifest?.minecraft) }
         }
         problems += fontProblems
+        val vanillaText = if (VanillaFile.FILE in files) source.read(VanillaFile.FILE) else null
+        val (vanilla, vanillaProblems) = when (vanillaText) {
+            null -> null to emptyList()
+            else -> cache.keep(VanillaFile.FILE, vanillaText, manifest?.minecraft) {
+                loadVanillaBlockStates(vanillaText, manifest?.minecraft)
+            }
+        }
+        problems += vanillaProblems
 
         // Which resources there are, each with its files: classify every path.
         val found = HashMap<KindSpec<*, *>, MutableMap<String, MutableSet<String>>>()
@@ -436,7 +454,7 @@ object Projects {
             }
         }
         cache.end()
-        return Reading(source, files, manifest, home ?: manifest?.namespace.orEmpty(), defaultFont, pending, problems)
+        return Reading(source, files, manifest, home ?: manifest?.namespace.orEmpty(), defaultFont, vanilla, pending, problems)
     }
 
     /**
@@ -477,7 +495,7 @@ object Projects {
         }
         problems += manifestSink.problems
         val folders = reading.pending.groupBy({ it.kind.id }, { it.id to it.files }).mapValues { it.value.toMap() }
-        val index = ProjectIndex(reading.source, reading.defaultFont, read, references, folders)
+        val index = ProjectIndex(reading.source, reading.defaultFont, read, references, folders, reading.vanilla)
         val loaded = reading.pending.map { it.kind to it.load(index, qualified) }
         for ((_, resource) in loaded) problems += resource.problems
         manifest?.worlds?.let { problems += worldHeights(it, references, read, packages) }
@@ -487,7 +505,7 @@ object Projects {
 
         // Every pack in the tree builds into the one resource pack, a package's in its own namespace.
         @Suppress("UNCHECKED_CAST")
-        val packs = (resources[ResourcePackKind.id].orEmpty() as Map<String, Loaded<ResourcePackFile, ResourcePackFile>>) +
+        val packs = (resources[ResourcePackKind.id].orEmpty() as Map<String, Loaded<ResourcePackFile, ResourcePackRead>>) +
             packages.entries.flatMap { (namespace, pkg) ->
                 pkg.snapshot[ResourcePackKind].map { (id, it) ->
                     PackagePaths.of(namespace, id) to
@@ -503,6 +521,7 @@ object Projects {
             manifest = manifest,
             references = references,
             defaultFont = reading.defaultFont,
+            vanilla = reading.vanilla,
             resources = resources,
             compiledResourcePacks = ResourcePackKind.build(home, packs, images),
             problems = problems.sortedWith(compareBy({ it.file }, { it.line ?: 0 })),
@@ -784,6 +803,26 @@ object Projects {
         }
         manifest.settings?.let { SettingsValidator.validate(it, sink) }
         return manifest to sink.problems
+    }
+
+    /** `client/vanilla.json` from its [text], and its problems: it was read from the target [minecraft] version's client, or it's stale. */
+    private fun loadVanillaBlockStates(text: String, minecraft: String?): Pair<VanillaFile?, List<Problem>> {
+        val path = VanillaFile.FILE
+        return when (val parsed = VanillaKind.parse(text, path)) {
+            is CanonicalJson.Parsed.Failed -> null to listOf(parsed.problem)
+            is CanonicalJson.Parsed.Ok -> {
+                val sink = ProblemSink(path)
+                if (minecraft != null && parsed.value.minecraft != minecraft) {
+                    sink.report(
+                        ProblemCodes.BLOCK_VANILLA_LOOKS,
+                        "This is the game's look of Minecraft ${parsed.value.minecraft}'s blocks, and the project is for $minecraft: " +
+                            "the editor writes it again once Minecraft $minecraft is imported",
+                        "$.minecraft"
+                    )
+                }
+                parsed.value to sink.problems
+            }
+        }
     }
 
     /** `fonts/default.json` from its [text], checked for the target [minecraft] version, and its problems. */

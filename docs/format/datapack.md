@@ -95,12 +95,18 @@ exactly the files for its own format, in one datapack with NetherForge's own.
 
 ## What goes in it
 
-Only worldgen passes through:
+Only worldgen, and tags of blocks, pass through:
 
 | Where                                                   | What                                                                                            |
 | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `data/<namespace>/worldgen/<registry>/<path>.json`      | An entry of one of the game's worldgen registries: `worldgen/noise_settings`, `worldgen/biome`… |
 | `data/<namespace>/tags/worldgen/<registry>/<path>.json` | A tag of one: `{ "values": ["basic:caves/deep", "#minecraft:is_overworld"] }`.                  |
+| `data/<namespace>/tags/block/<path>.json`               | A tag of the game's blocks, which an item's `canBreak` and `canPlaceOn` name: `#basic:soft`.    |
+
+A block tag holds the game's blocks and tags (`minecraft:dirt`,
+`#minecraft:logs`), not the project's own blocks: an item names those
+[directly](menu.md#items). Like every datapack file it's read when the server
+starts, so a changed tag needs a restart.
 
 The registries are the game's, and differ between versions (26.3 has
 `worldgen/feature` and `worldgen/carver` where earlier versions have

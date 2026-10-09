@@ -57,7 +57,8 @@ class AdminCommandTest {
                     "<green>milestones <white>running <gray>/milestones",
                     "<green>quests <white>running <gray>/quests",
                     "<green>ranks <white>running <gray>/perm",
-                    "<green>rewards <white>running <gray>/treasure"
+                    "<green>rewards <white>running <gray>/treasure",
+                    "<green>seasons <white>running <gray>/wisps"
                 ),
                 commands.run(alex, "nf modules")
             )
@@ -72,7 +73,7 @@ class AdminCommandTest {
             // Completion, like the server's, only offers what they may use.
             alex.permissions += NetherForgeRuntime.PERMISSION
             assertEquals(listOf("spawn"), commands.complete(alex, "nf sp"))
-            assertEquals(listOf("crate", "door", "lamp", "pool", "tower", "wisp"), commands.complete(alex, "nf spawn "))
+            assertEquals(listOf("crate", "crystal", "door", "lamp", "pool", "tower", "wisp"), commands.complete(alex, "nf spawn "))
             assertEquals(listOf("Alex"), commands.complete(alex, "nf spawn tower A"))
         }
     }

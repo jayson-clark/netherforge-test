@@ -29,7 +29,7 @@
   "classes": [
     {
       "name": "nf",
-      "doc": "Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.",
+      "doc": "Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.",
       "methods": false,
       "fields": [
         {
@@ -63,6 +63,11 @@
           "doc": "Centity instances: spawning new ones and finding live ones."
         },
         {
+          "name": "spawning",
+          "type": "nf.spawning",
+          "doc": "Natural spawning (a centity's `spawning` block in `centity.json`): conditions a script decides, which a `spawning` block names with `when`."
+        },
+        {
           "name": "menus",
           "type": "nf.menus",
           "doc": "The project's menus (`menus/<id>/`), and menus scripts make."
@@ -80,7 +85,7 @@
         {
           "name": "blocks",
           "type": "nf.blocks",
-          "doc": "The project's blocks (`blocks/<id>/`): blocks of its own, drawn by its resource pack, with their own hardness, drops and sounds, held in the world as note block states. A player places one with an item whose `block` names it, or a script with `ProjectBlock:place`."
+          "doc": "The project's blocks (`blocks/<id>/`): blocks of its own, drawn by its resource pack, with their own hardness, drops and sounds, held in the world as states of the game's blocks (their carriers: note blocks, tripwire, leaves). A player places one with an item whose `block` names it, or a script with `ProjectBlock:place`."
         },
         {
           "name": "recipes",
@@ -2133,6 +2138,32 @@
       ]
     },
     {
+      "name": "nf.spawning",
+      "doc": "Natural spawning (a centity's `spawning` block in `centity.json`): conditions a script decides, which a `spawning` block names with `when`.",
+      "methods": false,
+      "fields": [],
+      "functions": [
+        {
+          "name": "condition",
+          "doc": "Registers a condition a centity's `spawning.when` can name: the spawner asks `callback` about each place where every other `spawning` rule of that centity fits, and the centity appears there only when it answers `true`. Anything else (`false`, `nil`, an error) is no. It belongs to the script that registered it and goes when that script unloads (a reload, the server stopping), so register it in a module's body. A centity names it bare when it's in the same package as the registering script, `ns:name` from another. A name another live script already registered is an error, and so is one that isn't an id.",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "doc": "What `spawning.when` names: lowercase letters, digits and `_`, like `\"blood_moon\"`."
+            },
+            {
+              "name": "callback",
+              "type": "fun(check: SpawnCheck): boolean",
+              "doc": "Answers whether the centity may appear at `check.location`. Keep it quick: it runs on the main thread, for every place the spawner tries. An error in it is logged with its file and line and counts as `false`."
+            }
+          ],
+          "returns": [],
+          "example": "local raid = false\nnf.spawning.condition(\"raid_night\", function(check)\n  return raid and check.location.world:moon_phase() == \"full_moon\"\nend)\nnf.commands.register(\"raid\", function()\n  raid = not raid\nend)"
+        }
+      ]
+    },
+    {
       "name": "nf.menus",
       "doc": "The project's menus (`menus/<id>/`), and menus scripts make.",
       "methods": false,
@@ -2296,7 +2327,7 @@
     },
     {
       "name": "nf.blocks",
-      "doc": "The project's blocks (`blocks/<id>/`): blocks of its own, drawn by its resource pack, with their own hardness, drops and sounds, held in the world as note block states. A player places one with an item whose `block` names it, or a script with `ProjectBlock:place`.",
+      "doc": "The project's blocks (`blocks/<id>/`): blocks of its own, drawn by its resource pack, with their own hardness, drops and sounds, held in the world as states of the game's blocks (their carriers: note blocks, tripwire, leaves). A player places one with an item whose `block` names it, or a script with `ProjectBlock:place`.",
       "methods": false,
       "fields": [],
       "functions": [
@@ -4564,11 +4595,11 @@
         },
         {
           "name": "display_kind",
-          "doc": "What it draws: `\"block\"`, `\"item\"` or `\"text\"`, or `nil` for a node that draws nothing (a pivot, a hitbox alone) or once its centity is removed.",
+          "doc": "What it draws: `\"block\"`, `\"item\"`, `\"model\"` (a resource pack look) or `\"text\"`, or `nil` for a node that draws nothing (a pivot, a hitbox alone) or once its centity is removed.",
           "params": [],
           "returns": [
             {
-              "type": "\"block\"|\"item\"|\"text\"?"
+              "type": "\"block\"|\"item\"|\"model\"|\"text\"?"
             }
           ]
         },
@@ -4653,6 +4684,34 @@
             }
           ],
           "example": "this:node(\"sword\"):set_display_item({ kind = \"minecraft:diamond_sword\", glint = true })"
+        },
+        {
+          "name": "model",
+          "doc": "The resource pack look a model display shows (`<pack>/<key>`, as the calling script names it), or `nil` when the node isn't a model display.",
+          "params": [],
+          "returns": [
+            {
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "set_model",
+          "doc": "Changes the look a model display shows: another entry of a resource pack's `items`, a model with elements or not. The display entity stays and only its item changes, which costs one small update to each player who sees it, so swapping models every few ticks animates a node frame by frame (a flipbook), alongside the transform tracks. A look the project's resource packs don't have is an error.",
+          "params": [
+            {
+              "name": "model",
+              "type": "string",
+              "doc": "`<pack>/<key>`: an entry of a resource pack's `items` (a package's as `ns:<pack>/<key>`)."
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` when the node isn't a model display."
+            }
+          ],
+          "example": "local frames = { \"mobs/wing_1\", \"mobs/wing_2\", \"mobs/wing_3\", \"mobs/wing_2\" }\nlocal wing = assert(this:node(\"wing\"))\nlocal frame = 1\nnf.every(3, function()\n  frame = frame % #frames + 1\n  wing:set_model(frames[frame])\nend)"
         },
         {
           "name": "display_text_style",
@@ -7716,6 +7775,39 @@
           ]
         },
         {
+          "name": "storage",
+          "doc": "A set of item slots of the project's own that they keep: extra equipment, a backpack, a bank. It's saved in the player's own save data, with their inventory, in the same file and the same write, so a crash or a restart can't duplicate an item between the two or lose one. Shown in a menu by binding slots to it (`slot:bind`), where what players move in and out is saved at once. Dying doesn't drop it. An `Inventory` of kind `\"storage\"`: its item methods work as on any other, and it answers `nil` and `false` while they're offline (it can't be changed then). `nil` when they're offline. A name that isn't an id is an error, and so is a size outside 1 to 256.",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "doc": "Lowercase letters, digits and `_`: the project's own (a package's scripts keep theirs apart, under their namespace). Scripts that use one name share one storage."
+            },
+            {
+              "name": "size",
+              "type": "integer",
+              "doc": "How many slots it has, numbered from 0. Changing it later keeps every item: a slot past the size isn't shown, but its item is kept, and comes back with a bigger size."
+            }
+          ],
+          "returns": [
+            {
+              "type": "Inventory?"
+            }
+          ],
+          "example": "local trinkets = player:storage(\"trinkets\", 4)\nif trinkets and trinkets:has_item({ kind = \"ruby_ring\" }) then\n  player:send_message(\"Your ring glows.\")\nend"
+        },
+        {
+          "name": "hud",
+          "doc": "Their HUD: the resource packs' HUD elements, filled in for them (bars, icons, text). A handle like this one: fine to keep, and it answers `false` or `nil` while they're offline.",
+          "params": [],
+          "returns": [
+            {
+              "type": "Hud"
+            }
+          ],
+          "example": "player:hud():fill_bar(\"ui/mana\", 40, 100)"
+        },
+        {
           "name": "held_item",
           "doc": "What's in their main hand (the selected hotbar slot), or `nil` for nothing or when they're offline.",
           "params": [],
@@ -8038,7 +8130,7 @@
         },
         {
           "name": "open_inventory",
-          "doc": "Shows them a real inventory, as if they'd opened it: a chest's, another player's, their ender chest. Whatever was on their screen closes.",
+          "doc": "Shows them a real inventory, as if they'd opened it: a chest's, another player's, their ender chest. Whatever was on their screen closes. A storage (`player:storage`) is shown in a menu instead, by binding slots to it (`slot:bind`): opening one is `false`.",
           "params": [
             {
               "name": "inventory",
@@ -8961,6 +9053,17 @@
               "type": "integer?"
             }
           ]
+        },
+        {
+          "name": "moon_phase",
+          "doc": "Tonight's moon, or `nil` once the world has gone. It moves on a phase each day: full, waning gibbous, last quarter, waning crescent, new, waxing crescent, first quarter, waxing gibbous, then full again.",
+          "params": [],
+          "returns": [
+            {
+              "type": "\"full_moon\"|\"waning_gibbous\"|\"last_quarter\"|\"waning_crescent\"|\"new_moon\"|\"waxing_crescent\"|\"first_quarter\"|\"waxing_gibbous\"|nil"
+            }
+          ],
+          "example": "if world:moon_phase() == \"full_moon\" then\n  nf.server.broadcast(\"<red>The moon is full tonight.\")\nend"
         },
         {
           "name": "weather",
@@ -10149,7 +10252,7 @@
     },
     {
       "name": "CustomBlock",
-      "doc": "A block of the project's own at a position, which is a `Block` like any other: it reads the world live, so one kept from earlier turns into whatever is there now (`block:custom()` says whether it still is one). The game holds it as a note block state its resource pack draws as the block, so `kind()` and `state()` answer that; `id()` and `project()` say which block it is. `data()` is its own table: it starts empty when the block is placed and is gone when the block is, whatever replaced it. `break_naturally` rolls its loot table; replacing or filling over it with `set_state` or `world:fill_blocks` removes it without drops.",
+      "doc": "A block of the project's own at a position, which is a `Block` like any other: it reads the world live, so one kept from earlier turns into whatever is there now (`block:custom()` says whether it still is one). The game holds it as a state of its carrier (a note block's, tripwire's or a leaves block's) its resource pack draws as the block, so `kind()` and `state()` answer that; `id()` and `project()` say which block it is. `data()` is its own table: it starts empty when the block is placed and is gone when the block is, whatever replaced it. `break_naturally` rolls its loot table; replacing or filling over it with `set_state` or `world:fill_blocks` removes it without drops.",
       "methods": true,
       "extends": "Block",
       "fields": [],
@@ -10192,7 +10295,7 @@
       "events": [
         {
           "name": "place",
-          "doc": "A block of this kind is about to be placed: by a player right-clicking with an item that places it (`event.player`, `event.item`), or by a script (`project_block:place`, neither set). `event:cancel()` stops it. It is heard before the world's own `block_place`, which a player's placing also raises (with the block's note block state as `state`).",
+          "doc": "A block of this kind is about to be placed: by a player right-clicking with an item that places it (`event.player`, `event.item`), or by a script (`project_block:place`, neither set). `event:cancel()` stops it. It is heard before the world's own `block_place`, which a player's placing also raises (with the state of the game block it's held as, its carrier's, as `state`).",
           "payload": "ProjectBlockPlaceEvent",
           "cancellable": true,
           "example": "this:on(\"place\", function(event)\n  if event.player and not event.player:has_permission(\"mine.build\") then\n    event:cancel()\n  end\nend)"
@@ -10245,7 +10348,7 @@
         },
         {
           "name": "place",
-          "doc": "Places one at the block position a location is in, as `world:set_block` would: whatever is there is replaced, and nothing drops. Its `place` handlers are not asked (a script placing a block isn't a player placing one), and it isn't a `block_place` either. If the block has a centity, it's spawned over the block. `nil` when the chunk isn't loaded, or when the game has no note block state left to hold the block in (the project has more blocks than that).",
+          "doc": "Places one at the block position a location is in, as `world:set_block` would: whatever is there is replaced, and nothing drops. Its `place` handlers are not asked (a script placing a block isn't a player placing one), and it isn't a `block_place` either. If the block has a centity, it's spawned over the block. `nil` when the chunk isn't loaded, or when the game has no state of its carrier left to hold the block in (the project has more blocks of that carrier than that).",
           "params": [
             {
               "name": "location",
@@ -10317,7 +10420,7 @@
     },
     {
       "name": "Inventory",
-      "doc": "A real inventory: a player's (`player:inventory()`), their ender chest, a container block's (`block:inventory()`: a chest, a barrel, a hopper, a furnace) or an entity's (a chest boat, a donkey, a villager). Its item methods work like `Menu`'s. The handle is where the inventory is, so it reads live; once that's gone (a chest broken, a player offline, a chunk unloaded) its methods answer `nil`, `false` or nothing. Slots are numbered from 0. A player's: the hotbar 0 to 8, the rest of the main inventory 9 to 35, armour 36 (feet), 37 (legs), 38 (chest) and 39 (head), the offhand 40, then body armour 41 and a saddle 42 (what the game keeps there for any entity). A double chest's inventory is both halves, 0 to 53.",
+      "doc": "A real inventory: a player's (`player:inventory()`), their ender chest, a storage of the project's that they keep (`player:storage(name, size)`), a container block's (`block:inventory()`: a chest, a barrel, a hopper, a furnace) or an entity's (a chest boat, a donkey, a villager). Its item methods work like `Menu`'s. The handle is where the inventory is, so it reads live; once that's gone (a chest broken, a player offline, a chunk unloaded) its methods answer `nil`, `false` or nothing. Slots are numbered from 0. A player's: the hotbar 0 to 8, the rest of the main inventory 9 to 35, armour 36 (feet), 37 (legs), 38 (chest) and 39 (head), the offhand 40, then body armour 41 and a saddle 42 (what the game keeps there for any entity). A double chest's inventory is both halves, 0 to 53.",
       "methods": true,
       "handle": {
         "key": [
@@ -10341,7 +10444,7 @@
         },
         {
           "name": "kind",
-          "doc": "What kind of inventory it is: `\"player\"`, `\"ender_chest\"`, `\"chest\"`, `\"barrel\"`, `\"shulker_box\"`, `\"hopper\"`, `\"dispenser\"`, `\"dropper\"`, `\"furnace\"`, `\"brewing\"`, … `nil` once it's gone.",
+          "doc": "What kind of inventory it is: `\"player\"`, `\"ender_chest\"`, `\"storage\"`, `\"chest\"`, `\"barrel\"`, `\"shulker_box\"`, `\"hopper\"`, `\"dispenser\"`, `\"dropper\"`, `\"furnace\"`, `\"brewing\"`, … `nil` once it's gone.",
           "params": [],
           "returns": [
             {
@@ -10361,7 +10464,7 @@
         },
         {
           "name": "holder",
-          "doc": "Whose it is: the `Player` (for a player's inventory and ender chest), the `Entity`, or the `Block`. `nil` once it's gone.",
+          "doc": "Whose it is: the `Player` (for a player's inventory, ender chest and storage), the `Entity`, or the `Block`. `nil` once it's gone.",
           "params": [],
           "returns": [
             {
@@ -10527,7 +10630,7 @@
         },
         {
           "name": "viewers",
-          "doc": "The players who have it open on their screen now. (A player's own inventory, open in their own inventory screen, doesn't count: the server can't tell.)",
+          "doc": "The players who have it open on their screen now: for a storage, those looking at a window with a slot bound to it. (A player's own inventory, open in their own inventory screen, doesn't count: the server can't tell.)",
           "params": [],
           "returns": [
             {
@@ -11855,6 +11958,51 @@
             {
               "type": "boolean",
               "doc": "`false` once the window is gone."
+            }
+          ]
+        },
+        {
+          "name": "bind",
+          "doc": "Makes this slot a view of a slot of a player's `storage`: it shows what's there, and whatever goes in or out of it, by a click, a drag, a shift-click or a script's `set_item` on either, is saved in the storage at once, as the game moves it. So the item is only ever in one place, whatever happens next: the window closing, the player leaving or dying, the server stopping or the project reloading. In a locked window players can still put items in and take them out of a bound slot by hand (shift-clicking from their own inventory and double-click gathering stay locked); its `click` handlers can still refuse what doesn't belong (`event:cancel()`). Binding a slot again moves it to the new place. Only a window of a menu that isn't `shared` can be bound, and only to a storage (`player:storage`): another inventory, or a slot outside the storage, is an error.",
+          "params": [
+            {
+              "name": "storage",
+              "type": "Inventory",
+              "doc": "From `player:storage(name, size)`."
+            },
+            {
+              "name": "index",
+              "type": "integer",
+              "doc": "Which of its slots, from 0. Default the same number as this slot.",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` once the window is gone, or the storage's player is offline."
+            }
+          ],
+          "example": "local trinkets = event.player:storage(\"trinkets\", 4)\nfor i = 0, 3 do\n  this:slot(10 + i):bind(trinkets, i)\nend"
+        },
+        {
+          "name": "unbind",
+          "doc": "Stops showing a storage's slot here. The slot is emptied, since what it showed is still in the storage. Its player leaving unbinds every slot bound to their storage.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` when it wasn't bound, or the window is gone."
+            }
+          ]
+        },
+        {
+          "name": "binding",
+          "doc": "Which storage slot this slot shows, or `nil` when it shows none.",
+          "params": [],
+          "returns": [
+            {
+              "type": "SlotBinding?"
             }
           ]
         },
@@ -13378,6 +13526,177 @@
             }
           ],
           "example": "local kind = rng:weighted({ [\"minecraft:diamond\"] = 1, [\"minecraft:iron_ingot\"] = 9 })"
+        }
+      ]
+    },
+    {
+      "name": "Hud",
+      "doc": "One player's HUD: the elements of the project's resource packs (`hud` in `pack.json`: bars, rows of icons, lines of text, each at its place on the screen), shown with what a script sets here. An element nobody set isn't drawn. It's drawn in their action bar, sent again whenever something changes and every second, so `player:send_actionbar` shows its line alongside it while the HUD is up (on its own for a moment, when the server can't measure it). What it shows is the server's to remember, not saved: set it again when they join. A name that isn't one of the packs' elements, or is another kind of element, is an error.",
+      "methods": true,
+      "handle": {
+        "key": [
+          {
+            "name": "player",
+            "type": "string"
+          }
+        ]
+      },
+      "fields": [],
+      "functions": [
+        {
+          "name": "player",
+          "doc": "Whose HUD it is.",
+          "params": [],
+          "returns": [
+            {
+              "type": "Player"
+            }
+          ]
+        },
+        {
+          "name": "fill_bar",
+          "doc": "Fills a bar: `value` out of `max`, shown as that much of its segments (to the nearest half segment, for a bar with a half picture). A `value` past `max` or below 0 is shown full or empty; a `max` of 0 or less is an error.",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "doc": "The bar, as `<pack>/<key>`: a key of a resource pack's `hud.bars` (a package's as `ns:<pack>/<key>`)."
+            },
+            {
+              "name": "value",
+              "type": "number",
+              "doc": ""
+            },
+            {
+              "name": "max",
+              "type": "number",
+              "doc": ""
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` when they're offline."
+            }
+          ],
+          "example": "local hud = player:hud()\nhud:fill_bar(\"ui/health\", player:health() or 0, player:max_health() or 20)\nhud:fill_bar(\"ui/mana\", 40, 100)"
+        },
+        {
+          "name": "bar",
+          "doc": "What a bar shows, or `nil` when nothing set it (or they're offline).",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "doc": "The bar, as `<pack>/<key>`: a key of a resource pack's `hud.bars` (a package's as `ns:<pack>/<key>`)."
+            }
+          ],
+          "returns": [
+            {
+              "type": "HudBar?"
+            }
+          ]
+        },
+        {
+          "name": "set_icons",
+          "doc": "Shows these of a row's icons, in this order: status effects, buffs, keys held. An empty list shows none. An icon the row doesn't have is an error.",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "doc": "The row of icons, as `<pack>/<key>`: a key of a resource pack's `hud.icons` (a package's as `ns:<pack>/<key>`)."
+            },
+            {
+              "name": "icons",
+              "type": "string[]",
+              "doc": "Keys of the row's `icons`."
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` when they're offline."
+            }
+          ],
+          "example": "player:hud():set_icons(\"ui/effects\", { \"poison\", \"regeneration\" })"
+        },
+        {
+          "name": "icons",
+          "doc": "The icons a row shows, in order, or `nil` when nothing set it (or they're offline).",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "doc": "The row of icons, as `<pack>/<key>`: a key of a resource pack's `hud.icons` (a package's as `ns:<pack>/<key>`)."
+            }
+          ],
+          "returns": [
+            {
+              "type": "string[]?"
+            }
+          ]
+        },
+        {
+          "name": "set_text",
+          "doc": "Sets a line of text, on the action bar's own line where the line's `x` and `align` put it. The server measures it with the game's font (`fonts/default.json`) to put it there; one it can't measure isn't drawn.",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "doc": "The line of text, as `<pack>/<key>`: a key of a resource pack's `hud.texts` (a package's as `ns:<pack>/<key>`)."
+            },
+            {
+              "name": "text",
+              "type": "Text",
+              "doc": "MiniMessage; glyphs are fine."
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` when they're offline."
+            }
+          ],
+          "example": "local mana = 40\nplayer:hud():set_text(\"ui/mana_label\", \"<aqua>\" .. mana .. \"/100\")"
+        },
+        {
+          "name": "text",
+          "doc": "A line's text, or `nil` when nothing set it (or they're offline).",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "doc": "The line of text, as `<pack>/<key>`: a key of a resource pack's `hud.texts` (a package's as `ns:<pack>/<key>`)."
+            }
+          ],
+          "returns": [
+            {
+              "type": "Text?"
+            }
+          ]
+        },
+        {
+          "name": "remove",
+          "doc": "Stops drawing one element (any kind), until something sets it again.",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "doc": "A HUD element, `<pack>/<key>`."
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` when they're offline, or nothing was drawn for it."
+            }
+          ]
+        },
+        {
+          "name": "clear",
+          "doc": "Stops drawing every element: their action bar is the game's again.",
+          "params": [],
+          "returns": []
         }
       ]
     }
@@ -16564,6 +16883,24 @@
       ]
     },
     {
+      "name": "SlotBinding",
+      "doc": "Which slot of a storage a menu slot shows: `slot:binding()`.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "storage",
+          "type": "Inventory",
+          "doc": "The storage (`player:storage`)."
+        },
+        {
+          "name": "index",
+          "type": "integer",
+          "doc": "Its slot, from 0."
+        }
+      ]
+    },
+    {
       "name": "Item",
       "doc": "An item stack as a plain table: what `menu:item` returns and what `menu:set_item` takes. Only `kind` is required, or `item` instead. Read one, change a field and write it back, and nothing else about it changes: whatever the stack carries that these fields can't say (a book's pages, another plugin's data) rides along in `raw`, which you never write yourself. A field that isn't one of these is an error.",
       "methods": false,
@@ -16662,12 +16999,12 @@
         {
           "name": "can_break",
           "type": "string[]?",
-          "doc": "Block kinds a player in adventure mode can break with it: `{ \"minecraft:stone\" }`."
+          "doc": "The blocks a player in adventure mode can break with it: the project's by id (`\"ruby_ore\"`, a package's `\"acme:gem_ore\"`), the game's with their namespace (`\"minecraft:stone\"`), `#tags` of blocks (`\"#minecraft:logs\"`, or one a project datapack defines), or `\"*\"` for any block: `{ \"ruby_ore\", \"#minecraft:logs\" }`. A project block it names that the project doesn't have is an error."
         },
         {
           "name": "can_place_on",
           "type": "string[]?",
-          "doc": "Block kinds a player in adventure mode can place it on."
+          "doc": "The blocks a player in adventure mode can place it on, written as `can_break`'s: `{ \"*\" }` is anywhere."
         },
         {
           "name": "food",
@@ -17103,12 +17440,12 @@
         {
           "name": "can_break",
           "type": "string[]?",
-          "doc": "Block kinds a player in adventure mode can break with it: `{ \"minecraft:stone\" }`."
+          "doc": "The blocks a player in adventure mode can break with it: the project's by id (`\"ruby_ore\"`, a package's `\"acme:gem_ore\"`), the game's with their namespace (`\"minecraft:stone\"`), `#tags` of blocks (`\"#minecraft:logs\"`, or one a project datapack defines), or `\"*\"` for any block: `{ \"ruby_ore\", \"#minecraft:logs\" }`. A project block it names that the project doesn't have is an error."
         },
         {
           "name": "can_place_on",
           "type": "string[]?",
-          "doc": "Block kinds a player in adventure mode can place it on."
+          "doc": "The blocks a player in adventure mode can place it on, written as `can_break`'s: `{ \"*\" }` is anywhere."
         },
         {
           "name": "food",
@@ -17735,6 +18072,47 @@
           "name": "seed",
           "type": "integer?",
           "doc": "Rolls with this seed give the same items every time, on the server and in the editor. Default a new one each roll."
+        }
+      ]
+    },
+    {
+      "name": "HudBar",
+      "doc": "What a HUD bar shows: `hud:bar(name)`.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "value",
+          "type": "number",
+          "doc": "How much of it is full, as set."
+        },
+        {
+          "name": "max",
+          "type": "number",
+          "doc": "Out of how much."
+        }
+      ]
+    },
+    {
+      "name": "SpawnCheck",
+      "doc": "What a spawn condition (`nf.spawning.condition`) is asked about: one centity at one place.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "centity",
+          "type": "string",
+          "doc": "Which centity, as the project names it: its folder name under `centities/` (`wisp`), or `acme:wisp` for one a package brings."
+        },
+        {
+          "name": "location",
+          "type": "Location",
+          "doc": "Where it would stand: the block its feet would be in."
+        },
+        {
+          "name": "player",
+          "type": "Player",
+          "doc": "The player it would appear near."
         }
       ]
     },

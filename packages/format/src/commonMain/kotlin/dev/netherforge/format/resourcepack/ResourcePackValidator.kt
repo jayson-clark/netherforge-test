@@ -9,14 +9,29 @@ object ResourcePackValidator {
 
     /**
      * [textures] is the set of files under this pack's `textures/` folder,
-     * [sounds] its usable sound files under `sounds/` ([PackSounds.files]).
+     * [sounds] its usable sound files under `sounds/` ([PackSounds.files]),
+     * [models] the files under `models/`. What's in a model file is checked
+     * in the file itself ([PackModels.validate]).
      */
-    fun validate(file: ResourcePackFile, sink: ProblemSink, textures: Set<String>?, sounds: Set<String>? = null) {
+    fun validate(
+        file: ResourcePackFile,
+        sink: ProblemSink,
+        textures: Set<String>?,
+        sounds: Set<String>? = null,
+        models: Set<String>? = null
+    ) {
         fun texture(path: String, at: String) {
             if (!ResourcePackFile.isTexturePath(path)) {
                 sink.report(ProblemCodes.RESOURCE_PACK_TEXTURE_PATH, "\"$path\" must be ${ResourcePackFile.TEXTURE_PATH_RULE}", at)
             } else if (textures != null && path !in textures) {
                 sink.report(ProblemCodes.RESOURCE_PACK_TEXTURE_MISSING, "textures/$path doesn't exist", at)
+            }
+        }
+        fun model(path: String, at: String) {
+            if (!PackModels.isModelPath(path)) {
+                sink.report(ProblemCodes.RESOURCE_PACK_MODEL_FILE, "\"$path\" must be ${PackModels.MODEL_PATH_RULE}", at)
+            } else if (models != null && path !in models) {
+                sink.report(ProblemCodes.RESOURCE_PACK_MODEL_FILE, "${PackModels.FOLDER}/$path doesn't exist", at)
             }
         }
         fun key(key: String, at: String) {
@@ -58,15 +73,21 @@ object ResourcePackValidator {
             key(key, at)
             item.texture?.let { texture(it, "$at.texture") }
             item.guiTexture?.let { texture(it, "$at.guiTexture") }
+            item.model?.let { model(it, "$at.model") }
+            val looks = listOfNotNull(item.texture?.let { "texture" }, item.block?.let { "block" }, item.model?.let { "model" })
             when {
-                item.texture == null && item.block == null ->
-                    sink.report(ProblemCodes.RESOURCE_PACK_ITEM_LOOK, "Give this item a texture, or a block it's drawn as", at)
-                item.texture != null && item.block != null ->
-                    sink.report(ProblemCodes.RESOURCE_PACK_ITEM_LOOK, "An item is drawn as a texture or as a block, not both", "$at.block")
-                item.block != null && item.parent != null ->
+                looks.isEmpty() ->
+                    sink.report(ProblemCodes.RESOURCE_PACK_ITEM_LOOK, "Give this item a texture, a block it's drawn as, or a model", at)
+                looks.size > 1 ->
                     sink.report(
                         ProblemCodes.RESOURCE_PACK_ITEM_LOOK,
-                        "An item drawn as a block is held as a block: drop `parent`",
+                        "An item is drawn as one of a texture, a block and a model: it has ${looks.joinToString(" and ")}",
+                        "$at.${looks.last()}"
+                    )
+                item.parent != null && item.texture == null ->
+                    sink.report(
+                        ProblemCodes.RESOURCE_PACK_ITEM_LOOK,
+                        "Only a texture is held as `parent` says: a block or model is held as it is, so drop `parent`",
                         "$at.parent"
                     )
             }
@@ -119,7 +140,16 @@ object ResourcePackValidator {
             )) {
                 path?.let { texture(it, "$at.$field") }
             }
-            if (block.faces() == null) {
+            if (block.model != null) {
+                model(block.model, "$at.model")
+                if (block.textures().isNotEmpty()) {
+                    sink.report(
+                        ProblemCodes.RESOURCE_PACK_BLOCK_FACES,
+                        "A block look is a model or textures, not both: the model's own textures are what it's drawn with",
+                        "$at.model"
+                    )
+                }
+            } else if (block.faces() == null) {
                 val missing = BlockModelDef.FACES.filter { block.faceTexture(it) == null }
                 sink.report(
                     ProblemCodes.RESOURCE_PACK_BLOCK_FACES,
@@ -128,6 +158,60 @@ object ResourcePackValidator {
                     at
                 )
             }
+        }
+        file.hud?.let { hud ->
+            val seen = HashSet<String>()
+            fun element(map: String, key: String): String {
+                val at = CanonicalJson.childPath("$.hud.$map", key)
+                key(key, at)
+                if (!seen.add(key)) {
+                    sink.report(
+                        ProblemCodes.RESOURCE_PACK_HUD,
+                        "\"$key\" names another of this pack's HUD elements too: scripts name them by key",
+                        at
+                    )
+                }
+                return at
+            }
+            fun place(x: Int, y: Int?, at: String) {
+                if (x !in -HudDef.MAX_X..HudDef.MAX_X) {
+                    sink.report(
+                        ProblemCodes.RESOURCE_PACK_HUD,
+                        "x is from -${HudDef.MAX_X} to ${HudDef.MAX_X} pixels from the middle of the screen",
+                        "$at.x"
+                    )
+                }
+                if (y != null && y !in 0..HudDef.MAX_Y) {
+                    sink.report(
+                        ProblemCodes.RESOURCE_PACK_HUD,
+                        "y is from 0 (the bottom of the screen) to ${HudDef.MAX_Y}: the action bar can't draw higher",
+                        "$at.y"
+                    )
+                }
+            }
+            for ((key, bar) in hud.bars) {
+                val at = element("bars", key)
+                texture(bar.full, "$at.full")
+                texture(bar.empty, "$at.empty")
+                bar.half?.let { texture(it, "$at.half") }
+                place(bar.x, bar.y, at)
+                if (bar.segments !in 1..HudDef.MAX_SEGMENTS) {
+                    sink.report(ProblemCodes.RESOURCE_PACK_HUD, "A bar has 1 to ${HudDef.MAX_SEGMENTS} segments", "$at.segments")
+                }
+                if ((bar.gap ?: 0) < 0) sink.report(ProblemCodes.RESOURCE_PACK_HUD, "gap can't be negative", "$at.gap")
+            }
+            for ((key, row) in hud.icons) {
+                val at = element("icons", key)
+                place(row.x, row.y, at)
+                if (row.icons.isEmpty()) sink.report(ProblemCodes.RESOURCE_PACK_HUD, "A row of icons needs an icon to show", "$at.icons")
+                for ((icon, texture) in row.icons) {
+                    val path = CanonicalJson.childPath("$at.icons", icon)
+                    key(icon, path)
+                    texture(texture, path)
+                }
+                if ((row.gap ?: 0) < 0) sink.report(ProblemCodes.RESOURCE_PACK_HUD, "gap can't be negative", "$at.gap")
+            }
+            for ((key, text) in hud.texts) place(text.x, null, element("texts", key))
         }
         for ((key, sound) in file.sounds) {
             val at = CanonicalJson.childPath("$.sounds", key)

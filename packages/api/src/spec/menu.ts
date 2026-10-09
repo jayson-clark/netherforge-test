@@ -388,6 +388,39 @@ export const slotClass: LuaClass = {
       ],
       returns: [{ type: 'boolean', doc: '`false` once the window is gone.' }],
     },
+    {
+      name: 'bind',
+      doc: "Makes this slot a view of a slot of a player's `storage`: it shows what's there, and whatever goes in or out of it, by a click, a drag, a shift-click or a script's `set_item` on either, is saved in the storage at once, as the game moves it. So the item is only ever in one place, whatever happens next: the window closing, the player leaving or dying, the server stopping or the project reloading. In a locked window players can still put items in and take them out of a bound slot by hand (shift-clicking from their own inventory and double-click gathering stay locked); its `click` handlers can still refuse what doesn't belong (`event:cancel()`). Binding a slot again moves it to the new place. Only a window of a menu that isn't `shared` can be bound, and only to a storage (`player:storage`): another inventory, or a slot outside the storage, is an error.",
+      params: [
+        { name: 'storage', type: 'Inventory', doc: 'From `player:storage(name, size)`.' },
+        {
+          name: 'index',
+          type: 'integer',
+          doc: 'Which of its slots, from 0. Default the same number as this slot.',
+          optional: true,
+        },
+      ],
+      returns: [
+        {
+          type: 'boolean',
+          doc: "`false` once the window is gone, or the storage's player is offline.",
+        },
+      ],
+      example:
+        'local trinkets = event.player:storage("trinkets", 4)\nfor i = 0, 3 do\n  this:slot(10 + i):bind(trinkets, i)\nend',
+    },
+    {
+      name: 'unbind',
+      doc: "Stops showing a storage's slot here. The slot is emptied, since what it showed is still in the storage. Its player leaving unbinds every slot bound to their storage.",
+      params: [],
+      returns: [{ type: 'boolean', doc: "`false` when it wasn't bound, or the window is gone." }],
+    },
+    {
+      name: 'binding',
+      doc: 'Which storage slot this slot shows, or `nil` when it shows none.',
+      params: [],
+      returns: [{ type: 'SlotBinding?' }],
+    },
     ...eventFunctions(
       'Slot',
       'slot',
@@ -532,6 +565,10 @@ export const buttonClass: LuaClass = {
 
 /** The plain tables menus and dialogs hand out and take. */
 export const menuShapes: LuaClass[] = [
+  shape('SlotBinding', 'Which slot of a storage a menu slot shows: `slot:binding()`.', [
+    { name: 'storage', type: 'Inventory', doc: 'The storage (`player:storage`).' },
+    { name: 'index', type: 'integer', doc: 'Its slot, from 0.' },
+  ]),
   shape(
     'Item',
     "An item stack as a plain table: what `menu:item` returns and what `menu:set_item` takes. Only `kind` is required, or `item` instead. Read one, change a field and write it back, and nothing else about it changes: whatever the stack carries that these fields can't say (a book's pages, another plugin's data) rides along in `raw`, which you never write yourself. A field that isn't one of these is an error.",
@@ -601,12 +638,12 @@ export const menuShapes: LuaClass[] = [
       {
         name: 'can_break',
         type: 'string[]?',
-        doc: 'Block kinds a player in adventure mode can break with it: `{ "minecraft:stone" }`.',
+        doc: 'The blocks a player in adventure mode can break with it: the project\'s by id (`"ruby_ore"`, a package\'s `"acme:gem_ore"`), the game\'s with their namespace (`"minecraft:stone"`), `#tags` of blocks (`"#minecraft:logs"`, or one a project datapack defines), or `"*"` for any block: `{ "ruby_ore", "#minecraft:logs" }`. A project block it names that the project doesn\'t have is an error.',
       },
       {
         name: 'can_place_on',
         type: 'string[]?',
-        doc: 'Block kinds a player in adventure mode can place it on.',
+        doc: 'The blocks a player in adventure mode can place it on, written as `can_break`\'s: `{ "*" }` is anywhere.',
       },
       {
         name: 'food',

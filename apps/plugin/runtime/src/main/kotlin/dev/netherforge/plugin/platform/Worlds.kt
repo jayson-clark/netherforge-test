@@ -1,6 +1,7 @@
 package dev.netherforge.plugin.platform
 
 import dev.netherforge.format.Vec3
+import dev.netherforge.format.block.BlockCarrier
 import dev.netherforge.format.particle.SpawnData
 import java.util.UUID
 
@@ -84,7 +85,10 @@ interface BlockOps {
      */
     fun breakSpeed(tool: ItemData?, state: String): Double?
 
-    /** Whether a block of [state] fits at the position: nothing standing there that a block can't be put into, as for a player placing one. */
+    /**
+     * Whether a block of [state] fits at the position: nothing standing there that a block can't be put into, as for
+     * a player placing one. A block with nothing to collide with (tripwire) goes where anything stands, as string does.
+     */
     fun canPlace(world: String, x: Int, y: Int, z: Int, state: String): Boolean
 
     /**
@@ -97,16 +101,16 @@ interface BlockOps {
     fun place(player: UUID, world: String, x: Int, y: Int, z: Int, state: String, against: BlockVector, hand: String): Boolean
 
     /**
-     * Stops the server working note blocks out for itself (Paper's
-     * `disable-noteblock-updates`): their instrument from what's above and
-     * below, `powered` from redstone, their tuning and sounding. Custom
-     * blocks are note block states the server must leave alone; the adapter
-     * does the vanilla note blocks' part itself from then on, in the default
-     * instrument's column. Idempotent, and it stays in force while the
-     * plugin is enabled. False when this server can't (then nothing holds
-     * custom blocks).
+     * Stops the server working out the states of [carrier]'s blocks for itself, so custom blocks held in them stay
+     * in the state they were set to. Note blocks (Paper's `disable-noteblock-updates`): no instrument from what's
+     * above and below, `powered` from redstone, tuning or sounding; the adapter does the vanilla note blocks' part
+     * itself from then on, in the default instrument's column. Tripwire (`disable-tripwire-updates`): string goes
+     * down in its default state and nothing attaches, powers or disarms it. Leaves: a persistent leaves block's
+     * distance isn't worked out again, and a player's leaves go down at the farthest distance; natural leaves still
+     * decay. Idempotent, and it stays in force while the plugin is enabled. False when this server can't (then
+     * nothing holds custom blocks in that carrier).
      */
-    fun freezeNoteBlocks(): Boolean
+    fun freeze(carrier: BlockCarrier): Boolean
 }
 
 /** A custom block the server remembers at a position: [json] is what the runtime stored with [BlockOps.setRecord]. */

@@ -333,6 +333,49 @@ A template lasts as long as the script that made it: when that script
 unloads, or you call `template:remove()`, its windows close and its handlers
 go. See the [MenuTemplate reference](../reference/menutemplate.md).
 
+## Items a player keeps
+
+A menu's window holds its items only while it's open. For items a player keeps
+(extra equipment slots, a backpack, a bank), give them a **storage** and show
+it in a menu:
+
+```lua
+-- menus/trinkets/menu.json: { "rows": 3, "locked": true, "script": { "file": "script.lua" } }
+this:on("open", function(event)
+  local trinkets = event.player:storage("trinkets", 4)
+  for i = 0, 3 do
+    this:slot(11 + i):bind(trinkets, i)
+  end
+end)
+```
+
+`player:storage(name, size)` is an `Inventory` (kind `"storage"`) saved in the
+player's own save data, beside their inventory: the server writes both in the
+same file at the same moment. `slot:bind(storage, index)` makes a window's
+slot a view of one of its slots. Whatever goes in or out of a bound slot, by a
+click, a drag, a shift-click or a script, is written to the storage as the game
+moves it. So an item is in the storage or out of it, never in the window alone,
+and nothing is duplicated or lost by closing the window, leaving, dying, a
+reload or the server crashing.
+
+- In a locked window, players can still use a bound slot by hand.
+  Shift-clicking into the window and double-click gathering stay locked, since
+  they reach the window's other slots. To accept only some items, cancel the
+  slot's `click` (`event.cursor_item` is what they're putting in).
+- Only a window of its own can be bound, not a `shared` one.
+- Scripts read and change a storage like any inventory: `item`, `set_item`,
+  `add_item`, `remove_item`, `has_item`. A slot showing it updates at once.
+- Changing the size keeps every item: slots past the size are hidden, not
+  emptied.
+- A storage can only be read or changed while its player is online.
+- `player:data()` lives in NetherForge's own database, saved apart from the
+  inventory. Keep items in a storage, not in `data()`, or a crash between the
+  two saves can duplicate them.
+
+A window shown to two players (`menu:open_for`) can move one player's items
+into another's inventory, and two players' files are saved separately: keep
+bound windows for their own player.
+
 ## Measuring text
 
 `nf.text.width(text)` says how many pixels wide a line of MiniMessage text

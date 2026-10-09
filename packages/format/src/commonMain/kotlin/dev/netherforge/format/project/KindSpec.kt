@@ -3,6 +3,7 @@ package dev.netherforge.format.project
 import dev.netherforge.format.Problem
 import dev.netherforge.format.ProblemCode
 import dev.netherforge.format.ProblemSink
+import dev.netherforge.format.block.VanillaFile
 import dev.netherforge.format.datapack.DatapackCollection
 import dev.netherforge.format.datapack.DatapackFiles
 import dev.netherforge.format.game.FeatureTable
@@ -308,6 +309,9 @@ class KindContext internal constructor(
     /** `fonts/default.json`, when it's there and reads. */
     val defaultFont: DefaultFontFile? get() = project.defaultFont
 
+    /** `client/vanilla.json`, when it's there and reads. */
+    val vanilla: VanillaFile? get() = project.vanilla
+
     /** Whether [image] reads pixels at all (see [ProjectSource.readsImages]). */
     val readsImages: Boolean get() = project.source.readsImages
 
@@ -342,7 +346,8 @@ internal class ProjectIndex(
     private val read: Map<String, Map<String, Any?>>,
     val references: ReferenceIndex,
     /** The files in each resource's folder, by kind and id, relative to it. */
-    private val files: Map<String, Map<String, Set<String>>> = emptyMap()
+    private val files: Map<String, Map<String, Set<String>>> = emptyMap(),
+    val vanilla: VanillaFile? = null
 ) {
     private val images = HashMap<String, ImageInfo?>()
 

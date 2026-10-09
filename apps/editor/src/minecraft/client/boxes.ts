@@ -49,9 +49,18 @@ function corners(from: V3, to: V3): V3[] {
 function elementCorners(element: RawElement): V3[] {
   const points = corners(element.from, element.to)
   const rotation = element.rotation
-  if (!rotation || !rotation.angle) return points
-  const radians = deg(rotation.angle)
+  if (!rotation) return points
   const origin = rotation.origin
+  // Angles about each axis (26.x's form): the X·Y·Z rotation the renderer draws (geometry.ts), so a point turns about z first.
+  if (!rotation.axis) {
+    const turns = (['z', 'y', 'x'] as const).filter((axis) => rotation[axis])
+    return points.map((point) =>
+      turns.reduce((p, axis) => rotate(p, axis, deg(rotation[axis]!), origin), point),
+    )
+  }
+  if (!rotation.angle) return points
+  const axis = rotation.axis
+  const radians = deg(rotation.angle)
   return points.map((point) => {
     let p = point
     if (rotation.rescale) {
@@ -59,12 +68,12 @@ function elementCorners(element: RawElement): V3[] {
       // element still spans the block (rails, stairs edges).
       const factor = 1 / Math.cos(radians)
       p = [
-        rotation.axis === 'x' ? p[0] : origin[0] + (p[0] - origin[0]) * factor,
-        rotation.axis === 'y' ? p[1] : origin[1] + (p[1] - origin[1]) * factor,
-        rotation.axis === 'z' ? p[2] : origin[2] + (p[2] - origin[2]) * factor,
+        axis === 'x' ? p[0] : origin[0] + (p[0] - origin[0]) * factor,
+        axis === 'y' ? p[1] : origin[1] + (p[1] - origin[1]) * factor,
+        axis === 'z' ? p[2] : origin[2] + (p[2] - origin[2]) * factor,
       ]
     }
-    return rotate(p, rotation.axis, radians, origin)
+    return rotate(p, axis, radians, origin)
   })
 }
 

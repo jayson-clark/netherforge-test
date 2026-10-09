@@ -66,8 +66,8 @@ interface RuntimeService {
     /** Entities are about to unload with their chunk, while they can still be written. */
     fun entitiesUnloading(entities: Set<UUID>) {}
 
-    /** A chunk came into memory (loaded, or generated for the first time), with its blocks readable. */
-    fun chunkLoaded(world: String, chunkX: Int, chunkZ: Int) {}
+    /** A chunk came into memory (loaded, or [generated] for the first time), with its blocks readable. */
+    fun chunkLoaded(world: String, chunkX: Int, chunkZ: Int, generated: Boolean) {}
 
     /**
      * The server events this service needs the adapter to deliver even when no

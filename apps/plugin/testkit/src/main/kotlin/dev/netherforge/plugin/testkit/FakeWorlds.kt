@@ -1,6 +1,7 @@
 package dev.netherforge.plugin.testkit
 
 import dev.netherforge.format.Vec3
+import dev.netherforge.format.block.BlockCarrier
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.Box
 import dev.netherforge.format.game.RegistryKey
@@ -88,6 +89,9 @@ class FakeWorlds(private val platform: FakePlatform) : WorldOps {
     val weathers = mutableMapOf<String, Pair<String, Int?>>()
 
     override fun weather(world: String) = if (exists(world)) weathers[world]?.first ?: "clear" else null
+
+    /** A phase a day, from the day count, as the game turns the moon. */
+    override fun moonPhase(world: String) = fullTime(world)?.let { Math.floorMod(it / DAY_TICKS, MOON_PHASES).toInt() }
 
     override fun setWeather(world: String, weather: String, ticks: Int?): Boolean {
         if (!exists(world)) return false
@@ -390,6 +394,8 @@ class FakeBlocks(private val platform: FakePlatform) : BlockOps {
 
     override fun canPlace(world: String, x: Int, y: Int, z: Int, state: String): Boolean {
         if (!loaded(world, x, z) || BlockAt(world, x, y, z) in occupied) return false
+        // Tripwire is the block in the fake game nothing collides with: it goes where anything stands.
+        if (state.startsWith("minecraft:tripwire")) return true
         // A player's feet and head take two blocks, as their body does.
         return platform.players.byId.values.none { player ->
             val at = player.location
@@ -431,13 +437,19 @@ class FakeBlocks(private val platform: FakePlatform) : BlockOps {
         return true
     }
 
-    /** Whether the runtime asked the server to stop working note blocks out, and whether the server agrees to. */
-    var frozen = false
+    /** The carriers the runtime asked the server to hold still, and whether the server agrees to. */
+    val frozenCarriers = mutableSetOf<BlockCarrier>()
     var refuseFreeze = false
 
-    override fun freezeNoteBlocks(): Boolean {
+    /** Whether note blocks are held still. */
+    val frozen: Boolean get() = BlockCarrier.NOTE_BLOCK in frozenCarriers
+
+    override fun freeze(carrier: BlockCarrier): Boolean {
         if (refuseFreeze) return false
-        frozen = true
+        frozenCarriers += carrier
         return true
     }
 }
+
+private const val DAY_TICKS = 24_000L
+private const val MOON_PHASES = 8L

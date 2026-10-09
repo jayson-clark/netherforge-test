@@ -28,6 +28,8 @@
       "max": 3
     },
     "cap": 6,
-    "despawnDistance": 80
+    "despawnDistance": 80,
+    "time": "night",
+    "when": "wisp_season"
   }
 }

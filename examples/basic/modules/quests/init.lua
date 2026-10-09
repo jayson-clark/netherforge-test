@@ -1,13 +1,33 @@
 -- Quests: the project's own advancements (advancements/*.json), a tree under
 -- the "Adventurer" tab. Joining completes its root; each /treasure roll meets
--- one more of treasure_hunter's three criteria; /quests says how far you are.
+-- one more of treasure_hunter's three criteria; /quests says how far you are,
+-- and so does the HUD: the ui pack's `hud` has a bar of three segments and a
+-- line of text above it, which show each player's hunt.
 
 -- The criteria treasure_hunter's file names, in the order rolls meet them.
 local TREASURE_STEPS = { "first", "second", "third" }
 
+-- What the HUD shows is the server's to remember, not saved: it's set again on joining.
+local function show_hunt(player)
+  local progress = player:advancement_progress("treasure_hunter")
+  if not progress then
+    return
+  end
+  local done, all = #progress.done, #progress.done + #progress.remaining
+  local hud = player:hud()
+  if done == all then
+    hud:remove("ui/treasure")
+    hud:remove("ui/treasure_label")
+  else
+    hud:fill_bar("ui/treasure", done, all)
+    hud:set_text("ui/treasure_label", "<yellow>Treasure")
+  end
+end
+
 nf.on("player_join", function(event)
   -- A bare id is one of the project's advancements: basic:adventurer on the server.
   event.player:grant_advancement("adventurer")
+  show_hunt(event.player)
 end)
 
 nf.on("player_complete_advancement", function(event)
@@ -34,6 +54,7 @@ nf.on("rewards:rolled", function(event)
     end
     if not met then
       player:grant_advancement("treasure_hunter", step)
+      show_hunt(player)
       return
     end
   end

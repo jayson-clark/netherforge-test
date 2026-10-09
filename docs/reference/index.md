@@ -16,10 +16,11 @@ Everything a NetherForge script can call. Scripts run Lua 5.4 in a sandbox, on t
 - [nf.worlds](nf.worlds.md): The server's worlds: finding them, and making, loading and copying them
 - [nf.structures](nf.structures.md): Structures: saved boxes of blocks that `world:place_structure` places
 - [nf.centities](nf.centities.md): Centity instances: spawning new ones and finding live ones
+- [nf.spawning](nf.spawning.md): Natural spawning (a centity's `spawning` block in `centity.json`): conditions a script decides, which a `spawning` block names with `when`
 - [nf.menus](nf.menus.md): The project's menus (`menus/<id>/`), and menus scripts make
 - [nf.dialogs](nf.dialogs.md): The project's dialogs (`dialogs/<id>/`), and dialogs scripts make
 - [nf.items](nf.items.md): The project's items (`items/<id>/`): item kinds of its own, whose stacks the server can always tell apart from any other stack of the same Minecraft kind
-- [nf.blocks](nf.blocks.md): The project's blocks (`blocks/<id>/`): blocks of its own, drawn by its resource pack, with their own hardness, drops and sounds, held in the world as note block states
+- [nf.blocks](nf.blocks.md): The project's blocks (`blocks/<id>/`): blocks of its own, drawn by its resource pack, with their own hardness, drops and sounds, held in the world as states of the game's blocks (their carriers: note blocks, tripwire, leaves)
 - [nf.recipes](nf.recipes.md): The project's recipes: those in `recipes/<id>.json`, and those scripts register
 - [nf.loot](nf.loot.md): Loot tables: the project's own (`loot/<id>.json`) and the game's
 - [nf.bossbars](nf.bossbars.md): Boss bars: bars across the top of players' screens
@@ -50,7 +51,7 @@ Everything a NetherForge script can call. Scripts run Lua 5.4 in a sandbox, on t
 - [Block](block.md): One block position in one world
 - [CustomBlock](customblock.md): A block of the project's own at a position, which is a `Block` like any other: it reads the world live, so one kept from earlier turns into whatever is there now (`block:custom()` says whether it still is one)
 - [ProjectBlock](projectblock.md): A project block from `blocks/<id>/block.json`: `this` in the block's script, and what `nf.blocks.get` hands out
-- [Inventory](inventory.md): A real inventory: a player's (`player:inventory()`), their ender chest, a container block's (`block:inventory()`: a chest, a barrel, a hopper, a furnace) or an entity's (a chest boat, a donkey, a villager)
+- [Inventory](inventory.md): A real inventory: a player's (`player:inventory()`), their ender chest, a storage of the project's that they keep (`player:storage(name, size)`), a container block's (`block:inventory()`: a chest, a barrel, a hopper, a furnace) or an entity's (a chest boat, a donkey, a villager)
 - [BossBar](bossbar.md): A bar across the top of players' screens, made by `nf.bossbars.create`
 - [Sidebar](sidebar.md): The panel of lines at the right of one player's screen, from `player:sidebar()`: up to 15 lines of MiniMessage under a title, without the score numbers vanilla shows
 - [Team](team.md): A scoreboard team, made by `nf.teams.create`: what goes before and after its members' names (over their heads and in the player list), the colour of those names and of their glow, whether members can hurt each other, see each other while invisible, see name tags and push each other
@@ -68,6 +69,7 @@ Everything a NetherForge script can call. Scripts run Lua 5.4 in a sandbox, on t
 - [Task](task.md): What `nf.task`, `nf.after` and `nf.every` return: a task that may be waiting, or a callback waiting to run
 - [Schedule](schedule.md): What `nf.schedule.daily`, `weekly` and `cron` return: a schedule that will run at its next time, until it is cancelled or its script unloads
 - [Random](random.md): A random generator from `nf.random.new`: numbers that repeat for its seed, apart from `math.random` and every other generator
+- [Hud](hud.md): One player's HUD: the elements of the project's resource packs (`hud` in `pack.json`: bars, rows of icons, lines of text, each at its place on the screen), shown with what a script sets here
 - [Vec3](vec3.md): Three numbers: a position, an offset, a velocity, a direction or a scale
 - [Location](location.md): A position in a particular world, with an optional facing
 

@@ -26,7 +26,16 @@ import {
 import type { PosedNode } from '@/core/format'
 import { type ClientAssets } from '@/minecraft/client/assets'
 import { parseBlockState } from '@/minecraft/client/model'
-import { BlockModel, ItemModel } from '@/minecraft/client/models'
+import { BlockModel, ItemModel, PackLookModel } from '@/minecraft/client/models'
+import { resourcePackItemLook } from '@/minecraft/item/icon'
+import {
+  useCompiledResourcePacks,
+  useHomeNamespace,
+  useProjectFileUrl,
+  useReferenceNamespace,
+  useResourcePackFiles,
+  useResourcePackModels,
+} from '@/state/useResourcePacks'
 import { useClientAssets } from '@/minecraft/client/useClientAssets'
 import { glyphAdvancesOf, useGlyphMap } from '@/minecraft/text/glyphs'
 import { useApp, useWorkspace } from '@/state/providers'
@@ -227,9 +236,46 @@ export function DisplayVisual({
       return (
         <ItemModel item={display.item} context={display.itemTransform ?? 'none'} assets={assets} />
       )
+    case 'model':
+      return (
+        <ModelVisual
+          model={display.model}
+          context={display.itemTransform ?? 'none'}
+          assets={assets}
+        />
+      )
     case 'text':
       return <TextVisual display={display} />
   }
+}
+
+/** A model display: one of the project's resource pack looks, as the server shows it. */
+function ModelVisual({
+  model,
+  context,
+  assets,
+}: {
+  model: string
+  context: string
+  assets: ClientAssets | null
+}) {
+  const look = resourcePackItemLook(
+    model,
+    useResourcePackFiles(),
+    useCompiledResourcePacks(),
+    useReferenceNamespace(),
+    useHomeNamespace(),
+    useResourcePackModels(),
+  )
+  return (
+    <PackLookModel
+      id={model}
+      look={look}
+      urlOf={useProjectFileUrl()}
+      context={context}
+      assets={assets}
+    />
+  )
 }
 
 /** Pixels to blocks for text displays. */
@@ -400,7 +446,9 @@ function SelectionBox({ display }: { display: DisplayDef | undefined }) {
       ? [1.02, 1.02, 1.02]
       : display?.type === 'item'
         ? [0.55, 0.55, 0.1]
-        : [0.25, 0.25, 0.25]
+        : display?.type === 'model'
+          ? [1.02, 1.02, 1.02]
+          : [0.25, 0.25, 0.25]
   const offset: [number, number, number] = display?.type === 'block' ? [0.5, 0.5, 0.5] : [0, 0, 0]
   return (
     <mesh position={offset} raycast={() => null}>

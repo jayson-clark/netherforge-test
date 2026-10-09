@@ -27,7 +27,8 @@ data class DatapackPath(
  * Where things are in a datapack, as the game lays one out: `data/<namespace>/<registry>/<path>.json` for an entry,
  * `data/<namespace>/tags/<registry>/<path>.json` for a tag, and the same under an overlay's folder. Only worldgen
  * passes through: a registry is a folder of `worldgen/`, which every supported version keeps there (what's in it
- * changes between versions, which is the game's to say; see [DatapackPath]).
+ * changes between versions, which is the game's to say; see [DatapackPath]), and besides it the tags of a few
+ * other registries ([TAG_REGISTRIES]), which items' `canBreak` and `canPlaceOn` name.
  */
 object DatapackLayout {
     /** The folder every pack and overlay keeps its files in. */
@@ -38,6 +39,9 @@ object DatapackLayout {
 
     private const val TAGS = "tags"
     private const val JSON = ".json"
+
+    /** Registries outside worldgen whose tags pass through, by their folder under `tags/`: blocks, for items' `canBreak`. */
+    val TAG_REGISTRIES = setOf("block")
 
     /** A namespace as the game takes one. */
     private val NAMESPACE = Regex("^[a-z0-9_.-]+$")
@@ -75,17 +79,21 @@ object DatapackLayout {
         val inNamespace = rest.drop(1)
         val tag = inNamespace.firstOrNull() == TAGS
         val registryAt = if (tag) inNamespace.drop(1) else inNamespace
-        if (registryAt.firstOrNull() != WORLDGEN || registryAt.size < 3) {
+        // A tag of one of TAG_REGISTRIES is `tags/<registry>/<path>.json`; everything else is worldgen's, a folder deeper.
+        val other = tag && registryAt.firstOrNull() in TAG_REGISTRIES && registryAt.size >= 2
+        if (!other && (registryAt.firstOrNull() != WORLDGEN || registryAt.size < 3)) {
             return Placed.Wrong(
-                "Only worldgen passes through: entries go in $DATA/$namespace/$WORLDGEN/<registry>/, " +
-                    "tags of them in $DATA/$namespace/$TAGS/$WORLDGEN/<registry>/"
+                "Only worldgen passes through, and tags of blocks: entries go in $DATA/$namespace/$WORLDGEN/<registry>/, " +
+                    "tags of them in $DATA/$namespace/$TAGS/$WORLDGEN/<registry>/, and " +
+                    TAG_REGISTRIES.sorted().joinToString { "$it tags in $DATA/$namespace/$TAGS/$it/" }
             )
         }
-        val registry = "$WORLDGEN/${registryAt[1]}"
+        val depth = if (other) 1 else 2
+        val registry = if (other) registryAt[0] else "$WORLDGEN/${registryAt[1]}"
         val last = registryAt.last()
-        if (!last.endsWith(JSON) || last.length == JSON.length) return Placed.Wrong("A datapack's worldgen files are .json")
-        val path = (registryAt.drop(2).dropLast(1) + last.removeSuffix(JSON)).joinToString("/")
-        if (!SEGMENT.matches(registryAt[1]) || !path.split('/').all(SEGMENT::matches)) {
+        if (!last.endsWith(JSON) || last.length == JSON.length) return Placed.Wrong("A datapack's files are .json")
+        val path = (registryAt.drop(depth).dropLast(1) + last.removeSuffix(JSON)).joinToString("/")
+        if (!SEGMENT.matches(registryAt[depth - 1]) || !path.split('/').all(SEGMENT::matches)) {
             return Placed.Wrong("\"$path\" isn't an id the game takes: lowercase letters, digits, _, - and ., in folders")
         }
         return Placed.Ok(DatapackPath(file, overlay, namespace, registry, path, tag))
