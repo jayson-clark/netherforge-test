@@ -254,7 +254,7 @@ What [Centity](centity.md) listens for.
 | --- | --- | --- | --- |
 | `spawn` | [CentityEvent](events.md#centityevent) |  | Once, when the instance is first put into the world, after its script's body has run: not when it comes back after a restart or a reload. A script's body runs every time it starts; this is for what happens only once. |
 | `remove` | [CentityEvent](events.md#centityevent) |  | The instance is being removed for good (`centity:remove()`, `/nf kill`). Its script then unloads (`nf.on("unload")`), and every handler on it and its nodes goes. |
-| `tick` | [TickEvent](events.md#tickevent) |  | Every tick while the instance's chunk is loaded, or every `n` ticks with `{ every = n }`. A centity nobody listens to this on isn't ticked at all. Options: `every`. |
+| `tick` | [TickEvent](events.md#tickevent) |  | Every tick while the instance's chunk is loaded, or every `n` ticks with `{ every = n }`. Each instance falls on its own one of those `n` ticks, so a crowd of centities with `every = 4` spreads over four ticks rather than all running on one. A centity nobody listens to this on isn't ticked at all, and one whose handlers all have `every` is only called into on the ticks one is due. Options: `every`. |
 | `click` | [ClickEvent](events.md#clickevent) |  | A player clicked one of its hitboxes: after the clicked node and the nodes above it, and before `nf.on("centity_click")`, unless one of them called `event:stop()`. Bubbles. |
 | `animation_start` | [AnimationEvent](events.md#animationevent) |  | One of its animations started (`play_animation`), from the beginning. |
 | `animation_end` | [AnimationEvent](events.md#animationevent) |  | An animation reached its end: a `once` clip has finished, a `hold` clip is holding its last pose. Looping clips never end. |
@@ -767,7 +767,7 @@ How `:on` listens. Every key is optional, and each applies only to the events th
 
 | Field | Type | |
 | --- | --- | --- |
-| `every` | `integer?` | For `tick`: run every this many ticks instead of every tick (at least 1). `every = 20` is once a second. |
+| `every` | `integer?` | For `tick`: run every this many ticks instead of every tick (at least 1). `every = 20` is once a second. Which of those ticks is fixed by the server's tick count and the thing it's on (a centity's handlers all agree, and different centities fall on different ticks; each `nf.on` handler has its own), not by when the handler was added, so the first call can come sooner than `every` ticks. |
 
 ## SettingChangedEvent
 

@@ -415,7 +415,13 @@ fun interface BiomeSearch {
  */
 data class EntityTag(val instance: UUID, val node: String, val role: EntityRole)
 
-enum class EntityRole { DISPLAY, HITBOX }
+/**
+ * What an entity is to its instance: a node's display or hitbox, or the
+ * instance's **anchor**, the invisible vehicle at the anchor its displays
+ * (and the hitboxes that sit at the anchor) ride, so moving the centity is
+ * one teleport. An anchor's tag has an empty node.
+ */
+enum class EntityRole { DISPLAY, HITBOX, ANCHOR }
 
 /**
  * A `marker` entity in a structure that asks for a centity ([centity], as a
@@ -434,8 +440,8 @@ data class StructureMarker(val id: UUID, val centity: String, val at: Location) 
 /**
  * How a display entity is placed relative to the anchor it stands on.
  *
- * Every display of a centity stands at the instance's anchor and carries its
- * offset in [matrix], so moving the whole centity is one teleport per entity.
+ * Every display of a centity rides the instance's anchor entity and carries
+ * its offset in [matrix], so moving the whole centity is one teleport.
  * [cullSize] widens the client's culling box to the whole assembly; without
  * it a display offset far from its entity vanishes at some camera angles.
  */
@@ -478,6 +484,22 @@ interface EntityOps {
     fun spawnHitbox(at: Location, width: Double, height: Double, tag: EntityTag): UUID?
 
     /**
+     * Spawns an instance's anchor at [at]: an entity that draws nothing, which
+     * the instance's other entities ride ([mount]). Riders stand exactly at
+     * its position, so moving it with [teleport] moves them all.
+     */
+    fun spawnAnchor(at: Location, tag: EntityTag): UUID?
+
+    /**
+     * Makes [passenger] ride [vehicle]. True when it rides it now (already
+     * did included); false when either can't be reached.
+     */
+    fun mount(vehicle: UUID, passenger: UUID): Boolean
+
+    /** Gets [passenger] off whatever it rides, where it is. Nothing when it rides nothing or can't be reached. */
+    fun dismount(passenger: UUID)
+
+    /**
      * Whether the entity can be reached right now. False for one in an
      * unloaded chunk and for one that's gone; [WorldOps.entitiesLoaded] tells
      * the two apart.
@@ -493,7 +515,7 @@ interface EntityOps {
 
     fun setPose(id: UUID, pose: DisplayPose)
 
-    /** Moves an entity, keeping everything else about it. */
+    /** Moves an entity, keeping everything else about it: what rides it comes too. One that rides something doesn't move. */
     fun teleport(id: UUID, to: Location)
 
     fun resizeHitbox(id: UUID, width: Double, height: Double)

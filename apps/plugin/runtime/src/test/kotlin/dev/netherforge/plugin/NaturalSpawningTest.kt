@@ -322,9 +322,9 @@ class NaturalSpawningTest {
             repeat(40) { server.platform.players.add("p$it", Location("world", it * 1000.5, 64.0, 0.5)) }
             val before = server.platform.entities.spawned
             server.tick()
-            // Two players' passes of four places each, at most, and a spawn makes two entities.
+            // Two players' passes of four places each, at most, and a spawn makes three entities (anchor, display, hitbox).
             assertTrue(
-                server.platform.entities.spawned - before <= 2 * 4 * 2,
+                server.platform.entities.spawned - before <= 2 * 4 * 3,
                 "${server.platform.entities.spawned - before} entities in one tick"
             )
         }

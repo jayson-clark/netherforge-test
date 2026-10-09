@@ -96,7 +96,7 @@ export const shapes: LuaClass[] = [
       {
         name: 'every',
         type: 'integer?',
-        doc: 'For `tick`: run every this many ticks instead of every tick (at least 1). `every = 20` is once a second.',
+        doc: "For `tick`: run every this many ticks instead of every tick (at least 1). `every = 20` is once a second. Which of those ticks is fixed by the server's tick count and the thing it's on (a centity's handlers all agree, and different centities fall on different ticks; each `nf.on` handler has its own), not by when the handler was added, so the first call can come sooner than `every` ticks.",
       },
     ],
   ),

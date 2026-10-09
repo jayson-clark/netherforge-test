@@ -31,6 +31,9 @@ object Hitboxes {
     /** The sliver a degenerate box stays clickable at, on the server and in the ray test alike. */
     const val MIN_SIZE = 0.01
 
+    /** How near the anchor, in blocks, a hitbox counts as standing at it ([Bounds.atAnchor]). */
+    const val AT_ANCHOR = 1e-6
+
     private const val PARALLEL = 1e-12
 
     data class Bounds(val centerX: Double, val bottomY: Double, val centerZ: Double, val width: Double, val height: Double) {
@@ -38,6 +41,12 @@ object Hitboxes {
             Vec3(centerX - width / 2, bottomY, centerZ - width / 2),
             Vec3(centerX + width / 2, bottomY + height, centerZ + width / 2)
         )
+
+        /**
+         * Whether it stands right at the anchor (centred on it, its bottom at
+         * its height): where an interaction entity riding the anchor entity is.
+         */
+        fun atAnchor(): Boolean = abs(centerX) < AT_ANCHOR && abs(bottomY) < AT_ANCHOR && abs(centerZ) < AT_ANCHOR
     }
 
     fun bounds(boxes: List<Box>, world: Matrix4): Bounds {

@@ -625,8 +625,10 @@ object Events {
     val CENTITY_REMOVE = EventType<CentityEvent>("Centity", "remove", payload = CentityEvent.Codec, cancellable = false, bubbles = false, writable = emptyList(), local = false, since = null)
 
     /**
-     * Every tick while the instance's chunk is loaded, or every `n` ticks with `{ every = n }`. A centity
-     * nobody listens to this on isn't ticked at all.
+     * Every tick while the instance's chunk is loaded, or every `n` ticks with `{ every = n }`. Each
+     * instance falls on its own one of those `n` ticks, so a crowd of centities with `every = 4` spreads
+     * over four ticks rather than all running on one. A centity nobody listens to this on isn't ticked at
+     * all, and one whose handlers all have `every` is only called into on the ticks one is due.
      */
     val CENTITY_TICK = EventType<TickEvent>("Centity", "tick", payload = TickEvent.Codec, cancellable = false, bubbles = false, writable = emptyList(), local = false, since = null)
 

@@ -69,6 +69,14 @@ class Scripts internal constructor(
     /** Handlers per target (null for `nf`) and event, as the event core reports them. */
     private val listeners = HashMap<LuaHandle?, HashMap<String, Int>>()
 
+    /**
+     * When the handlers of an event on a target run, where every one of them
+     * has a rate (`every`): pairs of rate and phase, a handler running on the
+     * ticks where `(tick + phase) % rate == 0`. No entry: some handler runs
+     * every time.
+     */
+    private val rates = HashMap<LuaHandle?, HashMap<String, LongArray>>()
+
     /** The current server tick, for timers. */
     var now: Long = 0
         private set
@@ -86,7 +94,7 @@ class Scripts internal constructor(
     override fun tick(phase: TickPhase) {
         when (phase) {
             TickPhase.TIMERS -> advance(ticks())
-            TickPhase.EVENTS -> emit(Events.NF_TICK, null, TickEvent(ticks()))
+            TickPhase.EVENTS -> if (due(null, Events.NF_TICK, ticks())) emit(Events.NF_TICK, null, TickEvent(ticks()))
             TickPhase.ACCOUNTS -> {
                 stopBlamed(memoryMegabytes)
                 host?.sweepHandles()
@@ -101,6 +109,7 @@ class Scripts internal constructor(
         host?.close()
         host = null
         listeners.clear()
+        rates.clear()
         totals.clear()
         for (watch in watches) watch.update()
     }
@@ -275,9 +284,20 @@ class Scripts internal constructor(
 
     // ---- events ---------------------------------------------------------------
 
-    /** The event core's count of handlers for [event] on [target] (null for `nf`). */
-    internal fun listeningChanged(target: LuaHandle?, event: String, count: Int) {
+    /**
+     * The event core's count of handlers for [event] on [target] (null for
+     * `nf`), and their [rates] when every one has one: rate and phase pairs.
+     */
+    internal fun listeningChanged(target: LuaHandle?, event: String, count: Int, rated: LongArray? = null) {
         val before = listeners[target]?.get(event) ?: 0
+        if (count > 0 && rated != null) {
+            rates.getOrPut(target) { HashMap() }[event] = rated
+        } else {
+            rates[target]?.let { byEvent ->
+                byEvent.remove(event)
+                if (byEvent.isEmpty()) rates.remove(target)
+            }
+        }
         if (count > 0) {
             listeners.getOrPut(target) { HashMap() }[event] = count
         } else {
@@ -322,6 +342,23 @@ class Scripts internal constructor(
 
     /** Whether anything listens for [event] on [target] (null for `nf`). */
     fun listening(target: LuaHandle?, event: EventType<*>): Boolean = (listeners[target]?.get(event.luaName) ?: 0) > 0
+
+    /**
+     * Whether a handler for [event] on [target] runs on [tick]: something
+     * listens, and one of them has no rate or is due on it. So a centity
+     * whose handlers all run `every = 4` is called into once in four ticks,
+     * not every tick to count.
+     */
+    fun due(target: LuaHandle?, event: EventType<*>, tick: Long): Boolean {
+        if (!listening(target, event)) return false
+        val rated = rates[target]?.get(event.luaName) ?: return true
+        var at = 0
+        while (at < rated.size) {
+            if (Math.floorMod(tick + rated[at + 1], rated[at]) == 0L) return true
+            at += 2
+        }
+        return false
+    }
 
     /** A handler failed in the event core: reported; [gaveUp] when its subscription was cancelled for it. */
     internal fun handlerFailed(scope: Scope, what: String, failure: ScriptFailure, gaveUp: Boolean) {
@@ -437,5 +474,15 @@ class Scripts internal constructor(
 
         /** The key `nf.on` subscriptions are filed under. */
         private const val NF = "nf"
+
+        /** Phases are taken below this, so `tick + phase` never comes near overflowing. */
+        private const val PHASES = 1 shl 20
+
+        /**
+         * Where [handle]'s `every` handlers fall among the ticks: the thing it
+         * belongs to (a node's centity), hashed, so every handler on one
+         * instance agrees and a crowd of instances spreads over the ticks.
+         */
+        fun phaseOf(handle: LuaHandle): Long = Math.floorMod((handle.partOf() ?: handle).hashCode() * 0x9E3779B1.toInt(), PHASES).toLong()
     }
 }

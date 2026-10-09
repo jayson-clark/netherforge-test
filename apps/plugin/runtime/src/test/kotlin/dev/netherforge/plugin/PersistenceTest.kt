@@ -70,7 +70,7 @@ class PersistenceTest {
         TestServer(project).use { server ->
             server.platform.worlds.unloaded += server.platform.worlds.chunkOf(at)
             val instance = server.runtime.session.centities.spawn("c", at)!!
-            assertEquals(2, server.platform.entities.of(instance.id).size, "a display and a hitbox")
+            assertEquals(3, server.platform.entities.of(instance.id).size, "an anchor, a display and a hitbox")
         }
     }
 
@@ -129,7 +129,7 @@ class PersistenceTest {
                 emptyList()
             )
             assertFalse(stray in server.platform.entities.all)
-            assertEquals(2, server.platform.entities.of(kept.id).size)
+            assertEquals(3, server.platform.entities.of(kept.id).size)
         }
     }
 

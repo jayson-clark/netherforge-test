@@ -4,7 +4,9 @@ A **centity** is a composed, scripted entity: a tree of nodes, each of which
 can draw something, be clicked and fall under physics, with one Lua script
 for the whole centity. On the server
 each node with a display becomes a Minecraft display entity, and each node
-with a hitbox becomes an interaction entity, all moving together.
+with a hitbox becomes an interaction entity, all moving together: the
+displays ride one invisible entity at the centity's place, so moving the
+centity moves that one entity.
 
 It lives at `centities/<id>/centity.json`, with its script beside it.
 
@@ -129,7 +131,10 @@ ticks animate it as a flipbook, alongside the animation tracks.
   up when a script swaps the block. Needs a block display on the same node.
 
 Minecraft's interaction entities are axis-aligned boxes with a square
-footprint, so the server spawns one box around everything. With `raycast`
+footprint, so the server spawns one box around everything. A hitbox whose
+box is centred on the centity's place, with its bottom there (a mob's body
+box), rides along with the displays; one anywhere else is a separate entity
+that the server moves after them, which costs a little more. With `raycast`
 on, a click that lands in that box but outside the real boxes is ignored. It's
 on by default whenever the shape is more than one box.
 
@@ -316,3 +321,10 @@ leaving the key: `linear` (default), `step`, `ease_in`, `ease_out` or
 `ease_in_out`. A track owns its whole channel. Outside its keys, it holds the
 nearest one. Rotation interpolates each axis the short way round, so a spin
 needs a key at least every 180°.
+
+Players' games ease display entities between poses themselves, so while only
+animations move a node the server sends a pose some ticks ahead and lets the
+game ease there: a `linear` segment once, an eased one in a few straight
+pieces, a `step` when it happens. Looping idles, bobbing and flapping cost
+almost nothing to keep playing. A node a script or physics moves is sent
+every tick instead.

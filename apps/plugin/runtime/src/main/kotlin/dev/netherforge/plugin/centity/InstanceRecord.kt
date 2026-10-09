@@ -24,6 +24,8 @@ data class InstanceRecord(
     val displays: Map<String, UUID> = emptyMap(),
     /** Node name → interaction entity. */
     val hitboxes: Map<String, UUID> = emptyMap(),
+    /** The anchor entity its displays ride, or null when it has none yet (made before anchors existed: the next reconcile makes one). */
+    val anchorEntity: UUID? = null,
     /** Entities still waiting to be removed because their chunk was unloaded. */
     val orphans: List<UUID> = emptyList(),
     /** Appeared by itself and is still temporary: never in the store, only carried from one session to the next. */

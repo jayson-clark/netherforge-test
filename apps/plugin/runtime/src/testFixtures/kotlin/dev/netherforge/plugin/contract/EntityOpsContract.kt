@@ -167,6 +167,47 @@ abstract class EntityOpsContract : PlatformContract() {
     }
 
     @Test
+    fun `what rides an anchor goes where it goes, and stays on it until it gets off`() {
+        val player = join()
+        val (anchor, rider) = main {
+            val anchor = tagged(entities.spawnAnchor(at(3, 2), tag("", EntityRole.ANCHOR)))
+            val rider = tagged(entities.spawnDisplay(at(3, 2), TextDisplay("", background = "#00000000"), pose, tag("rider")))
+            val box = tagged(entities.spawnHitbox(at(3, 2), 1.0, 1.0, tag("rider", EntityRole.HITBOX)))
+            assertEquals(tag("", EntityRole.ANCHOR), entities.loadedTagged()[anchor])
+            assertTrue(entities.mount(anchor, rider))
+            assertTrue(entities.mount(anchor, rider), "already on it")
+            assertTrue(entities.mount(anchor, box), "an interaction entity rides too")
+            assertFalse(entities.mount(anchor, UUID.randomUUID()))
+            // Looking through the rider shows where it is.
+            assertTrue(platform.players.setGameMode(player.uuid, "spectator"))
+            assertTrue(platform.playerViews.setCamera(player.uuid, rider))
+            anchor to rider
+        }
+        fun seenAt(x: Int) = eventually("the player at x = $x") {
+            platform.players.location(player.uuid)?.let { abs(it.x - at(x).x) < 0.5 } == true
+        }
+        seenAt(3)
+        main { entities.teleport(anchor, at(6, 2)) }
+        seenAt(6)
+        main {
+            // A rider told to move alone stays on.
+            entities.teleport(rider, at(0, 2))
+            entities.teleport(anchor, at(7, 2))
+        }
+        seenAt(7)
+        main {
+            entities.dismount(rider)
+            entities.teleport(rider, at(9, 2))
+        }
+        seenAt(9)
+        main {
+            assertTrue(platform.playerViews.setCamera(player.uuid, null))
+            assertTrue(platform.players.setGameMode(player.uuid, "survival"))
+            entities.dismount(UUID.randomUUID())
+        }
+    }
+
+    @Test
     fun `a removed entity is gone, and can't be removed twice`() {
         main {
             val id = entities.spawnDisplay(at(0, 2), BlockDisplay("minecraft:stone"), pose, tag("gone"))!!

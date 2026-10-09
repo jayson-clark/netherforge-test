@@ -172,7 +172,7 @@ class CentityTest {
                     local ticks = 0
                     log("body")
                     this:on("spawn", function(event) log("spawn", event.centity == this, event.name) end)
-                    this:on("tick", function() ticks = ticks + 1 end, { every = 2 })
+                    this:on("tick", function() ticks = ticks + 1 end)
                     this:on("animation_start", function(event) log("started " .. event.animation) end)
                     this:on("animation_end", function(event) log("ended " .. event.animation .. " after " .. ticks .. " ticks") end)
                     this:on("remove", function() log("remove", this:exists()) end)
@@ -185,7 +185,7 @@ class CentityTest {
             server.tick(10)
             server.runtime.session.centities.remove(robot)
             assertEquals(
-                listOf("body", "started wave", "spawn\ttrue\tspawn", "ended wave after 2 ticks", "remove\ttrue", "unload"),
+                listOf("body", "started wave", "spawn\ttrue\tspawn", "ended wave after 4 ticks", "remove\ttrue", "unload"),
                 server.logs
             )
             assertTrue(server.platform.entities.of(robot.id).isEmpty(), "its entities are gone")

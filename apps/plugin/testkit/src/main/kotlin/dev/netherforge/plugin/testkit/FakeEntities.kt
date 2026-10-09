@@ -24,6 +24,9 @@ class FakeEntity(val id: UUID, val role: EntityRole, var display: DisplayDef?, v
     var height = 0.0
     var look: DisplayLook? = null
 
+    /** What it rides, if anything: it stands where that stands. */
+    var vehicle: UUID? = null
+
     /** Whether the server would save it with its chunk. */
     var persistent = true
 
@@ -37,6 +40,12 @@ class FakeEntities(private val platform: FakePlatform) : EntityOps {
 
     val displays get() = all.values.filter { it.role == EntityRole.DISPLAY }
     val hitboxes get() = all.values.filter { it.role == EntityRole.HITBOX }
+    val anchors get() = all.values.filter { it.role == EntityRole.ANCHOR }
+
+    /** What rides [vehicle]. */
+    fun passengers(vehicle: UUID) = all.values.filter { it.vehicle == vehicle }
+
+    fun anchor(instance: UUID) = all.values.single { it.tag.instance == instance && it.role == EntityRole.ANCHOR }
 
     fun of(instance: UUID) = all.values.filter { it.tag.instance == instance }
 
@@ -71,6 +80,27 @@ class FakeEntities(private val platform: FakePlatform) : EntityOps {
         return entity.id
     }
 
+    override fun spawnAnchor(at: Location, tag: EntityTag): UUID {
+        val entity = FakeEntity(UUID.randomUUID(), EntityRole.ANCHOR, null, at, tag)
+        all[entity.id] = entity
+        spawned++
+        return entity.id
+    }
+
+    override fun mount(vehicle: UUID, passenger: UUID): Boolean {
+        if (!isLoaded(vehicle) || !isLoaded(passenger)) return false
+        val carrier = all.getValue(vehicle)
+        val rider = all.getValue(passenger)
+        rider.vehicle = vehicle
+        rider.location = carrier.location
+        platform.playerViews.cameraMoved(passenger, carrier.location)
+        return true
+    }
+
+    override fun dismount(passenger: UUID) {
+        all[passenger]?.takeIf { isLoaded(passenger) }?.vehicle = null
+    }
+
     /** As on Paper: an entity is reachable while its chunk's entities are loaded, and a gone one never is. */
     override fun isLoaded(id: UUID) = all[id]?.let { platform.worlds.entitiesLoaded(it.location) } == true
 
@@ -94,8 +124,14 @@ class FakeEntities(private val platform: FakePlatform) : EntityOps {
 
     override fun teleport(id: UUID, to: Location) {
         all[id]?.let {
+            // As on Paper: a rider stays on its vehicle, and riders come along with it.
+            if (it.vehicle != null) return
             it.location = to
             it.teleports++
+            for (rider in passengers(id)) {
+                rider.location = to
+                platform.playerViews.cameraMoved(rider.id, to)
+            }
         }
         platform.playerViews.cameraMoved(id, to)
     }
@@ -114,6 +150,8 @@ class FakeEntities(private val platform: FakePlatform) : EntityOps {
         }
         if (!isLoaded(id)) return false
         all.remove(id)
+        // Its riders get off where they are.
+        for (rider in passengers(id)) rider.vehicle = null
         return true
     }
 

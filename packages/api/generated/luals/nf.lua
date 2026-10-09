@@ -4458,7 +4458,7 @@ function Event:uncancel() end
 
 --- How `:on` listens. Every key is optional, and each applies only to the events that say so: a key that isn't one of these, or one the event doesn't take, is an error.
 ---@class EventOptions
----@field every integer? For `tick`: run every this many ticks instead of every tick (at least 1). `every = 20` is once a second.
+---@field every integer? For `tick`: run every this many ticks instead of every tick (at least 1). `every = 20` is once a second. Which of those ticks is fixed by the server's tick count and the thing it's on (a centity's handlers all agree, and different centities fall on different ticks; each `nf.on` handler has its own), not by when the handler was added, so the first call can come sooner than `every` ticks.
 
 --- One of the package's settings changed.
 ---@class SettingChangedEvent: Event

@@ -93,7 +93,7 @@ const centityEvents: EventSpec[] = [
   },
   {
     name: 'tick',
-    doc: "Every tick while the instance's chunk is loaded, or every `n` ticks with `{ every = n }`. A centity nobody listens to this on isn't ticked at all.",
+    doc: "Every tick while the instance's chunk is loaded, or every `n` ticks with `{ every = n }`. Each instance falls on its own one of those `n` ticks, so a crowd of centities with `every = 4` spreads over four ticks rather than all running on one. A centity nobody listens to this on isn't ticked at all, and one whose handlers all have `every` is only called into on the ticks one is due.",
     payload: 'TickEvent',
     options: ['every'],
     example:

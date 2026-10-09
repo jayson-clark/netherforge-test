@@ -21,6 +21,7 @@ import dev.netherforge.plugin.api.LuaEvent
 import dev.netherforge.plugin.api.LuaHandle
 import dev.netherforge.plugin.api.TickEvent
 import dev.netherforge.plugin.platform.ClickButton
+import dev.netherforge.plugin.platform.DisplayLook
 import dev.netherforge.plugin.platform.DisplayPose
 import dev.netherforge.plugin.platform.EntityRole
 import dev.netherforge.plugin.platform.EntityTag
@@ -55,6 +56,13 @@ import kotlin.math.sqrt
  *
  * Only sync touches the world, so an instance nothing changed costs nothing,
  * and an instance whose chunk isn't loaded is skipped entirely until it is.
+ *
+ * Every display rides the instance's anchor entity (an invisible vehicle at
+ * the anchor), and so does every hitbox sitting at the anchor, so moving a
+ * centity is one teleport. A hitbox off the anchor can't ride (an
+ * interaction entity has no transform to carry an offset in) and is moved
+ * on its own. While only clips move a node, its display is sent poses ahead
+ * for the client to ease to ([Keyframes]), not one every tick.
  *
  * The centity's events are raised from here (and from [Physics] for a
  * node's body): `spawn` after a new instance's script has run, `remove`
@@ -225,6 +233,7 @@ class Centities(
         instance.natural = record.natural
         instance.displays.putAll(record.displays)
         instance.hitboxes.putAll(record.hitboxes)
+        instance.anchorEntity = record.anchorEntity
         instance.orphans.addAll(record.orphans)
         instances[id] = instance
         obstacles.add(instance)
@@ -235,11 +244,15 @@ class Centities(
 
     /** A temporary instance whose centity is gone: its entities are removed, as an inert one's are when it's removed. */
     private fun discard(record: InstanceRecord) {
-        (record.displays.values + record.hitboxes.values + record.orphans).forEach { platform.entities.remove(it) }
+        entitiesOf(record).forEach { platform.entities.remove(it) }
         onRemoved(record.id)
     }
 
+    private fun entitiesOf(record: InstanceRecord) =
+        listOfNotNull(record.anchorEntity) + record.displays.values + record.hitboxes.values + record.orphans
+
     private fun own(instance: Instance) {
+        instance.anchorEntity?.let { owners[it] = instance to ANCHOR_NODE }
         instance.displays.forEach { (node, entity) -> owners[entity] = instance to node }
         instance.hitboxes.forEach { (node, entity) -> owners[entity] = instance to node }
     }
@@ -333,7 +346,7 @@ class Centities(
     /** Removes an inert record and whatever of its entities is reachable. */
     fun removeInert(id: UUID): Boolean {
         val record = inert.remove(id) ?: return false
-        (record.displays.values + record.hitboxes.values + record.orphans).forEach { platform.entities.remove(it) }
+        entitiesOf(record).forEach { platform.entities.remove(it) }
         onRemoved(id)
         changed(id)
         return true
@@ -489,8 +502,10 @@ class Centities(
         // Walking moves the whole centity first, so physics settles its bodies where it has been walked to.
         if (instance.walk != null && !instance.removed) paths.step(instance)
         if (instance.hasBodies && !instance.removed) physics.step(instance, SECONDS_PER_TICK)
-        // Rates are handler options (`every`), counted by the event core; nobody listening, no tick.
-        if (!instance.removed) emit(Events.CENTITY_TICK, instance, TickEvent(scripts.now))
+        // Rates are handler options (`every`): only a tick some handler is due on is raised, and none when nobody listens.
+        if (!instance.removed && scripts.due(handle(instance), Events.CENTITY_TICK, scripts.now)) {
+            emit(Events.CENTITY_TICK, instance, TickEvent(scripts.now))
+        }
         if (!instance.removed) sync(instance)
     }
 
@@ -502,7 +517,8 @@ class Centities(
      * [reconcile] can put them in the world, wherever that is.
      */
     fun loaded(instance: Instance): Boolean =
-        (instance.displays.isEmpty() && instance.hitboxes.isEmpty()) || platform.worlds.entitiesLoaded(instance.anchor)
+        (instance.anchorEntity == null && instance.displays.isEmpty() && instance.hitboxes.isEmpty()) ||
+            platform.worlds.entitiesLoaded(instance.anchor)
 
     // ---- sync ------------------------------------------------------------------
 
@@ -518,6 +534,8 @@ class Centities(
         val cull = cullSize(world)
         val anchor = instance.anchor
         val entities = platform.entities
+        val vehicle = syncAnchor(instance)
+        val ahead = Lookahead(instance)
         for ((index, node) in instance.definition.nodes.withIndex()) {
             val shown = instance.shown(index)
             instance.displays[node.name]?.let { entity ->
@@ -532,13 +550,10 @@ class Centities(
                     entities.setLook(entity, look)
                     instance.pushedLooks[entity] = look
                 }
-                if (instance.moved) entities.teleport(entity, anchor)
-                val matrix = if (shown) world[index] else HIDDEN
-                val pushed = Instance.PushedPose(matrix.values.toList(), cull)
-                if (instance.forceSync || instance.pushedPoses[entity] != pushed) {
-                    entities.setPose(entity, DisplayPose(matrix, if (instance.forceSync) 0 else instance.interpolation(index), cull))
-                    instance.pushedPoses[entity] = pushed
-                }
+                if (instance.forceSync && vehicle != null) ride(instance, vehicle, entity)
+                // One that couldn't get on the anchor entity is moved on its own.
+                if ((instance.moved || instance.forceSync) && entity !in instance.riders) entities.teleport(entity, anchor)
+                syncPose(instance, index, entity, if (shown) world[index] else HIDDEN, shown, cull, ahead)
             }
             instance.hitboxes[node.name]?.let { entity ->
                 // An unclickable hitbox is collapsed like a hidden one, so clicks pass it by.
@@ -548,16 +563,88 @@ class Centities(
                     val origin = world[index].translation()
                     Hitboxes.Bounds(origin.x, origin.y, origin.z, Hitboxes.MIN_SIZE, Hitboxes.MIN_SIZE)
                 }
-                if (instance.forceSync || instance.moved || instance.pushedHitboxes[entity] != bounds) {
+                // At the anchor it rides the anchor entity; anywhere else it stands on its own.
+                val wasRiding = entity in instance.riders
+                if (vehicle != null && bounds.atAnchor()) {
+                    if (instance.forceSync || !wasRiding) ride(instance, vehicle, entity)
+                } else if (wasRiding || instance.forceSync) {
+                    entities.dismount(entity)
+                    instance.riders -= entity
+                }
+                val riding = entity in instance.riders
+                val reshaped = instance.forceSync || instance.pushedHitboxes[entity] != bounds
+                if (riding) {
+                    if (reshaped || !wasRiding) entities.resizeHitbox(entity, bounds.width, bounds.height)
+                } else if (reshaped || instance.moved || wasRiding) {
                     entities.teleport(entity, anchor.offset(bounds.centerX, bounds.bottomY, bounds.centerZ))
                     entities.resizeHitbox(entity, bounds.width, bounds.height)
-                    instance.pushedHitboxes[entity] = bounds
                 }
+                instance.pushedHitboxes[entity] = bounds
             }
         }
         instance.markSynced()
         // A display that turned out to be the wrong kind is respawned on the next pass.
         if (instance.needsReconcile) sync(instance)
+    }
+
+    /**
+     * The anchor entity, moved and eased as the instance says: what its
+     * riders follow. Null when it has none (it couldn't be spawned).
+     */
+    private fun syncAnchor(instance: Instance): UUID? {
+        val vehicle = instance.anchorEntity ?: return null
+        val look = DisplayLook(viewRange = instance.viewRange / Instance.DEFAULT_VIEW_RANGE, teleportTicks = instance.moveTicks())
+        if (instance.forceSync || instance.pushedLooks[vehicle] != look) {
+            platform.entities.setLook(vehicle, look)
+            instance.pushedLooks[vehicle] = look
+        }
+        if (instance.moved) platform.entities.teleport(vehicle, instance.anchor)
+        return vehicle
+    }
+
+    private fun ride(instance: Instance, vehicle: UUID, entity: UUID) {
+        if (platform.entities.mount(vehicle, entity)) instance.riders += entity else instance.riders -= entity
+    }
+
+    /**
+     * Shows node [index]'s display at [matrix] (its pose now, collapsed when
+     * hidden). While only clips move it, the pose is sent ahead instead: as
+     * far as the client's easing follows the clips ([Keyframes.reach]), and
+     * then nothing until it gets there. Anything else (a script, physics, a
+     * new clip, the first sync) sends the pose now, eased as the node says.
+     */
+    private fun syncPose(instance: Instance, index: Int, entity: UUID, matrix: Matrix4, shown: Boolean, cull: Double, ahead: Lookahead) {
+        val planned = !instance.forceSync &&
+            shown &&
+            instance.animations.active &&
+            instance.interpolation(index) > 0 &&
+            !instance.edited(index)
+        val (target, ticks) = if (planned) {
+            // Still on its way to what it was sent.
+            if (instance.age < instance.due[index]) return
+            val reach = Keyframes.reach(matrix, Keyframes.MAX_TICKS) { ahead.at(it)[index] }
+            instance.due[index] = instance.age + reach
+            // The client shows the pose now; it eases on to the pose that many ticks on.
+            ahead.at(reach)[index] to reach
+        } else {
+            instance.due[index] = instance.age
+            matrix to if (instance.forceSync) 0 else instance.interpolation(index)
+        }
+        val pushed = Instance.PushedPose(target.values.toList(), cull)
+        if (instance.forceSync || instance.pushedPoses[entity] != pushed) {
+            platform.entities.setPose(entity, DisplayPose(target, ticks, cull))
+            instance.pushedPoses[entity] = pushed
+        }
+    }
+
+    /** [Instance.placedAhead] for 1, 2, … ticks on, each worked out once, the first time a display asks. */
+    private class Lookahead(private val instance: Instance) {
+        private val ticks = ArrayList<List<Matrix4>>()
+
+        fun at(tick: Int): List<Matrix4> {
+            while (ticks.size < tick) ticks += instance.placedAhead(ticks.size + 1)
+            return ticks[tick - 1]
+        }
     }
 
     /**
@@ -585,6 +672,14 @@ class Centities(
         val cull = cullSize(world)
         val anchor = instance.anchor
         val entities = platform.entities
+        if (instance.anchorEntity == null) {
+            entities.spawnAnchor(anchor, EntityTag(instance.id, ANCHOR_NODE, EntityRole.ANCHOR))?.let { entity ->
+                instance.anchorEntity = entity
+                owners[entity] = instance to ANCHOR_NODE
+                if (instance.natural) entities.setPersistent(entity, false)
+                for (player in instance.hiddenFrom) entities.setHidden(player, entity, true)
+            }
+        }
         for ((index, node) in definition.nodes.withIndex()) {
             val display = instance.display(index)
             if (display != null) {
@@ -638,14 +733,14 @@ class Centities(
         if (instance.removed) return
         val changed = if (hidden) instance.hiddenFrom.add(player) else instance.hiddenFrom.remove(player)
         if (!changed) return
-        for (entity in instance.displays.values + instance.hitboxes.values) platform.entities.setHidden(player, entity, hidden)
+        for (entity in instance.shownEntities()) platform.entities.setHidden(player, entity, hidden)
     }
 
     /** A player joined: everything hidden from them is hidden again, since the server forgot. */
     override fun playerJoined(player: PlayerRef) {
         for (instance in instances.values) {
             if (player.uuid !in instance.hiddenFrom) continue
-            for (entity in instance.displays.values + instance.hitboxes.values) platform.entities.setHidden(player.uuid, entity, true)
+            for (entity in instance.shownEntities()) platform.entities.setHidden(player.uuid, entity, true)
         }
     }
 
@@ -669,7 +764,14 @@ class Centities(
             val at = instance.pushedHitboxes[entity]?.let { anchor.offset(it.centerX, it.bottomY, it.centerZ) } ?: anchor
             gone(entity, at)
         }
-        if (goneDisplays.isEmpty() && goneHitboxes.isEmpty()) return
+        val goneAnchor = instance.anchorEntity?.takeIf { gone(it, anchor) }
+        if (goneDisplays.isEmpty() && goneHitboxes.isEmpty() && goneAnchor == null) return
+        if (goneAnchor != null) {
+            // Its riders are left standing where they were: the new one picks them up.
+            instance.anchorEntity = null
+            instance.riders.clear()
+            forget(goneAnchor, instance)
+        }
         for ((name, entity) in goneDisplays) {
             instance.displays.remove(name)
             forget(entity, instance)
@@ -684,6 +786,7 @@ class Centities(
 
     private fun forget(entity: UUID, instance: Instance) {
         owners.remove(entity)
+        instance.riders.remove(entity)
         instance.pushedPoses.remove(entity)
         instance.pushedHitboxes.remove(entity)
         instance.pushedLooks.remove(entity)
@@ -914,6 +1017,7 @@ class Centities(
         yaw = instance.yaw,
         displays = instance.displays.toMap(),
         hitboxes = instance.hitboxes.toMap(),
+        anchorEntity = instance.anchorEntity,
         orphans = instance.orphans.toList(),
         natural = instance.natural
     )
@@ -936,6 +1040,9 @@ class Centities(
 
         /** How far a click may reach for the narrow phase; past any reach the server allows. */
         const val REACH = 8.0
+
+        /** The node an anchor entity's tag names: none. */
+        const val ANCHOR_NODE = ""
 
         /** Displays can't be hidden, only collapsed. */
         private val HIDDEN = Matrix4().scale(0.0, 0.0, 0.0)

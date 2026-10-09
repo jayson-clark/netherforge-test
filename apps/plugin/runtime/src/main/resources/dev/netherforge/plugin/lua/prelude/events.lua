@@ -28,6 +28,7 @@ local guard_module = require("guard")
 
 local prim = input.prim
 local raw, format, concat, unpack, floor = std.raw, std.format, std.concat, std.unpack, std.floor
+local math_type = std.math_type
 local new, keys = handles.new, handles.keys
 local gated, needs_version = gates.gated, gates.needs_version
 local timing, invoke, current = guard_module.timing, guard_module.invoke, guard_module.current
@@ -67,9 +68,24 @@ local function event_names(class_name)
   return concat(names, ", ")
 end
 
+-- Tells Kotlin how many handlers `event` has on `key`, and, when every one of
+-- them has a rate, each one's "rate:phase", so it raises only the ticks one
+-- is due on (nil: one runs every time).
 local function notify(key, event)
   local list = listeners[key] and listeners[key][event]
-  prim["events.listening"](key ~= NF and key or nil, event, list and #list or 0)
+  local rates = nil
+  if list ~= nil then
+    local parts = {}
+    for _, sub in ipairs(list) do
+      if sub.every == nil then
+        parts = nil
+        break
+      end
+      parts[#parts + 1] = sub.every .. ":" .. sub.phase
+    end
+    rates = parts and concat(parts, " ")
+  end
+  prim["events.listening"](key ~= NF and key or nil, event, list and #list or 0, rates)
 end
 
 local function unsubscribe(sub)
@@ -158,6 +174,9 @@ local function subscribe(scope, target, event, handler, options, once, level)
     fn = handler,
     once = once,
     every = every,
+    -- A handler with a rate runs on the ticks where (tick + phase) % every == 0: phased by the
+    -- thing it's on (so one centity's handlers agree and a crowd of them spreads), or by its id on nf.
+    phase = every ~= nil and (target == nil and id or prim["events.phase"](target)) or nil,
     count = 0,
     errors = 0,
     active = true,
@@ -339,8 +358,14 @@ local function deliver(key, event, ev, state, only_scope)
     then
       local run = true
       if sub.every ~= nil then
-        sub.count = sub.count + 1
-        run = sub.count % sub.every == 0
+        local tick = state.fields.tick
+        if math_type(tick) == "integer" then
+          run = (tick + sub.phase) % sub.every == 0
+        else
+          -- Raised by hand without a tick (a test): counted instead.
+          sub.count = sub.count + 1
+          run = sub.count % sub.every == 0
+        end
       end
       if run then
         if sub.once then

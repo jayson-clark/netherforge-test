@@ -39,6 +39,14 @@ class AnimationPlayer {
     val active: Boolean get() = playing.isNotEmpty()
 
     /**
+     * Counts every change a script makes to the clips (started, stopped,
+     * paused, moved, sped up): what was worked out ahead from them
+     * ([applyAhead]) no longer holds once it moves. Advancing doesn't count.
+     */
+    var version = 0L
+        private set
+
+    /**
      * Starts [clip], restarting it if it was already playing: at [speed]
      * times its authored rate, [from] seconds in, under [loop] (its own mode
      * when null), easing from [pose] (the pose shown now) over
@@ -52,14 +60,18 @@ class AnimationPlayer {
         blendSeconds: Double = 0.0,
         pose: Array<Transform>? = null
     ) {
+        version++
         playing.remove(clip.name)
         val blend = if (blendSeconds > 0.0 && pose != null) Blend(pose.copyOf(), blendSeconds) else null
         playing[clip.name] = Playing(clip, loop ?: clip.loop, speed, blend).also { it.time = from }
     }
 
-    fun stop(name: String): Boolean = playing.remove(name) != null
+    fun stop(name: String): Boolean = (playing.remove(name) != null).also { if (it) version++ }
 
-    fun stopAll() = playing.clear()
+    fun stopAll() {
+        if (playing.isNotEmpty()) version++
+        playing.clear()
+    }
 
     fun isPlaying(name: String): Boolean = name in playing
 
@@ -69,12 +81,14 @@ class AnimationPlayer {
     fun pause(name: String): Boolean {
         val entry = playing[name] ?: return false
         entry.paused = true
+        version++
         return true
     }
 
     fun resume(name: String): Boolean {
         val entry = playing[name] ?: return false
         entry.paused = false
+        version++
         return true
     }
 
@@ -86,6 +100,7 @@ class AnimationPlayer {
         val entry = playing[name] ?: return false
         entry.time = seconds
         entry.ended = false
+        version++
         return true
     }
 
@@ -94,6 +109,7 @@ class AnimationPlayer {
     fun setSpeed(name: String, speed: Double): Boolean {
         val entry = playing[name] ?: return false
         entry.speed = speed
+        version++
         return true
     }
 
@@ -120,10 +136,24 @@ class AnimationPlayer {
     }
 
     /** Writes every playing clip's channels over [pose], which starts as a copy of the rest pose. */
-    fun apply(pose: Array<Transform>) {
+    fun apply(pose: Array<Transform>) = apply(pose, 0.0)
+
+    /**
+     * What [apply] will write after [advance] by [seconds], without moving
+     * anything: each clip that far on (a `once` clip that will have ended
+     * no longer writes), each blend that much further in.
+     */
+    fun applyAhead(pose: Array<Transform>, seconds: Double) = apply(pose, seconds)
+
+    private fun apply(pose: Array<Transform>, ahead: Double) {
         for (entry in playing.values) {
-            val at = entry.clip.resolve(entry.time, entry.loop).time
-            val weight = entry.blend?.weight ?: 1.0
+            val time = if (entry.ended || entry.paused) entry.time else entry.time + ahead * entry.speed
+            val position = entry.clip.resolve(time, entry.loop)
+            if (position.ended && entry.loop == LoopMode.ONCE && ahead > 0.0) continue
+            val at = position.time
+            val weight = entry.blend?.let { blend ->
+                if (blend.seconds <= 0.0) 1.0 else ((blend.elapsed + ahead) / blend.seconds).coerceIn(0.0, 1.0)
+            } ?: 1.0
             for (track in entry.clip.tracks) {
                 if (track.nodeIndex !in pose.indices) continue
                 var value = track.sample(at)

@@ -43,9 +43,10 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
         private set
 
     /**
-     * Where every display stands. Their offsets live in their transforms. Its
-     * own facing is always zero: the centity's facing is [yaw], which turns
-     * the transforms instead, so the entities themselves never turn.
+     * Where every display stands: they ride the [anchorEntity] there, and
+     * their offsets live in their transforms. Its own facing is always zero:
+     * the centity's facing is [yaw], which turns the transforms instead, so
+     * the entities themselves never turn.
      */
     var anchor: Location = anchor
         set(value) {
@@ -67,6 +68,15 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
     /** Node name → display entity / interaction entity. */
     val displays = LinkedHashMap<String, UUID>()
     val hitboxes = LinkedHashMap<String, UUID>()
+
+    /**
+     * The invisible entity at the anchor that every display rides, and every
+     * hitbox sitting at the anchor: moving the centity is one teleport of it.
+     */
+    var anchorEntity: UUID? = null
+
+    /** The entities known to ride [anchorEntity] now (runtime state: a sync with [forceSync] finds out again). */
+    internal val riders = HashSet<UUID>()
 
     /** Entities to remove that were unreachable (unloaded chunk) when they became stale. */
     val orphans = LinkedHashSet<UUID>()
@@ -131,6 +141,24 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
     private var looks: Array<DisplayLook> = emptyArray()
     private var unclickable: BooleanArray = BooleanArray(0)
     private var interpolation: IntArray = IntArray(0)
+
+    /**
+     * Nodes whose pose something other than a clip changed since the last
+     * sync (a script, physics, visibility): their displays are sent as they
+     * are, since what comes next can't be known. [allEdited] is every node.
+     */
+    private var edited: BooleanArray = BooleanArray(0)
+    private var allEdited = true
+
+    /** The clips' [AnimationPlayer.version] at the last sync: a clip started, stopped or moved since means nothing planned holds. */
+    private var syncedClips = -1L
+
+    /**
+     * Per node, the [age] its display's eased move lands on: until then the
+     * client is on its way to a pose sync worked out ahead, and nothing is
+     * sent for it while only clips move it. See [Keyframes].
+     */
+    internal var due: LongArray = LongArray(0)
 
     /** The pose changed since the last sync. */
     var poseDirty = true
@@ -234,6 +262,9 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
         contentChanged = BooleanArray(nodes.size) { from[it] >= 0 && contentChanged[from[it]] }
         unclickable = BooleanArray(nodes.size) { from[it] >= 0 && unclickable[from[it]] }
         interpolation = IntArray(nodes.size) { if (from[it] >= 0) interpolation[from[it]] else DEFAULT_INTERPOLATION_TICKS }
+        edited = BooleanArray(nodes.size)
+        due = LongArray(nodes.size)
+        allEdited = true
         if (renumber != null) {
             // What a body was touching is named by other bodies' indices.
             for (body in bodies) {
@@ -266,6 +297,9 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
         looks = Array(next.nodes.size) { DisplayLook() }
         unclickable = BooleanArray(next.nodes.size)
         interpolation = IntArray(next.nodes.size) { DEFAULT_INTERPOLATION_TICKS }
+        edited = BooleanArray(next.nodes.size)
+        due = LongArray(next.nodes.size)
+        allEdited = true
         animations.stopAll()
         // A walk was sized from the old hitboxes, and its `path_end` handlers went with the old script.
         walk = null
@@ -295,6 +329,7 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
     fun set(index: Int, channel: Channel, value: Vec3) {
         rest[index] = rest[index].with(channel, value)
         pose[index] = pose[index].with(channel, value)
+        edited[index] = true
         posed()
     }
 
@@ -331,13 +366,44 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
     }
 
     /** Each node's matrix into the centity's space, in node order. */
-    fun compose(): List<Matrix4> {
+    fun compose(): List<Matrix4> = compose(pose)
+
+    private fun compose(pose: Array<Transform>): List<Matrix4> {
         val world = ArrayList<Matrix4>(pose.size)
         definition.nodes.forEachIndexed { index, node ->
             val local = Matrix4.fromTrs(pose[index].translationOrDefault, pose[index].rotationOrDefault, pose[index].scaleOrDefault)
             world += if (node.isRoot) local else world[node.parentIndex].copy().mul(local)
         }
         return world
+    }
+
+    /**
+     * [placed] as it will be [ticks] ticks from now if only the clips move
+     * it: rest plus the clips advanced that far, nothing else changing.
+     */
+    fun placedAhead(ticks: Int): List<Matrix4> {
+        val ahead = rest.copyOf()
+        animations.applyAhead(ahead, ticks * Centities.SECONDS_PER_TICK)
+        val composed = compose(ahead)
+        if (yaw == 0.0) return composed
+        val turn = turn()
+        return composed.map { Matrix4().set(turn).mul(it) }
+    }
+
+    /**
+     * Whether node [index]'s shown matrix changed since the last sync in a way
+     * the clips alone don't account for: it, or a node above it, was set by
+     * a script or physics, hidden or shown, or eased differently; or the
+     * centity turned, or a clip was started, stopped or moved.
+     */
+    fun edited(index: Int): Boolean {
+        if (allEdited || animations.version != syncedClips) return true
+        var at = index
+        while (at >= 0) {
+            if (edited[at]) return true
+            at = definition.nodes[at].parentIndex
+        }
+        return false
     }
 
     // ---- the centity's space --------------------------------------------------
@@ -358,6 +424,7 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
             body.orientation = body.orientation?.let { (by * it).normalized() }
         }
         yaw = next
+        allEdited = true
         posed()
     }
 
@@ -433,6 +500,9 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
         forceSync = false
         moved = false
         contentChanged.fill(false)
+        edited.fill(false)
+        allEdited = false
+        syncedClips = animations.version
     }
 
     // ---- visibility and content ---------------------------------------------
@@ -442,6 +512,7 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
     fun setVisible(index: Int, value: Boolean) {
         if (hidden[index] == !value) return
         hidden[index] = !value
+        edited[index] = true
         poseDirty = true
         reshaped()
     }
@@ -498,11 +569,26 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
 
     fun setInterpolation(index: Int, ticks: Int) {
         interpolation[index] = ticks
+        edited[index] = true
         poseDirty = true
     }
 
+    /**
+     * Ticks a move of the whole centity is eased over (the anchor entity's
+     * teleport, which everything riding it follows): its roots' easing, the
+     * least of them, at most what Minecraft eases a teleport over.
+     */
+    fun moveTicks(): Int {
+        var ticks = MAX_TELEPORT_TICKS
+        definition.nodes.forEachIndexed { index, node -> if (node.isRoot) ticks = minOf(ticks, interpolation[index]) }
+        return ticks.coerceAtLeast(0)
+    }
+
     /** Every entity this instance owns or still has to clean up. */
-    fun entityIds(): List<UUID> = displays.values + hitboxes.values + orphans
+    fun entityIds(): List<UUID> = listOfNotNull(anchorEntity) + displays.values + hitboxes.values + orphans
+
+    /** The entities a player sees of it: its anchor, displays and hitboxes. */
+    fun shownEntities(): List<UUID> = listOfNotNull(anchorEntity) + displays.values + hitboxes.values
 
     companion object {
         /** Minecraft's default view range for a display, in blocks: a multiplier of 1. */

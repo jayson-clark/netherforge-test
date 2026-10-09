@@ -27,6 +27,7 @@ import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.schedule.NfScheduleImpl
 import dev.netherforge.plugin.schedule.ScheduleImpl
 import dev.netherforge.plugin.script.Scope
+import dev.netherforge.plugin.script.Scripts
 import dev.netherforge.plugin.session.ProjectSession
 import dev.netherforge.plugin.testing.NfTestImpl
 import dev.netherforge.plugin.world.MobGoals
@@ -332,10 +333,24 @@ internal class RuntimeApi(private val session: ProjectSession) :
         put(
             "events.listening",
             Primitive { lua ->
-                // (target or nil for nf, event, handlers now)
+                // (target or nil for nf, event, handlers now, their rates as "rate:phase …" or nil when one runs every time)
                 val target = if (lua.isNil(1)) null else host.handleAt(lua, 1)
-                scripts.listeningChanged(target, lua.toString(2)!!, lua.toInteger(3).toInt())
+                val rated = if (lua.isString(4)) {
+                    lua.toString(4)!!.split(' ').filter { it.isNotEmpty() }.flatMap { it.split(':').map(String::toLong) }.toLongArray()
+                } else {
+                    null
+                }
+                scripts.listeningChanged(target, lua.toString(2)!!, lua.toInteger(3).toInt(), rated)
                 0
+            }
+        )
+        put(
+            "events.phase",
+            Primitive { lua ->
+                // (handle): where its `every` handlers fall among the ticks, the same for every handler on it and
+                // its parts, and spread over instances so they don't all run on the same tick.
+                lua.push(Scripts.phaseOf(host.handleAt(lua, 1)))
+                1
             }
         )
         put(

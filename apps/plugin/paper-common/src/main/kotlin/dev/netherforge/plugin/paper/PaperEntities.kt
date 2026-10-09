@@ -16,6 +16,8 @@ import dev.netherforge.plugin.platform.EntityRole
 import dev.netherforge.plugin.platform.EntityTag
 import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.platform.StructureMarker
+import io.papermc.paper.entity.TeleportFlag
+import net.kyori.adventure.text.Component
 import org.bukkit.Bukkit
 import org.bukkit.Color
 import org.bukkit.Material
@@ -116,6 +118,30 @@ class PaperEntities(private val plugin: Plugin) : EntityOps {
             it.isResponsive = true
         }
         return entity.uniqueId
+    }
+
+    override fun spawnAnchor(at: Location, tag: EntityTag): UUID? {
+        val location = bukkit(at) ?: return null
+        // A text display with no text and no background draws nothing, but the client knows it, so riders sit on it there too.
+        val entity = location.world.spawn(location, BukkitTextDisplay::class.java) {
+            stamp(it, tag)
+            it.text(Component.empty())
+            it.isDefaultBackground = false
+            it.backgroundColor = Color.fromARGB(0)
+        }
+        return entity.uniqueId
+    }
+
+    override fun mount(vehicle: UUID, passenger: UUID): Boolean {
+        val carrier = Bukkit.getEntity(vehicle) ?: return false
+        val rider = Bukkit.getEntity(passenger) ?: return false
+        if (rider.vehicle == carrier) return true
+        if (rider.vehicle != null) rider.leaveVehicle()
+        return carrier.addPassenger(rider)
+    }
+
+    override fun dismount(passenger: UUID) {
+        Bukkit.getEntity(passenger)?.takeIf { it.vehicle != null }?.leaveVehicle()
     }
 
     override fun isLoaded(id: UUID): Boolean = Bukkit.getEntity(id) != null
@@ -221,7 +247,21 @@ class PaperEntities(private val plugin: Plugin) : EntityOps {
     override fun teleport(id: UUID, to: Location) {
         val entity = Bukkit.getEntity(id) ?: return
         val location = bukkit(to) ?: return
-        entity.teleport(location)
+        val riders = entity.passengers
+        if (riders.isEmpty()) {
+            entity.teleport(location)
+        } else if (location.world == entity.world) {
+            // Paper refuses to move an entity something rides unless told to keep them.
+            entity.teleport(location, TeleportFlag.EntityState.RETAIN_PASSENGERS)
+        } else {
+            // Not across worlds, though: off, over, and on again.
+            entity.eject()
+            entity.teleport(location)
+            for (rider in riders) {
+                rider.teleport(location)
+                entity.addPassenger(rider)
+            }
+        }
     }
 
     override fun resizeHitbox(id: UUID, width: Double, height: Double) {

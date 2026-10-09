@@ -304,7 +304,11 @@ What tends to cost:
 
 - **Tick handlers on many centities.** A handler on each of 200 instances is
   200 calls a tick. Use `every` (`this:on("tick", handler, { every = 10 })`) for
-  what doesn't need 20 times a second.
+  what doesn't need 20 times a second: then the server calls in only on the
+  ticks a handler is due, and different centities fall on different ticks, so
+  200 instances with `every = 4` cost about 50 calls a tick, not 200 every
+  fourth tick. Play animations rather than setting a node's pose every tick
+  where you can: an animation costs almost nothing once it's playing.
 - **Building tables and vectors per tick.** Each event is a new table, and so
   is every `Vec3`; keep what you can between calls.
 - **`player_move`.** It's raised per block a player moves, only while some

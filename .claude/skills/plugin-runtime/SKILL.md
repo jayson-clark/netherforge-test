@@ -620,8 +620,12 @@ walk `move_to` started moves the whole centity a step; see
 entities-and-physics), **physics**
 (bodies move and write their nodes' translation/rotation, then `collide`,
 `wake`, `sleep`; see entities-and-physics), **scripts** (`tick`, only when
-something listens; the rate is each handler's `every`, counted in the event
-core), **sync** (compose world matrices,
+something listens; the rate is each handler's `every`: it runs where
+`(tick + phase) % every == 0`, the phase the centity's (`Scripts.phaseOf`, a
+hash of its handle, so a crowd spreads over the ticks) or the subscription's
+id on `nf`; the event core tells Kotlin each handler's rate and phase
+(`events.listening`), and `Scripts.due` raises `tick` only on ticks one is
+due), **sync** (compose world matrices,
 push only what changed).
 
 ### Cutscenes (`cutscene/Cutscenes.kt`)
@@ -1119,15 +1123,41 @@ Lua state, and hands over.
 - **Local transforms are the truth**, not matrices. A script's setter writes
   the _rest_ pose (and the shown pose immediately); a clip owns the channels
   its tracks drive while it plays and they fall back to rest when it ends.
-- Displays all stand at the instance's **anchor** and carry their offset in
-  the transformation matrix, so moving a centity is one teleport per entity.
+- Displays all **ride the anchor entity** (`Instance.anchorEntity`, role
+  `ANCHOR`, an empty text display at the anchor: `EntityOps.spawnAnchor`,
+  `mount`, `dismount`) and carry their offset in the transformation matrix,
+  so moving a centity is one teleport, of the anchor entity. A hitbox rides
+  it too while its bounds sit at the anchor (`Bounds.atAnchor`: centred, its
+  bottom at the anchor's height), since an interaction entity has no
+  transform to carry an offset in; any other hitbox stands on its own and is
+  teleported, getting off and on as it moves. `Instance.riders` is what
+  rides now (runtime state: a `forceSync` mounts again, and mounting is
+  idempotent); something that couldn't get on is teleported as before. A
+  killed anchor entity is respawned by reconcile and picks its riders up; an
+  instance stored before anchors existed gets one at its first reconcile.
   The anchor's own facing is always zero: the centity's yaw is baked into
   the matrices (`Instance.placed()`), so turning it is a pose update, never
   an entity rotation.
   Hidden = zero-scale matrix. `cullSize` widens the client's culling box.
   Interpolation is each node's `interpolation_ticks` (1 unless a script
-  changed it: smooth at 20 Hz), 0 when forced; the same value, capped at 59,
-  is the display's teleport duration, so a moving centity glides too.
+  changed it: smooth at 20 Hz), 0 when forced; the roots' least, capped at
+  59, is the anchor entity's teleport duration (`Instance.moveTicks`), so a
+  moving centity glides too.
+- **Clips as keyframes** (`centity/Keyframes.kt`). While only clips move a
+  node (`Instance.edited`: not it or a node above it set by a script or
+  physics, hidden, re-eased, the centity not turned, no clip started,
+  stopped or moved since the last sync: `AnimationPlayer.version`), sync
+  doesn't send its pose every tick: it sends the pose `h` ticks on with `h`
+  ticks of interpolation and nothing more until `Instance.due`, `h` being as
+  far as the client's easing (translation and scale straight, rotation the
+  short arc: Paper's decomposition, see the file) passes within a hundredth
+  of a block of the clip at each tick between (`Keyframes.reach`, at most
+  20, looking ahead with `Instance.placedAhead` / `AnimationPlayer.applyAhead`).
+  So a linear segment is one send, an eased one a few, a step one at the
+  step, and a child on a turning parent pieces short enough that the chord
+  stays near the arc. Shear, mirrors, a collapsed node or an uneven scale
+  that changes aren't planned. The server's own pose (hitboxes, physics,
+  `world_position`) is still every tick's.
 - **Looks.** What a script changes about how a display is drawn (glow and
   its colour, brightness, a billboard, a text display's opacity, an item
   display's whole item) is a per-node `DisplayLook` on the `Instance`, reset

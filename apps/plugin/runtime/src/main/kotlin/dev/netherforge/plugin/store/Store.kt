@@ -89,6 +89,7 @@ class Store private constructor(private val database: Database) : AutoCloseable 
                                 yaw = rows.getDouble(7).takeIf { it.isFinite() } ?: 0.0,
                                 displays = role(DISPLAY).associate { it.third.orEmpty() to UUID.fromString(it.first) },
                                 hitboxes = role(HITBOX).associate { it.third.orEmpty() to UUID.fromString(it.first) },
+                                anchorEntity = role(ANCHOR).firstOrNull()?.let { UUID.fromString(it.first) },
                                 orphans = role(ORPHAN).map { UUID.fromString(it.first) }
                             )
                         )
@@ -120,6 +121,7 @@ class Store private constructor(private val database: Database) : AutoCloseable 
                 }
                 record.displays.forEach { (node, entity) -> add(entity, DISPLAY, node) }
                 record.hitboxes.forEach { (node, entity) -> add(entity, HITBOX, node) }
+                record.anchorEntity?.let { add(it, ANCHOR, null) }
                 record.orphans.forEach { add(it, ORPHAN, null) }
                 insert.executeBatch()
             }
@@ -470,12 +472,14 @@ class Store private constructor(private val database: Database) : AutoCloseable 
                 "002_schedules.sql",
                 "003_cutscene_states.sql",
                 "004_world_terrains.sql",
-                "005_world_dimension_types.sql"
+                "005_world_dimension_types.sql",
+                "006_instance_anchors.sql"
             )
 
         private const val DISPLAY = "display"
         private const val HITBOX = "hitbox"
         private const val ORPHAN = "orphan"
+        private const val ANCHOR = "anchor"
 
         /** Columns holding JSON, exported as the JSON they hold. */
         private val JSON_COLUMNS = setOf("centity_data.value", "player_data.value", "named_data.value")
