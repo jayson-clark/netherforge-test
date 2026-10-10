@@ -78,6 +78,12 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
     /** The entities known to ride [anchorEntity] now (runtime state: a sync with [forceSync] finds out again). */
     internal val riders = HashSet<UUID>()
 
+    /** The player this centity follows, if any (runtime state, see [Centities.follow]). */
+    internal var follower: UUID? = null
+
+    /** Whether [anchorEntity] rides [follower] now. While it does, the anchor isn't teleported: that would get it off. */
+    internal var followMounted = false
+
     /** Entities to remove that were unreachable (unloaded chunk) when they became stale. */
     val orphans = LinkedHashSet<UUID>()
 

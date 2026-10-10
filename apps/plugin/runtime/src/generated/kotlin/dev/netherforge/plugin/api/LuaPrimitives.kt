@@ -967,6 +967,23 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         1
     }
 
+    fn("Centity.follow") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.Centity
+        val player = call.arg(2, "player", LuaHandle.Player.Codec)
+        val result = api.centity.follow(self, player)
+        call.push(result, LuaCodecs.BOOLEAN)
+        1
+    }
+
+    fn("Centity.stop_following") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.Centity
+        val result = api.centity.stopFollowing(self)
+        call.push(result, LuaCodecs.BOOLEAN)
+        1
+    }
+
     fn("Centity.move_to") { call ->
         val lua = call.lua
         val self = call.self(1) as LuaHandle.Centity

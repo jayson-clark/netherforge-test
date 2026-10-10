@@ -198,6 +198,26 @@ Moves the whole centity: to a `Location` (turning to face its `yaw`, when it has
 this:teleport(this:position() + vec3(0, 5, 0))
 ```
 
+## `centity:follow(player)`
+
+Makes it ride a player: it moves with them and turns with their body, its displays and hitboxes at the anchor coming along, until `stop_following`, a `teleport`, or a `move_to` ends it. Not for a centity with physics bodies.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `player` | `Player` | Who it follows. |
+
+**Returns** `boolean`: Whether it follows them now: `false` once it's removed, for a player who is offline, and for a centity with physics bodies.
+
+```lua
+this:follow(player)
+```
+
+## `centity:stop_following()`
+
+Stops it following its player, where it is now. `false` when it wasn't following, or once it's removed.
+
+**Returns** `boolean`: `false` once it's removed.
+
 ## `centity:move_to(target, options?)`
 
 Makes the whole centity walk somewhere, finding its way round the blocks in the way: to a place in its own world, or after an entity or another centity, looking for a new path to wherever that is every 10 ticks. When it stops, its `path_end` handlers hear whether it got there. A walk goes by the centity's **feet**: the middle of the bottom of its hitboxes as they're placed when it sets off (its position, for a centity without any). The way is found over the blocks' collision shapes, sized to its hitboxes (other centities aren't in the way), and walked a little each tick, before physics and scripts: it steps up and drops down as the options allow, falls when nothing holds it up, and finds another way when a block appears across its path. With `fly = true` it flies instead, through the air in any direction. A new `move_to`, `stop_pathing` and `teleport` end the walk it was on, and so does a reload of its centity (its script's body can set off again). Walks aren't saved, and a centity whose chunk unloads waits where it is until it loads again. Its physics bodies are carried along with it.

@@ -33,6 +33,9 @@ open class FakeBody(val id: UUID, val kind: String, var location: Location) {
     /** Something with health: a mob, an armour stand, a player. */
     val living get() = type.health != null
 
+    /** Which way a living body faces: a test sets it apart from the look, as a walking player's body lags. */
+    var bodyYaw: Double = location.yaw
+
     /** Has AI: a mob, not an armour stand or a player. */
     val mob get() = type.mob
 
@@ -122,6 +125,8 @@ class FakeWorldEntities(private val platform: FakePlatform) : WorldEntityOps {
     }
 
     override fun velocity(id: UUID) = body(id)?.velocity
+
+    override fun bodyYaw(id: UUID): Double? = body(id)?.takeIf { it.living }?.bodyYaw
 
     override fun setVelocity(id: UUID, velocity: Vec3): Boolean {
         val body = body(id) ?: return false

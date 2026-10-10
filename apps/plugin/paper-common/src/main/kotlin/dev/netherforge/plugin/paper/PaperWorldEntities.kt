@@ -96,6 +96,8 @@ class PaperWorldEntities(private val plugin: Plugin, private val tagged: PaperEn
         return entity.teleport(location, TeleportFlag.EntityState.RETAIN_PASSENGERS)
     }
 
+    override fun bodyYaw(id: UUID): Double? = living(id)?.bodyYaw?.toDouble()
+
     override fun setRotation(id: UUID, yaw: Double, pitch: Double): Boolean {
         val entity = entity(id) ?: return false
         if (entity is Player) {

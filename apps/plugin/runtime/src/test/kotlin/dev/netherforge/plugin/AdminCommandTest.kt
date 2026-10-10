@@ -49,6 +49,7 @@ class AdminCommandTest {
             assertEquals(listOf("<green>basic: reloaded"), commands.run(alex, "nf reload"))
             assertEquals(
                 listOf(
+                    "<green>companion <white>running <gray>/companion",
                     "<green>flyby <white>running <gray>/flyby",
                     "<green>greeter <white>running <gray>/tower /shop /visits",
                     // The library's, which examples/basic depends on, run beside its own.

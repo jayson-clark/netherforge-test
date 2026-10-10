@@ -134,6 +134,13 @@ interface WorldEntityOps {
 
     fun setRotation(id: UUID, yaw: Double, pitch: Double): Boolean
 
+    /**
+     * Which way a living entity's body faces, in Minecraft degrees: not its look
+     * (a player's body follows their walking and turns only after their head has
+     * gone far enough). Null for anything not living, or gone.
+     */
+    fun bodyYaw(id: UUID): Double?
+
     /** Takes it out of the world, without dying. Never a player. */
     fun remove(id: UUID): Boolean
 

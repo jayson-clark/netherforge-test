@@ -133,6 +133,16 @@ function Centity.teleport(self, location_or_position)
   return prim["Centity.teleport"](self_key, location_or_position)
 end
 
+function Centity.follow(self, player)
+  local self_key = self_of(self, "Centity")
+  return prim["Centity.follow"](self_key, player)
+end
+
+function Centity.stop_following(self)
+  local self_key = self_of(self, "Centity")
+  return prim["Centity.stop_following"](self_key)
+end
+
 function Centity.move_to(self, target, options)
   local self_key = self_of(self, "Centity")
   return prim["Centity.move_to"](self_key, target, options)

@@ -1138,6 +1138,15 @@ Lua state, and hands over.
   The anchor's own facing is always zero: the centity's yaw is baked into
   the matrices (`Instance.placed()`), so turning it is a pose update, never
   an entity rotation.
+- **Following** (`Centities.follow`, `centity:follow(player)`): the anchor
+  entity is mounted on a player (`Instance.follower`), and each tick
+  (`followTick`, before the walk and sync) the anchor moves to their place and
+  the centity turns to their body: `LivingEntity.getBodyYaw()` through
+  `WorldEntityOps.bodyYaw`, not their look, since the body lags the head and
+  follows walking. While it rides them (`followMounted`) sync
+  never teleports the anchor, since a teleport would dismount it; if the
+  mount fails (other world) the anchor is teleported as usual. A teleport or
+  `move_to` ends a follow; physics bodies refuse one. Not persisted.
   Hidden = zero-scale matrix. `cullSize` widens the client's culling box.
   Interpolation is each node's `interpolation_ticks` (1 unless a script
   changed it: smooth at 20 Hz), 0 when forced; the roots' least, capped at

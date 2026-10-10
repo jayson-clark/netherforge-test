@@ -87,22 +87,25 @@ class FakeEntities(private val platform: FakePlatform) : EntityOps {
         return entity.id
     }
 
+    /** A vehicle is an entity of ours or a player, as on Paper. */
     override fun mount(vehicle: UUID, passenger: UUID): Boolean {
         if (!isLoaded(vehicle) || !isLoaded(passenger)) return false
-        val carrier = all.getValue(vehicle)
+        val carrier = locationOf(vehicle) ?: return false
         val rider = all.getValue(passenger)
         rider.vehicle = vehicle
-        rider.location = carrier.location
-        platform.playerViews.cameraMoved(passenger, carrier.location)
+        rider.location = carrier
+        platform.playerViews.cameraMoved(passenger, carrier)
         return true
     }
+
+    private fun locationOf(id: UUID) = all[id]?.location ?: platform.players.byId[id]?.location
 
     override fun dismount(passenger: UUID) {
         all[passenger]?.takeIf { isLoaded(passenger) }?.vehicle = null
     }
 
     /** As on Paper: an entity is reachable while its chunk's entities are loaded, and a gone one never is. */
-    override fun isLoaded(id: UUID) = all[id]?.let { platform.worlds.entitiesLoaded(it.location) } == true
+    override fun isLoaded(id: UUID) = locationOf(id)?.let { platform.worlds.entitiesLoaded(it) } == true
 
     override fun updateDisplay(id: UUID, display: DisplayDef): Boolean {
         val entity = all[id] ?: return true

@@ -326,6 +326,24 @@ export const centityClass: LuaClass = {
       ],
       example: 'this:teleport(this:position() + vec3(0, 5, 0))',
     },
+    {
+      name: 'follow',
+      doc: 'Makes it ride a player: it moves with them and turns with their body, its displays and hitboxes at the anchor coming along, until `stop_following`, a `teleport`, or a `move_to` ends it. Not for a centity with physics bodies.',
+      params: [{ name: 'player', type: 'Player', doc: 'Who it follows.' }],
+      returns: [
+        {
+          type: 'boolean',
+          doc: "Whether it follows them now: `false` once it's removed, for a player who is offline, and for a centity with physics bodies.",
+        },
+      ],
+      example: 'this:follow(player)',
+    },
+    {
+      name: 'stop_following',
+      doc: "Stops it following its player, where it is now. `false` when it wasn't following, or once it's removed.",
+      params: [],
+      returns: [{ type: 'boolean', doc: "`false` once it's removed." }],
+    },
     ...pathFunctions,
     {
       name: 'data',

@@ -103,6 +103,14 @@ internal class CentityImpl(private val session: ProjectSession) : CentityApi {
         return centities.teleport(instance, place.resolve(instance.anchor.world), place.yaw)
     }
 
+    override fun follow(self: LuaHandle.Centity, player: LuaHandle.Player): Boolean {
+        val instance = instance(self) ?: return false
+        val who = runCatching { UUID.fromString(player.id) }.getOrNull() ?: return false
+        return centities.follow(instance, who)
+    }
+
+    override fun stopFollowing(self: LuaHandle.Centity): Boolean = instance(self)?.let { centities.unfollow(it) } == true
+
     override fun moveTo(self: LuaHandle.Centity, target: LocationOrVec3OrEntityOrCentity, options: CentityPathOptions?): Boolean {
         val settings = pathSettings(options)
         val instance = instance(self) ?: return false
@@ -118,6 +126,8 @@ internal class CentityImpl(private val session: ProjectSession) : CentityApi {
             }.getOrNull()?.let(PathTarget::Centity)
             is LocationOrVec3OrEntityOrCentity.Entity -> target.value.uuidOrNull()?.let(PathTarget::Entity)
         } ?: return false
+        // A walk ends a follow, as a teleport does.
+        centities.unfollow(instance)
         return centities.paths.start(instance, goal, settings)
     }
 

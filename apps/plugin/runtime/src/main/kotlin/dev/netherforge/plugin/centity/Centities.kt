@@ -382,12 +382,70 @@ class Centities(
      */
     fun teleport(instance: Instance, to: Location, yaw: Double? = null): Boolean {
         if (instance.removed || !platform.worlds.exists(to.world)) return false
-        // A teleport ends a walk, as `stop_pathing` does: no `path_end`.
+        // A teleport ends a walk, as `stop_pathing` does: no `path_end`. It ends a follow too.
         instance.walk = null
+        unfollow(instance)
         instance.anchor = to.copy(yaw = 0.0, pitch = 0.0)
         if (yaw != null) instance.turnTo(yaw)
         sync(instance)
         return true
+    }
+
+    /**
+     * Makes [instance] ride [player]: its anchor entity mounts them, and each
+     * tick it moves to their place and turns to their body ([followAt]).
+     * False when they're offline, or it has physics bodies (not tested
+     * together yet). A walk it was on ends.
+     */
+    fun follow(instance: Instance, player: UUID): Boolean {
+        if (instance.removed || instance.hasBodies) return false
+        val at = platform.players.location(player) ?: return false
+        instance.walk = null
+        instance.follower = player
+        followAt(instance, at)
+        return true
+    }
+
+    /**
+     * Stops following, where the centity is now: the anchor entity gets off
+     * the player and stays put. False when it wasn't following.
+     */
+    fun unfollow(instance: Instance): Boolean {
+        if (instance.follower == null) return false
+        if (instance.followMounted) instance.anchorEntity?.let(platform.entities::dismount)
+        instance.follower = null
+        instance.followMounted = false
+        return true
+    }
+
+    /** Moves a following centity to its player (each tick, before its sync): the anchor, and the facing with their body. */
+    private fun followTick(instance: Instance) {
+        val player = instance.follower ?: return
+        val at = platform.players.location(player)
+        if (at == null) {
+            // Offline: the anchor is left where it was, as after `stop_following`.
+            instance.follower = null
+            instance.followMounted = false
+            return
+        }
+        followAt(instance, at)
+    }
+
+    /**
+     * Puts the anchor at [at] and turns the centity to the player's body (not
+     * their look: their body lags their head and follows their walking, so a
+     * centity worn on them turns as they do), then mounts the anchor entity on
+     * the player: that's idempotent, so it also puts it back after something got
+     * it off. A player in another world can't carry it, so until they're in its
+     * world the anchor is teleported instead.
+     */
+    private fun followAt(instance: Instance, at: Location) {
+        val anchor = at.copy(yaw = 0.0, pitch = 0.0)
+        if (instance.anchor != anchor) instance.anchor = anchor
+        val player = instance.follower
+        instance.turnTo(player?.let { platform.worldEntities.bodyYaw(it) } ?: at.yaw)
+        val vehicle = instance.anchorEntity
+        instance.followMounted = vehicle != null && player != null && platform.entities.mount(player, vehicle)
     }
 
     /**
@@ -499,6 +557,8 @@ class Centities(
                 emit(Events.CENTITY_ANIMATION_END, instance, AnimationEvent(handle(instance), clip))
             }
         }
+        // A follow moves it to its player first, as a walk does; it never has both (a walk ends it).
+        if (instance.follower != null && !instance.removed) followTick(instance)
         // Walking moves the whole centity first, so physics settles its bodies where it has been walked to.
         if (instance.walk != null && !instance.removed) paths.step(instance)
         if (instance.hasBodies && !instance.removed) physics.step(instance, SECONDS_PER_TICK)
@@ -598,7 +658,8 @@ class Centities(
             platform.entities.setLook(vehicle, look)
             instance.pushedLooks[vehicle] = look
         }
-        if (instance.moved) platform.entities.teleport(vehicle, instance.anchor)
+        // Riding a followed player, it moves with them: a teleport would get it off.
+        if (instance.moved && !instance.followMounted) platform.entities.teleport(vehicle, instance.anchor)
         return vehicle
     }
 

@@ -968,6 +968,19 @@ interface CentityApi {
     fun teleport(self: LuaHandle.Centity, locationOrPosition: LocationOrVec3): Boolean
 
     /**
+     * Makes it ride a player: it moves with them and turns with their body, its displays and hitboxes at
+     * the anchor coming along, until `stop_following`, a `teleport`, or a `move_to` ends it. Not for a
+     * centity with physics bodies.
+     */
+    fun follow(self: LuaHandle.Centity, player: LuaHandle.Player): Boolean
+
+    /**
+     * Stops it following its player, where it is now. `false` when it wasn't following, or once it's
+     * removed.
+     */
+    fun stopFollowing(self: LuaHandle.Centity): Boolean
+
+    /**
      * Makes the whole centity walk somewhere, finding its way round the blocks in the way: to a place in
      * its own world, or after an entity or another centity, looking for a new path to wherever that is
      * every 10 ticks. When it stops, its `path_end` handlers hear whether it got there. A walk goes by the
