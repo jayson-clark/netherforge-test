@@ -100,6 +100,7 @@ class CompiledResourcePack(
             item.texture?.let(::add)
             item.guiTexture?.let(::add)
             item.model?.let { models[it] }?.let { addAll(it.packTextures) }
+            item.drawn?.forEach { models[it]?.let { model -> addAll(model.packTextures) } }
         }
         tooltips.values.forEach { tooltip ->
             tooltip.background?.let(::add)
@@ -332,42 +333,77 @@ object PackLayout {
                     }
                 )
                 item.guiTexture?.let { itemSprites += resource(it) }
-                val definition = if (item.guiTexture == null) {
+                // The look a stack shows at rest: the model, or the GUI's picture in inventories and item frames.
+                val look = if (item.guiTexture == null) {
                     buildJsonObject {
-                        putJsonObject("model") {
-                            put("type", "minecraft:model")
-                            put("model", model)
-                        }
+                        put("type", "minecraft:model")
+                        put("model", model)
                     }
                 } else {
                     val guiModel = "$ns:item/$id/${key}_gui"
                     out["assets/$ns/models/item/$id/${key}_gui.json"] =
                         json(itemModel(ItemModelParent.GENERATED, resource(item.guiTexture)))
                     buildJsonObject {
-                        putJsonObject("model") {
-                            put("type", "minecraft:select")
-                            put("property", "minecraft:display_context")
-                            putJsonArray("cases") {
-                                add(
-                                    buildJsonObject {
-                                        putJsonArray("when") {
-                                            add(JsonPrimitive("gui"))
-                                            add(JsonPrimitive("fixed"))
-                                        }
-                                        putJsonObject("model") {
-                                            put("type", "minecraft:model")
-                                            put("model", guiModel)
-                                        }
+                        put("type", "minecraft:select")
+                        put("property", "minecraft:display_context")
+                        putJsonArray("cases") {
+                            add(
+                                buildJsonObject {
+                                    putJsonArray("when") {
+                                        add(JsonPrimitive("gui"))
+                                        add(JsonPrimitive("fixed"))
                                     }
-                                )
-                            }
-                            putJsonObject("fallback") {
-                                put("type", "minecraft:model")
-                                put("model", model)
-                            }
+                                    putJsonObject("model") {
+                                        put("type", "minecraft:model")
+                                        put("model", guiModel)
+                                    }
+                                }
+                            )
+                        }
+                        putJsonObject("fallback") {
+                            put("type", "minecraft:model")
+                            put("model", model)
                         }
                     }
                 }
+                val definition = item.drawn?.takeIf { it.isNotEmpty() }?.let { drawn ->
+                    // Each stage is a model of its own, in the item's folder, as its GUI picture is.
+                    val stages = drawn.mapIndexed { i, name ->
+                        val stage = "${key}_drawn$i"
+                        out["assets/$ns/models/item/$id/$stage.json"] = json(PackModels.write(pack.models.getValue(name), ::resource))
+                        itemSprites += pack.models.getValue(name).packTextures.map(::resource)
+                        buildJsonObject {
+                            put("type", "minecraft:model")
+                            put("model", "$ns:item/$id/$stage")
+                        }
+                    }
+                    // The game's `use_duration` counts ticks used, scaled: at 0.05 a full second (20 ticks) is 1, the
+                    // draw a bow takes. Stage i starts at i / (last), so the last begins at a full draw.
+                    val last = (stages.size - 1).coerceAtLeast(1)
+                    buildJsonObject {
+                        putJsonObject("model") {
+                            put("type", "minecraft:condition")
+                            put("property", "minecraft:using_item")
+                            put("on_false", look)
+                            putJsonObject("on_true") {
+                                put("type", "minecraft:range_dispatch")
+                                put("property", "minecraft:use_duration")
+                                put("scale", ItemModelDef.DRAW_SCALE)
+                                putJsonArray("entries") {
+                                    stages.drop(1).forEachIndexed { i, stage ->
+                                        add(
+                                            buildJsonObject {
+                                                put("threshold", (i + 1).toDouble() / last)
+                                                put("model", stage)
+                                            }
+                                        )
+                                    }
+                                }
+                                put("fallback", stages.first())
+                            }
+                        }
+                    }
+                } ?: buildJsonObject { put("model", look) }
                 out["assets/$ns/items/$id/$key.json"] = json(definition)
             }
 

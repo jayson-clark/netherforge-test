@@ -58,7 +58,8 @@ object ResourcePackKind : DocumentResourceKind<ResourcePackFile, ResourcePackRea
 
     /** The model files [file]'s looks name, each once, by path under `models/`. */
     fun modelsOf(file: ResourcePackFile): List<String> =
-        (file.items.values.mapNotNull { it.model } + file.blocks.values.mapNotNull { it.model }).filter(PackModels::isModelPath).distinct()
+        (file.items.values.flatMap { listOfNotNull(it.model) + it.drawn.orEmpty() } + file.blocks.values.mapNotNull { it.model })
+            .filter(PackModels::isModelPath).distinct()
 
     override fun crossCheck(value: ResourcePackFile, ctx: KindContext) {
         val id = ctx.id

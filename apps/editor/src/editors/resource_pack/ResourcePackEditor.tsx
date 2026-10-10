@@ -30,7 +30,15 @@ import { useApp, useWorkspace } from '@/state/providers'
 import { usePrimary, useView } from '@/editors/views'
 import { MiniText, TextPreview } from '@/minecraft/text/MiniText'
 import { ask } from '@/ui/dialogs'
-import { CheckField, NumberField, Row, Section, SelectField, TextField } from '@/ui/fields'
+import {
+  CheckField,
+  Datalist,
+  NumberField,
+  Row,
+  Section,
+  SelectField,
+  TextField,
+} from '@/ui/fields'
 import { Button, IconButton } from '@/ui/Button'
 import { cx } from '@/ui/cx'
 import { Icon } from '@/ui/Icon'
@@ -87,6 +95,14 @@ const KIND_LABELS: Record<EntryKind, { title: string; one: string }> = {
 const textureLabel = (key: string) =>
   key[0]!.toUpperCase() + key.slice(1).replace(/[A-Z]/g, (it) => ` ${it.toLowerCase()}`)
 const capitalized = (text: string) => text[0]!.toUpperCase() + text.slice(1)
+/** The `drawn` stages a text field writes: model files, comma-separated, in order; none is no `drawn`. */
+const drawnFromText = (text: string) => {
+  const stages = text
+    .split(',')
+    .map((it) => it.trim())
+    .filter(Boolean)
+  return stages.length > 0 ? stages : undefined
+}
 
 type Pick = ResourcePackPick | null
 
@@ -695,6 +711,19 @@ function EntryInspector({
             })
           }
         />
+      )}
+      {kind === 'items' && (
+        <>
+          <TextField
+            label="Draw stages"
+            dataPath={at('drawn')}
+            value={((def as { drawn?: string[] }).drawn ?? []).join(', ')}
+            placeholder="pull_0.json, pull_1.json"
+            list="drawn-models"
+            onChange={(text) => setDef('drawn', drawnFromText(text))}
+          />
+          <Datalist id="drawn-models" values={modelFiles} />
+        </>
       )}
       {TEXTURE_FIELDS[kind]
         .filter((key) => !(block && key === 'texture'))

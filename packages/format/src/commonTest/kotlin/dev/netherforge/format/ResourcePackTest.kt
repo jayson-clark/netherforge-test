@@ -10,6 +10,7 @@ import dev.netherforge.format.resourcepack.GlyphDef
 import dev.netherforge.format.resourcepack.ItemModelDef
 import dev.netherforge.format.resourcepack.PackFonts
 import dev.netherforge.format.resourcepack.PackLayout
+import dev.netherforge.format.resourcepack.PackModels
 import dev.netherforge.format.resourcepack.ResourcePackFile
 import dev.netherforge.format.resourcepack.ResourcePackValidator
 import dev.netherforge.format.resourcepack.SkinDef
@@ -17,6 +18,8 @@ import dev.netherforge.format.resourcepack.SoundDef
 import dev.netherforge.format.resourcepack.TooltipDef
 import dev.netherforge.format.resourcepack.pngSize
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -121,6 +124,61 @@ class ResourcePackTest {
         )
         val nineSlice = (files.getValue("assets/shop/textures/gui/sprites/tooltip/ui/fancy_frame.png.mcmeta") as PackLayout.Entry.Text).text
         assertTrue("\"nine_slice\"" in nineSlice && "\"width\": 24" in nineSlice, nineSlice)
+    }
+
+    @Test
+    fun drawnStagesAreModelsAndTheLookWrapsThemInAUseDurationSelector() {
+        val blank = PackModels.Model(JsonObject(emptyMap()), emptyMap())
+        val pack = CompiledResourcePack.compileAll(
+            "shop",
+            mapOf(
+                "ui" to ResourcePackFile(
+                    items = mapOf("bow" to ItemModelDef(model = "bow.json", drawn = listOf("blank.json", "blank.json", "blank.json")))
+                )
+            ),
+            models = mapOf("ui" to mapOf("bow.json" to blank, "blank.json" to blank))
+        ).values.toList()
+        val files = PackLayout.build(pack, listOf(75, 0), "Test") { 24 to 24 }
+        for (stage in 0..2) assertTrue("assets/shop/models/item/ui/bow_drawn$stage.json" in files, files.keys.toString())
+        // At rest the item shows its look; in use, the stages, the last from a full draw (a second, at 0.05 per tick).
+        val definition = Json.parseToJsonElement((files.getValue("assets/shop/items/ui/bow.json") as PackLayout.Entry.Text).text).jsonObject
+        val condition = definition.getValue("model").jsonObject
+        assertEquals("minecraft:condition", condition.getValue("type").jsonPrimitive.content)
+        assertEquals("minecraft:using_item", condition.getValue("property").jsonPrimitive.content)
+        assertEquals("shop:item/ui/bow", condition.getValue("on_false").jsonObject.getValue("model").jsonPrimitive.content)
+        val dispatch = condition.getValue("on_true").jsonObject
+        assertEquals("minecraft:use_duration", dispatch.getValue("property").jsonPrimitive.content)
+        assertEquals(0.05, dispatch.getValue("scale").jsonPrimitive.double)
+        assertEquals("shop:item/ui/bow_drawn0", dispatch.getValue("fallback").jsonObject.getValue("model").jsonPrimitive.content)
+        val entries = dispatch.getValue("entries").jsonArray.map { it.jsonObject }
+        assertEquals(listOf(0.5, 1.0), entries.map { it.getValue("threshold").jsonPrimitive.double })
+        assertEquals(
+            listOf("shop:item/ui/bow_drawn1", "shop:item/ui/bow_drawn2"),
+            entries.map { it.getValue("model").jsonObject.getValue("model").jsonPrimitive.content }
+        )
+        // A look with no drawn stages is the plain definition: no selector.
+        val plain = CompiledResourcePack.compileAll(
+            "shop",
+            mapOf(
+                "ui" to ResourcePackFile(items = mapOf("gem" to ItemModelDef("item/gem.png")))
+            )
+        )
+            .values.toList()
+        val gem = PackLayout.build(plain, listOf(75, 0), "Test") { 24 to 24 }
+        assertTrue("using_item" !in (gem.getValue("assets/shop/items/ui/gem.json") as PackLayout.Entry.Text).text)
+    }
+
+    @Test
+    fun drawnStagesAreCheckedAsModelFilesAndNeedAtLeastOne() {
+        fun problems(drawn: List<String>?): List<Pair<String?, String?>> {
+            val file = ResourcePackFile(items = mapOf("bow" to ItemModelDef(model = "bow.json", drawn = drawn)))
+            return ProblemSink("resource_packs/ui/pack.json").also {
+                ResourcePackValidator.validate(file, it, emptySet(), emptySet(), setOf("bow.json", "blank.json"))
+            }.problems.map { it.code to it.path }
+        }
+        assertEquals(emptyList(), problems(listOf("blank.json")))
+        assertEquals(listOf("resource_pack.model-file" to "$.items.bow.drawn[1]"), problems(listOf("blank.json", "missing.json")))
+        assertEquals(listOf("resource_pack.item-look" to "$.items.bow.drawn"), problems(emptyList()))
     }
 
     @Test

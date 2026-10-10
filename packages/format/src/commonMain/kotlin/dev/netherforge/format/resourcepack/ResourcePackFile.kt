@@ -133,8 +133,19 @@ data class ItemModelDef(
     /** How a [texture] is held. Default [ItemModelParent.GENERATED]. */
     val parent: ItemModelParent? = null,
     /** A different picture used only in GUIs. */
-    @Ref(RefKind.TEXTURE) val guiTexture: String? = null
-)
+    @Ref(RefKind.TEXTURE) val guiTexture: String? = null,
+    /**
+     * Model files (`crystal_pull.json`) for the stages of drawing the item, from the first pull to a full draw, as a bow
+     * is drawn: while it's in use the first is shown, and each later one from its share of the first second of use
+     * (the last from a full draw). Once it's drawn, the look above is shown again. Needs at least one.
+     */
+    @Ref(RefKind.MODEL) val drawn: List<String>? = null
+) {
+    companion object {
+        /** The game's `use_duration` property scales ticks used by this: 0.05 makes one second (20 ticks) a value of 1. */
+        const val DRAW_SCALE = 0.05
+    }
+}
 
 /** The vanilla item models a custom item model builds on. */
 @Serializable

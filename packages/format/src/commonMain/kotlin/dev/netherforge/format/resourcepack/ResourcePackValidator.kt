@@ -74,10 +74,17 @@ object ResourcePackValidator {
             item.texture?.let { texture(it, "$at.texture") }
             item.guiTexture?.let { texture(it, "$at.guiTexture") }
             item.model?.let { model(it, "$at.model") }
+            item.drawn?.forEachIndexed { i, stage -> model(stage, "$at.drawn[$i]") }
             val looks = listOfNotNull(item.texture?.let { "texture" }, item.block?.let { "block" }, item.model?.let { "model" })
             when {
                 looks.isEmpty() ->
                     sink.report(ProblemCodes.RESOURCE_PACK_ITEM_LOOK, "Give this item a texture, a block it's drawn as, or a model", at)
+                item.drawn?.isEmpty() == true ->
+                    sink.report(
+                        ProblemCodes.RESOURCE_PACK_ITEM_LOOK,
+                        "`drawn` lists the models of each draw stage, so it needs at least one",
+                        "$at.drawn"
+                    )
                 looks.size > 1 ->
                     sink.report(
                         ProblemCodes.RESOURCE_PACK_ITEM_LOOK,

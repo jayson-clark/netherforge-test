@@ -99,13 +99,14 @@ A custom look for one item stack, through its `itemModel`. No vanilla item is
 replaced: a stack of paper with `"itemModel": "ui/ruby"` looks like a ruby,
 and every other piece of paper is untouched.
 
-| Key          | Meaning                                                                                                          | Default                    |
-| ------------ | ---------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `texture`    | The picture, drawn flat.                                                                                         |                            |
-| `block`      | A [block look](#block-models) (`ui/ruby_ore`) to draw instead: a cube in slots and the hand, as a block item is. |                            |
-| `model`      | A [model file](#models) (`crystal.json`, under `models/`): a shape of its own, drawn as modelled.                |                            |
-| `parent`     | With a `texture`: `minecraft:item/generated` (a flat sprite) or `minecraft:item/handheld` (held like a tool)     | `minecraft:item/generated` |
-| `guiTexture` | A different picture shown only in inventories and item frames.                                                   |                            |
+| Key          | Meaning                                                                                                                | Default                    |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `texture`    | The picture, drawn flat.                                                                                               |                            |
+| `block`      | A [block look](#block-models) (`ui/ruby_ore`) to draw instead: a cube in slots and the hand, as a block item is.       |                            |
+| `model`      | A [model file](#models) (`crystal.json`, under `models/`): a shape of its own, drawn as modelled.                      |                            |
+| `parent`     | With a `texture`: `minecraft:item/generated` (a flat sprite) or `minecraft:item/handheld` (held like a tool)           | `minecraft:item/generated` |
+| `guiTexture` | A different picture shown only in inventories and item frames.                                                         |                            |
+| `drawn`      | [Draw stages](#draw-stages) (`["bow_pull_0.json", …]`): model files shown while the item is in use, as a bow is drawn. |                            |
 
 A look has one of `texture`, `block` and `model`, and `parent` only goes with a
 `texture` (`resource_pack.item-look`). The item that places a [block](block.md) usually
@@ -123,6 +124,29 @@ and a model drawing a texture outside every atlas shows the missing texture, so
 the built resource pack adds the looks' textures to it
 (`assets/minecraft/atlases/items.json`). A texture a block look uses too goes
 in the `blocks` atlas only: the game wants each texture in one atlas.
+
+### Draw stages
+
+An item that's drawn over time, like a bow, names a model per stage in
+`drawn`, from the first pull to a full draw. While the player uses the item,
+the first stage shows; each later one from its share of the first second of
+use, so the last from a full draw (20 ticks, the bow's). Once the item is put
+down, its look shows again.
+
+```json partial
+"items": {
+  "bow": {
+    "model": "bow.json",
+    "drawn": ["bow_pull_0.json", "bow_pull_1.json", "bow_pull_2.json"]
+  }
+}
+```
+
+Each stage is a [model file](#models) under `models/`, checked like any other
+(`resource_pack.model-file`), and the built pack gives the item a definition
+that chooses between them with the game's `use_duration`. A list needs at
+least one stage (`resource_pack.item-look`). A stage can be an empty model (`{}`) to hold
+its place until the art is drawn.
 
 ## Models
 
