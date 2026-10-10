@@ -1,5 +1,6 @@
 package dev.netherforge.plugin
 
+import dev.netherforge.plugin.platform.EntityRole
 import dev.netherforge.plugin.platform.Location
 import java.util.UUID
 import kotlin.test.Test
@@ -133,6 +134,39 @@ class CentityFollowTest {
 
             assertFalse(centities.follow(instance, UUID.randomUUID()))
             assertNull(server.platform.entities.anchor(instance.id).vehicle)
+        }
+    }
+
+    @Test
+    fun `a mounted follower is drawn where it is, not at the height its rider sits`() {
+        server().use { server ->
+            val centities = server.runtime.session.centities
+            val instance = assertNotNull(centities.spawn("lantern", at))
+            server.tick()
+            val player = server.platform.players.add("alex", at)
+            centities.follow(instance, player.ref.uuid)
+            server.tick()
+
+            val body = server.platform.entities.of(instance.id).first { it.role == EntityRole.DISPLAY }
+            assertEquals(-server.platform.entities.ridingHeight, body.pose!!.matrix.translation().y, 1e-6)
+        }
+    }
+
+    @Test
+    fun `sneaking lowers the rider, and the displays follow it down`() {
+        server().use { server ->
+            val centities = server.runtime.session.centities
+            val instance = assertNotNull(centities.spawn("lantern", at))
+            server.tick()
+            val player = server.platform.players.add("alex", at)
+            centities.follow(instance, player.ref.uuid)
+            server.tick()
+
+            server.platform.entities.ridingHeight = 1.5
+            server.tick()
+
+            val body = server.platform.entities.of(instance.id).first { it.role == EntityRole.DISPLAY }
+            assertEquals(-1.5, body.pose!!.matrix.translation().y, 1e-6)
         }
     }
 }

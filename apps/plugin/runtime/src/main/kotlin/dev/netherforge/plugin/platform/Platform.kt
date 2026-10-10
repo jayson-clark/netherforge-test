@@ -518,6 +518,13 @@ interface EntityOps {
     /** Moves an entity, keeping everything else about it: what rides it comes too. One that rides something doesn't move. */
     fun teleport(id: UUID, to: Location)
 
+    /**
+     * Where an entity is now, as the game has it: a rider sits where its vehicle
+     * puts it (above the feet of a player who carries it, lower when they sneak).
+     * Null when it can't be reached.
+     */
+    fun location(id: UUID): Location?
+
     fun resizeHitbox(id: UUID, width: Double, height: Double)
 
     /** Removes the entity; false when it can't be reached (see [isLoaded]). */

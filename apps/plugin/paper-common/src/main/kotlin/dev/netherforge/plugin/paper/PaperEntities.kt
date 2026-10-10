@@ -244,6 +244,10 @@ class PaperEntities(private val plugin: Plugin) : EntityOps {
 
     private fun collapsed(matrix: Matrix4): Boolean = matrix.scale().let { it.x < EPSILON || it.y < EPSILON || it.z < EPSILON }
 
+    override fun location(id: UUID): Location? = Bukkit.getEntity(id)?.location?.let {
+        Location(it.world.name, it.x, it.y, it.z, it.yaw.toDouble(), it.pitch.toDouble())
+    }
+
     override fun teleport(id: UUID, to: Location) {
         val entity = Bukkit.getEntity(id) ?: return
         val location = bukkit(to) ?: return

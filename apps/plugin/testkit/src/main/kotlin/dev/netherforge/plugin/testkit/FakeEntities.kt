@@ -125,6 +125,16 @@ class FakeEntities(private val platform: FakePlatform) : EntityOps {
         entity.poses++
     }
 
+    /** How far above its vehicle a rider sits: a player's head standing, lower when they sneak (as the game puts it). */
+    var ridingHeight = 1.8
+
+    /** Where an entity is: a rider is where its vehicle is, plus the height it rides at. */
+    override fun location(id: UUID): Location? {
+        val entity = all[id] ?: return null
+        val vehicle = entity.vehicle ?: return entity.location
+        return locationOf(vehicle)?.offset(0.0, ridingHeight, 0.0) ?: entity.location
+    }
+
     override fun teleport(id: UUID, to: Location) {
         all[id]?.let {
             // As on Paper: a rider stays on its vehicle, and riders come along with it.

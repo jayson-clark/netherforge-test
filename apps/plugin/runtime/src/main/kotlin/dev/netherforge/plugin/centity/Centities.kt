@@ -582,19 +582,40 @@ class Centities(
 
     // ---- sync ------------------------------------------------------------------
 
+    /**
+     * How far a mounted follower's anchor sits from where it should be: a rider
+     * sits on its vehicle's attachment point (a player's head, lower when they
+     * sneak), so the game puts the anchor that far off the centity. Null when
+     * nothing is mounted, so nothing moves.
+     */
+    private fun riderShift(instance: Instance, vehicle: UUID?): Vec3? {
+        if (!instance.followMounted || vehicle == null) return null
+        val actual = platform.entities.location(vehicle) ?: return null
+        val wanted = instance.anchor
+        return Vec3(wanted.x - actual.x, wanted.y - actual.y, wanted.z - actual.z)
+    }
+
+    /** The poses moved by [shift] in the world: what the riders are drawn at, from where the game puts the anchor. */
+    private fun shiftedBy(poses: List<Matrix4>, shift: Vec3?): List<Matrix4> {
+        if (shift == null) return poses
+        val move = Matrix4().identity().translate(shift.x, shift.y, shift.z)
+        return poses.map { Matrix4().set(move).mul(it) }
+    }
+
     /** Brings the instance's entities in line with its state, writing only what changed. */
     fun sync(instance: Instance) {
         if (instance.removed || !loaded(instance)) return
         dropGone(instance)
         if (instance.needsReconcile) reconcile(instance)
         sweepOrphans(instance)
-        if (!instance.poseDirty && !instance.forceSync && !instance.moved) return
+        // A mounted follower is redrawn every tick: the game's place for its rider moves with a sneak, not only a walk.
+        if (!instance.poseDirty && !instance.forceSync && !instance.moved && !instance.followMounted) return
 
-        val world = instance.placed()
-        val cull = cullSize(world)
         val anchor = instance.anchor
         val entities = platform.entities
         val vehicle = syncAnchor(instance)
+        val world = shiftedBy(instance.placed(), riderShift(instance, vehicle))
+        val cull = cullSize(world)
         val ahead = Lookahead(instance)
         for ((index, node) in instance.definition.nodes.withIndex()) {
             val shown = instance.shown(index)
