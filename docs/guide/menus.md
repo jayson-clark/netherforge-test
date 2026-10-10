@@ -359,9 +359,12 @@ and nothing is duplicated or lost by closing the window, leaving, dying, a
 reload or the server crashing.
 
 - In a locked window, players can still use a bound slot by hand.
-  Shift-clicking into the window and double-click gathering stay locked, since
-  they reach the window's other slots. To accept only some items, cancel the
-  slot's `click` (`event.cursor_item` is what they're putting in).
+  Double-click gathering stays locked, since it reaches the window's other
+  slots. A shift-click from the player's own inventory is locked too, unless
+  the window says where it goes with `menu:shift_into(storage, first?, last?)`:
+  then it fills the bound slots of that storage, first slot first, and nothing
+  else. To accept only some items, cancel the slot's `click` (`event.item` is
+  the stack going in).
 - Only a window of its own can be bound, not a `shared` one.
 - Scripts read and change a storage like any inventory: `item`, `set_item`,
   `add_item`, `remove_item`, `has_item`. A slot showing it updates at once.

@@ -45,8 +45,11 @@ import java.util.UUID
  * is heard by the clicked slot's handlers first, then the window's, then
  * `nf.on("menu_click")`; `event:stop()` ends that and `event:cancel()`
  * cancels the click. A locked window starts every click that would move items
- * in or out of it already cancelled, which a handler may undo. When a window
- * goes, so does every handler on it and its slots.
+ * in or out of it already cancelled, which a handler may undo. A window with
+ * a [ShiftInto] takes a shift-click from the player's own inventory instead:
+ * the engine moves the stack into the bound slots it names, offering it to
+ * each slot's click handlers. When a window goes, so does every handler on it
+ * and its slots.
  *
  * Closing is reported by the server, and a window is only retired on the next
  * tick: while a close is being handled the closing player can still count as a
@@ -92,6 +95,9 @@ class Menus(
     /** Which slot of a storage a window's slot shows. */
     data class Binding(val storage: InventoryRef.Storage, val index: Int)
 
+    /** Where a shift-click from the player's inventory goes: the window's slots bound to [storage]'s, from [first] to [last]. */
+    data class ShiftInto(val storage: InventoryRef.Storage, val first: Int, val last: Int)
+
     /** A menu a script made: what its windows start as, for as long as the scope [owner] lasts. */
     class Template(val id: String, val definition: CompiledMenu, val owner: Int)
 
@@ -120,6 +126,10 @@ class Menus(
 
         /** Its slots bound to a storage's, by slot. */
         internal val bindings = HashMap<Int, Binding>()
+
+        /** Where a shift-click from the player's own inventory goes, when a script set it; null for the game's own rules. */
+        var shiftInto: ShiftInto? = null
+            internal set
 
         /** What the server was last told the title is, skin included. */
         internal var pushedTitle: String = ""
@@ -304,6 +314,9 @@ class Menus(
 
     // ---- clicks ------------------------------------------------------------
 
+    /** The clicks that a window's `shiftInto` takes over, when they come from the player's own inventory. */
+    private val shiftClicks = setOf("shift_left", "shift_right")
+
     /**
      * A click while [uuid] was open, along its path: the clicked slot (for a
      * click in the window), the window, then `nf`. True means cancel. A
@@ -311,6 +324,7 @@ class Menus(
      */
     fun click(uuid: UUID, click: MenuClick): Boolean {
         val window = windowOf(uuid) ?: return false
+        val shifting = window.shiftInto != null && !click.top && click.click in shiftClicks
         val menu = LuaHandle.Menu(window.id)
         val slot = if (click.top &&
             click.slot != null &&
@@ -338,9 +352,67 @@ class Menus(
             templateOf(window)?.let { Events.MENUTEMPLATE_CLICK to it },
             Events.NF_MENU_CLICK to null
         )
+        if (shifting) {
+            // The engine moves the stack itself (`shiftInto`), slot by slot, so the game's own move is always stopped.
+            if (!scripts.emit(path, event, precancelled = false)) shiftIn(window, click)
+            return true
+        }
         // A locked window's bound slots are still the player's to put things in and take them out of, by hand.
         val byHand = click.top && click.slot != null && click.slot in window.bindings && click.click != "double"
         return scripts.emit(path, event, precancelled = window.locked && click.movesItems && !byHand)
+    }
+
+    /**
+     * Moves the stack a shift-click took from the player's inventory into the slots of [window] that show the storage
+     * of its `shiftInto`, first slot first: partial stacks it can top up, then empty ones, each taking what the server
+     * says it holds. A slot is offered the stack as a click on it (see [offer]). What's left stays in the inventory.
+     */
+    private fun shiftIn(window: Window, click: MenuClick) {
+        val target = window.shiftInto ?: return
+        val from = click.slot ?: return
+        val moving = click.item ?: return
+        val player = click.player
+        var left = moving.def.count ?: 1
+        val slots = window.bindings.entries
+            .filter { it.value.storage.same(target.storage) && it.value.index in target.first..target.last }
+            .sortedBy { it.value.index }
+            .map { it.key }
+        for (partial in listOf(true, false)) {
+            for (slot in slots) {
+                if (left <= 0) break
+                val held = item(window, slot)
+                if ((held != null) != partial) continue
+                val room = ops.room(window.uuid, slot, moving)
+                if (room <= 0 || !offer(window, click, slot, moving)) continue
+                val amount = minOf(room, left)
+                val stack = moving.copy(def = moving.def.copy(count = (held?.def?.count ?: 0) + amount))
+                if (!setItem(window, slot, stack)) continue
+                left -= amount
+            }
+        }
+        val taken = (moving.def.count ?: 1) - left
+        if (taken > 0) {
+            val remainder = if (left == 0) null else moving.copy(def = moving.def.copy(count = left))
+            inventories.setItem(InventoryRef.Player(player.uuid), from, remainder)
+        }
+    }
+
+    /** Whether the slot's click handlers let [item] in: they hear it as a click on the slot, and a cancel refuses it there. */
+    private fun offer(window: Window, click: MenuClick, slot: Int, item: ItemData): Boolean {
+        val target = LuaHandle.Slot(window.id, slot.toLong())
+        val event = MenuClickEvent(
+            player = playerHandle(click.player),
+            menu = LuaHandle.Menu(window.id),
+            target = target,
+            index = slot.toLong(),
+            inMenu = true,
+            click = click.click,
+            hotbarIndex = null,
+            item = item,
+            cursorItem = null,
+            context = window.context
+        )
+        return !scripts.emit(listOf(Events.SLOT_CLICK to target), event, precancelled = false)
     }
 
     /** A drag of [cursor] over [slots] of the window. A locked window starts it already cancelled. True means cancel. */
@@ -436,7 +508,7 @@ class Menus(
      * whose shape changed can't be patched: it's rebuilt from the file and
      * reopened for whoever was looking. Either way its script restarts (it
      * unloads, then its body runs again), and handlers other scripts put on
-     * it stay.
+     * it stay, while its `shiftInto` is forgotten (the body sets it again).
      */
     fun reload(id: String, next: CompiledMenu?): Int {
         val previous = definitions[id]
@@ -450,6 +522,7 @@ class Menus(
         var kept = 0
         for (window in live) {
             stopScripts(window)
+            window.shiftInto = null
             if (previous != null && window.shared && !next.shared) {
                 retire(window)
                 continue
@@ -543,6 +616,10 @@ class Menus(
 
     fun setLocked(window: Window, locked: Boolean) {
         window.locked = locked
+    }
+
+    fun setShiftInto(window: Window, target: ShiftInto?) {
+        window.shiftInto = target
     }
 
     fun setTitle(window: Window, title: String?) {

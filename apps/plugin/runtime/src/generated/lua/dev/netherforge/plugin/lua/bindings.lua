@@ -2714,6 +2714,11 @@ function Menu.set_locked(self, locked)
   prim["Menu.set_locked"](self_key, locked)
 end
 
+function Menu.shift_into(self, storage, first, last)
+  local self_key = self_of(self, "Menu")
+  return prim["Menu.shift_into"](self_key, storage, first, last)
+end
+
 function Menu.slot(self, index)
   local self_key = self_of(self, "Menu")
   return prim["Menu.slot"](self_key, index)

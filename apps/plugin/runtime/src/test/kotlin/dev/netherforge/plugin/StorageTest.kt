@@ -35,6 +35,17 @@ class StorageTest {
           end
           log(table.concat(items, ","))
         end)
+        nf.commands.register("shift", function(event)
+          local bag = assert(event.player:storage("bag", 4))
+          local menu = event.player:open_menu("bag")
+          for i = 0, 3 do
+            assert(menu:slot(2 + i):bind(bag, i))
+          end
+          menu:slot(4):on("click", function(event)
+            if event.item and event.item.kind == "minecraft:emerald" then event:cancel() end
+          end)
+          log("shift " .. tostring(menu:shift_into(bag, 1, 3)))
+        end)
         nf.commands.register("bad", function(event)
           local ok, err = pcall(function() event.player:storage("Bad Name", 4) end)
           log(tostring(ok))
@@ -53,6 +64,43 @@ class StorageTest {
     )
 
     private fun diamonds(count: Int) = ItemData(ItemDef(kind = "minecraft:diamond", count = count))
+
+    private fun emeralds(count: Int) = ItemData(ItemDef(kind = "minecraft:emerald", count = count))
+
+    @Test
+    fun `a shift-click from the inventory goes into the bound storage's slots, topping up first, and a refusal keeps it out`() {
+        server().use { server ->
+            val alex = server.player("Alex")
+            server.platform.commands.run(alex, "shift")
+            assertEquals("shift true", server.logs.last())
+            val window = server.platform.menus.of(alex)!!
+
+            // Empty, so the first of its slots takes the whole stack.
+            alex.inventorySlots[0] = diamonds(10)
+            assertTrue(server.platform.menus.click(alex, 0, top = false, click = "shift_left"))
+            assertEquals(10, window.slots[3]?.def?.count)
+            assertEquals(10, alex.storages.getValue("test:bag")[1]?.def?.count)
+            assertNull(alex.inventorySlots[0])
+
+            // Partial stacks come before empty slots: the diamonds top up slot 3 and nothing else.
+            alex.inventorySlots[2] = diamonds(10)
+            server.platform.menus.click(alex, 2, top = false, click = "shift_left")
+            assertEquals(20, window.slots[3]?.def?.count)
+            assertNull(window.slots[4])
+
+            // Slot 4 refuses emeralds (its click handler cancels them), so they go on to slot 5.
+            alex.inventorySlots[1] = emeralds(5)
+            server.platform.menus.click(alex, 1, top = false, click = "shift_left")
+            assertNull(window.slots[4])
+            assertEquals(5, window.slots[5]?.def?.count)
+            assertEquals(5, alex.storages.getValue("test:bag")[3]?.def?.count)
+            assertNull(alex.inventorySlots[1])
+
+            // Clicks inside the window keep the locked window's own rules: a click on a bound slot is still refused.
+            assertFalse(server.platform.menus.click(alex, 2))
+            assertEquals(emptyList(), server.errors.map { it.message })
+        }
+    }
 
     @Test
     fun `a bound slot shows the storage, and what the game or a script moves is saved in it at once`() {

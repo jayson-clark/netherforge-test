@@ -49,6 +49,18 @@ class FakeMenus(private val platform: FakePlatform) : MenuOps {
         return true
     }
 
+    override fun room(window: UUID, slot: Int, item: ItemData): Int {
+        val it = windows[window] ?: return 0
+        if (slot !in it.slots.indices) return 0
+        val key = item.copy(def = item.def.copy(count = null))
+        val held = it.slots[slot]
+        return when {
+            held == null -> 64
+            held.copy(def = held.def.copy(count = null)) == key -> 64 - (held.def.count ?: 1)
+            else -> 0
+        }
+    }
+
     override fun add(window: UUID, given: ItemData): Int {
         val it = windows[window] ?: return given.def.count ?: 1
         val item = platform.stack(given) ?: return given.def.count ?: 1

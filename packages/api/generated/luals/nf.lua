@@ -3682,6 +3682,13 @@ function Menu:is_locked() end
 ---@param locked boolean
 function Menu:set_locked(locked) end
 
+--- Where a shift-click from the player's own inventory goes: into the slots of this window bound to `storage`, from `first` to `last` (storage slot indexes), in order. Stacks top up partial stacks first, then take empty slots, as vanilla does. Each slot's `click` handlers hear the move as a click on it (`event.item` is the stack moving); `event:cancel()` refuses it there, and the item goes to the next slot. Nothing else is tried: an item that no slot takes stays in the player's inventory, and a window's other slots never get it. Applies whether or not the window is locked, and each call replaces the last. A reload forgets it, so the script's body sets it again. The window must be bound to the storage (`slot:bind`), and not be `shared`.
+---@param storage Inventory From `player:storage(name, size)`.
+---@param first? integer The first storage slot to try, from 0. Default 0.
+---@param last? integer The last storage slot to try. Default the storage's last slot.
+---@return boolean # `false` once the window is gone.
+function Menu:shift_into(storage, first, last) end
+
 --- One of its slots, as a handle. A slot outside the window is an error. A handle is the window's id and the index, so it's fine to keep while the window lasts.
 ---@param index integer From 0.
 ---@return Slot
@@ -3797,7 +3804,7 @@ function Slot:item() end
 ---@return boolean # `false` once the window is gone.
 function Slot:set_item(item) end
 
---- Makes this slot a view of a slot of a player's `storage`: it shows what's there, and whatever goes in or out of it, by a click, a drag, a shift-click or a script's `set_item` on either, is saved in the storage at once, as the game moves it. So the item is only ever in one place, whatever happens next: the window closing, the player leaving or dying, the server stopping or the project reloading. In a locked window players can still put items in and take them out of a bound slot by hand (shift-clicking from their own inventory and double-click gathering stay locked); its `click` handlers can still refuse what doesn't belong (`event:cancel()`). Binding a slot again moves it to the new place. Only a window of a menu that isn't `shared` can be bound, and only to a storage (`player:storage`): another inventory, or a slot outside the storage, is an error.
+--- Makes this slot a view of a slot of a player's `storage`: it shows what's there, and whatever goes in or out of it, by a click, a drag, a shift-click or a script's `set_item` on either, is saved in the storage at once, as the game moves it. So the item is only ever in one place, whatever happens next: the window closing, the player leaving or dying, the server stopping or the project reloading. In a locked window players can still put items in and take them out of a bound slot by hand (double-click gathering stays locked, and a shift-click from their own inventory goes only where `shift_into` says); its `click` handlers can still refuse what doesn't belong (`event:cancel()`). Binding a slot again moves it to the new place. Only a window of a menu that isn't `shared` can be bound, and only to a storage (`player:storage`): another inventory, or a slot outside the storage, is an error.
 ---@param storage Inventory From `player:storage(name, size)`.
 ---@param index? integer Which of its slots, from 0. Default the same number as this slot.
 ---@return boolean # `false` once the window is gone, or the storage's player is offline.

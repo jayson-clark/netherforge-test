@@ -122,6 +122,26 @@ Locks or unlocks this window. Not saved: a reload goes back to what the file say
 | --- | --- | --- |
 | `locked` | `boolean` |  |
 
+## `menu:shift_into(storage, first?, last?)`
+
+Where a shift-click from the player's own inventory goes: into the slots of this window bound to `storage`, from `first` to `last` (storage slot indexes), in order. Stacks top up partial stacks first, then take empty slots, as vanilla does. Each slot's `click` handlers hear the move as a click on it (`event.item` is the stack moving); `event:cancel()` refuses it there, and the item goes to the next slot. Nothing else is tried: an item that no slot takes stays in the player's inventory, and a window's other slots never get it. Applies whether or not the window is locked, and each call replaces the last. A reload forgets it, so the script's body sets it again. The window must be bound to the storage (`slot:bind`), and not be `shared`.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `storage` | `Inventory` | From `player:storage(name, size)`. |
+| `first` (optional) | `integer` | The first storage slot to try, from 0. Default 0. |
+| `last` (optional) | `integer` | The last storage slot to try. Default the storage's last slot. |
+
+**Returns** `boolean`: `false` once the window is gone.
+
+```lua
+nf.on("menu_open", function(event)
+  local trinkets = event.player:storage("trinkets", 4)
+  this:slot(10):bind(trinkets, 0)
+  this:shift_into(trinkets)
+end)
+```
+
 ## `menu:slot(index)`
 
 One of its slots, as a handle. A slot outside the window is an error. A handle is the window's id and the index, so it's fine to keep while the window lasts.

@@ -3331,6 +3331,18 @@ interface MenuApi {
     fun setLocked(self: LuaHandle.Menu, locked: Boolean)
 
     /**
+     * Where a shift-click from the player's own inventory goes: into the slots of this window bound to
+     * `storage`, from `first` to `last` (storage slot indexes), in order. Stacks top up partial stacks
+     * first, then take empty slots, as vanilla does. Each slot's `click` handlers hear the move as a click
+     * on it (`event.item` is the stack moving); `event:cancel()` refuses it there, and the item goes to
+     * the next slot. Nothing else is tried: an item that no slot takes stays in the player's inventory,
+     * and a window's other slots never get it. Applies whether or not the window is locked, and each call
+     * replaces the last. A reload forgets it, so the script's body sets it again. The window must be bound
+     * to the storage (`slot:bind`), and not be `shared`.
+     */
+    fun shiftInto(self: LuaHandle.Menu, storage: LuaHandle.Inventory, first: Long?, last: Long?): Boolean
+
+    /**
      * One of its slots, as a handle. A slot outside the window is an error. A handle is the window's id
      * and the index, so it's fine to keep while the window lasts.
      */
@@ -3429,10 +3441,11 @@ interface SlotApi {
      * the storage at once, as the game moves it. So the item is only ever in one place, whatever happens
      * next: the window closing, the player leaving or dying, the server stopping or the project reloading.
      * In a locked window players can still put items in and take them out of a bound slot by hand
-     * (shift-clicking from their own inventory and double-click gathering stay locked); its `click`
-     * handlers can still refuse what doesn't belong (`event:cancel()`). Binding a slot again moves it to
-     * the new place. Only a window of a menu that isn't `shared` can be bound, and only to a storage
-     * (`player:storage`): another inventory, or a slot outside the storage, is an error.
+     * (double-click gathering stays locked, and a shift-click from their own inventory goes only where
+     * `shift_into` says); its `click` handlers can still refuse what doesn't belong (`event:cancel()`).
+     * Binding a slot again moves it to the new place. Only a window of a menu that isn't `shared` can be
+     * bound, and only to a storage (`player:storage`): another inventory, or a slot outside the storage,
+     * is an error.
      */
     fun bind(self: LuaHandle.Slot, storage: LuaHandle.Inventory, index: Long?): Boolean
 

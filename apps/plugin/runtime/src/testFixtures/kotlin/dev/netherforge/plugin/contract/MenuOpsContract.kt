@@ -45,6 +45,19 @@ abstract class MenuOpsContract : PlatformContract() {
     }
 
     @Test
+    fun `room is what a slot takes of an item, by the server's stacking`() {
+        main {
+            val window = window()
+            assertEquals(64, menus.room(window, 0, item("minecraft:bread")), "an empty slot takes a whole stack")
+            assertTrue(menus.setItem(window, 0, item("minecraft:bread", 60)))
+            assertEquals(4, menus.room(window, 0, item("minecraft:bread", 9)), "what's left of the stack")
+            assertEquals(0, menus.room(window, 0, item("minecraft:diamond")), "another item takes none")
+            assertEquals(0, menus.room(window, 9, item("minecraft:bread")), "past the end")
+            assertEquals(0, menus.room(UUID.randomUUID(), 0, item("minecraft:bread")), "no such window")
+        }
+    }
+
+    @Test
     fun `adding tops up matching stacks first and says what didn't fit`() {
         main {
             val window = window()

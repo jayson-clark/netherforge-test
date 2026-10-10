@@ -65,6 +65,27 @@ internal class MenuImpl(private val session: ProjectSession) : MenuApi {
         window(self)?.let { menus.setLocked(it, locked) }
     }
 
+    override fun shiftInto(self: LuaHandle.Menu, storage: LuaHandle.Inventory, first: Long?, last: Long?): Boolean {
+        val ref = InventoryKeys.ref(storage) as? InventoryRef.Storage
+            ?: throw LuaApiException("only a player's storage (player:storage) can take shift-clicks from a menu")
+        val from = first ?: 0L
+        val to = last ?: (ref.size - 1).toLong()
+        for (at in listOf(from, to)) {
+            if (at !in 0 until ref.size) {
+                throw LuaApiException("slot $at is outside this storage: it has ${ref.size} slots, 0 to ${ref.size - 1}")
+            }
+        }
+        if (from > to) throw LuaApiException("first slot $from is after last slot $to")
+        val window = window(self) ?: return false
+        if (window.shared) {
+            throw LuaApiException(
+                "a shared menu's window can't show a storage: everyone would see one player's items (bind a window of their own)"
+            )
+        }
+        menus.setShiftInto(window, Menus.ShiftInto(ref, from.toInt(), to.toInt()))
+        return true
+    }
+
     /** Checked against the window while it's there; a gone window's slots are handed out and answer nil. */
     override fun slot(self: LuaHandle.Menu, index: Long): LuaHandle.Slot {
         window(self)?.let { slotIn(it, index) }

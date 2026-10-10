@@ -4753,6 +4753,17 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         0
     }
 
+    fn("Menu.shift_into") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.Menu
+        val storage = call.arg(2, "storage", LuaHandle.Inventory.Codec)
+        val first = call.arg(3, "first", CODEC_21)
+        val last = call.arg(4, "last", CODEC_21)
+        val result = api.menu.shiftInto(self, storage, first, last)
+        call.push(result, LuaCodecs.BOOLEAN)
+        1
+    }
+
     fn("Menu.slot") { call ->
         val lua = call.lua
         val self = call.self(1) as LuaHandle.Menu

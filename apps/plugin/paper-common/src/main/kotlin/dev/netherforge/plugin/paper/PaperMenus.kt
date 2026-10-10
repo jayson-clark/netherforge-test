@@ -149,6 +149,18 @@ class PaperMenus(private val plugin: Plugin, private val version: PaperVersion) 
         return inventory.addItem(stack).values.sumOf { it.amount }
     }
 
+    override fun room(window: UUID, slot: Int, item: ItemData): Int {
+        val inventory = windows[window] ?: return 0
+        if (slot !in 0 until inventory.size) return 0
+        val stack = PaperItems.toStack(item) ?: return 0
+        val held = inventory.getItem(slot)
+        return when {
+            held == null || held.type.isAir -> stack.maxStackSize
+            held.isSimilar(stack) -> (held.maxStackSize - held.amount).coerceAtLeast(0)
+            else -> 0
+        }
+    }
+
     override fun open(window: UUID, player: UUID): Boolean {
         val inventory = windows[window] ?: return false
         val who = player(player) ?: return false

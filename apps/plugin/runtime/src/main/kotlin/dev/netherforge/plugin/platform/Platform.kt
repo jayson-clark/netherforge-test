@@ -742,6 +742,12 @@ interface MenuOps {
     /** Puts [item] wherever it fits, topping up matching stacks first. Returns how many didn't fit. */
     fun add(window: UUID, item: ItemData): Int
 
+    /**
+     * How many of [item]'s count slot [slot] of [window] takes, by the server's own stacking: what's left of a stack of
+     * the same item, the whole stack limit for an empty slot, 0 for another item. Only that count, not the item's.
+     */
+    fun room(window: UUID, slot: Int, item: ItemData): Int
+
     /** Shows the window to a player. False when they're offline or the window is gone. */
     fun open(window: UUID, player: UUID): Boolean
 
