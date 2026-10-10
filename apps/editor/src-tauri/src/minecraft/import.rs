@@ -9,7 +9,7 @@
 //! - `assets/minecraft/lang/en_us.json` (the only language inside the jar)
 //!
 //! Plus three files we write: `index.json` (ids of blockstates, item
-//! definitions and fonts, and the HUD's GUI sprites, so the UI can fill pickers without listing folders),
+//! definitions and fonts, the HUD's GUI sprites and the container screens' textures with their sizes, so the UI can fill pickers without listing folders),
 //! `glyph-advances.json` (the default font's advances, see [super::fonts]) and
 //! `.import.json` (the marker `mc_cache_status` checks). The import goes to
 //! a temp folder first and is swapped in at the end, so a failed import never
@@ -107,6 +107,7 @@ pub fn import_client(
             }
             let mut file = std::fs::File::create(&out)?;
             std::io::copy(&mut entry, &mut file).context(|| format!("Couldn't extract {name}"))?;
+            index.note_size(&name, &out);
             if (done + 1) % 200 == 0 {
                 progress(done + 1, total);
             }
@@ -149,9 +150,40 @@ struct Index {
     fonts: Vec<String>,
     /// The HUD's sprites (`hud/heart/full`), which a resource pack's `hud.hide` blanks.
     sprites: Vec<String>,
+    /// The container screens' textures (`gui/container/inventory`) with their pixel sizes, which a resource
+    /// pack's `textures` redraws and must match.
+    textures: std::collections::BTreeMap<String, [u32; 2]>,
+}
+
+/// The textures of the game's container screens, by the folder they're in (under `textures/`).
+const TEXTURE_FOLDER: &str = "gui/container/";
+
+/// A PNG's width and height, from the header's first 24 bytes.
+fn png_size(bytes: &[u8]) -> Option<[u32; 2]> {
+    if bytes.len() < 24 || &bytes[..8] != b"\x89PNG\r\n\x1a\n" || &bytes[12..16] != b"IHDR" {
+        return None;
+    }
+    let number = |at: usize| u32::from_be_bytes(bytes[at..at + 4].try_into().unwrap());
+    Some([number(16), number(20)])
 }
 
 impl Index {
+    /// Notes the size of the texture just extracted to [path], when it's one of the container screens'.
+    fn note_size(&mut self, name: &str, path: &Path) {
+        let Some(texture) = name
+            .strip_prefix("assets/minecraft/textures/")
+            .filter(|rest| rest.starts_with(TEXTURE_FOLDER))
+            .and_then(|rest| rest.strip_suffix(".png"))
+        else {
+            return;
+        };
+        let mut header = [0u8; 24];
+        let read = std::fs::File::open(path).and_then(|mut file| file.read_exact(&mut header));
+        if let (Ok(()), Some(size)) = (read, png_size(&header)) {
+            self.textures.insert(texture.to_string(), size);
+        }
+    }
+
     fn note(&mut self, name: &str) {
         let id = |folder: &str| {
             name.strip_prefix(folder)
@@ -188,6 +220,7 @@ impl Index {
             "items": self.items,
             "fonts": self.fonts,
             "sprites": self.sprites,
+            "textures": self.textures,
         });
         write_atomic(&dir.join(INDEX), serde_json::to_string(&index)?.as_bytes())
     }
@@ -209,6 +242,10 @@ pub(crate) mod tests {
             (
                 "assets/minecraft/textures/gui/sprites/hud/heart/full.png",
                 b"\x89PNG",
+            ),
+            (
+                "assets/minecraft/textures/gui/container/inventory.png",
+                b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR\0\0\x01\0\0\0\x01\x80\x08\x06",
             ),
             (
                 "assets/minecraft/textures/block/test_block.png.mcmeta",
@@ -246,9 +283,9 @@ pub(crate) mod tests {
 
         let mut calls = Vec::new();
         let count = import_client(&jar, "26.3", &client, |d, t| calls.push((d, t))).unwrap();
-        assert_eq!(count, 9);
-        assert_eq!(calls.first(), Some(&(0, 9)));
-        assert_eq!(calls.last(), Some(&(9, 9)));
+        assert_eq!(count, 10);
+        assert_eq!(calls.first(), Some(&(0, 10)));
+        assert_eq!(calls.last(), Some(&(10, 10)));
 
         let mut files: Vec<String> = walkdir::WalkDir::new(&client)
             .into_iter()
@@ -275,6 +312,7 @@ pub(crate) mod tests {
                 "assets/minecraft/particles/flame.json",
                 "assets/minecraft/textures/block/test_block.png",
                 "assets/minecraft/textures/block/test_block.png.mcmeta",
+                "assets/minecraft/textures/gui/container/inventory.png",
                 "assets/minecraft/textures/gui/sprites/hud/heart/full.png",
                 "glyph-advances.json",
                 "index.json",
@@ -285,6 +323,10 @@ pub(crate) mod tests {
         assert_eq!(index["blockstates"], json!(["minecraft:test_block"]));
         assert_eq!(index["items"], json!(["minecraft:test_item"]));
         assert_eq!(index["sprites"], json!(["hud/heart/full"]));
+        assert_eq!(
+            index["textures"],
+            json!({ "gui/container/inventory": [256, 384] })
+        );
         // The fake font has no providers, so no advances, but the file is there.
         assert_eq!(
             std::fs::read_to_string(client.join(super::super::fonts::ADVANCES)).unwrap(),

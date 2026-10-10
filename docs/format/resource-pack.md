@@ -366,6 +366,42 @@ names into [`client/vanilla.json`](project.md#clientvanillajson) from your
 imported Minecraft. Until it has (`resource_pack.hud-hide`), nothing is
 hidden. Mods that draw these elements themselves still draw them.
 
+### Redrawing the game's sprites
+
+`replace` draws the game's own GUI sprites with pictures of the pack instead,
+for every player: the sprite's name (its path under the client's
+`textures/gui/sprites/`, without `.png`) to a texture of the pack. It's how a
+pack restyles the hotbar:
+
+```json partial
+"hud": {
+  "replace": {
+    "hud/hotbar": "hud/hotbar.png",
+    "hud/hotbar_selection": "hud/hotbar_sel.png",
+    "hud/hotbar_offhand_left": "hud/offhand_left.png",
+    "hud/hotbar_offhand_right": "hud/offhand_right.png"
+  }
+}
+```
+
+The built pack writes the pack's PNG over the sprite
+(`assets/minecraft/textures/gui/sprites/hud/hotbar.png`), so it goes with
+`hide`: whatever isn't hidden or replaced stays the game's. The names are the
+HUD's sprites in [`client/vanilla.json`](project.md#clientvanillajson), which
+the editor writes from your imported Minecraft; one the game doesn't have is an
+error (`resource_pack.replace-name`), and until the file lists them nothing is
+replaced (`resource_pack.vanilla-missing`). Two resource packs can't replace the
+same sprite.
+
+The game draws a sprite at the size its own picture is, at the place it draws
+its own, so draw yours to the same pixel size and leave the gaps inside the
+picture: take the original from your client jar to start from. Some sprites
+scale: a `.mcmeta` file beside the picture (`hud/hotbar.png.mcmeta` in the
+pack's `textures/`) is built in beside the sprite, with the game's own
+[nine-slice](https://minecraft.wiki/w/Resource_pack#Texture_scaling) settings if
+you write them. Without one the sprite is stretched, as the game's hotbar is;
+the game's own `.mcmeta` isn't kept.
+
 ### Placing elements
 
 Positions are GUI pixels, so they scale with the player's GUI scale like the
@@ -410,6 +446,32 @@ are, untinted and without the text shadow. So:
   placed; one the server can't measure isn't drawn.
 - Elements are above other screens' contents only as the action bar is: they
   hide with the HUD (F1) and under a chat that's open.
+
+## Redrawing the game's textures
+
+`textures` does the same for the game's pictures that aren't GUI sprites, like
+the screen behind the player's own inventory (`gui/container/inventory`).
+It's a top-level map of the texture's name (its path under the client's
+`textures/`, without `.png`) to a texture of the pack:
+
+```json partial
+"textures": {
+  "gui/container/inventory": "gui/inventory.png"
+}
+```
+
+Unlike a sprite, a texture is a sheet the screen cuts its parts out of at
+fixed places, so **the replacement must have exactly the game's pixel size**
+(256×256 for the inventory); another size is an error
+(`resource_pack.replace-size`). Keep every slot, the armour column, the
+player's preview box and the recipe button where the original has them: only
+the art changes, not where the game draws things. The names and sizes are the
+container screens' textures in `client/vanilla.json`
+(`textures/gui/container/`: the inventory, the crafting table, chests, furnaces
+and so on), and a `.mcmeta` beside the picture is built in like a sprite's.
+
+Unlike [skins](#skins), which draw behind menus the project opens itself, this
+changes the screen of every player who opens it, menus of the project's or not.
 
 ## How it reaches players
 

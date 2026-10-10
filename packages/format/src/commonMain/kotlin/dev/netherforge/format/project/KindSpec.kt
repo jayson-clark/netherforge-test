@@ -317,6 +317,12 @@ class KindContext internal constructor(
 
     /** A PNG's pixel facts by project path (see [ProjectSource.image]), read once per load. */
     fun image(path: String): ImageInfo? = project.image(path)
+
+    /** Whether [size] knows pictures' sizes at all (see [ProjectSource.readsSizes]). */
+    val readsSizes: Boolean get() = project.source.readsSizes
+
+    /** A PNG's `[width, height]` by project path (see [ProjectSource.size]). */
+    fun size(path: String): List<Int>? = project.source.size(path)
 }
 
 /**

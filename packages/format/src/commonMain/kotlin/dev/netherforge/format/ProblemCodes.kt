@@ -762,6 +762,24 @@ object ProblemCodes {
             RESOURCE_PACK,
             "`hud.hide` needs the game's HUD sprites, which `client/vanilla.json` lacks or has from another version."
         )
+    val RESOURCE_PACK_VANILLA_MISSING =
+        warning(
+            "resource_pack.vanilla-missing",
+            RESOURCE_PACK,
+            "`hud.replace` or `textures` needs the game's sprite and texture names and sizes, which `client/vanilla.json` lacks or has from another version."
+        )
+    val RESOURCE_PACK_REPLACE_NAME =
+        error(
+            "resource_pack.replace-name",
+            RESOURCE_PACK,
+            "`hud.replace` or `textures` names a sprite or texture the game doesn't have, or one another resource pack replaces too."
+        )
+    val RESOURCE_PACK_REPLACE_SIZE =
+        error(
+            "resource_pack.replace-size",
+            RESOURCE_PACK,
+            "A `textures` replacement isn't the pixel size of the game's texture it replaces."
+        )
     val RESOURCE_PACK_MODEL_FILE =
         error(
             "resource_pack.model-file",

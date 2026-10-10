@@ -15,6 +15,7 @@ export function createValidator(): ValidationApi {
       for (const path of request.deleted) validator.deleteFile(path)
       if (request.gameData !== undefined) validator.setGameData(request.gameData)
       if (request.packages !== undefined) validator.setPackages(request.packages)
+      if (request.sizes !== undefined) validator.setSizes(request.sizes)
       return validator.validate()
     },
   }

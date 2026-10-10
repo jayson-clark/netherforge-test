@@ -383,6 +383,9 @@ export interface PackageInputs {
   git: GitFetches
 }
 
+/** PNGs' `[width, height]` in pixels, by project path. */
+export type ImageSizes = Record<string, [number, number]>
+
 export const NO_PACKAGES: PackageInputs = { folders: {}, git: {} }
 
 export type { GitFetchRequest, PackageSource }
@@ -391,17 +394,20 @@ export type { GitFetchRequest, PackageSource }
  * Validates a whole project. [files] maps every project path to its text, or
  * to null when its contents don't matter to validation (`.lua`, images);
  * [packages] are the package folders its dependencies point at, read as
- * [packagesNeeded] asks.
+ * [packagesNeeded] asks. [sizes] are the `[width, height]` of the PNGs the
+ * host measured, by path, which hold a resource pack's `textures` to the game's sizes.
  */
 export function loadProject(
   files: Record<string, string | null>,
   gameData: GameDataBundle | null,
   packages: PackageInputs = NO_PACKAGES,
+  sizes: ImageSizes | null = null,
 ): ProjectOutline {
   const raw = nf.loadProject(
     JSON.stringify(files),
     JSON.stringify(packages),
     gameData ? JSON.stringify(gameData) : null,
+    sizes ? JSON.stringify(sizes) : null,
   )
   return JSON.parse(raw) as ProjectOutline
 }
@@ -415,6 +421,11 @@ export function loadProject(
  */
 export class ProjectValidator {
   private readonly validator = new nf.ProjectValidator()
+
+  /** The pictures' sizes (see [loadProject]), all of them: what was set before is forgotten. */
+  setSizes(sizes: ImageSizes | null): void {
+    this.validator.setSizes(sizes ? JSON.stringify(sizes) : null)
+  }
 
   /** Sets a file's text: null for one whose contents format doesn't read (`.lua`, `.png`). */
   setFile(path: string, text: string | null): void {

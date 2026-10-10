@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { closeSync, openSync, readdirSync, readFileSync, readSync, statSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import * as nf from '@netherforge/format'
@@ -58,6 +58,34 @@ export function readProject(root: string): Record<string, string | null> {
   }
   return input
 }
+
+/**
+ * The pixel size of each PNG of a resource pack's `textures/` in [files], from its header, which is all that holding
+ * a replaced game texture to the game's size needs (a file that isn't a PNG is left out).
+ */
+export function pngSizes(root: string, files: string[]): Record<string, [number, number]> {
+  const sizes: Record<string, [number, number]> = {}
+  for (const file of files) {
+    if (!/^resource_packs\/[^/]+\/textures\/.+\.png$/.test(file)) continue
+    const fd = openSync(path.join(root, file), 'r')
+    try {
+      const header = Buffer.alloc(24)
+      const read = readSync(fd, header, 0, 24, 0)
+      if (
+        read === 24 &&
+        header.subarray(0, 8).equals(PNG_SIGNATURE) &&
+        header.toString('latin1', 12, 16) === 'IHDR'
+      ) {
+        sizes[file] = [header.readUInt32BE(16), header.readUInt32BE(20)]
+      }
+    } finally {
+      closeSync(fd)
+    }
+  }
+  return sizes
+}
+
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 
 const sha256 = (data: Buffer | string) => createHash('sha256').update(data).digest('hex')
 

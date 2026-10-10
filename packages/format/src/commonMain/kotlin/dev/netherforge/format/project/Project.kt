@@ -57,6 +57,15 @@ interface ProjectSource {
      * plugin reads them off the disk; the editor passes what it measured.
      */
     fun image(path: String): ImageInfo? = null
+
+    /**
+     * Whether [size] answers at all: a source that reads [image]s does, and one that can only measure a picture's
+     * header (the CLI's) says so without having to read its pixels.
+     */
+    val readsSizes: Boolean get() = readsImages
+
+    /** A PNG's `[width, height]` in pixels, or null where unknown; the pixel facts' size by default. */
+    fun size(path: String): List<Int>? = image(path)?.let { listOf(it.width, it.height) }
 }
 
 /**
@@ -67,8 +76,15 @@ interface ProjectSource {
 @Serializable
 data class ImageInfo(val width: Int, val height: Int, val opaqueWidth: Int)
 
-/** A project from memory. With [images], it [readsImages] and answers from them. */
-class MapProjectSource(private val contents: Map<String, String?>, private val images: Map<String, ImageInfo>? = null) : ProjectSource {
+/**
+ * A project from memory. With [images], it [readsImages] and answers from them; with [sizes] alone (a host that
+ * only measured the pictures' headers) it [readsSizes].
+ */
+class MapProjectSource(
+    private val contents: Map<String, String?>,
+    private val images: Map<String, ImageInfo>? = null,
+    private val sizes: Map<String, List<Int>>? = null
+) : ProjectSource {
     override fun files(): Collection<String> = contents.keys
 
     override fun read(path: String): String? = contents[path]
@@ -76,6 +92,10 @@ class MapProjectSource(private val contents: Map<String, String?>, private val i
     override val readsImages: Boolean get() = images != null
 
     override fun image(path: String): ImageInfo? = images?.get(path)
+
+    override val readsSizes: Boolean get() = sizes != null || images != null
+
+    override fun size(path: String): List<Int>? = sizes?.get(path) ?: super.size(path)
 }
 
 /**

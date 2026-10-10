@@ -213,6 +213,16 @@ export function createResourcePacks(
       if (JSON.stringify(images) === JSON.stringify(store.getState().images)) return
       const { namespace, texts } = store.getState()
       store.setState({ images, compiled: compile(namespace, texts, images) })
+      workspace
+        .getState()
+        .setImageSizes(
+          Object.fromEntries(
+            Object.entries(images).map(([path, it]) => [
+              path,
+              [it.width, it.height] as [number, number],
+            ]),
+          ),
+        )
     })
   }
 

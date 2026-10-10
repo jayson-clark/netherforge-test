@@ -1266,6 +1266,18 @@ Error. A `hud` element's key is taken by another, or its place, segments or icon
 
 Warning. `hud.hide` needs the game's HUD sprites, which `client/vanilla.json` lacks or has from another version. See [resource packs](resource-pack.md).
 
+### `resource_pack.vanilla-missing` {#resource_pack-vanilla-missing}
+
+Warning. `hud.replace` or `textures` needs the game's sprite and texture names and sizes, which `client/vanilla.json` lacks or has from another version. See [resource packs](resource-pack.md).
+
+### `resource_pack.replace-name` {#resource_pack-replace-name}
+
+Error. `hud.replace` or `textures` names a sprite or texture the game doesn't have, or one another resource pack replaces too. See [resource packs](resource-pack.md).
+
+### `resource_pack.replace-size` {#resource_pack-replace-size}
+
+Error. A `textures` replacement isn't the pixel size of the game's texture it replaces. See [resource packs](resource-pack.md).
+
 ### `resource_pack.model-file` {#resource_pack-model-file}
 
 Error. A `model` names a file that isn't in the resource pack's `models/` folder, or isn't a JSON model. See [resource packs](resource-pack.md).

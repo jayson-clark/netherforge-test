@@ -8,6 +8,7 @@ const index = {
   items: [],
   fonts: [],
   sprites: ['hud/heart/full'],
+  textures: { 'gui/container/inventory': [256, 256], 'gui/container/odd': [1, 'x'] },
 }
 
 describe('the game’s own looks', () => {
@@ -20,19 +21,31 @@ describe('the game’s own looks', () => {
     expect(await vanillaLooks(assets)).toEqual({
       blockstates: { 'minecraft:tripwire': tripwire },
       sprites: ['hud/heart/full'],
+      textures: { 'gui/container/inventory': [256, 256] },
     })
-    expect(await vanillaLooks({ json: async () => null })).toEqual({ blockstates: {}, sprites: [] })
+    expect(await vanillaLooks({ json: async () => null })).toEqual({
+      blockstates: {},
+      sprites: [],
+      textures: {},
+    })
   })
 
   it('writes the file only when it would change, and never without something to write from', () => {
     expect(VANILLA_FILE).toBe('client/vanilla.json')
-    const looks = { blockstates: { 'minecraft:tripwire': tripwire }, sprites: ['hud/heart/full'] }
+    const looks = {
+      blockstates: { 'minecraft:tripwire': tripwire },
+      sprites: ['hud/heart/full'],
+      textures: { 'gui/container/inventory': [256, 256] },
+    }
     const text = vanillaToWrite('26.3', looks, undefined)
     expect(text).toContain('"minecraft": "26.3"')
     expect(text).toContain('tripwire_ns')
     expect(text).toContain('hud/heart/full')
+    expect(text).toContain('gui/container/inventory')
     expect(vanillaToWrite('26.3', looks, text!)).toBeNull()
-    expect(vanillaToWrite('26.3', { blockstates: {}, sprites: [] }, undefined)).toBeNull()
+    expect(
+      vanillaToWrite('26.3', { blockstates: {}, sprites: [], textures: {} }, undefined),
+    ).toBeNull()
     expect(vanillaToWrite(null, looks, undefined)).toBeNull()
   })
 })

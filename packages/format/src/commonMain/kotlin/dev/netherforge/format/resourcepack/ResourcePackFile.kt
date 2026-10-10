@@ -46,6 +46,12 @@ data class ResourcePackFile(
      * key (`menu/open`). Every `.ogg` under `sounds/` is already an event.
      */
     val sounds: Map<String, SoundDef> = emptyMap(),
+    /**
+     * The game's own textures that aren't GUI sprites to draw with the pack's pictures instead, for every player: the
+     * texture's name under `textures/` (`gui/container/inventory`), without `.png`, to a texture of the pack of
+     * exactly the game's pixel size.
+     */
+    @Ref(RefKind.TEXTURE) val textures: Map<String, String> = emptyMap(),
     /** What it does to the HUD: the game's elements it hides, and elements of its own scripts fill in ([HudDef]). */
     val hud: HudDef? = null
 ) {

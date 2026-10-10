@@ -166,6 +166,22 @@ object ResourcePackValidator {
                 )
             }
         }
+        // A replaced sprite or texture is written to a path in the built pack, so its name is held to a path's shape.
+        fun replacements(map: String, replaced: Map<String, String>) {
+            for ((name, picture) in replaced) {
+                val at = CanonicalJson.childPath(map, name)
+                if (!ResourcePackFile.isTexturePath("$name${ResourcePackFile.TEXTURE_EXTENSION}")) {
+                    sink.report(
+                        ProblemCodes.RESOURCE_PACK_REPLACE_NAME,
+                        "\"$name\" isn't the name of a game texture: a path like hud/hotbar, without .png",
+                        at
+                    )
+                }
+                texture(picture, at)
+            }
+        }
+        replacements("$.textures", file.textures)
+        file.hud?.let { replacements("$.hud.replace", it.replace) }
         file.hud?.let { hud ->
             val seen = HashSet<String>()
             fun element(map: String, key: String): String {

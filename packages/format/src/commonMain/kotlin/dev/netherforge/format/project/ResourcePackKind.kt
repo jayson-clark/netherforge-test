@@ -91,6 +91,75 @@ object ResourcePackKind : DocumentResourceKind<ResourcePackFile, ResourcePackRea
                 )
             }
         }
+        // Redrawing the game's sprites and textures takes their names, and for a texture its size, which only the client has.
+        val sprites = value.hud?.replace.orEmpty()
+        if (sprites.isNotEmpty() || value.textures.isNotEmpty()) {
+            val vanilla = ctx.vanilla
+            val stale = ctx.minecraft != null && vanilla?.minecraft != ctx.minecraft
+            if (vanilla == null ||
+                stale ||
+                (sprites.isNotEmpty() && vanilla.sprites.isEmpty()) ||
+                (value.textures.isNotEmpty() && vanilla.textures.isEmpty())
+            ) {
+                ctx.sink.report(
+                    ProblemCodes.RESOURCE_PACK_VANILLA_MISSING,
+                    "Replacing the game's sprites and textures takes their names and sizes, " +
+                        "which the editor writes into ${VanillaFile.FILE} from " +
+                        "your Minecraft: open the project in the editor with ${ctx.minecraft?.let {
+                            "Minecraft $it"
+                        } ?: "the project's Minecraft"} imported (import it again if it was imported before the editor listed them). " +
+                        "Until then nothing is replaced",
+                    if (sprites.isNotEmpty()) "$.hud.replace" else "$.textures"
+                )
+            } else {
+                val others = ctx.models(ResourcePackKind).filterKeys { it < id }.values
+                fun check(map: String, replaced: Map<String, String>, known: Set<String>, taken: (ResourcePackFile) -> Set<String>) {
+                    for ((name, picture) in replaced.entries.sortedBy { it.key }) {
+                        val at = CanonicalJson.childPath(map, name)
+                        when {
+                            // A name that isn't a path is already reported where it's written.
+                            !ResourcePackFile.isTexturePath("$name${ResourcePackFile.TEXTURE_EXTENSION}") -> {}
+                            name !in known -> ctx.sink.report(
+                                ProblemCodes.RESOURCE_PACK_REPLACE_NAME,
+                                "The game has no \"$name\" (${VanillaFile.FILE} lists what Minecraft ${vanilla.minecraft} has)",
+                                at
+                            )
+                            others.any { name in taken(it) } -> ctx.sink.report(
+                                ProblemCodes.RESOURCE_PACK_REPLACE_NAME,
+                                "Another resource pack replaces \"$name\" too; only one can",
+                                at
+                            )
+                        }
+                    }
+                }
+                check("$.hud.replace", sprites, vanilla.sprites.toSet()) { it.hud?.replace.orEmpty().keys }
+                check("$.textures", value.textures, vanilla.textures.keys) { it.textures.keys }
+                // A texture is drawn at the game's own pixel size, on the screen's layout, so a different one is a broken screen.
+                if (ctx.readsSizes) {
+                    for ((name, picture) in value.textures.entries.sortedBy { it.key }) {
+                        val size = vanilla.textures[name]?.takeIf { it.size == 2 } ?: continue
+                        val at = CanonicalJson.childPath("$.textures", name)
+                        val image = ctx.size(CompiledResourcePack.texturePath(id, picture))
+                        if (image == null) {
+                            if (picture in textures) {
+                                ctx.sink.report(
+                                    ProblemCodes.RESOURCE_PACK_IMAGE,
+                                    "textures/$picture can't be read as a PNG, so its size can't be checked",
+                                    at
+                                )
+                            }
+                        } else if (image != size) {
+                            ctx.sink.report(
+                                ProblemCodes.RESOURCE_PACK_REPLACE_SIZE,
+                                "textures/$picture is ${image[0]}x${image[1]} pixels, but the game's $name is ${size[0]}x${size[1]}: " +
+                                    "a replacement must be the same size",
+                                at
+                            )
+                        }
+                    }
+                }
+            }
+        }
         // Glyphs share one font across every pack, numbered in id order
         // (CompiledResourcePack.compileAll), so the limit is the project's, reported in
         // every pack past it.
@@ -131,7 +200,8 @@ object ResourcePackKind : DocumentResourceKind<ResourcePackFile, ResourcePackRea
         val files = packs.mapValues { it.value.value }
         val soundFiles = packs.mapValues { (id, pack) -> soundFiles(id, pack.files) }
         val models = packs.mapValues { it.value.compiled?.models.orEmpty() }
-        return CompiledResourcePack.compileAll(namespace, files, soundFiles, models, image)
+        val textureFiles = packs.mapValues { under(it.value.files, ResourcePackFile.TEXTURES) }
+        return CompiledResourcePack.compileAll(namespace, files, soundFiles, models, textureFiles, image)
     }
 
     /** Pack [id]'s sound events by key, from its `pack.json` and the files in its folder ([files], relative to it). */

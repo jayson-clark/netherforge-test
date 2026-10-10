@@ -2,10 +2,10 @@
  * `client/vanilla.json` (docs/format/project.md#clientvanillajson): what only
  * the client knows and the built pack needs: the game's own blockstate files
  * of the blocks custom blocks are held in (tripwire: a model per shape), and
- * the names of the HUD's sprites (which `hud.hide` blanks). The editor writes
+ * the names of the HUD's sprites (which `hud.hide` blanks and `hud.replace` redraws) and the container screens' textures with their sizes (which a resource pack's `textures` redraws). The editor writes
  * it from the import, as it writes `fonts/default.json`; it's committed and
  * deployed. Pure: the workspace decides when to ask, which is when validation
- * says something needs it (`block.vanilla-looks`, `resource_pack.hud-hide`).
+ * says something needs it (`block.vanilla-looks`, `resource_pack.hud-hide`, `resource_pack.vanilla-missing`).
  */
 import type { Backend } from '@/core/backend/types'
 import { canonicalizeModel, VANILLA_FILE, VANILLA_LOOK_BLOCKS } from '@/core/format'
@@ -37,6 +37,8 @@ export interface VanillaLooks {
   blockstates: Record<string, unknown>
   /** The HUD's sprites (`hud/heart/full`), from the import's index; none from an import older than the list. */
   sprites: string[]
+  /** The container screens' textures (`gui/container/inventory`) with their `[width, height]`; none from an import older than the list. */
+  textures: Record<string, number[]>
 }
 
 /** What [assets] has of [VanillaLooks]; empty without an import. */
@@ -50,11 +52,19 @@ export async function vanillaLooks(assets: ClientJson): Promise<VanillaLooks> {
     if (json && typeof json === 'object') blockstates[block] = json
   }
   // The import's index (`ClientIndex`), which lists the HUD's sprites.
-  const index = await assets.json<{ sprites?: unknown }>('index.json')
+  const index = await assets.json<{ sprites?: unknown; textures?: unknown }>('index.json')
   const sprites = Array.isArray(index?.sprites)
     ? index.sprites.filter((it): it is string => typeof it === 'string')
     : []
-  return { blockstates, sprites }
+  const textures: Record<string, number[]> = {}
+  if (index?.textures && typeof index.textures === 'object') {
+    for (const [name, size] of Object.entries(index.textures)) {
+      if (Array.isArray(size) && size.length === 2 && size.every((it) => Number.isInteger(it))) {
+        textures[name] = size
+      }
+    }
+  }
+  return { blockstates, sprites, textures }
 }
 
 /**
@@ -67,12 +77,18 @@ export function vanillaToWrite(
   looks: VanillaLooks,
   diskText: string | undefined,
 ): string | null {
-  if (!minecraft || (Object.keys(looks.blockstates).length === 0 && looks.sprites.length === 0))
+  if (
+    !minecraft ||
+    (Object.keys(looks.blockstates).length === 0 &&
+      looks.sprites.length === 0 &&
+      Object.keys(looks.textures).length === 0)
+  )
     return null
   const text = canonicalizeModel('vanilla', VANILLA_FILE, {
     minecraft,
     blockstates: looks.blockstates,
     sprites: looks.sprites,
+    textures: looks.textures,
   }).text
   return text !== undefined && text !== null && text !== diskText ? text : null
 }

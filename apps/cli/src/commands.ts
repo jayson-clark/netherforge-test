@@ -21,6 +21,7 @@ import {
   editorDataDir,
   gameDataFile,
   hashPackage,
+  pngSizes,
   listFiles,
   packageCache,
   packageDir,
@@ -147,7 +148,12 @@ function load(
 ): ProjectOutline {
   const packages = readPackages(root, packageCache(env), input)
   return JSON.parse(
-    nf.loadProject(JSON.stringify(input), JSON.stringify(packages), gameData),
+    nf.loadProject(
+      JSON.stringify(input),
+      JSON.stringify(packages),
+      gameData,
+      JSON.stringify(pngSizes(root, Object.keys(input))),
+    ),
   ) as ProjectOutline
 }
 

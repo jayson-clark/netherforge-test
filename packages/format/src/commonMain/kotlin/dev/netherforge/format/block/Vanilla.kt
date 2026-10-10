@@ -16,7 +16,9 @@ import kotlinx.serialization.json.JsonObject
  *   other states as the game does takes more than one model (tripwire draws a model per shape). The built pack
  *   replaces the carrier's blockstate file, so it must say how every state looks: its blocks' states as their looks,
  *   the rest as this says.
- * - [sprites]: the GUI sprites of the game's HUD (`hud/heart/full`), which a resource pack's `hud.hide` blanks.
+ * - [sprites]: the GUI sprites of the game's HUD (`hud/heart/full`), which a resource pack's `hud.hide` blanks and
+ *   `hud.replace` redraws.
+ * - [textures]: the game's container screens' textures with their sizes, which a resource pack's `textures` redraws.
  */
 @Serializable
 data class VanillaFile(
@@ -26,7 +28,9 @@ data class VanillaFile(
     /** Each block's blockstate file as the client has it, by block id (`minecraft:tripwire`). */
     val blockstates: Map<String, JsonElement> = emptyMap(),
     /** The game's HUD sprites, by their path under `textures/gui/sprites/` without `.png` (`hud/heart/full`), sorted. */
-    val sprites: List<String> = emptyList()
+    val sprites: List<String> = emptyList(),
+    /** The game's container screens' textures (`gui/container/inventory`), by their path under `textures/` without `.png`, to their pixel size `[width, height]`. */
+    val textures: Map<String, List<Int>> = emptyMap()
 ) {
     companion object {
         const val FILE = "client/vanilla.json"

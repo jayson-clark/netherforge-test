@@ -8,7 +8,7 @@
  * to, so it validates only those files and then checks everything across
  * files again (format's `ProjectCache`).
  */
-import { MANIFEST_FILE, type Problem, type ProjectOutline } from '@/core/format'
+import { MANIFEST_FILE, type ImageSizes, type Problem, type ProjectOutline } from '@/core/format'
 import type { ProjectInfo } from '@/core/backend/types'
 import { isProjectJson } from '@/core/paths'
 import { validationWorker, type ValidationClient } from '@/core/validation/client'
@@ -72,6 +72,8 @@ export function namespaceOf(state: Workspace): string | null {
 export interface ValidationState {
   outline: ProjectOutline | null
   problems: Problem[]
+  /** The pictures' pixel sizes, as the resource pack previews measured them: what holds a replaced game texture to the game's size. */
+  imageSizes: ImageSizes
 }
 
 export interface ValidationActions {
@@ -81,9 +83,11 @@ export interface ValidationActions {
   validateSoon(): void
   /** Drops a validation that was asked for and hasn't run or answered (the project is closing). */
   cancelValidation(): void
+  /** Tells validation the resource packs' pictures' sizes (by project path); it runs again when they changed. */
+  setImageSizes(sizes: ImageSizes): void
 }
 
-export const VALIDATION_INITIAL: ValidationState = { outline: null, problems: [] }
+export const VALIDATION_INITIAL: ValidationState = { outline: null, problems: [], imageSizes: {} }
 
 /**
  * [connect] makes the worker, the first time a project is validated; it's
@@ -117,7 +121,12 @@ export function validationSlice(
       client ??= connect()
       const asked = generation
       // Validation checks ids against the server's export only; glyph advances aren't game data.
-      const request = changes.request(projectInput(state), state.gameData, state.packages)
+      const request = changes.request(
+        projectInput(state),
+        state.gameData,
+        state.packages,
+        state.imageSizes,
+      )
       try {
         const { outline } = await client.validate(request)
         if (asked !== generation) return
@@ -127,10 +136,13 @@ export function validationSlice(
           outline,
           problems: fontProblem === null ? outline.problems : [...outline.problems, fontProblem],
         })
-        // A tripwire block wants the game's own look of tripwire, and hiding the HUD its sprites' names, which only the import has.
+        // A tripwire block wants the game's own look of tripwire, and hiding or replacing the game's HUD and textures their names and sizes, which only the import has.
         if (
           outline.problems.some(
-            (it) => it.code === 'block.vanilla-looks' || it.code === 'resource_pack.hud-hide',
+            (it) =>
+              it.code === 'block.vanilla-looks' ||
+              it.code === 'resource_pack.hud-hide' ||
+              it.code === 'resource_pack.vanilla-missing',
           )
         ) {
           void get().syncVanilla()
@@ -149,6 +161,12 @@ export function validationSlice(
         timer = null
         void get().validateNow()
       }, VALIDATE_DELAY_MS)
+    },
+
+    setImageSizes(sizes) {
+      if (JSON.stringify(sizes) === JSON.stringify(get().imageSizes)) return
+      set({ imageSizes: sizes })
+      if (get().project) get().validateSoon()
     },
 
     cancelValidation() {

@@ -15,6 +15,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** A resource pack's `hud`: its checks, the font it builds, the game's sprites it blanks, and the line a player's HUD draws. */
@@ -137,6 +138,91 @@ class HudTest {
                 "resource_pack.hud-hide" to "$.hud.hide"
             ),
             problems.map { it.code to it.path }
+        )
+    }
+
+    private val replacing = """
+        {
+          "hud": { "replace": { "hud/hotbar": "gui/hotbar.png", "hud/hotbar_selection": "gui/selection.png" } },
+          "textures": { "gui/container/inventory": "gui/inventory.png" }
+        }
+    """.trimIndent()
+    private val replacingVanilla = """
+        { "minecraft": "26.3", "sprites": ["hud/hotbar", "hud/hotbar_selection", "hud/heart/full"], "textures": { "gui/container/inventory": [256, 256] } }
+    """.trimIndent()
+    private val pictures = listOf("gui/hotbar.png", "gui/selection.png", "gui/inventory.png")
+
+    private fun replacingProject(vanilla: String?, pack: String = replacing, size: Int = 256, extra: Map<String, String?> = emptyMap()) =
+        Projects.load(
+            MapProjectSource(
+                mapOf("netherforge.json" to testManifest(), "resource_packs/ui/pack.json" to pack, VanillaFile.FILE to vanilla) +
+                    pictures.associate { "resource_packs/ui/textures/$it" to null } + extra,
+                pictures.associate { "resource_packs/ui/textures/$it" to ImageInfo(size, size, size) }
+            )
+        )
+
+    @Test
+    fun theBuiltPackDrawsThePacksPicturesOverTheGamesSpritesAndTextures() {
+        val snapshot = replacingProject(replacingVanilla, extra = mapOf("resource_packs/ui/textures/gui/selection.png.mcmeta" to "{}"))
+        assertEquals(emptyList(), snapshot.problems.filter { it.severity == Severity.ERROR })
+        val files = PackLayout.build(snapshot.compiledResourcePacks.values.toList(), listOf(75, 0), "Test", vanilla = snapshot.vanilla) {
+            null
+        }
+        val sprites = "assets/minecraft/textures/gui/sprites/hud"
+        assertEquals(PackLayout.Entry.Copy("resource_packs/ui/textures/gui/hotbar.png"), files["$sprites/hotbar.png"])
+        assertEquals(PackLayout.Entry.Copy("resource_packs/ui/textures/gui/selection.png"), files["$sprites/hotbar_selection.png"])
+        // Only a picture with a `.mcmeta` beside it brings one.
+        assertEquals(
+            PackLayout.Entry.Copy("resource_packs/ui/textures/gui/selection.png.mcmeta"),
+            files["$sprites/hotbar_selection.png.mcmeta"]
+        )
+        assertNull(files["$sprites/hotbar.png.mcmeta"])
+        assertEquals(
+            PackLayout.Entry.Copy("resource_packs/ui/textures/gui/inventory.png"),
+            files["assets/minecraft/textures/gui/container/inventory.png"]
+        )
+        // Not hidden, not replaced: the game's.
+        assertNull(files["$sprites/heart/full.png"])
+    }
+
+    @Test
+    fun aNameTheGameLacksASizeItDoesntHaveAndAWaitingVanillaFileAreSaidWhereTheyAre() {
+        fun codes(vanilla: String?, pack: String = replacing, size: Int = 256) = replacingProject(vanilla, pack, size).problems.filter {
+            it.code?.startsWith("resource_pack.") == true
+        }.map { it.code to it.path }
+        // No client facts yet: a warning, and nothing is replaced.
+        assertEquals(listOf("resource_pack.vanilla-missing" to "$.hud.replace"), codes(null))
+        assertEquals(
+            listOf("resource_pack.vanilla-missing" to "$.hud.replace"),
+            codes("""{ "minecraft": "26.3", "sprites": ["hud/hotbar"] }""")
+        )
+        assertEquals(listOf("resource_pack.vanilla-missing" to "$.hud.replace"), codes(replacingVanilla.replace("26.3", "26.2")))
+        assertEquals(emptyList(), codes(replacingVanilla))
+        // A texture of another size is an error, and so is a name the game doesn't have.
+        assertEquals(listOf("resource_pack.replace-size" to "$.textures[\"gui/container/inventory\"]"), codes(replacingVanilla, size = 128))
+        val unknown = replacing.replace("hud/hotbar_selection", "hud/nothing").replace("gui/container/inventory", "gui/container/nothing")
+        assertEquals(
+            listOf(
+                "resource_pack.replace-name" to "$.hud.replace[\"hud/nothing\"]",
+                "resource_pack.replace-name" to "$.textures[\"gui/container/nothing\"]"
+            ),
+            codes(replacingVanilla, unknown)
+        )
+        // A name that couldn't be a path never gets that far.
+        val shape = """{ "hud": { "replace": { "../hud/hotbar": "gui/hotbar.png" } } }"""
+        assertEquals("resource_pack.replace-name", replacingProject(replacingVanilla, shape).problems.first().code)
+    }
+
+    @Test
+    fun twoPacksCantReplaceTheSameTexture() {
+        val second = """{ "textures": { "gui/container/inventory": "gui/inventory.png" } }"""
+        val snapshot = replacingProject(
+            replacingVanilla,
+            extra = mapOf("resource_packs/zz/pack.json" to second, "resource_packs/zz/textures/gui/inventory.png" to null)
+        )
+        assertEquals(
+            listOf("resource_pack.replace-name" to "resource_packs/zz/pack.json"),
+            snapshot.problems.filter { it.code == "resource_pack.replace-name" }.map { it.code to it.file }
         )
     }
 }

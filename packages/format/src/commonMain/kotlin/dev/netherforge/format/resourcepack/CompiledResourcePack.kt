@@ -50,8 +50,15 @@ class CompiledResourcePack(
     /** The model files its looks name, read, by path under `models/`. */
     val models: Map<String, PackModels.Model> = emptyMap(),
     /** Its HUD elements, their pictures numbered in its own HUD font; null for a pack with no `hud`. */
-    val hud: CompiledHud? = null
+    val hud: CompiledHud? = null,
+    /** The game's GUI sprites it redraws (`hud.replace`), by name. */
+    val spriteReplacements: Map<String, Replacement> = emptyMap(),
+    /** The game's other textures it redraws (`textures`), by name. */
+    val textureReplacements: Map<String, Replacement> = emptyMap()
 ) {
+    /** A game sprite or texture drawn with the pack's [texture] (a path under `textures/`), and its `.mcmeta` when it has [meta]. */
+    class Replacement(val texture: String, val meta: Boolean)
+
     /**
      * [advance] is the skin character's advance in pixels
      * ([PackFonts.bitmapAdvance]), or null when its picture couldn't be read.
@@ -129,13 +136,15 @@ class CompiledResourcePack(
          * (`resource_packs/ui/textures/gui/shop.png`), or null when unknown; skins and
          * glyphs whose picture is unknown get no [Skin.advance]. [soundFiles]
          * is each pack's usable sound files under `sounds/`
-         * ([PackSounds.files]), by pack id.
+         * ([PackSounds.files]), by pack id, and [textureFiles] the files under its `textures/`, which say
+         * whether a replaced sprite brings a `.mcmeta`.
          */
         fun compileAll(
             namespace: String,
             files: Map<String, ResourcePackFile>,
             soundFiles: Map<String, Set<String>> = emptyMap(),
             models: Map<String, Map<String, PackModels.Model>> = emptyMap(),
+            textureFiles: Map<String, Set<String>> = emptyMap(),
             image: (projectPath: String) -> ImageInfo? = { null }
         ): Map<String, CompiledResourcePack> {
             var nextGlyph = 0
@@ -143,7 +152,18 @@ class CompiledResourcePack(
             // so its glyphs keep the characters the editor previews them with.
             return files.entries.sortedWith(compareBy({ ':' in it.key }, { it.key })).associate { (key, file) ->
                 val (pkg, id) = PackagePaths.split(key)
-                val pack = compile(pkg ?: namespace, id, key, file, nextGlyph, soundFiles[key].orEmpty(), image, models[key].orEmpty())
+                val pack =
+                    compile(
+                        pkg ?: namespace,
+                        id,
+                        key,
+                        file,
+                        nextGlyph,
+                        soundFiles[key].orEmpty(),
+                        image,
+                        models[key].orEmpty(),
+                        textureFiles[key].orEmpty()
+                    )
                 nextGlyph += file.glyphs.size
                 key to pack
             }
@@ -164,8 +184,11 @@ class CompiledResourcePack(
             glyphStart: Int,
             soundFiles: Set<String>,
             image: (String) -> ImageInfo?,
-            models: Map<String, PackModels.Model>
+            models: Map<String, PackModels.Model>,
+            textureFiles: Set<String>
         ): CompiledResourcePack {
+            fun replacements(replaced: Map<String, String>) = replaced.entries.sortedBy { it.key }
+                .associate { (name, texture) -> name to Replacement(texture, "$texture.mcmeta" in textureFiles) }
             fun advance(texture: String, drawnHeight: Int): Int? = image(texturePath(key, texture))
                 ?.takeIf { it.height > 0 }
                 ?.let { PackFonts.bitmapAdvance(it.opaqueWidth, it.height, drawnHeight) }
@@ -197,7 +220,9 @@ class CompiledResourcePack(
                     CompiledHud.compile(namespace, id, hud) { texture ->
                         image(texturePath(key, texture))?.takeIf { it.height > 0 }?.let { it.height to it.opaqueWidth }
                     }
-                }
+                },
+                replacements(file.hud?.replace.orEmpty()),
+                replacements(file.textures)
             )
         }
     }
@@ -470,10 +495,31 @@ object PackLayout {
             }
         }
 
+        // The game's sprites and textures the packs redraw, which only the client lists; a later pack's wins (the
+        // project's validation refuses two).
+        fun redraw(sprites: Boolean, known: Set<String>) {
+            for (pack in packs.sortedWith(compareBy({ it.namespace }, { it.id }))) {
+                for ((name, replacement) in if (sprites) pack.spriteReplacements else pack.textureReplacements) {
+                    if (name !in known) continue
+                    val target = "assets/minecraft/textures/${if (sprites) "gui/sprites/" else ""}$name.png"
+                    val source = CompiledResourcePack.texturePath(pack.key, replacement.texture)
+                    out[target] = Entry.Copy(source)
+                    if (replacement.meta) out["$target.mcmeta"] = Entry.Copy("$source.mcmeta") else out.remove("$target.mcmeta")
+                }
+            }
+        }
+        redraw(true, vanilla?.sprites.orEmpty().toSet())
+        redraw(false, vanilla?.textures?.keys.orEmpty())
+
         // The game's own HUD elements the packs hide: every sprite that draws one, blank.
         val hidden = packs.flatMap { it.hud?.hide.orEmpty() }.toSet()
         for (sprite in vanilla?.sprites.orEmpty()) {
-            if (hidden.any { it.draws(sprite) }) out["assets/minecraft/textures/gui/sprites/$sprite.png"] = Entry.Bytes(BLANK_PNG)
+            if (hidden.any { it.draws(sprite) } &&
+                "assets/minecraft/textures/gui/sprites/$sprite.png" !in out
+            ) {
+                out["assets/minecraft/textures/gui/sprites/$sprite.png"] =
+                    Entry.Bytes(BLANK_PNG)
+            }
         }
         if (blocks != null) {
             for ((path, states) in blockStates(blocks, packs, vanilla)) out[path] = states

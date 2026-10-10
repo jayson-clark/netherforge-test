@@ -119,6 +119,7 @@ class ExportsTest {
                     "modules/util/init.lua" to null
                 ),
                 null,
+                null,
                 null
             )
         )
@@ -156,7 +157,7 @@ class ExportsTest {
         assertEquals(emptyList<JsonElement>(), second.getValue("locations").jsonArray.toList())
         assertEquals(emptyList<JsonElement>(), second.getValue("git").jsonArray.toList())
         // A fetch that failed is the problem it gives, at the dependency.
-        val outline = obj(loadProject(app, inputs, null))
+        val outline = obj(loadProject(app, inputs, null, null))
         assertTrue("package.git" in codes(outline["problems"]), outline["problems"].toString())
         assertTrue("lib" in outline.getValue("packages").jsonObject)
     }
@@ -406,8 +407,23 @@ class ExportsTest {
         assertFailsWith<Exception> { readSetting("{}", "1", typed = true) }
         assertNull(obj(classify("netherforge.json"))["kind"], "a project file is no resource kind")
         assertTrue(
-            obj(loadProject(files(), null, null)).getValue("problems").jsonArray.isNotEmpty(),
+            obj(loadProject(files(), null, null, null)).getValue("problems").jsonArray.isNotEmpty(),
             "no manifest is a problem, not a throw"
         )
+    }
+
+    @Test
+    fun loadProjectHoldsAReplacedGameTextureToTheSizesItIsGiven() {
+        val project = files(
+            "netherforge.json" to manifest,
+            "client/vanilla.json" to """{"minecraft":"26.3","textures":{"gui/container/inventory":[256,256]}}""",
+            "resource_packs/skin/pack.json" to """{"textures":{"gui/container/inventory":"gui/inventory.png"}}""",
+            "resource_packs/skin/textures/gui/inventory.png" to null
+        )
+        fun problemsFor(sizes: String?) = codes(obj(loadProject(project, null, null, sizes))["problems"])
+        assertEquals(listOf("resource_pack.replace-size"), problemsFor("""{"resource_packs/skin/textures/gui/inventory.png":[128,128]}"""))
+        assertEquals(emptyList(), problemsFor("""{"resource_packs/skin/textures/gui/inventory.png":[256,256]}"""))
+        // Sizes the host didn't measure aren't a problem the host can be told about.
+        assertEquals(emptyList(), problemsFor(null))
     }
 }

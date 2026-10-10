@@ -253,6 +253,44 @@ describe('project files', () => {
     expect(outcome.code).toBe(0)
   })
 
+  it("holds a pack's replacement of a game texture to the game's size, from the PNG's header", async () => {
+    const png = (width: number, height: number) => {
+      const header = Buffer.alloc(24)
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(header)
+      header.write('IHDR', 12, 'latin1')
+      header.writeUInt32BE(width, 16)
+      header.writeUInt32BE(height, 20)
+      return header
+    }
+    const files: Record<string, string | Buffer> = {
+      'client/vanilla.json': JSON.stringify({
+        minecraft: '26.3',
+        sprites: ['hud/hotbar'],
+        textures: { 'gui/container/inventory': [256, 256] },
+      }),
+      'resource_packs/skin/pack.json': JSON.stringify({
+        hud: { replace: { 'hud/hotbar': 'gui/hotbar.png' } },
+        textures: { 'gui/container/inventory': 'gui/inventory.png' },
+      }),
+      'resource_packs/skin/textures/gui/hotbar.png': png(182, 22),
+      'resource_packs/skin/textures/gui/inventory.png': png(128, 128),
+    }
+    for (const [file, contents] of Object.entries(files)) {
+      mkdirSync(path.dirname(path.join(project, file)), { recursive: true })
+      writeFileSync(path.join(project, file), contents)
+    }
+    const wrong = await run(['check', project], env)
+    expect(wrong.code).not.toBe(0)
+    expect(wrong.out.join('\n')).toContain('[resource_pack.replace-size]')
+    expect(wrong.out.join('\n')).toContain('128x128')
+    // The right size passes.
+    writeFileSync(
+      path.join(project, 'resource_packs/skin/textures/gui/inventory.png'),
+      png(256, 256),
+    )
+    expect((await run(['check', project], env)).out.join('\n')).not.toContain('replace-size')
+  })
+
   it("reads a structure's generation file, which format owns, and reports what's wrong in it", async () => {
     const files: Record<string, string | Buffer> = {
       'structures/ruins.nbt': Buffer.from([0x1f, 0x8b, 1]),

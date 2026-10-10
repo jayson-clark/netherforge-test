@@ -90,6 +90,17 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Added
 
+- **Resource packs can redraw the game's own pictures.** `hud.replace` draws
+  the game's HUD sprites (`hud/hotbar`, `hud/hotbar_selection`, the offhand
+  ones…) with the pack's own PNGs for every player, with a `.mcmeta` beside the
+  picture for nine-slice scaling, and a top-level `textures` does the same for
+  the game's container screens (`gui/container/inventory`, the player's own
+  inventory), where the replacement must have exactly the game's pixel size.
+  Unknown names are `resource_pack.replace-name`, a wrong size
+  `resource_pack.replace-size` (in the editor and in `netherforge check`, which
+  reads the PNGs' headers), and until `client/vanilla.json` lists the names
+  and sizes (import the client again) `resource_pack.vanilla-missing`.
+
 - **Items a player keeps.** `player:storage(name, size)` is an inventory of
   the project's own saved in the player's own save data, with their
   inventory in the same write, so a crash can't duplicate or lose an item

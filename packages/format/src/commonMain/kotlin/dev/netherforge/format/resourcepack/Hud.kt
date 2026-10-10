@@ -23,6 +23,12 @@ import kotlinx.serialization.Serializable
 data class HudDef(
     /** The game's own HUD elements to hide, for every player of the project. */
     val hide: List<HudElement>? = null,
+    /**
+     * The game's GUI sprites to draw with the pack's own pictures instead, for every player: the sprite's name under
+     * `textures/gui/sprites/` (`hud/hotbar`), without `.png`, to a texture of the pack. A `.mcmeta` beside the picture
+     * (nine-slice scaling) comes along; without one the sprite is drawn stretched.
+     */
+    @Ref(RefKind.TEXTURE) val replace: Map<String, String> = emptyMap(),
     /** Bars, by key: a value out of a max, drawn as segments. */
     val bars: Map<String, HudBarDef> = emptyMap(),
     /** Rows of icons, by key: which of its icons show is a script's to say. */

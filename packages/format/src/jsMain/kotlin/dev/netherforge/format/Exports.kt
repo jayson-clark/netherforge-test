@@ -204,11 +204,16 @@ fun packagesNeeded(filesJson: String, packagesJson: String?): String {
  * ([packagesJson]: a [PackageInputs], read and fetched as [packagesNeeded]
  * asks; null for none), and
  * returns its [ProjectOutline]. [gameDataJson] is a [GameDataBundle], or null
- * when the target version hasn't been imported yet.
+ * when the target version hasn't been imported yet. [sizesJson] is `{ path: [width, height] }` for the PNGs the host
+ * measured (the CLI reads their headers), which holds a resource pack's `textures` to the game's sizes; null for none.
  */
-fun loadProject(filesJson: String, packagesJson: String?, gameDataJson: String?): String {
+fun loadProject(filesJson: String, packagesJson: String?, gameDataJson: String?, sizesJson: String?): String {
     val files = CanonicalJson.json.decodeFromString<Map<String, String?>>(filesJson)
-    val snapshot = Projects.load(MapProjectSource(files), gameDataJson?.let(::gameData), MapPackages(packagesJson))
+    val snapshot = Projects.load(
+        MapProjectSource(files, sizes = sizesJson?.let(::sizes)),
+        gameDataJson?.let(::gameData),
+        MapPackages(packagesJson)
+    )
     return encode(ProjectOutline.serializer(), outlineOf(snapshot))
 }
 
@@ -224,6 +229,12 @@ class ProjectValidator {
     private val cache = ProjectCache()
     private var game: GameDataBundle? = null
     private var packagesJson: String? = null
+    private var sizes: Map<String, List<Int>>? = null
+
+    /** The pictures' sizes (`{ path: [width, height] }`) for the checks that hold a replacement to the game's, or null for none known. */
+    fun setSizes(sizesJson: String?) {
+        sizes = sizesJson?.let(::sizes)
+    }
 
     /** Sets a file's text: null for one whose contents format doesn't read (`.lua`, `.png`). */
     fun setFile(path: String, text: String?) {
@@ -247,12 +258,14 @@ class ProjectValidator {
 
     /** The project as it is now: a [ProjectValidation]. */
     fun validate(): String {
-        val snapshot = Projects.load(MapProjectSource(HashMap(files)), game, MapPackages(packagesJson), cache)
+        val snapshot = Projects.load(MapProjectSource(HashMap(files), sizes = sizes), game, MapPackages(packagesJson), cache)
         val validated = cache.validated +
             snapshot.packages.keys.sorted().flatMap { namespace -> cache.scope(namespace).validated.map { PackagePaths.of(namespace, it) } }
         return encode(ProjectValidation.serializer(), ProjectValidation(outlineOf(snapshot), validated))
     }
 }
+
+private fun sizes(json: String): Map<String, List<Int>> = CanonicalJson.json.decodeFromString(json)
 
 private fun gameData(json: String) = CanonicalJson.json.decodeFromString(GameDataBundle.serializer(), json)
 
