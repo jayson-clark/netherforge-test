@@ -640,6 +640,10 @@ Error. A cooldown's `seconds` isn't more than 0. See [items](item.md).
 
 Error. A cooldown's `group` isn't a namespaced id. See [items](item.md).
 
+### `item.draw-without-ammo` {#item-draw-without-ammo}
+
+Error. `drawWithoutAmmo` is on an item that isn't a bow. See [items](item.md).
+
 ## Recipes
 
 ### `recipe.missing` {#recipe-missing}

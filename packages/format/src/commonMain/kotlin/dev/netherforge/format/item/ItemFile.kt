@@ -64,6 +64,12 @@ data class ItemFile(
     val food: FoodDef? = null,
     /** A cooldown after using it. */
     val cooldown: CooldownDef? = null,
+    /**
+     * A bow draws and shoots with no ammo: it needs no arrow in the inventory, and uses none up. The arrow is
+     * the server's own, and `entity_shoot_bow` hears the shot, so a script can cancel it or hand out its own
+     * ammo. Only a bow (`minecraft:bow`) can.
+     */
+    val drawWithoutAmmo: Boolean? = null,
     /** `<id>`: a block of the project's that a player places by right-clicking with it (one is used up each time, but in creative). */
     @Ref(RefKind.BLOCK) val block: ResourceRef? = null,
     /** The item's one script, with `this` the item: it hears what players do with every stack of it. */

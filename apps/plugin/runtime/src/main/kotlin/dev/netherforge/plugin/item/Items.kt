@@ -95,6 +95,12 @@ class Items(
         return block.nameIn(namespace())
     }
 
+    /** Whether a stack of a project item is a bow that draws and shoots without ammo (its `drawWithoutAmmo`). */
+    fun drawsWithoutAmmo(stack: ItemData?): Boolean {
+        val id = stack?.def?.item?.let { idOf(it.text) } ?: return false
+        return synchronized(records) { records[id]?.file?.drawWithoutAmmo == true }
+    }
+
     fun ids(): List<String> = synchronized(records) { records.keys.sorted() }
 
     /** Takes every item: its look, before any window or script builds a stack. Their scripts start in [start]. */

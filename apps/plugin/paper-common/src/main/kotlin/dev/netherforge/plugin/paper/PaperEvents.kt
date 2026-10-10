@@ -8,10 +8,14 @@ import dev.netherforge.plugin.platform.MenuClick
 import dev.netherforge.plugin.platform.PlatformEvents
 import dev.netherforge.plugin.platform.WatchedEvent
 import io.papermc.paper.event.player.PlayerCustomClickEvent
+import io.papermc.paper.event.player.PlayerStopUsingItemEvent
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
 import org.bukkit.Bukkit
+import org.bukkit.GameMode
 import org.bukkit.block.Block
 import org.bukkit.block.data.BlockData
+import org.bukkit.entity.AbstractArrow
+import org.bukkit.entity.Arrow
 import org.bukkit.entity.Display
 import org.bukkit.entity.Interaction
 import org.bukkit.entity.Player
@@ -24,6 +28,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.event.entity.EntityPickupItemEvent
+import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.inventory.ClickType
 import org.bukkit.event.inventory.InventoryAction
@@ -35,6 +40,7 @@ import org.bukkit.event.player.PlayerInteractAtEntityEvent
 import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerItemConsumeEvent
+import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.player.PlayerResourcePackStatusEvent
 import org.bukkit.event.server.PluginDisableEvent
 import org.bukkit.event.server.PluginEnableEvent
@@ -56,7 +62,15 @@ import java.util.UUID
  * decide at NORMAL or LOW) have had their say, and skip events something
  * already cancelled.
  */
-class PaperEvents(private val plugin: JavaPlugin, private val platform: PaperPlatform, private val runtime: PlatformEvents) : Listener {
+class PaperEvents(
+    private val plugin: JavaPlugin,
+    private val platform: PaperPlatform,
+    private val runtime: PlatformEvents,
+    private val version: PaperVersion
+) : Listener {
+    /** Players whose draw of a bow with no ammo the server started ([PaperVersion.startUsingItem]): their shot is fired by [onLetGoOfDraw]. */
+    private val drawing = HashSet<UUID>()
+
     /** The game's other events, generated from the API spec: always listened to but for the watched ones. */
     private val game = PaperGameEvents(plugin, platform, runtime.game).also { plugin.server.pluginManager.registerEvents(it, plugin) }
 
@@ -91,14 +105,49 @@ class PaperEvents(private val plugin: JavaPlugin, private val platform: PaperPla
             return
         }
         // Using the item comes after the click, and only stops the item.
-        if (button == ClickButton.RIGHT &&
-            item != null &&
-            event.useItemInHand() != org.bukkit.event.Event.Result.DENY &&
-            runtime.playerUseItem(ref(event), item, hand)
-        ) {
-            event.setUseItemInHand(org.bukkit.event.Event.Result.DENY)
+        if (button == ClickButton.RIGHT && item != null && event.useItemInHand() != org.bukkit.event.Event.Result.DENY) {
+            if (runtime.playerUseItem(ref(event), item, hand)) {
+                event.setUseItemInHand(org.bukkit.event.Event.Result.DENY)
+            } else if (runtime.drawsWithoutAmmo(item) && !hasArrows(event.player) && event.player.gameMode != GameMode.CREATIVE) {
+                // The game won't draw a bow with no arrows, so the draw is started here, and the shot fired on release.
+                drawing.add(event.player.uniqueId)
+                version.startUsingItem(event.player, slot)
+            }
         }
     }
+
+    /**
+     * Fires the shot of a bow drawn with no ammo, as the game would have: the force its draw gives, and a shot the
+     * `entity_shoot_bow` handlers can cancel, which takes the arrow back. Nothing is used up.
+     */
+    @EventHandler(priority = EventPriority.HIGH)
+    fun onLetGoOfDraw(event: PlayerStopUsingItemEvent) {
+        if (!drawing.remove(event.player.uniqueId)) return
+        val player = event.player
+        // The game's force for a draw this long (BowItem.getPowerForTime), and no shot below a tenth of it.
+        val seconds = event.ticksHeldFor / 20.0
+        val force = minOf(1.0, (seconds * seconds + seconds * 2.0) / 3.0)
+        if (force < 0.1) return
+        val arrow = player.world.spawn(player.eyeLocation, Arrow::class.java) {
+            it.shooter = player
+            it.velocity = player.eyeLocation.direction.multiply(force * 3.0)
+            it.isCritical = force >= 1.0
+            // Like a shot from a bow with no ammo, it's not an arrow to pick back up for free.
+            it.pickupStatus = AbstractArrow.PickupStatus.CREATIVE_ONLY
+        }
+        val hand = if (player.inventory.itemInMainHand.isSimilar(event.item)) EquipmentSlot.HAND else EquipmentSlot.OFF_HAND
+        val shot = EntityShootBowEvent(player, event.item, null, arrow, hand, force.toFloat(), false)
+        plugin.server.pluginManager.callEvent(shot)
+        if (shot.isCancelled) arrow.remove()
+    }
+
+    @EventHandler
+    fun onQuit(event: PlayerQuitEvent) {
+        drawing.remove(event.player.uniqueId)
+    }
+
+    /** Whether [player] has any arrow (arrow, tipped or spectral: what a bow takes as ammo). */
+    private fun hasArrows(player: Player): Boolean = player.inventory.contents.any { it != null && it.type.name.endsWith("ARROW") }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     fun onDropItem(event: PlayerDropItemEvent) {

@@ -105,6 +105,8 @@ class ServerEvents internal constructor(private val runtime: NetherForgeRuntime)
             PlayerUseItemEvent(handle(player), item, hand)
         )
 
+    override fun drawsWithoutAmmo(item: ItemData): Boolean = running && items.drawsWithoutAmmo(item)
+
     override fun blockBreak(player: PlayerRef, block: BlockRef, drops: () -> List<ItemData>, experience: Int): DropsAnswer? {
         val unchanged = DropsAnswer(null, experience)
         if (!running) return unchanged

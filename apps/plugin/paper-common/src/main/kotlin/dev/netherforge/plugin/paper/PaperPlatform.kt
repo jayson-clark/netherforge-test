@@ -147,7 +147,7 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
         plugin.server.pluginManager.registerEvents(recipes, plugin)
         dialogs.events = events
         menus.events = events
-        this.events = PaperEvents(plugin, this, events).also { plugin.server.pluginManager.registerEvents(it, plugin) }
+        this.events = PaperEvents(plugin, this, events, version).also { plugin.server.pluginManager.registerEvents(it, plugin) }
         plugin.server.pluginManager.registerEvents(borders, plugin)
         plugin.server.pluginManager.registerEvents(noteBlocks, plugin)
         plugin.server.pluginManager.registerEvents(PaperGeneratedLoot(worldManager.generators, events, plugin.logger), plugin)

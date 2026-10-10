@@ -98,6 +98,11 @@ class Version : PaperVersion {
         return result.consumesAction()
     }
 
+    override fun startUsingItem(player: Player, hand: EquipmentSlot) {
+        val side = if (hand == EquipmentSlot.OFF_HAND) InteractionHand.OFF_HAND else InteractionHand.MAIN_HAND
+        (player as CraftPlayer).handle.startUsingItem(side)
+    }
+
     override fun playNote(block: Block) {
         val level = (block.world as CraftWorld).handle
         val pos = BlockPos(block.x, block.y, block.z)

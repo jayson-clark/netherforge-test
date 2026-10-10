@@ -5,8 +5,8 @@ import dev.netherforge.format.item.EquipmentDef
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.item.ItemFile
 import dev.netherforge.format.item.ItemRarity
-import dev.netherforge.format.item.TooltipComponent
 import dev.netherforge.format.item.ProjectItems
+import dev.netherforge.format.item.TooltipComponent
 import dev.netherforge.format.project.ItemKind
 import dev.netherforge.format.ref.ResourceRef
 import kotlinx.serialization.json.JsonPrimitive
@@ -35,10 +35,19 @@ class ProjectItemsTest {
     @Test
     fun aStackHidesTheTooltipLinesTheLookHidesUnlessItSaysOtherwise() {
         val hidden = look.copy(hiddenTooltipComponents = listOf(TooltipComponent.CAN_BREAK))
-        assertEquals(listOf(TooltipComponent.CAN_BREAK), ProjectItems.resolve(ItemDef(item = ResourceRef("ruby")), hidden).hiddenTooltipComponents)
+        assertEquals(
+            listOf(TooltipComponent.CAN_BREAK),
+            ProjectItems.resolve(ItemDef(item = ResourceRef("ruby")), hidden).hiddenTooltipComponents
+        )
         val own = listOf(TooltipComponent.CAN_PLACE_ON)
-        assertEquals(own, ProjectItems.resolve(ItemDef(item = ResourceRef("ruby"), hiddenTooltipComponents = own), hidden).hiddenTooltipComponents)
-        assertEquals(emptyList(), ProjectItems.resolve(ItemDef(item = ResourceRef("ruby"), hiddenTooltipComponents = emptyList()), hidden).hiddenTooltipComponents)
+        assertEquals(
+            own,
+            ProjectItems.resolve(ItemDef(item = ResourceRef("ruby"), hiddenTooltipComponents = own), hidden).hiddenTooltipComponents
+        )
+        assertEquals(
+            emptyList(),
+            ProjectItems.resolve(ItemDef(item = ResourceRef("ruby"), hiddenTooltipComponents = emptyList()), hidden).hiddenTooltipComponents
+        )
     }
 
     @Test
@@ -105,7 +114,8 @@ class ProjectItemsTest {
         val file = ItemKind.serializer.descriptor
         val itemFields = (0 until item.elementsCount).map(item::getElementName).toSet()
         val fileFields = (0 until file.elementsCount).map(file::getElementName).toSet()
-        assertEquals(itemFields - ItemFile.STACK_FIELDS, fileFields - setOf("\$schema", "script", "block"))
+        // `block` and `drawWithoutAmmo` are the item's own behaviour, read from the file rather than carried by a stack's look.
+        assertEquals(itemFields - ItemFile.STACK_FIELDS, fileFields - setOf("\$schema", "script", "block", "drawWithoutAmmo"))
         assertTrue(ItemFile.STACK_FIELDS.all { it in itemFields })
     }
 }

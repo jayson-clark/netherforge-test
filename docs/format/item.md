@@ -43,6 +43,7 @@ that describe its look and behaviour. What one stack holds (`count`, `damage`,
 | `hiddenTooltipComponents` | Tooltip lines to hide: `can_break` ("Can break") and `can_place_on` ("Can place on"). The blocks still apply.   |
 | `food`                    | Eating it.                                                                                                      |
 | `cooldown`                | A cooldown after using it.                                                                                      |
+| `drawWithoutAmmo`         | A bow (`minecraft:bow`) that draws and shoots with no arrows, and uses none up. See below.                      |
 | `block`                   | `<id>`: a [block](block.md) of the project's that a right click with it places.                                 |
 | `script`                  | The item's one Lua script. See [`script`](#script).                                                             |
 
@@ -53,6 +54,16 @@ that [block](block.md) (it names a block of the project, or of a package that
 exports it; one that doesn't exist is `reference.block`) instead of using the
 item, and the stack is built on whatever `kind` it's given, which needn't be a
 block's.
+
+## Drawing without ammo
+
+A bow with `"drawWithoutAmmo": true` draws with no arrows in the inventory,
+and fires one each time, using none up. Its arrow is the server's own: the
+shot still goes through [`entity_shoot_bow`](../reference/events.md), so a
+script can cancel it (nothing is fired and the arrow is taken back), and a
+project that wants its own ammo can cancel it and spend its own item instead.
+The arrow can't be picked up again. It's the one behaviour, with no options.
+Only `minecraft:bow` takes it (`item.draw-without-ammo` otherwise).
 
 ## Naming a project item
 

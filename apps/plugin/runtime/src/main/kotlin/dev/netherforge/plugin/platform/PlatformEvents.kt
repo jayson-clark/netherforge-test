@@ -33,6 +33,12 @@ interface PlatformEvents {
     fun playerUseItem(player: PlayerRef, item: ItemData, hand: String): Boolean
 
     /**
+     * Whether [item] is a bow that draws and shoots without ammo: a project item with `drawWithoutAmmo`. The platform
+     * then starts the draw itself when the player has no arrows, and fires the shot when they let go.
+     */
+    fun drawsWithoutAmmo(item: ItemData): Boolean
+
+    /**
      * A player breaking [block]. [drops] is what it would drop (asked only if
      * a script listens) and [experience] the experience. Null cancels it.
      */

@@ -21,6 +21,13 @@
   },
   {
     "severity": "error",
+    "file": "items/drawn/item.json",
+    "message": "Only a bow can draw without ammo",
+    "path": "$.drawWithoutAmmo",
+    "code": "item.draw-without-ammo"
+  },
+  {
+    "severity": "error",
     "file": "items/gem/item.json",
     "message": "Script file \"missing.lua\" doesn't exist",
     "path": "$.script.file",

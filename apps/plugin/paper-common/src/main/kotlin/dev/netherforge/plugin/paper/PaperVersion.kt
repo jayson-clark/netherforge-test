@@ -4,6 +4,7 @@ import com.destroystokyo.paper.entity.ai.Goal
 import dev.netherforge.format.game.RegistryKey
 import org.bukkit.entity.Mob
 import org.bukkit.entity.Player
+import org.bukkit.inventory.EquipmentSlot
 import java.util.ServiceLoader
 
 /**
@@ -96,6 +97,13 @@ interface PaperVersion {
         face: org.bukkit.block.BlockFace,
         point: org.bukkit.util.Vector
     ): Boolean
+
+    /**
+     * Starts [player] drawing what they hold in [hand], as the game does when a right click starts a bow: for a bow the
+     * game won't draw (no arrows), the draw starts all the same, and letting go of it is the game's as usual. (The
+     * game's own start is refused without ammo, so it's the server that starts it.)
+     */
+    fun startUsingItem(player: Player, hand: EquipmentSlot)
 
     /**
      * Calls [changed] with the slots of the window [player] has open (those of its top inventory: below [size]) that

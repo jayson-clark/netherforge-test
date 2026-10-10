@@ -363,6 +363,7 @@ object ProblemCodes {
     val ITEM_FOOD = error("item.food", ITEM, "A `food` value is out of range.")
     val ITEM_COOLDOWN = error("item.cooldown", ITEM, "A cooldown's `seconds` isn't more than 0.")
     val ITEM_COOLDOWN_GROUP = error("item.cooldown-group", ITEM, "A cooldown's `group` isn't a namespaced id.")
+    val ITEM_DRAW_WITHOUT_AMMO = error("item.draw-without-ammo", ITEM, "`drawWithoutAmmo` is on an item that isn't a bow.")
 
     // ---- recipes --------------------------------------------------------------
 

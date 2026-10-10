@@ -55,6 +55,17 @@ class ItemTest {
     private fun stack(id: String, count: Int = 1) = ItemData(ItemDef(item = ResourceRef(id), count = count))
 
     @Test
+    fun `only a project bow with drawWithoutAmmo draws without ammo`() {
+        val server = server(
+            files(item = """{ "kind": "minecraft:bow", "drawWithoutAmmo": true }""") +
+                mapOf("items/plain/item.json" to """{ "kind": "minecraft:bow" }""")
+        )
+        assertTrue(server.runtime.events.drawsWithoutAmmo(stack("ruby")))
+        assertFalse(server.runtime.events.drawsWithoutAmmo(stack("plain")), "a bow without the flag still needs ammo")
+        assertFalse(server.runtime.events.drawsWithoutAmmo(ItemData(ItemDef(kind = "minecraft:bow"))), "a bow that isn't a project item")
+    }
+
+    @Test
     fun `scripts make stacks of a project item, and every item table can name one`() {
         val module = """
             ${LuaChecks.HELPERS}

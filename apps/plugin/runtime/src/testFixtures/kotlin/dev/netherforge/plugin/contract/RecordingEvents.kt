@@ -71,6 +71,8 @@ class RecordingEvents : PlatformEvents {
 
     override fun playerUseItem(player: PlayerRef, item: ItemData, hand: String) = hear("playerUseItem", player, item, hand)
 
+    override fun drawsWithoutAmmo(item: ItemData): Boolean = false
+
     override fun generatedLoot(table: String, player: UUID?, location: Location): List<ItemData>? {
         hear("generatedLoot", table, player, location)
         return emptyList()

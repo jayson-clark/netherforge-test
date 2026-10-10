@@ -348,6 +348,8 @@ class FakePlatform(
                     "minecraft:iron_sword",
                     // examples/basic's ruby pick.
                     "minecraft:iron_pickaxe",
+                    // A bow: what a project item with `drawWithoutAmmo` is built on, and what the game events shoot.
+                    "minecraft:bow",
                     // What examples/basic's loot tables give and ask for.
                     "minecraft:diamond_sword",
                     // What examples/basic's advancements show, and a new one's template.
