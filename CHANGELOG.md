@@ -455,6 +455,11 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Fixed
 
+- Model displays (mobs, projectiles, any node showing a model look) were drawn
+  turned a half turn about Y, so a model's nose on `+Z` showed on the node's
+  `-Z`. They're now drawn as the docs describe: a model's `+Z` is the node's
+  `+Z`. Block displays were already right. Models that were authored to look
+  right in game against the old drawing will now face the other way.
 - Right-clicking a centity, and `player_interact_entity`, did nothing on
   Minecraft 26.3, which no longer raises the event the plugin waited for.
 

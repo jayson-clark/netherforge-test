@@ -51,6 +51,24 @@ class ModelDisplayTest {
     }
 
     @Test
+    fun `a model is drawn turned a half turn about Y, a block is not`() {
+        TestServer(files).use { server ->
+            val instance = server.runtime.session.centities.spawn(
+                "bat",
+                dev.netherforge.plugin.platform.Location("world", 0.0, 64.0, 0.0)
+            )!!
+            server.tick(1)
+            // The client draws a model a half turn about Y from the matrix it's sent, so the sent matrix carries the
+            // half turn back: at its rest pose the node's +Z is sent as -Z, and the client's turn lands it on +Z.
+            val wing = server.platform.entities.display(instance.id, "wing").pose!!.matrix
+            assertEquals(-1.0, wing.values[10], 1e-9, "the sent pose turns the model a half turn")
+            assertEquals(0.0, wing.values[8], 1e-9)
+            val body = server.platform.entities.display(instance.id, "body").pose!!.matrix
+            assertEquals(1.0, body.values[10], 1e-9, "a block keeps its +Z")
+        }
+    }
+
+    @Test
     fun `swapping a look is an update of the entity, not a respawn`() {
         TestServer(files).use { server ->
             val instance = server.runtime.session.centities.spawn(

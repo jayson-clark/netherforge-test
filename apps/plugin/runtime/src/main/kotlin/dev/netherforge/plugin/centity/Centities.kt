@@ -4,6 +4,7 @@ import dev.netherforge.format.Vec3
 import dev.netherforge.format.bridge.InstanceInfo
 import dev.netherforge.format.centity.BlockDisplay
 import dev.netherforge.format.centity.CompiledCentity
+import dev.netherforge.format.centity.ModelDisplay
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.Box
 import dev.netherforge.format.math.Matrix4
@@ -39,6 +40,7 @@ import dev.netherforge.plugin.session.TickPhase
 import dev.netherforge.plugin.session.liveness
 import dev.netherforge.plugin.store.Store
 import java.util.UUID
+import kotlin.math.PI
 import kotlin.math.ceil
 import kotlin.math.sqrt
 
@@ -714,10 +716,19 @@ class Centities(
         }
         val pushed = Instance.PushedPose(target.values.toList(), cull)
         if (instance.forceSync || instance.pushedPoses[entity] != pushed) {
-            platform.entities.setPose(entity, DisplayPose(target, ticks, cull))
+            platform.entities.setPose(entity, DisplayPose(drawn(instance, index, target), ticks, cull))
             instance.pushedPoses[entity] = pushed
         }
     }
+
+    /**
+     * What a display is drawn at, given its node's [matrix] in the world. A model
+     * look is authored nose on +Z, as the docs say, but the client draws it turned
+     * a half turn about its own Y, so it's turned back here to put its nose where
+     * the node's +Z points. Blocks and the rest are drawn as they are.
+     */
+    private fun drawn(instance: Instance, index: Int, matrix: Matrix4): Matrix4 =
+        if (instance.display(index) is ModelDisplay) matrix.copy().rotateY(PI) else matrix
 
     /** [Instance.placedAhead] for 1, 2, … ticks on, each worked out once, the first time a display asks. */
     private class Lookahead(private val instance: Instance) {
@@ -775,7 +786,7 @@ class Centities(
                     entities.spawnDisplay(
                         anchor,
                         display,
-                        DisplayPose(matrix, 0, cull),
+                        DisplayPose(drawn(instance, index, matrix), 0, cull),
                         EntityTag(instance.id, node.name, EntityRole.DISPLAY)
                     )
                         ?.let { claim(instance, node.name, it, instance.displays) }
