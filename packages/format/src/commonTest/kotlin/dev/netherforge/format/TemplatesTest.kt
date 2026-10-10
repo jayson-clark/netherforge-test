@@ -74,9 +74,10 @@ class TemplatesTest {
         assertTrue("node ${Templates.CLI_FILE} check" in agents)
         assertTrue("`get_problems`" in agents, "names the MCP tools")
         assertEquals("@AGENTS.md\n", files[Templates.CLAUDE_FILE])
-        // `.mcp.json` carries this computer's MCP token: never committed.
+        // `.mcp.json` and `opencode.json` carry this computer's MCP token: never committed.
         val ignored = files.getValue(".gitignore").lines()
         assertTrue(".mcp.json" in ignored, files.getValue(".gitignore"))
+        assertTrue("opencode.json" in ignored, files.getValue(".gitignore"))
         assertTrue(".netherforge/" in ignored)
     }
 

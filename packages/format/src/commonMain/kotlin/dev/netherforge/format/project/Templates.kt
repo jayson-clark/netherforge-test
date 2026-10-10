@@ -115,11 +115,11 @@ object Templates {
         |  terrain as the editor's preview does (`--slice x --at 0` for the
         |  ground through a line), so you can look at terrain you changed. See
         |  `$AGENT_DOCS/guide/world-generation.md`.
-        |- With the NetherForge editor open, its `netherforge` MCP server (`.mcp.json`)
+        |- With the NetherForge editor open, its `netherforge` MCP server (`.mcp.json`, `opencode.json`)
         |  has tools for the rest: `get_problems` after editing, `reload` and then
         |  `get_console` to see a change run on the dev server, and
-        |  `lookup_game_data` instead of guessing Minecraft ids. `.mcp.json` holds
-        |  this computer's token for it: never commit it or copy the token elsewhere.
+        |  `lookup_game_data` instead of guessing Minecraft ids. They hold
+        |  tokens for it: never commit them.
         |- You can't see the game. Say what to look at in game after a reload
         |  when a change is visual.
         |
@@ -138,7 +138,7 @@ object Templates {
     internal fun titleOf(id: String): String = id.replace('_', ' ').trim().replaceFirstChar { it.uppercaseChar() }.ifEmpty { id }
 
     const val GITIGNORE = "# What the NetherForge editor generates: schemas, agent docs, cached pictures.\n.netherforge/\n" +
-        "# Connects coding agents to this computer's editor, with its token: not for sharing.\n.mcp.json\n" +
+        "# Connects coding agents to this computer's editor, with its token: not for sharing.\n.mcp.json\nopencode.json\n" +
         "# Bundles `netherforge build` writes, for a production server: built again from the project, never committed.\n/build/\n"
 
     const val LUARC_FILE = ".luarc.json"

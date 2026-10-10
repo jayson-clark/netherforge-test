@@ -182,8 +182,9 @@ describe('workspace', () => {
     backend.testWrite('AGENTS.md', '# Mine\n')
     backend.testDelete('CLAUDE.md')
     backend.testWrite('.mcp.json', JSON.stringify({ mcpServers: { other: { command: 'x' } } }))
+    backend.testWrite('opencode.json', '{}\n')
     await ws().refreshFiles()
-    expect(await ws().addAgentFiles()).toEqual(['CLAUDE.md', '.mcp.json'])
+    expect(await ws().addAgentFiles()).toEqual(['CLAUDE.md', '.mcp.json', 'opencode.json'])
     expect(JSON.parse(backend.testFiles()['.mcp.json']!)).toEqual({
       mcpServers: {
         other: { command: 'x' },
@@ -193,6 +194,11 @@ describe('workspace', () => {
           headers: { Authorization: `Bearer ${MEMORY_MCP_TOKEN}` },
         },
       },
+    })
+    expect(JSON.parse(backend.testFiles()['opencode.json']!)['mcp'].netherforge).toEqual({
+      type: 'remote',
+      url: 'http://127.0.0.1:47615/mcp',
+      headers: { authorization: `Bearer ${MEMORY_MCP_TOKEN}` },
     })
     expect(backend.testFiles()['AGENTS.md']).toBe('# Mine\n')
     expect(backend.testFiles()['CLAUDE.md']).toBe('@AGENTS.md\n')

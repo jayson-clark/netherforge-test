@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { MEMORY_MCP_TOKEN, MemoryBackend } from '@/core/backend/memory'
-import { claudeAddCommand, syncMcpConfig, withNetherforgeServer } from './config'
+import {
+  MCP_SERVER_NAME,
+  OPENCODE_CONFIG_FILE,
+  claudeAddCommand,
+  syncMcpConfig,
+  syncOpencodeConfig,
+  withNetherforgeServer,
+  withOpencodeServer,
+} from './config'
 
 const here = { port: 4000, token: 'abc' }
 const server = {
@@ -65,5 +73,61 @@ describe('.mcp.json', () => {
     expect(claudeAddCommand(here)).toBe(
       'claude mcp add --transport http netherforge http://127.0.0.1:4000/mcp --header "Authorization: Bearer abc"',
     )
+  })
+})
+
+describe('opencode.json', () => {
+  const serverRemote = {
+    type: 'remote',
+    url: 'http://127.0.0.1:4000/mcp',
+    headers: { authorization: 'Bearer abc' },
+  }
+
+  it('is created for a fresh opencode.json with the netherforge server', () => {
+    const written = JSON.parse(withOpencodeServer(null, here)!)
+    expect(written.mcp).toEqual({ [MCP_SERVER_NAME]: serverRemote })
+  })
+
+  it('merges netherforge into empty mcp map', () => {
+    const mine = '{}'
+    const result = JSON.parse(withOpencodeServer(mine, here)!)
+    expect(result.mcp[MCP_SERVER_NAME]).toEqual(serverRemote)
+  })
+
+  it('merges into existing opencode.json, keeping other servers', () => {
+    const mine = JSON.stringify({
+      model: 'anthropic/claude-sonnet-4.5',
+      mcp: { other: { type: 'remote', url: 'https://x.com/mcp' } },
+    })
+    const result = JSON.parse(withOpencodeServer(mine, here)!)
+    expect(result.model).toBe('anthropic/claude-sonnet-4.5')
+    expect(result.mcp.other).toEqual({ type: 'remote', url: 'https://x.com/mcp' })
+    expect(result.mcp[MCP_SERVER_NAME]).toEqual(serverRemote)
+  })
+
+  it('brings a stale netherforge entry up to date', () => {
+    const stale = JSON.stringify({
+      mcp: { netherforge: { type: 'remote', url: 'http://127.0.0.1:9999/mcp' } },
+    })
+    const parsed = JSON.parse(withOpencodeServer(stale, here)!)
+    expect(parsed.mcp[MCP_SERVER_NAME].url).toBe('http://127.0.0.1:4000/mcp')
+  })
+
+  it('leaves a current netherforge entry alone', () => {
+    const mine = JSON.stringify({ mcp: { netherforge: serverRemote } })
+    expect(withOpencodeServer(mine, here)).toBeNull()
+  })
+
+  it('on open, updates only if there is a netherforge server', async () => {
+    const backend = new MemoryBackend({ projects: { '/p': { 'netherforge.json': '{}' } } })
+    await backend.openProject('/p')
+    expect(await syncOpencodeConfig(backend, [], false)).toBe(false)
+
+    // Only other servers, no netherforge: should create/update
+    backend.testWrite(OPENCODE_CONFIG_FILE, JSON.stringify({ mcp: { other: {} } }))
+    expect(await syncOpencodeConfig(backend, [OPENCODE_CONFIG_FILE], true)).toBe(true)
+
+    // Now with netherforge added, a second call should be no-op
+    expect(await syncOpencodeConfig(backend, [OPENCODE_CONFIG_FILE], true)).toBe(false)
   })
 })

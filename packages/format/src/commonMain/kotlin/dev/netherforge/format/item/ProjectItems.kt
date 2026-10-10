@@ -41,6 +41,7 @@ object ProjectItems {
         attributeModifiers = def.attributeModifiers ?: look.attributeModifiers,
         canBreak = def.canBreak ?: look.canBreak,
         canPlaceOn = def.canPlaceOn ?: look.canPlaceOn,
+        hiddenTooltipComponents = def.hiddenTooltipComponents ?: look.hiddenTooltipComponents,
         food = def.food ?: look.food,
         cooldown = def.cooldown ?: look.cooldown,
         data = def.data

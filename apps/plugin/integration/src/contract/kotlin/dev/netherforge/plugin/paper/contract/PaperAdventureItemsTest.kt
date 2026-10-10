@@ -1,6 +1,7 @@
 package dev.netherforge.plugin.paper.contract
 
 import dev.netherforge.format.item.ItemDef
+import dev.netherforge.format.item.TooltipComponent
 import dev.netherforge.plugin.contract.PlatformContract
 import dev.netherforge.plugin.platform.InventoryRef
 import dev.netherforge.plugin.platform.ItemData
@@ -50,5 +51,26 @@ class PaperAdventureItemsTest : PlatformContract() {
         }
         val moved = components(player.uuid, 0)
         assertTrue("note:\"4\"" in moved && "note:\"3\"" !in moved, moved)
+    }
+
+    @Test
+    fun `the lines an item's lists write can be hidden from its tooltip, and read back`() {
+        val player = join()
+        val inventory = InventoryRef.Player(player.uuid)
+        val written = ItemDef(
+            kind = "minecraft:wooden_pickaxe",
+            canBreak = listOf("*"),
+            canPlaceOn = listOf("*"),
+            hiddenTooltipComponents = listOf(TooltipComponent.CAN_BREAK)
+        )
+        main { assertTrue(platform.inventories.setItem(inventory, 0, ItemData(written))) }
+        val text = components(player.uuid, 0)
+        val hidden = text.substringAfter("tooltip_display=").substringBefore("}")
+        assertTrue("minecraft:can_break" in hidden && "can_place_on" !in hidden, text)
+        main {
+            val back = platform.inventories.contents(inventory)!![0]!!.def
+            assertEquals(listOf(TooltipComponent.CAN_BREAK), back.hiddenTooltipComponents)
+            assertEquals(listOf("*"), back.canPlaceOn, "the lists still apply")
+        }
     }
 }

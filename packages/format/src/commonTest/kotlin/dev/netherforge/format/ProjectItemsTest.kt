@@ -5,6 +5,7 @@ import dev.netherforge.format.item.EquipmentDef
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.item.ItemFile
 import dev.netherforge.format.item.ItemRarity
+import dev.netherforge.format.item.TooltipComponent
 import dev.netherforge.format.item.ProjectItems
 import dev.netherforge.format.project.ItemKind
 import dev.netherforge.format.ref.ResourceRef
@@ -29,6 +30,21 @@ class ProjectItemsTest {
         assertEquals(listOf("50 coins"), resolved.lore, "what the stack says wins")
         assertEquals(ResourceRef("ui/ruby"), resolved.itemModel)
         assertEquals(mapOf("found" to JsonPrimitive("cave")), resolved.data)
+    }
+
+    @Test
+    fun aStackHidesTheTooltipLinesTheLookHidesUnlessItSaysOtherwise() {
+        val hidden = look.copy(hiddenTooltipComponents = listOf(TooltipComponent.CAN_BREAK))
+        assertEquals(listOf(TooltipComponent.CAN_BREAK), ProjectItems.resolve(ItemDef(item = ResourceRef("ruby")), hidden).hiddenTooltipComponents)
+        val own = listOf(TooltipComponent.CAN_PLACE_ON)
+        assertEquals(own, ProjectItems.resolve(ItemDef(item = ResourceRef("ruby"), hiddenTooltipComponents = own), hidden).hiddenTooltipComponents)
+        assertEquals(emptyList(), ProjectItems.resolve(ItemDef(item = ResourceRef("ruby"), hiddenTooltipComponents = emptyList()), hidden).hiddenTooltipComponents)
+    }
+
+    @Test
+    fun aProjectItemsLookCarriesItsHiddenTooltipLines() {
+        val file = ItemFile(kind = "minecraft:paper", canBreak = listOf("*"), hiddenTooltipComponents = listOf(TooltipComponent.CAN_BREAK))
+        assertEquals(listOf(TooltipComponent.CAN_BREAK), file.look().hiddenTooltipComponents)
     }
 
     @Test

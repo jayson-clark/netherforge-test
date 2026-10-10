@@ -14,6 +14,7 @@ import dev.netherforge.format.item.EquipmentDef
 import dev.netherforge.format.item.FoodDef
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.item.ItemRarity
+import dev.netherforge.format.item.TooltipComponent
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.format.validate.Rules
@@ -48,7 +49,7 @@ object LuaItems {
     private val FIELDS = listOf(
         "kind", "item", "count", "name", "lore", "enchantments", "glint", "hide_tooltip", "unbreakable", "damage",
         "item_model", "tooltip_style", "equipment", "color", "profile", "max_stack_size", "rarity", "attribute_modifiers",
-        "can_break", "can_place_on", "food", "cooldown", "data", "raw"
+        "can_break", "can_place_on", "hidden_tooltip_components", "food", "cooldown", "data", "raw"
     )
     private val MODIFIER_FIELDS = listOf("id", "attribute", "amount", "operation", "slot")
     private val FOOD_FIELDS = listOf("nutrition", "saturation", "can_always_eat", "eat_seconds")
@@ -189,6 +190,11 @@ object LuaItems {
             attributeModifiers = modifiers,
             canBreak = blocks("can_break"),
             canPlaceOn = blocks("can_place_on"),
+            hiddenTooltipComponents = list(table["hidden_tooltip_components"], "item.hidden_tooltip_components", "a list of tooltip lines") { _, entry ->
+                val name = (entry as? JsonPrimitive)?.takeIf { it.isString }?.content
+                TooltipComponent.entries.firstOrNull { serialName(it) == name }
+                    ?: throw LuaApiException("item.hidden_tooltip_components must be a list of \"can_break\" or \"can_place_on\"")
+            },
             food = food,
             cooldown = cooldown,
             data = data
@@ -275,6 +281,7 @@ object LuaItems {
             }
             def.canBreak?.let { put("can_break", it) }
             def.canPlaceOn?.let { put("can_place_on", it) }
+            def.hiddenTooltipComponents?.let { put("hidden_tooltip_components", it.map(::serialName)) }
             def.food?.let { food ->
                 put(
                     "food",

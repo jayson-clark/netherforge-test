@@ -1,11 +1,14 @@
 /**
- * How agents find the editor's MCP server. `.mcp.json` in a project's root is
- * Claude Code's project-scoped config (it asks the user before trusting one);
- * other agents take the URL and the header in their own settings.
+ * How agents find the editor's MCP server.
  *
- * The server wants the install's bearer token on every request, so the entry
- * carries it as a header. That makes `.mcp.json` this computer's, not the
- * project's: the project's `.gitignore` leaves it out.
+ * `.mcp.json` in a project's root is Claude Code's project-scoped config
+ * (it asks the user before trusting one); other agents take the URL and the
+ * header in their own settings.
+ *
+ * `opencode.json` beside it is OpenCode's project-wide JSON config, which
+ * also accepts MCP server definitions under `mcp`. The server wants the
+ * install's bearer token on every request, so both files are this computer's,
+ * not the project's. The project's `.gitignore` leaves them out.
  */
 import type { Backend } from '@/core/backend/types'
 
@@ -93,3 +96,79 @@ export async function syncMcpConfig(
 /** For agents configured from a terminal. */
 export const claudeAddCommand = ({ port, token }: McpConnection) =>
   `claude mcp add --transport http ${MCP_SERVER_NAME} ${mcpUrl(port)} --header "Authorization: ${authorization(token)}"`
+
+// --- opencode.json ---
+
+/** The path OpenCode reads for project config. */
+export const OPENCODE_CONFIG_FILE = 'opencode.json'
+
+/** The `netherforge` entry in OpenCode's `mcp` map. */
+export const netherforgeOpencodeServer = ({ port, token }: McpConnection) => ({
+  type: 'remote',
+  url: mcpUrl(port),
+  headers: { authorization: authorization(token) },
+})
+
+type OpencodeConfig = Record<string, unknown> & {
+  $schema?: string
+  mcp?: Record<string, unknown>
+}
+
+/** `opencode.json`'s text as an object, or null when it isn't one. */
+function parseOpencode(text: string): OpencodeConfig | null {
+  try {
+    const parsed = JSON.parse(text)
+    if (typeof parsed !== 'object' || parsed === null) return null
+    return parsed as OpencodeConfig
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Builds a minimal `opencode.json` that adds the `netherforge` server, or
+ * upgrades an existing one to this editor's port and token.
+ */
+export function withOpencodeServer(
+  existingText: string | null,
+  connection: McpConnection,
+): string | null {
+  const entry = netherforgeOpencodeServer(connection)
+  const parsed = existingText === null ? null : parseOpencode(existingText)
+  if (parsed === null && existingText !== null) return null
+
+  const servers = (parsed?.mcp as Record<string, unknown>) ?? {}
+  if (JSON.stringify(servers[MCP_SERVER_NAME]) === JSON.stringify(entry)) return null
+
+  const base = parsed ?? {}
+  return JSON.stringify(
+    {
+      $schema: 'https://opencode.ai/config.json',
+      ...base,
+      mcp: { ...(base.mcp as Record<string, unknown>), [MCP_SERVER_NAME]: entry },
+    },
+    null,
+    2,
+  ) + '\n'
+}
+
+/**
+ * Adds a missing `opencode.json` or brings the existing one up to date with this
+ * editor's port and token. Returns whether it wrote.
+ */
+export async function syncOpencodeConfig(
+  backend: Backend,
+  files: readonly string[],
+  add: boolean = false,
+): Promise<boolean> {
+  const exists = files.includes(OPENCODE_CONFIG_FILE)
+  if (!exists && !add) return false
+  const text = exists ? await backend.readText(OPENCODE_CONFIG_FILE).catch(() => null) : null
+  if (text === null && exists) return false
+  const status = await backend.mcpStatus()
+  if (!add && !status.enabled) return false
+  const next = withOpencodeServer(text, status)
+  if (next === null) return false
+  await backend.writeText(OPENCODE_CONFIG_FILE, next)
+  return true
+}

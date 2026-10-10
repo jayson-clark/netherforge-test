@@ -10,6 +10,7 @@ import dev.netherforge.format.item.EquipmentDef
 import dev.netherforge.format.item.FoodDef
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.item.ProjectItems
+import dev.netherforge.format.item.TooltipComponent
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.ref.ResourceRef
@@ -22,6 +23,7 @@ import io.papermc.paper.datacomponent.item.Equippable
 import io.papermc.paper.datacomponent.item.FoodProperties
 import io.papermc.paper.datacomponent.item.ItemAdventurePredicate
 import io.papermc.paper.datacomponent.item.ItemAttributeModifiers
+import io.papermc.paper.datacomponent.item.TooltipDisplay
 import io.papermc.paper.datacomponent.item.UseCooldown
 import io.papermc.paper.persistence.PersistentDataContainerView
 import io.papermc.paper.registry.RegistryAccess
@@ -187,6 +189,37 @@ object PaperItems {
         return stack
     }
 
+    /**
+     * [stack]'s tooltip with exactly [hidden] of the lines an item's own fields write hidden. The display's other
+     * settings (the whole tooltip, a hidden component of another kind) stay as the stack had them.
+     */
+    private fun hideTooltipLines(stack: ItemStack, hidden: List<TooltipComponent>) {
+        val current = stack.getData(DataComponentTypes.TOOLTIP_DISPLAY)
+        val kept = current?.hiddenComponents().orEmpty() - OWN_TOOLTIP_LINES
+        stack.setData(
+            DataComponentTypes.TOOLTIP_DISPLAY,
+            TooltipDisplay.tooltipDisplay()
+                .hideTooltip(current?.hideTooltip() ?: false)
+                .hiddenComponents(kept + hidden.map { it.paper() })
+                .build()
+        )
+    }
+
+    /** The lines [stack] hides that an item's own fields write, or null for none. */
+    private fun hiddenTooltipComponentsOf(stack: ItemStack): List<TooltipComponent>? {
+        val hidden = stack.takeIf { it.isDataOverridden(DataComponentTypes.TOOLTIP_DISPLAY) }
+            ?.getData(DataComponentTypes.TOOLTIP_DISPLAY)?.hiddenComponents().orEmpty()
+        return TooltipComponent.entries.filter { it.paper() in hidden }.takeIf { it.isNotEmpty() }
+    }
+
+    private fun TooltipComponent.paper(): DataComponentType = when (this) {
+        TooltipComponent.CAN_BREAK -> DataComponentTypes.CAN_BREAK
+        TooltipComponent.CAN_PLACE_ON -> DataComponentTypes.CAN_PLACE_ON
+    }
+
+    /** The tooltip lines [hideTooltipLines] owns: the ones an item's own fields write. */
+    private val OWN_TOOLTIP_LINES: Set<DataComponentType> = setOf(DataComponentTypes.CAN_BREAK, DataComponentTypes.CAN_PLACE_ON)
+
     /** The fields that are data components with no `ItemMeta` side: written onto the stack itself. */
     private fun components(def: ItemDef, stack: ItemStack) {
         def.maxStackSize?.let { stack.setData(DataComponentTypes.MAX_STACK_SIZE, it) }
@@ -204,6 +237,7 @@ object PaperItems {
         }
         def.canBreak?.let { stack.setData(DataComponentTypes.CAN_BREAK, predicate(DataComponentTypes.CAN_BREAK, it)) }
         def.canPlaceOn?.let { stack.setData(DataComponentTypes.CAN_PLACE_ON, predicate(DataComponentTypes.CAN_PLACE_ON, it)) }
+        def.hiddenTooltipComponents?.let { hideTooltipLines(stack, it) }
         def.food?.let { food ->
             stack.setData(
                 DataComponentTypes.FOOD,
@@ -451,6 +485,7 @@ object PaperItems {
             attributeModifiers = modifiersOf(stack),
             canBreak = adventure?.canBreak ?: blocksOf(stack, DataComponentTypes.CAN_BREAK),
             canPlaceOn = adventure?.canPlaceOn ?: blocksOf(stack, DataComponentTypes.CAN_PLACE_ON),
+            hiddenTooltipComponents = hiddenTooltipComponentsOf(stack),
             food = foodOf(stack),
             cooldown = cooldownOf(stack),
             equipment = equipmentOf(stack),

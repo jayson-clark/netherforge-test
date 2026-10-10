@@ -19,6 +19,7 @@ import {
   type ItemDef,
   type ItemRarity,
   type ProjectOutline,
+  type TooltipComponent,
 } from '@/core/format'
 import { usePickerIds } from '@/minecraft/client/usePickerIds'
 import { useWorkspace } from '@/state/providers'
@@ -90,6 +91,13 @@ export function ItemEditor({
   const at = (key: string) => (dataPath ? `${dataPath}.${key}` : key)
   const set = <K extends keyof ItemDef>(key: K, value: ItemDef[K] | undefined) =>
     onEdit((draft) => setKey(draft, key, value))
+  const hiddenTooltipLine = (line: TooltipComponent) =>
+    (item.hiddenTooltipComponents ?? []).includes(line)
+  const setHiddenTooltipLine = (line: TooltipComponent, hidden: boolean) => {
+    const current = item.hiddenTooltipComponents ?? []
+    const next = hidden ? [...current, line] : current.filter((it) => it !== line)
+    set('hiddenTooltipComponents', next.length ? next : undefined)
+  }
   const int = (value: number | undefined) => (value === undefined ? undefined : Math.round(value))
   const offers = (key: keyof ItemDef) =>
     !look || !(ITEM_STACK_FIELDS as readonly string[]).includes(key)
@@ -255,6 +263,18 @@ export function ItemEditor({
         value={blocksToText(item.canPlaceOn)}
         placeholder="One per row: ruby_ore, minecraft:stone, #minecraft:logs, * (adventure mode)"
         onChange={(text) => set('canPlaceOn', blocksFromText(text))}
+      />
+      <CheckField
+        label='Hide "Can break" line'
+        dataPath={at('hiddenTooltipComponents')}
+        value={hiddenTooltipLine('can_break')}
+        onChange={(value) => setHiddenTooltipLine('can_break', value)}
+      />
+      <CheckField
+        label='Hide "Can place on" line'
+        dataPath={at('hiddenTooltipComponents')}
+        value={hiddenTooltipLine('can_place_on')}
+        onChange={(value) => setHiddenTooltipLine('can_place_on', value)}
       />
       <NumberField
         label="Nutrition"

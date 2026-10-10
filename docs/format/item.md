@@ -21,29 +21,30 @@ The file holds what the item _is_: the fields an [item](menu.md#items) has
 that describe its look and behaviour. What one stack holds (`count`, `damage`,
 `data`) belongs to each stack, so it isn't here.
 
-| Key                  | Meaning                                                                                                         |
-| -------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `kind`               | The Minecraft item it's built on: `minecraft:paper`. Required.                                                  |
-| `name`               | Display name, MiniMessage.                                                                                      |
-| `lore`               | Lines under the name, each MiniMessage.                                                                         |
-| `enchantments`       | Enchantment id → level.                                                                                         |
-| `glint`              | The enchanted shimmer without an enchantment.                                                                   |
-| `hideTooltip`        | No tooltip at all.                                                                                              |
-| `unbreakable`        |                                                                                                                 |
-| `itemModel`          | `<pack>/<key>`: its look, from one of the project's [resource packs](resource-pack.md).                         |
-| `tooltipStyle`       | `<pack>/<key>`: its tooltip frame, from one of the project's resource packs.                                    |
-| `equipment`          | `{ "asset", "slot" }`: worn as armour, drawn as a resource pack's [equipment look](resource-pack.md#equipment). |
-| `color`              | `#RRGGBB`, for dyed leather, potions and maps.                                                                  |
-| `profile`            | Whose head, for `minecraft:player_head`.                                                                        |
-| `maxStackSize`       | How many stack, 1–99.                                                                                           |
-| `rarity`             | `common`, `uncommon`, `rare` or `epic`.                                                                         |
-| `attributeModifiers` | What wearing or holding it changes.                                                                             |
-| `canBreak`           | The blocks it can break in adventure mode: [the project's, the game's, tags, or `*`](menu.md#items).            |
-| `canPlaceOn`         | The blocks it can be placed on in adventure mode, written as `canBreak`'s.                                      |
-| `food`               | Eating it.                                                                                                      |
-| `cooldown`           | A cooldown after using it.                                                                                      |
-| `block`              | `<id>`: a [block](block.md) of the project's that a right click with it places.                                 |
-| `script`             | The item's one Lua script. See [`script`](#script).                                                             |
+| Key                       | Meaning                                                                                                         |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `kind`                    | The Minecraft item it's built on: `minecraft:paper`. Required.                                                  |
+| `name`                    | Display name, MiniMessage.                                                                                      |
+| `lore`                    | Lines under the name, each MiniMessage.                                                                         |
+| `enchantments`            | Enchantment id → level.                                                                                         |
+| `glint`                   | The enchanted shimmer without an enchantment.                                                                   |
+| `hideTooltip`             | No tooltip at all.                                                                                              |
+| `unbreakable`             |                                                                                                                 |
+| `itemModel`               | `<pack>/<key>`: its look, from one of the project's [resource packs](resource-pack.md).                         |
+| `tooltipStyle`            | `<pack>/<key>`: its tooltip frame, from one of the project's resource packs.                                    |
+| `equipment`               | `{ "asset", "slot" }`: worn as armour, drawn as a resource pack's [equipment look](resource-pack.md#equipment). |
+| `color`                   | `#RRGGBB`, for dyed leather, potions and maps.                                                                  |
+| `profile`                 | Whose head, for `minecraft:player_head`.                                                                        |
+| `maxStackSize`            | How many stack, 1–99.                                                                                           |
+| `rarity`                  | `common`, `uncommon`, `rare` or `epic`.                                                                         |
+| `attributeModifiers`      | What wearing or holding it changes.                                                                             |
+| `canBreak`                | The blocks it can break in adventure mode: [the project's, the game's, tags, or `*`](menu.md#items).            |
+| `canPlaceOn`              | The blocks it can be placed on in adventure mode, written as `canBreak`'s.                                      |
+| `hiddenTooltipComponents` | Tooltip lines to hide: `can_break` ("Can break") and `can_place_on` ("Can place on"). The blocks still apply.   |
+| `food`                    | Eating it.                                                                                                      |
+| `cooldown`                | A cooldown after using it.                                                                                      |
+| `block`                   | `<id>`: a [block](block.md) of the project's that a right click with it places.                                 |
+| `script`                  | The item's one Lua script. See [`script`](#script).                                                             |
 
 Each means what it means on any [item](menu.md#items), and is checked the
 same way (the same problem codes, at the same paths), except `block`, which

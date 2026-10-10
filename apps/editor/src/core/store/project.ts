@@ -19,7 +19,7 @@ import {
   type GameDataBundle,
   type Problem,
 } from '@/core/format'
-import { MCP_CONFIG_FILE, syncMcpConfig } from '@/core/mcp/config'
+import { MCP_CONFIG_FILE, OPENCODE_CONFIG_FILE, syncMcpConfig, syncOpencodeConfig } from '@/core/mcp/config'
 import { isProjectJson } from '@/core/paths'
 import { SCHEMA_FOLDER, schemaFiles } from '@/core/schemas'
 import { DOCUMENTS_INITIAL } from './documents'
@@ -103,7 +103,7 @@ export interface ProjectActions {
   /**
    * Trusts the open project (or, `false`, stops trusting it). The backend decides and keeps
    * it; until it's trusted, the project's dev server, its Lua language features, fetching its
-   * git packages and agents' tools are refused there, and `.mcp.json` isn't written into it.
+   * git packages and agents' tools are refused there, and neither .mcp.json nor opencode.json is written.
    */
   trustProject(trusted: boolean): Promise<void>
   refreshFiles(): Promise<void>
@@ -122,8 +122,8 @@ export interface ProjectActions {
   syncVanilla(): Promise<void>
   /**
    * Adds AGENTS.md and CLAUDE.md to the open project, each only if it's
-   * missing, and the editor's MCP server (its port and token) to `.mcp.json`
-   * (created, merged into or brought up to date); returns the paths it wrote.
+   * missing, and the editor's MCP server (its port and token) to `.mcp.json` and `opencode.json`
+   * (created, merged into or brought up to date); returns the paths written.
    */
   addAgentFiles(): Promise<string[]>
   /**
@@ -241,9 +241,12 @@ export function projectSlice({ backend, get, set }: SliceArgs): ProjectState & P
         set({ diskTexts, minecraft })
         await writeSchemas()
         void writeAgentDocs().catch(() => {})
-        // A .mcp.json from another computer, or from before a port change, gets this editor's:
-        // only in a project the user trusts, since it carries this editor's token.
-        if (project.trusted) void syncMcpConfig(backend, get().files, false).catch(() => {})
+        // A .mcp.json (and opencode.json) from another computer, or from before a port change,
+        // gets this editor's: only in a project the user trusts, since they carry tokens.
+        if (project.trusted) {
+          void syncMcpConfig(backend, get().files, true).catch(() => {})
+          void syncOpencodeConfig(backend, get().files, true).catch(() => {})
+        }
         await get().refreshGameData()
         await get().refreshPackages()
         await get().validateNow()
@@ -258,6 +261,7 @@ export function projectSlice({ backend, get, set }: SliceArgs): ProjectState & P
       set({ project })
       if (!trusted) return
       void syncMcpConfig(backend, get().files, false).catch(() => {})
+      void syncOpencodeConfig(backend, get().files).catch(() => {})
       // Its git packages can be fetched now.
       await get().refreshPackages()
       await get().validateNow()
@@ -266,7 +270,7 @@ export function projectSlice({ backend, get, set }: SliceArgs): ProjectState & P
     async createProject(root, name, minecraft) {
       await backend.createProject(root, newProjectFiles(name, minecraft))
       await get().openProject(root)
-      // AGENTS.md and CLAUDE.md came with the template; this adds .mcp.json for this editor's port and token.
+      // AGENTS.md and CLAUDE.md came with the template; these add .mcp.json and opencode.json for this editor's port and tokens.
       await get()
         .addAgentFiles()
         .catch(() => {})
@@ -298,6 +302,7 @@ export function projectSlice({ backend, get, set }: SliceArgs): ProjectState & P
       for (const [path, text] of missing) await backend.writeText(path, text)
       const written = missing.map(([path]) => path)
       if (await syncMcpConfig(backend, files, true)) written.push(MCP_CONFIG_FILE)
+      if (await syncOpencodeConfig(backend, files, true)) written.push(OPENCODE_CONFIG_FILE)
       await get().refreshFiles()
       return written
     },

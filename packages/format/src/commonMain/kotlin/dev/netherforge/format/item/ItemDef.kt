@@ -71,6 +71,11 @@ data class ItemDef(
     @Ref(RefKind.ADVENTURE_BLOCK) val canBreak: List<String>? = null,
     /** The blocks it can be placed on in adventure mode (the `can_place_on` component), written as [canBreak]'s. */
     @Ref(RefKind.ADVENTURE_BLOCK) val canPlaceOn: List<String>? = null,
+    /**
+     * The tooltip lines to hide (the `tooltip_display` component): the "Can break" and "Can place on"
+     * lines, which the lists still apply when hidden. Left out leaves the tooltip as it is; `[]` shows all.
+     */
+    val hiddenTooltipComponents: List<TooltipComponent>? = null,
     /** Eating it (the `food` component, plus `consumable` so it can be eaten at all). */
     val food: FoodDef? = null,
     /** A cooldown after using it (the `use_cooldown` component). */
@@ -112,6 +117,18 @@ enum class EquipSlot {
 
     @SerialName("saddle")
     SADDLE
+}
+
+/** The tooltip lines an item's own fields write, which [ItemDef.hiddenTooltipComponents] can hide. */
+@Serializable
+enum class TooltipComponent {
+    /** The "Can break" lines, from `canBreak`. */
+    @SerialName("can_break")
+    CAN_BREAK,
+
+    /** The "Can place on" lines, from `canPlaceOn`. */
+    @SerialName("can_place_on")
+    CAN_PLACE_ON
 }
 
 /** Minecraft's item rarities: the colour of the item's name. */

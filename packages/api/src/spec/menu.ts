@@ -646,6 +646,11 @@ export const menuShapes: LuaClass[] = [
         doc: 'The blocks a player in adventure mode can place it on, written as `can_break`\'s: `{ "*" }` is anywhere.',
       },
       {
+        name: 'hidden_tooltip_components',
+        type: '("can_break"|"can_place_on")[]?',
+        doc: 'Lines of its tooltip to hide: `"can_break"` hides "Can break", `"can_place_on"` hides "Can place on". The blocks still apply. Left out shows the tooltip as it is; `{}` shows every line.',
+      },
+      {
         name: 'food',
         type: 'ItemFood?',
         doc: "What eating it does. Any item with `food` can be eaten, even one that isn't food: `{ nutrition = 4, saturation = 2.4 }`.",
