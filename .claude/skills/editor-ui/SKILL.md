@@ -161,7 +161,8 @@ onChange }`, oldest first, the row acted on last being the primary:
   kinds: see "Packages") lists resources as atoms (`explorer/folders.ts`, one
   folder per registry entry: ids, location, what opens, how to create, from
   `KINDS`). **Group folders** (`items/(weapons)/`, see project-format) show as
-  folder tiles before a kind's resources: Enter/double-click goes in, the
+  folder tiles before a kind's resources (in the grid, a collage of up to four of
+  their resources' thumbnails, `groupPreview`, with a folder badge): Enter/double-click goes in, the
   breadcrumb or Backspace back out, a resource tile dropped on a group (or
   the breadcrumb) or **Move to group…** (`resourceActions.move`) moves it,
   F2 on a group renames its folder, **New group** makes an empty one kept by
@@ -172,7 +173,10 @@ onChange }`, oldest first, the row acted on last being the primary:
   (`groupOf`, `mainFileIn`, `locationIn`, `groupsOf`, cached per list) or
   from a path (`resourceOf(..).group`), and a package's from the outline's
   `groups`. Resource packs never are in one (`KINDS[kind].groupable`). `Thumbnail` draws the kind's registered `thumbnail` over its
-  icon. Centity thumbnails are drawn one at a
+  icon. A kind's (or group's) tiles stay hidden (`opacity: 0`, `data-loading`) until their
+  thumbnails are ready (`ui/Reveal`: a picture still being worked out calls `usePendingPicture(true)`; the
+  page shows once none is and its `<img>`s have decoded, or after `MAX_WAIT_MS`), and `useLookPicture` keeps
+  every look it worked out this session, so an icon shown again draws at once. Centity thumbnails are drawn one at a
   time in one hidden canvas (`editors/centity/CentityThumbnail.tsx`), keyed by
   the centity's text and the client version, so an unchanged centity is
   never drawn twice, even across sessions: each picture is saved as

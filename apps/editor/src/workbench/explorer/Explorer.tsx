@@ -26,13 +26,20 @@ import { openMenu, type MenuItem } from '@/ui/ContextMenu'
 import { cx } from '@/ui/cx'
 import { Bar, Spacer } from '@/ui/layout'
 import { Icon } from '@/ui/Icon'
+import { RevealGate, useReveal } from '@/ui/Reveal'
 import { InlineInput } from '@/ui/Tree'
 import { fuzzyMatch } from '../quickOpen/fuzzy'
 import { groupPath, idProblem, resourceActions } from '../resourceActions'
 import { PackageView, templateMenu } from './Dependencies'
 import styles from './Explorer.module.css'
-import { EXPLORER_FOLDERS, EXPLORER_SECTIONS, folderByKey, type ExplorerFolder } from './folders'
-import { FolderIcon, Thumbnail } from './Thumbnail'
+import {
+  EXPLORER_FOLDERS,
+  EXPLORER_SECTIONS,
+  folderByKey,
+  groupPreview,
+  type ExplorerFolder,
+} from './folders'
+import { FolderIcon, GroupThumbnail, Thumbnail } from './Thumbnail'
 
 /**
  * A tile: a resource ([id] in its [group] folders), or a group folder ([group], `(weapons)/(swords)`, whose own
@@ -44,6 +51,8 @@ interface Entry {
   id: string
   group: string
   key: string
+  /** A group's resources drawn on its tile: up to four, those right in it first. */
+  preview?: string[]
 }
 
 const keyOf = (folder: ExplorerFolder, id: string) => `${folder.key}:${id}`
@@ -108,6 +117,7 @@ export function Explorer() {
         id: ownName(it),
         group: it,
         key: groupKeyOf(folder, it),
+        preview: groupPreview(folder, files, it),
       }))
       const resources = folder
         .ids(files)
@@ -233,6 +243,8 @@ export function Explorer() {
   }
 
   const searching = query.trim().length > 0
+  // A kind's or group's tiles show once their thumbnails are ready, not as icons turning into pictures.
+  const reveal = useReveal(items, searching ? 'search' : `${folder.key}:${group}`)
   const cursor = entries.findIndex((it) => it.key === selected)
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (renaming || event.target !== event.currentTarget) return
@@ -482,11 +494,13 @@ export function Explorer() {
             <div
               ref={items}
               className={cx(styles.items, view === 'grid' ? styles.grid : styles.list)}
-              style={
-                view === 'grid'
-                  ? { gridTemplateColumns: `repeat(auto-fill, minmax(${tileSize}px, 1fr))` }
-                  : undefined
-              }
+              style={{
+                ...(view === 'grid' && {
+                  gridTemplateColumns: `repeat(auto-fill, minmax(${tileSize}px, 1fr))`,
+                }),
+                ...(!reveal.shown && { opacity: 0 }),
+              }}
+              data-loading={reveal.shown ? undefined : ''}
               role="listbox"
               aria-label={searching ? 'Search results' : folder.title}
               tabIndex={0}
@@ -494,60 +508,62 @@ export function Explorer() {
               onKeyDown={onKeyDown}
               onClick={(event) => event.target === event.currentTarget && select(null)}
             >
-              {entries.map((entry) => (
-                <Tile
-                  key={entry.key}
-                  entry={entry}
-                  view={view}
-                  size={tileSize}
-                  subtitle={
-                    searching
-                      ? entry.group
-                        ? `${entry.folder.one} · ${groupPath(entry.group)}`
-                        : entry.folder.one
-                      : undefined
-                  }
-                  location={locationOf(entry)}
-                  selected={entry.key === selected}
-                  errors={errorsIn(entry)}
-                  dirty={dirtyIn(entry)}
-                  rename={
-                    renaming !== entry.key
-                      ? null
-                      : entry.type === 'group'
-                        ? {
-                            validate: (value) => groupNameProblem(value, allGroups, entry.group),
-                            commit: (value) => {
-                              setRenaming(null)
-                              void actions
-                                .renameGroup(entry.folder, entry.group, value)
-                                .then((next) => {
-                                  if (next) setSelected(groupKeyOf(entry.folder, next))
-                                  focusItems()
-                                })
-                            },
-                            cancel: () => {
-                              setRenaming(null)
-                              focusItems()
-                            },
-                          }
-                        : {
-                            validate: (value) =>
-                              idProblem(value, entry.folder.ids(files), entry.id),
-                            commit: (value) => {
-                              setRenaming(null)
-                              setSelected(keyOf(entry.folder, value))
-                              void actions.rename(entry.folder, entry.id, value).then(focusItems)
-                            },
-                            cancel: () => {
-                              setRenaming(null)
-                              focusItems()
-                            },
-                          }
-                  }
-                  handlers={handlers}
-                />
-              ))}
+              <RevealGate value={reveal.gate}>
+                {entries.map((entry) => (
+                  <Tile
+                    key={entry.key}
+                    entry={entry}
+                    view={view}
+                    size={tileSize}
+                    subtitle={
+                      searching
+                        ? entry.group
+                          ? `${entry.folder.one} · ${groupPath(entry.group)}`
+                          : entry.folder.one
+                        : undefined
+                    }
+                    location={locationOf(entry)}
+                    selected={entry.key === selected}
+                    errors={errorsIn(entry)}
+                    dirty={dirtyIn(entry)}
+                    rename={
+                      renaming !== entry.key
+                        ? null
+                        : entry.type === 'group'
+                          ? {
+                              validate: (value) => groupNameProblem(value, allGroups, entry.group),
+                              commit: (value) => {
+                                setRenaming(null)
+                                void actions
+                                  .renameGroup(entry.folder, entry.group, value)
+                                  .then((next) => {
+                                    if (next) setSelected(groupKeyOf(entry.folder, next))
+                                    focusItems()
+                                  })
+                              },
+                              cancel: () => {
+                                setRenaming(null)
+                                focusItems()
+                              },
+                            }
+                          : {
+                              validate: (value) =>
+                                idProblem(value, entry.folder.ids(files), entry.id),
+                              commit: (value) => {
+                                setRenaming(null)
+                                setSelected(keyOf(entry.folder, value))
+                                void actions.rename(entry.folder, entry.id, value).then(focusItems)
+                              },
+                              cancel: () => {
+                                setRenaming(null)
+                                focusItems()
+                              },
+                            }
+                    }
+                    handlers={handlers}
+                  />
+                ))}
+              </RevealGate>
             </div>
           )}
         </div>
@@ -750,7 +766,9 @@ const Tile = memo(function Tile({
         className={styles.picture}
         style={view === 'grid' ? { width: size - 12, height: size - 12 } : undefined}
       >
-        {isGroup ? (
+        {isGroup && view === 'grid' && entry.preview?.length ? (
+          <GroupThumbnail folder={entry.folder} ids={entry.preview} size={size - 12} />
+        ) : isGroup ? (
           <Icon name="folder" size={view === 'grid' ? Math.round((size - 12) * 0.55) : 16} />
         ) : (
           <Thumbnail folder={entry.folder} id={entry.id} size={view === 'grid' ? size - 12 : 22} />

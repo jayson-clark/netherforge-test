@@ -4,9 +4,10 @@
  * recipe's result, a pack's first picture, a centity drawn), over or instead
  * of the kind's icon.
  */
-import { Suspense } from 'react'
+import { Suspense, type ReactNode } from 'react'
 import { cx } from '@/ui/cx'
 import { Icon } from '@/ui/Icon'
+import { usePendingPicture } from '@/ui/Reveal'
 import type { ExplorerFolder } from './folders'
 import styles from './Thumbnail.module.css'
 
@@ -25,7 +26,7 @@ export function Thumbnail({
   return (
     <span className={styles.thumb} aria-hidden="true">
       {Picture ? (
-        <Suspense fallback={icon}>
+        <Suspense fallback={<Loading>{icon}</Loading>}>
           <Picture id={id} size={picture} fallback={icon} />
         </Suspense>
       ) : (
@@ -33,6 +34,41 @@ export function Thumbnail({
       )}
     </span>
   )
+}
+
+/**
+ * A group folder's tile: up to four of its resources' thumbnails in a 2×2 collage (one alone fills it), with a
+ * folder in the corner so it still reads as a group.
+ */
+export function GroupThumbnail({
+  folder,
+  ids,
+  size,
+}: {
+  folder: ExplorerFolder
+  ids: string[]
+  size: number
+}) {
+  const single = ids.length === 1
+  const cell = single ? size : Math.floor((size - 6) / 2)
+  return (
+    <span className={cx(styles.collage, single && styles.single)} aria-hidden="true">
+      {ids.map((id) => (
+        <span key={id} className={styles.cell}>
+          <Thumbnail folder={folder} id={id} size={cell} />
+        </span>
+      ))}
+      <span className={styles.badge}>
+        <Icon name="folder" size={Math.max(12, Math.round(size * 0.22))} />
+      </span>
+    </span>
+  )
+}
+
+/** The icon shown while a thumbnail's code loads, holding back the page it's on. */
+function Loading({ children }: { children: ReactNode }) {
+  usePendingPicture(true)
+  return children
 }
 
 const toneOf = (folder: ExplorerFolder) => {

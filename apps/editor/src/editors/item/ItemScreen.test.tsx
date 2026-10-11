@@ -97,13 +97,14 @@ describe('the item screen', () => {
 })
 
 describe('the item thumbnail', () => {
-  it('draws the item as a stack naming it does, a placeholder without client assets', () => {
+  it('draws the item as a stack naming it does: its pack look', async () => {
     const { container } = render(
       <AppProvider app={app}>
         <ItemThumbnail id="ruby" size={32} fallback={null} />
       </AppProvider>,
     )
-    // examples/basic's ruby is paper underneath: its placeholder is paper's initial.
-    expect(container.textContent).toBe('P')
+    // examples/basic's ruby has the pack's ui/ruby look, not paper's placeholder.
+    await waitFor(() => expect(container.querySelector('img')).not.toBeNull())
+    expect(container.textContent).toBe('')
   })
 })

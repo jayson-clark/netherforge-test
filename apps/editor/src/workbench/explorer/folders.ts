@@ -104,3 +104,11 @@ export function resourceAt(
   if (!found || !folder || folder.groupOf(files, found.id) !== found.group) return null
   return folder.ids(files).includes(found.id) ? { folder, id: found.id, group: found.group } : null
 }
+
+/** Up to four resources of group folder [group] to draw on its tile: those right in it, then those in its own groups. */
+export function groupPreview(folder: ExplorerFolder, files: string[], group: string): string[] {
+  const inside = folder.ids(files).map((id) => ({ id, at: folder.groupOf(files, id) }))
+  const direct = inside.filter((it) => it.at === group)
+  const deeper = inside.filter((it) => it.at.startsWith(`${group}/`))
+  return [...direct, ...deeper].slice(0, 4).map((it) => it.id)
+}

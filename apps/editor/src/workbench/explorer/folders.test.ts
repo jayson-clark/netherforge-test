@@ -5,6 +5,7 @@ import {
   EXPLORER_FOLDERS,
   EXPLORER_SECTIONS,
   folderByKey,
+  groupPreview,
   isFileFolder,
   resourceAt,
 } from './folders'
@@ -59,5 +60,17 @@ describe("the explorer's folders", () => {
     // A prefix of a resource's folder isn't inside it.
     expect(resourceAt('centities/towers/x.lua', files)).toBeNull()
     expect(resourceAt('netherforge.json', files)).toBeNull()
+  })
+
+  it("pick a group's tile pictures: up to four, those right in it before its own groups'", () => {
+    const items = folderByKey('item')
+    expect(groupPreview(items, files, '(tools)')).toEqual(['ruby_pick', 'ruby_wand'])
+    const nested = [
+      ...files,
+      ...['a', 'b', 'c'].map((id) => `items/(gear)/(deep)/${id}/item.json`),
+      ...['d', 'e'].map((id) => `items/(gear)/${id}/item.json`),
+    ]
+    expect(groupPreview(items, nested, '(gear)')).toEqual(['d', 'e', 'a', 'b'])
+    expect(groupPreview(items, nested, '(gear)/(deep)')).toEqual(['a', 'b', 'c'])
   })
 })

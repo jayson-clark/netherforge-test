@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useApp, useWorkspace } from '@/state/providers'
+import { usePendingPicture } from '@/ui/Reveal'
 import { centityPoser, type CentityFile } from '@/core/format'
 import { mainFileIn, resourceIdsOf } from '@/core/paths'
 import type { ThumbnailProps } from '@/editors/contributions'
@@ -59,9 +60,13 @@ function CentityPicture({ id, size }: { id: string; size: number }) {
     if (key && text !== undefined && ready) requestThumbnail({ key, id, text })
   }, [key, id, text, ready, savedKey])
 
-  if (!key) return null
-  const { url, stale } = pictureOf(backend, id, key, { drawn, savedKey, latest })
+  const { url, stale } = key
+    ? pictureOf(backend, id, key, { drawn, savedKey, latest })
+    : { url: undefined, stale: undefined }
   const shown = url ?? stale
+  // Waiting for the saved pictures, or for one to be drawn (a centity that can't be drawn is done with null).
+  usePendingPicture(key !== null && !shown && (!ready || drawn === undefined))
+  if (!key) return null
   if (!shown) return null
   return (
     <img

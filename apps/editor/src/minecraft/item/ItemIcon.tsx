@@ -18,6 +18,7 @@ import {
   useReferenceNamespace,
 } from '@/state/useResourcePacks'
 import { cx } from '@/ui/cx'
+import { usePendingPicture } from '@/ui/Reveal'
 import { resourcePackItemLook, vanillaIconSource, type IconSource } from './icon'
 import styles from './ItemIcon.module.css'
 import { hasGlint, itemLabel, stackLook } from './item'
@@ -25,58 +26,77 @@ import { useProjectItem } from './projectItems'
 
 type Picture = { layers: string[] } | { label: string }
 
+interface Worked {
+  source: IconSource
+  /** A drawn picture (a model, a block, a shape), null when it couldn't be. */
+  rendered?: string | null
+  /** The project files' URLs it was drawn from (`filesOf`): it's drawn again when they change. */
+  files: string
+}
+
+/**
+ * Every look worked out this session, by `useLookPicture`'s key: an icon shown again
+ * (another page, a tab come back) shows at once rather than after its effect.
+ */
+const worked = new Map<string, Worked>()
+
+/** The project files [source] is drawn from, by face or texture name, as URLs (which change with the file). */
+function urlsOf(source: IconSource, projectUrl: (path: string) => string): Record<string, string> {
+  const paths =
+    source.kind === 'block' ? source.faces : source.kind === 'shape' ? source.textures : {}
+  return Object.fromEntries(Object.entries(paths).map(([name, path]) => [name, projectUrl(path)]))
+}
+
+const filesOf = (source: IconSource, projectUrl: (path: string) => string) =>
+  JSON.stringify(urlsOf(source, projectUrl))
+
 /**
  * The picture layers of [look] (a pack's look, worked out by the caller), else of the
  * client's own model for item [kind]; null while it draws or when there's nothing to draw.
  * Only the look keys the picture: the packs are large, and a gallery has hundreds of
- * icons, so a key made from them costs more than the drawing.
+ * icons, so a key made from them costs more than the drawing. While it's worked out it
+ * holds back the page it's on (`usePendingPicture`).
  */
 export function useLookPicture(look: IconSource | null, kind: string | undefined): string[] | null {
   const assets = useClientAssets()
   const projectUrl = useProjectFileUrl()
-  const [state, setState] = useState<{
-    key: string
-    source: IconSource
-    rendered?: string | null
-  }>()
+  const [, setVersion] = useState(0)
   const lookKey = useMemo(() => JSON.stringify(look), [look])
   const key = `${kind}|${assets?.version ?? ''}|${lookKey}`
+  const known = worked.get(key)
+  // A picture drawn from project files that have changed since is drawn again, shown as it was meanwhile.
+  const current = known !== undefined && known.files === filesOf(known.source, projectUrl)
+  usePendingPicture(known === undefined)
 
   useEffect(() => {
+    if (current) return
     let live = true
     void (look ? Promise.resolve(look) : vanillaIconSource(kind, assets)).then(
       async (source: IconSource) => {
-        if (!live) return
-        setState({ key, source })
-        if (source.kind === 'model' && assets) {
-          const rendered = await itemPicture(assets, source.item)
-          if (live) setState({ key, source, rendered })
-        }
-        if (source.kind === 'block' && assets) {
-          const urls = Object.fromEntries(
-            Object.entries(source.faces).map(([face, path]) => [face, projectUrl(path)]),
-          )
-          const rendered = await blockLookPicture(assets, urls)
-          if (live) setState({ key, source, rendered })
-        }
-        if (source.kind === 'shape' && assets) {
-          const bound = Object.fromEntries(
-            Object.entries(source.textures).map(([name, path]) => [name, projectUrl(path)]),
-          )
-          const rendered = await packModelPicture(assets, source.model, bound)
-          if (live) setState({ key, source, rendered })
-        }
+        const files = filesOf(source, projectUrl)
+        const urls = urlsOf(source, projectUrl)
+        const rendered = !assets
+          ? null
+          : source.kind === 'model'
+            ? await itemPicture(assets, source.item)
+            : source.kind === 'block'
+              ? await blockLookPicture(assets, urls)
+              : source.kind === 'shape'
+                ? await packModelPicture(assets, source.model, urls)
+                : null
+        worked.set(key, { source, rendered, files })
+        if (live) setVersion((it) => it + 1)
       },
     )
     return () => {
       live = false
     }
-    // `key` covers the kind, the look and the assets.
+    // `key` covers the kind, the look and the assets; `current` the project files a drawing used.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key])
+  }, [key, current])
 
-  if (!state || state.key !== key) return null
-  const { source } = state
+  if (!known) return null
+  const { source } = known
   switch (source.kind) {
     case 'project':
       return [projectUrl(source.path)]
@@ -85,7 +105,7 @@ export function useLookPicture(look: IconSource | null, kind: string | undefined
     case 'model':
     case 'block':
     case 'shape':
-      return state.rendered ? [state.rendered] : null
+      return known.rendered ? [known.rendered] : null
     case 'none':
       return null
   }
