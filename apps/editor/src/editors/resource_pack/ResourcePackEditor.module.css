@@ -70,3 +70,16 @@
   gap: 4px;
   color: var(--muted);
 }
+.gameTexture {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.gameTexture figure {
+  margin: 0;
+  min-width: 0;
+}
+.gameTexture figcaption {
+  text-align: center;
+  font-size: 11px;
+}

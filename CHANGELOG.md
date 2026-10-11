@@ -90,6 +90,16 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Added
 
+- **Retexture anything of the game's.** A resource pack's `textures` now
+  redraws any vanilla texture, not only the container screens: blocks, items,
+  mobs, particles, the sky, paintings, GUI sprites. A replacement may be any
+  size of the game's shape (HD art), brings its own animation with a
+  `.mcmeta`, and is checked against the game's size (`resource_pack.replace-shape`).
+  In the resource pack editor, **Game textures** starts one from a copy of the
+  game's picture. `client/vanilla.json` keeps the sizes of only the textures
+  the project names, and `unknownTextures` the names the game doesn't have.
+  Import Minecraft again so the editor knows every texture.
+
 - **`get_profile` MCP tool.** Coding agents read the dev server's profile as
   the Profiler panel shows it: every function and scope scripts ran, sortable
   by total, mean, worst call or calls, the tick by step, and the worst recent

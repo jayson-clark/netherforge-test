@@ -201,12 +201,14 @@ class HudTest {
         // A texture of another size is an error, and so is a name the game doesn't have.
         assertEquals(listOf("resource_pack.replace-size" to "$.textures[\"gui/container/inventory\"]"), codes(replacingVanilla, size = 128))
         val unknown = replacing.replace("hud/hotbar_selection", "hud/nothing").replace("gui/container/inventory", "gui/container/nothing")
+        // A texture name the editor hasn't looked up yet waits for it; one it found the game lacks is an error.
+        assertEquals(listOf("resource_pack.vanilla-missing" to "$.hud.replace"), codes(replacingVanilla, unknown))
         assertEquals(
             listOf(
                 "resource_pack.replace-name" to "$.hud.replace[\"hud/nothing\"]",
                 "resource_pack.replace-name" to "$.textures[\"gui/container/nothing\"]"
             ),
-            codes(replacingVanilla, unknown)
+            codes(replacingVanilla.replace("[256, 256] } }", "[256, 256] }, \"unknownTextures\": [\"gui/container/nothing\"] }"), unknown)
         )
         // A name that couldn't be a path never gets that far.
         val shape = """{ "hud": { "replace": { "../hud/hotbar": "gui/hotbar.png" } } }"""

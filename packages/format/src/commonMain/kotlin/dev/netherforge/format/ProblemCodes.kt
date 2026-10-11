@@ -787,7 +787,7 @@ object ProblemCodes {
         warning(
             "resource_pack.vanilla-missing",
             RESOURCE_PACK,
-            "`hud.replace` or `textures` needs the game's sprite and texture names and sizes, which `client/vanilla.json` lacks or has from another version."
+            "`hud.replace` or `textures` needs the game's sprite and texture names and sizes, which `client/vanilla.json` lacks (for a texture the editor hasn't looked up yet) or has from another version."
         )
     val RESOURCE_PACK_REPLACE_NAME =
         error(
@@ -799,7 +799,13 @@ object ProblemCodes {
         error(
             "resource_pack.replace-size",
             RESOURCE_PACK,
-            "A `textures` replacement isn't the pixel size of the game's texture it replaces."
+            "A `textures` replacement of a screen's sheet (`gui/…`, not `gui/sprites/`) or a colour map isn't the pixel size of the game's texture it replaces."
+        )
+    val RESOURCE_PACK_REPLACE_SHAPE =
+        warning(
+            "resource_pack.replace-shape",
+            RESOURCE_PACK,
+            "A `textures` replacement isn't the shape of the game's texture (any size of the same shape is fine), or isn't one square frame of a texture the game animates and has no `.mcmeta` of its own."
         )
     val RESOURCE_PACK_MODEL_FILE =
         error(

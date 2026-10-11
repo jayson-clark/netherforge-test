@@ -47,9 +47,9 @@ data class ResourcePackFile(
      */
     val sounds: Map<String, SoundDef> = emptyMap(),
     /**
-     * The game's own textures that aren't GUI sprites to draw with the pack's pictures instead, for every player: the
-     * texture's name under `textures/` (`gui/container/inventory`), without `.png`, to a texture of the pack of
-     * exactly the game's pixel size.
+     * The game's own textures to draw with the pack's pictures instead, for every player (blocks, items, mobs, the
+     * screens): the texture's name under `textures/` (`block/stone`, `gui/container/inventory`), without `.png`, to a
+     * texture of the pack of the game's shape, or for a screen's sheet its exact size ([ReplacedTexture]).
      */
     @Ref(RefKind.TEXTURE) val textures: Map<String, String> = emptyMap(),
     /** What it does to the HUD: the game's elements it hides, and elements of its own scripts fill in ([HudDef]). */

@@ -18,7 +18,10 @@ import kotlinx.serialization.json.JsonObject
  *   the rest as this says.
  * - [sprites]: the GUI sprites of the game's HUD (`hud/heart/full`), which a resource pack's `hud.hide` blanks and
  *   `hud.replace` redraws.
- * - [textures]: the game's container screens' textures with their sizes, which a resource pack's `textures` redraws.
+ * - [textures]: the game's textures a resource pack's `textures` redraws, with their sizes: every container screen's
+ *   (`gui/container/`), and every other one the project's resource packs name (`block/stone`, `entity/zombie/zombie`).
+ *   The game has thousands, so the file holds only those asked about, and [unknownTextures] the names asked about that
+ *   the game doesn't have: a name in neither is one the editor hasn't looked up yet.
  */
 @Serializable
 data class VanillaFile(
@@ -29,8 +32,13 @@ data class VanillaFile(
     val blockstates: Map<String, JsonElement> = emptyMap(),
     /** The game's HUD sprites, by their path under `textures/gui/sprites/` without `.png` (`hud/heart/full`), sorted. */
     val sprites: List<String> = emptyList(),
-    /** The game's container screens' textures (`gui/container/inventory`), by their path under `textures/` without `.png`, to their pixel size `[width, height]`. */
-    val textures: Map<String, List<Int>> = emptyMap()
+    /**
+     * The game's textures (`gui/container/inventory`, `block/stone`), by their path under `textures/` without `.png`, to
+     * their pixel size `[width, height]`: every container screen's, and the others the project's resource packs redraw.
+     */
+    val textures: Map<String, List<Int>> = emptyMap(),
+    /** Names the project's resource packs redraw that the game has no texture by, sorted. */
+    val unknownTextures: List<String> = emptyList()
 ) {
     companion object {
         const val FILE = "client/vanilla.json"

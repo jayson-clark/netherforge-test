@@ -4,7 +4,9 @@
  * drawn from format's `compileResourcePacks` numbers (a skin over the window it
  * fits, a glyph inside a line of text, an item model in a slot, a tooltip's
  * nine-slice frame). PNGs are imported into `textures/` and Ogg files into
- * `sounds/` as project files; every sound file is a sound event.
+ * `sounds/` as project files; every sound file is a sound event. Game
+ * textures are the game's own pictures (`block/stone`) it redraws, for every
+ * player, each started from a copy of the game's out of the client import.
  */
 import { setKey } from '@/core/draft'
 import { useRef, useState, type ChangeEvent } from 'react'
@@ -55,12 +57,14 @@ import {
   ENTRY_KINDS,
   entryTextures,
   freeEntryKey,
+  gameTextureCopyPath,
   importPath,
   isOgg,
   newEntry,
   pngSize,
   removeEntry,
   renameEntry,
+  setGameTexture,
   setSoundValue,
   soundEvents,
   soundFilesOf,
@@ -81,6 +85,7 @@ import {
   useProjectFileUrl,
 } from '@/state/useResourcePacks'
 import { useGlyphMap } from '@/minecraft/text/glyphs'
+import { useGameTextures, type GameTextures } from '@/minecraft/client/useGameTextures'
 import styles from './ResourcePackEditor.module.css'
 
 const KIND_LABELS: Record<EntryKind, { title: string; one: string }> = {
@@ -119,11 +124,17 @@ export function ResourcePackEditor({ path }: { path: string }) {
   const input = useRef<HTMLInputElement>(null)
   const soundInput = useRef<HTMLInputElement>(null)
   const [importFolder, setImportFolder] = useState(DEFAULT_FOLDER.skins)
+  const game = useGameTextures()
   const ws = () => workspace.getState()
   const pick = (next: Pick) => (next ? view.select(next) : view.select())
 
   useFocusRequests(path, (segments) => {
     const [kind, key] = segments
+    // `textures` in pack.json is the game's textures it redraws, not the pack's files.
+    if (kind === 'textures' && typeof key === 'string') {
+      pick({ kind: 'game', key })
+      return segments.slice(2)
+    }
     if ((ENTRY_KINDS.includes(kind as EntryKind) || kind === 'sounds') && typeof key === 'string') {
       pick({ kind: kind as EntryKind | 'sounds', key })
       return segments.slice(2)
@@ -233,6 +244,51 @@ export function ResourcePackEditor({ path }: { path: string }) {
     pick({ kind, key })
   }
 
+  /**
+   * Redraws one of the game's textures: with [texture] when given, else with a copy of the game's own picture (and
+   * its animation) put in the pack to draw over.
+   */
+  const redraw = async (texture?: string) => {
+    if (!game || Object.keys(game.sizes).length === 0) {
+      ws().notify(
+        'error',
+        'Import Minecraft (again, if it was imported before the editor listed its textures) to pick a game texture.',
+      )
+      return
+    }
+    const names = Object.keys(game.sizes)
+    const name = await ask.prompt({
+      title: 'Redraw a game texture',
+      label: 'Game texture (its path under textures/, without .png)',
+      message:
+        'Every player sees the pack’s picture instead: block/stone, item/diamond, entity/zombie/zombie…',
+      confirmLabel: texture ? 'Redraw' : 'Copy and redraw',
+      suggestions: names,
+      validate: (value) => (value in game.sizes ? null : 'The game has no texture by that name'),
+    })
+    if (!name) return
+    let picture = texture ?? model.textures?.[name]
+    if (!picture) {
+      picture = gameTextureCopyPath(name)
+      if (!textures.includes(picture)) {
+        const copied = await game.files(name)
+        if (!copied) {
+          ws().notify('error', `Couldn't read the game's ${name}`)
+          return
+        }
+        const target = resourcePackTexturePath(pack, picture)
+        if (!(await ws().writeBinary(target, copied.png))) return
+        if (copied.mcmeta) await ws().writeBinary(`${target}.mcmeta`, copied.mcmeta)
+      }
+    }
+    const chosen = picture
+    edit((draft) => setGameTexture(draft, name, chosen))
+    pick({ kind: 'game', key: name })
+  }
+  const redrawn = Object.entries(model.textures ?? {}).sort(([a], [b]) =>
+    a < b ? -1 : a > b ? 1 : 0,
+  )
+
   return (
     <EditorScreen>
       <EditorBar
@@ -316,6 +372,25 @@ export function ResourcePackEditor({ path }: { path: string }) {
           )
         })}
         <GallerySection
+          title="Game textures"
+          picked={picked?.kind === 'game' ? picked.key : null}
+          onPick={(key) => pick({ kind: 'game', key })}
+          actions={
+            <IconButton icon="plus" label="Redraw a game texture" onClick={() => void redraw()} />
+          }
+          cards={redrawn.map(([name, texture]) => ({
+            key: name,
+            label: `Game texture ${name}`,
+            title: `${name} → textures/${texture}`,
+            caption: name,
+            picture: textures.includes(texture) ? (
+              <img src={textureUrl(texture)} alt="" />
+            ) : (
+              <Icon name="warning" />
+            ),
+          }))}
+        />
+        <GallerySection
           title="Textures"
           picked={picked?.kind === 'textures' ? picked.key : null}
           onPick={(key) => pick({ kind: 'textures', key })}
@@ -355,7 +430,19 @@ export function ResourcePackEditor({ path }: { path: string }) {
             url={textureUrl(picked.key)}
             model={model}
             onUse={(kind) => void add(kind, picked.key)}
+            onRedraw={() => void redraw(picked.key)}
             onDeleted={() => pick(null)}
+          />
+        )}
+        {picked?.kind === 'game' && model.textures?.[picked.key] !== undefined && (
+          <GameTextureInspector
+            name={picked.key}
+            texture={model.textures[picked.key]!}
+            textures={textures}
+            textureUrl={textureUrl}
+            game={game}
+            edit={edit}
+            onRemoved={() => pick(null)}
           />
         )}
         {picked?.kind === 'sounds' && sounds.some((it) => it.key === picked.key) && (
@@ -372,6 +459,7 @@ export function ResourcePackEditor({ path }: { path: string }) {
         {picked &&
           picked.kind !== 'textures' &&
           picked.kind !== 'sounds' &&
+          picked.kind !== 'game' &&
           model[picked.kind]?.[picked.key] && (
             <EntryInspector
               pack={pack}
@@ -416,6 +504,7 @@ function TextureInspector({
   url,
   model,
   onUse,
+  onRedraw,
   onDeleted,
 }: {
   path: string
@@ -423,6 +512,7 @@ function TextureInspector({
   url: string
   model: ResourcePackFile
   onUse: (kind: EntryKind) => void
+  onRedraw: () => void
   onDeleted: () => void
 }) {
   const { workspace } = useApp()
@@ -431,6 +521,10 @@ function TextureInspector({
     Object.entries(model[kind] ?? {})
       .filter(([, def]) => entryTextures(kind, def as EntryDef).includes(texture))
       .map(([key]) => `${KIND_LABELS[kind].one} ${key}`),
+  ).concat(
+    Object.entries(model.textures ?? {})
+      .filter(([, it]) => it === texture)
+      .map(([name]) => `game texture ${name}`),
   )
   return (
     <Section title={texture}>
@@ -447,6 +541,9 @@ function TextureInspector({
               {KIND_LABELS[kind].one}
             </Button>
           ))}
+          <Button size="small" onClick={onRedraw}>
+            game texture
+          </Button>
         </div>
       </Row>
       <Row label="">
@@ -468,6 +565,82 @@ function TextureInspector({
           Delete file
         </Button>
       </Row>
+    </Section>
+  )
+}
+
+function GameTextureInspector({
+  name,
+  texture,
+  textures,
+  textureUrl,
+  game,
+  edit,
+  onRemoved,
+}: {
+  name: string
+  texture: string
+  textures: string[]
+  textureUrl: (texture: string) => string
+  game: GameTextures | null
+  edit: (recipe: (draft: ResourcePackFile) => void) => void
+  onRemoved: () => void
+}) {
+  const size = game?.sizes[name]
+  return (
+    <Section
+      title={`Game texture ${name}`}
+      actions={
+        <IconButton
+          icon="trash"
+          label="Draw the game's own again"
+          onClick={() => {
+            edit((draft) => setGameTexture(draft, name, undefined))
+            onRemoved()
+          }}
+        />
+      }
+    >
+      <div className={styles.gameTexture}>
+        <figure>
+          <div className={cx(styles.texturePreview, styles.checker)}>
+            {game && size ? (
+              <img src={game.url(name)} alt={`The game's ${name}`} />
+            ) : (
+              <Muted>?</Muted>
+            )}
+          </div>
+          <figcaption>The game’s{size ? ` (${size[0]}×${size[1]})` : ''}</figcaption>
+        </figure>
+        <figure>
+          <div className={cx(styles.texturePreview, styles.checker)}>
+            {textures.includes(texture) ? (
+              <img src={textureUrl(texture)} alt={`The pack's ${texture}`} />
+            ) : (
+              <Icon name="warning" />
+            )}
+          </div>
+          <figcaption>The pack’s</figcaption>
+        </figure>
+      </div>
+      <SelectField
+        label="Drawn with"
+        dataPath={`textures.${name}`}
+        value={texture}
+        options={[
+          ...textures.map((it) => ({ value: it, label: it })),
+          ...(textures.includes(texture)
+            ? []
+            : [{ value: texture, label: `${texture} (missing)` }]),
+        ]}
+        onChange={(next) => edit((draft) => setGameTexture(draft, name, next))}
+      />
+      <Hint>
+        Every player sees it in place of the game&apos;s. Draw it at any size of the same shape
+        (32×32 for a 16×16 block is twice the detail); a screen&apos;s sheet (<code>gui/…</code>)
+        and a colour map take exactly the game&apos;s size. An animation needs its{' '}
+        <code>.mcmeta</code> beside the picture.
+      </Hint>
     </Section>
   )
 }

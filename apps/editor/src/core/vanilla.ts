@@ -2,7 +2,9 @@
  * `client/vanilla.json` (docs/format/project.md#clientvanillajson): what only
  * the client knows and the built pack needs: the game's own blockstate files
  * of the blocks custom blocks are held in (tripwire: a model per shape), and
- * the names of the HUD's sprites (which `hud.hide` blanks and `hud.replace` redraws) and the container screens' textures with their sizes (which a resource pack's `textures` redraws). The editor writes
+ * the names of the HUD's sprites (which `hud.hide` blanks and `hud.replace` redraws) and the sizes of the game's
+ * textures a resource pack's `textures` redraws (every container screen's, and the others the project names: the
+ * game has thousands, so only those). The editor writes
  * it from the import, as it writes `fonts/default.json`; it's committed and
  * deployed. Pure: the workspace decides when to ask, which is when validation
  * says something needs it (`block.vanilla-looks`, `resource_pack.hud-hide`, `resource_pack.vanilla-missing`).
@@ -37,12 +39,23 @@ export interface VanillaLooks {
   blockstates: Record<string, unknown>
   /** The HUD's sprites (`hud/heart/full`), from the import's index; none from an import older than the list. */
   sprites: string[]
-  /** The container screens' textures (`gui/container/inventory`) with their `[width, height]`; none from an import older than the list. */
+  /** The container screens' textures (`gui/container/inventory`) and the others asked for, with their `[width, height]`. */
   textures: Record<string, number[]>
+  /** The names asked for that the game has no texture by; none from an import that listed only the screens'. */
+  unknownTextures: string[]
 }
 
-/** What [assets] has of [VanillaLooks]; empty without an import. */
-export async function vanillaLooks(assets: ClientJson): Promise<VanillaLooks> {
+/** The container screens' textures, which the file always lists. */
+const SCREENS = 'gui/container/'
+
+/**
+ * What [assets] has of [VanillaLooks], with the sizes of the game's textures [replaced] names (the outline's
+ * `replacedTextures`); empty without an import.
+ */
+export async function vanillaLooks(
+  assets: ClientJson,
+  replaced: readonly string[] = [],
+): Promise<VanillaLooks> {
   const blockstates: Record<string, unknown> = {}
   for (const block of VANILLA_LOOK_BLOCKS) {
     const colon = block.indexOf(':')
@@ -56,15 +69,23 @@ export async function vanillaLooks(assets: ClientJson): Promise<VanillaLooks> {
   const sprites = Array.isArray(index?.sprites)
     ? index.sprites.filter((it): it is string => typeof it === 'string')
     : []
-  const textures: Record<string, number[]> = {}
+  const all: Record<string, number[]> = {}
   if (index?.textures && typeof index.textures === 'object') {
     for (const [name, size] of Object.entries(index.textures)) {
       if (Array.isArray(size) && size.length === 2 && size.every((it) => Number.isInteger(it))) {
-        textures[name] = size
+        all[name] = size
       }
     }
   }
-  return { blockstates, sprites, textures }
+  const wanted = new Set(replaced)
+  const textures: Record<string, number[]> = {}
+  for (const [name, size] of Object.entries(all)) {
+    if (name.startsWith(SCREENS) || wanted.has(name)) textures[name] = size
+  }
+  // An import from before the editor listed every texture has only the screens': it can't say what the game lacks.
+  const everything = Object.keys(all).some((it) => !it.startsWith(SCREENS))
+  const unknownTextures = everything ? [...wanted].filter((it) => !(it in all)).sort() : []
+  return { blockstates, sprites, textures, unknownTextures }
 }
 
 /**
@@ -81,7 +102,8 @@ export function vanillaToWrite(
     !minecraft ||
     (Object.keys(looks.blockstates).length === 0 &&
       looks.sprites.length === 0 &&
-      Object.keys(looks.textures).length === 0)
+      Object.keys(looks.textures).length === 0 &&
+      looks.unknownTextures.length === 0)
   )
     return null
   const text = canonicalizeModel('vanilla', VANILLA_FILE, {
@@ -89,6 +111,7 @@ export function vanillaToWrite(
     blockstates: looks.blockstates,
     sprites: looks.sprites,
     textures: looks.textures,
+    unknownTextures: looks.unknownTextures,
   }).text
   return text !== undefined && text !== null && text !== diskText ? text : null
 }

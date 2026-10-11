@@ -9,7 +9,7 @@
 //! - `assets/minecraft/lang/en_us.json` (the only language inside the jar)
 //!
 //! Plus three files we write: `index.json` (ids of blockstates, item
-//! definitions and fonts, the HUD's GUI sprites and the container screens' textures with their sizes, so the UI can fill pickers without listing folders),
+//! definitions and fonts, the HUD's GUI sprites and every texture with its size, so the UI can fill pickers without listing folders),
 //! `glyph-advances.json` (the default font's advances, see [super::fonts]) and
 //! `.import.json` (the marker `mc_cache_status` checks). The import goes to
 //! a temp folder first and is swapped in at the end, so a failed import never
@@ -150,13 +150,10 @@ struct Index {
     fonts: Vec<String>,
     /// The HUD's sprites (`hud/heart/full`), which a resource pack's `hud.hide` blanks.
     sprites: Vec<String>,
-    /// The container screens' textures (`gui/container/inventory`) with their pixel sizes, which a resource
-    /// pack's `textures` redraws and must match.
+    /// Every texture (`gui/container/inventory`, `block/stone`) with its pixel size, which a resource pack's
+    /// `textures` redraws and must match.
     textures: std::collections::BTreeMap<String, [u32; 2]>,
 }
-
-/// The textures of the game's container screens, by the folder they're in (under `textures/`).
-const TEXTURE_FOLDER: &str = "gui/container/";
 
 /// A PNG's width and height, from the header's first 24 bytes.
 fn png_size(bytes: &[u8]) -> Option<[u32; 2]> {
@@ -168,11 +165,10 @@ fn png_size(bytes: &[u8]) -> Option<[u32; 2]> {
 }
 
 impl Index {
-    /// Notes the size of the texture just extracted to [path], when it's one of the container screens'.
+    /// Notes the size of the texture just extracted to [path], when it is one.
     fn note_size(&mut self, name: &str, path: &Path) {
         let Some(texture) = name
             .strip_prefix("assets/minecraft/textures/")
-            .filter(|rest| rest.starts_with(TEXTURE_FOLDER))
             .and_then(|rest| rest.strip_suffix(".png"))
         else {
             return;
@@ -238,7 +234,11 @@ pub(crate) mod tests {
         let options = zip::write::SimpleFileOptions::default();
         let entries: &[(&str, &[u8])] = &[
             ("net/minecraft/client/Main.class", b"\xca\xfe"),
-            ("assets/minecraft/textures/block/test_block.png", b"\x89PNG"),
+            (
+                "assets/minecraft/textures/block/test_block.png",
+                b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR\0\0\0\x10\0\0\0\x20\x08\x06",
+            ),
+            ("assets/minecraft/textures/block/broken.png", b"\x89PNG"),
             (
                 "assets/minecraft/textures/gui/sprites/hud/heart/full.png",
                 b"\x89PNG",
@@ -283,9 +283,9 @@ pub(crate) mod tests {
 
         let mut calls = Vec::new();
         let count = import_client(&jar, "26.3", &client, |d, t| calls.push((d, t))).unwrap();
-        assert_eq!(count, 10);
-        assert_eq!(calls.first(), Some(&(0, 10)));
-        assert_eq!(calls.last(), Some(&(10, 10)));
+        assert_eq!(count, 11);
+        assert_eq!(calls.first(), Some(&(0, 11)));
+        assert_eq!(calls.last(), Some(&(11, 11)));
 
         let mut files: Vec<String> = walkdir::WalkDir::new(&client)
             .into_iter()
@@ -310,6 +310,7 @@ pub(crate) mod tests {
                 "assets/minecraft/lang/en_us.json",
                 "assets/minecraft/models/block/test_block.json",
                 "assets/minecraft/particles/flame.json",
+                "assets/minecraft/textures/block/broken.png",
                 "assets/minecraft/textures/block/test_block.png",
                 "assets/minecraft/textures/block/test_block.png.mcmeta",
                 "assets/minecraft/textures/gui/container/inventory.png",
@@ -325,7 +326,7 @@ pub(crate) mod tests {
         assert_eq!(index["sprites"], json!(["hud/heart/full"]));
         assert_eq!(
             index["textures"],
-            json!({ "gui/container/inventory": [256, 384] })
+            json!({ "block/test_block": [16, 32], "gui/container/inventory": [256, 384] })
         );
         // The fake font has no providers, so no advances, but the file is there.
         assert_eq!(

@@ -1300,7 +1300,7 @@ Warning. `hud.hide` needs the game's HUD sprites, which `client/vanilla.json` la
 
 ### `resource_pack.vanilla-missing` {#resource_pack-vanilla-missing}
 
-Warning. `hud.replace` or `textures` needs the game's sprite and texture names and sizes, which `client/vanilla.json` lacks or has from another version. See [resource packs](resource-pack.md).
+Warning. `hud.replace` or `textures` needs the game's sprite and texture names and sizes, which `client/vanilla.json` lacks (for a texture the editor hasn't looked up yet) or has from another version. See [resource packs](resource-pack.md).
 
 ### `resource_pack.replace-name` {#resource_pack-replace-name}
 
@@ -1308,7 +1308,11 @@ Error. `hud.replace` or `textures` names a sprite or texture the game doesn't ha
 
 ### `resource_pack.replace-size` {#resource_pack-replace-size}
 
-Error. A `textures` replacement isn't the pixel size of the game's texture it replaces. See [resource packs](resource-pack.md).
+Error. A `textures` replacement of a screen's sheet (`gui/…`, not `gui/sprites/`) or a colour map isn't the pixel size of the game's texture it replaces. See [resource packs](resource-pack.md).
+
+### `resource_pack.replace-shape` {#resource_pack-replace-shape}
+
+Warning. A `textures` replacement isn't the shape of the game's texture (any size of the same shape is fine), or isn't one square frame of a texture the game animates and has no `.mcmeta` of its own. See [resource packs](resource-pack.md).
 
 ### `resource_pack.model-file` {#resource_pack-model-file}
 

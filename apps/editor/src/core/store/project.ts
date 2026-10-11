@@ -357,7 +357,10 @@ export function projectSlice({ backend, get, set }: SliceArgs): ProjectState & P
       if (!project || !minecraft || writingBlockStates || docs[VANILLA_FILE]?.dirty) return
       writingBlockStates = true
       try {
-        const looks = await vanillaLooks(clientJson(backend, minecraft))
+        const looks = await vanillaLooks(
+          clientJson(backend, minecraft),
+          get().outline?.replacedTextures ?? [],
+        )
         const text = vanillaToWrite(minecraft, looks, diskTexts[VANILLA_FILE])
         if (text === null) return
         await backend.writeText(VANILLA_FILE, text)

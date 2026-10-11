@@ -306,7 +306,12 @@ private fun outlineOf(snapshot: ProjectSnapshot) = ProjectOutline(
     },
     lock = snapshot.lock()?.takeIf { it.packages.isNotEmpty() }?.let(LockKind::write),
     requirements = Requirement.combined(snapshot),
-    registryNames = RefKind.entries.mapNotNull { kind -> kind.registry?.let { it to snapshot.references.names(kind) } }.toMap()
+    registryNames = RefKind.entries.mapNotNull { kind -> kind.registry?.let { it to snapshot.references.names(kind) } }.toMap(),
+    replacedTextures = (
+        snapshot.models(ResourcePackKind).values +
+            snapshot.packages.values.flatMap { it.snapshot.models(ResourcePackKind).values }
+        )
+        .flatMap { it.textures.keys }.distinct().sorted()
 )
 
 /**

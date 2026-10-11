@@ -201,6 +201,20 @@ oldest supported version (1.21.11); only 1.21.2-1.21.3 used `models/equipment`.
 layers (leggings need `humanoidLeggings`, the rest `humanoid`): the editor's
 hint says so.
 
+## Game textures
+
+`pack.json`'s `textures` redraws any of the game's textures (`block/stone`, `entity/zombie/zombie`,
+`gui/container/inventory`): `PackLayout.build` copies the picture (and its `.mcmeta`, when the pack has
+one) over `assets/minecraft/textures/<name>.png`, only for names `client/vanilla.json` lists. The game has
+thousands, so the import's `index.json` lists every texture's size, but `vanilla.json` only the container
+screens' and the ones the project names (`ProjectOutline.replacedTextures`, which `syncVanilla` passes to
+`vanillaLooks`), plus `unknownTextures` for names the game lacks. A name in neither is "not looked up yet"
+(`resource_pack.vanilla-missing`, which makes the editor sync), not unknown. Sizes: `ReplacedTexture.fit`
+(screens' sheets and colour maps exact, everything else the same shape at any scale; an animated game
+texture's replacement is one square frame unless it brings its own `.mcmeta`, since the game reads an
+animation's `.mcmeta` from the same pack as the picture). The editor's **Game textures** section copies the
+game's PNG and `.mcmeta` to `textures/vanilla/<name>.png` to start from (`useGameTextures`).
+
 ## Reload
 
 Any file under `resource_packs/<id>/` → the resource `resource_pack:<id>` → every resource pack is rebuilt

@@ -64,7 +64,12 @@ class ProjectOutline(
      * `worldgen/placed_feature`), what it names in the project's namespace, sorted: its own resources of that kind
      * and what its datapacks define. What a biome's features or a generator's areas suggest besides the game's.
      */
-    val registryNames: Map<String, List<String>> = emptyMap()
+    val registryNames: Map<String, List<String>> = emptyMap(),
+    /**
+     * The game's textures the project's resource packs and its packages' redraw (`textures`), sorted: what the editor
+     * looks up in the client for `client/vanilla.json`.
+     */
+    val replacedTextures: List<String> = emptyList()
 )
 
 /**

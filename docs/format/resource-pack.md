@@ -449,29 +449,68 @@ are, untinted and without the text shadow. So:
 
 ## Redrawing the game's textures
 
-`textures` does the same for the game's pictures that aren't GUI sprites, like
-the screen behind the player's own inventory (`gui/container/inventory`).
-It's a top-level map of the texture's name (its path under the client's
+`textures` redraws any of the game's own textures with a picture of the pack,
+for every player: blocks, items, mobs and other entities, the sky, particles,
+paintings, the font, the screens behind containers, the GUI's sprites. It's
+a top-level map of the texture's name (its path under the client's
 `textures/`, without `.png`) to a texture of the pack:
 
 ```json partial
 "textures": {
+  "block/stone": "vanilla/block/stone.png",
+  "item/diamond": "vanilla/item/diamond.png",
+  "entity/zombie/zombie": "mobs/zombie.png",
   "gui/container/inventory": "gui/inventory.png"
 }
 ```
 
-Unlike a sprite, a texture is a sheet the screen cuts its parts out of at
-fixed places, so **the replacement must have exactly the game's pixel size**
-(256×256 for the inventory); another size is an error
+The built resource pack writes the pack's PNG over the game's
+(`assets/minecraft/textures/block/stone.png`). Every block, item and model
+that draws the texture shows the new picture. Nothing else changes: models,
+shapes and sounds stay the game's. Two resource packs can't redraw the same
+texture.
+
+In the editor, **Game textures** → **+** asks for the texture's name and puts
+a copy of the game's picture (and its animation) in the pack under
+`textures/vanilla/`, ready to draw over.
+
+**Sizes.** Most textures are drawn by where things are on them as a share of
+the whole, so a replacement can be any size of the **same shape**: 32×32 for
+a 16×16 block is the same art at twice the detail. Another shape is a warning
+(`resource_pack.replace-shape`): the game stretches it. The exceptions are a
+screen's sheet (anything under `gui/` except `gui/sprites/`: the inventory,
+chests, furnaces…) and the colour maps (`colormap/`). The game cuts those at
+fixed pixel places, so **the replacement must be exactly the game's pixel
+size** (256×256 for the inventory). Another size is an error
 (`resource_pack.replace-size`). Keep every slot, the armour column, the
 player's preview box and the recipe button where the original has them: only
-the art changes, not where the game draws things. The names and sizes are the
-container screens' textures in `client/vanilla.json`
-(`textures/gui/container/`: the inventory, the crafting table, chests, furnaces
-and so on), and a `.mcmeta` beside the picture is built in like a sprite's.
+the art changes, not where the game draws things.
 
-Unlike [skins](#skins), which draw behind menus the project opens itself, this
-changes the screen of every player who opens it, menus of the project's or not.
+**Animations.** A texture the game animates (water, lava, fire, sea lanterns,
+prismarine) is its frames stacked in one tall picture, and the frames are
+read from the `.mcmeta` file beside it **in the same pack**. So a replacement
+with no `.mcmeta` of its own is a still picture, one square frame
+(`resource_pack.replace-shape` otherwise). To animate a replacement, or any
+texture the game draws still, put a `.mcmeta` beside the picture
+(`textures/vanilla/block/water_still.png.mcmeta`), in the game's
+[animation format](https://minecraft.wiki/w/Resource_pack#Animation). It's
+built in beside the texture, and the editor copies the game's along with its
+picture.
+
+**Names.** The game has thousands of textures, so
+[`client/vanilla.json`](project.md#clientvanillajson) lists the sizes of the
+ones the project's packs name, and the names the game doesn't have. The
+editor writes it from your imported Minecraft as you add names. A name it
+hasn't looked up yet is a warning that nothing is replaced yet
+(`resource_pack.vanilla-missing`), and one the game doesn't have is an error
+(`resource_pack.replace-name`).
+
+Unlike [skins](#skins), which draw behind menus the project opens itself, a
+redrawn screen texture changes the screen of every player who opens it,
+menus of the project's or not. Unlike [item models](#item-models) and
+[block models](#block-models), which give the project's own items and blocks
+a look of their own, it changes every one of the game's blocks or items that
+draws the texture.
 
 ## How it reaches players
 

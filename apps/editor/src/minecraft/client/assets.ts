@@ -15,6 +15,11 @@ export interface ClientIndex {
   fonts: string[]
   /** The HUD's GUI sprites (`hud/heart/full`); missing from imports before the editor listed them. */
   sprites?: string[]
+  /**
+   * Every texture (`block/stone`) with its `[width, height]`; only the container screens' from imports before the
+   * editor listed them all, and missing from older ones.
+   */
+  textures?: Record<string, number[]>
 }
 
 export interface ClientAssets extends AssetLoader {

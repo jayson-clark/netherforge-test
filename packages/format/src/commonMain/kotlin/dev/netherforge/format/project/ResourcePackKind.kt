@@ -9,6 +9,7 @@ import dev.netherforge.format.resourcepack.CompiledResourcePack
 import dev.netherforge.format.resourcepack.PackFonts
 import dev.netherforge.format.resourcepack.PackModels
 import dev.netherforge.format.resourcepack.PackSounds
+import dev.netherforge.format.resourcepack.ReplacedTexture
 import dev.netherforge.format.resourcepack.ResourcePackFile
 import dev.netherforge.format.resourcepack.ResourcePackRead
 import dev.netherforge.format.resourcepack.ResourcePackValidator
@@ -96,10 +97,18 @@ object ResourcePackKind : DocumentResourceKind<ResourcePackFile, ResourcePackRea
         if (sprites.isNotEmpty() || value.textures.isNotEmpty()) {
             val vanilla = ctx.vanilla
             val stale = ctx.minecraft != null && vanilla?.minecraft != ctx.minecraft
+            // The file holds only the textures the project asked about, so a name in neither list is one the editor
+            // hasn't looked up yet (a name that isn't a path is reported where it's written).
+            val unlooked = vanilla != null &&
+                value.textures.keys.any { name ->
+                    ResourcePackFile.isTexturePath("$name${ResourcePackFile.TEXTURE_EXTENSION}") &&
+                        name !in vanilla.textures &&
+                        name !in vanilla.unknownTextures
+                }
             if (vanilla == null ||
                 stale ||
                 (sprites.isNotEmpty() && vanilla.sprites.isEmpty()) ||
-                (value.textures.isNotEmpty() && vanilla.textures.isEmpty())
+                unlooked
             ) {
                 ctx.sink.report(
                     ProblemCodes.RESOURCE_PACK_VANILLA_MISSING,
@@ -114,7 +123,7 @@ object ResourcePackKind : DocumentResourceKind<ResourcePackFile, ResourcePackRea
             } else {
                 val others = ctx.models(ResourcePackKind).filterKeys { it < id }.values
                 fun check(map: String, replaced: Map<String, String>, known: Set<String>, taken: (ResourcePackFile) -> Set<String>) {
-                    for ((name, picture) in replaced.entries.sortedBy { it.key }) {
+                    for ((name, _) in replaced.entries.sortedBy { it.key }) {
                         val at = CanonicalJson.childPath(map, name)
                         when {
                             // A name that isn't a path is already reported where it's written.
@@ -134,7 +143,6 @@ object ResourcePackKind : DocumentResourceKind<ResourcePackFile, ResourcePackRea
                 }
                 check("$.hud.replace", sprites, vanilla.sprites.toSet()) { it.hud?.replace.orEmpty().keys }
                 check("$.textures", value.textures, vanilla.textures.keys) { it.textures.keys }
-                // A texture is drawn at the game's own pixel size, on the screen's layout, so a different one is a broken screen.
                 if (ctx.readsSizes) {
                     for ((name, picture) in value.textures.entries.sortedBy { it.key }) {
                         val size = vanilla.textures[name]?.takeIf { it.size == 2 } ?: continue
@@ -148,11 +156,27 @@ object ResourcePackKind : DocumentResourceKind<ResourcePackFile, ResourcePackRea
                                     at
                                 )
                             }
-                        } else if (image != size) {
-                            ctx.sink.report(
+                            continue
+                        }
+                        when (ReplacedTexture.fit(name, size, image, "$picture.mcmeta" in textures)) {
+                            ReplacedTexture.Fit.OK -> {}
+                            ReplacedTexture.Fit.SIZE -> ctx.sink.report(
                                 ProblemCodes.RESOURCE_PACK_REPLACE_SIZE,
                                 "textures/$picture is ${image[0]}x${image[1]} pixels, but the game's $name is ${size[0]}x${size[1]}: " +
-                                    "a replacement must be the same size",
+                                    "the screen cuts its parts out at fixed places, so a replacement must be the same size",
+                                at
+                            )
+                            ReplacedTexture.Fit.SHAPE -> ctx.sink.report(
+                                ProblemCodes.RESOURCE_PACK_REPLACE_SHAPE,
+                                "textures/$picture is ${image[0]}x${image[1]} pixels, but the game's $name is ${size[0]}x${size[1]}: " +
+                                    "a replacement may be bigger or smaller, but the same shape, or it's drawn stretched",
+                                at
+                            )
+                            ReplacedTexture.Fit.STILL -> ctx.sink.report(
+                                ProblemCodes.RESOURCE_PACK_REPLACE_SHAPE,
+                                "textures/$picture is ${image[0]}x${image[1]} pixels, but the game animates $name (its frames stacked, " +
+                                    "${size[0]}x${size[1]}): a still replacement is one square frame, and an animated one needs " +
+                                    "textures/$picture.mcmeta beside it, or it's drawn as one tall picture",
                                 at
                             )
                         }

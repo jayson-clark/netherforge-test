@@ -25,6 +25,8 @@ interface PromptRequest {
   confirmLabel: string
   /** An error message for invalid input, or null. */
   validate?: (value: string) => string | null
+  /** Values offered as the field is typed in. */
+  suggestions?: readonly string[]
   resolve: (value: string | null) => void
 }
 
@@ -187,7 +189,15 @@ function PromptDialog({
         aria-describedby={error && value ? `${id}-error` : undefined}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={(event) => event.key === 'Enter' && submit()}
+        list={request.suggestions ? `${id}-suggestions` : undefined}
       />
+      {request.suggestions && (
+        <datalist id={`${id}-suggestions`}>
+          {request.suggestions.map((it) => (
+            <option key={it} value={it} />
+          ))}
+        </datalist>
+      )}
       {error && value && <FormError id={`${id}-error`}>{error}</FormError>}
     </Modal>
   )

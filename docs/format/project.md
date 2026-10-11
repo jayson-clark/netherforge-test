@@ -305,9 +305,10 @@ replaces the carrier's file, so it needs these to keep drawing string as the
 game does. The names of the game's HUD sprites, which a resource pack's
 [`hud.hide`](resource-pack.md#hiding-the-games-elements) replaces with empty
 ones and [`hud.replace`](resource-pack.md#redrawing-the-games-sprites)
-redraws. And the names and pixel sizes of the container screens' textures,
-which a resource pack's [`textures`](resource-pack.md#redrawing-the-games-textures)
-redraws and must match. Like `fonts/default.json`, the editor writes it from your
+redraws. And the pixel sizes of the game's textures a resource pack's
+[`textures`](resource-pack.md#redrawing-the-games-textures) redraws: every
+container screen's, and every other one the project's packs name, with the
+names they name that the game doesn't have. Like `fonts/default.json`, the editor writes it from your
 imported Minecraft client whenever a tripwire block, `hud.hide`, `hud.replace`
 or `textures` needs it and it's missing or out of date: you never edit it, but
 you commit it.
@@ -326,16 +327,18 @@ you commit it.
     }
   },
   "sprites": ["hud/air", "hud/armor_full", "hud/food_full", "hud/heart/full"],
-  "textures": { "gui/container/inventory": [256, 256] }
+  "textures": { "block/stone": [16, 16], "gui/container/inventory": [256, 256] },
+  "unknownTextures": ["block/stoen"]
 }
 ```
 
-| Key           | Meaning                                                                                                                                                                               |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `minecraft`   | The version whose client it was read from. When it isn't the project's `minecraft`, the file is stale (`block.vanilla-looks`).                                                        |
-| `blockstates` | Each block's blockstate file as the client has it, by block id.                                                                                                                       |
-| `sprites`     | The HUD's GUI sprites (`textures/gui/sprites/hud/`), by name. An import from before the editor listed them has none: import again.                                                    |
-| `textures`    | The container screens' textures (`textures/gui/container/`), by name, each with its `[width, height]` in pixels. An import from before the editor listed them has none: import again. |
+| Key               | Meaning                                                                                                                                                                                                                                                  |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `minecraft`       | The version whose client it was read from. When it isn't the project's `minecraft`, the file is stale (`block.vanilla-looks`).                                                                                                                           |
+| `blockstates`     | Each block's blockstate file as the client has it, by block id.                                                                                                                                                                                          |
+| `sprites`         | The HUD's GUI sprites (`textures/gui/sprites/hud/`), by name. An import from before the editor listed them has none: import again.                                                                                                                       |
+| `textures`        | The container screens' textures (`textures/gui/container/`) and the other textures the project's packs redraw, by name, each with its `[width, height]` in pixels. An import from before the editor listed them all has only the screens': import again. |
+| `unknownTextures` | The names the project's packs redraw that the game has no texture by. A name in neither list hasn't been looked up yet (`resource_pack.vanilla-missing`).                                                                                                |
 
 Without it, tripwire blocks look like string (`block.vanilla-looks`, at each tripwire block), `hud.hide` hides nothing (`resource_pack.hud-hide`), and `hud.replace` and `textures` replace nothing (`resource_pack.vanilla-missing`).
 

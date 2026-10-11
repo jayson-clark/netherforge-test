@@ -33,9 +33,12 @@ export const ENTRY_KINDS: EntryKind[] = [
   'blocks',
 ]
 
-/** What the pack editor can pick: an entry, a texture (its path under `textures/`) or a sound (its event key). */
+/**
+ * What the pack editor can pick: an entry, a texture (its path under `textures/`), a sound (its event key) or a
+ * game texture it redraws (`game`, by the game's name: `block/stone`).
+ */
 export interface ResourcePackPick {
-  kind: EntryKind | 'textures' | 'sounds'
+  kind: EntryKind | 'textures' | 'sounds' | 'game'
   key: string
 }
 
@@ -167,8 +170,26 @@ export function unusedTextures(pack: ResourcePackFile, textures: string[]): stri
     }
   }
   for (const texture of hudTextures(pack)) used.add(texture)
+  for (const texture of Object.values(pack.hud?.replace ?? {})) used.add(texture)
+  for (const texture of Object.values(pack.textures ?? {})) used.add(texture)
   return textures.filter((it) => !used.has(it))
 }
+
+/** Draws the game's texture [name] (`block/stone`) with the pack's [texture], or with undefined, the game's own again. */
+export function setGameTexture(
+  pack: ResourcePackFile,
+  name: string,
+  texture: string | undefined,
+): void {
+  const textures = { ...(pack.textures ?? {}) }
+  if (texture === undefined) delete textures[name]
+  else textures[name] = texture
+  setKey(pack, 'textures', Object.keys(textures).length > 0 ? textures : undefined)
+}
+
+/** Where a copy of the game's texture [name] goes under `textures/`, to draw over: `vanilla/block/stone.png`. */
+export const gameTextureCopyPath = (name: string) =>
+  `vanilla/${name}${RESOURCE_PACK_TEXTURE_EXTENSION}`
 
 /** The pictures of the pack's HUD elements: its bars' and rows of icons'. */
 export function hudTextures(pack: ResourcePackFile): string[] {

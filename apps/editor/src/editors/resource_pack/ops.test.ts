@@ -19,6 +19,8 @@ import {
   soundImportPath,
   texturesOf,
   unusedTextures,
+  setGameTexture,
+  gameTextureCopyPath,
 } from './ops'
 
 const PACK = 'resource_packs/ui/pack.json'
@@ -131,5 +133,16 @@ describe('duplicateEntry', () => {
     expect(selectionForFile('sounds/menu/open.ogg')).toEqual({ kind: 'sounds', key: 'menu/open' })
     expect(selectionForFile('sounds/Door Open.ogg')).toBeNull()
     expect(selectionForFile('pack.json')).toBeNull()
+  })
+})
+
+describe('game textures', () => {
+  it('redraws one of the game’s textures with a picture of the pack, which counts as used, and stops', () => {
+    const pack: ResourcePackFile = {}
+    setGameTexture(pack, 'block/stone', gameTextureCopyPath('block/stone'))
+    expect(pack.textures).toEqual({ 'block/stone': 'vanilla/block/stone.png' })
+    expect(unusedTextures(pack, ['vanilla/block/stone.png', 'other.png'])).toEqual(['other.png'])
+    setGameTexture(pack, 'block/stone', undefined)
+    expect(pack).toEqual({})
   })
 })
