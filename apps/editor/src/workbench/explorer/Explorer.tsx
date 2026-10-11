@@ -8,7 +8,7 @@
  * the search box looks across every kind. Below the kinds, the packages the
  * project depends on, each shown read-only (`Dependencies.tsx`).
  */
-import { useMemo, useRef, useState } from 'react'
+import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Header, ListBox, ListBoxItem, ListBoxSection } from 'react-aria-components'
 import { useApp, useLayout, useWorkspace } from '@/state/providers'
 import { LIMITS } from '@/core/store/layout'
@@ -68,19 +68,22 @@ export function Explorer() {
     ).sort((a, b) => b.score - a.score)
   }, [query, folder, files])
 
-  const errorsIn = (entry: Entry) => {
-    const location = entry.folder.location(entry.id)
-    return problems.filter(
-      (it) =>
-        it.severity === 'error' && (it.file === location || it.file.startsWith(`${location}/`)),
-    ).length
-  }
-  const dirtyIn = (entry: Entry) => {
-    const location = entry.folder.location(entry.id)
-    return Object.values(docs).some(
-      (doc) => doc.dirty && (doc.path === location || doc.path.startsWith(`${location}/`)),
-    )
-  }
+  // Counted once per change by every folder a path is in, not once per tile: a kind can hold thousands.
+  const errors = useMemo(
+    () => countByFolder(problems.filter((it) => it.severity === 'error').map((it) => it.file)),
+    [problems],
+  )
+  const dirty = useMemo(
+    () =>
+      countByFolder(
+        Object.values(docs)
+          .filter((doc) => doc.dirty)
+          .map((doc) => doc.path),
+      ),
+    [docs],
+  )
+  const errorsIn = (entry: Entry) => errors.get(entry.folder.location(entry.id)) ?? 0
+  const dirtyIn = (entry: Entry) => dirty.has(entry.folder.location(entry.id))
 
   const open = (entry: Entry) => void ws().openFile(entry.folder.openPath(entry.id))
   const select = (key: string | null) => setSelected(key)
@@ -153,6 +156,26 @@ export function Explorer() {
   }
 
   const searching = query.trim().length > 0
+
+  // The tiles' handlers stay the same functions, so a tile renders again only when what it shows changes.
+  const latest = useRef({ select, focusItems, open, menuFor })
+  useLayoutEffect(() => {
+    latest.current = { select, focusItems, open, menuFor }
+  })
+  const handlers: TileHandlers = useMemo(
+    () => ({
+      select: (entry) => {
+        latest.current.select(entry.key)
+        latest.current.focusItems()
+      },
+      open: (entry) => latest.current.open(entry),
+      menu: (event, entry) => {
+        latest.current.select(entry.key)
+        openMenu(event, latest.current.menuFor(entry))
+      },
+    }),
+    [],
+  )
 
   const shownKey = shownPackage ? `${PACKAGE_TAB}${pkg}` : folder.key
   const pick = (id: string) => {
@@ -351,15 +374,7 @@ export function Explorer() {
                         }
                       : null
                   }
-                  onSelect={() => {
-                    select(entry.key)
-                    focusItems()
-                  }}
-                  onOpen={() => open(entry)}
-                  onMenu={(event) => {
-                    select(entry.key)
-                    openMenu(event, menuFor(entry))
-                  }}
+                  handlers={handlers}
                 />
               ))}
             </div>
@@ -370,7 +385,25 @@ export function Explorer() {
   )
 }
 
-function Tile({
+/** Every folder [paths] are in, and each path itself, with how many of them are in it. */
+function countByFolder(paths: string[]): Map<string, number> {
+  const out = new Map<string, number>()
+  for (const path of paths) {
+    for (let end = path.length; end > 0; end = path.lastIndexOf('/', end - 1)) {
+      const folder = path.slice(0, end)
+      out.set(folder, (out.get(folder) ?? 0) + 1)
+    }
+  }
+  return out
+}
+
+interface TileHandlers {
+  select: (entry: Entry) => void
+  open: (entry: Entry) => void
+  menu: (event: React.MouseEvent, entry: Entry) => void
+}
+
+const Tile = memo(function Tile({
   entry,
   view,
   size,
@@ -379,9 +412,7 @@ function Tile({
   errors,
   dirty,
   rename,
-  onSelect,
-  onOpen,
-  onMenu,
+  handlers,
 }: {
   entry: Entry
   view: 'grid' | 'list'
@@ -395,9 +426,7 @@ function Tile({
     commit: (value: string) => void
     cancel: () => void
   } | null
-  onSelect: () => void
-  onOpen: () => void
-  onMenu: (event: React.MouseEvent) => void
+  handlers: TileHandlers
 }) {
   const label = rename ? (
     <InlineInput
@@ -420,9 +449,9 @@ function Tile({
       aria-selected={selected}
       aria-label={entry.id}
       className={view === 'grid' ? styles.tile : styles.row}
-      onClick={onSelect}
-      onDoubleClick={onOpen}
-      onContextMenu={onMenu}
+      onClick={() => handlers.select(entry)}
+      onDoubleClick={() => handlers.open(entry)}
+      onContextMenu={(event) => handlers.menu(event, entry)}
     >
       <span
         className={styles.picture}
@@ -439,4 +468,4 @@ function Tile({
       </span>
     </div>
   )
-}
+})

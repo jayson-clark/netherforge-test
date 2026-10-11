@@ -108,16 +108,29 @@ export function resourceOf(path: string): ResourcePath | null {
   return { kind: found.kind, id: found.id, role: found.role, rest: found.rest ?? '' }
 }
 
-/** Every resource id of [kind] in a file list, sorted. */
+/** Each file list's ids by kind, worked out in one pass: the store's list is replaced, never changed. */
+const idsByList = new WeakMap<string[], Map<KindId, string[]>>()
+
+/** Every resource id of [kind] in a file list, sorted. Treat the answer as read-only: it's shared. */
 export function resourceIdsOf(paths: string[], kind: KindId): string[] {
-  const ids = new Set<string>()
-  for (const path of paths) {
-    const resource = resourceOf(path)
-    // A list holds files: one shaped like a folder is a stray in the kind's folder.
-    if (resource?.kind === kind && resource.role !== 'folder') ids.add(resource.id)
+  let byKind = idsByList.get(paths)
+  if (!byKind) {
+    const sets = new Map<KindId, Set<string>>()
+    for (const path of paths) {
+      const resource = resourceOf(path)
+      // A list holds files: one shaped like a folder is a stray in the kind's folder.
+      if (!resource || resource.role === 'folder') continue
+      let ids = sets.get(resource.kind)
+      if (!ids) sets.set(resource.kind, (ids = new Set()))
+      ids.add(resource.id)
+    }
+    byKind = new Map([...sets].map(([it, ids]) => [it, [...ids].sort()]))
+    idsByList.set(paths, byKind)
   }
-  return [...ids].sort()
+  return byKind.get(kind) ?? NO_IDS
 }
+
+const NO_IDS: string[] = []
 
 /** A pack sound file's project path: `resource_packs/<ns>/sounds/<file>`. */
 export const resourcePackSoundPath = (pack: string, file: string) =>

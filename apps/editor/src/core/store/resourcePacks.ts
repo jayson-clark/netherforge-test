@@ -226,7 +226,17 @@ export function createResourcePacks(
     })
   }
 
+  // What the packs are read from: the store's own objects, replaced on change. Most workspace
+  // changes (a tab, a selection, a problem) touch none of them, and reading every pack is costly.
+  let read: unknown[] = []
+
   const update = (state: Workspace) => {
+    const inputs = [state.files, state.docs, state.diskTexts, state.outline, state.packages]
+    if (inputs.every((it, index) => it === read[index])) {
+      measure(measuredTextures(store.getState().files), state.fileStamps, state.outline)
+      return
+    }
+    read = inputs
     const models = resourcePackModels(state)
     if (JSON.stringify(models) !== JSON.stringify(store.getState().models))
       store.setState({ models })

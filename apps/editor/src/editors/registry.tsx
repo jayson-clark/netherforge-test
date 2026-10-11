@@ -15,6 +15,7 @@ import { CENTITY_VIEW } from '@/editors/centity/view'
 import { CUTSCENE_VIEW } from '@/editors/cutscene/view'
 import { useThumbnails } from '@/editors/centity/thumbnails'
 import { DIALOG_VIEW } from '@/editors/dialog/view'
+import { BlockThumbnail } from '@/editors/block/BlockThumbnail'
 import { ItemThumbnail } from '@/editors/item/ItemThumbnail'
 import { LOOT_VIEW } from '@/editors/loot/view'
 import { MENU_VIEW } from '@/editors/menu/view'
@@ -104,6 +105,7 @@ export const KIND_CONTRIBUTIONS = {
     view: lazy(() =>
       import('@/editors/block/BlockEditor').then((m) => ({ default: m.BlockEditor })),
     ),
+    thumbnail: BlockThumbnail,
   },
   recipe: {
     title: 'Recipes',

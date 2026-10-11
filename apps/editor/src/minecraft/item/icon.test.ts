@@ -5,7 +5,7 @@ import {
   type ResourcePacksPreview,
 } from '@/core/format'
 import type { AssetLoader } from '@/minecraft/client/model'
-import { iconSource, resourcePackItemLook } from './icon'
+import { iconSource, resourcePackBlockLook, resourcePackItemLook } from './icon'
 
 const loader = (files: Record<string, unknown>): AssetLoader => ({
   json: async <T>(path: string) => (files[path] as T) ?? null,
@@ -57,6 +57,33 @@ describe('item icons', () => {
     })
     // A block look that isn't built (or a pack that doesn't compile) draws nothing of the pack's.
     expect(resourcePackItemLook('ui/ore', packs, none, 'shop')).toBeNull()
+  })
+
+  it("draws a block as its look: the cube's faces, or the look's model file", () => {
+    const withModel: Record<string, ResourcePackFile> = {
+      ui: { ...packs.ui, blocks: { ...packs.ui!.blocks, crystal: { model: 'crystal.json' } } },
+    }
+    const compiled = compileResourcePacks('shop', { ui: JSON.stringify(withModel.ui) }, undefined)
+    expect(resourcePackBlockLook('ui/ore', withModel, compiled, 'shop')).toMatchObject({
+      kind: 'block',
+      faces: { up: 'resource_packs/ui/textures/block/top.png' },
+    })
+    const models = {
+      ui: {
+        files: { 'crystal.json': { textures: { all: 'block/gem' } } },
+        textures: ['block/gem.png'],
+      },
+    }
+    expect(
+      resourcePackBlockLook('ui/crystal', withModel, compiled, 'shop', 'shop', models),
+    ).toEqual({
+      kind: 'shape',
+      model: { textures: { all: 'block/gem' } },
+      textures: { all: 'resource_packs/ui/textures/block/gem.png' },
+    })
+    // No look, or one that isn't there, is drawn as the game's note block: nothing of the pack's.
+    expect(resourcePackBlockLook(undefined, withModel, compiled, 'shop')).toBeNull()
+    expect(resourcePackBlockLook('ui/none', withModel, compiled, 'shop')).toBeNull()
   })
 
   it('falls back to the client model: sprites, cuboids, or nothing', async () => {

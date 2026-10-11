@@ -3,7 +3,10 @@
  * pack item drawn as a pack's block) to a small picture for slot icons, using the same baked geometry as the
  * viewport and the model's own `gui` display transform, the way the game
  * draws items in inventories. One shared offscreen renderer; results are
- * cached per asset set and item, and renders run one at a time.
+ * cached per asset set and item, and renders run one at a time. Textures are
+ * loaded once per URL and kept on the renderer (a gallery of block items draws
+ * the same few pictures hundreds of times); losing the WebGL context drops the
+ * renderer and its textures, and the next render makes them again.
  */
 import * as THREE from 'three'
 import type { ClientAssets } from './assets'
@@ -19,8 +22,17 @@ import {
 const SIZE = 64
 
 let renderer: THREE.WebGLRenderer | null | undefined
+/** The renderer's textures by URL; null for one that didn't load. */
+let textures = new Map<string, Promise<THREE.Texture | null>>()
 const cache = new WeakMap<ClientAssets, Map<string, Promise<string | null>>>()
 let queue: Promise<unknown> = Promise.resolve()
+
+function dropRenderer() {
+  for (const pending of textures.values()) void pending.then((texture) => texture?.dispose())
+  textures = new Map()
+  renderer?.dispose()
+  renderer = undefined
+}
 
 function sharedRenderer(): THREE.WebGLRenderer | null {
   if (renderer !== undefined) return renderer
@@ -28,6 +40,8 @@ function sharedRenderer(): THREE.WebGLRenderer | null {
     const canvas = document.createElement('canvas')
     canvas.width = SIZE
     canvas.height = SIZE
+    // A lost context draws nothing again: start over with a new one.
+    canvas.addEventListener('webglcontextlost', dropRenderer)
     renderer = new THREE.WebGLRenderer({ canvas, alpha: true, preserveDrawingBuffer: true })
     renderer.setSize(SIZE, SIZE, false)
     renderer.outputColorSpace = THREE.SRGBColorSpace
@@ -38,6 +52,15 @@ function sharedRenderer(): THREE.WebGLRenderer | null {
 }
 
 function loadTexture(url: string): Promise<THREE.Texture | null> {
+  let pending = textures.get(url)
+  if (!pending) {
+    pending = newTexture(url)
+    textures.set(url, pending)
+  }
+  return pending
+}
+
+function newTexture(url: string): Promise<THREE.Texture | null> {
   return new THREE.TextureLoader().loadAsync(url).then(
     (texture) => {
       texture.magFilter = THREE.NearestFilter
@@ -69,12 +92,11 @@ async function draw(
   root.matrixAutoUpdate = false
   root.matrix.copy(geometry.matrix)
   scene.add(root)
-  const textures = await Promise.all(
-    geometry.groups.map((group) => loadTexture(urlOf(group.texture))),
-  )
+  const maps = await Promise.all(geometry.groups.map((group) => loadTexture(urlOf(group.texture))))
+  if (gl !== renderer) return null
   geometry.groups.forEach((group, index) => {
     const material = new THREE.MeshBasicMaterial({
-      map: textures[index] ?? null,
+      map: maps[index] ?? null,
       vertexColors: true,
       transparent: true,
       alphaTest: 0.1,
@@ -88,7 +110,7 @@ async function draw(
   gl.setClearColor(0x000000, 0)
   gl.clear()
   gl.render(scene, camera)
-  const url = gl.domElement.toDataURL('image/png')
+  const url = gl.getContext().isContextLost() ? null : gl.domElement.toDataURL('image/png')
   for (const child of root.children) {
     const material = (child as THREE.Mesh).material as THREE.MeshBasicMaterial
     material.dispose()
@@ -108,9 +130,14 @@ function cached(
   }
   let pending = perAssets.get(key)
   if (!pending) {
-    pending = queue.then(render).catch(() => null)
-    queue = pending
-    perAssets.set(key, pending)
+    const mine = queue.then(render).catch(() => null)
+    queue = mine
+    perAssets.set(key, mine)
+    // Nothing drawn (a lost context, a texture still being written) is tried again next time.
+    void mine.then((url) => {
+      if (url === null && perAssets.get(key) === mine) perAssets.delete(key)
+    })
+    pending = mine
   }
   return pending
 }

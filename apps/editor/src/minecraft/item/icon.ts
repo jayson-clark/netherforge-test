@@ -63,6 +63,25 @@ export function resourcePackItemLook(
 }
 
 /**
+ * What a block's `model` reference (a pack's block look) draws as its item in a GUI: the
+ * look's faces as a cube, or its model file; null when it names no look that's built.
+ */
+export function resourcePackBlockLook(
+  model: string | undefined,
+  packs: Record<string, ResourcePackFile>,
+  compiled: ResourcePacksPreview,
+  namespace: string,
+  home: string = namespace,
+  models: Record<string, PackModels> = {},
+): Extract<IconSource, { kind: 'block' | 'shape' }> | null {
+  const faces = lookOf(compiled, model, namespace, home)?.faces
+  if (faces) return { kind: 'block', faces }
+  const ref = splitResourcePackRef('block_model', model, namespace, home)
+  const file = ref && packs[ref[0]]?.blocks?.[ref[1]]?.model
+  return ref && file ? packModelLook(ref[0], file, models) : null
+}
+
+/**
  * Model file [path] (under `models/`) of pack [pack] as a [IconSource] `shape`: its texture
  * variables that name a file under the pack's `textures/` bound to that file, as the built pack
  * binds them (format's `PackModels`); null when the file isn't there or doesn't parse.
@@ -94,13 +113,20 @@ export async function iconSource(
   models: Record<string, PackModels> = {},
 ): Promise<IconSource> {
   const look = resourcePackItemLook(item.itemModel, packs, compiled, namespace, home, models)
-  if (look) return look
-  if (!assets || !item.kind) return { kind: 'none' }
-  const model = await resolveModel(assets, await itemModelRef(assets, item.kind))
+  return look ?? vanillaIconSource(item.kind, assets)
+}
+
+/** What the client's own model for item [kind] draws in a GUI, without the project's packs. */
+export async function vanillaIconSource(
+  kind: string | undefined,
+  assets: AssetLoader | null,
+): Promise<IconSource> {
+  if (!assets || !kind) return { kind: 'none' }
+  const model = await resolveModel(assets, await itemModelRef(assets, kind))
   if (!model) return { kind: 'none' }
   if (isSpriteModel(model)) {
     const textures = spriteLayers(model)
     return textures.length > 0 ? { kind: 'sprite', textures } : { kind: 'none' }
   }
-  return model.elements.length > 0 ? { kind: 'model', item: item.kind } : { kind: 'none' }
+  return model.elements.length > 0 ? { kind: 'model', item: kind } : { kind: 'none' }
 }

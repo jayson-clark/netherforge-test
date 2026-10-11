@@ -337,7 +337,8 @@ export function classify(path: string): PathInfo | null {
   let found = classified.get(path)
   if (found === undefined) {
     found = JSON.parse(nf.classify(path)) as (ClassifiedPath & PathInfo) | null
-    if (classified.size > 10_000) classified.clear()
+    // Past what a large project has, so a pass over every file never empties it partway.
+    if (classified.size > 200_000) classified.clear()
     classified.set(path, found)
   }
   return found
