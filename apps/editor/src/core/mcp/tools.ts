@@ -19,6 +19,7 @@ import { z } from 'zod'
 import { BackendError, type Backend } from '@/core/backend/types'
 import { BLOCK_REGISTRY } from '@netherforge/format/constants'
 import type { BotAction, InstanceInfo, Problem, ReloadResult } from '@netherforge/format/types'
+import { sortRows, type ProfilerStore, type SortKey } from '@/core/store/profiler'
 import type { ConsoleLine, RunStore } from '@/core/store/run'
 import type { WorkspaceStore } from '@/core/store/workspace'
 import { BackendTransport } from './transport'
@@ -27,6 +28,7 @@ export interface ToolContext {
   backend: Backend
   workspace: WorkspaceStore
   run: RunStore
+  profiler: ProfilerStore
   /** Waits; tests pass a faster one. */
   sleep?: (ms: number) => Promise<void>
 }
@@ -35,7 +37,7 @@ export interface ToolContext {
 export class ToolError extends Error {}
 
 const INSTRUCTIONS =
-  "Tools for the NetherForge editor the user has open: the project's problems (the editor's validation and the dev server's), hot reload onto the running dev server, its console (script errors with file and line), server commands, spawning centities and game-data lookups. Project files are plain files: edit them directly, then reload and read the console. The file format and Lua API for this exact version are in the project's .netherforge/docs/README.md."
+  "Tools for the NetherForge editor the user has open: the project's problems (the editor's validation and the dev server's), hot reload onto the running dev server, its console (script errors with file and line), where its ticks' time goes, server commands, spawning centities and game-data lookups. Project files are plain files: edit them directly, then reload and read the console. The file format and Lua API for this exact version are in the project's .netherforge/docs/README.md."
 
 const sleep = (ctx: ToolContext, ms: number) =>
   (ctx.sleep ?? ((it) => new Promise((resolve) => setTimeout(resolve, it))))(ms)
@@ -78,6 +80,11 @@ function linesSince(ctx: ToolContext, since: number, minLevel: Level = 'debug'):
 
 /** Lets what a server action printed arrive on the console before reporting it. */
 const SETTLE_MS = 600
+
+/** Nanoseconds as milliseconds, to the microsecond. */
+const millis = (nanos: number) => Math.round(nanos / 1_000) / 1_000
+
+const SORTS = ['total', 'mean', 'max', 'calls'] as const satisfies readonly SortKey[]
 
 function problemCounts(problems: Problem[]) {
   const errors = problems.filter((it) => it.severity === 'error').length
@@ -245,6 +252,103 @@ function registerTools(server: McpServer, ctx: ToolContext) {
         lines: lines.slice(-limit),
         truncated: lines.length > limit,
         lastId: lastLineId(ctx),
+      }
+    }),
+  )
+
+  server.registerTool(
+    'get_profile',
+    {
+      title: 'Dev server profile',
+      description:
+        "Where the dev server's ticks go, as the editor's Profiler panel shows it: measured exactly by the plugin on every tick (not sampled), totalled since the last reset. `functions` is every function scripts ran (a handler by its event, a timer, a task, a command…) with its script and the file and line it starts on; `scopes` is every module and every centity instance's, window's or dialog's script. Times are milliseconds: `total`, `mean` per call, `max` the slowest call (a scope's slowest tick). `steps` is NetherForge's tick by step over the last ticks. To measure one thing: call with `reset: true`, do it (a bot, a command), wait a few seconds for the stream, then call again.",
+      inputSchema: {
+        sort: z
+          .enum(SORTS)
+          .optional()
+          .describe('What rows are ordered by, the largest first (default: total).'),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(200)
+          .optional()
+          .describe('At most this many functions and this many scopes (default: 20).'),
+        reset: z
+          .boolean()
+          .optional()
+          .describe('Forget the totals after reading them, so the next call measures afresh.'),
+      },
+      annotations: local({ readOnlyHint: false, destructiveHint: false, idempotentHint: false }),
+    },
+    answer(ctx, async ({ sort = 'total', limit = 20, reset = false }, ctx) => {
+      const data = ctx.profiler.getState()
+      // Totals outlive the server (as in the panel); with none yet, say why.
+      if (data.measured === 0) {
+        requireBridge(ctx)
+        if (!data.subscribed) {
+          throw new ToolError(
+            "Nothing measured yet: the dev server's profiler streams about once a second once the plugin connects. Try again in a moment.",
+          )
+        }
+      }
+      const { ticks, measured } = data
+      const steps: Record<string, number> = {}
+      for (const tick of ticks) {
+        for (const [name, nanos] of Object.entries(tick.phases))
+          steps[name] = (steps[name] ?? 0) + nanos
+      }
+      const worst = ticks.reduce<(typeof ticks)[number] | null>(
+        (slowest, tick) => (slowest === null || tick.nanos > slowest.nanos ? tick : slowest),
+        null,
+      )
+      const functions = sortRows(data.handlers.values(), sort)
+      const scopes = sortRows(data.scopes.values(), sort)
+      if (reset) ctx.profiler.getState().reset()
+      return {
+        ticks: measured,
+        meanTickMs: measured === 0 ? 0 : millis(data.nanos / measured),
+        recent: {
+          ticks: ticks.length,
+          stepsMeanMs: Object.fromEntries(
+            Object.entries(steps).map(([name, nanos]) => [name, millis(nanos / ticks.length)]),
+          ),
+          scriptsMeanMs: millis(
+            ticks.reduce((sum, it) => sum + (it.scripts ?? 0), 0) / Math.max(ticks.length, 1),
+          ),
+          worstTick: worst && {
+            tick: worst.tick,
+            ms: millis(worst.nanos),
+            steps: Object.fromEntries(
+              Object.entries(worst.phases).map(([name, nanos]) => [name, millis(nanos)]),
+            ),
+            topScopes: (worst.top ?? []).map((it) => ({ scope: it.scope, ms: millis(it.nanos) })),
+          },
+        },
+        functions: functions.slice(0, limit).map((row) => ({
+          script: row.script,
+          kind: row.kind,
+          where: row.source
+            ? row.source.line
+              ? `${row.source.file}:${row.source.line}`
+              : row.source.file
+            : null,
+          ...(row.scopes > 1 ? { scopes: row.scopes } : {}),
+          calls: row.calls,
+          totalMs: millis(row.nanos),
+          meanMs: millis(row.calls === 0 ? 0 : row.nanos / row.calls),
+          maxMs: millis(row.max),
+        })),
+        functionsTotal: functions.length,
+        scopes: scopes.slice(0, limit).map((row) => ({
+          scope: row.scope,
+          calls: row.calls,
+          totalMs: millis(row.nanos),
+          perTickMs: millis(measured === 0 ? 0 : row.nanos / measured),
+          maxTickMs: millis(row.max),
+        })),
+        scopesTotal: scopes.length,
+        reset,
       }
     }),
   )

@@ -90,6 +90,10 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Added
 
+- **`get_profile` MCP tool.** Coding agents read the dev server's profile as
+  the Profiler panel shows it: every function and scope scripts ran, sortable
+  by total, mean, worst call or calls, the tick by step, and the worst recent
+  tick, with a reset to measure one thing at a time.
 - **Pose a held item.** An item's `hold` (in item files, menus, dialogs, loot,
   and a script's `hold`) also takes `{ "animation": "trident" }`: the same
   endless use as `hold: true`, with the player posed as one of the game's uses
@@ -482,6 +486,9 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Fixed
 
+- The Profiler panel's Functions and Scopes tables were always empty in the
+  editor (the data arrived; the panel read it once and React's dev checks
+  draw twice).
 - Model displays (mobs, projectiles, any node showing a model look) were drawn
   turned a half turn about Y, so a model's nose on `+Z` showed on the node's
   `-Z`. They're now drawn as the docs describe: a model's `+Z` is the node's

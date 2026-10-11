@@ -1,4 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { MemoryBackend } from '@/core/backend/memory'
 import { AppProvider, type AppStores } from '@/state/providers'
@@ -16,11 +17,14 @@ beforeEach(async () => {
 
 afterEach(cleanup)
 
+// As main.tsx renders it: StrictMode renders twice, which catches props read only once.
 const show = () =>
   render(
-    <AppProvider app={app}>
-      <ProfilerPanel />
-    </AppProvider>,
+    <StrictMode>
+      <AppProvider app={app}>
+        <ProfilerPanel />
+      </AppProvider>
+    </StrictMode>,
   )
 
 const ticks = Array.from({ length: 20 }, (_, i) => ({

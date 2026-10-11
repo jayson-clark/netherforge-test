@@ -68,7 +68,7 @@ export function createApp(backend: Backend): AppStores {
   // The project's names for lua-language-server, in .netherforge/luals/.
   followLualsStubs(workspace, backend)
   // The MCP server for coding agents, answering from these stores (see core/mcp/tools.ts).
-  void connectMcp({ backend, workspace, run })
+  void connectMcp({ backend, workspace, run, profiler })
   // The workbench's layout, remembered per project.
   const layout = createLayout()
   followProject(layout, workspace)

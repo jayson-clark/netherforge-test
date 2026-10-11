@@ -80,9 +80,9 @@ export function ProfilerPanel() {
       {ticks.length > 0 && <ProfileTimeline ticks={ticks} />}
       <div className={styles.rows}>
         {view === 'functions' ? (
-          <Functions rows={handlers.values()} sort={sort} onSort={setSort} open={open} />
+          <Functions rows={[...handlers.values()]} sort={sort} onSort={setSort} open={open} />
         ) : (
-          <Scopes rows={scopes.values()} ticks={measured} sort={sort} onSort={setSort} />
+          <Scopes rows={[...scopes.values()]} ticks={measured} sort={sort} onSort={setSort} />
         )}
       </div>
     </div>
@@ -125,7 +125,7 @@ function Functions({
   onSort,
   open,
 }: {
-  rows: Iterable<HandlerRow>
+  rows: readonly HandlerRow[]
   sort: SortKey
   onSort: (key: SortKey) => void
   open: (source: SourceRef) => void
@@ -177,7 +177,7 @@ function Scopes({
   sort,
   onSort,
 }: {
-  rows: Iterable<ScopeRow>
+  rows: readonly ScopeRow[]
   ticks: number
   sort: SortKey
   onSort: (key: SortKey) => void

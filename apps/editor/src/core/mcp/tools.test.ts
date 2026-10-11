@@ -10,6 +10,7 @@ const TOOL_NAMES = [
   'get_problems',
   'reload',
   'get_console',
+  'get_profile',
   'run_command',
   'spawn_centity',
   'list_instances',
@@ -90,6 +91,8 @@ describe('MCP tools', () => {
     const invalid = [
       ['get_console', { limit: 0 }],
       ['get_console', { level: 'loud' }],
+      ['get_profile', { sort: 'slowest' }],
+      ['get_profile', { limit: 0 }],
       ['spawn_centity', {}],
       ['run_command', { command: '   ' }],
       ['lookup_game_data', { registry: 'biome' }],
@@ -217,6 +220,77 @@ describe('MCP tools', () => {
     expect(fresh.lines.map((it: { text: string }) => it.text)).toEqual(['[12:00:01 INFO]: three'])
     const warnings = await call('get_console', { level: 'warn' })
     expect(warnings.lines).toHaveLength(1)
+  })
+
+  it('reads the profile, sorted and limited, and resets it', async () => {
+    expect((await call('get_profile')).error).toMatch(/isn't running/)
+    await app.profiler.getState().connect()
+    backend.testConnect()
+    backend.testBridgeEvent('profiler', {
+      items: [
+        {
+          ticks: [
+            {
+              tick: 1,
+              nanos: 2_000_000,
+              phases: { timers: 500_000, world: 1_500_000 },
+              scripts: 1_000_000,
+            },
+            {
+              tick: 2,
+              nanos: 4_000_000,
+              phases: { timers: 1_000_000, world: 3_000_000 },
+              scripts: 3_000_000,
+              top: [{ scope: 'module shop', nanos: 3_000_000, calls: 1 }],
+            },
+          ],
+          handlers: [
+            {
+              script: 'centity tower',
+              kind: 'tick',
+              source: { file: 'centities/tower/script.lua', line: 9 },
+              calls: 4,
+              nanos: 4_000_000,
+              max: 1_500_000,
+              scopes: 2,
+            },
+            { script: 'module shop', kind: 'command', calls: 1, nanos: 3_000_000, max: 3_000_000 },
+          ],
+          scopes: [{ scope: 'module shop', nanos: 3_000_000, calls: 1, max: 3_000_000 }],
+        },
+      ],
+    })
+    const profile = await call('get_profile')
+    expect(profile).toMatchObject({
+      ticks: 2,
+      meanTickMs: 3,
+      recent: {
+        ticks: 2,
+        stepsMeanMs: { timers: 0.75, world: 2.25 },
+        scriptsMeanMs: 2,
+        worstTick: { tick: 2, ms: 4, topScopes: [{ scope: 'module shop', ms: 3 }] },
+      },
+      functions: [
+        {
+          script: 'centity tower',
+          kind: 'tick',
+          where: 'centities/tower/script.lua:9',
+          scopes: 2,
+          calls: 4,
+          totalMs: 4,
+          meanMs: 1,
+          maxMs: 1.5,
+        },
+        { script: 'module shop', kind: 'command', where: null, calls: 1, totalMs: 3 },
+      ],
+      functionsTotal: 2,
+      scopes: [{ scope: 'module shop', calls: 1, totalMs: 3, perTickMs: 1.5, maxTickMs: 3 }],
+      reset: false,
+    })
+    const byWorst = await call('get_profile', { sort: 'max', limit: 1, reset: true })
+    expect(byWorst.functions.map((it: { script: string }) => it.script)).toEqual(['module shop'])
+    expect(byWorst.functionsTotal).toBe(2)
+    expect(await call('get_profile')).toMatchObject({ ticks: 0, functions: [], scopes: [] })
   })
 
   it('runs commands through the bridge and spawns centities', async () => {
