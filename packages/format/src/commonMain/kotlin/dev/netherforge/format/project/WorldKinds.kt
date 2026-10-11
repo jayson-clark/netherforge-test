@@ -38,13 +38,11 @@ object StructureKind : FilesKind<StructureFile>(
 
     override fun of(id: String, files: List<String>) = StructureFile(id)
 
-    override fun ofCompanion(id: String, files: List<String>, text: String, problems: MutableList<Problem>): StructureFile {
-        val path = requireNotNull(companionPathOf(id))
-        return when (val parsed = StructureGenerationKind.parse(text, path)) {
+    override fun ofCompanion(id: String, files: List<String>, text: String, path: String, problems: MutableList<Problem>): StructureFile =
+        when (val parsed = StructureGenerationKind.parse(text, path)) {
             is CanonicalJson.Parsed.Failed -> StructureFile(id).also { problems += parsed.problem }
             is CanonicalJson.Parsed.Ok -> StructureFile(id, parsed.value)
         }
-    }
 
     override fun companion(value: StructureFile) =
         value.generation?.let { CanonicalJson.json.encodeToJsonElement(StructureGenerationKind.serializer, it) }
@@ -52,7 +50,7 @@ object StructureKind : FilesKind<StructureFile>(
     // The generation file's problems are its own, not the template's: reported at its path.
     override fun validate(value: StructureFile, ctx: ResourceContext) {
         val generation = value.generation ?: return
-        val sink = ProblemSink(requireNotNull(companionPathOf(ctx.id)))
+        val sink = ProblemSink(requireNotNull(companionPathOf(ctx.id, ctx.group)))
         StructureValidator.validate(generation, sink, ctx.game)
         ctx.report(sink.problems)
     }
@@ -60,7 +58,7 @@ object StructureKind : FilesKind<StructureFile>(
     /** A pool's pieces are the project's own structures. */
     override fun crossCheck(value: StructureFile, ctx: KindContext) {
         val generation = value.generation ?: return
-        val sink = ProblemSink(requireNotNull(companionPathOf(ctx.id)))
+        val sink = ProblemSink(requireNotNull(companionPathOf(ctx.id, ctx.group)))
         val structures = ctx.models(StructureKind)
         for ((name, pool) in generation.pools) {
             pool.elements.forEachIndexed { index, element ->

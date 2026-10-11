@@ -20,7 +20,7 @@ import {
   type TerrainStructureInput,
 } from '@/core/format'
 import { readProjectBytes } from '@/core/backend/projectBytes'
-import { mainFileOf, resourceIdsOf } from '@/core/paths'
+import { mainFileIn, resourceIdsOf } from '@/core/paths'
 import { isModel } from '@/core/store/documents'
 import { currentText, parseCached } from '@/minecraft/item/projectItems'
 import { useHomeNamespace } from '@/state/useResourcePacks'
@@ -78,7 +78,7 @@ function useStructures(names: string[]): {
   const { backend } = useApp()
   const files = useWorkspace((s) => s.files)
   const stamps = useWorkspace((s) => s.fileStamps)
-  const paths = names.map((name) => mainFileOf('structure', name))
+  const paths = names.map((name) => mainFileIn(files, 'structure', name))
   const key = paths
     .map((path) => `${path}@${files.includes(path) ? (stamps[path] ?? 0) : '-'}`)
     .join('|')
@@ -158,7 +158,7 @@ function useHeightChoices(terrain: string): HeightChoice[] {
     const dimensions: Record<string, DimensionTypeFile | null> = {}
     for (const id of resourceIdsOf(files, 'dimension_type')) {
       dimensions[id] = parseCached<DimensionTypeFile>(
-        currentText(texts, mainFileOf('dimension_type', id)),
+        currentText(texts, mainFileIn(files, 'dimension_type', id)),
       )
     }
     return heightChoices(manifest, home, terrain, dimensions)

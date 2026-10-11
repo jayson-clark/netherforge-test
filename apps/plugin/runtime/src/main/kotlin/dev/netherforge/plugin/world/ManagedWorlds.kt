@@ -218,7 +218,7 @@ internal class ManagedWorlds(
         val known = snapshot()?.models(MapKind).orEmpty()
         if (map !in known) throw LuaApiException(notInProject("map", map, known.keys.toList()))
         checkNewName(name)
-        val work = ops.copy(project().resolve(known.getValue(map).folder).normalize(), name)
+        val work = ops.copy(project().resolve(snapshot()!!.placeOf(MapKind, map).location).normalize(), name)
         copying += name
         own(name, Store.OwnedWorld(NORMAL))
         return async.workers.submit(files) { work.run() }.handleAsync({ _, failure ->

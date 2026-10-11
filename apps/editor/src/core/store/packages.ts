@@ -373,14 +373,20 @@ export function packagesSlice({ backend, get, set }: SliceArgs): PackagesState &
     },
 
     async copyFromPackage(namespace, kind, id, to) {
-      const location = get().outline?.packages?.[namespace]?.location
+      const pkg = get().outline?.packages?.[namespace]
+      const location = pkg?.location
       const home = namespaceOf(get())
       if (location === undefined || home === null) return false
       const target = locationOf(kind, to)
       return get().transact(`Copy ${namespace}:${id} into the project as ${to}`, async () => {
         await get().touch(target)
         try {
-          await backend.packageCopy(location, locationOf(kind, id), target)
+          // From wherever the package keeps it (its group folders) into the kind's own folder.
+          await backend.packageCopy(
+            location,
+            locationOf(kind, id, pkg?.groups?.[kind]?.[id]),
+            target,
+          )
         } catch (error) {
           get().notify('error', `Couldn't copy ${namespace}:${id}: ${errorText(error)}`)
           return false

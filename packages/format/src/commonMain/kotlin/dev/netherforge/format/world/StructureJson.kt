@@ -80,7 +80,7 @@ object StructureJson {
             templates += pieces
         }
         for (key in templates) {
-            val path = StructureKind.pathOf(key.relativeTo(ctx.home).text)
+            val path = ctx.snapshot.placeOf(StructureKind, key.relativeTo(ctx.home).text).path
             out["data/${key.namespace}/$TEMPLATE_FOLDER/${key.path}.nbt"] = DatapackEntry.Copy(path)
         }
         return out

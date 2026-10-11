@@ -86,7 +86,7 @@ class LootTables(
 
     override fun reload(kind: KindSpec<*, *>, ids: Set<String>, batch: ReloadBatch) {
         for (id in ids) {
-            batch.resource(Resource(LootTableKind, id), LootTableKind.pathOf(id), batch.snapshot.running(LootTableKind)[id]) { next ->
+            batch.resource(Resource(LootTableKind, id), batch.snapshot.running(LootTableKind)[id]) { next ->
                 if (next == null) tables.remove(id) else tables[id] = next
                 0
             }

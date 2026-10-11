@@ -8,8 +8,9 @@ import { PACKAGE_STUBS } from './stubs'
 /**
  * The arguments NetherForge's LuaLS plugin takes: each scripted kind whose
  * resources are folders with a JSON main file naming their script
- * (`centities=centity.json`), from format's kind table; and where the
- * packages' module stubs are (`packages=.netherforge/luals/packages`).
+ * (`centities=centity.json`), from format's kind table; where modules are
+ * (`modules=modules`); and where the packages' module stubs are
+ * (`packages=.netherforge/luals/packages`).
  */
 export const pluginArgs = (): string[] => [
   ...(Object.keys(KINDS) as KindId[]).flatMap((kind) => {
@@ -18,13 +19,15 @@ export const pluginArgs = (): string[] => [
       ? [`${folder}=${main}`]
       : []
   }),
+  // Where modules are, group folders and all, for `require("greeter")`.
+  `modules=${KINDS.module.folder}`,
   // Where the packages' exported modules' stubs are, for `require("library:greetings")`.
   `packages=${PACKAGE_STUBS}`,
 ]
 
 export function lualsSettings(plugin: string) {
   return {
-    // `require` beside a resource's script, as the server resolves it.
+    // `require` beside a resource's script and of a module in a group folder, as the server resolves it.
     runtime: { plugin, pluginArgs: pluginArgs() },
     // LuaLS would otherwise offer to download addons and ask about third-party libraries.
     addonManager: { enable: false },

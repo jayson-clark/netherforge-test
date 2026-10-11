@@ -57,7 +57,7 @@ object DatapackKind : DocumentResourceKind<PackMeta, CompiledDatapack>(
     override val datapack = DatapackFiles<CompiledDatapack> { key, value, ctx ->
         if (!ctx.passThrough) return@DatapackFiles emptyMap()
         val name = key.relativeTo(ctx.home).text
-        value.filesFor(ctx.packFormat).mapValues { (_, path) -> DatapackEntry.Copy(fileOf(name, path.file)) }
+        value.filesFor(ctx.packFormat).mapValues { (_, path) -> DatapackEntry.Copy(ctx.snapshot.placeOf(this, name).file(path.file)) }
     }
 
     /**

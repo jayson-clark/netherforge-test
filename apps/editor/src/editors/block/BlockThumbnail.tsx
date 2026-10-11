@@ -1,7 +1,7 @@
 /** A block's picture: its look as the inventory draws a block's item, as it is now (unsaved edits too). */
 import { useMemo } from 'react'
 import type { BlockFile } from '@/core/format'
-import { mainFileOf } from '@/core/paths'
+import { mainFileIn } from '@/core/paths'
 import type { ThumbnailProps } from '@/editors/contributions'
 import { LookIcon, useLookPicture } from '@/minecraft/item/ItemIcon'
 import { resourcePackBlockLook } from '@/minecraft/item/icon'
@@ -16,7 +16,7 @@ import {
 } from '@/state/useResourcePacks'
 
 export function BlockThumbnail({ id, size, fallback }: ThumbnailProps) {
-  const text = useWorkspace((s) => currentText(s, mainFileOf('block', id)))
+  const text = useWorkspace((s) => currentText(s, mainFileIn(s.files, 'block', id)))
   const model = parseCached<BlockFile>(text)?.model
   const packs = useResourcePackFiles()
   const compiled = useCompiledResourcePacks()

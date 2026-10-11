@@ -140,30 +140,30 @@
     "target": "basic:ruby_ore"
   },
   {
-    "file": "items/ruby_pick/item.json",
+    "file": "items/(tools)/ruby_pick/item.json",
     "path": "$.canBreak[0]",
     "kind": "adventure_block",
     "text": "ruby_ore",
     "target": "basic:ruby_ore"
   },
   {
-    "file": "items/ruby_pick/item.json",
+    "file": "items/(tools)/ruby_pick/item.json",
     "path": "$.canBreak[1]",
     "kind": "adventure_block",
     "text": "#minecraft:planks"
   },
   {
-    "file": "items/ruby_pick/item.json",
+    "file": "items/(tools)/ruby_pick/item.json",
     "path": "$.canPlaceOn[0]",
     "kind": "adventure_block",
     "text": "*"
   },
   {
-    "file": "items/ruby_wand/item.json",
+    "file": "items/(tools)/ruby_wand/item.json",
     "path": "$.script.file",
     "kind": "script",
     "text": "script.lua",
-    "target": "items/ruby_wand/script.lua"
+    "target": "items/(tools)/ruby_wand/script.lua"
   },
   {
     "file": "recipes/ruby.json",

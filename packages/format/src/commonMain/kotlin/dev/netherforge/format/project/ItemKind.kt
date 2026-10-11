@@ -46,7 +46,7 @@ object ItemKind : DocumentResourceKind<ItemFile, ItemFile>(
             ProblemCodes.ITEM_KIND_MISMATCH,
             "Item \"$reference\" is a $itemKind, not a $kind: leave kind out",
             "$at.kind",
-            listOf(Location(pathOf(key.path), "$.kind"))
+            listOf(Location(ctx.placeOf(this, key.path).path, "$.kind"))
         )
     }
 

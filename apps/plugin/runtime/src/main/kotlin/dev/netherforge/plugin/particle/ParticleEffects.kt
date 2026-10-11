@@ -139,12 +139,11 @@ class ParticleEffects(
 
     override fun reload(kind: KindSpec<*, *>, ids: Set<String>, batch: ReloadBatch) {
         for (id in ids) {
-            val file = ParticleEffectKind.pathOf(id)
-            val exists = batch.exists(file)
+            val exists = batch.exists(Resource(ParticleEffectKind, id))
             val next = batch.snapshot.running(ParticleEffectKind)[id]
             // A file with errors keeps its last good version playing; noted, so playing one that never had one can say why.
             if (next == null && exists) reload(id, null, exists = true, problem = effectProblem(batch.snapshot, id))
-            batch.resource(Resource(ParticleEffectKind, id), file, next) { reload(id, it, exists, null) }
+            batch.resource(Resource(ParticleEffectKind, id), next) { reload(id, it, exists, null) }
         }
     }
 
@@ -156,8 +155,8 @@ class ParticleEffects(
 
     /** The first error in [id]'s effect file, or null when it has none. */
     private fun effectProblem(snapshot: ProjectSnapshot, id: String): String? {
-        val file = ParticleEffectKind.pathOf(id)
-        return snapshot.problems.firstOrNull { it.file == file && it.severity == Severity.ERROR }?.message
+        val resource = Resource(ParticleEffectKind, id)
+        return snapshot.problems.firstOrNull { it.severity == Severity.ERROR && Resource.mainOf(it.file) == resource }?.message
     }
 
     /**
@@ -427,7 +426,11 @@ class ParticleEffects(
      * first skipped effect's file until it's over.
      */
     private fun budgetWarning(message: String, kinds: List<String>) {
-        val file = kinds.firstOrNull()?.let { ParticleEffectKind.pathOf(it) }
+        // The first skipped effect's file, in whichever group folder it is.
+        val file = kinds.firstOrNull()?.let { id ->
+            Resource(ParticleEffectKind, id).let { effect -> projectFiles().firstOrNull { Resource.mainOf(it) == effect } }
+                ?: ParticleEffectKind.pathOf(id)
+        }
         platform.log.warn(message)
         log.send(ScriptError(message, file?.let { SourceRef(it, null) }, null))
         val problem = ProblemCodes.PARTICLES_BUDGET.at(

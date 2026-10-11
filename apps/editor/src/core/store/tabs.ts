@@ -6,6 +6,7 @@
 import { KINDS, type BinaryKindId, type EditedKind } from '@/core/format'
 import {
   isBinaryKind,
+  locationIn,
   locationOf,
   mainFileOf,
   MODULE_ENTRY,
@@ -102,8 +103,11 @@ export interface TabsState {
 export interface TabsActions {
   /** Opens [path] in the right kind of tab and optionally puts the caret somewhere. */
   openFile(path: string, at?: { line?: number; column?: number; jsonPath?: string }): Promise<void>
-  /** Opens a structure's or map's screen (there may be no file yet: it's captured from there). */
-  openBinary(kind: BinaryKindId, id: string): void
+  /**
+   * Opens a structure's or map's screen (there may be no file yet: it's captured from there), in [group] folders
+   * when given, else where the project has it.
+   */
+  openBinary(kind: BinaryKindId, id: string, group?: string): void
   /** Opens the editor's settings in a tab of their own, on [page] if given. */
   openSettings(page?: string): void
   activate(tabId: string): void
@@ -132,15 +136,15 @@ export function tabsSlice({ get, set }: SliceArgs): TabsState & TabsActions {
       const resource = resourceOf(path)
       // Minecraft's own files are never read as text: a structure or a map gets its own screen.
       if (resource && isBinaryKind(resource.kind))
-        return get().openBinary(resource.kind, resource.id)
+        return get().openBinary(resource.kind, resource.id, resource.group)
       // A problem about a resource folder rather than a file: a module opens on the file it runs first.
       if (resource?.role === 'folder')
-        return get().openFile(opensAs(resource.kind, resource.id), at)
+        return get().openFile(opensAs(resource.kind, resource.id, resource.group), at)
       // A module without an `init.lua` opens on one of the files it does have.
       if (resource && KINDS[resource.kind].contents === 'lua' && resource.rest === MODULE_ENTRY) {
         const { files } = get()
         if (!files.includes(path)) {
-          const folder = `${locationOf(resource.kind, resource.id)}/`
+          const folder = `${locationOf(resource.kind, resource.id, resource.group)}/`
           const lua = files.filter((it) => it.startsWith(folder) && it.endsWith('.lua'))
           // Its top-level files before those in subfolders, each in order.
           const depth = (it: string) => it.split('/').length
@@ -155,8 +159,9 @@ export function tabsSlice({ get, set }: SliceArgs): TabsState & TabsActions {
       if (at) get().requestFocus({ path, ...at })
     },
 
-    openBinary(kind, id) {
-      const path = locationOf(kind, id)
+    openBinary(kind, id, group) {
+      const path =
+        group === undefined ? locationIn(get().files, kind, id) : locationOf(kind, id, group)
       show({ id: tabIdOf(kind, path), type: kind, path })
     },
 
@@ -182,7 +187,7 @@ export function tabsSlice({ get, set }: SliceArgs): TabsState & TabsActions {
       const mainOf = (path: string) => {
         const resource = resourceOf(path)
         return resource && KINDS[resource.kind].contents === 'json'
-          ? mainFileOf(resource.kind, resource.id)
+          ? mainFileOf(resource.kind, resource.id, resource.group)
           : undefined
       }
       const shown = (path: string) =>

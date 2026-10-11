@@ -128,6 +128,14 @@ object ProblemCodes {
         error("project.setting-choices", SETTINGS, "A choice setting offers no choices, an empty one, or one twice.")
     val PROJECT_SETTING_DEFAULT = error("project.setting-default", SETTINGS, "A setting's `default` isn't one of its own values.")
     val PROJECT_ID = error("project.id", PROJECT, "A resource's folder or file name isn't an id, so it's ignored.")
+    val PROJECT_GROUP =
+        error("project.group", PROJECT, "A group folder's name isn't an id in parentheses, so everything in it is ignored.")
+    val PROJECT_DUPLICATE_ID =
+        error(
+            "project.duplicate-id",
+            PROJECT,
+            "Two resources of one kind have the same id in different group folders; only the first is read."
+        )
     val PROJECT_MISSING_FILE = warning("project.missing-file", PROJECT, "A resource folder has no main file, so it's ignored.")
     val PROJECT_STRAY_FILE =
         warning("project.stray-file", PROJECT, "A file sits where no resource of the folder's kind can be, so it's ignored.")

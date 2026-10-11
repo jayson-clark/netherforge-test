@@ -21,7 +21,7 @@ object ModuleKind : FilesKind<ModuleInfo>("module", "modules", Layout.Folder(nul
             if (!Names.isLuaFile(file)) {
                 ctx.problem(
                     ProblemCodes.MODULE_FILE_NAME,
-                    fileOf(value.id, file),
+                    ctx.pathIn(this, file),
                     "Module files must be named with letters, digits and _ so require() can reach them"
                 )
             }

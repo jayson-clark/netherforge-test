@@ -7,8 +7,15 @@
  * Cmd+Backspace) deletes, and the context menu has all of them. Typing in
  * the search box looks across every kind. Below the kinds, the packages the
  * project depends on, each shown read-only (`Dependencies.tsx`).
+ *
+ * A kind's group folders (`items/(weapons)/`) show as folder tiles before its
+ * resources: opening one shows what's in it, the breadcrumb (or Backspace)
+ * goes back up, and a resource dropped on a group (or picked "Move to
+ * group…") moves there, keeping its id.
  */
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { KindId } from '@/core/format'
+import { folderOf, groupName, ID_PATTERN } from '@/core/paths'
 import { Header, ListBox, ListBoxItem, ListBoxSection } from 'react-aria-components'
 import { useApp, useLayout, useWorkspace } from '@/state/providers'
 import { LIMITS } from '@/core/store/layout'
@@ -18,21 +25,47 @@ import { Button, IconButton } from '@/ui/Button'
 import { openMenu, type MenuItem } from '@/ui/ContextMenu'
 import { cx } from '@/ui/cx'
 import { Bar, Spacer } from '@/ui/layout'
+import { Icon } from '@/ui/Icon'
 import { InlineInput } from '@/ui/Tree'
 import { fuzzyMatch } from '../quickOpen/fuzzy'
-import { idProblem, resourceActions } from '../resourceActions'
+import { groupPath, idProblem, resourceActions } from '../resourceActions'
 import { PackageView, templateMenu } from './Dependencies'
 import styles from './Explorer.module.css'
 import { EXPLORER_FOLDERS, EXPLORER_SECTIONS, folderByKey, type ExplorerFolder } from './folders'
 import { FolderIcon, Thumbnail } from './Thumbnail'
 
+/**
+ * A tile: a resource ([id] in its [group] folders), or a group folder ([group], `(weapons)/(swords)`, whose own
+ * name is [id], `swords`).
+ */
 interface Entry {
+  type: 'resource' | 'group'
   folder: ExplorerFolder
   id: string
+  group: string
   key: string
 }
 
 const keyOf = (folder: ExplorerFolder, id: string) => `${folder.key}:${id}`
+const groupKeyOf = (folder: ExplorerFolder, group: string) => `${folder.key}:group:${group}`
+
+/** What a dragged resource tile carries, so a group tile can take it. */
+const DRAG_TYPE = 'application/x-netherforge-resource'
+
+/** The group folders right inside [parent] (empty: the kind's own folder), among [all]. */
+const childGroups = (all: string[], parent: string) =>
+  all.filter((it) =>
+    parent
+      ? it.startsWith(`${parent}/`) && !it.slice(parent.length + 1).includes('/')
+      : !it.includes('/'),
+  )
+
+/** The group folder that holds [group] (`(weapons)` for `(weapons)/(swords)`), empty at the top. */
+const parentOf = (group: string) =>
+  group.includes('/') ? group.slice(0, group.lastIndexOf('/')) : ''
+
+/** A group folder's own name: `swords` for `(weapons)/(swords)`. */
+const ownName = (group: string) => groupName(group.slice(group.lastIndexOf('/') + 1))
 
 /** A dependency's id in the kind list, beside the kinds' (`package:library`). */
 const PACKAGE_TAB = 'package:'
@@ -52,21 +85,54 @@ export function Explorer() {
   const shownPackage = pkg !== null ? packages?.[pkg] : undefined
   const [selected, setSelected] = useState<string | null>(null)
   const [renaming, setRenaming] = useState<string | null>(null)
+  /** The group folder open in each kind (`(weapons)`), the kind's own folder when it has none. */
+  const [openGroups, setOpenGroups] = useState<Partial<Record<KindId, string>>>({})
   const items = useRef<HTMLDivElement>(null)
   const folder = folderByKey(folderKey)
   const actions = resourceActions(workspace)
   const ws = () => workspace.getState()
+  const allGroups = folder.groups(files)
+  // A group the files no longer have (its last resource moved out) shows the kind's own folder.
+  const wanted = openGroups[folder.key] ?? ''
+  const group = wanted && allGroups.includes(wanted) ? wanted : ''
+  const openGroup = (next: string) => {
+    setOpenGroups((it) => ({ ...it, [folder.key]: next }))
+    setSelected(null)
+  }
 
   const entries: Entry[] = useMemo(() => {
-    if (!query.trim())
-      return folder.ids(files).map((id) => ({ folder, id, key: keyOf(folder, id) }))
+    if (!query.trim()) {
+      const groups = childGroups(allGroups, group).map((it): Entry => ({
+        type: 'group',
+        folder,
+        id: ownName(it),
+        group: it,
+        key: groupKeyOf(folder, it),
+      }))
+      const resources = folder
+        .ids(files)
+        .filter((id) => folder.groupOf(files, id) === group)
+        .map((id): Entry => ({ type: 'resource', folder, id, group, key: keyOf(folder, id) }))
+      return [...groups, ...resources]
+    }
     return EXPLORER_FOLDERS.flatMap((it) =>
       it.ids(files).flatMap((id) => {
         const match = fuzzyMatch(query, id)
-        return match ? [{ folder: it, id, key: keyOf(it, id), score: match.score }] : []
+        return match
+          ? [
+              {
+                type: 'resource' as const,
+                folder: it,
+                id,
+                group: it.groupOf(files, id),
+                key: keyOf(it, id),
+                score: match.score,
+              },
+            ]
+          : []
       }),
     ).sort((a, b) => b.score - a.score)
-  }, [query, folder, files])
+  }, [query, folder, files, allGroups, group])
 
   // Counted once per change by every folder a path is in, not once per tile: a kind can hold thousands.
   const errors = useMemo(
@@ -82,10 +148,17 @@ export function Explorer() {
       ),
     [docs],
   )
-  const errorsIn = (entry: Entry) => errors.get(entry.folder.location(entry.id)) ?? 0
-  const dirtyIn = (entry: Entry) => dirty.has(entry.folder.location(entry.id))
+  const locationOf = (entry: Entry) =>
+    entry.type === 'group'
+      ? folderOf(entry.folder.key, entry.group)
+      : entry.folder.location(entry.id, entry.group)
+  const errorsIn = (entry: Entry) => errors.get(locationOf(entry)) ?? 0
+  const dirtyIn = (entry: Entry) => dirty.has(locationOf(entry))
 
-  const open = (entry: Entry) => void ws().openFile(entry.folder.openPath(entry.id))
+  const open = (entry: Entry) => {
+    if (entry.type === 'group') return openGroup(entry.group)
+    void ws().openFile(entry.folder.openPath(entry.id, entry.group))
+  }
   const select = (key: string | null) => setSelected(key)
   const focusItems = () => items.current?.focus()
 
@@ -101,18 +174,57 @@ export function Explorer() {
     focusItems()
   }
   const create = async (target: ExplorerFolder) => {
-    const id = await actions.create(target)
+    const id = await actions.create(target, group)
     if (id) setSelected(keyOf(target, id))
   }
+  const createGroup = async () => {
+    const made = await actions.createGroup(folder, group)
+    if (made) setSelected(groupKeyOf(folder, made))
+  }
+  const removeGroup = async (entry: Entry) => {
+    if (await actions.removeGroup(entry.folder, entry.group)) setSelected(null)
+    focusItems()
+  }
+  /** Moves the resource [id] of the shown kind into [to] (group folders; empty for the kind's own folder). */
+  const moveTo = async (id: string, to: string) => {
+    await actions.move(folder, id, to)
+    focusItems()
+  }
 
-  const menuFor = (entry: Entry): MenuItem[] => [
-    { label: 'Open', shortcut: 'Enter', run: () => open(entry) },
-    { label: 'Rename', shortcut: 'F2', run: () => setRenaming(entry.key) },
-    { label: 'Duplicate', shortcut: 'Mod+D', run: () => void duplicate(entry) },
-    { label: 'Copy id', run: () => void navigator.clipboard?.writeText(entry.id) },
-    'separator',
-    { label: 'Delete', shortcut: 'Mod+Backspace', danger: true, run: () => void remove(entry) },
-  ]
+  const menuFor = (entry: Entry): MenuItem[] =>
+    entry.type === 'group'
+      ? [
+          { label: 'Open', shortcut: 'Enter', run: () => open(entry) },
+          { label: 'Rename group', shortcut: 'F2', run: () => setRenaming(entry.key) },
+          'separator',
+          {
+            label: 'Delete group',
+            shortcut: 'Mod+Backspace',
+            danger: true,
+            run: () => void removeGroup(entry),
+          },
+        ]
+      : [
+          { label: 'Open', shortcut: 'Enter', run: () => open(entry) },
+          { label: 'Rename', shortcut: 'F2', run: () => setRenaming(entry.key) },
+          { label: 'Duplicate', shortcut: 'Mod+D', run: () => void duplicate(entry) },
+          ...(entry.folder.groupable
+            ? [
+                {
+                  label: 'Move to group…',
+                  run: () => void actions.moveAsking(entry.folder, entry.id),
+                },
+              ]
+            : []),
+          { label: 'Copy id', run: () => void navigator.clipboard?.writeText(entry.id) },
+          'separator',
+          {
+            label: 'Delete',
+            shortcut: 'Mod+Backspace',
+            danger: true,
+            run: () => void remove(entry),
+          },
+        ]
 
   const columns = () => {
     if (view === 'list' || !items.current) return 1
@@ -120,11 +232,20 @@ export function Explorer() {
     return Math.max(1, Math.floor((width + 6) / (tileSize + 6)))
   }
 
+  const searching = query.trim().length > 0
   const cursor = entries.findIndex((it) => it.key === selected)
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (renaming || event.target !== event.currentTarget) return
     const entry = entries[cursor]
     const mod = event.metaKey || event.ctrlKey
+    // Backspace alone (Cmd+Backspace deletes) goes up out of a group folder.
+    if (event.key === 'Backspace' && !mod && group && !searching) {
+      event.preventDefault()
+      const from = group
+      openGroup(parentOf(group))
+      setSelected(groupKeyOf(folder, from))
+      return
+    }
     const move = (to: number) => {
       event.preventDefault()
       const next = entries[Math.max(0, Math.min(entries.length - 1, to))]
@@ -146,6 +267,11 @@ export function Explorer() {
     } else if (event.key === 'F2') {
       event.preventDefault()
       setRenaming(entry.key)
+    } else if (entry.type === 'group') {
+      if (event.key === 'Delete' || (event.key === 'Backspace' && mod)) {
+        event.preventDefault()
+        void removeGroup(entry)
+      }
     } else if (event.key === 'Delete' || (event.key === 'Backspace' && mod)) {
       event.preventDefault()
       void remove(entry)
@@ -155,12 +281,10 @@ export function Explorer() {
     }
   }
 
-  const searching = query.trim().length > 0
-
   // The tiles' handlers stay the same functions, so a tile renders again only when what it shows changes.
-  const latest = useRef({ select, focusItems, open, menuFor })
+  const latest = useRef({ select, focusItems, open, menuFor, moveTo })
   useLayoutEffect(() => {
-    latest.current = { select, focusItems, open, menuFor }
+    latest.current = { select, focusItems, open, menuFor, moveTo }
   })
   const handlers: TileHandlers = useMemo(
     () => ({
@@ -173,6 +297,7 @@ export function Explorer() {
         latest.current.select(entry.key)
         openMenu(event, latest.current.menuFor(entry))
       },
+      drop: (id, to) => void latest.current.moveTo(id, to),
     }),
     [],
   )
@@ -272,7 +397,11 @@ export function Explorer() {
       ) : (
         <div className={styles.content}>
           <Bar>
-            <span className={styles.title}>{searching ? 'Search results' : folder.title}</span>
+            {searching ? (
+              <span className={styles.title}>Search results</span>
+            ) : (
+              <Breadcrumb folder={folder} group={group} onOpen={openGroup} onDrop={handlers.drop} />
+            )}
             <Spacer />
             <input
               type="search"
@@ -310,10 +439,20 @@ export function Explorer() {
                 layout.getState().set({ explorerView: view === 'grid' ? 'list' : 'grid' })
               }
             />
+            {folder.groupable && !searching && (
+              <Button
+                size="small"
+                icon="newFolder"
+                aria-label={group ? `New group in ${groupPath(group)}` : 'New group'}
+                onClick={() => void createGroup()}
+              >
+                New group
+              </Button>
+            )}
             <Button
               size="small"
               icon="plus"
-              aria-label={`New ${folder.one}`}
+              aria-label={group ? `New ${folder.one} in ${groupPath(group)}` : `New ${folder.one}`}
               onClick={() => void create(folder)}
             >
               New {folder.one}
@@ -323,6 +462,13 @@ export function Explorer() {
             <div className={styles.empty}>
               {searching ? (
                 <p>Nothing matches “{query}”.</p>
+              ) : group ? (
+                <>
+                  <p>This group is empty.</p>
+                  <Button variant="primary" icon="plus" onClick={() => void create(folder)}>
+                    Create a {folder.one}
+                  </Button>
+                </>
               ) : (
                 <>
                   <p>No {folder.title.toLowerCase()} yet.</p>
@@ -354,25 +500,50 @@ export function Explorer() {
                   entry={entry}
                   view={view}
                   size={tileSize}
-                  subtitle={searching ? entry.folder.one : undefined}
+                  subtitle={
+                    searching
+                      ? entry.group
+                        ? `${entry.folder.one} · ${groupPath(entry.group)}`
+                        : entry.folder.one
+                      : undefined
+                  }
+                  location={locationOf(entry)}
                   selected={entry.key === selected}
                   errors={errorsIn(entry)}
                   dirty={dirtyIn(entry)}
                   rename={
-                    renaming === entry.key
-                      ? {
-                          validate: (value) => idProblem(value, entry.folder.ids(files), entry.id),
-                          commit: (value) => {
-                            setRenaming(null)
-                            setSelected(keyOf(entry.folder, value))
-                            void actions.rename(entry.folder, entry.id, value).then(focusItems)
-                          },
-                          cancel: () => {
-                            setRenaming(null)
-                            focusItems()
-                          },
-                        }
-                      : null
+                    renaming !== entry.key
+                      ? null
+                      : entry.type === 'group'
+                        ? {
+                            validate: (value) => groupNameProblem(value, allGroups, entry.group),
+                            commit: (value) => {
+                              setRenaming(null)
+                              void actions
+                                .renameGroup(entry.folder, entry.group, value)
+                                .then((next) => {
+                                  if (next) setSelected(groupKeyOf(entry.folder, next))
+                                  focusItems()
+                                })
+                            },
+                            cancel: () => {
+                              setRenaming(null)
+                              focusItems()
+                            },
+                          }
+                        : {
+                            validate: (value) =>
+                              idProblem(value, entry.folder.ids(files), entry.id),
+                            commit: (value) => {
+                              setRenaming(null)
+                              setSelected(keyOf(entry.folder, value))
+                              void actions.rename(entry.folder, entry.id, value).then(focusItems)
+                            },
+                            cancel: () => {
+                              setRenaming(null)
+                              focusItems()
+                            },
+                          }
                   }
                   handlers={handlers}
                 />
@@ -401,6 +572,95 @@ interface TileHandlers {
   select: (entry: Entry) => void
   open: (entry: Entry) => void
   menu: (event: React.MouseEvent, entry: Entry) => void
+  /** A resource tile of the shown kind (its [id]) was dropped on group folder [to] (empty: the kind's own folder). */
+  drop: (id: string, to: string) => void
+}
+
+/** Why [value] can't rename group folder [group] among [all] (its siblings' names are taken), or null. */
+function groupNameProblem(value: string, all: string[], group: string): string | null {
+  if (!ID_PATTERN.test(value)) return idProblem(value, [])
+  const parent = parentOf(group)
+  const taken = childGroups(all, parent)
+    .filter((it) => it !== group)
+    .map(ownName)
+  return taken.includes(value) ? 'There is a group by that name here' : null
+}
+
+/** What a drag carries when it's a resource of [kind]: its id; null for anything else. */
+function draggedId(event: React.DragEvent, kind: KindId): string | null {
+  const data = event.dataTransfer.getData(DRAG_TYPE)
+  if (!data) return null
+  try {
+    const it = JSON.parse(data) as { kind?: string; id?: string }
+    return it.kind === kind && typeof it.id === 'string' ? it.id : null
+  } catch {
+    return null
+  }
+}
+
+/** Whether a drag over [event] is a resource tile (its data is only readable on drop). */
+const carriesResource = (event: React.DragEvent) => event.dataTransfer.types.includes(DRAG_TYPE)
+
+/**
+ * The shown kind's title, then the group folders down to the open one (`Items › weapons › swords`): each goes back
+ * there when clicked, and takes a dropped resource of the kind.
+ */
+function Breadcrumb({
+  folder,
+  group,
+  onOpen,
+  onDrop,
+}: {
+  folder: ExplorerFolder
+  group: string
+  onOpen: (group: string) => void
+  onDrop: (id: string, to: string) => void
+}) {
+  const parts = group ? group.split('/') : []
+  const [over, setOver] = useState<number | null>(null)
+  const crumbs = [
+    { label: folder.title, group: '' },
+    ...parts.map((part, i) => ({ label: groupName(part), group: parts.slice(0, i + 1).join('/') })),
+  ]
+  if (crumbs.length === 1) return <span className={styles.title}>{folder.title}</span>
+  return (
+    <nav className={styles.breadcrumb} aria-label="Group folders">
+      {crumbs.map((crumb, i) => {
+        const last = i === crumbs.length - 1
+        return (
+          <span key={crumb.group} className={styles.crumb}>
+            {i > 0 && <Icon name="chevronRight" />}
+            {last ? (
+              <span className={styles.title} aria-current="location">
+                {crumb.label}
+              </span>
+            ) : (
+              <button
+                type="button"
+                className={cx(styles.crumbButton, over === i && styles.dropTarget)}
+                onClick={() => onOpen(crumb.group)}
+                onDragOver={(event) => {
+                  if (!carriesResource(event)) return
+                  event.preventDefault()
+                  setOver(i)
+                }}
+                onDragLeave={() => setOver(null)}
+                onDrop={(event) => {
+                  setOver(null)
+                  const id = draggedId(event, folder.key)
+                  if (id === null) return
+                  event.preventDefault()
+                  onDrop(id, crumb.group)
+                }}
+              >
+                {crumb.label}
+              </button>
+            )}
+          </span>
+        )
+      })}
+    </nav>
+  )
 }
 
 const Tile = memo(function Tile({
@@ -408,6 +668,7 @@ const Tile = memo(function Tile({
   view,
   size,
   subtitle,
+  location,
   selected,
   errors,
   dirty,
@@ -418,6 +679,8 @@ const Tile = memo(function Tile({
   view: 'grid' | 'list'
   size: number
   subtitle?: string
+  /** Its folder or file (a group's folder), shown on hover. */
+  location: string
   selected: boolean
   errors: number
   dirty: boolean
@@ -428,36 +691,70 @@ const Tile = memo(function Tile({
   } | null
   handlers: TileHandlers
 }) {
+  const isGroup = entry.type === 'group'
+  const [over, setOver] = useState(false)
   const label = rename ? (
     <InlineInput
       className={view === 'grid' ? styles.renameTile : undefined}
-      label={`Rename ${entry.id}`}
+      label={isGroup ? `Rename group ${entry.id}` : `Rename ${entry.id}`}
       initial={entry.id}
       validate={rename.validate}
       onCommit={rename.commit}
       onCancel={rename.cancel}
     />
   ) : (
-    <span className={styles.label} title={entry.folder.location(entry.id)}>
+    <span className={styles.label} title={location}>
       {entry.id}
     </span>
   )
+  // A resource tile drags; a group tile takes a resource of its kind dropped on it.
+  const drag = isGroup
+    ? {
+        onDragOver: (event: React.DragEvent) => {
+          if (!carriesResource(event)) return
+          event.preventDefault()
+          setOver(true)
+        },
+        onDragLeave: () => setOver(false),
+        onDrop: (event: React.DragEvent) => {
+          setOver(false)
+          const id = draggedId(event, entry.folder.key)
+          if (id === null) return
+          event.preventDefault()
+          handlers.drop(id, entry.group)
+        },
+      }
+    : {
+        draggable: !rename,
+        onDragStart: (event: React.DragEvent) => {
+          event.dataTransfer.setData(
+            DRAG_TYPE,
+            JSON.stringify({ kind: entry.folder.key, id: entry.id }),
+          )
+          event.dataTransfer.effectAllowed = 'move'
+        },
+      }
   return (
     <div
       id={`explorer-${entry.key}`}
       role="option"
       aria-selected={selected}
-      aria-label={entry.id}
-      className={view === 'grid' ? styles.tile : styles.row}
+      aria-label={isGroup ? `Group ${entry.id}` : entry.id}
+      className={cx(view === 'grid' ? styles.tile : styles.row, over && styles.dropTarget)}
       onClick={() => handlers.select(entry)}
       onDoubleClick={() => handlers.open(entry)}
       onContextMenu={(event) => handlers.menu(event, entry)}
+      {...drag}
     >
       <span
         className={styles.picture}
         style={view === 'grid' ? { width: size - 12, height: size - 12 } : undefined}
       >
-        <Thumbnail folder={entry.folder} id={entry.id} size={view === 'grid' ? size - 12 : 22} />
+        {isGroup ? (
+          <Icon name="folder" size={view === 'grid' ? Math.round((size - 12) * 0.55) : 16} />
+        ) : (
+          <Thumbnail folder={entry.folder} id={entry.id} size={view === 'grid' ? size - 12 : 22} />
+        )}
       </span>
       {label}
       {subtitle && view === 'grid' && <span className={styles.subtitle}>{subtitle}</span>}

@@ -18,6 +18,7 @@ import dev.netherforge.format.project.MenuKind
 import dev.netherforge.format.project.ModuleKind
 import dev.netherforge.format.project.ProjectManifest
 import dev.netherforge.format.project.ProjectSnapshot
+import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.text.TextWidth
 import dev.netherforge.plugin.NetherForgeRuntime
 import dev.netherforge.plugin.advancement.Advancements
@@ -145,6 +146,9 @@ class ProjectSession internal constructor(
      * a stack is named under.
      */
     val namespace: String get() = snapshot.namespace
+
+    /** Where the resource [id] of [kind] is now, in its group folders: the project's, or a package's named `ns:id`. */
+    fun placeOf(kind: KindSpec<*, *>, id: String): ResourcePlace = snapshot.placeOf(kind, id)
 
     /** How names cross between the packages: what a script names, resolved in its package, and what it reads back, spelled for it. */
     val names = PackageNames(this)
@@ -322,10 +326,10 @@ class ProjectSession internal constructor(
     val modules = service(Modules(scripts, { projectFiles }, { namespace }) { snapshot.manifestOf(it) })
 
     /** The project's items: the looks stacks of them take (before any window builds one), and their scripts. */
-    val items = service(Items(platform, scripts, source::read) { namespace })
+    val items = service(Items(platform, scripts, source::read, ::placeOf) { namespace })
 
     /** The recipes the project adds to the server, after the items they're built from. */
-    val recipes = service(Recipes(platform, log, items::idOf))
+    val recipes = service(Recipes(platform, log, ::placeOf, items::idOf))
 
     /** The loot tables scripts roll (and, later, blocks' and mobs' drops), the packages' included. */
     val loot = service(LootTables(platform, items, { namespace }) { snapshot.packages.keys + namespace })
@@ -334,13 +338,13 @@ class ProjectSession internal constructor(
     val advancements = service(Advancements { namespace })
 
     /** Menu windows and their scripts: shared ones exist before any module's body runs. */
-    val menus = service(Menus(platform.menus, platform.inventories, scripts, source::read, packs::skinTitle, ::measureText))
+    val menus = service(Menus(platform.menus, platform.inventories, scripts, source::read, ::placeOf, packs::skinTitle, ::measureText))
 
-    val dialogs = service(Dialogs(platform.dialogs, scripts, source::read, { namespace }) { log.warn(it) })
+    val dialogs = service(Dialogs(platform.dialogs, scripts, source::read, ::placeOf, { namespace }) { log.warn(it) })
 
     /** Every centity instance: started after everything a script may use, stopped before it. */
     val centities = service(
-        Centities(platform, scripts, log, source::read, runtime.store.instances, handover.instances, { namespace }) {
+        Centities(platform, scripts, log, source::read, ::placeOf, runtime.store.instances, handover.instances, { namespace }) {
             data.remove(ScriptData.Owner.Centity(it))
         }
     )
@@ -357,7 +361,7 @@ class ProjectSession internal constructor(
     /** The project's blocks and every one placed in a world, held as note block states the resource pack draws; after the centities some are drawn by. */
     internal val customBlocks = service(
         CustomBlocks(
-            platform, scripts, log, source::read, { namespace }, { ticks },
+            platform, scripts, log, source::read, ::placeOf, { namespace }, { ticks },
             { items }, { loot }, { centities }, { effects }, { blockData }, ::problemsChanged
         )
     )

@@ -68,8 +68,26 @@ pub fn is_excluded(relative: &str) -> bool {
     relative.starts_with("data/paper/")
 }
 
+/// Whether [segment] is a group folder: an id in parentheses, `(arenas)`
+/// (format's `Names.GROUP`). Groups sort maps without changing their ids.
+fn is_group(segment: &str) -> bool {
+    segment
+        .strip_prefix('(')
+        .and_then(|it| it.strip_suffix(')'))
+        .is_some_and(|name| {
+            let bytes = name.as_bytes();
+            !bytes.is_empty()
+                && bytes.len() <= 64
+                && (bytes[0].is_ascii_lowercase() || bytes[0].is_ascii_digit())
+                && bytes
+                    .iter()
+                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || *b == b'_')
+        })
+}
+
 /// Copies the server's world ([level], its storage's `level.dat`, and
-/// [dimension], its folder; both relative to [server]) into `maps/<id>/`.
+/// [dimension], its folder; both relative to [server]) into `maps/<id>/`,
+/// or into group folders when [id] starts with them (`(arenas)/duel`).
 /// An existing map is replaced only with [replace].
 pub fn capture(
     project: &ProjectRoot,
@@ -81,7 +99,8 @@ pub fn capture(
     progress: &mut dyn FnMut(CaptureProgress),
 ) -> Result<()> {
     let segments = scope::segments(id)?;
-    if segments.len() != 1 || id.starts_with('.') {
+    let (name, groups) = segments.split_last().unwrap_or((&"", &[]));
+    if name.is_empty() || name.starts_with('.') || !groups.iter().all(|it| is_group(it)) {
         bail!(Invalid, "\"{id}\" can't name a map");
     }
     let destination_path = format!("{MAPS}/{id}");

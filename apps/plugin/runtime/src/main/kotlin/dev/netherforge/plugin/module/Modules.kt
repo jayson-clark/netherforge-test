@@ -6,6 +6,7 @@ import dev.netherforge.format.project.ModuleKind
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.project.PackagePaths
 import dev.netherforge.format.project.ProjectManifest
+import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.ref.ReferenceIndex
 import dev.netherforge.format.script.ScriptDef
 import dev.netherforge.plugin.lua.LuaApiException
@@ -50,12 +51,16 @@ class Modules(
     }
 
     private val modules = LinkedHashMap<String, ModuleInfo>()
+
+    /** Where each module's folder is, in its group folders: where `require` finds its files. */
+    private val places = HashMap<String, ResourcePlace>()
     private val scopes = HashMap<String, Scope>()
 
     /** Takes every module, the packages' included, as their files say (errors or not: a file is Lua the server runs). */
     override fun define(project: SessionProject) {
         modules.clear()
-        modules.putAll(project.everywhere(ModuleKind).mapValues { it.value.value })
+        places.clear()
+        for ((id, loaded) in project.everywhere(ModuleKind)) define(id, loaded.value, loaded.group)
     }
 
     override fun start() = startAll()
@@ -73,11 +78,11 @@ class Modules(
         val resource = Resource(ModuleKind, id)
         if (!batch.first(resource)) return
         val requiredBy = dependents(id)
-        val info = batch.snapshot.everywhere(ModuleKind)[id]?.value
+        val loaded = batch.snapshot.everywhere(ModuleKind)[id]
         val failures = batch.failures {
             stop(id)
-            define(id, info)
-            if (info != null) start(id)
+            define(id, loaded?.value, loaded?.group.orEmpty())
+            if (loaded != null) start(id)
         }
         batch.report(resource, ok = failures.isEmpty(), problems = batch.problemsUnder(resource) + failures)
         for (scope in requiredBy) {
@@ -86,9 +91,18 @@ class Modules(
         }
     }
 
-    private fun define(id: String, info: ModuleInfo?) {
-        if (info == null) modules.remove(id) else modules[id] = info
+    private fun define(id: String, info: ModuleInfo?, group: String) {
+        if (info == null) {
+            modules.remove(id)
+            places.remove(id)
+        } else {
+            modules[id] = info
+            places[id] = ModuleKind.place(id, group)
+        }
     }
+
+    /** Where module [id] is (a package's named `ns:id`); in `modules/` itself when it isn't there. */
+    private fun placeOf(id: String): ResourcePlace = places[id] ?: ModuleKind.place(id)
 
     fun ids(): List<String> = modules.keys.sorted()
 
@@ -124,7 +138,7 @@ class Modules(
     /** Ends a module: its `unload` handlers run, then its handlers, timers and commands go and its files are forgotten. */
     fun stop(id: String) {
         scopes.remove(id)?.let { scripts.close(it) }
-        scripts.host?.forget("${ModuleKind.locationOf(id)}/")
+        scripts.host?.forget("${placeOf(id).location}/")
     }
 
     fun stopAll() {
@@ -176,14 +190,14 @@ class Modules(
         if (pkg != from) checkExported(from, pkg!!, parts[0], name)
         // A resource's script, whose folder holds its own files; a module's are in its folder. Only a bare name looks there.
         val script = caller.owner.file.takeIf { caller.module == null }
-        val own = if (named != null) null else caller.module?.let(ModuleKind::locationOf) ?: script?.substringBeforeLast('/', "")
+        val own = if (named != null) null else caller.module?.let { placeOf(it).location } ?: script?.substringBeforeLast('/', "")
         val ownFiles = own?.let { listOf(within(it, "$joined.lua"), within(it, "$joined/${ModuleKind.ENTRY}")) }.orEmpty()
         val id = pkg?.let { PackagePaths.of(it, parts[0]) } ?: parts[0]
         val rest = parts.drop(1).joinToString("/")
         val moduleFiles = if (rest.isEmpty()) {
             listOf(initPath(id))
         } else {
-            listOf(ModuleKind.fileOf(id, "$rest.lua"), ModuleKind.fileOf(id, "$rest/${ModuleKind.ENTRY}"))
+            placeOf(id).let { listOf(it.file("$rest.lua"), it.file("$rest/${ModuleKind.ENTRY}")) }
         }
         val candidates = ownFiles + moduleFiles
         val path =
@@ -224,7 +238,7 @@ class Modules(
         }
     }
 
-    private fun initPath(id: String) = ModuleKind.fileOf(id, ModuleKind.ENTRY)
+    private fun initPath(id: String) = placeOf(id).file(ModuleKind.ENTRY)
 
     private fun within(folder: String, file: String) = if (folder.isEmpty()) file else "$folder/$file"
 

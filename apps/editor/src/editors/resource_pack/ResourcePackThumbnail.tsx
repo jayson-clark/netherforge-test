@@ -1,6 +1,6 @@
 /** A pack's most telling picture: its first skin's, else an item model's or glyph's, else any. */
 import type { ResourcePackFile } from '@/core/format'
-import { mainFileOf, RESOURCE_PACKS, TEXTURES } from '@/core/paths'
+import { mainFileIn, RESOURCE_PACKS, TEXTURES } from '@/core/paths'
 import { useProjectFileUrl } from '@/state/useResourcePacks'
 import { useWorkspace } from '@/state/providers'
 import type { ThumbnailProps } from '@/editors/contributions'
@@ -10,7 +10,7 @@ import styles from './ResourcePackThumbnail.module.css'
 export function ResourcePackThumbnail({ id, fallback }: ThumbnailProps) {
   const prefix = `${RESOURCE_PACKS}/${id}/${TEXTURES}/`
   const pack = parseCached<ResourcePackFile>(
-    useWorkspace((s) => currentText(s, mainFileOf('resource_pack', id))),
+    useWorkspace((s) => currentText(s, mainFileIn(s.files, 'resource_pack', id))),
   )
   const anyTexture = useWorkspace((s) =>
     s.files.find((it) => it.startsWith(prefix) && it.endsWith('.png')),

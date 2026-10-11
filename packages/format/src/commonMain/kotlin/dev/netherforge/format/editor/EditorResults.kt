@@ -38,6 +38,8 @@ class ProjectOutline(
     val minecraft: String?,
     /** Every resource that read (possibly with semantic problems): kind (`KindSpec.id`) → ids, for every kind. */
     val resources: Map<String, List<String>>,
+    /** The group folders of each resource in one (`(weapons)/(swords)`), by kind then id; one in its kind's folder isn't here. */
+    val groups: Map<String, Map<String, String>> = emptyMap(),
     /** Pack id → the keys of what it defines (referenced as `<pack>/<key>`). */
     val resourcePacks: Map<String, ResourcePackOutline>,
     /** Module id → its .lua files, relative to the module folder. */
@@ -90,7 +92,9 @@ class PackageOutline(
     /** Every resource that read: kind (`KindSpec.id`) → ids, for every kind. */
     val resources: Map<String, List<String>>,
     /** What it exports, by kind folder (`netherforge.json`'s `exports`). */
-    val exports: Map<String, List<String>>
+    val exports: Map<String, List<String>>,
+    /** The group folders of each resource in one, by kind then id, as [ProjectOutline.groups]. */
+    val groups: Map<String, Map<String, String>> = emptyMap()
 )
 
 /**

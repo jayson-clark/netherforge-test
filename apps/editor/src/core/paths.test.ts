@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  companionOf,
   findSourceRefs,
+  groupAt,
+  groupOf,
+  groupsOf,
   isFileKind,
+  locationIn,
   locationOf,
+  mainFileIn,
   mainFileOf,
   opensAs,
   resourcePackTexturePath,
@@ -30,6 +36,7 @@ describe('paths', () => {
       id: 'tower',
       role: 'file',
       rest: 'script.lua',
+      group: '',
     })
     expect(resourceOf('modules/greeter/lib/a.lua')).toMatchObject({
       kind: 'module',
@@ -43,6 +50,7 @@ describe('paths', () => {
       id: 'welcome',
       role: 'folder',
       rest: '',
+      group: '',
     })
     expect(resourceOf('maps/arena/region/r.0.0.mca')).toMatchObject({ kind: 'map' })
     expect(resourcePackTexturePath('ui', 'gui/shop.png')).toBe(
@@ -83,6 +91,7 @@ describe('paths', () => {
       id: 'torch',
       role: 'main',
       rest: '',
+      group: '',
     })
     expect(resourceOf('recipes/.json')).toBeNull()
     expect(resourceOf('recipes/a/b.json')).toBeNull()
@@ -92,9 +101,46 @@ describe('paths', () => {
     expect(resourceIdsOf(files, 'item')).toEqual(['ruby'])
   })
 
+  it('places resources in group folders without changing their ids', () => {
+    expect(resourceOf('items/(weapons)/(wands)/ruby_wand/script.lua')).toEqual({
+      kind: 'item',
+      id: 'ruby_wand',
+      role: 'file',
+      rest: 'script.lua',
+      group: '(weapons)/(wands)',
+    })
+    expect(resourceOf('items/(weapons)')).toBeNull()
+    expect(groupAt('items/(weapons)')).toEqual({ kind: 'item', group: '(weapons)' })
+    expect(groupAt('items/ruby')).toBeNull()
+    expect(locationOf('item', 'ruby_wand', '(weapons)')).toBe('items/(weapons)/ruby_wand')
+    expect(mainFileOf('recipe', 'torch', '(smelting)')).toBe('recipes/(smelting)/torch.json')
+    expect(opensAs('module', 'shop', '(economy)')).toBe('modules/(economy)/shop/init.lua')
+    expect(companionOf('structure', 'house', '(town)')).toBe('structures/(town)/house.json')
+
+    const files = [
+      'items/(weapons)/(wands)/ruby_wand/item.json',
+      'items/(weapons)/sword/item.json',
+      'items/(gems)/ruby/item.json',
+      // The same id twice: format reads the one whose group sorts first, none before any.
+      'items/ruby/item.json',
+      'items/plain/item.json',
+    ]
+    expect(resourceIdsOf(files, 'item')).toEqual(['plain', 'ruby', 'ruby_wand', 'sword'])
+    expect(groupOf(files, 'item', 'ruby_wand')).toBe('(weapons)/(wands)')
+    expect(groupOf(files, 'item', 'ruby')).toBe('')
+    expect(groupOf(files, 'item', 'missing')).toBe('')
+    expect(groupsOf(files, 'item')).toEqual(['(gems)', '(weapons)', '(weapons)/(wands)'])
+    expect(mainFileIn(files, 'item', 'sword')).toBe('items/(weapons)/sword/item.json')
+    expect(locationIn(files, 'item', 'plain')).toBe('items/plain')
+  })
+
   it('finds file:line references in console output', () => {
     const refs = findSourceRefs('error at centities/tower/script.lua:12: attempt to index nil')
     expect(refs).toEqual([{ start: 9, end: 38, file: 'centities/tower/script.lua', line: 12 }])
     expect(findSourceRefs('at menus/shop/script.lua:3')[0]?.file).toBe('menus/shop/script.lua')
+    expect(findSourceRefs('at items/(tools)/ruby_wand/script.lua:7')[0]).toMatchObject({
+      file: 'items/(tools)/ruby_wand/script.lua',
+      line: 7,
+    })
   })
 })

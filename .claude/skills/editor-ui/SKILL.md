@@ -160,7 +160,18 @@ onChange }`, oldest first, the row acted on last being the primary:
 - **The explorer** (with each dependency's resources read-only under the
   kinds: see "Packages") lists resources as atoms (`explorer/folders.ts`, one
   folder per registry entry: ids, location, what opens, how to create, from
-  `KINDS`). `Thumbnail` draws the kind's registered `thumbnail` over its
+  `KINDS`). **Group folders** (`items/(weapons)/`, see project-format) show as
+  folder tiles before a kind's resources: Enter/double-click goes in, the
+  breadcrumb or Backspace back out, a resource tile dropped on a group (or
+  the breadcrumb) or **Move to group…** (`resourceActions.move`) moves it,
+  F2 on a group renames its folder, **New group** makes an empty one kept by
+  a hidden `.gitkeep` (`GROUP_KEEP`; `groupsOf` counts such a folder), Delete
+  on a group asks and deletes it whole, and new resources go in the open group.
+  A resource's place isn't its id's: `core/paths.ts` takes a `group` in
+  `locationOf`/`mainFileOf`/`opensAs`/`companionOf`, finds it in a file list
+  (`groupOf`, `mainFileIn`, `locationIn`, `groupsOf`, cached per list) or
+  from a path (`resourceOf(..).group`), and a package's from the outline's
+  `groups`. Resource packs never are in one (`KINDS[kind].groupable`). `Thumbnail` draws the kind's registered `thumbnail` over its
   icon. Centity thumbnails are drawn one at a
   time in one hidden canvas (`editors/centity/CentityThumbnail.tsx`), keyed by
   the centity's text and the client version, so an unchanged centity is

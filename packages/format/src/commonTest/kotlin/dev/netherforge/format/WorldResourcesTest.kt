@@ -29,9 +29,9 @@ class WorldResourcesTest {
         )
         assertEquals(emptyList(), snapshot.problems)
         assertEquals(listOf("arena"), snapshot.models(MapKind).keys.toList())
-        assertEquals("maps/arena", snapshot.models(MapKind).getValue("arena").folder)
+        assertEquals("maps/arena", snapshot.placeOf(MapKind, "arena").location)
         assertEquals(listOf("arena_reset"), snapshot.models(StructureKind).keys.toList())
-        assertEquals("structures/arena_reset.nbt", snapshot.models(StructureKind).getValue("arena_reset").path)
+        assertEquals("structures/arena_reset.nbt", snapshot.placeOf(StructureKind, "arena_reset").path)
     }
 
     @Test

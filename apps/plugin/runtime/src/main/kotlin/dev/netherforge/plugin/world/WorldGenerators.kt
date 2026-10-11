@@ -163,7 +163,7 @@ internal class WorldGenerators(
             }
         ) { id, message ->
             log.warn("terrain $id: $message")
-            found += ProblemCodes.RUNTIME_TERRAIN.at(TerrainKind.pathOf(id), message)
+            found += ProblemCodes.RUNTIME_TERRAIN.at(snapshot.placeOf(TerrainKind, id).path, message)
         }
         problems = found
         platform.worldManager.publishGenerators(generators)
@@ -206,8 +206,8 @@ internal class WorldGenerators(
         /** The file of the structure a generator names, the project's own or a package's, as [files] resolves its path. */
         fun structureFile(snapshot: ProjectSnapshot, name: String, files: (String) -> Path?): Path? {
             val key = snapshot.references.resolve(RefKind.STRUCTURE, name) ?: return null
-            val path = StructureKind.pathOf(key.path)
-            return files(if (key.namespace == snapshot.namespace) path else PackagePaths.of(key.namespace, path))
+            // A package's is at its package path, in whichever group folder it is.
+            return files(snapshot.placeOf(StructureKind, key.relativeTo(snapshot.namespace).text).path)
         }
 
         /**

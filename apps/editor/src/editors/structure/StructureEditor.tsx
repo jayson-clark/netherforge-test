@@ -34,9 +34,10 @@ const errorText = (error: unknown) => (error instanceof Error ? error.message : 
 
 export function StructureEditor({ path }: { path: string }) {
   const { backend } = useApp()
-  const id = resourceOf(path)?.id ?? path
+  const found = resourceOf(path)
+  const id = found?.id ?? path
   const exists = useWorkspace((s) => s.files.includes(path))
-  const generationPath = companionOf('structure', id) ?? ''
+  const generationPath = companionOf('structure', id, found?.group) ?? ''
   const generates = useWorkspace((s) => s.files.includes(generationPath))
   const stamp = useWorkspace((s) => s.fileStamps[path] ?? 0)
   const loaded = useAsyncResult(`${path}|${stamp}|${exists}`, () =>

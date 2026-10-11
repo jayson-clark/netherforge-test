@@ -57,33 +57,51 @@ export const isProjectJson = (path: string) =>
   documentKindOf(path) !== null ||
   (path.endsWith('.json') && !BINARY_FOLDERS.some((folder) => path.startsWith(folder)))
 
+/**
+ * Group folders sort a kind's resources without changing their ids: `items/(weapons)/ruby_wand/` is the item
+ * `ruby_wand`. A resource's `group` is the group folders it's in as on disk (`(weapons)/(swords)`), empty for one
+ * in its kind's folder itself; every helper below takes it, and [groupOf] finds it in a file list.
+ */
+export const groupFolder = (name: string) => `(${name})`
+
+/** The hidden file a new, empty group folder is made with, so it's there (and git keeps it) before anything's in it. */
+export const GROUP_KEEP = '.gitkeep'
+
+/** A group folder's name without its parentheses: `(weapons)` → `weapons`. */
+export const groupName = (folder: string) => folder.replace(/^\(/, '').replace(/\)$/, '')
+
+/** The folder of [kind]'s resources in [group] (`items/(weapons)`), or the kind's own folder. */
+export const folderOf = (kind: KindId, group = '') =>
+  group ? `${KINDS[kind].folder}/${group}` : KINDS[kind].folder
+
 /** The document beside a single-file resource's file (a structure's generation `.json`), or null for a kind without one. */
-export function companionOf(kind: KindId, id: string): string | null {
+export function companionOf(kind: KindId, id: string, group = ''): string | null {
   const where = KINDS[kind]
-  return where.companion === null ? null : `${where.folder}/${id}${where.companion}`
+  return where.companion === null ? null : `${folderOf(kind, group)}/${id}${where.companion}`
 }
 
 /**
  * What a resource is on disk, for rename and delete: its folder
- * (`menus/shop`), or a file kind's one file (`recipes/ruby.json`).
+ * (`menus/shop`), or a file kind's one file (`recipes/ruby.json`), in its group folders.
  */
-export function locationOf(kind: KindId, id: string): string {
+export function locationOf(kind: KindId, id: string, group = ''): string {
   const where = KINDS[kind]
   return where.layout === 'file'
-    ? `${where.folder}/${id}${where.extension}`
-    : `${where.folder}/${id}`
+    ? `${folderOf(kind, group)}/${id}${where.extension}`
+    : `${folderOf(kind, group)}/${id}`
 }
 
 /** The file a resource is read from: its main file, or (a module, which has none) its folder. */
-export function mainFileOf(kind: KindId, id: string): string {
+export function mainFileOf(kind: KindId, id: string, group = ''): string {
   const main = KINDS[kind].main
-  return main === null ? locationOf(kind, id) : `${locationOf(kind, id)}/${main}`
+  const location = locationOf(kind, id, group)
+  return main === null ? location : `${location}/${main}`
 }
 
 /** What opening a resource opens: its main file, a module's entry, or a map's folder. */
-export function opensAs(kind: KindId, id: string): string {
-  if (KINDS[kind].contents === 'lua') return `${locationOf(kind, id)}/${MODULE_ENTRY}`
-  return isBinaryKind(kind) ? locationOf(kind, id) : mainFileOf(kind, id)
+export function opensAs(kind: KindId, id: string, group = ''): string {
+  if (KINDS[kind].contents === 'lua') return `${locationOf(kind, id, group)}/${MODULE_ENTRY}`
+  return isBinaryKind(kind) ? locationOf(kind, id, group) : mainFileOf(kind, id, group)
 }
 
 /** A file in a project resource, as format's `classify` places it. */
@@ -94,6 +112,8 @@ export interface ResourcePath {
   role: Exclude<PathRole, 'project'>
   /** The path inside its folder (`lib/util.lua`); empty for the folder itself and a file kind's one file. */
   rest: string
+  /** The group folders it's in (`(weapons)`), empty when none. */
+  group: string
 }
 
 /**
@@ -104,31 +124,102 @@ export interface ResourcePath {
  */
 export function resourceOf(path: string): ResourcePath | null {
   const found = classify(path)
-  if (!found?.kind || !found.id || found.role === 'project') return null
-  return { kind: found.kind, id: found.id, role: found.role, rest: found.rest ?? '' }
+  if (!found?.kind || !found.id || found.role === 'project' || found.role === 'group') return null
+  return {
+    kind: found.kind,
+    id: found.id,
+    role: found.role,
+    rest: found.rest ?? '',
+    group: found.group ?? '',
+  }
 }
 
-/** Each file list's ids by kind, worked out in one pass: the store's list is replaced, never changed. */
-const idsByList = new WeakMap<string[], Map<KindId, string[]>>()
+/** A group folder a path is (`items/(weapons)`), or null when it isn't one. */
+export function groupAt(path: string): { kind: KindId; group: string } | null {
+  const found = classify(path)
+  return found?.role === 'group' && found.kind && found.group && !found.package
+    ? { kind: found.kind, group: found.group }
+    : null
+}
 
-/** Every resource id of [kind] in a file list, sorted. Treat the answer as read-only: it's shared. */
-export function resourceIdsOf(paths: string[], kind: KindId): string[] {
-  let byKind = idsByList.get(paths)
-  if (!byKind) {
+/** What a file list holds, by kind: the ids, and the group of each in a group folder. */
+interface ListIndex {
+  ids: Map<KindId, string[]>
+  /** Each resource's group folders, empty for one in its kind's folder. */
+  groups: Map<KindId, Map<string, string>>
+  /** Every group folder that has a file in it, by kind (`(weapons)`, `(weapons)/(swords)`), sorted. */
+  folders: Map<KindId, string[]>
+}
+
+/** Each file list's index, worked out in one pass: the store's list is replaced, never changed. */
+const indexByList = new WeakMap<string[], ListIndex>()
+
+function indexOf(paths: string[]): ListIndex {
+  let index = indexByList.get(paths)
+  if (!index) {
     const sets = new Map<KindId, Set<string>>()
+    const groups = new Map<KindId, Map<string, string>>()
+    const folders = new Map<KindId, Set<string>>()
+    const addFolders = (kind: KindId, group: string) => {
+      let inKind = folders.get(kind)
+      if (!inKind) folders.set(kind, (inKind = new Set()))
+      const parts = group.split('/')
+      for (let i = 1; i <= parts.length; i++) inKind.add(parts.slice(0, i).join('/'))
+    }
     for (const path of paths) {
       const resource = resourceOf(path)
+      // A group made empty keeps a hidden file (`items/(weapons)/.gitkeep`), so the folder is there, and in git.
+      if (!resource) {
+        const group = path.slice(path.lastIndexOf('/') + 1).startsWith('.')
+          ? groupAt(dirname(path))
+          : null
+        if (group) addFolders(group.kind, group.group)
+        continue
+      }
       // A list holds files: one shaped like a folder is a stray in the kind's folder.
-      if (!resource || resource.role === 'folder') continue
+      if (resource.role === 'folder') continue
       let ids = sets.get(resource.kind)
       if (!ids) sets.set(resource.kind, (ids = new Set()))
       ids.add(resource.id)
+      // Format reads the place whose group sorts first, none at all before any (another is a duplicate it ignores).
+      let byId = groups.get(resource.kind)
+      if (!byId) groups.set(resource.kind, (byId = new Map()))
+      const kept = byId.get(resource.id)
+      if (kept === undefined || resource.group < kept) byId.set(resource.id, resource.group)
+      if (resource.group) addFolders(resource.kind, resource.group)
     }
-    byKind = new Map([...sets].map(([it, ids]) => [it, [...ids].sort()]))
-    idsByList.set(paths, byKind)
+    index = {
+      ids: new Map([...sets].map(([it, ids]) => [it, [...ids].sort()])),
+      groups,
+      folders: new Map([...folders].map(([it, all]) => [it, [...all].sort()])),
+    }
+    indexByList.set(paths, index)
   }
-  return byKind.get(kind) ?? NO_IDS
+  return index
 }
+
+/** Every resource id of [kind] in a file list, sorted. Treat the answer as read-only: it's shared. */
+export const resourceIdsOf = (paths: string[], kind: KindId): string[] =>
+  indexOf(paths).ids.get(kind) ?? NO_IDS
+
+/** The group folders resource [id] of [kind] is in, in a file list; empty when it's in its kind's folder (or not there). */
+export const groupOf = (paths: string[], kind: KindId, id: string): string =>
+  indexOf(paths).groups.get(kind)?.get(id) ?? ''
+
+/**
+ * Every group folder of [kind] a file list has files in (`(weapons)`, `(weapons)/(swords)`), sorted: a resource,
+ * or the hidden file that keeps an empty one ([GROUP_KEEP]).
+ */
+export const groupsOf = (paths: string[], kind: KindId): string[] =>
+  indexOf(paths).folders.get(kind) ?? NO_IDS
+
+/** The file a resource is read from, found where it is in a file list: [mainFileOf] in its group. */
+export const mainFileIn = (paths: string[], kind: KindId, id: string) =>
+  mainFileOf(kind, id, groupOf(paths, kind, id))
+
+/** What a resource is on disk, found where it is in a file list: [locationOf] in its group. */
+export const locationIn = (paths: string[], kind: KindId, id: string) =>
+  locationOf(kind, id, groupOf(paths, kind, id))
 
 const NO_IDS: string[] = []
 
@@ -198,7 +289,10 @@ export function findSourceRefs(
   text: string,
 ): { start: number; end: number; file: string; line: number }[] {
   const refs: { start: number; end: number; file: string; line: number }[] = []
-  const pattern = new RegExp(`((?:${SCRIPT_FOLDERS.join('|')})/[A-Za-z0-9_./-]+\\.lua):(\\d+)`, 'g')
+  const pattern = new RegExp(
+    `((?:${SCRIPT_FOLDERS.join('|')})/[A-Za-z0-9_./()-]+\\.lua):(\\d+)`,
+    'g',
+  )
   for (const match of text.matchAll(pattern)) {
     refs.push({
       start: match.index,

@@ -84,17 +84,18 @@ class PackageSchemas(
         if (migrations.isEmpty()) return
         val first = migrations.keys.minOf { it }
         val broken = migrations.entries.firstOrNull { (_, loaded) -> loaded.problems.any { it.severity == Severity.ERROR } }
+        fun pathOf(id: String) = MigrationKind.pathOf(id, migrations[id]?.group)
         if (broken != null) {
             fail(
                 namespace,
-                MigrationKind.pathOf(broken.key),
-                "its migrations have problems (see ${MigrationKind.pathOf(broken.key)}), so the database isn't built"
+                pathOf(broken.key),
+                "its migrations have problems (see ${pathOf(broken.key)}), so the database isn't built"
             )
             return
         }
         val steps = ArrayList<Migration>()
         for ((id, _) in migrations.entries.sortedBy { it.key }) {
-            val path = MigrationKind.pathOf(id)
+            val path = pathOf(id)
             val sql = read(path) ?: return fail(namespace, path, "$path couldn't be read")
             steps += Migration.of(PackagePaths.split(id).second + ".sql", sql)
         }
@@ -102,9 +103,9 @@ class PackageSchemas(
             databases.database(namespace).migrate(namespace, steps)
         } catch (e: MigrationFailed) {
             val failed = migrations.keys.first { PackagePaths.split(it).second + ".sql" == e.migration.fileName }
-            fail(namespace, MigrationKind.pathOf(failed), "couldn't apply ${e.migration.fileName}: ${e.cause.message}", e)
+            fail(namespace, pathOf(failed), "couldn't apply ${e.migration.fileName}: ${e.cause.message}", e)
         } catch (e: Exception) {
-            fail(namespace, MigrationKind.pathOf(first), "couldn't open the database: ${e.message}", e)
+            fail(namespace, pathOf(first), "couldn't open the database: ${e.message}", e)
         }
     }
 

@@ -87,6 +87,21 @@ describe.skipIf(!binary)('lua-language-server, as the editor runs it', () => {
       recursive: true,
       filter: (source: string) => !source.includes(`${path.sep}.netherforge`),
     })
+    // A module in a group folder, and a resource's script in another that requires it and the file beside it.
+    const groupFiles: Record<string, string> = {
+      'modules/(social)/(chat)/chatter/init.lua':
+        'local chatter = {}\n\nfunction chatter.say(text)\n  return text\nend\n\nreturn chatter\n',
+      'modules/(social)/(chat)/chatter/words.lua': 'return { hello = "hello" }\n',
+      'centities/(test)/probe/centity.json':
+        '{\n  "nodes": { "root": { "display": { "type": "block", "block": "minecraft:stone" } } },\n  "script": { "file": "script.lua" }\n}\n',
+      'centities/(test)/probe/script.lua':
+        'local chatter = require("chatter")\nlocal words = require("chatter.words")\nlocal near = require("near")\nchatter.say(words.hello .. near.name)\n',
+      'centities/(test)/probe/near.lua': 'return { name = "near" }\n',
+    }
+    for (const [file, text] of Object.entries(groupFiles)) {
+      mkdirSync(path.dirname(path.join(project, file)), { recursive: true })
+      writeFileSync(path.join(project, file), text)
+    }
     // The API's stubs, as generated, with what the example can't use marked.
     const generated = path.join(repo, 'packages/api/generated/luals')
     const api: ApiStubs = {
@@ -256,6 +271,24 @@ describe.skipIf(!binary)('lua-language-server, as the editor runs it', () => {
     expect(target.split('\n')[found[0]!.range.start.line]).toContain(
       'function greetings.hello(name)',
     )
+  }, 60_000)
+
+  it('follows requires through group folders: a module, a file in it, and one beside the script', async () => {
+    const file = 'centities/(test)/probe/script.lua'
+    const text = readFileSync(path.join(project, file), 'utf8')
+    await open(file, text)
+    const lines = text.split('\n')
+    const at = async (line: number, word: string) => {
+      const found = (await connection.sendRequest('textDocument/definition', {
+        textDocument: { uri: uri(file) },
+        position: { line, character: lines[line]!.indexOf(word) },
+      })) as Location[]
+      return found.map((it) => same(it.uri))
+    }
+    expect(await at(3, 'say')).toEqual([same(uri('modules/(social)/(chat)/chatter/init.lua'))])
+    expect(await at(3, 'hello')).toEqual([same(uri('modules/(social)/(chat)/chatter/words.lua'))])
+    expect(await at(3, 'name')).toEqual([same(uri('centities/(test)/probe/near.lua'))])
+    expect((await diagnosticsOf(file)).filter((it) => it.message.includes('require'))).toEqual([])
   }, 60_000)
 
   it('goes to a definition across a require beside the script', async () => {

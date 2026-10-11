@@ -34,7 +34,7 @@ import {
   type PackageOutline,
   type ProjectOutline,
 } from '@/core/format'
-import { mainFileOf } from '@/core/paths'
+import { mainFileOf, resourceOf } from '@/core/paths'
 
 /** Each name a project has, per kind, with where it comes from (`"tower"` for a node of the tower). */
 export type ProjectNames = Record<NameKind, Map<string, string[]>>
@@ -79,12 +79,16 @@ export function projectNames(
     if (kind in KINDS) for (const id of ids(kind as KindId)) add(kind, id)
   // Parts of resources: a centity's nodes and animations, a dialog's buttons.
   for (const id of ids('centity')) {
-    const model = modelAt<{ nodes?: object; animations?: object }>(mainFileOf('centity', id))
+    const model = modelAt<{ nodes?: object; animations?: object }>(
+      mainFileOf('centity', id, outline.groups?.centity?.[id]),
+    )
     for (const node of Object.keys(model?.nodes ?? {})) add('node', node, id)
     for (const animation of Object.keys(model?.animations ?? {})) add('animation', animation, id)
   }
   for (const id of ids('dialog')) {
-    const buttons = modelAt<{ buttons?: unknown }>(mainFileOf('dialog', id))?.buttons
+    const buttons = modelAt<{ buttons?: unknown }>(
+      mainFileOf('dialog', id, outline.groups?.dialog?.[id]),
+    )?.buttons
     for (const button of Array.isArray(buttons) ? buttons : [])
       add('button', (button as { key?: unknown } | null)?.key, id)
   }
@@ -149,19 +153,16 @@ export const PACKAGE_STUBS = `${AGENT_FILES.luals}/packages`
  */
 export function packageModuleStubs(packages: PackageSource[]): Record<string, string> {
   const out: Record<string, string> = {}
-  const folder = `${KINDS.module.folder}/`
   for (const { namespace, outline, files } of packages) {
     const exported = new Set(outline.exports[KINDS.module.folder] ?? [])
     for (const [path, text] of Object.entries(files)) {
-      if (text == null || !path.startsWith(folder) || !path.endsWith('.lua')) continue
-      const [id, ...rest] = path.slice(folder.length).split('/')
-      if (!id || !exported.has(id) || rest.length === 0) continue
-      const inside = rest
-        .join('/')
-        .slice(0, -'.lua'.length)
-        .replace(/(^|\/)init$/, '')
+      // A module's file in whichever group folder the package keeps it: the stub goes by the name it's required by.
+      const found = text != null && path.endsWith('.lua') ? resourceOf(path) : null
+      if (found?.kind !== 'module' || found.role !== 'file' || !exported.has(found.id)) continue
+      const id = found.id
+      const inside = found.rest.slice(0, -'.lua'.length).replace(/(^|\/)init$/, '')
       const name = `${namespace}:${[id, ...(inside ? inside.split('/') : [])].join('.')}`
-      out[`packages/${namespace}/${id}/${rest.join('/')}`] = [
+      out[`packages/${namespace}/${id}/${found.rest}`] = [
         `---@meta ${name}`,
         `-- ${namespace}'s ${path}, for lua-language-server: what require("${name}") gives.`,
         "-- Written by the NetherForge editor from the package as it is: don't edit it.",

@@ -5,6 +5,7 @@ import dev.netherforge.format.project.DefaultFontKind
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.MenuKind
 import dev.netherforge.format.project.ResourcePackKind
+import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.plugin.api.EventType
 import dev.netherforge.plugin.api.Events
 import dev.netherforge.plugin.api.LuaHandle
@@ -76,6 +77,8 @@ class Menus(
     private val inventories: InventoryOps,
     private val scripts: Scripts,
     private val readSource: (String) -> String?,
+    /** Where a resource is now (in its group folders), by kind and id: where its script is read from. */
+    private val placeOf: (KindSpec<*, *>, String) -> ResourcePlace,
     /**
      * The MiniMessage that draws a skin, moved by a number of pixels, for
      * the front of a title; null for none or one the packs don't have.
@@ -187,7 +190,7 @@ class Menus(
     override val reloads: Set<KindSpec<*, *>> get() = setOf(MenuKind)
 
     override fun reload(kind: KindSpec<*, *>, ids: Set<String>, batch: ReloadBatch) {
-        for (id in ids) batch.resource(Resource(MenuKind, id), MenuKind.pathOf(id), batch.snapshot.running(MenuKind)[id]) { reload(id, it) }
+        for (id in ids) batch.resource(Resource(MenuKind, id), batch.snapshot.running(MenuKind)[id]) { reload(id, it) }
     }
 
     /** Titles draw the packs' skins, centred by the default font's advances. */
@@ -703,7 +706,7 @@ class Menus(
     private fun startScripts(window: Window) {
         val definition = window.definition
         val script = definition.script ?: return
-        val path = MenuKind.fileOf(definition.id, script.file)
+        val path = placeOf(MenuKind, definition.id).file(script.file)
         val source = readSource(path) ?: return
         window.scope = scripts.start(ScopeOwner.MenuScript(window.id, definition.id, path), script, source).first
     }

@@ -129,10 +129,16 @@ object Templates {
      * The files of a new resource of [kind], `{ path: text }`; [id] is
      * already checked, [game] the server's game data when there is some.
      * Each kind's [KindSpec.template] says what they are, and throws
-     * [TemplateNeedsGame] when it needs [game] and there's none.
+     * [TemplateNeedsGame] when it needs [game] and there's none. In [group]
+     * folders (`(weapons)`), its files are there instead of in the kind's own.
      */
-    fun newResource(kind: KindSpec<*, *>, id: String, game: GameData? = null): Map<String, String> =
-        requireNotNull(kind.template(id, game)) { "a new ${kind.id} isn't made from a template" }
+    fun newResource(kind: KindSpec<*, *>, id: String, game: GameData? = null, group: String? = null): Map<String, String> {
+        val files = requireNotNull(kind.template(id, game)) { "a new ${kind.id} isn't made from a template" }
+        if (group.isNullOrEmpty()) return files
+        require(kind.groupable) { "a ${kind.id} can't go in group folders" }
+        // Every file a template makes is in the kind's folder: its resource's folder, its one file, its companion.
+        return files.mapKeys { (path, _) -> "${kind.folder}/$group/" + path.removePrefix("${kind.folder}/") }
+    }
 
     /** `village_shop` → `Village shop`. */
     internal fun titleOf(id: String): String = id.replace('_', ' ').trim().replaceFirstChar { it.uppercaseChar() }.ifEmpty { id }

@@ -217,6 +217,12 @@ surface, id)`; a module has none). `Scripts.open(owner, budget)` picks it.
   table as its chunk argument and hands it only to its own modules
   (`require("input")`, which no script can reach). Scripts see handles,
   never their keys' values or primitives.
+- **A resource's files are where the snapshot says** (group folders,
+  `centities/(towers)/tower/`, see project-format): a service that reads a
+  script or file asks `ProjectSession.placeOf(kind, id)` (handed to
+  services as `placeOf`), `Modules` keeps each module's place, and reloads
+  match files to a resource by classifying them (`Resource.of`, `mainOf`,
+  `ReloadBatch.exists(resource)`), never by building its path from the id.
 - **Chunk names are project paths** (`@centities/tower/root.lua`), so Lua's
   own messages and tracebacks already speak the editor's language. The
   prelude is `=nf` and its modules `=nf:<name>`. `describe()` (the message handler for every call in)

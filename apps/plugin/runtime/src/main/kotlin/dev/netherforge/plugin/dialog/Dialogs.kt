@@ -13,6 +13,7 @@ import dev.netherforge.format.dialog.RangeInput
 import dev.netherforge.format.dialog.TextInput
 import dev.netherforge.format.project.DialogKind
 import dev.netherforge.format.project.KindSpec
+import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.api.DialogEvent
 import dev.netherforge.plugin.api.DialogPressEvent
@@ -79,6 +80,8 @@ class Dialogs(
     private val ops: DialogOps,
     private val scripts: Scripts,
     private val readSource: (String) -> String?,
+    /** Where a resource is now (in its group folders), by kind and id: where its script is read from. */
+    private val placeOf: (KindSpec<*, *>, String) -> ResourcePlace,
     /** The project's namespace, which references naming none are in. */
     private val namespace: () -> String,
     private val onIgnored: (String) -> Unit
@@ -167,7 +170,7 @@ class Dialogs(
 
     override fun reload(kind: KindSpec<*, *>, ids: Set<String>, batch: ReloadBatch) {
         for (id in ids) {
-            batch.resource(Resource(DialogKind, id), DialogKind.pathOf(id), batch.snapshot.running(DialogKind)[id]) {
+            batch.resource(Resource(DialogKind, id), batch.snapshot.running(DialogKind)[id]) {
                 reload(id, it)
                 0
             }
@@ -482,7 +485,7 @@ class Dialogs(
 
     private fun start(record: Record) {
         val script = record.file.script ?: return
-        val path = DialogKind.fileOf(record.id, script.file)
+        val path = placeOf(DialogKind, record.id).file(script.file)
         val source = readSource(path) ?: return
         record.scope = scripts.start(ScopeOwner.DialogScript(record.id, path), script, source).first
     }

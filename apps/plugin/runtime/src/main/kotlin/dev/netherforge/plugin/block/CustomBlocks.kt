@@ -14,6 +14,7 @@ import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.project.BlockKind
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Loaded
+import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.project.plan
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.RuntimeLog
@@ -102,6 +103,8 @@ internal class CustomBlocks(
     private val scripts: Scripts,
     private val log: RuntimeLog,
     private val readSource: (String) -> String?,
+    /** Where a resource is now (in its group folders), by kind and id: where its script is read from. */
+    private val placeOf: (KindSpec<*, *>, String) -> ResourcePlace,
     private val namespace: () -> String,
     private val ticks: () -> Long,
     private val items: () -> Items,
@@ -340,7 +343,7 @@ internal class CustomBlocks(
                 val noun = CanonicalJson.serialName(blocks[name]?.value?.carrierOrDefault ?: BlockCarrier.NOTE_BLOCK).replace('_', ' ')
                 add(
                     ProblemCodes.RUNTIME_BLOCKS.at(
-                        BlockKind.pathOf(name),
+                        placeOf(BlockKind, name).path,
                         "This server's game has no $noun states to hold this block in",
                         "$.carrier"
                     )
@@ -352,7 +355,7 @@ internal class CustomBlocks(
                 val capacity = next?.pools?.get(carrier)?.carriers?.size ?: 0
                 add(
                     ProblemCodes.BLOCK_CARRIERS.at(
-                        BlockKind.pathOf(name),
+                        placeOf(BlockKind, name).path,
                         "The game has $capacity $noun states to hold blocks in, and the project has more $noun blocks than that",
                         "$"
                     )
@@ -365,7 +368,7 @@ internal class CustomBlocks(
 
     private fun startScript(def: Def) {
         val script = def.file.script ?: return
-        val path = BlockKind.fileOf(def.id, script.file)
+        val path = placeOf(BlockKind, def.id).file(script.file)
         val source = readSource(path) ?: return
         def.scope = scripts.start(ScopeOwner.BlockScript(def.id, path), script, source).first
     }
@@ -380,7 +383,7 @@ internal class CustomBlocks(
     /** `reattached` is how many placed blocks of it there are in loaded chunks: they run the new script at once. */
     override fun reload(kind: KindSpec<*, *>, ids: Set<String>, batch: ReloadBatch) {
         for (id in ids) {
-            batch.resource(Resource(BlockKind, id), BlockKind.pathOf(id), batch.snapshot.running(BlockKind)[id]) { next ->
+            batch.resource(Resource(BlockKind, id), batch.snapshot.running(BlockKind)[id]) { next ->
                 reload(id, next)
             }
         }

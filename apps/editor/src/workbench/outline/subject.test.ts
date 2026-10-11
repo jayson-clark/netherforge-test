@@ -6,6 +6,7 @@ describe('subjectOf', () => {
     expect(subjectOf('centities/tower/centity.json')).toEqual({
       kind: 'centity',
       id: 'tower',
+      group: '',
       location: 'centities/tower',
       main: 'centities/tower/centity.json',
       hasFiles: true,
@@ -22,6 +23,12 @@ describe('subjectOf', () => {
     })
     expect(subjectOf('structures/house.nbt')?.companion).toBeNull()
     expect(subjectOf('maps/arena')).toMatchObject({ kind: 'map', id: 'arena' })
+    // In group folders, wherever its files are.
+    expect(subjectOf('terrain/(worlds)/vale.lua')).toMatchObject({
+      group: '(worlds)',
+      main: 'terrain/(worlds)/vale.json',
+      companion: 'terrain/(worlds)/vale.lua',
+    })
     expect(subjectOf('netherforge.json')).toBeNull()
     expect(subjectOf(null)).toBeNull()
   })

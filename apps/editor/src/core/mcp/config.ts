@@ -141,15 +141,17 @@ export function withOpencodeServer(
   if (JSON.stringify(servers[MCP_SERVER_NAME]) === JSON.stringify(entry)) return null
 
   const base = parsed ?? {}
-  return JSON.stringify(
-    {
-      $schema: 'https://opencode.ai/config.json',
-      ...base,
-      mcp: { ...(base.mcp as Record<string, unknown>), [MCP_SERVER_NAME]: entry },
-    },
-    null,
-    2,
-  ) + '\n'
+  return (
+    JSON.stringify(
+      {
+        $schema: 'https://opencode.ai/config.json',
+        ...base,
+        mcp: { ...(base.mcp as Record<string, unknown>), [MCP_SERVER_NAME]: entry },
+      },
+      null,
+      2,
+    ) + '\n'
+  )
 }
 
 /**

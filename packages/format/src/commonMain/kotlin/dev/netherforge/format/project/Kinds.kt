@@ -71,8 +71,10 @@ object Kinds {
      * What a project path is: which resource it belongs to and what part of
      * it, or a project file format owns. Null for anything else (a README,
      * `.gitignore`, a stray file in a kind's folder, a hidden one). Works
-     * from the path alone; it doesn't check that an id is usable
-     * ([Names.isId]) or that the file exists.
+     * from the path alone; it doesn't check that an id or a group is usable
+     * ([Names.isId], [Names.isGroup]) or that the file exists. Group folders,
+     * `(weapons)`, may come between a kind's folder and a resource
+     * (`items/(weapons)/ruby_wand/item.json`): the id is `ruby_wand` all the same.
      *
      * A package path ([PackagePaths]: `acme:items/coin/item.json`) is a file
      * of the dependency `acme`, classified the same way with its [ClassifiedPath.pkg] set.
@@ -93,29 +95,49 @@ object Kinds {
         }
         val parts = normalized.split('/')
         val kind = byFolder[parts[0]] ?: return null
-        val name = parts.getOrNull(1) ?: return null
+        // Group folders, `(weapons)/(swords)`, sit between the kind's folder and the resource's.
+        var at = 1
+        while (at < parts.size && Names.looksLikeGroup(parts[at])) at++
+        val group = parts.subList(1, at).joinToString("/").ifEmpty { null }
+        val name = parts.getOrNull(at) ?: return group?.let { ClassifiedPath(kind.id, null, PathRole.GROUP, group = it) }
         // Hidden files (`.DS_Store`, `.gitkeep`) are nobody's.
         if (name.isEmpty() || name.startsWith(".")) return null
         val document = (kind as? DocumentResourceKind<*, *>)?.id
         return when (val layout = kind.layout) {
             is Layout.Folder -> {
-                val rest = parts.drop(2).joinToString("/")
+                val rest = parts.drop(at + 1).joinToString("/")
                 val role = when {
-                    parts.size == 2 -> PathRole.FOLDER
+                    parts.size == at + 1 -> PathRole.FOLDER
                     rest == layout.main -> PathRole.MAIN
                     else -> PathRole.FILE
                 }
-                ClassifiedPath(kind.id, name, role, document.takeIf { role == PathRole.MAIN }, rest)
+                ClassifiedPath(kind.id, name, role, document.takeIf { role == PathRole.MAIN }, rest, group = group)
             }
             is Layout.SingleFile -> {
-                if (parts.size != 2) return null
+                if (parts.size != at + 1) return null
                 val companion = layout.companion
                 if (companion != null && name.endsWith(companion) && name.length > companion.length) {
                     // The document beside the file: part of its resource, and a document of its own kind.
-                    return ClassifiedPath(kind.id, name.removeSuffix(companion), PathRole.FILE, kind.companionDocument?.id, name)
+                    return ClassifiedPath(
+                        kind.id,
+                        name.removeSuffix(companion),
+                        PathRole.FILE,
+                        kind.companionDocument?.id,
+                        name,
+                        group = group
+                    )
                 }
                 if (!name.endsWith(layout.extension) || name.length == layout.extension.length) return null
-                ClassifiedPath(kind.id, name.removeSuffix(layout.extension), PathRole.MAIN, document, name.takeIf { companion != null })
+                ClassifiedPath(
+                    kind.id,
+                    name.removeSuffix(layout.extension),
+                    PathRole.MAIN,
+                    document,
+                    name.takeIf {
+                        companion != null
+                    },
+                    group = group
+                )
             }
         }
     }
@@ -138,7 +160,11 @@ enum class PathRole {
 
     /** A file of the project's own that format reads: `netherforge.json`, `fonts/default.json`. */
     @SerialName("project")
-    PROJECT
+    PROJECT,
+
+    /** A group folder (`items/(weapons)`): it sorts resources, and is none itself. */
+    @SerialName("group")
+    GROUP
 }
 
 /** [Kinds.classify]'s answer. */
@@ -146,7 +172,7 @@ enum class PathRole {
 class ClassifiedPath(
     /** The resource kind ([KindSpec.id]); null for a project file. */
     val kind: String? = null,
-    /** The resource's id in its package; null for a project file. */
+    /** The resource's id in its package; null for a project file or a group folder. */
     val id: String? = null,
     val role: PathRole,
     /** The document kind format reads this file as ([DocumentKind.id]), or null when it isn't one. */
@@ -154,9 +180,14 @@ class ClassifiedPath(
     /** For a folder resource: the path inside its folder (`lib/util.lua`; empty for the folder itself). */
     val rest: String? = null,
     /** The dependency a package path is in (its namespace); null for the project's own files. */
-    @SerialName("package") val pkg: String? = null
+    @SerialName("package") val pkg: String? = null,
+    /**
+     * The group folders the resource (or group folder) is in, as on disk: `(weapons)/(swords)`. Null when it sits
+     * in its kind's folder. Groups only sort resources: the id is the same in any.
+     */
+    val group: String? = null
 ) {
-    internal fun inPackage(namespace: String) = ClassifiedPath(kind, id, role, document, rest, namespace)
+    internal fun inPackage(namespace: String) = ClassifiedPath(kind, id, role, document, rest, namespace, group)
 }
 
 /**

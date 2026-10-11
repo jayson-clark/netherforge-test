@@ -4,6 +4,7 @@ import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Kinds
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.project.PackagePaths
+import dev.netherforge.format.project.PathRole
 
 /**
  * The unit hot reload works in: one resource, a kind from format's registry
@@ -14,11 +15,11 @@ data class Resource(val kind: KindSpec<*, *>, val id: String) {
     /** As the console names it: `centity:tower`, `recipe:ruby_sword`, `map:arena`. */
     val key: String get() = "${kind.id}:$id"
 
-    /** Where it is: its folder (`menus/shop`), or its one file (`recipes/ruby.json`). */
-    val location: String get() = kind.locationOf(id)
-
-    /** Whether [file] (a project path) is one of its files: its folder's, or the document beside its file. */
-    fun owns(file: String): Boolean = file == location || file.startsWith("$location/") || file == kind.companionPathOf(id)
+    /**
+     * Whether [file] (a project or package path) is one of its files: its folder or a file in it, its one file, or
+     * the document beside that, in whichever group folder it is.
+     */
+    fun owns(file: String): Boolean = of(file) == this
 
     companion object {
         /**
@@ -33,5 +34,8 @@ data class Resource(val kind: KindSpec<*, *>, val id: String) {
             // A package's resource is named as the runtime names it: `acme:coin`.
             return Resource(kind, found.pkg?.let { PackagePaths.of(it, id) } ?: id)
         }
+
+        /** The resource whose main file [path] is, or null. */
+        fun mainOf(path: String): Resource? = of(path).takeIf { Kinds.classify(path)?.role == PathRole.MAIN }
     }
 }

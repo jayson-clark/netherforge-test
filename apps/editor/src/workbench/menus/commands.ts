@@ -246,7 +246,7 @@ export const COMMANDS = {
     run: async (c) => {
       const at = activeResource(c)
       const copy = at && (await resourceActions(c.app.workspace).duplicate(at.folder, at.id))
-      if (at && copy) await c.app.workspace.getState().openFile(at.folder.openPath(copy))
+      if (at && copy) await c.app.workspace.getState().openFile(at.folder.openPath(copy, at.group))
     },
   },
   'file.deleteResource': {

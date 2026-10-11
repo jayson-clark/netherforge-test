@@ -39,7 +39,7 @@ object MigrationKind : FilesKind<MigrationFile>("migration", "migrations", Layou
             if (same.first().id != value.id) {
                 ctx.sink.report(
                     ProblemCodes.MIGRATION_DUPLICATE,
-                    "Migration ${pad(number)} is also ${same.first().path}; the numbers must be unique"
+                    "Migration ${pad(number)} is also ${ctx.placeOf(MigrationKind, same.first().id).path}; the numbers must be unique"
                 )
             }
             return

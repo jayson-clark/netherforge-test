@@ -109,7 +109,7 @@ internal class ScriptReports(private val session: ProjectSession) : RuntimeServi
             slowLog[key] = last to held + 1
         }
         val problem = ProblemCodes.SCRIPT_SLOW.at(
-            file ?: scope.module?.let(ModuleKind::locationOf) ?: ModuleKind.folder,
+            file ?: scope.module?.let { session.placeOf(ModuleKind, it).location } ?: ModuleKind.folder,
             "${scope.owner.label} takes more than $limit ms a tick; see /nf scripts",
             line = slow.line
         )
@@ -122,7 +122,8 @@ internal class ScriptReports(private val session: ProjectSession) : RuntimeServi
 
     private fun problemOf(scope: Scope, failure: ScriptFailure): Problem {
         val file =
-            failure.file?.let(session::projectPath) ?: scope.owner.file ?: scope.module?.let(ModuleKind::locationOf) ?: ModuleKind.folder
+            failure.file?.let(session::projectPath) ?: scope.owner.file ?: scope.module?.let { session.placeOf(ModuleKind, it).location }
+                ?: ModuleKind.folder
         return ProblemCodes.SCRIPT_ERROR.at(file, failure.message, line = failure.line)
     }
 

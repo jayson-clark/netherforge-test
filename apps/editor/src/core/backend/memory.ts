@@ -1055,7 +1055,11 @@ export class MemoryBackend implements Backend {
     const files = this.files()
     // As the Rust side: a path first, then one segment that isn't hidden.
     checkPath(id)
-    if (id.includes('/') || id.startsWith('.')) fail('invalid', `"${id}" can't name a map`)
+    // Group folders (`(arenas)/duel`), then one segment that isn't hidden.
+    const segments = id.split('/')
+    const name = segments.pop()!
+    if (name.startsWith('.') || !segments.every((it) => /^\([a-z0-9][a-z0-9_]{0,63}\)$/.test(it)))
+      fail('invalid', `"${id}" can't name a map`)
     const folder = `maps/${id}`
     const existing = [...files.keys()].filter((it) => it.startsWith(`${folder}/`))
     if (existing.length > 0 && !replace) fail('alreadyExists', `${folder} already exists`)

@@ -41,8 +41,8 @@ object TerrainKind : DocumentResourceKind<TerrainFile, CompiledTerrain>(
 ) {
     override fun canonical(value: TerrainFile) = value.copy(schema = schemaRef)
 
-    /** The script beside terrain [id], `terrain/<id>.lua` (a package's at its package path). */
-    fun scriptPathOf(id: String): String = requireNotNull(companionPathOf(id))
+    /** The script beside terrain [id], `terrain/<id>.lua` (a package's at its package path), in its [group] folders. */
+    fun scriptPathOf(id: String, group: String? = null): String = requireNotNull(companionPathOf(id, group))
 
     override fun validate(value: TerrainFile, ctx: ResourceContext) {
         TerrainValidator.validate(value, ctx.sink, ctx.game)
@@ -50,14 +50,14 @@ object TerrainKind : DocumentResourceKind<TerrainFile, CompiledTerrain>(
         if (value.script != null && script !in ctx.files) {
             ctx.sink.report(
                 ProblemCodes.TERRAIN_SCRIPT_MISSING,
-                "There's no ${scriptPathOf(ctx.id)} beside this file for its script to run",
+                "There's no ${scriptPathOf(ctx.id, ctx.group)} beside this file for its script to run",
                 "$.script"
             )
         } else if (value.script == null && script in ctx.files) {
             ctx.problem(
                 ProblemCodes.TERRAIN_SCRIPT_UNUSED,
-                scriptPathOf(ctx.id),
-                "${pathOf(ctx.id)} has no `script`, so this never runs: add one to hand it stages"
+                scriptPathOf(ctx.id, ctx.group),
+                "${pathOf(ctx.id, ctx.group)} has no `script`, so this never runs: add one to hand it stages"
             )
         }
     }
@@ -109,7 +109,7 @@ object TerrainKind : DocumentResourceKind<TerrainFile, CompiledTerrain>(
                 ProblemCodes.TERRAIN_CUSTOM_BLOCK,
                 "Block \"$reference\" is drawn by the centity \"$centity\", so a terrain can't place it: use a block that's a plain cube",
                 at,
-                listOf(Location(BlockKind.pathOf(key.path), "$.centity"))
+                listOf(Location(ctx.placeOf(BlockKind, key.path).path, "$.centity"))
             )
         }
     }
@@ -132,7 +132,7 @@ object TerrainKind : DocumentResourceKind<TerrainFile, CompiledTerrain>(
         file.script?.customBlocks?.forEachIndexed { i, block -> add("$.script.customBlocks[$i]" to block) }
     }
 
-    override fun compile(id: String, value: TerrainFile, ctx: ResourceContext) = TerrainCompiler.compile(value, scriptPathOf(id))
+    override fun compile(id: String, value: TerrainFile, ctx: ResourceContext) = TerrainCompiler.compile(value, scriptPathOf(id, ctx.group))
 
     /** Terrains that fill containers from loot tables need the empty table the game unpacks them with ([GeneratedLoot]). */
     override val datapackAll = DatapackCollection<CompiledTerrain> { resources, _ ->

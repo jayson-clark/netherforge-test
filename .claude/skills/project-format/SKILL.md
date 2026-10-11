@@ -79,6 +79,18 @@ is how the implementation is put together and how to change it.
   check a reference by hand: the walker finds it, the loader checks it, and
   usages and renames follow it.
 - **Ids are folder names**, `Names.isId`. Never put an `id` inside a file.
+- **Group folders only sort.** `(name)` folders (`Names.GROUP`) may sit between a kind's folder and a
+  resource's (`items/(weapons)/(wands)/ruby_wand/`), and the id is still `ruby_wand`: an id is the kind's
+  whole (`project.duplicate-id` past the first, in sorted group order with no group first), a bad group name is
+  `project.group`, and `KindSpec.groupable` is false for resource packs only (a pack's id names everything in it
+  and where its files go; `project.group` too). `Kinds.classify` reads the group from the path alone
+  (`ClassifiedPath.group`, `PathRole.GROUP` for a group folder itself). **So a resource's location doesn't follow
+  from its id**: `locationOf`/`pathOf`/`fileOf`/`companionPathOf` take a `group`, and everything that needs an
+  existing resource's files asks where it is: `ProjectSnapshot.placeOf(kind, id)` (a `ResourcePlace`: `location`,
+  `path`, `file(..)`, `companionPath`; a package's id `ns:id` at its package path), `KindContext.placeOf`,
+  `ResourceContext.group`/`pathIn(kind, file)`, `Loaded.group`, the outline's `groups`. A bare `pathOf(id)` is
+  only right for where a _new_ one goes or in a message about a missing one. Nothing names a group, so moving
+  a resource changes no reference. Cases: `GroupsTest`, `invalid/groups`.
 - **One format version, no migration.** `netherforge.json`'s `formatVersion`
   must be `FormatVersion.CURRENT` (1). Anything else is
   `project.format-version` (`Projects.formatProblem`, naming the version);

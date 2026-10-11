@@ -55,7 +55,10 @@ internal class StructureStore(
 
     private val ops: StructureOps get() = platform.structures
 
-    private fun projectFile(id: String): Path? = snapshot()?.models(StructureKind)?.get(id)?.let { project().resolve(it.path) }
+    private fun projectFile(id: String): Path? = projectPath(id)?.let { project().resolve(it) }
+
+    /** Where the project's structure [id] is, in its group folders; null when the project has none. */
+    private fun projectPath(id: String): String? = snapshot()?.takeIf { id in it[StructureKind] }?.placeOf(StructureKind, id)?.path
 
     private fun savedFile(id: String): Path = saved.resolve("$id${StructureKind.EXTENSION}")
 
@@ -83,7 +86,7 @@ internal class StructureStore(
     }.getOrDefault(emptyList())
 
     private fun unreadable(id: String, file: Path): Nothing {
-        val shown = projectFile(id)?.let { StructureKind.pathOf(id) } ?: "the structure saved as \"$id\""
+        val shown = projectPath(id) ?: "the structure saved as \"$id\""
         throw LuaApiException("$shown can't be read as a structure${if (file.isRegularFile()) "" else " (it's gone)"}")
     }
 
@@ -107,8 +110,8 @@ internal class StructureStore(
 
     fun save(id: String, world: String, from: BlockVector, to: BlockVector, entities: Boolean): Boolean {
         if (!Names.isId(id)) throw LuaApiException("\"$id\" can't name a structure (${Names.ID_RULE})")
-        if (projectFile(id) != null) {
-            throw LuaApiException("\"$id\" is one of the project's structures (${StructureKind.pathOf(id)}): save under another id")
+        projectPath(id)?.let { path ->
+            throw LuaApiException("\"$id\" is one of the project's structures ($path): save under another id")
         }
         checkSides(from, to)
         val ops = ops
@@ -158,7 +161,7 @@ internal class StructureStore(
 
     /** The project's structure [id] changed on disk (or went): the next placement reads it again. */
     private fun reload(id: String) {
-        ops.forget(project().resolve(StructureKind.pathOf(id)))
+        ops.forget(project().resolve(snapshot()?.placeOf(StructureKind, id)?.path ?: StructureKind.pathOf(id)))
     }
 
     companion object {

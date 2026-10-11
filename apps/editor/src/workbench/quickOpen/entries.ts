@@ -47,15 +47,18 @@ function fileDetail(path: string): string {
 
 export function quickEntries(files: string[]): Candidate[] {
   const resources = EXPLORER_FOLDERS.flatMap((folder) =>
-    folder.ids(files).map((id): Candidate => ({
-      key: `${folder.key}:${id}`,
-      label: id,
-      detail: `${capitalized(folder.one)} · ${folder.location(id)}`,
-      icon: folder.icon,
-      resource: { folder, id },
-      action: { open: folder.openPath(id) },
-      text: id,
-    })),
+    folder.ids(files).map((id): Candidate => {
+      const group = folder.groupOf(files, id)
+      return {
+        key: `${folder.key}:${id}`,
+        label: id,
+        detail: `${capitalized(folder.one)} · ${folder.location(id, group)}`,
+        icon: folder.icon,
+        resource: { folder, id },
+        action: { open: folder.openPath(id, group) },
+        text: id,
+      }
+    }),
   )
   const opened = new Set(resources.map((it) => 'open' in it.action && it.action.open))
   const texts = files

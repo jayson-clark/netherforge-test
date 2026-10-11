@@ -90,10 +90,13 @@ export function PackageView({
     const to = await copyIntoProject(workspace, namespace, folder, id)
     if (to) onCopied(folder, to)
   }
+  /** The group folders the package keeps [id] in. */
+  const groupIn = (folder: ExplorerFolder, id: string) => pkg.groups?.[folder.key]?.[id] ?? ''
   /** Opens it read-only, as the package has it (a world or structure has no read-only screen). */
   const openable = (folder: ExplorerFolder) => !isBinaryKind(folder.key)
   const open = (folder: ExplorerFolder, id: string) => {
-    if (openable(folder)) void workspace.getState().openFile(`${namespace}:${folder.openPath(id)}`)
+    if (openable(folder))
+      void workspace.getState().openFile(`${namespace}:${folder.openPath(id, groupIn(folder, id))}`)
   }
   const fetching = useWorkspace((s) => s.fetchingPackages)
   const menuFor = (folder: ExplorerFolder, id: string): MenuItem[] => [
@@ -153,7 +156,10 @@ export function PackageView({
                   <span className={styles.picture}>
                     <FolderIcon folder={folder} />
                   </span>
-                  <span className={styles.label} title={`${namespace}:${folder.location(id)}`}>
+                  <span
+                    className={styles.label}
+                    title={`${namespace}:${folder.location(id, groupIn(folder, id))}`}
+                  >
                     {id}
                   </span>
                   {exported(folder, id) && (

@@ -211,11 +211,10 @@ class ReferenceIndex internal constructor(
 
     /** Every reference to [target], from outside it (a pack's own textures don't count as its usages). */
     fun usagesOf(target: RefTarget): List<RefUse> {
-        val inside = when (target) {
-            is RefTarget.Resource -> Kinds.byId(target.kind)?.locationOf(target.id)
-            is RefTarget.ResourcePackEntry, is RefTarget.File -> null
-        }
-        return uses.filter { use -> matches(home, target, use.kind, use.target) && (inside == null || !isUnder(use.file, inside)) }
+        // A resource's own files are its, in whichever group folder it is.
+        fun inside(file: String) = target is RefTarget.Resource &&
+            Kinds.classify(file)?.let { it.pkg == null && it.kind == target.kind && it.id == target.id } == true
+        return uses.filter { use -> matches(home, target, use.kind, use.target) && !inside(use.file) }
     }
 
     companion object {
@@ -265,7 +264,7 @@ class ReferenceIndex internal constructor(
             val at = Kinds.classify(file)?.takeIf { it.role == PathRole.MAIN } ?: return null
             val resource = Kinds.byId(at.kind ?: return null) ?: return null
             if (resource.mainFile == null) return null
-            return resource.locationOf(at.id ?: return null) + "/" + kind.folder
+            return resource.locationOf(at.id ?: return null, at.group) + "/" + kind.folder
         }
 
         /** Every reference [element], the document [file] of [kind], makes. */

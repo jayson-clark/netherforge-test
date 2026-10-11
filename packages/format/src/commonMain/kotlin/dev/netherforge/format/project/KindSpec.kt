@@ -84,6 +84,12 @@ sealed class KindSpec<T, C>(
     /** Whether a package may list it in `exports`: false for what belongs to the package alone (a database's migrations). */
     open val exportable: Boolean get() = true
 
+    /**
+     * Whether its resources may sit in group folders (`items/(weapons)/ruby_wand/`): every kind's but a resource
+     * pack's, whose id is part of every name in it (`ui/coin`) and of every file the built pack is made from.
+     */
+    open val groupable: Boolean get() = true
+
     /** The Lua its resources run, or null when they run none. */
     open val script: ScriptSpec? get() = null
 
@@ -105,18 +111,23 @@ sealed class KindSpec<T, C>(
 
     /**
      * What a resource is on disk, for rename and delete: its folder
-     * (`menus/shop`), or its one file (`recipes/ruby.json`). A package's
-     * resource, named `ns:id` as the server names it, is at its package path
-     * ([PackagePaths]: `acme:menus/bank`).
+     * (`menus/shop`), or its one file (`recipes/ruby.json`), inside its
+     * [group] folders when it's in any (`menus/(shops)/shop`; see
+     * [ResourcePlace]). A package's resource, named `ns:id` as the server
+     * names it, is at its package path ([PackagePaths]: `acme:menus/bank`).
      */
-    fun locationOf(id: String): String {
+    fun locationOf(id: String, group: String? = null): String {
         val (pkg, bare) = PackagePaths.split(id)
+        val inside = if (group.isNullOrEmpty()) folder else "$folder/$group"
         val local = when (val layout = layout) {
-            is Layout.Folder -> "$folder/$bare"
-            is Layout.SingleFile -> "$folder/$bare${layout.extension}"
+            is Layout.Folder -> "$inside/$bare"
+            is Layout.SingleFile -> "$inside/$bare${layout.extension}"
         }
         return if (pkg == null) local else PackagePaths.of(pkg, local)
     }
+
+    /** Where the resource [id] of this kind sits, in its [group] folders (none by default). */
+    fun place(id: String, group: String? = null): ResourcePlace = ResourcePlace(this, id, group.orEmpty())
 
     /**
      * Whether the loader reads [file] (a path inside one of the kind's folder resources, other than its main file) as
@@ -145,19 +156,19 @@ sealed class KindSpec<T, C>(
     open fun companion(value: T): JsonElement? = null
 
     /** The path of a single-file resource's companion document ([Layout.SingleFile.companion]), or null for a kind without one. */
-    fun companionPathOf(id: String): String? {
+    fun companionPathOf(id: String, group: String? = null): String? {
         val layout = layout as? Layout.SingleFile ?: return null
         val companion = layout.companion ?: return null
-        return locationOf(id).removeSuffix(layout.extension) + companion
+        return locationOf(id, group).removeSuffix(layout.extension) + companion
     }
 
     /** The file a resource is read from: its main file, or its [locationOf] when it has none. */
-    fun pathOf(id: String): String = mainFile?.let { fileOf(id, it) } ?: locationOf(id)
+    fun pathOf(id: String, group: String? = null): String = mainFile?.let { fileOf(id, it, group) } ?: locationOf(id, group)
 
     /** A file in a folder resource, by its path there: a script, a texture. */
-    fun fileOf(id: String, file: String): String {
+    fun fileOf(id: String, file: String, group: String? = null): String {
         require(layout is Layout.Folder) { "$folder/ holds single files, not folders" }
-        return "${locationOf(id)}/$file"
+        return "${locationOf(id, group)}/$file"
     }
 
     /**
@@ -220,10 +231,10 @@ abstract class FilesKind<T>(id: String, folder: String, layout: Layout, override
     /**
      * A resource whose [companion document][Layout.SingleFile.companion] is
      * there, from its [text]: a kind with one reads it here and puts what's
-     * wrong with it in [problems] (reported at [companionPathOf]). The
+     * wrong with it in [problems] (reported at [path], the document's). The
      * resource still reads when its document doesn't.
      */
-    open fun ofCompanion(id: String, files: List<String>, text: String, problems: MutableList<Problem>): T = of(id, files)
+    open fun ofCompanion(id: String, files: List<String>, text: String, path: String, problems: MutableList<Problem>): T = of(id, files)
 
     override fun compile(id: String, value: T, ctx: ResourceContext): T = value
 }
@@ -236,6 +247,8 @@ abstract class FilesKind<T>(id: String, folder: String, layout: Layout, override
 open class ResourceContext internal constructor(
     /** The resource's id. */
     val id: String,
+    /** The group folders it's in (`(weapons)`), empty when none: where its files are, never what it means. */
+    val group: String,
     /** The files in the resource's folder, relative to it; empty for a single-file kind. */
     val files: Set<String>,
     /** The game's facts, or null when there are none (the editor before an import). */
@@ -249,6 +262,9 @@ open class ResourceContext internal constructor(
     /** The resource's other files the loader read, for a kind that reads some ([KindSpec.readsFile]). */
     internal val texts: ResourceTexts = ResourceTexts.NONE
 ) {
+    /** A file in the resource's folder, by its project path: what a problem in it is reported at. */
+    fun pathIn(kind: KindSpec<*, *>, file: String): String = kind.fileOf(id, file, group)
+
     /** The text of [file] (a path inside the resource's folder) when the kind reads it ([KindSpec.readsFile]) and it's there. */
     fun text(file: String): String? = texts.text(file)
 
@@ -282,6 +298,7 @@ open class ResourceContext internal constructor(
  */
 class KindContext internal constructor(
     id: String,
+    group: String,
     files: Set<String>,
     game: GameData?,
     minecraft: String?,
@@ -291,9 +308,12 @@ class KindContext internal constructor(
     texts: ResourceTexts = ResourceTexts.NONE,
     /** Whether the resource is a package's (checked in the package's own namespace) rather than the project's. */
     val inPackage: Boolean = false
-) : ResourceContext(id, files, game, minecraft, sink, features, texts) {
+) : ResourceContext(id, group, files, game, minecraft, sink, features, texts) {
     /** Every resource of [kind] that read, by id. */
     fun <T> models(kind: KindSpec<T, *>): Map<String, T> = project.models(kind)
+
+    /** Where the resource [id] of [kind] sits (in its group folders), or where it would if it's not there. */
+    fun placeOf(kind: KindSpec<*, *>, id: String): ResourcePlace = kind.place(id, project.groupOf(kind, id))
 
     /** The files in the folder of the resource [id] of [kind], relative to it (empty for a single-file kind's). */
     fun filesOf(kind: KindSpec<*, *>, id: String): Set<String> = project.filesOf(kind, id)
@@ -353,7 +373,9 @@ internal class ProjectIndex(
     val references: ReferenceIndex,
     /** The files in each resource's folder, by kind and id, relative to it. */
     private val files: Map<String, Map<String, Set<String>>> = emptyMap(),
-    val vanilla: VanillaFile? = null
+    val vanilla: VanillaFile? = null,
+    /** The group folders each resource is in, by kind and id; absent for one in its kind's folder. */
+    private val groups: Map<String, Map<String, String>> = emptyMap()
 ) {
     private val images = HashMap<String, ImageInfo?>()
 
@@ -361,6 +383,8 @@ internal class ProjectIndex(
     fun <T> models(kind: KindSpec<T, *>): Map<String, T> = read[kind.id].orEmpty() as Map<String, T>
 
     fun filesOf(kind: KindSpec<*, *>, id: String): Set<String> = files[kind.id]?.get(id).orEmpty()
+
+    fun groupOf(kind: KindSpec<*, *>, id: String): String = groups[kind.id]?.get(id).orEmpty()
 
     fun image(path: String): ImageInfo? = images.getOrPut(path) { source.image(path) }
 }
@@ -376,5 +400,29 @@ class Loaded<T, C>(
     /** The files in its folder, relative to it; empty for a single-file kind. */
     val files: Set<String>,
     val problems: List<Problem>,
-    val compiled: C?
+    val compiled: C?,
+    /** The group folders it's in (`(weapons)/(swords)`), empty when none. */
+    val group: String = ""
 )
+
+/**
+ * Where one resource sits in its project: its [kind]'s folder, then any [group] folders (`(weapons)/(swords)`,
+ * empty for none), then its folder or file by [id]. Groups sort resources and nothing else, so an id is the same
+ * in any group; everything that needs a resource's files asks its place (the snapshot's [ProjectSnapshot.placeOf]).
+ */
+data class ResourcePlace(val kind: KindSpec<*, *>, val id: String, val group: String = "") {
+    /** Its folder, or its one file: what rename and delete act on. */
+    val location: String get() = kind.locationOf(id, group)
+
+    /** The file it's read from: its main file, or its [location] when it has none. */
+    val path: String get() = kind.pathOf(id, group)
+
+    /** A single-file resource's companion document's path, or null for a kind without one. */
+    val companionPath: String? get() = kind.companionPathOf(id, group)
+
+    /** A file in its folder, by its path there. */
+    fun file(file: String): String = kind.fileOf(id, file, group)
+
+    /** Whether [path] is one of its files (or its folder, or its companion). */
+    fun owns(path: String): Boolean = path == location || path.startsWith("$location/") || path == companionPath
+}

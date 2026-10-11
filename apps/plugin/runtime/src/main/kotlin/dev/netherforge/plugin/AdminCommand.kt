@@ -399,7 +399,7 @@ internal class AdminCommand(private val runtime: NetherForgeRuntime) : CommandHa
                     "tp" -> runtime.session.centities.all().map { short(it.id) }
                     "reload" -> listOf(ProjectManifest.FILE_NAME) +
                         runtime.session.snapshot.let { snapshot ->
-                            Kinds.all.flatMap { kind -> snapshot[kind].keys.map(kind::locationOf) }
+                            Kinds.all.flatMap { kind -> snapshot[kind].keys.map { snapshot.placeOf(kind, it).location } }
                         }.orEmpty()
                     "pack" -> listOf("send")
                     "scripts" -> listOf("all")

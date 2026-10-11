@@ -3,6 +3,7 @@ package dev.netherforge.plugin.item
 import dev.netherforge.format.project.ItemKind
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.RecipeKind
+import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.recipe.RecipeFile
 import dev.netherforge.format.recipe.RecipeValidator
 import dev.netherforge.format.ref.ResourceRef
@@ -26,8 +27,13 @@ import dev.netherforge.plugin.session.TickPhase
  * clients only once a tick ([tick]: `resend`), so a reload that changes many
  * recipes, or a script registering a few in its body, sends the list once.
  */
-class Recipes(private val platform: Platform, private val log: RuntimeLog, private val itemId: (reference: String) -> String?) :
-    RuntimeService {
+class Recipes(
+    private val platform: Platform,
+    private val log: RuntimeLog,
+    /** Where a resource is now (in its group folders), by kind and id: where a recipe's file is. */
+    private val placeOf: (KindSpec<*, *>, String) -> ResourcePlace,
+    private val itemId: (reference: String) -> String?
+) : RuntimeService {
     override val name get() = "recipes"
 
     private class Created(val file: RecipeFile, val owner: Int)
@@ -70,7 +76,7 @@ class Recipes(private val platform: Platform, private val log: RuntimeLog, priva
     /** The server learns the recipe again (or forgets it); players are sent the list at the next tick. */
     override fun reload(kind: KindSpec<*, *>, ids: Set<String>, batch: ReloadBatch) {
         for (id in ids) {
-            batch.resource(Resource(RecipeKind, id), RecipeKind.pathOf(id), batch.snapshot.running(RecipeKind)[id]) {
+            batch.resource(Resource(RecipeKind, id), batch.snapshot.running(RecipeKind)[id]) {
                 reload(id, it)
                 0
             }
@@ -95,7 +101,7 @@ class Recipes(private val platform: Platform, private val log: RuntimeLog, priva
      * with that id. An id a file has is the script's mistake.
      */
     fun register(id: String, file: RecipeFile, owner: Int) {
-        if (id in files) throw LuaApiException("recipe \"$id\" is ${RecipeKind.pathOf(id)}'s; pick another id")
+        if (id in files) throw LuaApiException("recipe \"$id\" is ${placeOf(RecipeKind, id).path}'s; pick another id")
         if (created.remove(id) != null) take(id)
         if (!put(id, file)) throw LuaApiException("the server couldn't make recipe \"$id\"")
         created[id] = Created(file, owner)
@@ -103,7 +109,7 @@ class Recipes(private val platform: Platform, private val log: RuntimeLog, priva
 
     /** Takes away a recipe a script registered; false when there's none by that id. */
     fun remove(id: String): Boolean {
-        if (id in files) throw LuaApiException("recipe \"$id\" is ${RecipeKind.pathOf(id)}'s; delete the file to remove it")
+        if (id in files) throw LuaApiException("recipe \"$id\" is ${placeOf(RecipeKind, id).path}'s; delete the file to remove it")
         created.remove(id) ?: return false
         take(id)
         return true

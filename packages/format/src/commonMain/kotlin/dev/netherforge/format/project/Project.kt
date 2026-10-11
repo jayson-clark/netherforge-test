@@ -209,6 +209,16 @@ class ProjectSnapshot internal constructor(
     }
 
     fun problemsFor(file: String) = problems.filter { it.file == file }
+
+    /**
+     * Where the resource [id] of [kind] sits, in its group folders: the project's own by id, a package's as `ns:id`
+     * (at its package path). One that isn't there is placed in its kind's folder, where a new one would go.
+     */
+    fun placeOf(kind: KindSpec<*, *>, id: String): ResourcePlace {
+        val (pkg, bare) = PackagePaths.split(id)
+        val loaded = if (pkg == null) get(kind)[id] else packages[pkg]?.snapshot?.get(kind)?.get(bare)
+        return kind.place(id, loaded?.group)
+    }
 }
 
 /** A package the project depends on, as it was found ([resolved]) and as it loaded on its own ([snapshot]). */
@@ -232,6 +242,8 @@ object Projects {
     private class Pending<T, C>(
         val kind: KindSpec<T, C>,
         val id: String,
+        /** The group folders it's in, empty for none. */
+        val group: String,
         val value: T,
         val files: Set<String>,
         game: GameData?,
@@ -240,7 +252,7 @@ object Projects {
         texts: ResourceTexts
     ) {
         /** Its own problems, which don't depend on anything else in the project. */
-        private val own = ResourceContext(id, files, game, minecraft, ProblemSink(kind.pathOf(id)), features, texts)
+        private val own = ResourceContext(id, group, files, game, minecraft, ProblemSink(kind.pathOf(id, group)), features, texts)
 
         init {
             kind.validate(value, own)
@@ -254,10 +266,15 @@ object Projects {
             uses?.takeIf { it.first == home }?.let { return it.second }
             val found = when (kind) {
                 is DocumentResourceKind<T, C> ->
-                    ReferenceIndex.usesOf(home, kind.pathOf(id), kind, CanonicalJson.json.encodeToJsonElement(kind.serializer, value))
+                    ReferenceIndex.usesOf(
+                        home,
+                        kind.pathOf(id, group),
+                        kind,
+                        CanonicalJson.json.encodeToJsonElement(kind.serializer, value)
+                    )
                 is FilesKind<*> -> {
                     val document = kind.companionDocument
-                    val path = kind.companionPathOf(id)
+                    val path = kind.companionPathOf(id, group)
                     val json = kind.companion(value)
                     if (document != null && path != null && json != null) ReferenceIndex.usesOf(home, path, document, json) else emptyList()
                 }
@@ -278,13 +295,19 @@ object Projects {
         /** Checked against the project, and compiled when nothing found errors: from a [qualified] copy for a package, which runs beside the project. */
         fun load(index: ProjectIndex, qualified: Boolean): Loaded<T, C> {
             val ctx =
-                KindContext(id, files, own.game, own.minecraft, ProblemSink(kind.pathOf(id)), index, own.features, own.texts, qualified)
+                KindContext(
+                    id, group, files, own.game, own.minecraft,
+                    ProblemSink(
+                        kind.pathOf(id, group)
+                    ),
+                    index, own.features, own.texts, qualified
+                )
             kind.crossCheck(value, ctx)
             // Every reference it makes (in its document, or a binary resource's companion document), found by the walker
             // wherever the model marks one.
             val documents = when (kind) {
                 is DocumentResourceKind<T, C> -> listOf(ctx.sink)
-                is FilesKind<*> -> listOfNotNull(kind.companionPathOf(id)?.let(::ProblemSink))
+                is FilesKind<*> -> listOfNotNull(kind.companionPathOf(id, group)?.let(::ProblemSink))
             }
             for (sink in documents) {
                 for (use in index.references.usesIn(sink.file)) {
@@ -294,8 +317,8 @@ object Projects {
                 if (sink !== ctx.sink) ctx.report(sink.problems)
             }
             val problems = own.problems + ctx.problems
-            if (problems.hasErrors) return Loaded(id, value, files, problems, null)
-            return Loaded(id, value, files, problems, compiled(if (qualified) index.references.home else null))
+            if (problems.hasErrors) return Loaded(id, value, files, problems, null, group)
+            return Loaded(id, value, files, problems, compiled(if (qualified) index.references.home else null), group)
         }
 
         private fun qualify(kind: DocumentResourceKind<T, C>, value: T, home: String): T {
@@ -312,7 +335,7 @@ object Projects {
                 if (!file.endsWith(".lua") || file == script?.file || Names.isLuaFile(file)) continue
                 ctx.problem(
                     ProblemCodes.SCRIPT_FILE_NAME,
-                    kind.fileOf(id, file),
+                    kind.fileOf(id, file, group),
                     "Lua files beside a script must be named with letters, digits and _ so require() can reach them"
                 )
             }
@@ -456,8 +479,9 @@ object Projects {
         }
         problems += vanillaProblems
 
-        // Which resources there are, each with its files: classify every path.
-        val found = HashMap<KindSpec<*, *>, MutableMap<String, MutableSet<String>>>()
+        // Which resources there are, each in its group folders with its files: classify every path.
+        val found = HashMap<KindSpec<*, *>, MutableMap<String, MutableMap<String, MutableSet<String>>>>()
+        val badGroups = mutableSetOf<String>()
         for (path in files.sorted()) {
             val kind = Kinds.inFolder(path.substringBefore('/', "")) ?: continue
             val at = Kinds.classify(path)
@@ -466,11 +490,48 @@ object Projects {
                 if (path.split('/').drop(1).none { it.startsWith(".") }) problems += strayFile(kind, path)
                 continue
             }
-            found.getOrPut(kind) { mutableMapOf() }.getOrPut(at.id) { mutableSetOf() }.also { at.rest?.let(it::add) }
+            val group = at.group.orEmpty()
+            val segments = if (group.isEmpty()) emptyList() else group.split('/')
+            if (segments.isNotEmpty() && !kind.groupable) {
+                val folder = "${kind.folder}/${segments.first()}"
+                if (badGroups.add(folder)) {
+                    problems += ProblemCodes.PROJECT_GROUP.at(
+                        folder,
+                        "${kind.id.replace('_', ' ').replaceFirstChar { it.uppercaseChar() }}s can't go in group folders: " +
+                            "an id names everything in it, so they stay in ${kind.folder}/, and everything in here is ignored"
+                    )
+                }
+                continue
+            }
+            val bad = segments.indexOfFirst { !Names.isGroup(it) }
+            if (bad >= 0) {
+                // Everything in a group folder that isn't one is ignored, and said once.
+                val folder = (listOf(kind.folder) + segments.take(bad + 1)).joinToString("/")
+                if (badGroups.add(folder)) {
+                    problems += ProblemCodes.PROJECT_GROUP.at(
+                        folder,
+                        "\"${segments[bad]}\" isn't a usable group name (${Names.GROUP_RULE}), so everything in it is ignored"
+                    )
+                }
+                continue
+            }
+            found.getOrPut(kind) { mutableMapOf() }.getOrPut(at.id) { mutableMapOf() }.getOrPut(group) { mutableSetOf() }
+                .also { at.rest?.let(it::add) }
         }
         val pending = Kinds.all.flatMap { kind ->
-            found[kind].orEmpty().entries.sortedBy { it.key }.mapNotNull { (id, inside) ->
-                read(kind, id, inside, source, game, manifest?.minecraft, features, cache, problems)
+            found[kind].orEmpty().entries.sortedBy { it.key }.mapNotNull { (id, byGroup) ->
+                // An id is the project's whole whatever group it's in: the first place in path order is read.
+                val groups = byGroup.keys.sorted()
+                val first = groups.first()
+                for (other in groups.drop(1)) {
+                    problems += ProblemCodes.PROJECT_DUPLICATE_ID.at(
+                        kind.locationOf(id, other),
+                        "Another ${kind.id.replace('_', ' ')} is \"$id\" too (${kind.locationOf(id, first)}): an id is the " +
+                            "project's whole, whatever group folder it's in, so this one is ignored",
+                        related = listOf(Location(kind.locationOf(id, first)))
+                    )
+                }
+                read(kind, id, first, byGroup.getValue(first), source, game, manifest?.minecraft, features, cache, problems)
             }
         }
         cache.end()
@@ -515,10 +576,13 @@ object Projects {
         }
         problems += manifestSink.problems
         val folders = reading.pending.groupBy({ it.kind.id }, { it.id to it.files }).mapValues { it.value.toMap() }
-        val index = ProjectIndex(reading.source, reading.defaultFont, read, references, folders, reading.vanilla)
+        val groups = reading.pending.filter {
+            it.group.isNotEmpty()
+        }.groupBy({ it.kind.id }, { it.id to it.group }).mapValues { it.value.toMap() }
+        val index = ProjectIndex(reading.source, reading.defaultFont, read, references, folders, reading.vanilla, groups)
         val loaded = reading.pending.map { it.kind to it.load(index, qualified) }
         for ((_, resource) in loaded) problems += resource.problems
-        manifest?.worlds?.let { problems += worldHeights(it, references, read, packages) }
+        manifest?.worlds?.let { problems += worldHeights(it, references, read, index, packages) }
         val resources = Kinds.all.associate { kind ->
             kind.id to loaded.filter { it.first == kind }.associate { (_, resource) -> resource.id to resource }
         }
@@ -559,6 +623,7 @@ object Projects {
         worlds: Map<String, WorldConfig>,
         references: ReferenceIndex,
         read: Map<String, Map<String, Any?>>,
+        index: ProjectIndex,
         packages: Map<String, LoadedPackage>
     ): List<Problem> {
         val sink = ProblemSink(ProjectManifest.FILE_NAME)
@@ -567,10 +632,10 @@ object Projects {
             if (key.namespace == references.home) {
                 @Suppress("UNCHECKED_CAST")
                 val value = read[kind.id]?.get(key.path) as T? ?: return null
-                return kind.pathOf(key.path) to value
+                return kind.pathOf(key.path, index.groupOf(kind, key.path)) to value
             }
-            val value = packages[key.namespace]?.snapshot?.models(kind)?.get(key.path) ?: return null
-            return PackagePaths.of(key.namespace, kind.pathOf(key.path)) to value
+            val loaded = packages[key.namespace]?.snapshot?.get(kind)?.get(key.path) ?: return null
+            return PackagePaths.of(key.namespace, kind.pathOf(key.path, loaded.group)) to loaded.value
         }
         for ((name, config) in worlds) {
             val terrainRef = config.terrain ?: continue
@@ -631,12 +696,13 @@ object Projects {
      * One resource of [kind] read from [source] and validated on its own, or
      * null (with its problem) when it can't be read: an id that isn't usable,
      * a folder without its main file, a document that doesn't parse. [inside]
-     * is the files in its folder. What [cache] kept is used while the main
+     * is the files in its folder, in its [group] folders. What [cache] kept is used while the main
      * file's text, [inside], [game] and [minecraft] are what they were.
      */
     private fun <T, C> read(
         kind: KindSpec<T, C>,
         id: String,
+        group: String,
         inside: Set<String>,
         source: ProjectSource,
         game: GameData?,
@@ -645,7 +711,7 @@ object Projects {
         cache: ProjectCache,
         problems: MutableList<Problem>
     ): Pending<T, C>? {
-        val location = kind.locationOf(id)
+        val location = kind.locationOf(id, group)
         if (!Names.isId(id)) {
             problems += ProblemCodes.PROJECT_ID.at(location, "\"$id\" isn't a usable id (${Names.ID_RULE})")
             return null
@@ -655,9 +721,9 @@ object Projects {
             problems += ProblemCodes.PROJECT_MISSING_FILE.at(location, "Folder has no $main, so it's ignored")
             return null
         }
-        val path = kind.pathOf(id)
+        val path = kind.pathOf(id, group)
         // A file with a companion document: the document is only read beside the file.
-        val companion = kind.companionPathOf(id)?.takeIf { it.substringAfterLast('/') in inside }
+        val companion = kind.companionPathOf(id, group)?.takeIf { it.substringAfterLast('/') in inside }
         if (companion != null && path.substringAfterLast('/') !in inside) {
             problems += ProblemCodes.PROJECT_MISSING_FILE.at(companion, "There's no $path beside this, so it's ignored")
             return null
@@ -668,7 +734,7 @@ object Projects {
         }
         // The other files a kind reads besides its main one (a datapack's), compared whole like the main file's text.
         val texts = inside.filter { kind.layout is Layout.Folder && kind.readsFile(it) }.sorted().mapNotNull { file ->
-            source.read(kind.fileOf(id, file))?.let { file to it }
+            source.read(kind.fileOf(id, file, group))?.let { file to it }
         }.toMap()
         val (pending, failed) = cache.keep<Pair<Pending<T, C>?, List<Problem>>>(path, text, inside, texts, game, minecraft, features) {
             val found = mutableListOf<Problem>()
@@ -677,14 +743,20 @@ object Projects {
                 is FilesKind<*> -> {
                     @Suppress("UNCHECKED_CAST")
                     kind as FilesKind<T>
-                    if (text == null) kind.of(id, inside.sorted()) else kind.ofCompanion(id, inside.sorted(), text, found)
+                    if (text ==
+                        null
+                    ) {
+                        kind.of(id, inside.sorted())
+                    } else {
+                        kind.ofCompanion(id, inside.sorted(), text, requireNotNull(companion), found)
+                    }
                 }
                 is DocumentResourceKind<T, C> -> when (val parsed = kind.parse(requireNotNull(text), path)) {
                     is CanonicalJson.Parsed.Failed -> return@keep null to listOf(parsed.problem)
                     is CanonicalJson.Parsed.Ok -> parsed.value
                 }
             }
-            Pending(kind, id, value, inside, game, minecraft, features, ResourceTexts(texts)) to found
+            Pending(kind, id, group, value, inside, game, minecraft, features, ResourceTexts(texts)) to found
         }
         problems += failed
         return pending

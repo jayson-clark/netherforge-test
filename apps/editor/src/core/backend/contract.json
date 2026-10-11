@@ -1853,6 +1853,42 @@
             false
           ],
           "error": "notFound"
+        },
+        {
+          "call": "captureMap",
+          "args": [
+            {
+              "level": "world/level.dat",
+              "dimension": "world"
+            },
+            "(arenas)/(pvp)/duel",
+            false
+          ],
+          "ok": null
+        },
+        {
+          "expect": "onCaptureProgress",
+          "event": {
+            "done": "$any",
+            "total": "$any"
+          }
+        },
+        {
+          "call": "readText",
+          "args": ["maps/(arenas)/(pvp)/duel/level.dat"],
+          "ok": "level"
+        },
+        {
+          "call": "captureMap",
+          "args": [
+            {
+              "level": "world/level.dat",
+              "dimension": "world"
+            },
+            "(Arenas)/duel",
+            false
+          ],
+          "error": "invalid"
         }
       ]
     }

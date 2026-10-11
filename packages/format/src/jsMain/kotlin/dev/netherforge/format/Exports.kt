@@ -269,11 +269,17 @@ private fun sizes(json: String): Map<String, List<Int>> = CanonicalJson.json.dec
 
 private fun gameData(json: String) = CanonicalJson.json.decodeFromString(GameDataBundle.serializer(), json)
 
+/** The group folders each resource in a group is in, by kind and id (kinds with none left out). */
+private fun groupsOf(snapshot: ProjectSnapshot): Map<String, Map<String, String>> = Kinds.all.mapNotNull { kind ->
+    snapshot[kind].filterValues { it.group.isNotEmpty() }.mapValues { it.value.group }.takeIf { it.isNotEmpty() }?.let { kind.id to it }
+}.toMap()
+
 private fun outlineOf(snapshot: ProjectSnapshot) = ProjectOutline(
     name = snapshot.manifest?.name,
     namespace = snapshot.manifest?.namespace,
     minecraft = snapshot.manifest?.minecraft,
     resources = Kinds.all.associate { kind -> kind.id to snapshot[kind].keys.toList() },
+    groups = groupsOf(snapshot),
     resourcePacks = snapshot.models(ResourcePackKind).mapValues { (id, pack) ->
         ResourcePackOutline(
             pack.skins.keys.toList(),
@@ -294,7 +300,8 @@ private fun outlineOf(snapshot: ProjectSnapshot) = ProjectOutline(
             pkg.manifest?.name,
             pkg.manifest?.version,
             Kinds.all.associate { kind -> kind.id to pkg.snapshot[kind].keys.toList() },
-            pkg.manifest?.exports.orEmpty()
+            pkg.manifest?.exports.orEmpty(),
+            groupsOf(pkg.snapshot)
         )
     },
     lock = snapshot.lock()?.takeIf { it.packages.isNotEmpty() }?.let(LockKind::write),
@@ -706,8 +713,8 @@ fun classify(path: String): String = Kinds.classify(path)?.let { encode(Classifi
  * (a [GameDataBundle], or null before an import): `{ "files": { path: text } }`, or `{ "needsGame": why }` for a kind
  * whose new files need game data there isn't ([TemplateNeedsGame]).
  */
-fun newResourceFiles(kind: String, id: String, gameDataJson: String?): String = try {
-    "{\"files\":${files(Templates.newResource(kindOf(kind), id, gameDataJson?.let(::gameData)))}}"
+fun newResourceFiles(kind: String, id: String, gameDataJson: String?, group: String?): String = try {
+    "{\"files\":${files(Templates.newResource(kindOf(kind), id, gameDataJson?.let(::gameData), group))}}"
 } catch (e: TemplateNeedsGame) {
     "{\"needsGame\":${JsonPrimitive(e.message.orEmpty())}}"
 }

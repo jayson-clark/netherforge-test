@@ -90,9 +90,11 @@ class ExportsTest {
         assertTrue(project.values.all { it is JsonPrimitive && it.isString })
         assertEquals(setOf("AGENTS.md", "CLAUDE.md"), obj(newAgentFiles("My Thing")).keys)
 
-        val recipe = obj(newResourceFiles("recipe", "bread", null))
+        val recipe = obj(newResourceFiles("recipe", "bread", null, null))
         assertTrue("recipes/bread.json" in recipe.getValue("files").jsonObject, recipe.toString())
-        assertFailsWith<IllegalArgumentException> { newResourceFiles("nonsense", "x", null) }
+        val grouped = obj(newResourceFiles("centity", "door", null, "(doors)"))
+        assertEquals(setOf("centities/(doors)/door/centity.json"), grouped.getValue("files").jsonObject.keys)
+        assertFailsWith<IllegalArgumentException> { newResourceFiles("nonsense", "x", null, null) }
         assertTrue(newScript("centity", "door").isNotBlank())
         assertTrue(newTerrainScript().isNotBlank())
     }

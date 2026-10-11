@@ -8,11 +8,14 @@
  */
 import {
   companionOf,
+  groupOf,
+  groupsOf,
   isBinaryKind,
   isFileKind,
   locationOf,
   opensAs,
   resourceIdsOf,
+  resourceOf,
 } from '@/core/paths'
 import { KINDS, type KindId, type TemplateKindId } from '@/core/format'
 import type { Workspace } from '@/core/store/workspace'
@@ -28,14 +31,22 @@ export interface ExplorerFolder {
   icon: IconName
   /** Under the id prompt when creating one. */
   message: string
+  /** Every resource's id, whatever group folder it's in: an id is the kind's whole. */
   ids: (files: string[]) => string[]
-  /** What rename, duplicate and delete act on: its folder, or its one file. */
-  location: (id: string) => string
+  /** The group folders resource [id] is in (`(weapons)/(swords)`), empty for none. */
+  groupOf: (files: string[], id: string) => string
+  /** Every group folder its resources are in, nested ones too (`(weapons)`, `(weapons)/(swords)`), sorted. */
+  groups: (files: string[]) => string[]
+  /** What rename, duplicate and delete act on: its folder, or its one file, in [group]. */
+  location: (id: string, group?: string) => string
   /** The document beside a single file (a structure's generation `.json`), which goes where it goes; null for a kind without one. */
-  companion: (id: string) => string | null
+  companion: (id: string, group?: string) => string | null
   /** The file its tab opens (or a map's folder). */
-  openPath: (id: string) => string
-  create: (ws: Workspace, id: string) => Promise<void> | void
+  openPath: (id: string, group?: string) => string
+  /** Whether its resources may go in group folders (all but resource packs). */
+  groupable: boolean
+  /** Makes a new one, in [group] when it's given. */
+  create: (ws: Workspace, id: string, group?: string) => Promise<void> | void
   /** Its kind's entry in the registry. */
   contribution: KindContribution
 }
@@ -49,14 +60,18 @@ const folderOf = (kind: KindId): ExplorerFolder => {
     icon: contribution.icon,
     message: contribution.message,
     ids: (files) => resourceIdsOf(files, kind),
-    location: (id) => locationOf(kind, id),
-    companion: (id) => companionOf(kind, id),
-    openPath: (id) => opensAs(kind, id),
+    groupOf: (files, id) => groupOf(files, kind, id),
+    groups: (files) => groupsOf(files, kind),
+    groupable: KINDS[kind].groupable,
+    location: (id, group) => locationOf(kind, id, group),
+    companion: (id, group) => companionOf(kind, id, group),
+    openPath: (id, group) => opensAs(kind, id, group),
     // A kind format has a template for is written and opened; Minecraft's own
-    // files (a structure, a map) open on their screen, which captures one.
-    create: (ws, id) => {
-      if (isBinaryKind(kind)) return ws.openBinary(kind, id)
-      if (KINDS[kind].template) return ws.createResource(kind as TemplateKindId, id)
+    // files (a structure, a map) open on their screen, which captures one
+    // (where the screen saves it).
+    create: (ws, id, group) => {
+      if (isBinaryKind(kind)) return ws.openBinary(kind, id, group)
+      if (KINDS[kind].template) return ws.createResource(kind as TemplateKindId, id, group)
     },
     contribution,
   }
@@ -77,17 +92,15 @@ export const folderByKey = (key: string | null): ExplorerFolder =>
 /** Whether a folder's resources are single files (recipes, structures) rather than folders. */
 export const isFileFolder = (folder: ExplorerFolder) => isFileKind(folder.key)
 
-/** The folder and id a project path belongs to, if it's inside a resource the explorer shows. */
+/** The folder, id and group a project path belongs to, if it's inside a resource the explorer shows. */
 export function resourceAt(
   path: string,
   files: string[],
-): { folder: ExplorerFolder; id: string } | null {
-  for (const folder of EXPLORER_FOLDERS) {
-    for (const id of folder.ids(files)) {
-      const location = folder.location(id)
-      if (path === location || path.startsWith(`${location}/`) || path === folder.companion(id))
-        return { folder, id }
-    }
-  }
-  return null
+): { folder: ExplorerFolder; id: string; group: string } | null {
+  // A package path (`library:items/gem/item.json`) is the package's, never the project's: a project path has no `:`.
+  const found = path.includes(':') ? null : resourceOf(path)
+  const folder = found && EXPLORER_FOLDERS.find((it) => it.key === found.kind)
+  // The resource as the project has it: a duplicate id in another group folder isn't one format reads.
+  if (!found || !folder || folder.groupOf(files, found.id) !== found.group) return null
+  return folder.ids(files).includes(found.id) ? { folder, id: found.id, group: found.group } : null
 }

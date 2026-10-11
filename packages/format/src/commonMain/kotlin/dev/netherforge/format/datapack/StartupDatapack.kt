@@ -84,7 +84,7 @@ object StartupDatapack {
         val target = DatapackLayout.entryFile(key, folder, tag = false)
         for ((name, datapack) in snapshot.running(DatapackKind)) {
             val path = datapack.filesFor(PackFormat.of(format))[target] ?: continue
-            return DatapackKind.fileOf(name, path.file)
+            return snapshot.placeOf(DatapackKind, name).file(path.file)
         }
         for (kind in Kinds.all) sourceIn(kind, snapshot, folder, key)?.let { return it }
         return null
@@ -95,7 +95,7 @@ object StartupDatapack {
             val namespace = ResourceRef(name).resolve(snapshot.namespace)?.namespace ?: continue
             if (namespace != key.namespace) continue
             val id = name.substringAfter(':')
-            if (key.path in kind.datapackEntries(id, loaded.value)[folder].orEmpty()) return kind.pathOf(name)
+            if (key.path in kind.datapackEntries(id, loaded.value)[folder].orEmpty()) return kind.pathOf(name, loaded.group)
         }
         return null
     }

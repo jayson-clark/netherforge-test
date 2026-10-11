@@ -43,8 +43,8 @@ class ReloadBatch internal constructor(
     /** False when [resource] has already reloaded in this batch: one that required another, both ways round, reloads once. */
     fun first(resource: Resource): Boolean = reloaded.add(resource)
 
-    /** Whether [file] (a project or package path) is one of the project's files now. */
-    fun exists(file: String): Boolean = file in session.projectFiles
+    /** Whether [resource]'s main file is one of the project's files now, in whichever group folder it is. */
+    fun exists(resource: Resource): Boolean = session.projectFiles.any { Resource.mainOf(it) == resource }
 
     /** The problems in [resource]'s files, among [among] (the project's as it reads now, by default). */
     fun problemsUnder(resource: Resource, among: List<Problem> = session.projectProblems): List<Problem> =
@@ -54,14 +54,14 @@ class ReloadBatch internal constructor(
     fun failures(block: () -> Unit): List<Problem> = session.failures.collect(block)
 
     /**
-     * Reloads one resource with a main file at [file]: [next] is its new
+     * Reloads one resource with a main file: [next] is its new
      * version, null when the file has errors or is gone. [reload] puts it in
      * place (null: the resource was deleted) and returns how much kept running
      * on it. A file with errors leaves the last good version running until
      * it's fixed.
      */
-    fun <T : Any> resource(resource: Resource, file: String, next: T?, reload: (T?) -> Int) {
-        val exists = exists(file)
+    fun <T : Any> resource(resource: Resource, next: T?, reload: (T?) -> Int) {
+        val exists = exists(resource)
         var kept = 0
         val failures = failures {
             kept = when {

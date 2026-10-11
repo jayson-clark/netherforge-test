@@ -58,6 +58,16 @@ are good ones to explore: `examples/basic` has a little of everything, and
   tile to open it. Click it and press <kbd>F2</kbd> to rename it, or
   <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>D</kbd> to duplicate it. Right-click it
   for everything else. The search box looks across every kind.
+- As a project grows, sort a kind's resources into **groups**: **New group**
+  (above the tiles) makes one, then drag tiles onto it, or right-click a
+  resource, choose **Move to group…** and type a group's name (`weapons`, or
+  `weapons/swords` for one inside another). A
+  group shows as a folder tile; double-click it to go in, and use the path
+  above the tiles (or <kbd>Backspace</kbd>) to come back out. New resources go
+  in the group that's open. On disk a group is a folder in parentheses,
+  `items/(weapons)/`, and it only sorts: a resource keeps its id wherever it
+  is, so nothing that names it changes (see
+  [group folders](../format/project.md#group-folders)).
 - The **Outline**, on the left, is the inside of the resource you have open:
   a centity's animations and nodes (a block or item node shows its block or
   item), a menu's slots, a resource pack's entries. With them are its **Files** (its

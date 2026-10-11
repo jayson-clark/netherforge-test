@@ -47,7 +47,7 @@ object ResourcePackKind : DocumentResourceKind<ResourcePackFile, ResourcePackRea
         // Each model file a look names, checked in itself, once however many name it.
         for (path in modelsOf(value).filter { it in models }) {
             val file = ResourcePackFile.modelFile(path)
-            val at = fileOf(id, file)
+            val at = ctx.pathIn(this, file)
             when (val parsed = ctx.json(file, at)) {
                 null -> {}
                 is CanonicalJson.Parsed.Failed -> ctx.report(listOf(parsed.problem))
@@ -177,7 +177,7 @@ object ResourcePackKind : DocumentResourceKind<ResourcePackFile, ResourcePackRea
         val textures = under(ctx.files, ResourcePackFile.TEXTURES)
         val models = modelsOf(value).mapNotNull { path ->
             val file = ResourcePackFile.modelFile(path)
-            val json = (ctx.json(file, fileOf(id, file)) as? CanonicalJson.Parsed.Ok)?.value as? JsonObject ?: return@mapNotNull null
+            val json = (ctx.json(file, ctx.pathIn(this, file)) as? CanonicalJson.Parsed.Ok)?.value as? JsonObject ?: return@mapNotNull null
             path to PackModels.read(json, textures)
         }.toMap()
         return ResourcePackRead(value, models)
@@ -185,6 +185,9 @@ object ResourcePackKind : DocumentResourceKind<ResourcePackFile, ResourcePackRea
 
     /** An empty pack. */
     override fun template(id: String, game: GameData?) = mapOf(pathOf(id) to write(ResourcePackFile()))
+
+    /** A pack's id names everything in it (`ui/coin`) and where its files are: it stays in `resource_packs/`. */
+    override val groupable get() = false
 
     /**
      * Every pack that read, built into the one resource pack in [namespace],

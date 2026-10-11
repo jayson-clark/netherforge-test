@@ -24,7 +24,7 @@ import {
   type LootTableFile,
   type Problem,
 } from '@/core/format'
-import { mainFileOf, resourceIdsOf, resourceOf } from '@/core/paths'
+import { mainFileIn, mainFileOf, resourceIdsOf, resourceOf } from '@/core/paths'
 import { packageText, splitPackagePath } from '@/core/store/packages'
 import { ItemEditor } from '@/minecraft/item/ItemForm'
 import { ItemIcon } from '@/minecraft/item/ItemIcon'
@@ -367,10 +367,11 @@ function RollPreview({ path, id, tooltip }: { path: string; id: string; tooltip:
     const home = state.outline?.namespace ?? ''
     const tables: Record<string, string> = {}
     for (const it of resourceIdsOf(state.files, 'loot_table'))
-      tables[`${home}:${it}`] = currentText(state, mainFileOf('loot_table', it)) ?? ''
+      tables[`${home}:${it}`] = currentText(state, mainFileIn(state.files, 'loot_table', it)) ?? ''
     for (const [pkg, outline] of Object.entries(state.outline?.packages ?? {}))
       for (const it of outline.resources.loot_table ?? []) {
-        const text = packageText(state, `${pkg}:${mainFileOf('loot_table', it)}`)
+        const file = mainFileOf('loot_table', it, outline.groups?.loot_table?.[it])
+        const text = packageText(state, `${pkg}:${file}`)
         if (text !== undefined) tables[`${pkg}:${it}`] = text
       }
     const own = splitPackagePath(path)[0] === null ? currentText(state, path) : undefined

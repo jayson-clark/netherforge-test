@@ -87,6 +87,58 @@ all of them:
 
 A module's folder needs no particular file: any file makes one.
 
+### Group folders
+
+A large project can sort a kind's resources into **group folders**: a folder
+whose name is an [id](#ids) in parentheses, between the kind's folder and the
+resource's, as deep as you like.
+
+```
+items/
+  (weapons)/
+    (wands)/
+      ruby_wand/
+        item.json
+        script.lua
+    sword/
+      item.json
+  ruby/
+    item.json
+recipes/
+  (smelting)/
+    ruby.json
+modules/
+  (economy)/
+    shop/
+      init.lua
+```
+
+Groups only sort. A resource's id is still its own folder's (or file's) name,
+whichever group it's in: the item above is `ruby_wand`, the recipe `ruby` and
+the module `shop` (`require("shop")`). Nothing names a group, so moving a
+resource into one, out of one or between them changes no reference, script or
+saved data. The parentheses are what tell a group from a resource from the
+path alone, so a resource's own subfolders (`centities/tower/lib/`) are never
+mistaken for groups.
+
+Every kind can be grouped but resource packs: a pack's id is part of every
+name in it (`ui/coin`) and of where its files go in the built pack, so packs
+stay in `resource_packs/` itself.
+
+| What                                                                                             | Problem                                                |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| A group folder whose name isn't an id in parentheses (`items/(Weapons)/`)                        | `project.group` (error; everything in it is ignored)   |
+| A resource pack in a group folder (`resource_packs/(art)/ui/`)                                   | `project.group` (error; everything in it is ignored)   |
+| Two resources of a kind with the same id in different groups (`items/ruby`, `items/(gems)/ruby`) | `project.duplicate-id` (error; only the first is read) |
+
+A group with nothing in it yet is kept by a hidden file (the editor writes
+`.gitkeep`), so the folder is there and git keeps it; format ignores it, as it
+does every hidden file.
+
+An id is the kind's whole, groups or not: of two resources with one id, the one
+whose group folders sort first is read (one in no group before any), and the
+other is reported and ignored.
+
 See [centities](centity.md), [menus](menu.md),
 [dialogs](dialog.md), [particle effects](particle-effect.md), [cutscenes](cutscene.md), [terrains](terrain.md), [biomes](biome.md), [dimension types](dimension-type.md),
 [items](item.md), [recipes](recipe.md), [loot tables](loot.md), [blocks](block.md), [advancements](advancement.md),
@@ -94,7 +146,9 @@ See [centities](centity.md), [menus](menu.md),
 
 ## Ids
 
-A resource's **id is its folder name**. It isn't repeated inside the file.
+A resource's **id is its folder name** (or its file's, for a kind of single
+files), whichever [group folders](#group-folders) it's in. It isn't repeated
+inside the file.
 
 Ids are lowercase letters, digits and `_`, start with a letter or digit, and
 are at most 64 characters: `tower`, `shop_tier_2`. They're used as folder

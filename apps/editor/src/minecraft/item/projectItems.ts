@@ -12,7 +12,7 @@ import {
   type KindId,
   type RecipeFile,
 } from '@/core/format'
-import { mainFileOf, resourceOf, resourceIdsOf } from '@/core/paths'
+import { groupOf, mainFileOf, resourceOf, resourceIdsOf } from '@/core/paths'
 import { isModel } from '@/core/store/documents'
 import { directDependencies, exportedIds, packageText } from '@/core/store/packages'
 import type { Workspace } from '@/core/store/workspace'
@@ -61,20 +61,35 @@ export function parseCached<T>(text: string | undefined): T | null {
 /**
  * Where the item a stack names (`ruby`, `library:gem`, written in namespace
  * [namespace]) is defined: its file as a project path or a package path, and
- * the namespace that file is written in. Null when it isn't shaped like one.
+ * the namespace that file is written in. [groupOf] says which group folders
+ * the project (or a package, by namespace) keeps an item in. Null when it
+ * isn't shaped like one.
  */
 export function itemFileOf(
   ref: string,
   namespace: string,
   home: string,
+  groupOf: (owner: string, id: string) => string = () => '',
 ): { path: string; namespace: string } | null {
   const key = resolveReference('item', ref, namespace)
   if (!key) return null
   const colon = key.indexOf(':')
   const owner = key.slice(0, colon)
-  const file = mainFileOf('item', key.slice(colon + 1))
+  const id = key.slice(colon + 1)
+  const file = mainFileOf('item', id, groupOf(owner, id))
   return { path: owner === home ? file : `${owner}:${file}`, namespace: owner }
 }
+
+/** Which group folders the item [id] of [owner] (the project's namespace, [home], or a package's) is kept in. */
+const itemGroup = (
+  s: Pick<Workspace, 'files' | 'outline'>,
+  home: string,
+  owner: string,
+  id: string,
+): string =>
+  owner === home
+    ? groupOf(s.files, 'item', id)
+    : (s.outline?.packages?.[owner]?.groups?.item?.[id] ?? '')
 
 /** The text of the item file [ref] names, as it is now (the project's) or as it was read (a package's). */
 function itemText(
@@ -95,7 +110,13 @@ function itemText(
 export function useProjectItem(ref: string | undefined): ItemFile | null {
   const namespace = useReferenceNamespace()
   const home = useHomeNamespace()
-  const file = ref ? itemFileOf(ref, namespace, home) : null
+  const key = ref ? resolveReference('item', ref, namespace) : null
+  const colon = key?.indexOf(':') ?? -1
+  // Only the item's group, so a change elsewhere in the file list or the outline renders nothing again.
+  const group = useWorkspace((s) =>
+    key ? itemGroup(s, home, key.slice(0, colon), key.slice(colon + 1)) : '',
+  )
+  const file = ref ? itemFileOf(ref, namespace, home, () => group) : null
   const path = file?.path
   const owner = file?.namespace
   const text = useWorkspace((s) => itemText(s, path === undefined ? null : { path }))

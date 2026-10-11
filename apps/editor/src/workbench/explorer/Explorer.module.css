@@ -75,6 +75,45 @@
 .title {
   font-weight: 600;
 }
+/* The kind's title, then the group folders down to the open one. */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  color: var(--muted);
+}
+.crumbButton {
+  padding: 1px 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.crumbButton:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.crumb .title {
+  padding: 1px 4px;
+  color: var(--text);
+}
+/* A group (tile or breadcrumb) a dragged resource would move into. */
+.dropTarget,
+.tile.dropTarget,
+.row.dropTarget {
+  background: var(--bg-selected-dim);
+  border-color: var(--accent);
+}
 .size {
   width: 80px;
 }

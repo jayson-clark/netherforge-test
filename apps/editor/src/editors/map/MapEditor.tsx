@@ -17,7 +17,7 @@
 import { useEffect, useState } from 'react'
 import type { CaptureProgress } from '@/core/backend/types'
 import { readNbt, writeNbt, type NbtRoot } from '@netherforge/terrain-preview/nbt'
-import { basename, mainFileOf } from '@/core/paths'
+import { basename, mainFileOf, resourceOf } from '@/core/paths'
 import { useApp, useRun, useWorkspace } from '@/state/providers'
 import { ask } from '@/ui/dialogs'
 import { Row, Section } from '@/ui/fields'
@@ -61,7 +61,9 @@ export function formatBytes(bytes: number): string {
 export function MapEditor({ path: folder }: { path: string }) {
   const { backend } = useApp()
   const id = basename(folder)
-  const level = mainFileOf('map', id)
+  // The group folders it's in (`(arenas)`), which a capture writes into too.
+  const group = resourceOf(folder)?.group ?? ''
+  const level = mainFileOf('map', id, group)
   const allFiles = useWorkspace((s) => s.files)
   const stamps = useWorkspace((s) => s.fileStamps)
   const inside = allFiles.filter((it) => it.startsWith(`${folder}/`))
@@ -275,11 +277,17 @@ function CaptureWorld({ id, folder, exists }: { id: string; folder: string; exis
     setProgress(null)
     try {
       const saved = await backend.bridgeRequest('save_world', { world: chosen })
-      await backend.captureMap({ level: saved.level, dimension: saved.dimension }, id, exists)
+      // Into the group folders the map is in (`(arenas)/duel`), as the tab has it.
+      const group = resourceOf(folder)?.group ?? ''
+      await backend.captureMap(
+        { level: saved.level, dimension: saved.dimension },
+        group ? `${group}/${id}` : id,
+        exists,
+      )
       const ws = workspace.getState()
       await ws.refreshFiles()
       // The copy's spawn is the world's own, whichever world it was.
-      const levelPath = mainFileOf('map', id)
+      const levelPath = mainFileOf('map', id, group)
       const level = await readNbt(await readProjectBytes(backend, levelPath, Date.now()))
       await ws.writeBinary(levelPath, await writeNbt(withSpawn(level, saved.spawn)))
       setMessage({ kind: 'info', text: `Saved ${chosen} into ${folder}/.` })

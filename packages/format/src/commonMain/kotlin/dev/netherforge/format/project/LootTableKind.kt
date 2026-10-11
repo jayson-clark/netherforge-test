@@ -54,7 +54,7 @@ object LootTableKind : DocumentResourceKind<LootTableFile, LootTableFile>(
                     ProblemCodes.LOOT_CYCLE,
                     "\"${entry.table}\" includes this table again${if (start == ctx.id) "" else " (through its entries)"}, so a roll would never end",
                     "$at.table",
-                    listOf(Location(pathOf(start)))
+                    listOf(Location(ctx.placeOf(this, start).path))
                 )
                 return
             }

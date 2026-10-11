@@ -411,6 +411,8 @@ internal object Constants {
         append("  scripted: boolean\n")
         append("  /** `newResourceFiles` makes one (given game data, for a kind whose new files need it). */\n")
         append("  template: boolean\n")
+        append("  /** Its resources may sit in group folders (`items/(weapons)/ruby_wand/`): all but a resource pack's. */\n")
+        append("  groupable: boolean\n")
         append("}\n\n")
         append("/** Every resource kind, in the order a reload batch reloads them. */\n")
         append("export const KINDS = {\n")
@@ -423,7 +425,8 @@ internal object Constants {
                     "main: ${opt(
                         kind.mainFile
                     )}, extension: ${opt(extension)}, companion: ${opt(companion)}, contents: ${str(kind.contents.name.lowercase())}, " +
-                    "scripted: ${kind.script != null}, template: ${kind.template("id", TEMPLATE_GAME) != null} },\n"
+                    "scripted: ${kind.script != null}, template: ${kind.template("id", TEMPLATE_GAME) != null}, " +
+                    "groupable: ${kind.groupable} },\n"
             )
         }
         append("} as const satisfies Record<string, KindInfo>\n")

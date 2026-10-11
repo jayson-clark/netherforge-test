@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { MemoryBackend } from '@/core/backend/memory'
 import { AppProvider, type AppStores } from '@/state/providers'
 import { openExampleApp } from '@/testing/workspace'
+import { closeMenu, ContextMenuHost } from '@/ui/ContextMenu'
 import { DialogHost } from '@/ui/dialogs'
 import { Explorer } from './Explorer'
 
@@ -14,13 +15,17 @@ beforeEach(async () => {
   ;({ backend, app } = await openExampleApp())
 })
 
-afterEach(cleanup)
+afterEach(() => {
+  act(closeMenu)
+  cleanup()
+})
 
 function show() {
   render(
     <AppProvider app={app}>
       <Explorer />
       <DialogHost />
+      <ContextMenuHost />
     </AppProvider>,
   )
 }
@@ -177,5 +182,199 @@ describe('a dependency in the explorer', () => {
     expect(
       within(items).getByRole('option', { name: 'my_gem' }).getAttribute('aria-selected'),
     ).toBe('true')
+  })
+})
+
+/** What a drag carries between tiles: jsdom has no DataTransfer. */
+function dataTransfer() {
+  const data = new Map<string, string>()
+  return {
+    setData: (type: string, value: string) => void data.set(type, value),
+    getData: (type: string) => data.get(type) ?? '',
+    get types() {
+      return [...data.keys()]
+    },
+    effectAllowed: 'all',
+  }
+}
+
+describe('group folders in the explorer', () => {
+  const items = () => screen.getByRole('listbox', { name: 'Items' })
+  const shown = () =>
+    within(items())
+      .getAllByRole('option')
+      .map((it) => it.getAttribute('aria-label'))
+
+  it('shows a group as a folder before the resources, and goes in and back out', () => {
+    show()
+    pickKind('Items')
+    // The example keeps its tools in items/(tools)/: the group, then the items outside it.
+    expect(shown()[0]).toBe('Group tools')
+    expect(shown()).not.toContain('ruby_wand')
+    expect(shown()).toContain('ruby')
+
+    fireEvent.doubleClick(within(items()).getByRole('option', { name: 'Group tools' }))
+    expect(shown()).toEqual(['ruby_pick', 'ruby_wand'])
+    expect(screen.getByRole('navigation', { name: 'Group folders' }).textContent).toContain('tools')
+
+    // The breadcrumb goes back up, and so does Backspace.
+    fireEvent.click(screen.getByRole('button', { name: 'Items' }))
+    expect(shown()[0]).toBe('Group tools')
+    fireEvent.click(within(items()).getByRole('option', { name: 'Group tools' }))
+    fireEvent.keyDown(items(), { key: 'Enter' })
+    expect(shown()).toEqual(['ruby_pick', 'ruby_wand'])
+    fireEvent.keyDown(items(), { key: 'Backspace' })
+    expect(shown()[0]).toBe('Group tools')
+    expect(
+      within(items()).getByRole('option', { name: 'Group tools' }).getAttribute('aria-selected'),
+    ).toBe('true')
+  })
+
+  it('opens a resource in a group from where it is, and finds it by search', async () => {
+    show()
+    pickKind('Items')
+    fireEvent.doubleClick(within(items()).getByRole('option', { name: 'Group tools' }))
+    fireEvent.doubleClick(within(items()).getByRole('option', { name: 'ruby_wand' }))
+    await waitFor(() => expect(tabs()).toContain('items/(tools)/ruby_wand/item.json'))
+
+    fireEvent.change(search(), { target: { value: 'ruby_pi' } })
+    const results = screen.getByRole('listbox', { name: 'Search results' })
+    expect(within(results).getByRole('option', { name: 'ruby_pick' }).textContent).toContain(
+      'tools',
+    )
+  })
+
+  it('makes a new resource in the group that is open', async () => {
+    show()
+    pickKind('Items')
+    fireEvent.doubleClick(within(items()).getByRole('option', { name: 'Group tools' }))
+    fireEvent.click(screen.getByRole('button', { name: 'New item in tools' }))
+    const dialog = await screen.findByRole('dialog', { name: 'New item in tools' })
+    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: 'ruby_axe' } })
+    // Ids are the kind's whole: one in another group is taken here too.
+    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: 'ruby' } })
+    expect(within(dialog).getByText('That id is taken')).toBeTruthy()
+    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: 'ruby_axe' } })
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Create' }))
+    })
+    await waitFor(() =>
+      expect(backend.testFiles()['items/(tools)/ruby_axe/item.json']).toBeDefined(),
+    )
+    await waitFor(() => expect(tabs()).toContain('items/(tools)/ruby_axe/item.json'))
+  })
+
+  it('moves a resource dropped on a group, or on the breadcrumb, keeping its id', async () => {
+    show()
+    pickKind('Items')
+    const transfer = dataTransfer()
+    fireEvent.dragStart(within(items()).getByRole('option', { name: 'ruby' }), {
+      dataTransfer: transfer,
+    })
+    const tools = within(items()).getByRole('option', { name: 'Group tools' })
+    fireEvent.dragOver(tools, { dataTransfer: transfer })
+    fireEvent.drop(tools, { dataTransfer: transfer })
+    await waitFor(() => expect(backend.testFiles()['items/(tools)/ruby/item.json']).toBeDefined())
+    expect(backend.testFiles()['items/ruby/item.json']).toBeUndefined()
+    expect(shown()).not.toContain('ruby')
+
+    // And back out, onto the kind in the breadcrumb.
+    fireEvent.doubleClick(within(items()).getByRole('option', { name: 'Group tools' }))
+    const back = dataTransfer()
+    fireEvent.dragStart(within(items()).getByRole('option', { name: 'ruby' }), {
+      dataTransfer: back,
+    })
+    const crumb = screen.getByRole('button', { name: 'Items' })
+    fireEvent.dragOver(crumb, { dataTransfer: back })
+    fireEvent.drop(crumb, { dataTransfer: back })
+    await waitFor(() => expect(backend.testFiles()['items/ruby/item.json']).toBeDefined())
+  })
+
+  it('moves a resource to a group typed in, making it as it goes', async () => {
+    show()
+    pickKind('Items')
+    fireEvent.contextMenu(within(items()).getByRole('option', { name: 'crown' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Move to group…' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Move crown to a group' })
+    const group = within(dialog).getByRole('textbox')
+    fireEvent.change(group, { target: { value: 'Royal' } })
+    expect(within(dialog).getByRole('button', { name: 'Move' }).hasAttribute('disabled')).toBe(true)
+    fireEvent.change(group, { target: { value: 'royal/heads' } })
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Move' }))
+    })
+    await waitFor(() =>
+      expect(backend.testFiles()['items/(royal)/(heads)/crown/item.json']).toBeDefined(),
+    )
+    expect(await within(items()).findByRole('option', { name: 'Group royal' })).toBeTruthy()
+  })
+
+  it('renames a group in place with F2, taking what is in it along', async () => {
+    show()
+    pickKind('Items')
+    fireEvent.click(within(items()).getByRole('option', { name: 'Group tools' }))
+    fireEvent.keyDown(items(), { key: 'F2' })
+    const name = screen.getByRole('textbox', { name: 'Rename group tools' })
+    fireEvent.change(name, { target: { value: 'gear' } })
+    fireEvent.keyDown(name, { key: 'Enter' })
+    await waitFor(() =>
+      expect(backend.testFiles()['items/(gear)/ruby_wand/script.lua']).toBeDefined(),
+    )
+    expect(backend.testFiles()['items/(tools)/ruby_wand/script.lua']).toBeUndefined()
+    expect(await within(items()).findByRole('option', { name: 'Group gear' })).toBeTruthy()
+  })
+
+  it('makes an empty group with New group, inside the open one, and deletes it', async () => {
+    show()
+    pickKind('Items')
+    fireEvent.click(screen.getByRole('button', { name: 'New group' }))
+    const dialog = await screen.findByRole('dialog', { name: 'New group of items' })
+    // A group's name is an id, and one by that name is already here.
+    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: 'tools' } })
+    expect(within(dialog).getByText('There is a group by that name here')).toBeTruthy()
+    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: 'armour' } })
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Create' }))
+    })
+    // Kept by a hidden file, so the empty folder is there (and git keeps it).
+    await waitFor(() => expect(backend.testFiles()['items/(armour)/.gitkeep']).toBe(''))
+    const armour = await within(items()).findByRole('option', { name: 'Group armour' })
+    expect(armour.getAttribute('aria-selected')).toBe('true')
+
+    // Inside it, it says it's empty, and a group made there goes in it.
+    fireEvent.doubleClick(armour)
+    expect(screen.getByText('This group is empty.')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'New group in armour' }))
+    const inner = await screen.findByRole('dialog', { name: 'New group in armour' })
+    fireEvent.change(within(inner).getByRole('textbox'), { target: { value: 'helmets' } })
+    await act(async () => {
+      fireEvent.click(within(inner).getByRole('button', { name: 'Create' }))
+    })
+    await waitFor(() => expect(backend.testFiles()['items/(armour)/(helmets)/.gitkeep']).toBe(''))
+
+    // Deleting it asks, then takes the folder and what's in it.
+    fireEvent.click(screen.getByRole('button', { name: 'Items' }))
+    fireEvent.contextMenu(within(items()).getByRole('option', { name: 'Group armour' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete group' }))
+    const confirm = await screen.findByRole('dialog', { name: 'Delete group armour' })
+    await act(async () => {
+      fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }))
+    })
+    await waitFor(() =>
+      expect(Object.keys(backend.testFiles()).some((it) => it.startsWith('items/(armour)'))).toBe(
+        false,
+      ),
+    )
+    expect(within(items()).queryByRole('option', { name: 'Group armour' })).toBeNull()
+  })
+
+  it("doesn't offer to group a resource pack", () => {
+    show()
+    pickKind('Resource packs')
+    const packs = screen.getByRole('listbox', { name: 'Resource packs' })
+    fireEvent.contextMenu(within(packs).getAllByRole('option')[0]!)
+    expect(screen.getByRole('menuitem', { name: 'Duplicate' })).toBeTruthy()
+    expect(screen.queryByRole('menuitem', { name: 'Move to group…' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'New group' })).toBeNull()
   })
 })

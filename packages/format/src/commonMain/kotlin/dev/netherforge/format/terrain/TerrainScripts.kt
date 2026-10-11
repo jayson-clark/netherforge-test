@@ -9,6 +9,8 @@ import dev.netherforge.format.lua.LuaPlatform
 import dev.netherforge.format.lua.LuaState
 import dev.netherforge.format.noise.FastNoiseLite
 import dev.netherforge.format.noise.TerrainSeeds
+import dev.netherforge.format.project.Kinds
+import dev.netherforge.format.project.ModuleKind
 import kotlin.concurrent.Volatile
 
 /**
@@ -51,23 +53,32 @@ class TerrainScripts(val platform: LuaPlatform, val sources: Map<String, String>
          * out (a `require` of it then says there's no such module).
          */
         fun sourcesOf(script: CompiledScript, files: Collection<String>, read: (String) -> String?): Map<String, String> =
-            files.filter { it == script.file || (it.startsWith("modules/") && it.endsWith(".lua")) }
+            files.filter { it == script.file || (it.startsWith("${ModuleKind.folder}/") && it.endsWith(".lua")) }
                 .sorted()
                 .mapNotNull { path -> read(path)?.let { path to it } }
                 .toMap()
 
-        /** The paths a module name may be ([name] as `require` takes it) for code at [from] (`@modules/terrain/a.lua`, or the script's own). */
-        fun modulePaths(name: String, from: String): List<String> {
+        /**
+         * The paths a module name may be ([name] as `require` takes it) for code at [from] (`@modules/terrain/a.lua`, or
+         * the script's own), its modules found where [files] has them (`modules/(world)/rocks/init.lua` is the module
+         * `rocks`; one [files] lacks is looked for in `modules/` itself).
+         */
+        fun modulePaths(name: String, from: String, files: Collection<String> = emptyList()): List<String> {
             val parts = name.split('.')
             if (parts.any { !PART.matches(it) }) return emptyList()
             val joined = parts.joinToString("/")
-            val own = from.removePrefix("@").takeIf { it.startsWith("modules/") }?.split('/')?.getOrNull(1)
-            val ownFiles = own?.let { listOf("modules/$it/$joined.lua", "modules/$it/$joined/init.lua") }.orEmpty()
+            val modules = files.mapNotNull { Kinds.classify(it) }.filter { it.kind == ModuleKind.id && it.pkg == null }
+                .associate { it.id!! to ModuleKind.locationOf(it.id!!, it.group) }
+
+            fun location(id: String) = modules[id] ?: ModuleKind.locationOf(id)
+            val own = Kinds.classify(from.removePrefix("@"))?.takeIf { it.kind == ModuleKind.id }?.id
+            val ownFiles = own?.let { listOf("${location(it)}/$joined.lua", "${location(it)}/$joined/${ModuleKind.ENTRY}") }.orEmpty()
             val rest = parts.drop(1).joinToString("/")
+            val module = location(parts[0])
             val moduleFiles = if (rest.isEmpty()) {
-                listOf("modules/${parts[0]}/init.lua")
+                listOf("$module/${ModuleKind.ENTRY}")
             } else {
-                listOf("modules/${parts[0]}/$rest.lua", "modules/${parts[0]}/$rest/init.lua")
+                listOf("$module/$rest.lua", "$module/$rest/${ModuleKind.ENTRY}")
             }
             return ownFiles + moduleFiles
         }
@@ -326,7 +337,8 @@ internal class TerrainScriptState(private val runner: ScriptRunner) {
         },
         "host_resolve" to LuaHostFunction { args -> resolve(args.string(1).orEmpty()) },
         "host_module_path" to LuaHostFunction { args ->
-            TerrainScripts.modulePaths(args.string(1).orEmpty(), args.string(2).orEmpty()).firstOrNull { it in runner.scripts.sources }
+            val sources = runner.scripts.sources
+            TerrainScripts.modulePaths(args.string(1).orEmpty(), args.string(2).orEmpty(), sources.keys).firstOrNull { it in sources }
         },
         "host_load" to LuaHostFunction { args ->
             val path = args.string(1).orEmpty()

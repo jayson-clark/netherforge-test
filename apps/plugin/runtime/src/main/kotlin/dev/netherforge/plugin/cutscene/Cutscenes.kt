@@ -138,12 +138,11 @@ class Cutscenes(
 
     override fun reload(kind: KindSpec<*, *>, ids: Set<String>, batch: ReloadBatch) {
         for (id in ids) {
-            val file = CutsceneKind.pathOf(id)
-            val exists = batch.exists(file)
+            val exists = batch.exists(Resource(CutsceneKind, id))
             val next = batch.snapshot.running(CutsceneKind)[id]
             // A file with errors keeps its last good version; noted, so playing one that never had one can say why.
             if (next == null && exists) reload(id, null, exists = true, problem = cutsceneProblem(batch.snapshot, id))
-            batch.resource(Resource(CutsceneKind, id), file, next) { reload(id, it, exists, null) }
+            batch.resource(Resource(CutsceneKind, id), next) { reload(id, it, exists, null) }
         }
     }
 
@@ -164,8 +163,8 @@ class Cutscenes(
     }.toMap()
 
     private fun cutsceneProblem(snapshot: ProjectSnapshot, id: String): String? {
-        val file = CutsceneKind.pathOf(id)
-        return snapshot.problems.firstOrNull { it.file == file && it.severity == Severity.ERROR }?.message
+        val resource = Resource(CutsceneKind, id)
+        return snapshot.problems.firstOrNull { it.severity == Severity.ERROR && Resource.mainOf(it.file) == resource }?.message
     }
 
     /** What `nf.cutscenes.play` takes besides the player and the cutscene. */

@@ -5,6 +5,7 @@ import dev.netherforge.format.item.ItemFile
 import dev.netherforge.format.item.ProjectItems
 import dev.netherforge.format.project.ItemKind
 import dev.netherforge.format.project.KindSpec
+import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.api.EventType
 import dev.netherforge.plugin.api.Events
@@ -45,6 +46,8 @@ class Items(
     private val platform: Platform,
     private val scripts: Scripts,
     private val readSource: (String) -> String?,
+    /** Where a resource is now (in its group folders), by kind and id: where its script is read from. */
+    private val placeOf: (KindSpec<*, *>, String) -> ResourcePlace,
     /** The project's namespace, which references naming none are in. */
     private val namespace: () -> String
 ) : RuntimeService {
@@ -138,7 +141,7 @@ class Items(
 
     /** `reattached` is how many online players had stacks rewritten to the new look. */
     override fun reload(kind: KindSpec<*, *>, ids: Set<String>, batch: ReloadBatch) {
-        for (id in ids) batch.resource(Resource(ItemKind, id), ItemKind.pathOf(id), batch.snapshot.running(ItemKind)[id]) { reload(id, it) }
+        for (id in ids) batch.resource(Resource(ItemKind, id), batch.snapshot.running(ItemKind)[id]) { reload(id, it) }
     }
 
     /**
@@ -212,7 +215,7 @@ class Items(
 
     private fun start(record: Record) {
         val script = record.file.script ?: return
-        val path = ItemKind.fileOf(record.id, script.file)
+        val path = placeOf(ItemKind, record.id).file(script.file)
         val source = readSource(path) ?: return
         record.scope = scripts.start(ScopeOwner.ItemScript(record.id, path), script, source).first
     }

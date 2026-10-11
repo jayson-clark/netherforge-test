@@ -324,6 +324,8 @@ export interface PathInfo {
   rest?: string
   /** For a package path (`library:items/gem/item.json`): the dependency it's in. */
   package?: string
+  /** The group folders it's in (`(weapons)/(swords)`), absent when it's in its kind's folder itself. */
+  group?: string
 }
 
 /** Answers by path: the editor asks about the same few hundred paths on every render. */
@@ -632,16 +634,18 @@ export const newAgentFiles = (name: string) => JSON.parse(nf.newAgentFiles(name)
 
 /**
  * Files for a new resource of [kind], already canonical, from format's template for it, given the server's
- * [gameData] (a datapack's new `pack.mcmeta` names its format); `needsGame` says why there are none when a kind's
- * template needs game data there isn't.
+ * [gameData] (a datapack's new `pack.mcmeta` names its format), in [group] folders when it's given (`(weapons)`);
+ * `needsGame` says why there are none when a kind's template needs game data there isn't.
  */
 export const newResourceFiles = (
   kind: TemplateKindId,
   id: string,
   gameData: GameDataBundle | null,
+  group = '',
 ): { files: Files } | { needsGame: string } =>
-  JSON.parse(nf.newResourceFiles(kind, id, gameData ? JSON.stringify(gameData) : null)) as
-    { files: Files } | { needsGame: string }
+  JSON.parse(
+    nf.newResourceFiles(kind, id, gameData ? JSON.stringify(gameData) : null, group || null),
+  ) as { files: Files } | { needsGame: string }
 
 /**
  * Why a project can't be opened, from its `netherforge.json` text: a format

@@ -58,7 +58,7 @@ object BiomeKind : DocumentResourceKind<BiomeFile, BiomeFile>(
                     "\"$first\" comes before \"$second\" here, but after it in biome \"$other\": " +
                         "the game can't place both in one world, so list them in the same order",
                     CanonicalJson.childPath("$.features", step.id),
-                    listOf(Location(pathOf(other), CanonicalJson.childPath("$.features", step.id)))
+                    listOf(Location(ctx.placeOf(this, other).path, CanonicalJson.childPath("$.features", step.id)))
                 )
                 break
             }

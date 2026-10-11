@@ -53,7 +53,7 @@ object AdvancementKind : DocumentResourceKind<AdvancementFile, AdvancementFile>(
                     ProblemCodes.ADVANCEMENT_CYCLE,
                     "\"$parent\" leads back to this advancement${if (start == ctx.id) "" else " through its parents"}, so it would hang from itself",
                     "$.parent",
-                    listOf(Location(pathOf(start)))
+                    listOf(Location(ctx.placeOf(this, start).path))
                 )
                 return
             }

@@ -24,8 +24,11 @@ import { errorText, isUnder, nextNonce, type SliceArgs } from './slice'
 import { namespaceOf, projectInput } from './validation'
 
 export interface FilesActions {
-  /** Writes format's template for a new resource of [kind] (a module's `init.lua`) and opens it. */
-  createResource(kind: TemplateKindId, id: string): Promise<void>
+  /**
+   * Writes format's template for a new resource of [kind] (a module's `init.lua`), in [group] folders when given
+   * (`(weapons)`), and opens it.
+   */
+  createResource(kind: TemplateKindId, id: string, group?: string): Promise<void>
   createFile(path: string, text: string): Promise<void>
   /**
    * Copies a file or a folder (a resource, a map) to [to], as it is
@@ -59,8 +62,8 @@ export function filesSlice(args: SliceArgs): FilesActions {
   const filesUnder = (path: string) => get().files.filter((it) => isUnder(it, path))
 
   return {
-    async createResource(kind, id) {
-      const made = newResourceFiles(kind, id, get().gameData)
+    async createResource(kind, id, group = '') {
+      const made = newResourceFiles(kind, id, get().gameData, group)
       if ('needsGame' in made) return get().notify('error', `${made.needsGame}.`)
       const { files } = made
       if (get().refuseReadOnly(...Object.keys(files))) return
@@ -68,7 +71,7 @@ export function filesSlice(args: SliceArgs): FilesActions {
       await get().refreshFiles()
       const json = Object.fromEntries(Object.entries(files).filter(([path]) => isProjectJson(path)))
       set({ diskTexts: { ...get().diskTexts, ...json } })
-      await get().openFile(opensAs(kind, id))
+      await get().openFile(opensAs(kind, id, group))
       get().validateSoon()
     },
 

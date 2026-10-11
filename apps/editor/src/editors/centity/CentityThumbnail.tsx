@@ -10,7 +10,7 @@ import { Canvas, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useApp, useWorkspace } from '@/state/providers'
 import { centityPoser, type CentityFile } from '@/core/format'
-import { mainFileOf, resourceIdsOf } from '@/core/paths'
+import { mainFileIn, resourceIdsOf } from '@/core/paths'
 import type { ThumbnailProps } from '@/editors/contributions'
 import { useClientAssets } from '@/minecraft/client/useClientAssets'
 import { currentText, parseCached } from '@/minecraft/item/projectItems'
@@ -44,7 +44,7 @@ export function CentityThumbnail({ id, size, fallback }: ThumbnailProps) {
 function CentityPicture({ id, size }: { id: string; size: number }) {
   const { backend } = useApp()
   const root = useWorkspace((s) => s.project?.root ?? null)
-  const text = useWorkspace((s) => currentText(s, mainFileOf('centity', id)))
+  const text = useWorkspace((s) => currentText(s, mainFileIn(s.files, 'centity', id)))
   const assets = useClientAssets()
   const key = text === undefined ? null : thumbnailKey(id, text, assets?.version ?? null)
   const ready = useThumbnails((s) => s.saved !== null)

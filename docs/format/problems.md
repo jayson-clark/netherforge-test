@@ -96,6 +96,14 @@ Error. A setting's `default` isn't one of its own values. See [format/settings.m
 
 Error. A resource's folder or file name isn't an id, so it's ignored. See [the project format](project.md).
 
+### `project.group` {#project-group}
+
+Error. A group folder's name isn't an id in parentheses, so everything in it is ignored. See [the project format](project.md).
+
+### `project.duplicate-id` {#project-duplicate-id}
+
+Error. Two resources of one kind have the same id in different group folders; only the first is read. See [the project format](project.md).
+
 ### `project.missing-file` {#project-missing-file}
 
 Warning. A resource folder has no main file, so it's ignored. See [the project format](project.md).

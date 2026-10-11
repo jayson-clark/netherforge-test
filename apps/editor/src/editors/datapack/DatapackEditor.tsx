@@ -19,8 +19,9 @@ import { fileGroups, rangeText } from './ops'
 export function DatapackEditor({ path }: { path: string }) {
   const { workspace } = useApp()
   const { model } = useModelDoc<PackMeta>(path)
-  const id = resourceOf(path)?.id ?? path
-  const folder = `${locationOf('datapack', id)}/`
+  const found = resourceOf(path)
+  const id = found?.id ?? path
+  const folder = `${locationOf('datapack', id, found?.group)}/`
   const all = useWorkspace((s) => s.files)
   const files = all.filter((file) => file.startsWith(folder))
   if (!model) return <RawDocView path={path} />

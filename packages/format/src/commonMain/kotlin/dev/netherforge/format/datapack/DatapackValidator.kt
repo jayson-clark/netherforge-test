@@ -70,7 +70,7 @@ object DatapackValidator {
         val problems = mutableListOf<Problem>()
         for (file in ctx.files.sorted()) {
             if (file == PackMeta.FILE_NAME) continue
-            val at = DatapackKind.fileOf(ctx.id, file)
+            val at = ctx.pathIn(DatapackKind, file)
             val path = when (val placed = DatapackLayout.place(file, overlays)) {
                 is DatapackLayout.Placed.Wrong -> {
                     problems += ProblemCodes.DATAPACK_FILE.at(at, placed.message)
@@ -102,7 +102,7 @@ object DatapackValidator {
         // Every file another datapack writes, by where it goes: the first (by id) to write one keeps it.
         val earlier = datapacks.filterKeys { it < ctx.id }.values.flatten().associateBy { it.target }
         for (path in datapacks[ctx.id].orEmpty()) {
-            val at = DatapackKind.fileOf(ctx.id, path.file)
+            val at = ctx.pathIn(DatapackKind, path.file)
             when {
                 path.namespace == home -> if (!ResourceRef.RESOURCE_PATH.matches(path.path)) {
                     problems += ProblemCodes.DATAPACK_FILE.at(
@@ -126,7 +126,7 @@ object DatapackValidator {
                 problems += ProblemCodes.DATAPACK_CONFLICT.at(
                     at,
                     "The ${kind.id.replace('_', ' ')} \"$id\" is \"${path.key}\" in ${path.registry} too: rename one of them",
-                    related = listOf(Location(kind.pathOf(id)))
+                    related = listOf(Location(ctx.placeOf(kind, id).path))
                 )
             }
             earlier[path.target]?.let { other ->
@@ -134,7 +134,7 @@ object DatapackValidator {
                 problems += ProblemCodes.DATAPACK_CONFLICT.at(
                     at,
                     "Datapack \"$owner\" writes ${path.target} too: keep it in one of them",
-                    related = listOf(Location(DatapackKind.fileOf(owner, other.file)))
+                    related = listOf(Location(ctx.placeOf(DatapackKind, owner).file(other.file)))
                 )
             }
             val json = (ctx.json(path.file, at) as? CanonicalJson.Parsed.Ok)?.value ?: continue

@@ -310,7 +310,8 @@ export interface Backend {
   /**
    * Copies a world the plugin just saved (`save_world` answered where its
    * files are, relative to the dev server's folder) into the project as
-   * `maps/<id>/`: its `level.dat` at the top and its folder as the
+   * `maps/<id>/` ([id] may start with group folders: `(arenas)/duel` is
+   * `maps/(arenas)/duel/`): its `level.dat` at the top and its folder as the
    * map's overworld, without the files a server keeps for itself
    * (locks, identity, players). Rejects when the map exists unless
    * [replace]. Reports `onCaptureProgress` as it copies.

@@ -86,7 +86,20 @@ object Names {
     /** A Lua file `require` can reach, relative to its module's or resource's folder: `init.lua`, `lib/util.lua`. */
     val LUA_FILE = Regex("^([A-Za-z0-9_]+/)*[A-Za-z0-9_]+\\.lua$")
 
+    /**
+     * A group folder's name: an id in parentheses, `(weapons)`. Groups sort a kind's resources into folders
+     * (`items/(weapons)/ruby_wand/`) without changing their ids, and the parentheses are what tell one from a
+     * resource's own folder from the path alone.
+     */
+    val GROUP = Regex("^\\($ID_BODY\\)$")
+    const val GROUP_RULE = "an id in parentheses, like (weapons)"
+
     fun isId(text: String): Boolean = ID.matches(text)
+
+    /** Whether a path segment is shaped as a group folder, `(` … `)`, usable or not ([isGroup]). */
+    fun looksLikeGroup(segment: String): Boolean = segment.length >= 2 && segment.startsWith("(") && segment.endsWith(")")
+
+    fun isGroup(segment: String): Boolean = GROUP.matches(segment)
 
     fun isNamespace(text: String): Boolean = NAMESPACE.matches(text)
 

@@ -86,7 +86,7 @@ function SubjectOutline({ subject }: { subject: OutlineSubject }) {
     if (subject.main && KindOutline) void workspace.getState().loadDoc(subject.main)
   }, [subject.main, KindOutline, workspace])
 
-  const open = () => void ws().openFile(folder.openPath(subject.id))
+  const open = () => void ws().openFile(folder.openPath(subject.id, subject.group))
   const files = subject.hasFiles ? (
     <FilesPane root={subject.location} kind={subject.kind} main={subject.main} />
   ) : subject.companion ? (

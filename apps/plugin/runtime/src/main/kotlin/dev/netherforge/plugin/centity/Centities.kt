@@ -10,6 +10,7 @@ import dev.netherforge.format.game.Box
 import dev.netherforge.format.math.Matrix4
 import dev.netherforge.format.project.CentityKind
 import dev.netherforge.format.project.KindSpec
+import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.api.AnimationEvent
@@ -90,6 +91,8 @@ class Centities(
     private val scripts: Scripts,
     private val log: RuntimeLog,
     private val readSource: (String) -> String?,
+    /** Where a resource is now (in its group folders), by kind and id: where its script is read from. */
+    private val placeOf: (KindSpec<*, *>, String) -> ResourcePlace,
     /** Where instances are kept. */
     private val store: Store.Instances,
     /** The instances the session starts with, reattached as it defines the centities. */
@@ -190,7 +193,7 @@ class Centities(
 
     override fun reload(kind: KindSpec<*, *>, ids: Set<String>, batch: ReloadBatch) {
         for (id in ids) {
-            batch.resource(Resource(CentityKind, id), CentityKind.pathOf(id), batch.snapshot.running(CentityKind)[id]) { reload(id, it) }
+            batch.resource(Resource(CentityKind, id), batch.snapshot.running(CentityKind)[id]) { reload(id, it) }
         }
     }
 
@@ -302,7 +305,7 @@ class Centities(
         instance.chunkLoaded = loaded(instance)
         val script = definition.script
         if (script != null) {
-            val path = CentityKind.fileOf(definition.id, script.file)
+            val path = placeOf(CentityKind, definition.id).file(script.file)
             val source = readSource(path)
             if (source != null) {
                 instance.scope = scripts.start(ScopeOwner.CentityScript(instance.id, definition.id, path), script, source).first

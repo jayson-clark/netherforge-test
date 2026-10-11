@@ -19,7 +19,12 @@ import {
   type GameDataBundle,
   type Problem,
 } from '@/core/format'
-import { MCP_CONFIG_FILE, OPENCODE_CONFIG_FILE, syncMcpConfig, syncOpencodeConfig } from '@/core/mcp/config'
+import {
+  MCP_CONFIG_FILE,
+  OPENCODE_CONFIG_FILE,
+  syncMcpConfig,
+  syncOpencodeConfig,
+} from '@/core/mcp/config'
 import { isProjectJson } from '@/core/paths'
 import { SCHEMA_FOLDER, schemaFiles } from '@/core/schemas'
 import { DOCUMENTS_INITIAL } from './documents'

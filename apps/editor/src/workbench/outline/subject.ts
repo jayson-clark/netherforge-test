@@ -8,6 +8,8 @@ import { companionOf, isBinaryKind, locationOf, mainFileOf, resourceOf } from '@
 export interface OutlineSubject {
   kind: KindId
   id: string
+  /** The group folders it's in (`(weapons)`), empty when none. */
+  group: string
   /** Its folder (or its one file), whose files the outline lists. */
   location: string
   /** The file that opens it in its own editor, if it has one. */
@@ -21,14 +23,15 @@ export interface OutlineSubject {
 export function subjectOf(path: string | null): OutlineSubject | null {
   const resource = path ? resourceOf(path) : null
   if (!resource) return null
-  const { kind, id } = resource
+  const { kind, id, group } = resource
   const where = KINDS[kind]
   return {
     kind,
     id,
-    location: locationOf(kind, id),
-    main: where.contents === 'json' ? mainFileOf(kind, id) : null,
+    group,
+    location: locationOf(kind, id, group),
+    main: where.contents === 'json' ? mainFileOf(kind, id, group) : null,
     hasFiles: where.layout === 'folder' && !isBinaryKind(kind),
-    companion: isBinaryKind(kind) ? null : companionOf(kind, id),
+    companion: isBinaryKind(kind) ? null : companionOf(kind, id, group),
   }
 }

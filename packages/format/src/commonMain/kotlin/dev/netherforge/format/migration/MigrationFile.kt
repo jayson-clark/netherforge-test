@@ -1,7 +1,5 @@
 package dev.netherforge.format.migration
 
-import dev.netherforge.format.project.MigrationKind
-
 /**
  * A migration: `migrations/NNN_name.sql`, one step of a package's database
  * schema. [number] is the `NNN` (null when the file isn't named that way).
@@ -9,8 +7,6 @@ import dev.netherforge.format.project.MigrationKind
  * the SQL.
  */
 data class MigrationFile(val id: String, val number: Int?) {
-    val path: String get() = MigrationKind.pathOf(id)
-
     companion object {
         /** `NNN_name`: three digits, then the name. */
         val ID = Regex("^(\\d{3})_[a-z0-9_]+$")
