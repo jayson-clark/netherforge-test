@@ -84,6 +84,8 @@ class ReloadScenario : Scenario("reload") {
         editor.logged("adventure", "minecraft:stone", "minecraft:grass_block")
         editor.logged("food", "4", "2.5", "true", "0.8")
         editor.logged("cooldown", "2.0", "it:pearls", "nil")
+        editor.logged("hold", "true", "nil", "nil")
+        editor.logged("use effects", "1.0", "true", "nil", "nil")
         editor.logged("stackable sword", "false", "true")
 
         // the project's recipes and a script's, on the real server

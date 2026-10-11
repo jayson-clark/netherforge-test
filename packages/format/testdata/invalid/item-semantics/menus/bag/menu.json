@@ -22,7 +22,10 @@
     "8": {
       "item": {
         "kind": "minecraft:paper",
-        "enchantments": { "Not An Enchantment": 1 }
+        "enchantments": { "Not An Enchantment": 1 },
+        "hold": true,
+        "food": { "nutrition": 1, "saturation": 0 },
+        "useEffects": { "speedMultiplier": 1.5, "canSprint": true }
       }
     }
   }

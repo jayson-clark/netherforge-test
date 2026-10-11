@@ -64,6 +64,10 @@ data class ItemFile(
     val food: FoodDef? = null,
     /** A cooldown after using it. */
     val cooldown: CooldownDef? = null,
+    /** Held down with no end, until the player lets go (`player_stop_using_item`): no zoom, no pose, nothing used up. */
+    val hold: Boolean? = null,
+    /** How a player moves while using it: `speedMultiplier`, `canSprint`, `interactVibrations`. */
+    val useEffects: UseEffectsDef? = null,
     /**
      * A bow draws and shoots with no ammo: it needs no arrow in the inventory, and uses none up. The arrow is
      * the server's own, and `entity_shoot_bow` hears the shot, so a script can cancel it or hand out its own
@@ -96,7 +100,9 @@ data class ItemFile(
         canPlaceOn = canPlaceOn,
         hiddenTooltipComponents = hiddenTooltipComponents,
         food = food,
-        cooldown = cooldown
+        cooldown = cooldown,
+        hold = hold,
+        useEffects = useEffects
     )
 
     companion object {

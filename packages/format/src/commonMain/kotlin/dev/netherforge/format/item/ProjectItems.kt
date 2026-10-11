@@ -44,6 +44,8 @@ object ProjectItems {
         hiddenTooltipComponents = def.hiddenTooltipComponents ?: look.hiddenTooltipComponents,
         food = def.food ?: look.food,
         cooldown = def.cooldown ?: look.cooldown,
+        hold = def.hold ?: look.hold,
+        useEffects = def.useEffects ?: look.useEffects,
         data = def.data
     )
 

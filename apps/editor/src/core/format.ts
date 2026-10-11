@@ -75,6 +75,7 @@ export type {
   RotationKey,
   Camera as CutsceneCamera,
   CooldownDef,
+  UseEffectsDef,
   EquipSlot,
   EquipmentAssetDef,
   AdditionsSound,

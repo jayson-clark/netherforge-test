@@ -20,6 +20,7 @@ import {
   setFood,
   setModifier,
   setProjectItem,
+  setUseEffects,
   splitResourcePackRef,
   stackLook,
 } from './item'
@@ -186,6 +187,17 @@ describe('item components', () => {
     expect(item.cooldown).toEqual({ seconds: 2 })
     setCooldown(item, 'seconds', undefined)
     expect(item.cooldown).toBeUndefined()
+  })
+
+  it('sets use effects field by field, and drops the table once it is empty', () => {
+    const item: ItemDef = { kind: 'minecraft:stick', hold: true }
+    setUseEffects(item, 'canSprint', false)
+    setUseEffects(item, 'speedMultiplier', 0.5)
+    expect(item.useEffects).toEqual({ canSprint: false, speedMultiplier: 0.5 })
+    setUseEffects(item, 'canSprint', undefined)
+    expect(item.useEffects).toEqual({ speedMultiplier: 0.5 })
+    setUseEffects(item, 'speedMultiplier', undefined)
+    expect(item).toEqual({ kind: 'minecraft:stick', hold: true })
   })
 
   it('makes a stack a project item, leaving its kind to the definition', () => {

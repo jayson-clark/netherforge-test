@@ -15,6 +15,7 @@ import dev.netherforge.format.item.FoodDef
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.item.ItemRarity
 import dev.netherforge.format.item.TooltipComponent
+import dev.netherforge.format.item.UseEffectsDef
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.format.validate.Rules
@@ -49,11 +50,12 @@ object LuaItems {
     private val FIELDS = listOf(
         "kind", "item", "count", "name", "lore", "enchantments", "glint", "hide_tooltip", "unbreakable", "damage",
         "item_model", "tooltip_style", "equipment", "color", "profile", "max_stack_size", "rarity", "attribute_modifiers",
-        "can_break", "can_place_on", "hidden_tooltip_components", "food", "cooldown", "data", "raw"
+        "can_break", "can_place_on", "hidden_tooltip_components", "food", "cooldown", "hold", "use_effects", "data", "raw"
     )
     private val MODIFIER_FIELDS = listOf("id", "attribute", "amount", "operation", "slot")
     private val FOOD_FIELDS = listOf("nutrition", "saturation", "can_always_eat", "eat_seconds")
     private val COOLDOWN_FIELDS = listOf("seconds", "group")
+    private val USE_EFFECTS_FIELDS = listOf("speed_multiplier", "can_sprint", "interact_vibrations")
     private val EQUIPMENT_FIELDS = listOf("asset", "slot")
 
     /** What an item match ([read] with `partial`) can't say. */
@@ -152,6 +154,15 @@ object LuaItems {
                 group = cooldown.string("group")
             )
         }
+        val useEffects = table["use_effects"]?.takeIf { it != JsonNull }?.let {
+            val table = it as? JsonObject ?: throw LuaApiException("item.use_effects must be a table")
+            val effects = Fields(table, "item.use_effects", USE_EFFECTS_FIELDS)
+            UseEffectsDef(
+                speedMultiplier = effects.number("speed_multiplier"),
+                canSprint = effects.boolean("can_sprint"),
+                interactVibrations = effects.boolean("interact_vibrations")
+            )
+        }
         val equipment = table["equipment"]?.takeIf { it != JsonNull }?.let {
             val equipment =
                 Fields(it as? JsonObject ?: throw LuaApiException("item.equipment must be a table"), "item.equipment", EQUIPMENT_FIELDS)
@@ -204,6 +215,8 @@ object LuaItems {
             },
             food = food,
             cooldown = cooldown,
+            hold = boolean("hold"),
+            useEffects = useEffects,
             data = data
         )
         val sink = ProblemSink("item")
@@ -306,6 +319,17 @@ object LuaItems {
                     buildMap {
                         put("seconds", cooldown.seconds)
                         cooldown.group?.let { put("group", it) }
+                    }
+                )
+            }
+            def.hold?.let { put("hold", it) }
+            def.useEffects?.let { effects ->
+                put(
+                    "use_effects",
+                    buildMap {
+                        effects.speedMultiplier?.let { put("speed_multiplier", it) }
+                        effects.canSprint?.let { put("can_sprint", it) }
+                        effects.interactVibrations?.let { put("interact_vibrations", it) }
                     }
                 )
             }

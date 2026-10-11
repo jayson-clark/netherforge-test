@@ -159,6 +159,18 @@ object Rules {
                 sink.report(ProblemCodes.ITEM_COOLDOWN_GROUP, "\"${cooldown.group}\" isn't a namespaced id", "$at.cooldown.group")
             }
         }
+        if (item.hold == true && item.food != null) {
+            sink.report(
+                ProblemCodes.ITEM_HOLD_FOOD,
+                "An item that's held can't be eaten too: hold and food both make it a consumable",
+                "$at.hold"
+            )
+        }
+        item.useEffects?.speedMultiplier?.let { speed ->
+            if (!(speed in 0.0..1.0)) {
+                sink.report(ProblemCodes.ITEM_USE_EFFECTS, "speedMultiplier must be from 0 to 1", "$at.useEffects.speedMultiplier")
+            }
+        }
     }
 
     /**

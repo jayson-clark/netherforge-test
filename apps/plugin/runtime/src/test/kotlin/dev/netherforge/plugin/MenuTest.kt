@@ -577,6 +577,25 @@ class MenuTest {
     }
 
     @Test
+    fun `a hold and its use effects read back as they were written`() {
+        val script = """
+            do
+              this:set_item(0, { kind = "minecraft:stick", hold = true })
+              this:set_item(1, { kind = "minecraft:stick", hold = true, use_effects = { can_sprint = false } })
+              this:set_item(2, { kind = "minecraft:bread", use_effects = { speed_multiplier = 1, can_sprint = true } })
+              local held, slowed, bread = this:item(0), this:item(1), this:item(2)
+              log(held.hold, held.use_effects)
+              log(slowed.hold, slowed.use_effects.can_sprint, slowed.use_effects.speed_multiplier)
+              log(bread.hold, bread.use_effects.speed_multiplier, bread.use_effects.can_sprint)
+            end
+        """
+        TestServer(menu(script = script)).use { server ->
+            server.platform.commands.run(server.player("Alex"), "menu")
+            assertEquals(listOf("true\tnil", "true\tfalse\tnil", "nil\t1.0\ttrue"), server.logs)
+        }
+    }
+
+    @Test
     fun `bad item components are errors`() {
         fun modifier(fields: String) =
             "{ kind = \"minecraft:paper\", attribute_modifiers = { { attribute = \"minecraft:armor\", $fields } } }"
@@ -594,7 +613,10 @@ class MenuTest {
             modifier("amount = 1, operation = \"add_value\", slots = \"x\"") to "has no field \"slots\"",
             "{ kind = \"minecraft:paper\", can_break = { \"minecraft:obsidian\" } }" to "has no block \"minecraft:obsidian\"",
             "{ kind = \"minecraft:paper\", food = { nutrition = 2 } }" to "needs a saturation",
-            "{ kind = \"minecraft:paper\", cooldown = { seconds = 0 } }" to "more than 0"
+            "{ kind = \"minecraft:paper\", cooldown = { seconds = 0 } }" to "more than 0",
+            "{ kind = \"minecraft:stick\", hold = true, food = { nutrition = 1, saturation = 0 } }" to "can't be eaten too",
+            "{ kind = \"minecraft:stick\", use_effects = { speed_multiplier = 2 } }" to "speed_multiplier must be from 0 to 1",
+            "{ kind = \"minecraft:stick\", use_effects = { sprint = true } }" to "has no field \"sprint\""
         )) {
             TestServer(menu(script = "do\n  this:set_item(0, $line)\nend")).use { server ->
                 server.platform.commands.run(server.player(), "menu")

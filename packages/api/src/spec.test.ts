@@ -323,6 +323,7 @@ const NAMING_EXCEPTIONS: Record<string, string> = {
   'World.set_block':
     "a keyed setter of a block's state: `block(position)` hands back the Block handle, whose `state()` this sets",
   'ItemFood.can_always_eat': "Minecraft's own name for the food component's field",
+  'ItemUseEffects.can_sprint': "Minecraft's own name for the use_effects component's field",
 }
 
 /** Abbreviations API names spell out (`position`, not `pos`), as `_`-separated words. */

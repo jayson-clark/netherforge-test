@@ -11,6 +11,7 @@ import dev.netherforge.format.item.FoodDef
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.item.ProjectItems
 import dev.netherforge.format.item.TooltipComponent
+import dev.netherforge.format.item.UseEffectsDef
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.ref.ResourceRef
@@ -25,6 +26,8 @@ import io.papermc.paper.datacomponent.item.ItemAdventurePredicate
 import io.papermc.paper.datacomponent.item.ItemAttributeModifiers
 import io.papermc.paper.datacomponent.item.TooltipDisplay
 import io.papermc.paper.datacomponent.item.UseCooldown
+import io.papermc.paper.datacomponent.item.UseEffects
+import io.papermc.paper.datacomponent.item.consumable.ItemUseAnimation
 import io.papermc.paper.persistence.PersistentDataContainerView
 import io.papermc.paper.registry.RegistryAccess
 import io.papermc.paper.registry.RegistryKey
@@ -38,6 +41,7 @@ import net.kyori.adventure.text.format.TextDecoration
 import org.bukkit.Bukkit
 import org.bukkit.Color
 import org.bukkit.NamespacedKey
+import org.bukkit.Sound
 import org.bukkit.attribute.AttributeModifier
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.EquipmentSlotGroup
@@ -125,6 +129,12 @@ object PaperItems {
 
     /** Vanilla's eating time, which `food` leaves out when it's this. */
     private const val DEFAULT_EAT_SECONDS = 1.6
+
+    /**
+     * How long a `hold` lasts: a day, as good as no end. (The game plays a consumable's sound and particles only
+     * after a fifth of it, and the platform cancels the consume if anyone ever gets there: [isHold].)
+     */
+    private const val HOLD_SECONDS = 86_400f
 
     private fun key(id: String): NamespacedKey? = NamespacedKey.fromString(GameIds.normalize(id))
 
@@ -263,6 +273,56 @@ object PaperItems {
             cooldown.group?.let(::key)?.let { builder.cooldownGroup(it) }
             stack.setData(DataComponentTypes.USE_COOLDOWN, builder.build())
         }
+        val hold = def.hold == true
+        if (hold) {
+            // A use with no end, nothing drawn and nothing heard: the consumable a right click starts and letting go stops.
+            stack.setData(
+                DataComponentTypes.CONSUMABLE,
+                Consumable.consumable()
+                    .consumeSeconds(HOLD_SECONDS)
+                    .animation(ItemUseAnimation.NONE)
+                    .hasConsumeParticles(false)
+                    .sound(Sound.INTENTIONALLY_EMPTY.key())
+                    .build()
+            )
+        }
+        if (hold || def.useEffects != null) {
+            val effects = (def.useEffects ?: UseEffectsDef()).filled(if (hold) UseEffectsDef.HOLD else UseEffectsDef.GAME)
+            stack.setData(
+                DataComponentTypes.USE_EFFECTS,
+                UseEffects.useEffects()
+                    .speedMultiplier(effects.speedMultiplier!!.toFloat())
+                    .canSprint(effects.canSprint!!)
+                    .interactVibrations(effects.interactVibrations!!)
+                    .build()
+            )
+        }
+    }
+
+    /** Whether [stack] is a `hold` item: the consumable [components] gives one, which nothing else does. */
+    fun isHold(stack: ItemStack?): Boolean {
+        if (stack == null || !stack.isDataOverridden(DataComponentTypes.CONSUMABLE)) return false
+        val consumable = stack.getData(DataComponentTypes.CONSUMABLE) ?: return false
+        return consumable.consumeSeconds() == HOLD_SECONDS &&
+            consumable.animation() == ItemUseAnimation.NONE &&
+            !consumable.hasConsumeParticles() &&
+            consumable.consumeEffects().isEmpty()
+    }
+
+    /**
+     * The `useEffects` that build [stack]'s component, with the fields that are [hold]'s or the game's default left
+     * out: nothing for a hold that moves as holds do, `{}` for an item that sets the game's own.
+     */
+    private fun useEffectsOf(stack: ItemStack, hold: Boolean): UseEffectsDef? {
+        if (!stack.isDataOverridden(DataComponentTypes.USE_EFFECTS)) return null
+        val effects = stack.getData(DataComponentTypes.USE_EFFECTS) ?: return null
+        val defaults = if (hold) UseEffectsDef.HOLD else UseEffectsDef.GAME
+        val def = UseEffectsDef(
+            speedMultiplier = decimal(effects.speedMultiplier()).takeIf { it != defaults.speedMultiplier },
+            canSprint = effects.canSprint().takeIf { it != defaults.canSprint },
+            interactVibrations = effects.interactVibrations().takeIf { it != defaults.interactVibrations }
+        )
+        return def.takeIf { !hold || it != UseEffectsDef() }
     }
 
     /** Each list's predicates, by the component and the game's text for them: the same lists are parsed once. */
@@ -488,6 +548,8 @@ object PaperItems {
             hiddenTooltipComponents = hiddenTooltipComponentsOf(stack),
             food = foodOf(stack),
             cooldown = cooldownOf(stack),
+            hold = isHold(stack).takeIf { it },
+            useEffects = useEffectsOf(stack, isHold(stack)),
             equipment = equipmentOf(stack),
             data = scriptData(meta),
             item = meta?.persistentDataContainer?.get(ITEM_KEY, PersistentDataType.STRING)?.let(::reference)

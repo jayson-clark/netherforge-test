@@ -544,7 +544,14 @@ describe('workspace', () => {
     expect(backend.testFiles()['items/wand/item.json']).toContain('"name": "Wand"')
     await ws().validateNow()
     expect(ws().problems).toEqual([])
-    expect(ws().outline?.resources.item).toEqual(['crown', 'ruby', 'ruby_ore', 'ruby_pick', 'wand'])
+    expect(ws().outline?.resources.item).toEqual([
+      'crown',
+      'ruby',
+      'ruby_ore',
+      'ruby_pick',
+      'ruby_wand',
+      'wand',
+    ])
   })
 
   it('creates, renames and deletes a recipe, which is one file rather than a folder', async () => {

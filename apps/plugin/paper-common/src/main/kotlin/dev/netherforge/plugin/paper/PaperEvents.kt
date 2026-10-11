@@ -162,6 +162,12 @@ class PaperEvents(
         if (runtime.playerPickupItem(platform.players.ref(player), item, event.item.uniqueId)) event.isCancelled = true
     }
 
+    /** A `hold` item never finishes: held its whole (day-long) use, it isn't eaten, and no script hears a consume. */
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    fun onHoldEnd(event: PlayerItemConsumeEvent) {
+        if (PaperItems.isHold(event.item)) event.isCancelled = true
+    }
+
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     fun onConsume(event: PlayerItemConsumeEvent) {
         val item = PaperItems.toItem(event.item) ?: return

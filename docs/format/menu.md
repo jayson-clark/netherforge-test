@@ -94,32 +94,34 @@ emitters, and scripts that build them). Names and lore can show a resource pack 
 with `<glyph:<pack>/<key>>` (see [Glyphs](resource-pack.md#glyphs)):
 `"lore": ["<gray><glyph:ui/coin> 2"]`.
 
-| Key                  | Meaning                                                                                                                                                                      |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `kind`               | The item type: `minecraft:diamond_sword`, or `diamond_sword`. Required, unless `item` is given.                                                                              |
-| `item`               | A [project item](item.md)'s id: the stack is one, and takes what it leaves out.                                                                                              |
-| `count`              | 1–99.                                                                                                                                                                        |
-| `name`               | Display name, MiniMessage.                                                                                                                                                   |
-| `lore`               | Lines under the name, each MiniMessage.                                                                                                                                      |
-| `enchantments`       | Enchantment id → level: `{ "minecraft:sharpness": 5 }`.                                                                                                                      |
-| `glint`              | The enchanted shimmer without an enchantment; menus use it for "selected".                                                                                                   |
-| `hideTooltip`        | Hide the tooltip entirely, for decorative filler panes.                                                                                                                      |
-| `unbreakable`        |                                                                                                                                                                              |
-| `damage`             | Durability used: 0 is pristine.                                                                                                                                              |
-| `itemModel`          | `<pack>/<key>`: a custom look from a resource pack.                                                                                                                          |
-| `tooltipStyle`       | `<pack>/<key>`: a custom tooltip frame from a resource pack.                                                                                                                 |
-| `equipment`          | `{ "asset": "<pack>/<key>", "slot" }`: worn in `head`, `chest`, `legs`, `feet`, `body` or `saddle`, drawn as a resource pack's [equipment look](resource-pack.md#equipment). |
-| `color`              | `#RRGGBB`, for dyed leather, potions and maps.                                                                                                                               |
-| `profile`            | Whose head, for `minecraft:player_head`: a name or a UUID.                                                                                                                   |
-| `maxStackSize`       | How many stack, 1–99. More than 1 can't go with durability.                                                                                                                  |
-| `rarity`             | `common`, `uncommon`, `rare` or `epic`: the colour of its name.                                                                                                              |
-| `attributeModifiers` | What wearing or holding it changes. See below.                                                                                                                               |
-| `canBreak`           | The blocks it can break in adventure mode. See below.                                                                                                                        |
-| `canPlaceOn`         | The blocks it can be placed on in adventure mode. See below.                                                                                                                 |
-| `hiddenTooltipComponents` | Tooltip lines to hide, by the component that draws them: `["unbreakable", "attribute_modifiers"]`. See below. |
-| `food`               | `{ "nutrition", "saturation", "canAlwaysEat"?, "eatSeconds"? }`. See below.                                                                                                  |
-| `cooldown`           | `{ "seconds", "group"? }`: a cooldown after using it.                                                                                                                        |
-| `data`               | Your scripts' own data, a JSON object saved on the stack.                                                                                                                    |
+| Key                       | Meaning                                                                                                                                                                      |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kind`                    | The item type: `minecraft:diamond_sword`, or `diamond_sword`. Required, unless `item` is given.                                                                              |
+| `item`                    | A [project item](item.md)'s id: the stack is one, and takes what it leaves out.                                                                                              |
+| `count`                   | 1–99.                                                                                                                                                                        |
+| `name`                    | Display name, MiniMessage.                                                                                                                                                   |
+| `lore`                    | Lines under the name, each MiniMessage.                                                                                                                                      |
+| `enchantments`            | Enchantment id → level: `{ "minecraft:sharpness": 5 }`.                                                                                                                      |
+| `glint`                   | The enchanted shimmer without an enchantment; menus use it for "selected".                                                                                                   |
+| `hideTooltip`             | Hide the tooltip entirely, for decorative filler panes.                                                                                                                      |
+| `unbreakable`             |                                                                                                                                                                              |
+| `damage`                  | Durability used: 0 is pristine.                                                                                                                                              |
+| `itemModel`               | `<pack>/<key>`: a custom look from a resource pack.                                                                                                                          |
+| `tooltipStyle`            | `<pack>/<key>`: a custom tooltip frame from a resource pack.                                                                                                                 |
+| `equipment`               | `{ "asset": "<pack>/<key>", "slot" }`: worn in `head`, `chest`, `legs`, `feet`, `body` or `saddle`, drawn as a resource pack's [equipment look](resource-pack.md#equipment). |
+| `color`                   | `#RRGGBB`, for dyed leather, potions and maps.                                                                                                                               |
+| `profile`                 | Whose head, for `minecraft:player_head`: a name or a UUID.                                                                                                                   |
+| `maxStackSize`            | How many stack, 1–99. More than 1 can't go with durability.                                                                                                                  |
+| `rarity`                  | `common`, `uncommon`, `rare` or `epic`: the colour of its name.                                                                                                              |
+| `attributeModifiers`      | What wearing or holding it changes. See below.                                                                                                                               |
+| `canBreak`                | The blocks it can break in adventure mode. See below.                                                                                                                        |
+| `canPlaceOn`              | The blocks it can be placed on in adventure mode. See below.                                                                                                                 |
+| `hiddenTooltipComponents` | Tooltip lines to hide, by the component that draws them: `["unbreakable", "attribute_modifiers"]`. See below.                                                                |
+| `food`                    | `{ "nutrition", "saturation", "canAlwaysEat"?, "eatSeconds"? }`. See below.                                                                                                  |
+| `cooldown`                | `{ "seconds", "group"? }`: a cooldown after using it.                                                                                                                        |
+| `hold`                    | `true`: held down with no end, until the player lets go. See below.                                                                                                          |
+| `useEffects`              | `{ "speedMultiplier"?, "canSprint"?, "interactVibrations"? }`: how a player moves while using it. See below.                                                                 |
+| `data`                    | Your scripts' own data, a JSON object saved on the stack.                                                                                                                    |
 
 A `kind` the game doesn't have is an error (`item.kind`), and so is an
 enchantment (`item.unknown-enchantment`) or an attribute
@@ -187,7 +189,11 @@ that hides `attribute_modifiers` keeps its modifiers, and one that hides
   "lore": ["<gray>Mines faster", "<gray>Never breaks"],
   "unbreakable": true,
   "attributeModifiers": [
-    { "attribute": "minecraft:block_break_speed", "amount": 0.5, "operation": "add_multiplied_base" }
+    {
+      "attribute": "minecraft:block_break_speed",
+      "amount": 0.5,
+      "operation": "add_multiplied_base"
+    }
   ],
   "hiddenTooltipComponents": ["unbreakable", "attribute_modifiers"]
 }
@@ -195,44 +201,44 @@ that hides `attribute_modifiers` keeps its modifiers, and one that hides
 
 These are the lines Minecraft draws, and so the values allowed:
 
-| Value                      | The line                                                                     |
-| -------------------------- | ---------------------------------------------------------------------------- |
-| `attribute_modifiers`      | "When in Main Hand:" and the modifiers under it ("+2 Attack Damage")          |
-| `banner_patterns`          | A banner's patterns                                                          |
-| `bees`                     | A beehive's or bee nest's bees                                               |
-| `block_entity_data`        | A spawner's or trial spawner's mob                                           |
-| `block_state`              | A beehive's or bee nest's honey level                                         |
-| `bundle_contents`          | A bundle's contents and how full it is                                       |
-| `can_break`                | "Can break:" and its blocks                                                  |
-| `can_place_on`             | "Can be placed on:" and its blocks                                           |
-| `charged_projectiles`      | A crossbow's loaded projectile                                               |
-| `container`                | A shulker box's or other container's items                                   |
-| `container_loot`           | "???????" on a container with a loot table                                   |
-| `damage`                   | "Durability: x / y", in advanced tooltips (F3+H)                             |
-| `dyed_color`               | "Dyed"                                                                       |
-| `enchantments`             | Its enchantments ("Sharpness V")                                             |
-| `entity_data`              | A spawn egg's note that its mob can't spawn in peaceful                      |
-| `firework_explosion`       | A firework star's shape and colours                                          |
-| `fireworks`                | A firework rocket's flight duration and explosions                           |
-| `instrument`               | A goat horn's sound                                                          |
-| `intangible_projectile`    | "Can't be picked up", on an arrow                                            |
-| `jukebox_playable`         | A music disc's song                                                          |
-| `lore`                     | The item's lore                                                              |
-| `map_id`                   | A map's id ("Id #3"), or "Unknown Map"                                       |
-| `ominous_bottle_amplifier` | An ominous bottle's Bad Omen level                                           |
-| `painting/variant`         | A painting's title, artist and size                                          |
-| `pot_decorations`          | A decorated pot's sherds                                                     |
-| `potion_contents`          | A potion's effects                                                           |
-| `profile`                  | A player head's owner                                                        |
-| `sign_text_back`           | A sign's back text                                                           |
-| `sign_text_front`          | A sign's front text                                                          |
-| `stored_enchantments`      | An enchanted book's enchantments                                             |
-| `sulfur_cube_content`      | What a sulfur cube holds (only versions that have sulfur cubes)              |
-| `suspicious_stew_effects`  | A suspicious stew's effect, in creative                                      |
-| `trim`                     | "Upgrade:" and an armour trim's pattern and material                         |
-| `tropical_fish/pattern`    | A tropical fish bucket's fish                                                |
-| `unbreakable`              | "Unbreakable"                                                                |
-| `written_book_content`     | A written book's author and generation                                       |
+| Value                      | The line                                                             |
+| -------------------------- | -------------------------------------------------------------------- |
+| `attribute_modifiers`      | "When in Main Hand:" and the modifiers under it ("+2 Attack Damage") |
+| `banner_patterns`          | A banner's patterns                                                  |
+| `bees`                     | A beehive's or bee nest's bees                                       |
+| `block_entity_data`        | A spawner's or trial spawner's mob                                   |
+| `block_state`              | A beehive's or bee nest's honey level                                |
+| `bundle_contents`          | A bundle's contents and how full it is                               |
+| `can_break`                | "Can break:" and its blocks                                          |
+| `can_place_on`             | "Can be placed on:" and its blocks                                   |
+| `charged_projectiles`      | A crossbow's loaded projectile                                       |
+| `container`                | A shulker box's or other container's items                           |
+| `container_loot`           | "???????" on a container with a loot table                           |
+| `damage`                   | "Durability: x / y", in advanced tooltips (F3+H)                     |
+| `dyed_color`               | "Dyed"                                                               |
+| `enchantments`             | Its enchantments ("Sharpness V")                                     |
+| `entity_data`              | A spawn egg's note that its mob can't spawn in peaceful              |
+| `firework_explosion`       | A firework star's shape and colours                                  |
+| `fireworks`                | A firework rocket's flight duration and explosions                   |
+| `instrument`               | A goat horn's sound                                                  |
+| `intangible_projectile`    | "Can't be picked up", on an arrow                                    |
+| `jukebox_playable`         | A music disc's song                                                  |
+| `lore`                     | The item's lore                                                      |
+| `map_id`                   | A map's id ("Id #3"), or "Unknown Map"                               |
+| `ominous_bottle_amplifier` | An ominous bottle's Bad Omen level                                   |
+| `painting/variant`         | A painting's title, artist and size                                  |
+| `pot_decorations`          | A decorated pot's sherds                                             |
+| `potion_contents`          | A potion's effects                                                   |
+| `profile`                  | A player head's owner                                                |
+| `sign_text_back`           | A sign's back text                                                   |
+| `sign_text_front`          | A sign's front text                                                  |
+| `stored_enchantments`      | An enchanted book's enchantments                                     |
+| `sulfur_cube_content`      | What a sulfur cube holds (only versions that have sulfur cubes)      |
+| `suspicious_stew_effects`  | A suspicious stew's effect, in creative                              |
+| `trim`                     | "Upgrade:" and an armour trim's pattern and material                 |
+| `tropical_fish/pattern`    | A tropical fish bucket's fish                                        |
+| `unbreakable`              | "Unbreakable"                                                        |
+| `written_book_content`     | A written book's author and generation                               |
 
 Leaving the key out shows the tooltip as it is, and `[]` shows every line. A
 value that isn't one of these is `item.tooltip-component` (a near miss like
@@ -244,6 +250,23 @@ Minecraft doesn't have is `item.unknown-tooltip-component`. A script's
 Minecraft's `consumable` component, eaten over `eatSeconds` (1.6 by default).
 `cooldown`'s `seconds` must be more than 0; items with the same `group` (a
 namespaced id) share a cooldown, and without one the item's kind is its group.
+`hold` makes a right click a use that lasts until the player lets go: nothing
+is drawn (no zoom, no arm pose), it never finishes and nothing is used up, and
+letting go is [`player_stop_using_item`](../reference/events.md), whose
+`event.ticks` says how long it was held. That's how a script hears a right
+click being released: a flail thrown on letting go, a charge that grows while
+it's held. It's Minecraft's `consumable` component with no animation and no
+end, so it can't go with `food` (`item.hold-food`), and it only works on a kind
+with no use of its own: `minecraft:paper` or a stick, not a bow, a shield or a
+potion, whose own use comes first. While it's held, left clicks don't attack
+(the game ignores them during any use).
+`useEffects` is how a player moves while using the item, whatever the use: a
+hold, food, a bow, a shield. `speedMultiplier` (0 to 1, `item.use-effects`
+otherwise) is their speed, `canSprint` whether they keep sprinting, and
+`interactVibrations` whether starting to use it sets off sculk sensors. Left
+out, a field is the game's (0.2, `false`, `true`), or on a `hold` item full
+speed, sprinting and silent to sculk (1, `true`, `false`): a hold doesn't slow
+the player unless `useEffects` says so.
 `maxStackSize` above 1 on an item that takes damage (`damage` set, or a kind
 with durability, which the server knows) is an error
 (`item.max-stack-size-durable`), as Minecraft refuses it.

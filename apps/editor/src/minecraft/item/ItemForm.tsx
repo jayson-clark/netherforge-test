@@ -51,6 +51,7 @@ import {
   setFood,
   setModifier,
   setProjectItem,
+  setUseEffects,
 } from './item'
 import styles from './ItemForm.module.css'
 import { TooltipFrame } from './ItemTooltip'
@@ -322,6 +323,35 @@ export function ItemEditor({
           onChange={(value) => onEdit((draft) => setCooldown(draft, 'group', value.trim()))}
         />
       )}
+      <CheckField
+        label="Hold until let go"
+        dataPath={at('hold')}
+        value={item.hold ?? false}
+        onChange={(value) => set('hold', value || undefined)}
+      />
+      <NumberField
+        label="Speed while used"
+        dataPath={at('useEffects.speedMultiplier')}
+        value={item.useEffects?.speedMultiplier}
+        placeholder={item.hold ? '1' : '0.2'}
+        step={0.1}
+        min={0}
+        onChange={(value) => onEdit((draft) => setUseEffects(draft, 'speedMultiplier', value))}
+      />
+      <TriStateField
+        label="Sprint while used"
+        dataPath={at('useEffects.canSprint')}
+        value={item.useEffects?.canSprint}
+        defaultLabel={item.hold ? 'on' : 'off'}
+        onChange={(value) => onEdit((draft) => setUseEffects(draft, 'canSprint', value))}
+      />
+      <TriStateField
+        label="Sculk hears use"
+        dataPath={at('useEffects.interactVibrations')}
+        value={item.useEffects?.interactVibrations}
+        defaultLabel={item.hold ? 'off' : 'on'}
+        onChange={(value) => onEdit((draft) => setUseEffects(draft, 'interactVibrations', value))}
+      />
     </div>
   )
 }

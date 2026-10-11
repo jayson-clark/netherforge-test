@@ -1994,6 +1994,8 @@ An item stack as a plain table: what `menu:item` returns and what `menu:set_item
 | `hidden_tooltip_components` | `("attribute_modifiers"\|"banner_patterns"\|"bees"\|"block_entity_data"\|"block_state"\|"bundle_contents"\|"can_break"\|"can_place_on"\|"charged_projectiles"\|"container"\|"container_loot"\|"damage"\|"dyed_color"\|"enchantments"\|"entity_data"\|"firework_explosion"\|"fireworks"\|"instrument"\|"intangible_projectile"\|"jukebox_playable"\|"lore"\|"map_id"\|"ominous_bottle_amplifier"\|"painting/variant"\|"pot_decorations"\|"potion_contents"\|"profile"\|"sign_text_back"\|"sign_text_front"\|"stored_enchantments"\|"sulfur_cube_content"\|"suspicious_stew_effects"\|"trim"\|"tropical_fish/pattern"\|"unbreakable"\|"written_book_content")[]?` | Lines of its tooltip to hide, by the component that draws them: `{ "unbreakable", "attribute_modifiers" }` hides "Unbreakable" and the attribute lines ("+2 Attack Damage"). The components still apply: the item stays unbreakable and keeps its modifiers. Left out shows the tooltip as it is; `{}` shows every line. A value that isn't a line an item can hide is an error, and so is one the server's Minecraft version doesn't have. |
 | `food` | `ItemFood?` | What eating it does. Any item with `food` can be eaten, even one that isn't food: `{ nutrition = 4, saturation = 2.4 }`. |
 | `cooldown` | `ItemCooldown?` | A cooldown after using it (an ender pearl's): `{ seconds = 2 }`. Items with the same `group` share one. |
+| `hold` | `boolean?` | Held down with no end: a right click lasts until the player lets go, with nothing drawn (no zoom, no pose), never finishes and uses nothing up. Letting go is `player_stop_using_item`, and `event.ticks` says how long it was held: a flail thrown on release, a charge that grows while held. Unless `use_effects` says otherwise, the player keeps their speed and can sprint. It can't go with `food`, and only works on a kind with no use of its own (`minecraft:stick`, not a bow or a shield). Left clicks don't attack while it's held. |
+| `use_effects` | `ItemUseEffects?` | How a player moves while using it, for any use: a `hold`, eating, a bow drawn, a shield raised. `{ speed_multiplier = 1, can_sprint = true }` lets them eat at a run. |
 | `data` | `table<string, any>?` | Your script's own data, saved on the stack itself (its persistent data container), so it goes wherever the item goes: tag a coin with `data = { coin = true }`. A table keyed by strings, holding what a `data()` table may: strings, numbers, booleans, tables of them, `Vec3`s, `Location`s, `Item` tables, and `Player` and `Centity` handles, which come back as the same types. Absent when the stack carries none. Anything else (a function, a `Menu` window) is an error, naming where it was. |
 | `raw` | `string?` | Everything else the stack carries, opaque. Present only when the fields above don't say it all. Leave it alone: it's how a read-change-write keeps what you didn't change. |
 
@@ -2037,6 +2039,16 @@ A cooldown after using an item: an `Item`'s `cooldown`.
 | --- | --- | --- |
 | `seconds` | `number` | How long, more than 0. |
 | `group` | `string?` | A namespaced id: items in one group share a cooldown (`player:set_item_cooldown` takes it too). Default: the item's kind. |
+
+## ItemUseEffects
+
+How a player moves while using an item: an `Item`'s `use_effects`. A field left out is the game's default, or on a `hold` item the hold's.
+
+| Field | Type | |
+| --- | --- | --- |
+| `speed_multiplier` | `number?` | Their speed while using it, from 0 to 1. Default 0.2, or 1 on a `hold` item. |
+| `can_sprint` | `boolean?` | Whether they can sprint while using it. Default false, or true on a `hold` item. |
+| `interact_vibrations` | `boolean?` | Whether starting to use it sets off sculk sensors. Default true, or false on a `hold` item. |
 
 ## MenuOpenOptions
 
@@ -2157,6 +2169,8 @@ A partial `Item` that picks stacks: a stack matches when every field given match
 | `hidden_tooltip_components` | `("attribute_modifiers"\|"banner_patterns"\|"bees"\|"block_entity_data"\|"block_state"\|"bundle_contents"\|"can_break"\|"can_place_on"\|"charged_projectiles"\|"container"\|"container_loot"\|"damage"\|"dyed_color"\|"enchantments"\|"entity_data"\|"firework_explosion"\|"fireworks"\|"instrument"\|"intangible_projectile"\|"jukebox_playable"\|"lore"\|"map_id"\|"ominous_bottle_amplifier"\|"painting/variant"\|"pot_decorations"\|"potion_contents"\|"profile"\|"sign_text_back"\|"sign_text_front"\|"stored_enchantments"\|"sulfur_cube_content"\|"suspicious_stew_effects"\|"trim"\|"tropical_fish/pattern"\|"unbreakable"\|"written_book_content")[]?` | Lines of its tooltip to hide, by the component that draws them: `{ "unbreakable", "attribute_modifiers" }` hides "Unbreakable" and the attribute lines ("+2 Attack Damage"). The components still apply: the item stays unbreakable and keeps its modifiers. Left out shows the tooltip as it is; `{}` shows every line. A value that isn't a line an item can hide is an error, and so is one the server's Minecraft version doesn't have. |
 | `food` | `ItemFood?` | What eating it does. Any item with `food` can be eaten, even one that isn't food: `{ nutrition = 4, saturation = 2.4 }`. |
 | `cooldown` | `ItemCooldown?` | A cooldown after using it (an ender pearl's): `{ seconds = 2 }`. Items with the same `group` share one. |
+| `hold` | `boolean?` | Held down with no end: a right click lasts until the player lets go, with nothing drawn (no zoom, no pose), never finishes and uses nothing up. Letting go is `player_stop_using_item`, and `event.ticks` says how long it was held: a flail thrown on release, a charge that grows while held. Unless `use_effects` says otherwise, the player keeps their speed and can sprint. It can't go with `food`, and only works on a kind with no use of its own (`minecraft:stick`, not a bow or a shield). Left clicks don't attack while it's held. |
+| `use_effects` | `ItemUseEffects?` | How a player moves while using it, for any use: a `hold`, eating, a bow drawn, a shield raised. `{ speed_multiplier = 1, can_sprint = true }` lets them eat at a run. |
 | `data` | `table<string, any>?` | Your script's own data, saved on the stack itself (its persistent data container), so it goes wherever the item goes: tag a coin with `data = { coin = true }`. A table keyed by strings, holding what a `data()` table may: strings, numbers, booleans, tables of them, `Vec3`s, `Location`s, `Item` tables, and `Player` and `Centity` handles, which come back as the same types. Absent when the stack carries none. Anything else (a function, a `Menu` window) is an error, naming where it was. |
 
 ## CommandDefinition

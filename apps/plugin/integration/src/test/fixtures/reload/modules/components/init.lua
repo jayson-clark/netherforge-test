@@ -45,6 +45,20 @@ log(
   back.food.eat_seconds
 )
 log("cooldown", back.cooldown.seconds, back.cooldown.group, tostring(back.raw))
+funnel:set_item(3, { kind = "minecraft:stick", hold = true })
+funnel:set_item(
+  2,
+  { kind = "minecraft:bread", use_effects = { speed_multiplier = 1, can_sprint = true } }
+)
+local held, bread = funnel:item(3), funnel:item(2)
+log("hold", tostring(held.hold), tostring(held.use_effects), tostring(held.raw))
+log(
+  "use effects",
+  bread.use_effects.speed_multiplier,
+  tostring(bread.use_effects.can_sprint),
+  tostring(bread.use_effects.interact_vibrations),
+  tostring(bread.raw)
+)
 local ok, message =
   pcall(funnel.set_item, funnel, 0, { kind = "minecraft:diamond_sword", max_stack_size = 2 })
 log("stackable sword", tostring(ok), tostring(message:find("durability") ~= nil))

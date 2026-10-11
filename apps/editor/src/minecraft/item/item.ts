@@ -12,6 +12,7 @@ import type {
   ItemFile,
   ResourcePackOutline,
   RefKind,
+  UseEffectsDef,
 } from '@/core/format'
 import { resolveReference } from '@/core/format'
 
@@ -223,6 +224,22 @@ export function setCooldown<K extends keyof CooldownDef>(
   }
   if (value === undefined || value === '') delete item.cooldown.group
   else item.cooldown[key] = value
+}
+
+/**
+ * Sets one field of `useEffects`: undefined leaves it to the default (the
+ * game's, or a hold's), and the table goes once nothing's left in it.
+ */
+export function setUseEffects<K extends keyof UseEffectsDef>(
+  item: ItemDef,
+  key: K,
+  value: UseEffectsDef[K] | undefined,
+): void {
+  const effects: UseEffectsDef = { ...item.useEffects }
+  if (value === undefined) delete effects[key]
+  else effects[key] = value
+  if (Object.keys(effects).length === 0) delete item.useEffects
+  else item.useEffects = effects
 }
 
 /**

@@ -89,6 +89,19 @@ data class ItemDef(
     /** A cooldown after using it (the `use_cooldown` component). */
     val cooldown: CooldownDef? = null,
     /**
+     * Held down with no end: a right click starts a use that lasts until the player lets go, with nothing drawn
+     * (no zoom, no pose), never finishes and uses nothing up. Letting go is `player_stop_using_item`, with how
+     * long it was held. It's a `consumable` component of its own, so it can't go with [food], and only works on
+     * an item kind with no use of its own (`minecraft:paper`, not a bow or a shield). Unless [useEffects] says
+     * otherwise, the player keeps their speed and can sprint while holding it.
+     */
+    val hold: Boolean? = null,
+    /**
+     * How a player moves while using it, a bow drawn or food eaten as much as a [hold] (the `use_effects`
+     * component). Left out, the game's (a fifth of the speed, no sprinting), or for a [hold], full speed.
+     */
+    val useEffects: UseEffectsDef? = null,
+    /**
      * Script data saved on the stack (its persistent data container), JSON
      * values by key: `{ "coin": true }`. Scripts read it back as `item.data`.
      */
@@ -306,6 +319,35 @@ data class FoodDef(
     /** How long eating takes. Default 1.6. */
     val eatSeconds: Double? = null
 )
+
+/**
+ * How a player moves while using an item (the `use_effects` component). A field left out is the game's default,
+ * or for an item that's a [ItemDef.hold], [HOLD]'s.
+ */
+@Serializable
+data class UseEffectsDef(
+    /** Their speed while using it, from 0 to 1. The game's default is 0.2; a hold's 1. */
+    val speedMultiplier: Double? = null,
+    /** Whether they can sprint while using it. The game's default is false; a hold's true. */
+    val canSprint: Boolean? = null,
+    /** Whether starting to use it sets off sculk sensors. The game's default is true; a hold's false. */
+    val interactVibrations: Boolean? = null
+) {
+    /** Every field filled in: this one's, else [defaults]'s. */
+    fun filled(defaults: UseEffectsDef): UseEffectsDef = UseEffectsDef(
+        speedMultiplier ?: defaults.speedMultiplier,
+        canSprint ?: defaults.canSprint,
+        interactVibrations ?: defaults.interactVibrations
+    )
+
+    companion object {
+        /** The game's own, for an item that doesn't set the component. */
+        val GAME = UseEffectsDef(speedMultiplier = 0.2, canSprint = false, interactVibrations = true)
+
+        /** A [ItemDef.hold]'s: holding it doesn't slow the player, and a sculk sensor doesn't hear it. */
+        val HOLD = UseEffectsDef(speedMultiplier = 1.0, canSprint = true, interactVibrations = false)
+    }
+}
 
 /** A cooldown after using an item. */
 @Serializable

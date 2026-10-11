@@ -159,6 +159,13 @@
     "text": "*"
   },
   {
+    "file": "items/ruby_wand/item.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "items/ruby_wand/script.lua"
+  },
+  {
     "file": "recipes/ruby.json",
     "path": "$.result.item",
     "kind": "item",

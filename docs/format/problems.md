@@ -648,6 +648,14 @@ Error. A cooldown's `seconds` isn't more than 0. See [items](item.md).
 
 Error. A cooldown's `group` isn't a namespaced id. See [items](item.md).
 
+### `item.hold-food` {#item-hold-food}
+
+Error. An item has both `hold` and `food`. See [items](item.md).
+
+### `item.use-effects` {#item-use-effects}
+
+Error. A `useEffects` value is out of range. See [items](item.md).
+
 ### `item.draw-without-ammo` {#item-draw-without-ammo}
 
 Error. `drawWithoutAmmo` is on an item that isn't a bow. See [items](item.md).

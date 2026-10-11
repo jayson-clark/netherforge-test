@@ -102,7 +102,7 @@ class PackagesTest {
     fun aPackagesResourcesRunBesideTheProjects() {
         val snapshot = loadTestProject("examples", "basic")
         val items = snapshot.running(ItemKind)
-        assertEquals(setOf("ruby", "crown", "ruby_ore", "ruby_pick", "library:gem"), items.keys)
+        assertEquals(setOf("ruby", "crown", "ruby_ore", "ruby_pick", "ruby_wand", "library:gem"), items.keys)
         assertEquals("library:gems/gem", items.getValue("library:gem").itemModel?.text)
         // The project's own are compiled as written.
         assertEquals("ui/ruby", items.getValue("ruby").itemModel?.text)

@@ -79,6 +79,20 @@
   {
     "severity": "error",
     "file": "menus/bag/menu.json",
+    "message": "An item that's held can't be eaten too: hold and food both make it a consumable",
+    "path": "$.slots[\"8\"].item.hold",
+    "code": "item.hold-food"
+  },
+  {
+    "severity": "error",
+    "file": "menus/bag/menu.json",
+    "message": "speedMultiplier must be from 0 to 1",
+    "path": "$.slots[\"8\"].item.useEffects.speedMultiplier",
+    "code": "item.use-effects"
+  },
+  {
+    "severity": "error",
+    "file": "menus/bag/menu.json",
     "message": "\"not a block\" isn't a reference to a block: write <id>, or <namespace>:<id> for another package's, or minecraft:<id> for the game's, or a #tag, or * for any",
     "path": "$.slots[\"4\"].item.canBreak[0]",
     "code": "reference.syntax"
