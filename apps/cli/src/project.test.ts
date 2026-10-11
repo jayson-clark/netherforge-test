@@ -57,7 +57,7 @@ describe('listing a project', () => {
     expect(listFiles(path.join(tmp, 'nowhere'))).toEqual([])
   })
 
-  it('reads the JSON format reads as text and hands it the rest as null', () => {
+  it('reads the JSON and Lua format reads as text and hands it the rest as null', () => {
     const root = write(tmp, {
       'netherforge.json': manifest('p'),
       'netherforge.lock': '{}',
@@ -75,7 +75,7 @@ describe('listing a project', () => {
       'maps/lobby/level.dat': null,
       // A world's own JSON is the game's, never read.
       'maps/lobby/stats/x.json': null,
-      'modules/m/init.lua': null,
+      'modules/m/init.lua': 'return {}',
       'netherforge.json': manifest('p'),
       'netherforge.lock': '{}',
       'recipes/r.json': '{}',

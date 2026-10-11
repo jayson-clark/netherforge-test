@@ -9,6 +9,7 @@ import dev.netherforge.format.datapack.DatapackFiles
 import dev.netherforge.format.game.FeatureTable
 import dev.netherforge.format.game.GameData
 import dev.netherforge.format.json.CanonicalJson
+import dev.netherforge.format.module.ModuleRequires
 import dev.netherforge.format.ref.ReferenceIndex
 import dev.netherforge.format.script.ScriptDef
 import dev.netherforge.format.text.DefaultFontFile
@@ -332,6 +333,9 @@ class KindContext internal constructor(
     /** `client/vanilla.json`, when it's there and reads. */
     val vanilla: VanillaFile? get() = project.vanilla
 
+    /** The ids of the modules some `.lua` file in the project requires by name ([ModuleRequires]), or that it exports for others to; read once per load. */
+    val requiredModules: Set<String> get() = project.requiredModules
+
     /** Whether [image] reads pixels at all (see [ProjectSource.readsImages]). */
     val readsImages: Boolean get() = project.source.readsImages
 
@@ -375,9 +379,13 @@ internal class ProjectIndex(
     private val files: Map<String, Map<String, Set<String>>> = emptyMap(),
     val vanilla: VanillaFile? = null,
     /** The group folders each resource is in, by kind and id; absent for one in its kind's folder. */
-    private val groups: Map<String, Map<String, String>> = emptyMap()
+    private val groups: Map<String, Map<String, String>> = emptyMap(),
+    /** The modules the manifest exports, which other projects require. */
+    private val exportedModules: Set<String> = emptySet()
 ) {
     private val images = HashMap<String, ImageInfo?>()
+
+    val requiredModules: Set<String> by lazy { ModuleRequires.of(source) + exportedModules }
 
     @Suppress("UNCHECKED_CAST")
     fun <T> models(kind: KindSpec<T, *>): Map<String, T> = read[kind.id].orEmpty() as Map<String, T>

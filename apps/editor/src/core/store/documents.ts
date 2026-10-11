@@ -21,7 +21,7 @@ import {
   type DocumentKindId,
   type Problem,
 } from '@/core/format'
-import { isProjectJson } from '@/core/paths'
+import { readsText } from '@/core/paths'
 import * as H from './history'
 import { splitPackagePath } from './packages'
 import { errorText, type SliceArgs } from './slice'
@@ -389,7 +389,7 @@ export function documentsSlice(args: SliceArgs): DocumentsState & DocumentsActio
         }
         return withDirty({ ...next, savedModel: model })
       })
-      if (isProjectJson(path)) set({ diskTexts: { ...get().diskTexts, [path]: text } })
+      if (readsText(path)) set({ diskTexts: { ...get().diskTexts, [path]: text } })
       if (!get().files.includes(path)) set({ files: [...get().files, path].sort() })
       get().validateSoon()
       get().hotReload([path])

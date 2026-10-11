@@ -8,7 +8,7 @@
  * answers that without tracking our own writes separately.
  */
 import { DEFAULT_FONT_FILE, LOCK_FILE, MANIFEST_FILE } from '@/core/format'
-import { isProjectJson } from '@/core/paths'
+import { readsText } from '@/core/paths'
 import { docFromText, keepsRaw, patchDoc, withDirty } from './documents'
 import { nextNonce, type SliceArgs } from './slice'
 
@@ -79,10 +79,10 @@ export function externalSlice(args: SliceArgs): ExternalActions {
       set({ fileStamps: stamps })
       for (const path of paths) {
         const doc = get().docs[path]
-        const needsText = doc !== undefined || isProjectJson(path)
+        const needsText = doc !== undefined || readsText(path)
         if (!needsText) continue
         const text = await read(path)
-        if (isProjectJson(path)) {
+        if (readsText(path)) {
           if (text === null) delete diskTexts[path]
           else diskTexts[path] = text
         }
@@ -139,7 +139,7 @@ export function externalSlice(args: SliceArgs): ExternalActions {
         }
         return docFromText(path, theirs, keepsRaw(doc))
       })
-      if (choice === 'theirs' && isProjectJson(path)) {
+      if (choice === 'theirs' && readsText(path)) {
         const doc = get().docs[path]
         if (doc) set({ diskTexts: { ...get().diskTexts, [path]: doc.savedText } })
       }

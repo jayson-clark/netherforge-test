@@ -20,7 +20,7 @@ finds any of them by name).
 
 - When the project loads, every module with an `init.lua` runs it, in id
   order. A module without one is a library: it runs when something requires
-  it.
+  it. NetherForge warns about one only while no script requires it.
 - A module runs **once** for the whole server. All its files share one set of
   globals, and every `require` of it gets the running module, state and all.
 - What a module registers (event handlers, timers, commands) lasts until the

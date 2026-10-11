@@ -28,7 +28,7 @@ import type { Backend } from '@/core/backend/types'
 import { templateById, templateLocation } from '@/core/templates'
 import { isModel } from './documents'
 import type { Workspace } from './workspace'
-import { isProjectJson, locationOf, MODULES } from '@/core/paths'
+import { locationOf, readsText } from '@/core/paths'
 import { errorText, isUnder, nextNonce, type SliceArgs } from './slice'
 import { namespaceOf, projectInput } from './validation'
 
@@ -184,17 +184,14 @@ export function fileUrl(
   return location === undefined ? '' : backend.packageFileUrl(location, local, stamp)
 }
 
-/** A module's Lua file, by its path in a project or package (`modules/greetings/init.lua`). */
-const isModuleLua = (path: string) => path.startsWith(`${MODULES}/`) && path.endsWith('.lua')
-
 /** A read-only mark for a whole package: `library:` (see `readOnlyReason`). */
 export const isPackageMark = (path: string) => path.endsWith(':')
 
 export function packagesSlice({ backend, get, set }: SliceArgs): PackagesState & PackagesActions {
   /**
-   * A package folder as format reads it: its JSON as text (as the
-   * project's is read), and its modules' Lua (for LuaLS's stubs of what it
-   * exports; format doesn't read it), the rest null, and its content hash
+   * A package folder as format reads it: its JSON and Lua as text (as the
+   * project's are read; the Lua also gives LuaLS's stubs of what it
+   * exports), the rest null, and its content hash
    * from the backend's digests. Null when there's no package there.
    */
   const readPackage = async (location: string): Promise<PackageFolder | null> => {
@@ -207,7 +204,7 @@ export function packagesSlice({ backend, get, set }: SliceArgs): PackagesState &
     const files: Record<string, string | null> = {}
     for (const { path } of listed.files) {
       files[path] =
-        (isProjectJson(path) || isModuleLua(path)) && isPackageContent(path)
+        readsText(path) && isPackageContent(path)
           ? await backend.packageReadText(location, path).catch(() => null)
           : null
     }
@@ -395,7 +392,7 @@ export function packagesSlice({ backend, get, set }: SliceArgs): PackagesState &
         const written = get().files.filter((it) => isUnder(it, target))
         const texts: Record<string, string> = {}
         for (const path of written) {
-          if (!isProjectJson(path)) continue
+          if (!readsText(path)) continue
           try {
             const text = await backend.readText(path)
             const moved = documentKindOf(path)

@@ -579,7 +579,8 @@ object Projects {
         val groups = reading.pending.filter {
             it.group.isNotEmpty()
         }.groupBy({ it.kind.id }, { it.id to it.group }).mapValues { it.value.toMap() }
-        val index = ProjectIndex(reading.source, reading.defaultFont, read, references, folders, reading.vanilla, groups)
+        val exportedModules = reading.manifest?.exports?.get(ModuleKind.folder).orEmpty().toSet()
+        val index = ProjectIndex(reading.source, reading.defaultFont, read, references, folders, reading.vanilla, groups, exportedModules)
         val loaded = reading.pending.map { it.kind to it.load(index, qualified) }
         for ((_, resource) in loaded) problems += resource.problems
         manifest?.worlds?.let { problems += worldHeights(it, references, read, index, packages) }

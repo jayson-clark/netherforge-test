@@ -20,7 +20,7 @@
   {
     "severity": "warning",
     "file": "modules/tools",
-    "message": "Module \"tools\" has no init.lua, so it only runs when required",
+    "message": "Module \"tools\" has no init.lua and no script requires it, so it never runs",
     "code": "module.no-init"
   },
   {

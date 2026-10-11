@@ -85,7 +85,11 @@ all of them:
 | A folder or file name that isn't an [id](#ids)                                            | `project.id` (error; it's ignored)             |
 | A hidden file or folder (`.DS_Store`, `.gitkeep`) directly in a kind's folder             | nothing: it's nobody's                         |
 
-A module's folder needs no particular file: any file makes one.
+A module's folder needs no particular file: any file makes one. A module
+without an `init.lua` is a library, which only runs when required: it's
+`module.no-init` (a warning) only while no `.lua` file in the project requires
+it by a literal name (`require("util")`, `require "util.strings"`) and the
+project doesn't export it. A name built at run time isn't seen.
 
 ### Group folders
 

@@ -10,7 +10,7 @@
  */
 import { MANIFEST_FILE, type ImageSizes, type Problem, type ProjectOutline } from '@/core/format'
 import type { ProjectInfo } from '@/core/backend/types'
-import { isProjectJson } from '@/core/paths'
+import { readsText } from '@/core/paths'
 import { validationWorker, type ValidationClient } from '@/core/validation/client'
 import { ChangeTracker } from '@/core/validation/requests'
 import { isModel } from './documents'
@@ -35,7 +35,7 @@ function modelText(model: unknown): string {
 
 /**
  * Every project file as format reads it: the open documents' current
- * models and texts, the rest from disk, and null for what isn't JSON.
+ * models and texts, the rest from disk, and null for what format doesn't read (images).
  */
 export function projectInput(
   state: Pick<Workspace, 'files' | 'docs' | 'diskTexts'>,
@@ -43,7 +43,7 @@ export function projectInput(
   const { files, docs, diskTexts } = state
   const input: Record<string, string | null> = {}
   for (const path of files) {
-    if (!isProjectJson(path)) {
+    if (!readsText(path)) {
       input[path] = null
       continue
     }

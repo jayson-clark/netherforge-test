@@ -306,7 +306,7 @@ Warning. A module has no `.lua` files. See [the project format](project.md).
 
 ### `module.no-init` {#module-no-init}
 
-Warning. A module has no `init.lua`, so it only runs when required. See [the project format](project.md).
+Warning. A module has no `init.lua` and no script requires it, so it never runs. See [the project format](project.md).
 
 ## Centities
 

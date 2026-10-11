@@ -58,6 +58,12 @@ export const isProjectJson = (path: string) =>
   (path.endsWith('.json') && !BINARY_FOLDERS.some((folder) => path.startsWith(folder)))
 
 /**
+ * Whether format reads a file's text: the project's JSON ([isProjectJson]) and
+ * its Lua, which format reads for the modules scripts `require`.
+ */
+export const readsText = (path: string) => isProjectJson(path) || path.endsWith('.lua')
+
+/**
  * Group folders sort a kind's resources without changing their ids: `items/(weapons)/ruby_wand/` is the item
  * `ruby_wand`. A resource's `group` is the group folders it's in as on disk (`(weapons)/(swords)`), empty for one
  * in its kind's folder itself; every helper below takes it, and [groupOf] finds it in a file list.

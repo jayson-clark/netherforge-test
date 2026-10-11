@@ -25,7 +25,7 @@ import {
   syncMcpConfig,
   syncOpencodeConfig,
 } from '@/core/mcp/config'
-import { isProjectJson } from '@/core/paths'
+import { readsText } from '@/core/paths'
 import { SCHEMA_FOLDER, schemaFiles } from '@/core/schemas'
 import { DOCUMENTS_INITIAL } from './documents'
 import { isPackageMark, PACKAGES_INITIAL } from './packages'
@@ -224,7 +224,7 @@ export function projectSlice({ backend, get, set }: SliceArgs): ProjectState & P
         const diskTexts: Record<string, string> = {}
         await Promise.all(
           get()
-            .files.filter(isProjectJson)
+            .files.filter(readsText)
             .map(async (path) => {
               diskTexts[path] = await backend.readText(path)
             }),

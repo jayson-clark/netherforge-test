@@ -259,7 +259,7 @@ object ProblemCodes {
     val SCRIPT_FILE_NAME = warning("script.file-name", PROJECT, "A Lua file beside a script is named so `require` can't reach it.")
     val MODULE_FILE_NAME = error("module.file-name", PROJECT, "A module's Lua file is named so `require` can't reach it.")
     val MODULE_EMPTY = warning("module.empty", PROJECT, "A module has no `.lua` files.")
-    val MODULE_NO_INIT = warning("module.no-init", PROJECT, "A module has no `init.lua`, so it only runs when required.")
+    val MODULE_NO_INIT = warning("module.no-init", PROJECT, "A module has no `init.lua` and no script requires it, so it never runs.")
 
     // ---- centities --------------------------------------------------------------
 

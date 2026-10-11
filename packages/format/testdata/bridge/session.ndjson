@@ -1,6 +1,6 @@
 {"jsonrpc":"2.0","id":0,"method":"hello","params":{"token":"t0k3n","protocol":1,"pluginVersion":"0.1.0","minecraft":"26.3","project":"/home/me/projects/basic"}}
 {"jsonrpc":"2.0","id":0,"result":{"protocol":1}}
-{"jsonrpc":"2.0","method":"problems","params":{"problems":[{"severity":"warning","file":"modules/tools","message":"Module \"tools\" has no init.lua, so it only runs when required","code":"module.no-init"}]}}
+{"jsonrpc":"2.0","method":"problems","params":{"problems":[{"severity":"warning","file":"modules/tools","message":"Module \"tools\" has no init.lua and no script requires it, so it never runs","code":"module.no-init"}]}}
 {"jsonrpc":"2.0","method":"status","params":{"players":[],"instances":0}}
 {"jsonrpc":"2.0","id":"backend:1","method":"export_game_data"}
 {"jsonrpc":"2.0","id":1,"method":"reload","params":{"paths":["centities/tower/script.lua","centities/tower/centity.json"]}}

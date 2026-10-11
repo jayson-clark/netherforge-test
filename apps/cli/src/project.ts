@@ -42,7 +42,8 @@ const BINARY_FOLDERS = Object.values(KINDS)
 /**
  * What `loadProject` takes: JSON files' text (and `netherforge.lock`'s, JSON
  * by another name, and every document format owns whatever it's called: a
- * datapack's `pack.mcmeta`), `null` for the rest (Lua, PNGs, structures).
+ * datapack's `pack.mcmeta`), Lua's (for the modules scripts `require`),
+ * `null` for the rest (PNGs, structures).
  * JSON in a binary kind's folder (a map's player stats) is the
  * game's own, never read, as in the editor, unless format owns it (a
  * structure's generation file, `structures/<id>.json`).
@@ -50,11 +51,12 @@ const BINARY_FOLDERS = Object.values(KINDS)
 export function readProject(root: string): Record<string, string | null> {
   const input: Record<string, string | null> = {}
   for (const file of listFiles(root)) {
-    const json =
+    const text =
       file === LOCK_FILE ||
       documentKindOf(file) !== null ||
+      file.endsWith('.lua') ||
       (file.endsWith('.json') && !BINARY_FOLDERS.some((it) => file.startsWith(it)))
-    input[file] = json ? readFileSync(path.join(root, file), 'utf8') : null
+    input[file] = text ? readFileSync(path.join(root, file), 'utf8') : null
   }
   return input
 }

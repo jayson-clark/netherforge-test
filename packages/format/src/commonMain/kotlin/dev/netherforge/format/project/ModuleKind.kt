@@ -6,7 +6,8 @@ import dev.netherforge.format.module.ModuleInfo
 
 /**
  * `modules/<id>/`: a folder of Lua other scripts `require`, run from [ENTRY]
- * if it has one. It has no JSON file: any file makes a folder a module.
+ * if it has one. It has no JSON file: any file makes a folder a module. One
+ * without [ENTRY] is a library, warned about only while nothing requires it.
  */
 object ModuleKind : FilesKind<ModuleInfo>("module", "modules", Layout.Folder(null), Contents.LUA) {
     /** The file a module runs on load. Without it, a module only runs when required. */
@@ -28,8 +29,13 @@ object ModuleKind : FilesKind<ModuleInfo>("module", "modules", Layout.Folder(nul
         }
         if (value.files.isEmpty()) {
             ctx.sink.report(ProblemCodes.MODULE_EMPTY, "Module \"${value.id}\" has no .lua files")
-        } else if (!value.hasInit) {
-            ctx.sink.report(ProblemCodes.MODULE_NO_INIT, "Module \"${value.id}\" has no $ENTRY, so it only runs when required")
+        }
+    }
+
+    /** A module with no [ENTRY] is a library: fine while some script requires it, never run otherwise. */
+    override fun crossCheck(value: ModuleInfo, ctx: KindContext) {
+        if (value.files.isNotEmpty() && !value.hasInit && value.id !in ctx.requiredModules) {
+            ctx.sink.report(ProblemCodes.MODULE_NO_INIT, "Module \"${value.id}\" has no $ENTRY and no script requires it, so it never runs")
         }
     }
 

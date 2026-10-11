@@ -16,7 +16,7 @@ import {
   type TemplateKindId,
 } from '@/core/format'
 import { readProjectBytes } from '@/core/backend/projectBytes'
-import { isProjectJson, opensAs, resourceOf } from '@/core/paths'
+import { opensAs, readsText, resourceOf } from '@/core/paths'
 import { docFromText, isModel, keepsRaw, patchDoc } from './documents'
 import { readOnlyReason } from './project'
 import { isTextFile } from './refactors'
@@ -69,8 +69,8 @@ export function filesSlice(args: SliceArgs): FilesActions {
       if (get().refuseReadOnly(...Object.keys(files))) return
       for (const [path, text] of Object.entries(files)) await backend.writeText(path, text)
       await get().refreshFiles()
-      const json = Object.fromEntries(Object.entries(files).filter(([path]) => isProjectJson(path)))
-      set({ diskTexts: { ...get().diskTexts, ...json } })
+      const texts = Object.fromEntries(Object.entries(files).filter(([path]) => readsText(path)))
+      set({ diskTexts: { ...get().diskTexts, ...texts } })
       await get().openFile(opensAs(kind, id, group))
       get().validateSoon()
     },
@@ -96,7 +96,7 @@ export function filesSlice(args: SliceArgs): FilesActions {
             if (isTextFile(path)) {
               const text = await backend.readText(path)
               await backend.writeText(target(path), text)
-              if (isProjectJson(target(path))) texts[target(path)] = text
+              if (readsText(target(path))) texts[target(path)] = text
             } else {
               await backend.writeBytes(target(path), await readProjectBytes(backend, path))
             }
