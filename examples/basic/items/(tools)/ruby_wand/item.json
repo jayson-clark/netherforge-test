@@ -3,7 +3,9 @@
   "kind": "minecraft:stick",
   "name": "<red>Ruby wand",
   "lore": ["<gray>Hold right click to charge, let go to cast"],
-  "hold": true,
+  "hold": {
+    "animation": "trident"
+  },
   "script": {
     "file": "script.lua"
   }

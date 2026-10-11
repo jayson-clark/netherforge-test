@@ -596,6 +596,32 @@ class MenuTest {
     }
 
     @Test
+    fun `a hold with an animation reads back as the table it was, and keeps a hold's use effects`() {
+        val script = """
+            do
+              this:set_item(0, { kind = "minecraft:stick", hold = { animation = "trident" } })
+              this:set_item(1, { kind = "minecraft:stick", hold = { animation = "bow" }, use_effects = { can_sprint = false } })
+              this:set_item(2, { kind = "minecraft:stick", hold = { animation = "none" } })
+              this:set_item(3, { kind = "minecraft:stick", hold = {} })
+              local trident, bow, none, empty = this:item(0), this:item(1), this:item(2), this:item(3)
+              log(type(trident.hold), trident.hold.animation, trident.use_effects)
+              log(bow.hold.animation, bow.use_effects.can_sprint, bow.use_effects.speed_multiplier)
+              log(none.hold, empty.hold)
+            end
+        """
+        TestServer(menu(script = script)).use { server ->
+            server.platform.commands.run(server.player("Alex"), "menu")
+            assertEquals(listOf("table\ttrident\tnil", "bow\tfalse\tnil", "true\ttrue"), server.logs)
+            val slots = server.platform.menus.of(server.player("Alex"))!!.slots
+            assertEquals(
+                dev.netherforge.format.item.HoldDef(animation = dev.netherforge.format.item.UseAnimation("trident")),
+                slots[0]!!.def.hold
+            )
+            assertEquals(dev.netherforge.format.item.UseEffectsDef(canSprint = false), slots[1]!!.def.useEffects)
+        }
+    }
+
+    @Test
     fun `bad item components are errors`() {
         fun modifier(fields: String) =
             "{ kind = \"minecraft:paper\", attribute_modifiers = { { attribute = \"minecraft:armor\", $fields } } }"
@@ -615,6 +641,12 @@ class MenuTest {
             "{ kind = \"minecraft:paper\", food = { nutrition = 2 } }" to "needs a saturation",
             "{ kind = \"minecraft:paper\", cooldown = { seconds = 0 } }" to "more than 0",
             "{ kind = \"minecraft:stick\", hold = true, food = { nutrition = 1, saturation = 0 } }" to "can't be eaten too",
+            "{ kind = \"minecraft:stick\", hold = { animation = \"bow\" }, food = { nutrition = 1, saturation = 0 } }" to
+                "can't be eaten too",
+            "{ kind = \"minecraft:stick\", hold = { animation = \"tridnet\" } }" to
+                "\"tridnet\" isn't a use animation: did you mean \"trident\"?",
+            "{ kind = \"minecraft:stick\", hold = { pose = \"bow\" } }" to "has no field \"pose\"",
+            "{ kind = \"minecraft:stick\", hold = \"bow\" }" to "item.hold must be a boolean or a table",
             "{ kind = \"minecraft:stick\", use_effects = { speed_multiplier = 2 } }" to "speed_multiplier must be from 0 to 1",
             "{ kind = \"minecraft:stick\", use_effects = { sprint = true } }" to "has no field \"sprint\""
         )) {

@@ -119,7 +119,7 @@ with `<glyph:<pack>/<key>>` (see [Glyphs](resource-pack.md#glyphs)):
 | `hiddenTooltipComponents` | Tooltip lines to hide, by the component that draws them: `["unbreakable", "attribute_modifiers"]`. See below.                                                                |
 | `food`                    | `{ "nutrition", "saturation", "canAlwaysEat"?, "eatSeconds"? }`. See below.                                                                                                  |
 | `cooldown`                | `{ "seconds", "group"? }`: a cooldown after using it.                                                                                                                        |
-| `hold`                    | `true`: held down with no end, until the player lets go. See below.                                                                                                          |
+| `hold`                    | `true`, or `{ "animation" }`: held down with no end, until the player lets go. See below.                                                                                    |
 | `useEffects`              | `{ "speedMultiplier"?, "canSprint"?, "interactVibrations"? }`: how a player moves while using it. See below.                                                                 |
 | `data`                    | Your scripts' own data, a JSON object saved on the stack.                                                                                                                    |
 
@@ -250,16 +250,64 @@ Minecraft doesn't have is `item.unknown-tooltip-component`. A script's
 Minecraft's `consumable` component, eaten over `eatSeconds` (1.6 by default).
 `cooldown`'s `seconds` must be more than 0; items with the same `group` (a
 namespaced id) share a cooldown, and without one the item's kind is its group.
-`hold` makes a right click a use that lasts until the player lets go: nothing
-is drawn (no zoom, no arm pose), it never finishes and nothing is used up, and
-letting go is [`player_stop_using_item`](../reference/events.md), whose
-`event.ticks` says how long it was held. That's how a script hears a right
-click being released: a flail thrown on letting go, a charge that grows while
-it's held. It's Minecraft's `consumable` component with no animation and no
-end, so it can't go with `food` (`item.hold-food`), and it only works on a kind
-with no use of its own: `minecraft:paper` or a stick, not a bow, a shield or a
-potion, whose own use comes first. While it's held, left clicks don't attack
-(the game ignores them during any use).
+`hold` makes a right click a use that lasts until the player lets go: it never
+finishes and nothing is used up, and letting go is
+[`player_stop_using_item`](../reference/events.md), whose `event.ticks` says
+how long it was held. That's how a script hears a right click being released:
+a flail thrown on letting go, a charge that grows while it's held. It's
+Minecraft's `consumable` component with no end, so it can't go with `food`
+(`item.hold-food`), and it only works on a kind with no use of its own:
+`minecraft:paper` or a stick, not a bow, a shield or a potion, whose own use
+comes first. While it's held, left clicks don't attack (the game ignores them
+during any use).
+
+`"hold": true` draws nothing: no zoom, no arm pose. To pose the player while
+it's held, give it the animation of one of the game's uses instead:
+
+```json partial
+"hold": { "animation": "trident" }
+```
+
+`animation` is the `consumable` component's, by the game's own name, and
+defaults to `none`. Everything else is the same as `true`, `useEffects`'
+defaults included: a posed hold doesn't slow the player either. Written back,
+`{ "animation": "none" }` and `{}` read as `true`. A name that isn't one of
+these is `item.hold-animation` (a near miss like `tridnet` says which was
+meant). Every supported Minecraft version (1.21.11 to 26.3) has the same ones:
+
+| `animation` | First person                                                                 | Third person                                                     |
+| ----------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `none`      | Held as it is.                                                               | Held as it is.                                                   |
+| `trident`   | Raised over the shoulder, drawn back further for half a second, then shakes. | One arm raised over the head, the trident wind-up.               |
+| `bow`       | Turned and pulled back for a second, then shakes at full draw.               | Both arms raised and aimed where the player looks.               |
+| `crossbow`  | Held as it is.                                                               | Both arms, the near one pulling back: the crossbow being loaded. |
+| `block`     | Turned up across the body, as a sword blocks.                                | One arm across the body, as a shield is raised.                  |
+| `spyglass`  | Held as it is.                                                               | One arm raised to the eye.                                       |
+| `toot_horn` | Held as it is.                                                               | One arm raised to the mouth.                                     |
+| `brush`     | Swept back and forth.                                                        | The arm lowered and forward, brushing.                           |
+| `spear`     | Held low and out in front, still.                                            | The arm forward and low, couched like a lance.                   |
+| `eat`       | Held as it is.                                                               | Held as it is.                                                   |
+| `drink`     | Held as it is.                                                               | Held as it is.                                                   |
+| `bundle`    | Held as it is (it moves only when the player swings).                        | Held as it is.                                                   |
+
+The trident's wind-up is `trident`. `spear` is the 1.21.11 spear's pose, and
+the motion a real spear makes while charging comes from its
+`kinetic_weapon` component, which a hold doesn't have, so a held `spear` stays
+still. `eat` and `drink` move the item to the mouth over the use's length,
+which for a hold is a day, so they look like `none`; `crossbow`, `spyglass` and
+`toot_horn` have no first-person pose of their own except on the real items.
+
+The zoom isn't part of the animation. The game narrows the view for a drawn
+`minecraft:bow` and a raised `minecraft:spyglass` by the item's kind, and only
+the real spyglass hides the hand and shows the scope overlay, so a held stick
+with `bow` or `spyglass` poses without zooming. Nothing on the server changes
+either: the animation only picks the pose the clients draw. A held item never
+throws, fires an arrow, needs ammo or riptides, whatever its animation, since
+those are the trident's, the bow's and the crossbow's own uses (their kinds,
+which a hold can't go on), not their animations'. A resource pack's
+[draw stages](resource-pack.md#draw-stages) work with any animation: they
+follow how long the item has been used, which the animation doesn't change.
+
 `useEffects` is how a player moves while using the item, whatever the use: a
 hold, food, a bow, a shield. `speedMultiplier` (0 to 1, `item.use-effects`
 otherwise) is their speed, `canSprint` whether they keep sprinting, and

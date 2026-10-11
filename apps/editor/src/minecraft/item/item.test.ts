@@ -18,6 +18,8 @@ import {
   setEnchantment,
   setEquipment,
   setFood,
+  setHold,
+  holdAnimation,
   setModifier,
   setProjectItem,
   setUseEffects,
@@ -198,6 +200,21 @@ describe('item components', () => {
     expect(item.useEffects).toEqual({ speedMultiplier: 0.5 })
     setUseEffects(item, 'speedMultiplier', undefined)
     expect(item).toEqual({ kind: 'minecraft:stick', hold: true })
+  })
+
+  it('turns hold on and off, writing a pose as an object and none as true', () => {
+    const item: ItemDef = { kind: 'minecraft:stick' }
+    setHold(item, true)
+    expect(item.hold).toBe(true)
+    expect(holdAnimation(item)).toBe('none')
+    setHold(item, true, 'trident')
+    expect(item.hold).toEqual({ animation: 'trident' })
+    expect(holdAnimation(item)).toBe('trident')
+    setHold(item, false)
+    expect(item.hold).toBeUndefined()
+    setHold(item, true, 'bow')
+    setHold(item, true, 'none')
+    expect(item.hold).toBe(true)
   })
 
   it('makes a stack a project item, leaving its kind to the definition', () => {

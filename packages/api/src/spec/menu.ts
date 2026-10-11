@@ -1,4 +1,4 @@
-import { TooltipComponentValues } from '@netherforge/format/types'
+import { TooltipComponentValues, UseAnimationValues } from '@netherforge/format/types'
 import type { EventSpec, LuaClass } from '../types.ts'
 import { eventFunctions } from './events.ts'
 
@@ -685,8 +685,8 @@ export const menuShapes: LuaClass[] = [
       },
       {
         name: 'hold',
-        type: 'boolean?',
-        doc: "Held down with no end: a right click lasts until the player lets go, with nothing drawn (no zoom, no pose), never finishes and uses nothing up. Letting go is `player_stop_using_item`, and `event.ticks` says how long it was held: a flail thrown on release, a charge that grows while held. Unless `use_effects` says otherwise, the player keeps their speed and can sprint. It can't go with `food`, and only works on a kind with no use of its own (`minecraft:stick`, not a bow or a shield). Left clicks don't attack while it's held.",
+        type: 'boolean|ItemHold?',
+        doc: "Held down with no end: a right click lasts until the player lets go, never finishes and uses nothing up. Letting go is `player_stop_using_item`, and `event.ticks` says how long it was held: a flail thrown on release, a charge that grows while held. `true` draws nothing (no zoom, no pose); `{ animation = \"trident\" }` poses the player as that use of the game's does, a knife raised to throw. Read back, it's `true` or that table, as it was given (a hold whose animation is `\"none\"` reads back `true`). Unless `use_effects` says otherwise, the player keeps their speed and can sprint, whatever the animation. It can't go with `food`, and only works on a kind with no use of its own (`minecraft:stick`, not a bow or a shield). Left clicks don't attack while it's held.",
       },
       {
         name: 'use_effects',
@@ -766,6 +766,17 @@ export const menuShapes: LuaClass[] = [
       doc: "A namespaced id: items in one group share a cooldown (`player:set_item_cooldown` takes it too). Default: the item's kind.",
     },
   ]),
+  shape(
+    'ItemHold',
+    "A `hold` item that poses the player while it's held: an `Item`'s `hold`, as a table. Everything but the pose is a plain `hold = true`'s.",
+    [
+      {
+        name: 'animation',
+        type: `(${UseAnimationValues.map((it) => `"${it}"`).join('|')})?`,
+        doc: 'The pose, as one of the game\'s uses draws it: `"trident"` (arm raised to throw), `"bow"` (both arms out, drawing), `"crossbow"` (both arms, loading), `"block"`, `"spyglass"` (raised to the eye), `"toot_horn"`, `"brush"`, `"spear"` (held low and forward), `"eat"`, `"drink"`, `"bundle"`, or `"none"`. The zoom of a bow and the spyglass\'s scope are the real items\' only. Default `"none"`. A name that isn\'t one is an error.',
+      },
+    ],
+  ),
   shape(
     'ItemUseEffects',
     "How a player moves while using an item: an `Item`'s `use_effects`. A field left out is the game's default, or on a `hold` item the hold's.",

@@ -10,6 +10,7 @@ import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.game.has
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.item.TooltipComponent
+import dev.netherforge.format.item.UseAnimation
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.recipe.Ingredient
@@ -159,7 +160,14 @@ object Rules {
                 sink.report(ProblemCodes.ITEM_COOLDOWN_GROUP, "\"${cooldown.group}\" isn't a namespaced id", "$at.cooldown.group")
             }
         }
-        if (item.hold == true && item.food != null) {
+        item.hold?.animation?.let { animation ->
+            if (animation.id !in UseAnimation.ALL) {
+                val meant = nearestAnimation(animation.id)
+                val hint = if (meant != null) "did you mean \"$meant\"?" else "it's one of ${UseAnimation.ALL.joinToString(", ")}"
+                sink.report(ProblemCodes.ITEM_HOLD_ANIMATION, "\"${animation.id}\" isn't a use animation: $hint", "$at.hold.animation")
+            }
+        }
+        if (item.hold?.on == true && item.food != null) {
             sink.report(
                 ProblemCodes.ITEM_HOLD_FOOD,
                 "An item that's held can't be eaten too: hold and food both make it a consumable",
@@ -171,6 +179,33 @@ object Rules {
                 sink.report(ProblemCodes.ITEM_USE_EFFECTS, "speedMultiplier must be from 0 to 1", "$at.useEffects.speedMultiplier")
             }
         }
+    }
+
+    /**
+     * The animation [id] was likely meant to be: the same name written another way (`Toot-Horn`, `minecraft:bow`),
+     * or one a slip of a letter or two away (`crossbo`), or null for none.
+     */
+    private fun nearestAnimation(id: String): String? {
+        val written = id.lowercase().removePrefix("${GameIds.NAMESPACE}:").replace('-', '_').replace(' ', '_')
+        UseAnimation.ALL.firstOrNull { it == written }?.let { return it }
+        return UseAnimation.ALL
+            .map { it to editDistance(it, written) }
+            .filter { (it, distance) -> distance <= minOf(2, it.length / 3) }
+            .minByOrNull { it.second }
+            ?.first
+    }
+
+    private fun editDistance(a: String, b: String): Int {
+        var row = IntArray(b.length + 1) { it }
+        for (i in 1..a.length) {
+            val next = IntArray(b.length + 1)
+            next[0] = i
+            for (j in 1..b.length) {
+                next[j] = minOf(row[j] + 1, next[j - 1] + 1, row[j - 1] + if (a[i - 1] == b[j - 1]) 0 else 1)
+            }
+            row = next
+        }
+        return row[b.length]
     }
 
     /**

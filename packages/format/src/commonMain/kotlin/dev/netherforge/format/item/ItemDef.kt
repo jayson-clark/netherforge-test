@@ -8,12 +8,20 @@ import dev.netherforge.format.text.MiniMessage
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonEncoder
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonObject
 
 /**
  * One item stack, as an author writes it and a script reads it back.
@@ -89,13 +97,14 @@ data class ItemDef(
     /** A cooldown after using it (the `use_cooldown` component). */
     val cooldown: CooldownDef? = null,
     /**
-     * Held down with no end: a right click starts a use that lasts until the player lets go, with nothing drawn
-     * (no zoom, no pose), never finishes and uses nothing up. Letting go is `player_stop_using_item`, with how
-     * long it was held. It's a `consumable` component of its own, so it can't go with [food], and only works on
-     * an item kind with no use of its own (`minecraft:paper`, not a bow or a shield). Unless [useEffects] says
-     * otherwise, the player keeps their speed and can sprint while holding it.
+     * Held down with no end: a right click starts a use that lasts until the player lets go, never finishes and uses
+     * nothing up. Letting go is `player_stop_using_item`, with how long it was held. `true` draws nothing (no zoom, no
+     * pose); `{ "animation": "trident" }` poses the player as that use of the game's does ([HoldDef.animation]). It's
+     * a `consumable` component of its own, so it can't go with [food], and only works on an item kind with no use of
+     * its own (`minecraft:paper`, not a bow or a shield). Unless [useEffects] says otherwise, the player keeps their
+     * speed and can sprint while holding it, whatever the animation.
      */
-    val hold: Boolean? = null,
+    val hold: HoldDef? = null,
     /**
      * How a player moves while using it, a bow drawn or food eaten as much as a [hold] (the `use_effects`
      * component). Left out, the game's (a fifth of the speed, no sprinting), or for a [hold], full speed.
@@ -347,6 +356,102 @@ data class UseEffectsDef(
         /** A [ItemDef.hold]'s: holding it doesn't slow the player, and a sculk sensor doesn't hear it. */
         val HOLD = UseEffectsDef(speedMultiplier = 1.0, canSprint = true, interactVibrations = false)
     }
+}
+
+/**
+ * An item's [ItemDef.hold]: `true` (or `false`, no hold), or `{ "animation": "trident" }`, a hold that poses the
+ * player as one of the game's uses does. Everything but the pose is the same either way. Written back, a hold with
+ * no [animation] is `true` again.
+ */
+@Serializable(with = HoldDefSerializer::class)
+data class HoldDef(
+    /** Whether it's a hold at all: `false` is how a stack turns off its project item's hold. */
+    val on: Boolean = true,
+    /** The pose while it's held (the `consumable` component's `animation`). Left out, [UseAnimation.NONE]. */
+    val animation: UseAnimation? = null
+) {
+    companion object {
+        /** The serial name the contract generator knows this union by. */
+        const val SERIAL_NAME = "dev.netherforge.format.item.HoldDef"
+    }
+}
+
+/** A [HoldDef] as JSON: a boolean, or `{ "animation": "…" }`. */
+object HoldDefSerializer : KSerializer<HoldDef> {
+    override val descriptor: SerialDescriptor = buildClassSerialDescriptor(HoldDef.SERIAL_NAME) {
+        element("animation", UseAnimationSerializer.descriptor, isOptional = true)
+    }
+
+    override fun serialize(encoder: Encoder, value: HoldDef) {
+        val json = encoder as? JsonEncoder ?: throw SerializationException("A hold is JSON only")
+        val animation = value.animation?.takeIf { value.on }
+        json.encodeJsonElement(
+            if (animation == null) JsonPrimitive(value.on) else buildJsonObject { put("animation", JsonPrimitive(animation.id)) }
+        )
+    }
+
+    override fun deserialize(decoder: Decoder): HoldDef {
+        val json = decoder as? JsonDecoder ?: throw SerializationException("A hold is JSON only")
+        return when (val element = json.decodeJsonElement()) {
+            is JsonPrimitive -> HoldDef(on = element.takeUnless { it.isString }?.booleanOrNull ?: throw SerializationException(MESSAGE))
+            is JsonObject -> {
+                val unknown = element.keys - setOf("animation")
+                if (unknown.isNotEmpty()) throw SerializationException("A hold has only \"animation\", not \"${unknown.first()}\"")
+                val animation = element["animation"]?.let { it as? JsonPrimitive }?.takeIf { it.isString }
+                if (element["animation"] != null && animation == null) throw SerializationException(MESSAGE)
+                HoldDef(animation = animation?.content?.let(::UseAnimation))
+            }
+            else -> throw SerializationException(MESSAGE)
+        }
+    }
+
+    private const val MESSAGE = "hold is true, or { \"animation\": \"trident\" }"
+}
+
+/**
+ * The pose a [HoldDef] holds the player in: one of the `consumable` component's animations, by the game's own name
+ * (`trident`, `bow`). Which are what is read off the servers' `ItemUseAnimation` (every supported version has the
+ * same ones), and a contract test holds [ALL] to each server's. A value outside it is `item.hold-animation`. A
+ * Minecraft version that adds or drops one changes [ALL], and one some supported versions lack needs the feature
+ * table.
+ */
+@Serializable(with = UseAnimationSerializer::class)
+data class UseAnimation(val id: String) {
+    override fun toString(): String = id
+
+    companion object {
+        const val SERIAL_NAME = "dev.netherforge.format.item.UseAnimation"
+
+        /** Every animation, in the game's order. */
+        val ALL: List<String> = listOf(
+            "none",
+            "eat",
+            "drink",
+            "block",
+            "bow",
+            "trident",
+            "crossbow",
+            "spyglass",
+            "toot_horn",
+            "brush",
+            "bundle",
+            "spear"
+        )
+
+        /** No pose: what a hold has when it names none. */
+        val NONE = UseAnimation("none")
+
+        val entries: List<UseAnimation> = ALL.map(::UseAnimation)
+    }
+}
+
+/** A [UseAnimation] as JSON: its name. Any string reads; the validator says which aren't animations. */
+object UseAnimationSerializer : KSerializer<UseAnimation> {
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor(UseAnimation.SERIAL_NAME, PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: UseAnimation) = encoder.encodeString(value.id)
+
+    override fun deserialize(decoder: Decoder): UseAnimation = UseAnimation(decoder.decodeString())
 }
 
 /** A cooldown after using an item. */

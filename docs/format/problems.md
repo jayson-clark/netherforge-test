@@ -660,6 +660,10 @@ Error. A cooldown's `group` isn't a namespaced id. See [items](item.md).
 
 Error. An item has both `hold` and `food`. See [items](item.md).
 
+### `item.hold-animation` {#item-hold-animation}
+
+Error. A hold's `animation` isn't one of the game's use animations. See [items](item.md).
+
 ### `item.use-effects` {#item-use-effects}
 
 Error. A `useEffects` value is out of range. See [items](item.md).

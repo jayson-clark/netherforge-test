@@ -8,9 +8,11 @@ import dev.netherforge.format.item.CooldownDef
 import dev.netherforge.format.item.EquipSlot
 import dev.netherforge.format.item.EquipmentDef
 import dev.netherforge.format.item.FoodDef
+import dev.netherforge.format.item.HoldDef
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.item.ProjectItems
 import dev.netherforge.format.item.TooltipComponent
+import dev.netherforge.format.item.UseAnimation
 import dev.netherforge.format.item.UseEffectsDef
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceKey
@@ -273,14 +275,14 @@ object PaperItems {
             cooldown.group?.let(::key)?.let { builder.cooldownGroup(it) }
             stack.setData(DataComponentTypes.USE_COOLDOWN, builder.build())
         }
-        val hold = def.hold == true
+        val hold = def.hold?.on == true
         if (hold) {
-            // A use with no end, nothing drawn and nothing heard: the consumable a right click starts and letting go stops.
+            // A use with no end and nothing heard, posed as it says: the consumable a right click starts and letting go stops.
             stack.setData(
                 DataComponentTypes.CONSUMABLE,
                 Consumable.consumable()
                     .consumeSeconds(HOLD_SECONDS)
-                    .animation(ItemUseAnimation.NONE)
+                    .animation(animation(def.hold?.animation ?: UseAnimation.NONE))
                     .hasConsumeParticles(false)
                     .sound(Sound.INTENTIONALLY_EMPTY.key())
                     .build()
@@ -299,14 +301,24 @@ object PaperItems {
         }
     }
 
+    /**
+     * The game's animation [animation] names (the format's names are the game's, lower case). One this server
+     * doesn't have, which validation reports first, draws nothing.
+     */
+    private fun animation(animation: UseAnimation): ItemUseAnimation =
+        ItemUseAnimation.entries.firstOrNull { it.name.lowercase() == animation.id } ?: ItemUseAnimation.NONE
+
     /** Whether [stack] is a `hold` item: the consumable [components] gives one, which nothing else does. */
-    fun isHold(stack: ItemStack?): Boolean {
-        if (stack == null || !stack.isDataOverridden(DataComponentTypes.CONSUMABLE)) return false
-        val consumable = stack.getData(DataComponentTypes.CONSUMABLE) ?: return false
-        return consumable.consumeSeconds() == HOLD_SECONDS &&
-            consumable.animation() == ItemUseAnimation.NONE &&
-            !consumable.hasConsumeParticles() &&
-            consumable.consumeEffects().isEmpty()
+    fun isHold(stack: ItemStack?): Boolean = holdOf(stack) != null
+
+    /** [stack]'s hold, posed as it is, or null when it isn't a `hold` item. */
+    private fun holdOf(stack: ItemStack?): HoldDef? {
+        if (stack == null || !stack.isDataOverridden(DataComponentTypes.CONSUMABLE)) return null
+        val consumable = stack.getData(DataComponentTypes.CONSUMABLE) ?: return null
+        if (consumable.consumeSeconds() != HOLD_SECONDS || consumable.hasConsumeParticles() || consumable.consumeEffects().isNotEmpty()) {
+            return null
+        }
+        return HoldDef(animation = UseAnimation(consumable.animation().name.lowercase()).takeIf { it != UseAnimation.NONE })
     }
 
     /**
@@ -548,8 +560,8 @@ object PaperItems {
             hiddenTooltipComponents = hiddenTooltipComponentsOf(stack),
             food = foodOf(stack),
             cooldown = cooldownOf(stack),
-            hold = isHold(stack).takeIf { it },
-            useEffects = useEffectsOf(stack, isHold(stack)),
+            hold = holdOf(stack),
+            useEffects = useEffectsOf(stack, holdOf(stack) != null),
             equipment = equipmentOf(stack),
             data = scriptData(meta),
             item = meta?.persistentDataContainer?.get(ITEM_KEY, PersistentDataType.STRING)?.let(::reference)

@@ -12,6 +12,7 @@ import type {
   ItemFile,
   ResourcePackOutline,
   RefKind,
+  UseAnimation,
   UseEffectsDef,
 } from '@/core/format'
 import { resolveReference } from '@/core/format'
@@ -224,6 +225,24 @@ export function setCooldown<K extends keyof CooldownDef>(
   }
   if (value === undefined || value === '') delete item.cooldown.group
   else item.cooldown[key] = value
+}
+
+/** The pose a hold item holds the player in: `none` for a plain `true` (or no hold). */
+export function holdAnimation(item: ItemDef): UseAnimation {
+  return typeof item.hold === 'object' ? (item.hold.animation ?? 'none') : 'none'
+}
+
+/**
+ * Turns `hold` on or off. On keeps the pose it had; `none` is written as `true`,
+ * any other pose as `{ animation }`.
+ */
+export function setHold(
+  item: ItemDef,
+  on: boolean,
+  animation: UseAnimation = holdAnimation(item),
+): void {
+  if (!on) delete item.hold
+  else item.hold = animation === 'none' ? true : { animation }
 }
 
 /**

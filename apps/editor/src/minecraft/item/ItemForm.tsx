@@ -20,6 +20,7 @@ import {
   type ItemRarity,
   type ProjectOutline,
   type TooltipComponent,
+  UseAnimationValues,
 } from '@/core/format'
 import { usePickerIds } from '@/minecraft/client/usePickerIds'
 import { useWorkspace } from '@/state/providers'
@@ -49,6 +50,8 @@ import {
   setEnchantment,
   setEquipment,
   setFood,
+  setHold,
+  holdAnimation,
   setModifier,
   setProjectItem,
   setUseEffects,
@@ -326,9 +329,18 @@ export function ItemEditor({
       <CheckField
         label="Hold until let go"
         dataPath={at('hold')}
-        value={item.hold ?? false}
-        onChange={(value) => set('hold', value || undefined)}
+        value={!!item.hold}
+        onChange={(value) => onEdit((draft) => setHold(draft, value))}
       />
+      {item.hold && (
+        <SelectField
+          label="Hold animation"
+          dataPath={at('hold.animation')}
+          value={holdAnimation(item)}
+          options={UseAnimationValues}
+          onChange={(value) => onEdit((draft) => setHold(draft, true, value))}
+        />
+      )}
       <NumberField
         label="Speed while used"
         dataPath={at('useEffects.speedMultiplier')}

@@ -1,6 +1,13 @@
 [
   {
     "severity": "error",
+    "file": "items/knife/item.json",
+    "message": "\"tridnet\" isn't a use animation: did you mean \"trident\"?",
+    "path": "$.hold.animation",
+    "code": "item.hold-animation"
+  },
+  {
+    "severity": "error",
     "file": "items/pick/item.json",
     "message": "\"minecraft:Bad\" isn't a block: write a project block (ruby_ore), the game's (minecraft:stone), a #tag of blocks, or * for any block",
     "path": "$.canBreak[7]",

@@ -12,9 +12,11 @@ import dev.netherforge.format.item.CooldownDef
 import dev.netherforge.format.item.EquipSlot
 import dev.netherforge.format.item.EquipmentDef
 import dev.netherforge.format.item.FoodDef
+import dev.netherforge.format.item.HoldDef
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.item.ItemRarity
 import dev.netherforge.format.item.TooltipComponent
+import dev.netherforge.format.item.UseAnimation
 import dev.netherforge.format.item.UseEffectsDef
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceRef
@@ -57,6 +59,7 @@ object LuaItems {
     private val COOLDOWN_FIELDS = listOf("seconds", "group")
     private val USE_EFFECTS_FIELDS = listOf("speed_multiplier", "can_sprint", "interact_vibrations")
     private val EQUIPMENT_FIELDS = listOf("asset", "slot")
+    private val HOLD_FIELDS = listOf("animation")
 
     /** What an item match ([read] with `partial`) can't say. */
     private val NOT_MATCHED = setOf("count", "raw")
@@ -163,6 +166,20 @@ object LuaItems {
                 interactVibrations = effects.boolean("interact_vibrations")
             )
         }
+        // true, or { animation = "trident" }: which names are animations is the rules' to say (below), as in a file.
+        val hold = table["hold"]?.takeIf { it != JsonNull }?.let {
+            when {
+                it is JsonPrimitive && !it.isString && it.booleanOrNull != null -> HoldDef(on = it.booleanOrNull!!)
+                // `none` is a plain hold, which reads back `true` as the server's does.
+                it is JsonObject -> HoldDef(
+                    animation = Fields(it, "item.hold", HOLD_FIELDS).string("animation")?.let(::UseAnimation)?.takeIf {
+                        it !=
+                            UseAnimation.NONE
+                    }
+                )
+                else -> throw LuaApiException("item.hold must be a boolean or a table")
+            }
+        }
         val equipment = table["equipment"]?.takeIf { it != JsonNull }?.let {
             val equipment =
                 Fields(it as? JsonObject ?: throw LuaApiException("item.equipment must be a table"), "item.equipment", EQUIPMENT_FIELDS)
@@ -215,7 +232,7 @@ object LuaItems {
             },
             food = food,
             cooldown = cooldown,
-            hold = boolean("hold"),
+            hold = hold,
             useEffects = useEffects,
             data = data
         )
@@ -322,7 +339,10 @@ object LuaItems {
                     }
                 )
             }
-            def.hold?.let { put("hold", it) }
+            def.hold?.let { hold ->
+                val animation = hold.animation?.takeIf { hold.on }
+                put("hold", if (animation == null) hold.on else mapOf("animation" to animation.id))
+            }
             def.useEffects?.let { effects ->
                 put(
                     "use_effects",

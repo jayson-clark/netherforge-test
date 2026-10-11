@@ -27,7 +27,9 @@ import dev.netherforge.format.editor.TerrainStructureInput
 import dev.netherforge.format.editor.TextLayout
 import dev.netherforge.format.editor.Usages
 import dev.netherforge.format.game.GameDataBundle
+import dev.netherforge.format.item.HoldDef
 import dev.netherforge.format.item.TooltipComponent
+import dev.netherforge.format.item.UseAnimation
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.loot.LootRange
 import dev.netherforge.format.project.ClassifiedPath
@@ -249,6 +251,37 @@ private class Schema(root: SerialDescriptor, val kindId: String) {
                 )
             }
         }
+        if (descriptor.serialName.removeSuffix("?") == UseAnimation.SERIAL_NAME) {
+            return buildJsonObject { putJsonArray("enum") { UseAnimation.ALL.forEach { add(JsonPrimitive(it)) } } }
+        }
+        if (descriptor.serialName.removeSuffix("?") == HoldDef.SERIAL_NAME) {
+            // true, or a hold with a pose.
+            return buildJsonObject {
+                put(
+                    "oneOf",
+                    buildJsonArray {
+                        add(buildJsonObject { put("type", "boolean") })
+                        add(
+                            buildJsonObject {
+                                put("type", "object")
+                                put("additionalProperties", false)
+                                put(
+                                    "properties",
+                                    buildJsonObject {
+                                        put(
+                                            "animation",
+                                            buildJsonObject {
+                                                putJsonArray("enum") { UseAnimation.ALL.forEach { add(JsonPrimitive(it)) } }
+                                            }
+                                        )
+                                    }
+                                )
+                            }
+                        )
+                    }
+                )
+            }
+        }
         if (descriptor.serialName.removeSuffix("?") == TooltipComponent.SERIAL_NAME) {
             // A string to read (the validator names a wrong one), but only the lines there are to write.
             return buildJsonObject { putJsonArray("enum") { TooltipComponent.ALL.forEach { add(JsonPrimitive(it)) } } }
@@ -328,6 +361,8 @@ private class TypeScript {
         if (descriptor.serialName.removeSuffix("?") == LootRange.SERIAL_NAME) return "LootRange"
         if (descriptor.serialName.removeSuffix("?") == SpawnTime.SERIAL_NAME) return "SpawnTime"
         if (descriptor.serialName.removeSuffix("?") == TooltipComponent.SERIAL_NAME) return "TooltipComponent"
+        if (descriptor.serialName.removeSuffix("?") == UseAnimation.SERIAL_NAME) return "UseAnimation"
+        if (descriptor.serialName.removeSuffix("?") == HoldDef.SERIAL_NAME) return "HoldDef"
         if (descriptor.serialName.removeSuffix("?") == JSON_ELEMENT) return "unknown"
         return when (descriptor.kind) {
             PrimitiveKind.STRING -> "string"
@@ -392,6 +427,11 @@ private class TypeScript {
         append("/** A tooltip line an item can hide, by the data component that draws it. */\n")
         append("export const TooltipComponentValues = [${TooltipComponent.ALL.joinToString(", ") { "'$it'" }}] as const\n")
         append("export type TooltipComponent = (typeof TooltipComponentValues)[number]\n\n")
+        append("/** A pose a hold item holds the player in: one of the game's use animations. */\n")
+        append("export const UseAnimationValues = [${UseAnimation.ALL.joinToString(", ") { "'$it'" }}] as const\n")
+        append("export type UseAnimation = (typeof UseAnimationValues)[number]\n\n")
+        append("/** An item's hold: `true`, or one that poses the player. */\n")
+        append("export type HoldDef = boolean | { animation?: UseAnimation }\n\n")
         for (body in declared.values) {
             append(body)
             append('\n')

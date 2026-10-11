@@ -64,8 +64,11 @@ data class ItemFile(
     val food: FoodDef? = null,
     /** A cooldown after using it. */
     val cooldown: CooldownDef? = null,
-    /** Held down with no end, until the player lets go (`player_stop_using_item`): no zoom, no pose, nothing used up. */
-    val hold: Boolean? = null,
+    /**
+     * Held down with no end, until the player lets go (`player_stop_using_item`), nothing used up: `true` draws
+     * nothing, `{ "animation": "trident" }` poses the player.
+     */
+    val hold: HoldDef? = null,
     /** How a player moves while using it: `speedMultiplier`, `canSprint`, `interactVibrations`. */
     val useEffects: UseEffectsDef? = null,
     /**

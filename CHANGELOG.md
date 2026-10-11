@@ -90,6 +90,14 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Added
 
+- **Pose a held item.** An item's `hold` (in item files, menus, dialogs, loot,
+  and a script's `hold`) also takes `{ "animation": "trident" }`: the same
+  endless use as `hold: true`, with the player posed as one of the game's uses
+  (`trident`, `bow`, `crossbow`, `block`, `spyglass`, `toot_horn`, `brush`,
+  `spear`, `eat`, `drink`, `bundle`, `none`). A hold's movement defaults stay,
+  and nothing changes on the server: no zoom, throw, arrow or riptide. An
+  animation that isn't one is `item.hold-animation`.
+
 - **Hide any tooltip line.** An item's `hiddenTooltipComponents` (in item
   files, menus, dialogs, loot, and a script's `hidden_tooltip_components`)
   takes every line Minecraft draws for a data component, not only `can_break`

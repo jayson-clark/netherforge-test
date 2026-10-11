@@ -380,6 +380,7 @@ object ProblemCodes {
     val ITEM_COOLDOWN = error("item.cooldown", ITEM, "A cooldown's `seconds` isn't more than 0.")
     val ITEM_COOLDOWN_GROUP = error("item.cooldown-group", ITEM, "A cooldown's `group` isn't a namespaced id.")
     val ITEM_HOLD_FOOD = error("item.hold-food", ITEM, "An item has both `hold` and `food`.")
+    val ITEM_HOLD_ANIMATION = error("item.hold-animation", ITEM, "A hold's `animation` isn't one of the game's use animations.")
     val ITEM_USE_EFFECTS = error("item.use-effects", ITEM, "A `useEffects` value is out of range.")
     val ITEM_DRAW_WITHOUT_AMMO = error("item.draw-without-ammo", ITEM, "`drawWithoutAmmo` is on an item that isn't a bow.")
 
