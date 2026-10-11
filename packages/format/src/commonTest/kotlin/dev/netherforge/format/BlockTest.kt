@@ -206,7 +206,7 @@ class BlockTest {
             "centities/lamp/centity.json" to """{ "nodes": { "light": { "display": { "type": "block", "block": "minecraft:stone" } } } }""",
             "blocks/fine/block.json" to """{ "model": "ui/ore", "drops": "ore", "centity": "lamp", "hardness": 0, "tick": 20,
                 "tool": "shovel", "requiresTool": true, "sounds": {} }""",
-            "blocks/hard/block.json" to """{ "hardness": -2, "tick": 0, "requiresTool": true }""",
+            "blocks/hard/block.json" to """{ "hardness": -2, "tick": 0, "requiresTool": true, "sound": "Stone!" }""",
             "blocks/unbreakable/block.json" to """{ "hardness": -1, "tick": 72000 }""",
             "blocks/lost/block.json" to """{ "model": "ui/nowhere", "drops": "nothing", "centity": "ghost" }""",
             "blocks/faces/block.json" to """{ "model": "ui/half" }"""
@@ -218,6 +218,7 @@ class BlockTest {
                 Triple("block.hardness", "blocks/hard/block.json", "$.hardness"),
                 Triple("block.requires-tool", "blocks/hard/block.json", "$.requiresTool"),
                 Triple("block.tick", "blocks/hard/block.json", "$.tick"),
+                Triple("block.sound", "blocks/hard/block.json", "$.sound"),
                 Triple("reference.resource-pack-key", "blocks/lost/block.json", "$.model"),
                 Triple("reference.loot-table", "blocks/lost/block.json", "$.drops"),
                 Triple("reference.centity", "blocks/lost/block.json", "$.centity"),
@@ -229,6 +230,28 @@ class BlockTest {
         assertEquals(BlockTool.SHOVEL, fine.tool)
         assertEquals(0.0, fine.hardnessOrDefault)
         assertEquals(-1.0, snapshot.compiled(BlockKind).getValue("unbreakable").hardnessOrDefault)
+    }
+
+    @Test
+    fun aBlockSoundsLikeItsToolsBlocksUnlessItSaysAndTheGameMustHaveTheSound() {
+        assertEquals("minecraft:block.stone.place", BlockFile().placeSound)
+        assertEquals("minecraft:block.stone.break", BlockFile(tool = BlockTool.PICKAXE).breakSound)
+        assertEquals("wood", BlockFile(tool = BlockTool.AXE).soundOrDefault)
+        assertEquals("gravel", BlockFile(tool = BlockTool.SHOVEL).soundOrDefault)
+        assertEquals("grass", BlockFile(tool = BlockTool.HOE).soundOrDefault)
+        assertEquals("minecraft:block.glass.break", BlockFile(tool = BlockTool.AXE, sound = "glass").breakSound)
+
+        val files = mapOf(
+            "netherforge.json" to testManifest(),
+            "blocks/glassy/block.json" to """{ "sound": "glass" }""",
+            "blocks/odd/block.json" to """{ "sound": "jelly" }""",
+            "blocks/plain/block.json" to "{}"
+        )
+        val sounds = listOf("minecraft:block.glass.place", "minecraft:block.glass.break")
+        val game = game().copy(registries = mapOf(RegistryKey.SOUND_EVENT.id to sounds))
+        val problems = Projects.load(MapProjectSource(files), game).problems
+        assertEquals(listOf(Triple("block.sound", "blocks/odd/block.json", "$.sound")), problems.map { Triple(it.code, it.file, it.path) })
+        assertEquals("The game has no minecraft:block.jelly.place or minecraft:block.jelly.break sound", problems.single().message)
     }
 
     @Test

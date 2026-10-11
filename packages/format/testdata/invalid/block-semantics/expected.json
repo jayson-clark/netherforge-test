@@ -23,6 +23,13 @@
   {
     "severity": "error",
     "file": "blocks/hard/block.json",
+    "message": "sound is the game's kind of block it sounds like, like \"stone\" or \"wood\"",
+    "path": "$.sound",
+    "code": "block.sound"
+  },
+  {
+    "severity": "error",
+    "file": "blocks/hard/block.json",
     "message": "Script file \"missing.lua\" doesn't exist",
     "path": "$.script.file",
     "code": "script.missing"

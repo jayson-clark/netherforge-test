@@ -7,6 +7,8 @@ import dev.netherforge.format.block.BlockFile
 import dev.netherforge.format.block.BlockValidator
 import dev.netherforge.format.block.VanillaFile
 import dev.netherforge.format.game.GameData
+import dev.netherforge.format.game.RegistryKey
+import dev.netherforge.format.game.has
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.ref.RefKind
 
@@ -36,8 +38,16 @@ object BlockKind : DocumentResourceKind<BlockFile, BlockFile>(
      * packages' take states after them, which the server says if they run
      * out. A tripwire block needs the game's own look of tripwire beside it
      * (`client/vanilla.json`), and some fields mean nothing for a carrier.
+     * A block's `sound` must be one the game has place and break sounds for.
      */
     override fun crossCheck(value: BlockFile, ctx: KindContext) {
+        val game = ctx.game
+        if (value.sound != null && game != null) {
+            val missing = listOf(value.placeSound, value.breakSound).filter { game.has(RegistryKey.SOUND_EVENT, it) == false }
+            if (missing.isNotEmpty()) {
+                ctx.sink.report(ProblemCodes.BLOCK_SOUND, "The game has no ${missing.joinToString(" or ")} sound", "$.sound")
+            }
+        }
         val carrier = value.carrierOrDefault
         val noun = CanonicalJson.serialName(carrier).replace('_', ' ')
         val capacity = BlockCarriers.capacity(ctx.game, carrier)

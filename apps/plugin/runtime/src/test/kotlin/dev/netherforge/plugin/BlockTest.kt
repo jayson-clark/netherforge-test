@@ -306,6 +306,34 @@ class BlockTest {
     }
 
     @Test
+    fun `a block without sounds of its own sounds like the game's blocks of its tool, or of its sound`() {
+        val extra = mapOf(
+            "blocks/log/block.json" to """{ "tool": "axe" }""",
+            "blocks/pane/block.json" to """{ "tool": "axe", "sound": "glass" }""",
+            "items/log_item/item.json" to """{ "kind": "minecraft:paper", "block": "log" }"""
+        )
+        server(extra).use { server ->
+            val played = server.platform.sounds.played
+            val logItem = ItemData(ItemDef(kind = "minecraft:paper", item = ResourceRef("log_item"), count = 2))
+            server.hold(logItem)
+            val floor = BlockRef("world", 3, 63, 0, "minecraft:stone", "minecraft:stone")
+            assertTrue(server.runtime.events.playerInteract(server.alex.ref, ClickButton.RIGHT, floor, "up", logItem, "main_hand"))
+            assertEquals("log", server.custom().at("world", 3, 64, 0))
+            assertEquals(listOf("world minecraft:block.wood.place block 1.0 0.8"), played)
+            played.clear()
+            val log = BlockRef("world", 3, 64, 0, "minecraft:note_block", server.state(3, 64, 0))
+            assertNull(server.runtime.events.blockBreak(server.alex.ref, log, { emptyList() }, 0))
+            assertEquals(listOf("world minecraft:block.wood.break block 1.0 0.8"), played)
+
+            played.clear()
+            server.custom().place("pane", "world", 1, 64, 0)
+            val pane = BlockRef("world", 1, 64, 0, "minecraft:note_block", server.state(1, 64, 0))
+            assertNull(server.runtime.events.blockBreak(server.alex.ref, pane, { emptyList() }, 0))
+            assertEquals(listOf("world minecraft:block.glass.break block 1.0 0.8"), played)
+        }
+    }
+
+    @Test
     fun `picking one brings the item that places it to hand, not its carrier`() {
         server().use { server ->
             server.custom().place("ore", "world", 0, 64, 0)

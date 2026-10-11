@@ -419,6 +419,8 @@ object ProblemCodes {
 
     val BLOCK_HARDNESS = error("block.hardness", BLOCK, "A block's `hardness` is below -1 or isn't a number.")
     val BLOCK_TICK = error("block.tick", BLOCK, "A block's `tick` isn't a whole number of ticks from 1 to an hour.")
+    val BLOCK_SOUND =
+        error("block.sound", BLOCK, "A block's `sound` isn't a kind of block the game has place and break sounds for.")
     val BLOCK_REQUIRES_TOOL =
         warning("block.requires-tool", BLOCK, "A block `requiresTool` but names no `tool`, so no tool is the right one and nothing drops.")
     val BLOCK_CARRIERS =

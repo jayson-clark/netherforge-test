@@ -19,18 +19,19 @@ with its script beside it.
 }
 ```
 
-| Key            | Meaning                                                                                                                                                   | Default      |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| `model`        | `<pack>/<key>`: its look, an entry of a resource pack's [`blocks`](resource-pack.md#block-models). Without one it's drawn as the game block it's held as. |              |
-| `carrier`      | What it's held as, which decides how it behaves physically: `note_block`, `tripwire` or `leaves`. See [carriers](#carriers).                              | `note_block` |
-| `hardness`     | How long it takes to mine, as the game counts it (stone 1.5, dirt 0.5, obsidian 50). 0 breaks at once, -1 can't be broken by hand.                        | 1.5          |
-| `tool`         | `pickaxe`, `axe`, `shovel` or `hoe`: what mines it fastest.                                                                                               | none         |
-| `requiresTool` | It drops nothing unless it's mined with the right `tool`.                                                                                                 | false        |
-| `drops`        | `<id>`: the [loot table](loot.md) rolled when it's broken. Nothing drops when it's left out.                                                              |              |
-| `sounds`       | `place` and `break`: each a sound of a [resource pack](resource-pack.md#sounds), `<pack>/<key>`.                                                          |              |
-| `centity`      | `<id>`: a [centity](centity.md) drawn over the block, for a shape that isn't a cube. See [other shapes](#other-shapes).                                   |              |
-| `tick`         | Ticks between its `tick` events, for each placed block (1 to 72000). Without it nothing ticks.                                                            | none         |
-| `script`       | The block's one Lua script. See [`script`](#script).                                                                                                      |              |
+| Key            | Meaning                                                                                                                                                                                       | Default      |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `model`        | `<pack>/<key>`: its look, an entry of a resource pack's [`blocks`](resource-pack.md#block-models). Without one it's drawn as the game block it's held as.                                     |              |
+| `carrier`      | What it's held as, which decides how it behaves physically: `note_block`, `tripwire` or `leaves`. See [carriers](#carriers).                                                                  | `note_block` |
+| `hardness`     | How long it takes to mine, as the game counts it (stone 1.5, dirt 0.5, obsidian 50). 0 breaks at once, -1 can't be broken by hand.                                                            | 1.5          |
+| `tool`         | `pickaxe`, `axe`, `shovel` or `hoe`: what mines it fastest.                                                                                                                                   | none         |
+| `requiresTool` | It drops nothing unless it's mined with the right `tool`.                                                                                                                                     | false        |
+| `drops`        | `<id>`: the [loot table](loot.md) rolled when it's broken. Nothing drops when it's left out.                                                                                                  |              |
+| `sound`        | The game's kind of block it sounds like when it's placed and broken: `stone`, `wood`, `gravel`, `grass`, `sand`, `metal`, `glass`, `wool`, … (the game's `block.<sound>.place` and `.break`). | from `tool`  |
+| `sounds`       | `place` and `break`: sounds of its own, each a sound of a [resource pack](resource-pack.md#sounds), `<pack>/<key>`, played instead of `sound`'s.                                              |              |
+| `centity`      | `<id>`: a [centity](centity.md) drawn over the block, for a shape that isn't a cube. See [other shapes](#other-shapes).                                                                       |              |
+| `tick`         | Ticks between its `tick` events, for each placed block (1 to 72000). Without it nothing ticks.                                                                                                | none         |
+| `script`       | The block's one Lua script. See [`script`](#script).                                                                                                                                          |              |
 
 The id is the folder's name, and it's how scripts name it
 (`nf.blocks.get("ruby_ore")`) and how an item places it.
@@ -133,8 +134,11 @@ generates itself: elsewhere it may be a player's leaves from before the project 
 Because it's the game's block to the server, a few things follow:
 
 - Its **step, hit and fall sounds** are the carrier's own (a note block's
-  wood, string's, leaves' grass). `sounds` gives the sounds it makes when it's
-  placed and broken, which the plugin plays itself, with the carrier's left out.
+  wood, string's, leaves' grass). Placing and breaking it the plugin sounds
+  itself, for everyone nearby: its `sounds`, else the game's sounds of its
+  `sound` (`stone`, `wood`, …), which without one follows its `tool`: a pickaxe's
+  blocks sound like `stone`, an axe's `wood`, a shovel's `gravel`, a hoe's
+  `grass`, and a block without a tool like `stone`.
 - **Pistons** don't move it, and an explosion breaks it and drops its loot
   table's drops without its `break` event.
 - Other plugins and commands see the carrier (`/setblock` of a custom block's

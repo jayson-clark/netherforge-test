@@ -11,6 +11,9 @@ import dev.netherforge.format.validate.Rules
  * project's too ([dev.netherforge.format.project.BlockKind.crossCheck]).
  */
 object BlockValidator {
+    /** What a game sound's block kind looks like: the `stone` of `block.stone.place`. */
+    private val SOUND = Regex("[a-z0-9_]+")
+
     fun validate(file: BlockFile, sink: ProblemSink, files: Set<String>?) {
         file.hardness?.let {
             if (!it.isFinite() || (it < 0 && it != BlockFile.UNBREAKABLE)) {
@@ -32,6 +35,15 @@ object BlockValidator {
                 "requiresTool means nothing without a tool: no tool is the right one, so nothing would ever drop",
                 "$.requiresTool"
             )
+        }
+        file.sound?.let {
+            if (!SOUND.matches(it)) {
+                sink.report(
+                    ProblemCodes.BLOCK_SOUND,
+                    "sound is the game's kind of block it sounds like, like \"stone\" or \"wood\"",
+                    "$.sound"
+                )
+            }
         }
         file.script?.let { Rules.script(it, "$.script", sink, files) }
     }

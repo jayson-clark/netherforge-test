@@ -15,6 +15,7 @@ import dev.netherforge.format.project.BlockKind
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Loaded
 import dev.netherforge.format.project.plan
+import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.api.BlockBreakEvent
 import dev.netherforge.plugin.api.BlockPosition
@@ -703,12 +704,20 @@ internal class CustomBlocks(
                 )
             }
         }
-        def.file.sounds?.destroy?.let { play(world, centre, it.text) }
+        sound(world, centre, def.file.sounds?.destroy, def.file.breakSound)
     }
 
-    private fun play(world: String, at: Vec3, reference: String) {
-        val id = runCatching { effects().soundId(reference) }.getOrNull() ?: return
-        platform.sounds.play(world, at, SoundPlay(id, "block", 1.0, 1.0))
+    /**
+     * The sound of a block placed or broken, for everyone near it (the player's own game didn't play one, as the
+     * server did it): [own], one of the project's, else the game's [game] as the game plays a block's.
+     */
+    private fun sound(world: String, at: Vec3, own: ResourceRef?, game: String) {
+        if (own != null) {
+            val id = runCatching { effects().soundId(own.text) }.getOrNull() ?: return
+            platform.sounds.play(world, at, SoundPlay(id, "block", 1.0, 1.0))
+        } else {
+            platform.sounds.play(world, at, SoundPlay(game, "block", GAME_VOLUME, GAME_PITCH))
+        }
     }
 
     /** What breaking the block at a position drops: its loot table rolled for the player and the tool, nothing for a tool it needs and isn't. */
@@ -985,7 +994,7 @@ internal class CustomBlocks(
         }
         if (!platform.blocks.place(player.uuid, world, x, y, z, state, BlockVector(against.x, against.y, against.z), hand)) return
         register(name, world, BlockVector(x, y, z))
-        def.file.sounds?.place?.let { play(world, Vec3(x + 0.5, y + 0.5, z + 0.5), it.text) }
+        sound(world, Vec3(x + 0.5, y + 0.5, z + 0.5), def.file.sounds?.place, def.file.placeSound)
         if (platform.players.gameMode(player.uuid) != CREATIVE) consume(player.uuid, hand, item)
     }
 
@@ -1092,6 +1101,10 @@ internal class CustomBlocks(
 
         /** The attribute the game scales how fast a player mines by (`block_break_speed`). */
         const val BREAK_SPEED = "minecraft:block_break_speed"
+
+        /** How the game plays a block's sound when it's placed or broken: (its volume + 1) / 2, its pitch × 0.8, for 1 and 1. */
+        const val GAME_VOLUME = 1.0
+        const val GAME_PITCH = 0.8
 
         /** The particle a breaking block throws up, which draws the block's own model's particle texture. */
         const val BLOCK_PARTICLE = "minecraft:block"

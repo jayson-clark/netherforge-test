@@ -35,6 +35,45 @@ import { BLOCK_FACES, lookOf } from '@/minecraft/block/look'
 import { setSound, soundRefs } from './ops'
 import styles from './BlockEditor.module.css'
 
+/** Kinds of the game's blocks a block can sound like: each has the game's `block.<kind>.place` and `.break`. */
+const SOUND_KINDS = [
+  'stone',
+  'deepslate',
+  'tuff',
+  'calcite',
+  'basalt',
+  'netherrack',
+  'nether_bricks',
+  'bone_block',
+  'wood',
+  'cherry_wood',
+  'bamboo_wood',
+  'nether_wood',
+  'gravel',
+  'sand',
+  'soul_sand',
+  'mud',
+  'grass',
+  'moss',
+  'snow',
+  'metal',
+  'copper',
+  'glass',
+  'amethyst_block',
+  'wool',
+  'coral_block',
+  'honey_block',
+  'slime_block',
+]
+
+/** What a block sounds like without a `sound`: what its tool's blocks mostly are (BlockFile.soundOrDefault). */
+function toolSound(tool: BlockTool | undefined): string {
+  if (tool === 'axe') return 'wood'
+  if (tool === 'shovel') return 'gravel'
+  if (tool === 'hoe') return 'grass'
+  return 'stone'
+}
+
 /** One empty map, so a selector returns the same value while there's no outline yet. */
 const NO_RESOURCE_PACKS: NonNullable<ProjectOutline>['resourcePacks'] = {}
 const NO_IDS: string[] = []
@@ -190,17 +229,24 @@ export function BlockEditor({ path }: { path: string }) {
         </Section>
         <Section title="Sounds">
           <SelectField
+            label="Sounds like"
+            dataPath="sound"
+            value={model.sound ?? ''}
+            options={options(SOUND_KINDS, model.sound, `${toolSound(model.tool)} (from its tool)`)}
+            onChange={(value) => set('sound', value || undefined)}
+          />
+          <SelectField
             label="Placed"
             dataPath="sounds.place"
             value={model.sounds?.place ?? ''}
-            options={options(sounds, model.sounds?.place, "(the note block's)")}
+            options={options(sounds, model.sounds?.place, '(as it sounds like)')}
             onChange={(value) => edit((draft) => setSound(draft, 'place', value || undefined))}
           />
           <SelectField
             label="Broken"
             dataPath="sounds.break"
             value={model.sounds?.break ?? ''}
-            options={options(sounds, model.sounds?.break, "(the note block's)")}
+            options={options(sounds, model.sounds?.break, '(as it sounds like)')}
             onChange={(value) => edit((draft) => setSound(draft, 'break', value || undefined))}
           />
         </Section>

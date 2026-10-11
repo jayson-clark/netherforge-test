@@ -46,7 +46,13 @@ data class BlockFile(
     val requiresTool: Boolean? = null,
     /** `<id>`: the loot table rolled when it's broken, for its drops. Nothing drops when it's left out. */
     @Ref(RefKind.LOOT_TABLE) val drops: ResourceRef? = null,
-    /** What it sounds like when it's placed and broken. */
+    /**
+     * The game's kind of block it sounds like when it's placed and broken (`stone`, `wood`, `gravel`, `grass`,
+     * `sand`, `metal`, `glass`, `wool`, …): the game's `block.<sound>.place` and `block.<sound>.break`. Default
+     * from its [tool] ([soundOrDefault]); [sounds] of its own play instead.
+     */
+    val sound: String? = null,
+    /** Sounds of its own for when it's placed and broken, played instead of [sound]'s. */
     val sounds: BlockSounds? = null,
     /** `<id>`: a centity drawn over the block, for a shape that isn't a cube. It's spawned when the block is placed and goes with it. */
     @Ref(RefKind.CENTITY) val centity: ResourceRef? = null,
@@ -62,6 +68,20 @@ data class BlockFile(
     val requiresToolOrDefault: Boolean get() = requiresTool ?: false
 
     val carrierOrDefault: BlockCarrier get() = carrier ?: BlockCarrier.NOTE_BLOCK
+
+    /** The game's kind of block it sounds like: [sound], else what the blocks its [tool] mines mostly are. */
+    val soundOrDefault: String get() = sound ?: when (tool) {
+        BlockTool.AXE -> "wood"
+        BlockTool.SHOVEL -> "gravel"
+        BlockTool.HOE -> "grass"
+        BlockTool.PICKAXE, null -> "stone"
+    }
+
+    /** The game's sound of it being placed: [soundOrDefault]'s. */
+    val placeSound: String get() = "minecraft:block.$soundOrDefault.place"
+
+    /** The game's sound of it being broken: [soundOrDefault]'s. */
+    val breakSound: String get() = "minecraft:block.$soundOrDefault.break"
 
     companion object {
         const val FILE_NAME = "block.json"
@@ -108,7 +128,7 @@ enum class BlockCarrier {
     LEAVES
 }
 
-/** What a block sounds like. Each is a sound of one of the project's packs; the carrier's own wood sounds play for the rest (walking, hitting). */
+/** A block's own sounds. Each is a sound of one of the project's packs; the carrier's own sounds play for the rest (walking, hitting). */
 @Serializable
 data class BlockSounds(
     /** `<pack>/<key>`: played where it's placed, from a player placing it. */

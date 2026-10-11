@@ -400,6 +400,8 @@ class FakePlatform(
                 ),
                 RegistryKey.LOOT_TABLE.id to listOf("minecraft:chests/simple_dungeon", "minecraft:entities/zombie"),
                 RegistryKey.SOUND_EVENT.id to listOf(
+                    "minecraft:block.glass.break",
+                    "minecraft:block.glass.place",
                     "minecraft:block.note_block.hat",
                     "minecraft:block.note_block.pling",
                     "minecraft:ui.button.click",

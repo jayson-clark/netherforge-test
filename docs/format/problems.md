@@ -770,6 +770,10 @@ Error. A block's `hardness` is below -1 or isn't a number. See [blocks](block.md
 
 Error. A block's `tick` isn't a whole number of ticks from 1 to an hour. See [blocks](block.md).
 
+### `block.sound` {#block-sound}
+
+Error. A block's `sound` isn't a kind of block the game has place and break sounds for. See [blocks](block.md).
+
 ### `block.requires-tool` {#block-requires-tool}
 
 Warning. A block `requiresTool` but names no `tool`, so no tool is the right one and nothing drops. See [blocks](block.md).
