@@ -44,6 +44,15 @@ interface PlatformEvents {
      */
     fun blockBreak(player: PlayerRef, block: BlockRef, drops: () -> List<ItemData>, experience: Int): DropsAnswer?
 
+    /** A player stopped mining [block] before it broke: they let go, or looked away. */
+    fun blockStopBreak(player: PlayerRef, block: BlockRef)
+
+    /**
+     * A player picking [block] (the middle click), with [inventory] what they hold (36 slots, the hotbar's first).
+     * Null leaves it to the game; an answer picks what it says instead.
+     */
+    fun pickBlock(player: PlayerRef, block: BlockRef, inventory: List<ItemData?>): PickAnswer?
+
     /**
      * A player died: [killer] if someone killed them, [cause] the damage
      * cause (lowercase), [message] the death message (MiniMessage, null for
@@ -181,6 +190,12 @@ interface PlatformEvents {
      */
     fun customClicked(player: PlayerRef, id: String, answers: DialogAnswers): Boolean
 }
+
+/**
+ * What a player picking a block gets: [slot] of their inventory to bring to hand (as the game does for a block it
+ * finds there), else [item] put in hand (in creative), else nothing.
+ */
+data class PickAnswer(val slot: Int?, val item: ItemData?)
 
 /** What something drops: [drops] instead of what it would have (null when unchanged), and [experience]. */
 data class DropsAnswer(val drops: List<ItemData>?, val experience: Int)

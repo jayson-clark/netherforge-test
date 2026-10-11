@@ -95,6 +95,11 @@ class Items(
         return block.nameIn(namespace())
     }
 
+    /** The project item that places the project block [block] (`ruby_ore`), the first by name when several do; null for none. */
+    fun placing(block: String): String? = synchronized(records) {
+        records.values.sortedBy { it.id }.firstOrNull { it.file.block?.nameIn(namespace()) == block }?.id
+    }
+
     /** Whether a stack of a project item is a bow that draws and shoots without ammo (its `drawWithoutAmmo`). */
     fun drawsWithoutAmmo(stack: ItemData?): Boolean {
         val id = stack?.def?.item?.let { idOf(it.text) } ?: return false

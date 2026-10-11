@@ -12,6 +12,7 @@ import dev.netherforge.plugin.platform.GameEvents
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.platform.MenuClick
+import dev.netherforge.plugin.platform.PickAnswer
 import dev.netherforge.plugin.platform.PlatformEvents
 import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.platform.Ray
@@ -80,6 +81,18 @@ class RecordingEvents : PlatformEvents {
 
     override fun blockBreak(player: PlayerRef, block: BlockRef, drops: () -> List<ItemData>, experience: Int): DropsAnswer? =
         if (hear("blockBreak", player, block, experience)) null else DropsAnswer(null, experience)
+
+    override fun blockStopBreak(player: PlayerRef, block: BlockRef) {
+        hear("blockStopBreak", player, block)
+    }
+
+    /** What a suite answers a pick with; null (the default) leaves it to the game. */
+    @Volatile var pick: PickAnswer? = null
+
+    override fun pickBlock(player: PlayerRef, block: BlockRef, inventory: List<ItemData?>): PickAnswer? {
+        hear("pickBlock", player, block, inventory)
+        return pick
+    }
 
     override fun playerDied(
         player: PlayerRef,

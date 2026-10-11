@@ -180,9 +180,24 @@ A block's `hardness` and `tool` are how long it takes to break, with what a
 player holds, as the game counts it for any block: a faster tool is quicker
 (the right tool's speed, enchantments, haste, standing on the ground, as for
 every block), and `requiresTool` makes the wrong one drop nothing and take
-longer, like stone without a pickaxe. The server tells the player's game by
-adjusting the player's `block_break_speed` while they mine one of these, so
-what they see and what the server counts agree.
+longer, like stone without a pickaxe. The server does the mining: it counts
+each tick of it, shows the cracks to everyone nearby, and breaks the block when
+it's done, as the player's (protection plugins can still refuse it). While a
+player looks at or mines one of these, their `block_break_speed` is turned
+right down so their own game never finishes first: it would take the block
+away early, and redraw the note blocks above and below it, until the server
+put them back. A player far away from the server sees a block go a moment
+after the cracks finish. A block with `hardness` 0 breaks on the first hit, and
+creative players break blocks at once, as always.
+
+## Picking
+
+Picking one of these blocks (the middle click) brings the item that places it
+to hand, as for any block: one already in the player's inventory is selected or
+swapped into the hotbar, and in creative a new one is given when they have
+none. In survival, a player with none of its item gets nothing (never the note
+block, string or leaves it's held in). When several items place the same
+block, creative gives the first by name.
 
 ## Drops
 

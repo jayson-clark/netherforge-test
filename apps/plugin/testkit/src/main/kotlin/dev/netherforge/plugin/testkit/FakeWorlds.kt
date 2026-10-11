@@ -373,7 +373,12 @@ class FakeBlocks(private val platform: FakePlatform) : BlockOps {
     }
 
     /** What a state's hardness is, by block id, where a test says; a few of the game's, else 1. */
-    val hardnesses = mutableMapOf("minecraft:stone" to 1.5, "minecraft:note_block" to 0.8, "minecraft:oak_planks" to 2.0)
+    val hardnesses = mutableMapOf(
+        "minecraft:stone" to 1.5,
+        "minecraft:note_block" to 0.8,
+        "minecraft:oak_planks" to 2.0,
+        "minecraft:bedrock" to -1.0
+    )
 
     override fun hardness(state: String): Double? {
         val id = state.substringBefore('[')
@@ -387,6 +392,47 @@ class FakeBlocks(private val platform: FakePlatform) : BlockOps {
         val id = state.substringBefore('[')
         if (FakePlatform.GAME.block(id) == null) return null
         return breakSpeeds[tool?.def?.kind to id] ?: 1.0
+    }
+
+    /** What a tick of mining adds to a player's progress on a block, by the player; 0.1 where a test says nothing. */
+    val breakProgresses = mutableMapOf<UUID, Double>()
+
+    override fun breakProgress(player: UUID, world: String, x: Int, y: Int, z: Int): Double? {
+        if (player !in platform.players.byId || !loaded(world, x, z)) return null
+        // The game multiplies a player's progress by their block_break_speed, as the server's own does.
+        val speed = platform.attributes.value(player, "minecraft:block_break_speed") ?: 1.0
+        return (breakProgresses[player] ?: 0.1) * speed
+    }
+
+    /** Every crack drawn, as `"<player name> <world> x y z <stage>"`. */
+    val cracks = mutableListOf<String>()
+
+    override fun showBreaking(player: UUID, world: String, x: Int, y: Int, z: Int, stage: Int) {
+        val who = platform.players.byId[player] ?: return
+        cracks += "${who.ref.name} $world $x $y $z $stage"
+    }
+
+    /** What a protection plugin would say to a player's breaking a block: refused, when it names the player. */
+    val refusedBreakers = mutableSetOf<UUID>()
+
+    override fun breakAs(player: UUID, world: String, x: Int, y: Int, z: Int): Boolean {
+        val who = platform.players.byId[player]?.ref ?: return false
+        if (!loaded(world, x, z) || player in refusedBreakers) return false
+        val state = platform.worlds.state(world, x, y, z)
+        if (state == "minecraft:air") return false
+        // As the server's own break: the runtime hears it, and its null cancels the server's (the runtime broke it itself).
+        platform.events!!.blockBreak(who, BlockRef(world, x, y, z, state.substringBefore('['), state), { emptyList() }, 0) ?: return false
+        platform.worlds.blocks[BlockAt(world, x, y, z)] = "minecraft:air"
+        return true
+    }
+
+    /** The block each player is looking at, where a test says. */
+    val targets = mutableMapOf<UUID, BlockAt>()
+
+    override fun targeted(player: UUID): BlockRef? {
+        val at = targets[player] ?: return null
+        val state = platform.worlds.state(at.world, at.x, at.y, at.z)
+        return BlockRef(at.world, at.x, at.y, at.z, state.substringBefore('['), state)
     }
 
     /** Places a test says a block doesn't fit (something stands there). */

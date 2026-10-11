@@ -267,6 +267,10 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
                 alive()
                 breakBlock(bot, action)
             }
+            is BotAction.PickBlock -> {
+                alive()
+                pickBlock(bot, action)
+            }
             is BotAction.SelectSlot -> {
                 require(action.slot in 0..8) { "a hotbar slot is 0 to 8" }
                 val from = (bot.numbers[EntityNumber.HELD_SLOT] ?: 0.0).toInt()
@@ -521,6 +525,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
      * Mining, as the server hears it: the left click, the first hit (an
      * instant one in creative), then the break with its drops. Any of them
      * cancelled leaves the block, and the bot is refused as a real one is.
+     * One that can't be mined (bedrock) it lets go of, which is heard.
      */
     private fun breakBlock(bot: FakePlayer, mine: BotAction.BreakBlock) {
         val world = bot.location.world
@@ -532,6 +537,11 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
         if (events!!.playerInteract(bot.ref, ClickButton.LEFT, target, mine.face, item, "main_hand")) throw refused
         val creative = bot.gameMode == "creative"
         if (raise.blockStartBreak(GameEvent.BlockStartBreak(bot.ref, target, item, creative))) throw refused
+        if (!creative && (platform.blocks.hardness(target.state) ?: 0.0) < 0) {
+            // It gives up, and lets go as a player does.
+            events!!.blockStopBreak(bot.ref, target)
+            throw IllegalStateException("${bot.ref.name} can't break the block at ${mine.x} ${mine.y} ${mine.z}")
+        }
         val drops = if (creative ||
             !isItem(target.id)
         ) {
@@ -547,6 +557,35 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
         if (raise.blockDropItem(GameEvent.BlockDropItem(bot.ref, target, target.state) { dropped })) return
         val middle = dev.netherforge.format.Vec3(mine.x + 0.5, mine.y + 0.5, mine.z + 0.5)
         for (stack in dropped) platform.worldEntities.spawnItem(world, middle, stack)
+    }
+
+    /**
+     * A middle click on a block, as the server does it: what the runtime answers is brought to hand as the game
+     * brings a block's item (selected in the hotbar, swapped in from elsewhere, or put in a hotbar slot); left to
+     * the game, a survival player with none of the block's item gets nothing, which is all a test needs.
+     */
+    private fun pickBlock(bot: FakePlayer, pick: BotAction.PickBlock) {
+        val target = block(bot.location.world, pick.x, pick.y, pick.z)
+        val slots = bot.inventorySlots
+        val answer = events!!.pickBlock(bot.ref, target, (0 until PICKABLE).map { slots[it] }) ?: return
+        val held = heldSlot(bot)
+        val hotbar = (0 until HOTBAR).map { (held + it) % HOTBAR }
+        val into = hotbar.firstOrNull { slots[it] == null } ?: held
+        val source = answer.slot
+        val to = when {
+            source != null && source < HOTBAR -> source
+            source != null -> into.also {
+                val was = slots[it]
+                slots[it] = slots[source]
+                slots[source] = was
+            }
+            answer.item != null -> into.also {
+                slots[it]?.let { was -> (0 until PICKABLE).firstOrNull { free -> slots[free] == null }?.let { free -> slots[free] = was } }
+                slots[it] = answer.item
+            }
+            else -> return
+        }
+        bot.numbers[EntityNumber.HELD_SLOT] = to.toDouble()
     }
 
     /** Q: one of the held stack, or all of it, heard first (cancelled, it stays), then thrown ahead of them. */
@@ -774,6 +813,9 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
         const val MAX_NEARBY = 50
         const val HOTBAR = 9
         const val MAIN_ROWS = 27
+
+        /** The slots a picked block's item is looked for in: the hotbar and the rest of the inventory. */
+        const val PICKABLE = 36
         const val JUMP = 0.42
         const val FIST = 1.0
         const val REACH = 3.0

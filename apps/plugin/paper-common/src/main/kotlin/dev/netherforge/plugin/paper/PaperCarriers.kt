@@ -1,7 +1,9 @@
 package dev.netherforge.plugin.paper
 
 import dev.netherforge.format.block.BlockCarrier
-import org.bukkit.Tag
+import org.bukkit.Bukkit
+import org.bukkit.block.Block
+import org.bukkit.block.BlockFace
 import org.bukkit.block.data.type.Leaves
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
@@ -80,9 +82,12 @@ class PaperTripwires(private val plugin: JavaPlugin, private val version: PaperV
  * Leaves held still for leaves blocks, which Paper has no switch for. Leaves blocks are held in persistent leaves
  * nearer than the farthest distance a leaf can be from a log, so:
  *
- * - the server mustn't work a persistent leaves block's distance out again: the neighbour update that would start
- *   it is cancelled for a persistent leaves block (a player's, or a custom block). Natural leaves are never
- *   persistent, so they still work their distance out and decay when their tree goes;
+ * - the server mustn't work a persistent leaves block's distance out again (a player's, or a custom block). It does
+ *   that in a tick the leaves schedule themselves when a neighbour changes shape, which no event can stop: so a
+ *   block about to update its neighbours' shapes first has the persistent leaves beside it [guarded], and when one
+ *   of those changes nothing but its distance (its tick working it out) it's put back, within the same change, so
+ *   no player sees it. Natural leaves are never persistent, so they still work their distance out and decay when
+ *   their tree goes;
  * - a player's leaves go in at the farthest distance (what a frozen leaf keeps), out of the blocks' states.
  *
  * Nothing is listened to until [freeze]: physics events are the server's busiest, and a project without leaves
@@ -105,14 +110,46 @@ class PaperLeaves(private val plugin: JavaPlugin) : Listener {
 
     fun release() {
         HandlerList.unregisterAll(this)
+        guarded.clear()
         frozen = false
     }
+
+    /** Persistent leaves beside a block that changed, as they were, and the tick they were seen in: their own tick may follow. */
+    private val guarded = HashMap<Block, Guard>()
+
+    private class Guard(val data: Leaves, val tick: Int)
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     fun onPhysics(event: BlockPhysicsEvent) {
         val block = event.block
-        if (!Tag.LEAVES.isTagged(block.type)) return
-        if ((block.blockData as? Leaves)?.isPersistent == true) event.isCancelled = true
+        // A neighbour of a block that changed: leaves have nothing to do with it, and a persistent one wants nothing.
+        if (event.sourceBlock != block) {
+            if ((block.blockData as? Leaves)?.isPersistent == true) event.isCancelled = true
+            return
+        }
+        // The block itself changed, and its neighbours' shapes are updated next.
+        val now = Bukkit.getCurrentTick()
+        if (guarded.size > PRUNE) guarded.values.removeIf { now - it.tick > GUARD_TICKS }
+        val was = guarded.remove(block)
+        val data = event.changedBlockData as? Leaves
+        if (was != null && data != null && now - was.tick <= GUARD_TICKS && data.isPersistent && onlyDistance(was.data, data)) {
+            // Its tick worked its distance out: what it was is put back before the change goes anywhere.
+            block.setBlockData(was.data, false)
+            event.isCancelled = true
+            return
+        }
+        for (face in FACES) {
+            val next = block.getRelative(face)
+            val leaves = next.blockData as? Leaves ?: continue
+            if (leaves.isPersistent) guarded[next] = Guard(leaves, now)
+        }
+    }
+
+    private fun onlyDistance(was: Leaves, now: Leaves): Boolean {
+        if (was.distance == now.distance) return false
+        val moved = was.clone() as Leaves
+        moved.distance = now.distance
+        return moved == now
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -128,5 +165,15 @@ class PaperLeaves(private val plugin: JavaPlugin) : Listener {
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     fun onDecay(event: LeavesDecayEvent) {
         if ((event.block.blockData as? Leaves)?.isPersistent == true) event.isCancelled = true
+    }
+
+    private companion object {
+        val FACES = arrayOf(BlockFace.UP, BlockFace.DOWN, BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST)
+
+        /** How long a guard lasts: the leaves' tick comes one tick after their neighbour changed (in the same one, when it changed early in it). */
+        const val GUARD_TICKS = 2
+
+        /** Guards are only looked at for expiry once there are this many, so a quiet server keeps a handful. */
+        const val PRUNE = 256
     }
 }

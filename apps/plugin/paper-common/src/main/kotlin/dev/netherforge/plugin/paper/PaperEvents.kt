@@ -8,6 +8,7 @@ import dev.netherforge.plugin.platform.MenuClick
 import dev.netherforge.plugin.platform.PlatformEvents
 import dev.netherforge.plugin.platform.WatchedEvent
 import io.papermc.paper.event.player.PlayerCustomClickEvent
+import io.papermc.paper.event.player.PlayerPickBlockEvent
 import io.papermc.paper.event.player.PlayerStopUsingItemEvent
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent
 import org.bukkit.Bukkit
@@ -24,6 +25,7 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.event.block.BlockDamageAbortEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.EntityDeathEvent
@@ -54,6 +56,12 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.UUID
 
+/** A player's hotbar: the first 9 of their slots. */
+private const val HOTBAR = 9
+
+/** The slots a picked block's item is looked for in: the hotbar and the rest of the inventory, not the armour. */
+private const val PICKABLE = 36
+
 /**
  * Translates the server's events the runtime does more with than raise them
  * to scripts into [PlatformEvents] calls, and applies the answers; every other
@@ -71,6 +79,18 @@ class PaperEvents(
     /** Players whose draw of a bow with no ammo the server started ([PaperVersion.startUsingItem]): their shot is fired by [onLetGoOfDraw]. */
     private val drawing = HashSet<UUID>()
 
+    /**
+     * Players whose last right click on a block the runtime took (it placed a block from an item, or a script
+     * cancelled it): the tick and the hand.
+     */
+    private val consumed = HashMap<UUID, Pair<Int, EquipmentSlot>>()
+
+    /**
+     * The interact event being raised, when it's the one Paper raises for a right click that used the item (its
+     * ray cast hit a block) rather than for a click on a block: it starts with the block not to be used.
+     */
+    private var aimed: PlayerInteractEvent? = null
+
     /** The game's other events, generated from the API spec: always listened to but for the watched ones. */
     private val game = PaperGameEvents(plugin, platform, runtime.game).also { plugin.server.pluginManager.registerEvents(it, plugin) }
 
@@ -86,9 +106,28 @@ class PaperEvents(
     @EventHandler
     fun onCustomClick(event: PlayerCustomClickEvent) = platform.dialogs.customClicked(event)
 
+    /** Before any plugin has a say: whether this is Paper's own event for a right click that used the item ([aimed]). */
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
+    fun onInteractRaised(event: PlayerInteractEvent) {
+        aimed = event.takeIf {
+            it.action == Action.RIGHT_CLICK_BLOCK && it.useInteractedBlock() == org.bukkit.event.Event.Result.DENY
+        }
+    }
+
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = false)
     fun onInteract(event: PlayerInteractEvent) {
         val slot = event.hand ?: return
+        // A click on a block the runtime took (a custom block placed) the player's game can't foresee: it thinks
+        // nothing happened and uses the item too, which Paper raises again at whatever the player looks at now (the
+        // block just placed). That's the same click, and it's been had.
+        val tick = Bukkit.getCurrentTick()
+        if (event === aimed) {
+            val last = consumed[event.player.uniqueId]
+            if (last != null && last.second == slot && tick - last.first <= 1) {
+                event.isCancelled = true
+                return
+            }
+        }
         if (event.action == Action.PHYSICAL) return
         if (event.useInteractedBlock() == org.bukkit.event.Event.Result.DENY &&
             event.useItemInHand() == org.bukkit.event.Event.Result.DENY
@@ -102,6 +141,7 @@ class PaperEvents(
         val item = PaperItems.toItem(event.item)
         if (runtime.playerInteract(ref(event), button, clicked?.let(::block), face, item, hand)) {
             event.isCancelled = true
+            if (event.action == Action.RIGHT_CLICK_BLOCK && event !== aimed) consumed[event.player.uniqueId] = tick to slot
             return
         }
         // Using the item comes after the click, and only stops the item.
@@ -144,6 +184,7 @@ class PaperEvents(
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
         drawing.remove(event.player.uniqueId)
+        consumed.remove(event.player.uniqueId)
     }
 
     /** Whether [player] has any arrow (arrow, tipped or spectral: what a bow takes as ammo). */
@@ -211,6 +252,56 @@ class PaperEvents(
         event.isDropItems = false
         val at = broken.location.add(0.5, 0.5, 0.5)
         for (stack in stacks(changed)) broken.world.dropItemNaturally(at, stack)
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    fun onStopBreak(event: BlockDamageAbortEvent) {
+        runtime.blockStopBreak(platform.players.ref(event.player), block(event.block))
+    }
+
+    /**
+     * A middle click on a block. What the runtime answers is picked as the game picks a block's item: one in the
+     * hotbar is selected, one elsewhere is swapped into a hotbar slot (an empty one, else one without enchantments,
+     * from the selected one on), and a new one goes into that slot, what was there moved to a free one.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun onPickBlock(event: PlayerPickBlockEvent) {
+        val player = event.player
+        val inventory = player.inventory
+        val held = (0 until PICKABLE).map { slot -> inventory.getItem(slot)?.takeUnless { it.isEmpty }?.let(PaperItems::toItem) }
+        val answer = runtime.pickBlock(platform.players.ref(player), block(event.block), held) ?: return
+        event.isCancelled = true
+        val source = answer.slot
+        if (source != null) {
+            if (source < HOTBAR) {
+                inventory.heldItemSlot = source
+                return
+            }
+            val target = hotbarSlot(inventory)
+            val was = inventory.getItem(target)
+            inventory.setItem(target, inventory.getItem(source))
+            inventory.setItem(source, was)
+            inventory.heldItemSlot = target
+            return
+        }
+        val stack = answer.item?.let(PaperItems::toStack) ?: return
+        val target = hotbarSlot(inventory)
+        val was = inventory.getItem(target)
+        if (was != null && !was.isEmpty) {
+            val free = inventory.storageContents.indexOfFirst { it == null || it.isEmpty }
+            if (free >= 0) inventory.setItem(free, was)
+        }
+        inventory.setItem(target, stack)
+        inventory.heldItemSlot = target
+    }
+
+    /** Where the game puts a picked item: the first empty hotbar slot from the held one on, else one without enchantments, else the held one. */
+    private fun hotbarSlot(inventory: org.bukkit.inventory.PlayerInventory): Int {
+        val held = inventory.heldItemSlot
+        val order = (0 until HOTBAR).map { (held + it) % HOTBAR }
+        return order.firstOrNull { inventory.getItem(it).let { stack -> stack == null || stack.isEmpty } }
+            ?: order.firstOrNull { inventory.getItem(it)?.enchantments.isNullOrEmpty() }
+            ?: held
     }
 
     private fun stacks(items: List<ItemData>): List<ItemStack> = items.mapNotNull(PaperItems::toStack)

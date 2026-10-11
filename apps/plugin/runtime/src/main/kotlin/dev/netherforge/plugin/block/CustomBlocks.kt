@@ -38,6 +38,7 @@ import dev.netherforge.plugin.platform.ClickButton
 import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.Location
+import dev.netherforge.plugin.platform.PickAnswer
 import dev.netherforge.plugin.platform.Platform
 import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.platform.SoundPlay
@@ -216,8 +217,20 @@ internal class CustomBlocks(
     /** Chunks to check next, a few every tick. */
     private val sweepQueue = ArrayDeque<ChunkKey>()
 
-    /** Players whose break speed this service changed. */
-    private val mining = HashSet<UUID>()
+    /**
+     * A player mining one of the project's blocks, which the server counts ([mine]) and breaks for them: [factor]
+     * is how much faster than its carrier the block is to mine with what they hold, [stage] the cracks shown.
+     */
+    private class Mining(val world: String, val at: BlockVector, val name: String, val factor: Double) {
+        var progress = 0.0
+        var stage = -1
+    }
+
+    /** Who's mining one of the project's blocks, and which. */
+    private val mining = HashMap<UUID, Mining>()
+
+    /** Players whose break speed this service turned down, so their own game never finishes mining one of its blocks. */
+    private val slowed = HashSet<UUID>()
 
     private val toolStates = HashMap<BlockTool, String?>()
 
@@ -250,7 +263,7 @@ internal class CustomBlocks(
 
     override fun start() {
         for (def in defs.values) startScript(def)
-        if (plan != null) for (player in platform.players.online()) clearMining(player.uuid)
+        if (plan != null) for (player in platform.players.online()) clearSlowed(player.uuid)
         if (usable) {
             for (world in platform.worlds.names()) {
                 for ((x, z) in platform.worlds.loadedChunks(world)) reconcile(ChunkKey(world, x, z))
@@ -262,7 +275,8 @@ internal class CustomBlocks(
 
     override fun stop() {
         for (def in defs.values) stopScript(def)
-        for (player in mining.toList()) stopMining(player)
+        for (player in mining.keys.toList()) stopMining(player)
+        for (player in slowed.toList()) unslow(player)
         // Before the tables are saved and let go (block data stops after this service).
         for ((key, blocks) in chunks) pinData(key, blocks)
         chunks.clear()
@@ -755,53 +769,127 @@ internal class CustomBlocks(
     /**
      * A player is hitting the block at [start]'s position: [start] says whether
      * it breaks at once, and may be cancelled (a block nobody can break by hand).
-     * What it takes to mine one of the project's blocks is set as the player's
-     * `block_break_speed`, for as long as they mine it. True cancels.
+     * True cancels.
+     *
+     * The server mines the project's blocks, not the player's game: their
+     * `block_break_speed` is turned down so far that their game never finishes
+     * (it would take the block away itself, and the note blocks above and below
+     * with it, until the server put them back), and [mine] counts their progress
+     * each tick, shows the cracks and breaks it at the end.
      */
     fun startedBreaking(start: GameEvent.BlockStartBreak): Boolean {
         val player = start.player.uuid
         val placed = if (usable) placedAt(start.block.world, start.block.x, start.block.y, start.block.z) else null
         val def = placed?.let { defs[it.name] }
+        // A start, even on the same block, begins again from nothing (as the game's does when the tool changes).
+        stopMining(player)
         if (def == null) {
-            stopMining(player)
+            unslow(player)
             return false
         }
         val creative = platform.players.gameMode(player) == CREATIVE
         val hardness = def.file.hardnessOrDefault
-        if (hardness == BlockFile.UNBREAKABLE && !creative) {
-            stopMining(player)
-            return true
-        }
+        if (hardness == BlockFile.UNBREAKABLE && !creative) return true
+        // The server breaks it on this hit: the player's game, slowed, doesn't.
         if (hardness == 0.0) start.instant = true
-        if (creative) {
-            stopMining(player)
-            return false
-        }
+        if (creative || hardness == 0.0) return false
+        // A carrier that breaks at once (tripwire) can't be mined slower: the player's game does it, as the server's.
         val factor = miningFactor(def, start.block.state, start.item)
         if (factor == null) {
-            stopMining(player)
-        } else {
-            val applied = platform.attributes.addModifier(
-                player,
-                BREAK_SPEED,
-                AttributeModifierData(modifierId(), factor - 1.0, AttributeOperation.ADD_MULTIPLIED_TOTAL)
-            )
-            if (applied) mining += player
+            unslow(player)
+            return false
         }
+        slow(player)
+        mining[player] = Mining(start.block.world, BlockVector(start.block.x, start.block.y, start.block.z), def.id, factor)
         return false
+    }
+
+    /** A player let go of the block they were mining, or looked away. */
+    fun stoppedBreaking(player: PlayerRef, block: BlockRef) {
+        val was = mining[player.uuid] ?: return
+        if (was.world == block.world && was.at == BlockVector(block.x, block.y, block.z)) stopMining(player.uuid)
     }
 
     private fun modifierId() = "${namespace()}:mining"
 
-    /** The player isn't mining one of the project's blocks any more: their speed is theirs again. */
+    /** The player isn't mining one of the project's blocks any more: its cracks go. */
     private fun stopMining(player: UUID) {
-        if (mining.remove(player)) platform.attributes.removeModifier(player, BREAK_SPEED, modifierId())
+        val was = mining.remove(player) ?: return
+        if (was.stage >= 0) platform.blocks.showBreaking(player, was.world, was.at.x, was.at.y, was.at.z, -1)
+    }
+
+    /** Turns [player]'s break speed down to [SLOWED] of what it is, if it isn't already. */
+    private fun slow(player: UUID) {
+        if (player in slowed) return
+        val modifier = AttributeModifierData(modifierId(), SLOWED - 1.0, AttributeOperation.ADD_MULTIPLIED_TOTAL)
+        if (platform.attributes.addModifier(player, BREAK_SPEED, modifier)) slowed += player
+    }
+
+    /** [player]'s speed is theirs again. */
+    private fun unslow(player: UUID) {
+        if (slowed.remove(player)) platform.attributes.removeModifier(player, BREAK_SPEED, modifierId())
     }
 
     /** Takes the modifier off whether or not this session put it there: the server saves it with the player. */
-    private fun clearMining(player: UUID) {
-        mining -= player
+    private fun clearSlowed(player: UUID) {
+        slowed -= player
         platform.attributes.removeModifier(player, BREAK_SPEED, modifierId())
+    }
+
+    /**
+     * A tick of everyone mining one of the project's blocks: what the server
+     * counts for the carrier with what they hold, their effects and footing
+     * (less the slowing), times how much faster the block is than its carrier.
+     * At 1 the block breaks as theirs, with the server's own break event.
+     */
+    private fun mine() {
+        for ((player, mined) in mining.entries.toList()) {
+            val placed = placedAt(mined.world, mined.at.x, mined.at.y, mined.at.z)
+            val mode = platform.players.gameMode(player)
+            val step = platform.blocks.breakProgress(player, mined.world, mined.at.x, mined.at.y, mined.at.z)
+            if (placed?.name != mined.name || mode == null || mode == CREATIVE || mode == SPECTATOR || step == null) {
+                stopMining(player)
+                continue
+            }
+            mined.progress += step / (if (player in slowed) SLOWED else 1.0) * mined.factor
+            if (mined.progress < 1.0) {
+                val stage = (mined.progress * CRACKS).toInt() - 1
+                if (stage != mined.stage) {
+                    mined.stage = stage
+                    platform.blocks.showBreaking(player, mined.world, mined.at.x, mined.at.y, mined.at.z, stage)
+                }
+                continue
+            }
+            stopMining(player)
+            platform.blocks.breakAs(player, mined.world, mined.at.x, mined.at.y, mined.at.z)
+            // Refused (a protection plugin): they're still holding the button on it, and start over, as the game does.
+            val still = placedAt(mined.world, mined.at.x, mined.at.y, mined.at.z)?.name == mined.name
+            if (still) mining[player] = Mining(mined.world, mined.at, mined.name, mined.factor)
+        }
+    }
+
+    /**
+     * Slows everyone looking at one of the project's blocks before they hit it:
+     * the change takes a moment to reach their game, which could finish a soft
+     * block on the first hit meanwhile.
+     */
+    private fun watchLooks() {
+        for (player in platform.players.online()) {
+            val id = player.uuid
+            val mode = platform.players.gameMode(id)
+            if (mode == CREATIVE || mode == SPECTATOR) {
+                stopMining(id)
+                unslow(id)
+                continue
+            }
+            if (id in mining) continue
+            val target = platform.blocks.targeted(id)
+            val mined =
+                target != null &&
+                    placedAt(target.world, target.x, target.y, target.z) != null &&
+                    (platform.blocks.hardness(target.state) ?: 0.0) > 0
+            if (mined) slow(id) else unslow(id)
+        }
     }
 
     /**
@@ -916,6 +1004,21 @@ internal class CustomBlocks(
         else -> Triple(-1, 0, 0)
     }
 
+    /**
+     * A player picking [block] (the middle click). One of the project's blocks
+     * picks the item that places it, not its carrier: one already in
+     * [inventory] (any stack that places it), else in creative a new one, else
+     * nothing. Null for any other block, which the game picks itself.
+     */
+    fun picking(player: PlayerRef, block: BlockRef, inventory: List<ItemData?>): PickAnswer? {
+        if (!usable) return null
+        val placed = placedAt(block.world, block.x, block.y, block.z) ?: return null
+        val slot = inventory.indexOfFirst { items().blockOf(it) == placed.name }
+        if (slot >= 0) return PickAnswer(slot, null)
+        if (platform.players.gameMode(player.uuid) != CREATIVE) return PickAnswer(null, null)
+        return PickAnswer(null, items().placing(placed.name)?.let { items().create(it) })
+    }
+
     /** Pistons don't move a block that's held by its record. True cancels. */
     fun pushes(blocks: List<BlockRef>): Boolean = usable && blocks.any { placedAt(it.world, it.x, it.y, it.z) != null }
 
@@ -932,17 +1035,26 @@ internal class CustomBlocks(
 
     override fun playerJoined(player: PlayerRef) {
         // A modifier the server saved with the player from a session that ended mid-mine.
-        if (plan != null) clearMining(player.uuid)
+        if (plan != null) clearSlowed(player.uuid)
     }
 
     override fun playerQuit(player: PlayerRef) {
         mining -= player.uuid
+        slowed -= player.uuid
     }
 
     // ---- the tick ---------------------------------------------------------------
 
     override fun tick(phase: TickPhase) {
-        if (phase != TickPhase.WORLD || !usable) return
+        if (phase != TickPhase.WORLD) return
+        if (!usable) {
+            // The project's blocks went (a reload): nobody mines one, or needs slowing.
+            for (player in mining.keys.toList()) stopMining(player)
+            for (player in slowed.toList()) unslow(player)
+            return
+        }
+        mine()
+        watchLooks()
         val now = ticks()
         for (key in ticking.toList()) {
             val blocks = chunks[key] ?: continue
@@ -975,6 +1087,7 @@ internal class CustomBlocks(
     private companion object {
         const val AIR = "minecraft:air"
         const val CREATIVE = "creative"
+        const val SPECTATOR = "spectator"
         const val MAIN_HAND = "main_hand"
 
         /** The attribute the game scales how fast a player mines by (`block_break_speed`). */
@@ -987,9 +1100,18 @@ internal class CustomBlocks(
         const val HARVEST = 30.0
         const val NO_HARVEST = 100.0
 
-        /** The range the attribute takes; a block mined a thousand times quicker than a note block is instant anyway. */
+        /** The range the factor takes; a block mined a thousand times quicker than a note block is instant anyway. */
         const val MIN_FACTOR = 0.0001
         const val MAX_FACTOR = 1000.0
+
+        /**
+         * What a slowed player's break speed is multiplied by: their game would take hours to finish even a note
+         * block with the fastest axe there is, and the server's count divides it out again.
+         */
+        const val SLOWED = 1e-6
+
+        /** The cracks' stages a block's progress is shown in: the game's ten. */
+        const val CRACKS = 10
 
         /** Chunks checked a tick: a tracked chunk is looked at again every `chunks / SWEEP_PER_TICK` ticks. */
         const val SWEEP_PER_TICK = 2

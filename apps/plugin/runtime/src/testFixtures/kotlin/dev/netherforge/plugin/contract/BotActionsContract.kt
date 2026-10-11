@@ -21,8 +21,10 @@ import dev.netherforge.plugin.platform.EntityNumber
 import dev.netherforge.plugin.platform.EntityRole
 import dev.netherforge.plugin.platform.EntityTag
 import dev.netherforge.plugin.platform.GameEvent
+import dev.netherforge.plugin.platform.InventoryRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.MenuClick
+import dev.netherforge.plugin.platform.PickAnswer
 import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.platform.WatchedEvent
 import dev.netherforge.plugin.platform.WindowSpec
@@ -33,6 +35,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.floor
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -328,6 +331,40 @@ abstract class BotActionsContract : PlatformContract() {
         val broken = calls("blockBreak", player).single()[1] as dev.netherforge.plugin.platform.BlockRef
         assertEquals(Triple(x, y, z), Triple(broken.x, broken.y, broken.z))
         assertEquals("minecraft:oak_planks", broken.id)
+    }
+
+    @Test
+    fun `letting go of a block before it breaks is heard`() {
+        val player = join()
+        main { place(at(2), "minecraft:bedrock") }
+        val (x, y, z) = block(at(2))
+        assertFails { act(player, BotAction.BreakBlock(x, y, z, "west")) }
+        eventually("heard") { calls("blockStopBreak", player).isNotEmpty() }
+        val stopped = calls("blockStopBreak", player).single()[1] as dev.netherforge.plugin.platform.BlockRef
+        assertEquals(Triple(x, y, z), Triple(stopped.x, stopped.y, stopped.z))
+        assertEquals("minecraft:bedrock", stopped.id)
+        main { assertEquals("minecraft:bedrock", platform.blocks.get(world, x, y, z)?.state) }
+    }
+
+    @Test
+    fun `picking a block is heard, and what's answered is brought to hand`() {
+        val player = join()
+        main { place(at(2), "minecraft:oak_planks") }
+        val (x, y, z) = block(at(2))
+        val inventory = InventoryRef.Player(player.uuid)
+        main { assertTrue(platform.inventories.setItem(inventory, 12, item("minecraft:diamond", 3))) }
+        afterwards { platform.inventories.setItem(inventory, 12, null) }
+        afterwards { events.pick = null }
+        events.pick = PickAnswer(12, null)
+        act(player, BotAction.PickBlock(x, y, z))
+        eventually("heard") { calls("pickBlock", player).isNotEmpty() }
+        val (_, picked, held) = calls("pickBlock", player).single()
+        assertEquals(Triple(x, y, z), (picked as dev.netherforge.plugin.platform.BlockRef).let { Triple(it.x, it.y, it.z) })
+        assertEquals("minecraft:diamond", (held as List<*>).filterIsInstance<ItemData>().single().def.kind)
+        // Swapped from slot 12 into the first empty hotbar slot, from the held one on, which is held.
+        eventually("brought to hand") { held(player)?.def?.kind == "minecraft:diamond" }
+        assertEquals(3, count(held(player)))
+        main { assertNull(platform.inventories.contents(inventory)!![12]) }
     }
 
     @Test

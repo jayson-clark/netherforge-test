@@ -258,6 +258,11 @@ sealed interface BotAction {
     @SerialName("break_block")
     data class BreakBlock(val x: Int, val y: Int, val z: Int, val face: String = "up") : BotAction
 
+    /** Middle-click the block at (x, y, z): pick it, bringing its item to hand. */
+    @Serializable
+    @SerialName("pick_block")
+    data class PickBlock(val x: Int, val y: Int, val z: Int) : BotAction
+
     /** Hold hotbar slot [slot] (0–8). */
     @Serializable
     @SerialName("select_slot")

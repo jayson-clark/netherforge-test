@@ -86,6 +86,29 @@ interface BlockOps {
     fun breakSpeed(tool: ItemData?, state: String): Double?
 
     /**
+     * What a tick of [player] (online) mining the block at the position adds to its progress (1 breaks it), as the
+     * server counts it for the block that's there: their tool, enchantments, effects, attributes and footing. Null
+     * when the player isn't online or the chunk isn't loaded.
+     */
+    fun breakProgress(player: UUID, world: String, x: Int, y: Int, z: Int): Double?
+
+    /**
+     * Draws the cracks of [player] mining the block at the position at [stage] (0 to 9; -1 takes them away) for
+     * everyone near it, [player] too: what the game shows of a block being mined, when the server counts it.
+     */
+    fun showBreaking(player: UUID, world: String, x: Int, y: Int, z: Int, stage: Int)
+
+    /**
+     * [player] (online) breaks the block at the position as if they'd mined it: the server's own break, with its
+     * `BlockBreakEvent` (which protection plugins may refuse, and which the runtime hears as [PlatformEvents.blockBreak]).
+     * False when it wasn't broken.
+     */
+    fun breakAs(player: UUID, world: String, x: Int, y: Int, z: Int): Boolean
+
+    /** The block [player] (online) is looking at within reach, or null for none. */
+    fun targeted(player: UUID): BlockRef?
+
+    /**
      * Whether a block of [state] fits at the position: nothing standing there that a block can't be put into, as for
      * a player placing one. A block with nothing to collide with (tripwire) goes where anything stands, as string does.
      */

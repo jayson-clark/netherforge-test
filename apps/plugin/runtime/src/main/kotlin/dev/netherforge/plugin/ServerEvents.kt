@@ -27,6 +27,7 @@ import dev.netherforge.plugin.platform.GameEvents
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.platform.MenuClick
+import dev.netherforge.plugin.platform.PickAnswer
 import dev.netherforge.plugin.platform.PlatformEvents
 import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.platform.Ray
@@ -124,6 +125,13 @@ class ServerEvents internal constructor(private val runtime: NetherForgeRuntime)
             event.experience.coerceIn(0, Int.MAX_VALUE.toLong()).toInt()
         )
     }
+
+    override fun blockStopBreak(player: PlayerRef, block: BlockRef) {
+        if (running) session.customBlocks.stoppedBreaking(player, block)
+    }
+
+    override fun pickBlock(player: PlayerRef, block: BlockRef, inventory: List<ItemData?>): PickAnswer? =
+        if (running) session.customBlocks.picking(player, block, inventory) else null
 
     override fun playerDied(
         player: PlayerRef,

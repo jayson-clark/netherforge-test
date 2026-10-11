@@ -16,6 +16,7 @@ import dev.netherforge.plugin.platform.BiomeSearch
 import dev.netherforge.plugin.platform.BlockHit
 import dev.netherforge.plugin.platform.BlockOps
 import dev.netherforge.plugin.platform.BlockRecord
+import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.BlockSnapshot
 import dev.netherforge.plugin.platform.BlockVector
 import dev.netherforge.plugin.platform.ChunkGrid
@@ -297,6 +298,15 @@ class PaperBlocks(private val plugin: JavaPlugin, private val carriers: PaperCar
 
         /** The persistent data key a block's script data is kept under in its chunk, then `x_y_z`. */
         const val DATA = "block_data/"
+
+        /** The cracks' stages after none: 0 to 9. */
+        const val CRACK_STAGES = 9f
+
+        /** How far from a block the game shows it being mined, as it does for a player's. */
+        const val CRACKS_SEEN = 32.0
+
+        /** Farther than a player reaches (4.5 in survival): looking at a block this far away is enough to be ready for them mining it. */
+        const val REACH = 6
     }
 
     /** The block, if its world exists and its chunk is loaded: never loads one. */
@@ -425,6 +435,35 @@ class PaperBlocks(private val plugin: JavaPlugin, private val carriers: PaperCar
     override fun hardness(state: String): Double? = data(state)?.material?.hardness?.toDouble()
 
     override fun breakSpeed(tool: ItemData?, state: String): Double? = data(state)?.getDestroySpeed(stack(tool), true)?.toDouble()
+
+    override fun breakProgress(player: UUID, world: String, x: Int, y: Int, z: Int): Double? {
+        val who = Bukkit.getPlayer(player) ?: return null
+        val block = block(world, x, y, z) ?: return null
+        return block.getBreakSpeed(who).toDouble()
+    }
+
+    override fun showBreaking(player: UUID, world: String, x: Int, y: Int, z: Int, stage: Int) {
+        val breaker = Bukkit.getPlayer(player) ?: return
+        val block = block(world, x, y, z) ?: return
+        val at = block.location
+        // Paper draws stage (int) (9 * progress), and none for 0.
+        val progress = if (stage < 0) 0f else ((stage + 0.5f) / CRACK_STAGES).coerceAtMost(1f)
+        for (viewer in block.world.players) {
+            if (viewer.location.distanceSquared(at) > CRACKS_SEEN * CRACKS_SEEN) continue
+            // Others see the breaker's own cracks; the breaker's game keeps its own (none) under their id, so theirs are drawn under another.
+            val source = if (viewer == breaker) -breaker.entityId - 1 else breaker.entityId
+            viewer.sendBlockDamage(at, progress, source)
+        }
+    }
+
+    override fun breakAs(player: UUID, world: String, x: Int, y: Int, z: Int): Boolean {
+        val who = Bukkit.getPlayer(player) ?: return false
+        val block = block(world, x, y, z) ?: return false
+        if (block.world != who.world) return false
+        return who.breakBlock(block)
+    }
+
+    override fun targeted(player: UUID): BlockRef? = Bukkit.getPlayer(player)?.getTargetBlockExact(REACH)?.let(::blockRef)
 
     private fun data(state: String): org.bukkit.block.data.BlockData? = runCatching { Bukkit.createBlockData(state) }.getOrNull()
 

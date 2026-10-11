@@ -8,6 +8,7 @@ import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.ClickButton
 import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.ItemData
+import dev.netherforge.plugin.platform.PickAnswer
 import dev.netherforge.plugin.testkit.BlockAt
 import dev.netherforge.plugin.testkit.FakePlatform
 import kotlin.test.Test
@@ -19,7 +20,7 @@ import kotlin.test.assertTrue
 
 /**
  * The project's blocks (W4.1) on the fake server: held as note block states with a record, placed by an item or
- * a script, clicked, mined (the break speed it sets), broken for their loot table's drops, ticking, drawn by
+ * a script, clicked, mined (by the server, the player's own game slowed), broken for their loot table's drops, ticking, drawn by
  * centities, found again when a chunk loads, and moved when the project's blocks change.
  */
 class BlockTest {
@@ -227,7 +228,7 @@ class BlockTest {
     }
 
     @Test
-    fun `mining one sets the player's break speed from its hardness and tool, and any other block takes it off`() {
+    fun `the server mines one, slowing the player's own game, showing the cracks and breaking it as theirs`() {
         server().use { server ->
             val state = server.custom().stateOf("ore")!!
             server.custom().place("ore", "world", 0, 64, 0)
@@ -235,25 +236,93 @@ class BlockTest {
             fun modifiers() = server.platform.attributes.modifiers(id, "minecraft:block_break_speed").orEmpty()
             fun start(block: BlockRef, item: ItemData? = null, instant: Boolean = false) =
                 GameEvent.BlockStartBreak(server.alex.ref, block, item, instant).also { server.platform.raise.blockStartBreak(it) }
+            val mined = BlockRef("world", 0, 64, 0, "minecraft:note_block", state)
+            val cracks = server.platform.blocks.cracks
 
-            // Bare hand, no pickaxe: 1/3/100 a tick against the note block's 1/0.8/30.
-            start(BlockRef("world", 0, 64, 0, "minecraft:note_block", state))
-            assertEquals(1, modifiers().size)
-            assertEquals(1 / 3.0 / 100 / (1 / 0.8 / 30) - 1, modifiers().single().amount, 1e-9)
+            // Looking at one slows them before they hit it, so their game can't finish it first; looking away doesn't.
+            server.platform.blocks.targets[id] = BlockAt("world", 0, 64, 0)
+            server.tick(1)
+            assertEquals(1e-6 - 1, modifiers().single().amount, 1e-12)
             assertEquals("test:mining", modifiers().single().id)
-            // With the right tool it's faster by 100 / 30, and by the tool's own speed on its blocks.
+            server.platform.blocks.targets.remove(id)
+            server.tick(1)
+            assertEquals(emptyList(), modifiers())
+
+            // A tick of the note block is 1/8 here; with the sword (the right tool: 6 on stone) the ore is 1.6 times that.
+            val sword = ItemData(ItemDef(kind = "minecraft:iron_sword"))
             server.platform.blocks.breakSpeeds["minecraft:iron_sword" to "minecraft:stone"] = 6.0
-            start(BlockRef("world", 0, 64, 0, "minecraft:note_block", state), ItemData(ItemDef(kind = "minecraft:iron_sword")))
-            assertEquals(1 / 3.0 * 6.0 / 30 / (1 / 0.8 / 30) - 1, modifiers().single().amount, 1e-9)
+            server.platform.blocks.breakProgresses[id] = 0.125
+            server.hold(sword)
+            start(mined, sword)
+            assertEquals(1, modifiers().size)
+            server.tick(3)
+            assertEquals(state, server.state(0, 64, 0))
+            assertTrue(cracks.isNotEmpty() && cracks.all { it.startsWith("Alex world 0 64 0 ") }, cracks.toString())
+            val stages = cracks.map { it.substringAfterLast(' ').toInt() }
+            assertEquals(stages.sorted(), stages)
+            assertTrue(stages.last() in 3..5, stages.toString())
+            // Then it breaks, as the player's: the script hears it and doubles the drops, the cracks go, and so does the slowing.
+            server.tick(3)
+            assertEquals("minecraft:air", server.state(0, 64, 0))
+            assertEquals("-1", cracks.last().substringAfterLast(' '))
+            assertTrue(server.logs.contains("break 1 2"), server.logs.toString())
+            assertEquals(listOf(4), server.dropped().map { it.def.count })
+            server.tick(1)
+            assertEquals(emptyList(), modifiers())
+
+            // Letting go takes the cracks away, and it stays.
+            server.custom().place("ore", "world", 0, 64, 0)
+            start(mined, sword)
+            server.tick(2)
+            cracks.clear()
+            server.runtime.events.blockStopBreak(server.alex.ref, mined)
+            assertEquals(listOf("Alex world 0 64 0 -1"), cracks)
+            server.tick(10)
+            assertEquals(state, server.state(0, 64, 0))
+
+            // A protection plugin refusing the break: it stays, and they mine on from nothing.
+            server.platform.blocks.refusedBreakers += id
+            start(mined, sword)
+            server.tick(6)
+            assertEquals(state, server.state(0, 64, 0))
+            server.platform.blocks.refusedBreakers.clear()
+            server.tick(6)
+            assertEquals("minecraft:air", server.state(0, 64, 0))
+
             // Another block: the player mines as they would.
+            server.custom().place("ore", "world", 0, 64, 0)
+            start(mined, sword)
+            assertEquals(1, modifiers().size)
             start(BlockRef("world", 5, 63, 5, "minecraft:stone", "minecraft:stone"))
             assertEquals(emptyList(), modifiers())
 
-            // A block that breaks at once says so.
+            // A block that breaks at once says so, and the server breaks it on that hit.
             server.write("blocks/ore/block.json", ore.replace("\"hardness\": 3", "\"hardness\": 0"))
             assertTrue(server.reload("blocks/ore/block.json").resources.single().ok)
             val instant = start(BlockRef("world", 0, 64, 0, "minecraft:note_block", server.custom().stateOf("ore")!!))
             assertTrue(instant.instant)
+            assertEquals(emptyList(), modifiers())
+        }
+    }
+
+    @Test
+    fun `picking one brings the item that places it to hand, not its carrier`() {
+        server().use { server ->
+            server.custom().place("ore", "world", 0, 64, 0)
+            val block = BlockRef("world", 0, 64, 0, "minecraft:note_block", server.state(0, 64, 0))
+            fun pick(inventory: List<ItemData?>) = server.runtime.events.pickBlock(server.alex.ref, block, inventory)
+            val empty = List<ItemData?>(36) { null }
+
+            // One held anywhere (whatever else it carries) is the one picked.
+            assertEquals(PickAnswer(20, null), pick(empty.toMutableList().also { it[20] = oreItem }))
+            // None held: nothing in survival, a new one in creative.
+            assertEquals(PickAnswer(null, null), pick(empty))
+            server.platform.players.byId.getValue(server.alex.ref.uuid).gameMode = "creative"
+            val made = pick(empty)?.item
+            assertEquals("ore_item", made?.def?.item?.text)
+            assertEquals(1, made?.def?.count)
+            // Any other block is the game's to pick.
+            assertNull(server.runtime.events.pickBlock(server.alex.ref, ground, empty))
         }
     }
 

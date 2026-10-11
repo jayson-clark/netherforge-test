@@ -95,6 +95,7 @@ import net.minecraft.network.protocol.game.ServerboundConfigurationAcknowledgedP
 import net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket
 import net.minecraft.network.protocol.game.ServerboundContainerClosePacket
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket
+import net.minecraft.network.protocol.game.ServerboundPickItemFromBlockPacket
 import net.minecraft.network.protocol.game.ServerboundPlayerAbilitiesPacket
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket
 import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket
@@ -845,6 +846,12 @@ internal class Bot(
                 require(!player.level().getBlockState(pos).isAir) { "there's no block at ${pos.x} ${pos.y} ${pos.z} to break" }
                 start(Mine(pos, face, done, since))
             }
+            is BotAction.PickBlock -> {
+                alive()
+                val pos = BlockPos(action.x, action.y, action.z)
+                deliver { ServerboundPickItemFromBlockPacket(pos, false).handle(game) }
+                finished()
+            }
             is BotAction.SelectSlot -> {
                 require(action.slot in 0..8) { "a hotbar slot is 0 to 8" }
                 deliver { ServerboundSetCarriedItemPacket(action.slot).handle(game) }
@@ -1147,7 +1154,7 @@ internal class Bot(
         }
     }
 
-    /** Mines a block as the client does: start, keep at it for as long as the block takes, stop. */
+    /** Mines a block as the client does: start, keep at it for as long as the block takes, stop (or let go of one it can't break). */
     private inner class Mine(private val pos: BlockPos, private val face: Direction, done: (Result<BotActResult>) -> Unit, since: Int) :
         Task(done, since) {
         private var progress = 0f
@@ -1181,7 +1188,18 @@ internal class Bot(
                 return null
             }
             val step = state.getDestroyProgress(player, player.level(), pos)
-            if (step <= 0f) return Result.failure(IllegalStateException("$name can't break the block at ${pos.x} ${pos.y} ${pos.z}"))
+            if (step <= 0f) {
+                // It gives up, and lets go as a player does.
+                deliver {
+                    ServerboundPlayerActionPacket(
+                        ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK,
+                        pos,
+                        face,
+                        ++sequence
+                    ).handle(game)
+                }
+                return Result.failure(IllegalStateException("$name can't break the block at ${pos.x} ${pos.y} ${pos.z}"))
+            }
             progress += step
             if (progress >= 1f) {
                 deliver {
