@@ -360,6 +360,14 @@ object ProblemCodes {
     val ITEM_BLOCK = error("item.block", ITEM, "An entry of `canBreak` or `canPlaceOn` isn't a block, a `#tag` of blocks or `*`.")
     val ITEM_UNKNOWN_BLOCK =
         error("item.unknown-block", ITEM, "An entry of `canBreak` or `canPlaceOn` is a block or block tag the target version doesn't have.")
+    val ITEM_TOOLTIP_COMPONENT =
+        error("item.tooltip-component", ITEM, "An entry of `hiddenTooltipComponents` isn't a tooltip line an item can hide.")
+    val ITEM_UNKNOWN_TOOLTIP_COMPONENT =
+        error(
+            "item.unknown-tooltip-component",
+            ITEM,
+            "An entry of `hiddenTooltipComponents` is a component the target version doesn't have."
+        )
     val ITEM_FOOD = error("item.food", ITEM, "A `food` value is out of range.")
     val ITEM_COOLDOWN = error("item.cooldown", ITEM, "A cooldown's `seconds` isn't more than 0.")
     val ITEM_COOLDOWN_GROUP = error("item.cooldown-group", ITEM, "A cooldown's `group` isn't a namespaced id.")

@@ -90,6 +90,14 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Added
 
+- **Hide any tooltip line.** An item's `hiddenTooltipComponents` (in item
+  files, menus, dialogs, loot, and a script's `hidden_tooltip_components`)
+  takes every line Minecraft draws for a data component, not only `can_break`
+  and `can_place_on`: `unbreakable`, `attribute_modifiers`, `enchantments`,
+  `trim`, `painting/variant` and the rest, by the component's id. Only the
+  tooltip changes: the item stays unbreakable, keeps its modifiers and its
+  blocks. A value that isn't a line is `item.tooltip-component`, one the target
+  version lacks `item.unknown-tooltip-component`.
 - **Resource packs can redraw the game's own pictures.** `hud.replace` draws
   the game's HUD sprites (`hud/hotbar`, `hud/hotbar_selection`, the offhand
   ones…) with the pack's own PNGs for every player, with a `.mcmeta` beside the

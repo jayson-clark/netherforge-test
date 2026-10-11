@@ -40,6 +40,7 @@ class ProblemCoverageTest {
         "item.unknown-enchantment" to unit("ItemRulesTest", gameData),
         "item.unknown-attribute" to unit("ItemRulesTest", gameData),
         "item.unknown-block" to unit("ItemRulesTest", gameData),
+        "item.unknown-tooltip-component" to unit("ItemRulesTest", gameData),
         "item.attribute-amount" to unit("ItemRulesTest", "JSON can't hold a number that isn't finite; a script's item can"),
         "recipe.unknown-item" to unit("GameDataTest", gameData),
         "recipe.unknown-tag" to unit("GameDataTest", gameData),

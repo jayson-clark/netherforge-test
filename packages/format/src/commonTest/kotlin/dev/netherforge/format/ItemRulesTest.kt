@@ -6,6 +6,7 @@ import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.item.AttributeModifierDef
 import dev.netherforge.format.item.AttributeOperation
 import dev.netherforge.format.item.ItemDef
+import dev.netherforge.format.item.TooltipComponent
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.validate.Rules
 import kotlin.test.Test
@@ -111,5 +112,45 @@ class ItemRulesTest {
         assertTrue(RefKind.ADVENTURE_BLOCK.isDatapackTag("#basic:soft") && !RefKind.ADVENTURE_BLOCK.isGame("ruby_ore"))
         // The biome's tags are still all the game's: only a kind with a tag registry has datapack tags.
         assertTrue(RefKind.BIOME.isGame("#basic:wet") && !RefKind.BIOME.isDatapackTag("#basic:wet"))
+    }
+
+    @Test
+    fun `a hidden tooltip line is one the game draws, and one the target version has`() {
+        fun problems(game: GameDataBundle?, vararg lines: String): List<Pair<String?, String?>> {
+            val sink = ProblemSink("items/pick/item.json")
+            Rules.item(ItemDef(kind = "minecraft:wooden_pickaxe", hiddenTooltipComponents = lines.map(::TooltipComponent)), "$", sink, game)
+            return sink.problems.map { it.code to it.path }
+        }
+        // Every line there is reads, without game data and with a version that has them all.
+        val all = TooltipComponent.entries.map { it.key }
+        val game = GameDataBundle("26.3", registries = mapOf(RegistryKey.DATA_COMPONENT_TYPE.id to all))
+        assertEquals(emptyList(), problems(null, *TooltipComponent.ALL.toTypedArray()))
+        assertEquals(emptyList(), problems(game, *TooltipComponent.ALL.toTypedArray()))
+        assertEquals(
+            listOf(
+                "item.tooltip-component" to "$.hiddenTooltipComponents[1]",
+                "item.tooltip-component" to "$.hiddenTooltipComponents[2]",
+                "item.tooltip-component" to "$.hiddenTooltipComponents[3]"
+            ),
+            problems(null, "unbreakable", "tool", "painting_variant", "minecraft:unbreakable")
+        )
+        // An older version without the component: nothing there to hide.
+        val older =
+            GameDataBundle("1.21.11", registries = mapOf(RegistryKey.DATA_COMPONENT_TYPE.id to all - "minecraft:sulfur_cube_content"))
+        assertEquals(
+            listOf("item.unknown-tooltip-component" to "$.hiddenTooltipComponents[1]"),
+            problems(older, "unbreakable", "sulfur_cube_content")
+        )
+        val sink = ProblemSink("items/pick/item.json")
+        Rules.item(
+            ItemDef(kind = "minecraft:paper", hiddenTooltipComponents = listOf(TooltipComponent("painting_variant"))),
+            "$",
+            sink,
+            null
+        )
+        assertEquals(
+            "\"painting_variant\" isn't a tooltip line hiddenTooltipComponents can hide: did you mean \"painting/variant\"?",
+            sink.problems.single().message
+        )
     }
 }

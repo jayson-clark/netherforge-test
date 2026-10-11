@@ -116,6 +116,7 @@ with `<glyph:<pack>/<key>>` (see [Glyphs](resource-pack.md#glyphs)):
 | `attributeModifiers` | What wearing or holding it changes. See below.                                                                                                                               |
 | `canBreak`           | The blocks it can break in adventure mode. See below.                                                                                                                        |
 | `canPlaceOn`         | The blocks it can be placed on in adventure mode. See below.                                                                                                                 |
+| `hiddenTooltipComponents` | Tooltip lines to hide, by the component that draws them: `["unbreakable", "attribute_modifiers"]`. See below. |
 | `food`               | `{ "nutrition", "saturation", "canAlwaysEat"?, "eatSeconds"? }`. See below.                                                                                                  |
 | `cooldown`           | `{ "seconds", "group"? }`: a cooldown after using it.                                                                                                                        |
 | `data`               | Your scripts' own data, a JSON object saved on the stack.                                                                                                                    |
@@ -168,6 +169,76 @@ datapack defines is `reference.block`. A project block's state is what's
 matched, and a tag only holds the game's blocks: a tag can't name a project
 block, and `minecraft:note_block` in one matches every project block held in a
 note block too.
+
+### Hiding tooltip lines
+
+`hiddenTooltipComponents` hides lines of the item's tooltip and keeps the
+rest, where `hideTooltip` hides all of it, name and lore too. Each entry names
+the data component that draws a line, by Minecraft's id without
+`minecraft:`. Hiding a line changes only the tooltip: the component still
+does what it does. An item that hides `unbreakable` is still unbreakable, one
+that hides `attribute_modifiers` keeps its modifiers, and one that hides
+`can_break` still breaks only those blocks.
+
+```json partial
+{
+  "kind": "minecraft:iron_pickaxe",
+  "name": "<gold>Ruby Pick",
+  "lore": ["<gray>Mines faster", "<gray>Never breaks"],
+  "unbreakable": true,
+  "attributeModifiers": [
+    { "attribute": "minecraft:block_break_speed", "amount": 0.5, "operation": "add_multiplied_base" }
+  ],
+  "hiddenTooltipComponents": ["unbreakable", "attribute_modifiers"]
+}
+```
+
+These are the lines Minecraft draws, and so the values allowed:
+
+| Value                      | The line                                                                     |
+| -------------------------- | ---------------------------------------------------------------------------- |
+| `attribute_modifiers`      | "When in Main Hand:" and the modifiers under it ("+2 Attack Damage")          |
+| `banner_patterns`          | A banner's patterns                                                          |
+| `bees`                     | A beehive's or bee nest's bees                                               |
+| `block_entity_data`        | A spawner's or trial spawner's mob                                           |
+| `block_state`              | A beehive's or bee nest's honey level                                         |
+| `bundle_contents`          | A bundle's contents and how full it is                                       |
+| `can_break`                | "Can break:" and its blocks                                                  |
+| `can_place_on`             | "Can be placed on:" and its blocks                                           |
+| `charged_projectiles`      | A crossbow's loaded projectile                                               |
+| `container`                | A shulker box's or other container's items                                   |
+| `container_loot`           | "???????" on a container with a loot table                                   |
+| `damage`                   | "Durability: x / y", in advanced tooltips (F3+H)                             |
+| `dyed_color`               | "Dyed"                                                                       |
+| `enchantments`             | Its enchantments ("Sharpness V")                                             |
+| `entity_data`              | A spawn egg's note that its mob can't spawn in peaceful                      |
+| `firework_explosion`       | A firework star's shape and colours                                          |
+| `fireworks`                | A firework rocket's flight duration and explosions                           |
+| `instrument`               | A goat horn's sound                                                          |
+| `intangible_projectile`    | "Can't be picked up", on an arrow                                            |
+| `jukebox_playable`         | A music disc's song                                                          |
+| `lore`                     | The item's lore                                                              |
+| `map_id`                   | A map's id ("Id #3"), or "Unknown Map"                                       |
+| `ominous_bottle_amplifier` | An ominous bottle's Bad Omen level                                           |
+| `painting/variant`         | A painting's title, artist and size                                          |
+| `pot_decorations`          | A decorated pot's sherds                                                     |
+| `potion_contents`          | A potion's effects                                                           |
+| `profile`                  | A player head's owner                                                        |
+| `sign_text_back`           | A sign's back text                                                           |
+| `sign_text_front`          | A sign's front text                                                          |
+| `stored_enchantments`      | An enchanted book's enchantments                                             |
+| `sulfur_cube_content`      | What a sulfur cube holds (only versions that have sulfur cubes)              |
+| `suspicious_stew_effects`  | A suspicious stew's effect, in creative                                      |
+| `trim`                     | "Upgrade:" and an armour trim's pattern and material                         |
+| `tropical_fish/pattern`    | A tropical fish bucket's fish                                                |
+| `unbreakable`              | "Unbreakable"                                                                |
+| `written_book_content`     | A written book's author and generation                                       |
+
+Leaving the key out shows the tooltip as it is, and `[]` shows every line. A
+value that isn't one of these is `item.tooltip-component` (a near miss like
+`painting_variant` is told the spelling), and one that the target version's
+Minecraft doesn't have is `item.unknown-tooltip-component`. A script's
+`hidden_tooltip_components` takes the same values.
 
 `food` makes any item edible, not just food: it also gives the item
 Minecraft's `consumable` component, eaten over `eatSeconds` (1.6 by default).

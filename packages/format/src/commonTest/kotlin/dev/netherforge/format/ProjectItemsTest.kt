@@ -34,12 +34,12 @@ class ProjectItemsTest {
 
     @Test
     fun aStackHidesTheTooltipLinesTheLookHidesUnlessItSaysOtherwise() {
-        val hidden = look.copy(hiddenTooltipComponents = listOf(TooltipComponent.CAN_BREAK))
+        val hidden = look.copy(hiddenTooltipComponents = listOf(TooltipComponent("can_break")))
         assertEquals(
-            listOf(TooltipComponent.CAN_BREAK),
+            listOf(TooltipComponent("can_break")),
             ProjectItems.resolve(ItemDef(item = ResourceRef("ruby")), hidden).hiddenTooltipComponents
         )
-        val own = listOf(TooltipComponent.CAN_PLACE_ON)
+        val own = listOf(TooltipComponent("can_place_on"))
         assertEquals(
             own,
             ProjectItems.resolve(ItemDef(item = ResourceRef("ruby"), hiddenTooltipComponents = own), hidden).hiddenTooltipComponents
@@ -52,8 +52,9 @@ class ProjectItemsTest {
 
     @Test
     fun aProjectItemsLookCarriesItsHiddenTooltipLines() {
-        val file = ItemFile(kind = "minecraft:paper", canBreak = listOf("*"), hiddenTooltipComponents = listOf(TooltipComponent.CAN_BREAK))
-        assertEquals(listOf(TooltipComponent.CAN_BREAK), file.look().hiddenTooltipComponents)
+        val file =
+            ItemFile(kind = "minecraft:paper", canBreak = listOf("*"), hiddenTooltipComponents = listOf(TooltipComponent("can_break")))
+        assertEquals(listOf(TooltipComponent("can_break")), file.look().hiddenTooltipComponents)
     }
 
     @Test

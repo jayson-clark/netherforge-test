@@ -105,7 +105,11 @@ template` for drags). A template belongs to the scope that created it
 `rarity`, `attribute_modifiers` (each `{ id?, attribute, amount, operation,
 slot? }`, the id defaulting to `AttributeModifierDef.defaultId`:
 `<namespace>:<attribute>_<index>`), `can_break`,
-`can_place_on`, `food` (also given `consumable` so it can be eaten) and
+`can_place_on`, `hidden_tooltip_components` (`tooltip_display`'s hidden
+components: `TooltipComponent`, a component id from `TooltipComponent.ALL`, which
+the schema, the editor's types, the Lua type and the docs all read; the adapter
+maps each to the server's component through its registry and leaves hidden
+components it doesn't own alone), `food` (also given `consumable` so it can be eaten) and
 `cooldown` (`use_cooldown`), `equipment` (`equippable`: `{ asset, slot }`,
 the asset a resource pack's equipment look in the project's namespace, read back
 without it; a slot the format has no word for, a hand, leaves the stack to

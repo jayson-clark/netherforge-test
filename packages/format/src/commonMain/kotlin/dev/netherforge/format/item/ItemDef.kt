@@ -1,11 +1,18 @@
 package dev.netherforge.format.item
 
+import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.ref.Ref
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.format.text.MiniMessage
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonElement
 
 /**
@@ -72,8 +79,9 @@ data class ItemDef(
     /** The blocks it can be placed on in adventure mode (the `can_place_on` component), written as [canBreak]'s. */
     @Ref(RefKind.ADVENTURE_BLOCK) val canPlaceOn: List<String>? = null,
     /**
-     * The tooltip lines to hide (the `tooltip_display` component): the "Can break" and "Can place on"
-     * lines, which the lists still apply when hidden. Left out leaves the tooltip as it is; `[]` shows all.
+     * The tooltip lines to hide (the `tooltip_display` component), by the component that draws them:
+     * `unbreakable`, `attribute_modifiers`, `can_break` ([TooltipComponent.ALL]). The components still
+     * apply when hidden. Left out leaves the tooltip as it is; `[]` shows all.
      */
     val hiddenTooltipComponents: List<TooltipComponent>? = null,
     /** Eating it (the `food` component, plus `consumable` so it can be eaten at all). */
@@ -119,16 +127,80 @@ enum class EquipSlot {
     SADDLE
 }
 
-/** The tooltip lines an item's own fields write, which [ItemDef.hiddenTooltipComponents] can hide. */
-@Serializable
-enum class TooltipComponent {
-    /** The "Can break" lines, from `canBreak`. */
-    @SerialName("can_break")
-    CAN_BREAK,
+/**
+ * One line of an item's tooltip that [ItemDef.hiddenTooltipComponents] can hide (the `tooltip_display`
+ * component's `hidden_components`): the data component that draws it, by its id without the namespace
+ * (`unbreakable`, `painting/variant`). Hiding the line leaves the component working.
+ *
+ * [ALL] is every component the game draws a tooltip line for, on any supported version, read off the
+ * servers' own tooltip code (`ItemStack.addDetailsToTooltip`, `BundleItem`, `HangingEntityItem`), not a
+ * list of every data component. It's the one list the schema, the editor, the Lua API's type and the
+ * docs show; a value outside it is `item.tooltip-component`, and one the target version doesn't have
+ * (by the game's `data_component_type` registry) is `item.unknown-tooltip-component`. A Minecraft
+ * version that draws a new line adds it here.
+ */
+@Serializable(with = TooltipComponentSerializer::class)
+data class TooltipComponent(val id: String) {
+    /** The component's id in the game: `minecraft:unbreakable`. */
+    val key: String get() = "${GameIds.NAMESPACE}:$id"
 
-    /** The "Can place on" lines, from `canPlaceOn`. */
-    @SerialName("can_place_on")
-    CAN_PLACE_ON
+    override fun toString(): String = id
+
+    companion object {
+        const val SERIAL_NAME = "dev.netherforge.format.item.TooltipComponent"
+
+        /** Every line that can be hidden, by component id, in name order. */
+        val ALL: List<String> = listOf(
+            "attribute_modifiers",
+            "banner_patterns",
+            "bees",
+            "block_entity_data",
+            "block_state",
+            "bundle_contents",
+            "can_break",
+            "can_place_on",
+            "charged_projectiles",
+            "container",
+            "container_loot",
+            "damage",
+            "dyed_color",
+            "enchantments",
+            "entity_data",
+            "firework_explosion",
+            "fireworks",
+            "instrument",
+            "intangible_projectile",
+            "jukebox_playable",
+            "lore",
+            "map_id",
+            "ominous_bottle_amplifier",
+            "painting/variant",
+            "pot_decorations",
+            "potion_contents",
+            "profile",
+            "sign_text_back",
+            "sign_text_front",
+            "stored_enchantments",
+            "sulfur_cube_content",
+            "suspicious_stew_effects",
+            "trim",
+            "tropical_fish/pattern",
+            "unbreakable",
+            "written_book_content"
+        )
+
+        /** Every line that can be hidden. */
+        val entries: List<TooltipComponent> = ALL.map(::TooltipComponent)
+    }
+}
+
+/** A [TooltipComponent] as JSON: its id, as a string. Any string reads; the validator says which aren't lines. */
+object TooltipComponentSerializer : KSerializer<TooltipComponent> {
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor(TooltipComponent.SERIAL_NAME, PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: TooltipComponent) = encoder.encodeString(value.id)
+
+    override fun deserialize(decoder: Decoder): TooltipComponent = TooltipComponent(decoder.decodeString())
 }
 
 /** Minecraft's item rarities: the colour of the item's name. */

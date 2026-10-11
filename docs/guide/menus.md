@@ -87,6 +87,14 @@ panes), `damage`, `color` (`#RRGGBB` for leather, potions, maps), `profile`
 (whose head, for player heads) and `data`: your scripts' own data, saved on the
 stack so it goes wherever the item goes. See [Items](../format/menu.md#items).
 
+To hide only some of the tooltip, so your lore can say it better,
+`hiddenTooltipComponents` names the lines to leave out:
+`["unbreakable", "attribute_modifiers", "can_break"]` hides "Unbreakable", the
+attribute lines and "Can break" but keeps the name and lore. The item is still
+unbreakable and still has its modifiers and blocks; only the tooltip changes.
+[Hiding tooltip lines](../format/menu.md#hiding-tooltip-lines) lists every line
+you can hide.
+
 ## Custom looks
 
 With a [resource pack](resource-packs.md) in the project:

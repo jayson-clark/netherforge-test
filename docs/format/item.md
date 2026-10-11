@@ -40,7 +40,7 @@ that describe its look and behaviour. What one stack holds (`count`, `damage`,
 | `attributeModifiers`      | What wearing or holding it changes.                                                                             |
 | `canBreak`                | The blocks it can break in adventure mode: [the project's, the game's, tags, or `*`](menu.md#items).            |
 | `canPlaceOn`              | The blocks it can be placed on in adventure mode, written as `canBreak`'s.                                      |
-| `hiddenTooltipComponents` | Tooltip lines to hide: `can_break` ("Can break") and `can_place_on` ("Can place on"). The blocks still apply.   |
+| `hiddenTooltipComponents` | Tooltip lines to hide, by the component that draws them: [`unbreakable`, `attribute_modifiers`, …](menu.md#hiding-tooltip-lines). |
 | `food`                    | Eating it.                                                                                                      |
 | `cooldown`                | A cooldown after using it.                                                                                      |
 | `drawWithoutAmmo`         | A bow (`minecraft:bow`) that draws and shoots with no arrows, and uses none up. See below.                      |

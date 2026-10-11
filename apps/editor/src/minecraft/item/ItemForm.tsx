@@ -91,13 +91,6 @@ export function ItemEditor({
   const at = (key: string) => (dataPath ? `${dataPath}.${key}` : key)
   const set = <K extends keyof ItemDef>(key: K, value: ItemDef[K] | undefined) =>
     onEdit((draft) => setKey(draft, key, value))
-  const hiddenTooltipLine = (line: TooltipComponent) =>
-    (item.hiddenTooltipComponents ?? []).includes(line)
-  const setHiddenTooltipLine = (line: TooltipComponent, hidden: boolean) => {
-    const current = item.hiddenTooltipComponents ?? []
-    const next = hidden ? [...current, line] : current.filter((it) => it !== line)
-    set('hiddenTooltipComponents', next.length ? next : undefined)
-  }
   const int = (value: number | undefined) => (value === undefined ? undefined : Math.round(value))
   const offers = (key: keyof ItemDef) =>
     !look || !(ITEM_STACK_FIELDS as readonly string[]).includes(key)
@@ -264,17 +257,16 @@ export function ItemEditor({
         placeholder="One per row: ruby_ore, minecraft:stone, #minecraft:logs, * (adventure mode)"
         onChange={(text) => set('canPlaceOn', blocksFromText(text))}
       />
-      <CheckField
-        label='Hide "Can break" line'
+      <TextField
+        label="Hidden tooltip lines"
+        multiline
         dataPath={at('hiddenTooltipComponents')}
-        value={hiddenTooltipLine('can_break')}
-        onChange={(value) => setHiddenTooltipLine('can_break', value)}
-      />
-      <CheckField
-        label='Hide "Can place on" line'
-        dataPath={at('hiddenTooltipComponents')}
-        value={hiddenTooltipLine('can_place_on')}
-        onChange={(value) => setHiddenTooltipLine('can_place_on', value)}
+        value={blocksToText(item.hiddenTooltipComponents)}
+        placeholder="One per row, by component: unbreakable, attribute_modifiers, can_break"
+        // Whatever's typed is kept, so the problem names a line that isn't one.
+        onChange={(text) =>
+          set('hiddenTooltipComponents', blocksFromText(text) as TooltipComponent[] | undefined)
+        }
       />
       <NumberField
         label="Nutrition"

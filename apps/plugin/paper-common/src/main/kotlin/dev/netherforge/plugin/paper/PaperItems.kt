@@ -190,35 +190,35 @@ object PaperItems {
     }
 
     /**
-     * [stack]'s tooltip with exactly [hidden] of the lines an item's own fields write hidden. The display's other
-     * settings (the whole tooltip, a hidden component of another kind) stay as the stack had them.
+     * [stack]'s tooltip with exactly [hidden] of the lines an item can hide hidden ([TooltipComponent.ALL]).
+     * The display's other settings (the whole tooltip, a hidden component of another kind) stay as the stack
+     * had them. Only the display changes: a hidden component still does what it does. A line the server's
+     * version doesn't have was the validator's to say, and is skipped.
      */
     private fun hideTooltipLines(stack: ItemStack, hidden: List<TooltipComponent>) {
         val current = stack.getData(DataComponentTypes.TOOLTIP_DISPLAY)
-        val kept = current?.hiddenComponents().orEmpty() - OWN_TOOLTIP_LINES
+        val kept = current?.hiddenComponents().orEmpty() - tooltipLines.values.toSet()
         stack.setData(
             DataComponentTypes.TOOLTIP_DISPLAY,
             TooltipDisplay.tooltipDisplay()
                 .hideTooltip(current?.hideTooltip() ?: false)
-                .hiddenComponents(kept + hidden.map { it.paper() })
+                .hiddenComponents(kept + hidden.mapNotNull { tooltipLines[it.id] })
                 .build()
         )
     }
 
-    /** The lines [stack] hides that an item's own fields write, or null for none. */
+    /** The lines [stack] hides of those an item can hide, or null for none. */
     private fun hiddenTooltipComponentsOf(stack: ItemStack): List<TooltipComponent>? {
         val hidden = stack.takeIf { it.isDataOverridden(DataComponentTypes.TOOLTIP_DISPLAY) }
             ?.getData(DataComponentTypes.TOOLTIP_DISPLAY)?.hiddenComponents().orEmpty()
-        return TooltipComponent.entries.filter { it.paper() in hidden }.takeIf { it.isNotEmpty() }
+        return TooltipComponent.entries.filter { tooltipLines[it.id] in hidden }.takeIf { it.isNotEmpty() }
     }
 
-    private fun TooltipComponent.paper(): DataComponentType = when (this) {
-        TooltipComponent.CAN_BREAK -> DataComponentTypes.CAN_BREAK
-        TooltipComponent.CAN_PLACE_ON -> DataComponentTypes.CAN_PLACE_ON
+    /** Each line an item can hide ([TooltipComponent.ALL]) that this server has, by id: its data component. */
+    private val tooltipLines: Map<String, DataComponentType> by lazy {
+        val components = RegistryAccess.registryAccess().getRegistry(RegistryKey.DATA_COMPONENT_TYPE)
+        TooltipComponent.entries.mapNotNull { line -> key(line.key)?.let(components::get)?.let { line.id to it } }.toMap()
     }
-
-    /** The tooltip lines [hideTooltipLines] owns: the ones an item's own fields write. */
-    private val OWN_TOOLTIP_LINES: Set<DataComponentType> = setOf(DataComponentTypes.CAN_BREAK, DataComponentTypes.CAN_PLACE_ON)
 
     /** The fields that are data components with no `ItemMeta` side: written onto the stack itself. */
     private fun components(def: ItemDef, stack: ItemStack) {

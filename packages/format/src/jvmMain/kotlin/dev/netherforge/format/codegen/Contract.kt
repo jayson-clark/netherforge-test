@@ -27,6 +27,7 @@ import dev.netherforge.format.editor.TerrainStructureInput
 import dev.netherforge.format.editor.TextLayout
 import dev.netherforge.format.editor.Usages
 import dev.netherforge.format.game.GameDataBundle
+import dev.netherforge.format.item.TooltipComponent
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.loot.LootRange
 import dev.netherforge.format.project.ClassifiedPath
@@ -248,6 +249,10 @@ private class Schema(root: SerialDescriptor, val kindId: String) {
                 )
             }
         }
+        if (descriptor.serialName.removeSuffix("?") == TooltipComponent.SERIAL_NAME) {
+            // A string to read (the validator names a wrong one), but only the lines there are to write.
+            return buildJsonObject { putJsonArray("enum") { TooltipComponent.ALL.forEach { add(JsonPrimitive(it)) } } }
+        }
         if (descriptor.serialName.removeSuffix("?") == VEC3_SERIAL_NAME) {
             return buildJsonObject {
                 put("type", "array")
@@ -322,6 +327,7 @@ private class TypeScript {
         if (descriptor.serialName.removeSuffix("?") == Ingredient.SERIAL_NAME) return "string | { item: string }"
         if (descriptor.serialName.removeSuffix("?") == LootRange.SERIAL_NAME) return "LootRange"
         if (descriptor.serialName.removeSuffix("?") == SpawnTime.SERIAL_NAME) return "SpawnTime"
+        if (descriptor.serialName.removeSuffix("?") == TooltipComponent.SERIAL_NAME) return "TooltipComponent"
         if (descriptor.serialName.removeSuffix("?") == JSON_ELEMENT) return "unknown"
         return when (descriptor.kind) {
             PrimitiveKind.STRING -> "string"
@@ -383,6 +389,9 @@ private class TypeScript {
                 "'${CanonicalJson.serialName(it)}'"
             }} | { min?: number; max?: number }\n\n"
         )
+        append("/** A tooltip line an item can hide, by the data component that draws it. */\n")
+        append("export const TooltipComponentValues = [${TooltipComponent.ALL.joinToString(", ") { "'$it'" }}] as const\n")
+        append("export type TooltipComponent = (typeof TooltipComponentValues)[number]\n\n")
         for (body in declared.values) {
             append(body)
             append('\n')

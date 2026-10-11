@@ -9,6 +9,7 @@ import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.game.has
 import dev.netherforge.format.item.ItemDef
+import dev.netherforge.format.item.TooltipComponent
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.recipe.Ingredient
@@ -118,6 +119,28 @@ object Rules {
         }
         for ((field, blocks) in listOf("canBreak" to item.canBreak, "canPlaceOn" to item.canPlaceOn)) {
             blocks?.forEachIndexed { index, block -> adventureBlock(block, "$at.$field[$index]", sink, game) }
+        }
+        item.hiddenTooltipComponents?.forEachIndexed { index, line ->
+            val path = "$at.hiddenTooltipComponents[$index]"
+            if (line.id !in TooltipComponent.ALL) {
+                // `painting_variant` for `painting/variant`, `minecraft:unbreakable` for `unbreakable`.
+                val meant = TooltipComponent.ALL.firstOrNull {
+                    it.replace('/', '_') ==
+                        line.id.removePrefix("${GameIds.NAMESPACE}:").replace('/', '_')
+                }
+                val hint = if (meant != null) "did you mean \"$meant\"?" else "the item docs list the ones there are"
+                sink.report(
+                    ProblemCodes.ITEM_TOOLTIP_COMPONENT,
+                    "\"${line.id}\" isn't a tooltip line hiddenTooltipComponents can hide: $hint",
+                    path
+                )
+            } else if (game?.has(RegistryKey.DATA_COMPONENT_TYPE, line.key) == false) {
+                sink.report(
+                    ProblemCodes.ITEM_UNKNOWN_TOOLTIP_COMPONENT,
+                    "Minecraft ${game.minecraftVersion} has no \"${line.id}\" component, so hiddenTooltipComponents has no line of it to hide",
+                    path
+                )
+            }
         }
         item.food?.let { food ->
             if (food.nutrition < 0) sink.report(ProblemCodes.ITEM_FOOD, "nutrition can't be negative", "$at.food.nutrition")

@@ -628,6 +628,14 @@ Error. An entry of `canBreak` or `canPlaceOn` isn't a block, a `#tag` of blocks 
 
 Error. An entry of `canBreak` or `canPlaceOn` is a block or block tag the target version doesn't have. See [items](item.md).
 
+### `item.tooltip-component` {#item-tooltip-component}
+
+Error. An entry of `hiddenTooltipComponents` isn't a tooltip line an item can hide. See [items](item.md).
+
+### `item.unknown-tooltip-component` {#item-unknown-tooltip-component}
+
+Error. An entry of `hiddenTooltipComponents` is a component the target version doesn't have. See [items](item.md).
+
 ### `item.food` {#item-food}
 
 Error. A `food` value is out of range. See [items](item.md).

@@ -16,6 +16,13 @@
   {
     "severity": "error",
     "file": "items/pick/item.json",
+    "message": "\"tool\" isn't a tooltip line hiddenTooltipComponents can hide: the item docs list the ones there are",
+    "path": "$.hiddenTooltipComponents[3]",
+    "code": "item.tooltip-component"
+  },
+  {
+    "severity": "error",
+    "file": "items/pick/item.json",
     "message": "There's no block \"stone\" (blocks/stone/block.json); the game's are written \"minecraft:stone\"",
     "path": "$.canBreak[5]",
     "code": "reference.block"

@@ -95,6 +95,9 @@ value class RegistryKey(val id: String) {
         /** Biomes, and by their tags (`minecraft:is_forest`) where a structure may generate. */
         val BIOME = RegistryKey("minecraft:worldgen/biome")
         val BLOCK = RegistryKey("minecraft:block")
+
+        /** An item stack's data components: `minecraft:unbreakable`, `minecraft:painting/variant`. */
+        val DATA_COMPONENT_TYPE = RegistryKey("minecraft:data_component_type")
         val DIMENSION_TYPE = RegistryKey("minecraft:dimension_type")
         val ENCHANTMENT = RegistryKey("minecraft:enchantment")
         val ENTITY_TYPE = RegistryKey("minecraft:entity_type")

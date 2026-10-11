@@ -37,6 +37,13 @@
   {
     "severity": "error",
     "file": "menus/bag/menu.json",
+    "message": "\"painting_variant\" isn't a tooltip line hiddenTooltipComponents can hide: did you mean \"painting/variant\"?",
+    "path": "$.slots[\"4\"].item.hiddenTooltipComponents[0]",
+    "code": "item.tooltip-component"
+  },
+  {
+    "severity": "error",
+    "file": "menus/bag/menu.json",
     "message": "nutrition can't be negative",
     "path": "$.slots[\"5\"].item.food.nutrition",
     "code": "item.food"

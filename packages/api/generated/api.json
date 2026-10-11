@@ -17067,8 +17067,8 @@
         },
         {
           "name": "hidden_tooltip_components",
-          "type": "(\"can_break\"|\"can_place_on\")[]?",
-          "doc": "Lines of its tooltip to hide: `\"can_break\"` hides \"Can break\", `\"can_place_on\"` hides \"Can place on\". The blocks still apply. Left out shows the tooltip as it is; `{}` shows every line."
+          "type": "(\"attribute_modifiers\"|\"banner_patterns\"|\"bees\"|\"block_entity_data\"|\"block_state\"|\"bundle_contents\"|\"can_break\"|\"can_place_on\"|\"charged_projectiles\"|\"container\"|\"container_loot\"|\"damage\"|\"dyed_color\"|\"enchantments\"|\"entity_data\"|\"firework_explosion\"|\"fireworks\"|\"instrument\"|\"intangible_projectile\"|\"jukebox_playable\"|\"lore\"|\"map_id\"|\"ominous_bottle_amplifier\"|\"painting/variant\"|\"pot_decorations\"|\"potion_contents\"|\"profile\"|\"sign_text_back\"|\"sign_text_front\"|\"stored_enchantments\"|\"sulfur_cube_content\"|\"suspicious_stew_effects\"|\"trim\"|\"tropical_fish/pattern\"|\"unbreakable\"|\"written_book_content\")[]?",
+          "doc": "Lines of its tooltip to hide, by the component that draws them: `{ \"unbreakable\", \"attribute_modifiers\" }` hides \"Unbreakable\" and the attribute lines (\"+2 Attack Damage\"). The components still apply: the item stays unbreakable and keeps its modifiers. Left out shows the tooltip as it is; `{}` shows every line. A value that isn't a line an item can hide is an error, and so is one the server's Minecraft version doesn't have."
         },
         {
           "name": "food",
@@ -17513,8 +17513,8 @@
         },
         {
           "name": "hidden_tooltip_components",
-          "type": "(\"can_break\"|\"can_place_on\")[]?",
-          "doc": "Lines of its tooltip to hide: `\"can_break\"` hides \"Can break\", `\"can_place_on\"` hides \"Can place on\". The blocks still apply. Left out shows the tooltip as it is; `{}` shows every line."
+          "type": "(\"attribute_modifiers\"|\"banner_patterns\"|\"bees\"|\"block_entity_data\"|\"block_state\"|\"bundle_contents\"|\"can_break\"|\"can_place_on\"|\"charged_projectiles\"|\"container\"|\"container_loot\"|\"damage\"|\"dyed_color\"|\"enchantments\"|\"entity_data\"|\"firework_explosion\"|\"fireworks\"|\"instrument\"|\"intangible_projectile\"|\"jukebox_playable\"|\"lore\"|\"map_id\"|\"ominous_bottle_amplifier\"|\"painting/variant\"|\"pot_decorations\"|\"potion_contents\"|\"profile\"|\"sign_text_back\"|\"sign_text_front\"|\"stored_enchantments\"|\"sulfur_cube_content\"|\"suspicious_stew_effects\"|\"trim\"|\"tropical_fish/pattern\"|\"unbreakable\"|\"written_book_content\")[]?",
+          "doc": "Lines of its tooltip to hide, by the component that draws them: `{ \"unbreakable\", \"attribute_modifiers\" }` hides \"Unbreakable\" and the attribute lines (\"+2 Attack Damage\"). The components still apply: the item stays unbreakable and keeps its modifiers. Left out shows the tooltip as it is; `{}` shows every line. A value that isn't a line an item can hide is an error, and so is one the server's Minecraft version doesn't have."
         },
         {
           "name": "food",

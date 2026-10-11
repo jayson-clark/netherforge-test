@@ -31,6 +31,17 @@ describe('tooltipOf', () => {
     expect(lines[4]!.style).toEqual({ color: '#aa00aa', italic: true })
   })
 
+  it('leaves out the lines the item hides, and only those', () => {
+    const lines = tooltipOf({
+      kind: 'minecraft:stick',
+      enchantments: { 'minecraft:sharpness': 5 },
+      unbreakable: true,
+      lore: ['A stick'],
+      hiddenTooltipComponents: ['unbreakable', 'attribute_modifiers'],
+    })!
+    expect(lines.map((it) => it.text)).toEqual(['Stick', 'Sharpness V', 'A stick'])
+  })
+
   it('has no tooltip when the item hides it', () => {
     expect(tooltipOf({ kind: 'minecraft:stone', hideTooltip: true })).toBeNull()
   })

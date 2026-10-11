@@ -190,10 +190,17 @@ object LuaItems {
             attributeModifiers = modifiers,
             canBreak = blocks("can_break"),
             canPlaceOn = blocks("can_place_on"),
-            hiddenTooltipComponents = list(table["hidden_tooltip_components"], "item.hidden_tooltip_components", "a list of tooltip lines") { _, entry ->
-                val name = (entry as? JsonPrimitive)?.takeIf { it.isString }?.content
-                TooltipComponent.entries.firstOrNull { serialName(it) == name }
-                    ?: throw LuaApiException("item.hidden_tooltip_components must be a list of \"can_break\" or \"can_place_on\"")
+            // Which strings are lines is the rules' to say (below), as in a file.
+            hiddenTooltipComponents = list(
+                table["hidden_tooltip_components"],
+                "item.hidden_tooltip_components",
+                "a list of tooltip lines"
+            ) {
+                    _,
+                    entry
+                ->
+                (entry as? JsonPrimitive)?.takeIf { it.isString }?.content?.let(::TooltipComponent)
+                    ?: throw LuaApiException("item.hidden_tooltip_components must be a list of strings")
             },
             food = food,
             cooldown = cooldown,
@@ -281,7 +288,7 @@ object LuaItems {
             }
             def.canBreak?.let { put("can_break", it) }
             def.canPlaceOn?.let { put("can_place_on", it) }
-            def.hiddenTooltipComponents?.let { put("hidden_tooltip_components", it.map(::serialName)) }
+            def.hiddenTooltipComponents?.let { put("hidden_tooltip_components", it.map(TooltipComponent::id)) }
             def.food?.let { food ->
                 put(
                     "food",

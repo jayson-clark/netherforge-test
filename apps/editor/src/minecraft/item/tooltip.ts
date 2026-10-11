@@ -2,7 +2,8 @@
  * What an item's tooltip says, line by line, the way the game lays it out:
  * the name (a custom one in italics; otherwise the item's own, in its
  * rarity's colour), its enchantments in grey, "Unbreakable", then its lore
- * in purple italics. A stack that hides its tooltip has none.
+ * in purple italics. A stack that hides its tooltip has none, and a line
+ * `hiddenTooltipComponents` hides isn't there.
  */
 import type { ItemDef, ItemRarity } from '@/core/format'
 import type { TextStyle } from '@/minecraft/text/minimessage'
@@ -40,17 +41,24 @@ export function enchantmentLine(id: string, level: number): string {
 /** The lines of [item]'s tooltip (its look: a project item's stack through `stackLook`), or null when it hides it. */
 export function tooltipOf(item: ItemDef): TooltipLine[] | null {
   if (item.hideTooltip) return null
+  const hidden = new Set<string>(item.hiddenTooltipComponents ?? [])
   const color = RARITY_COLOR[item.rarity ?? 'common']
   const lines: TooltipLine[] = [
     item.name
       ? { text: item.name, style: { color, italic: true } }
       : { text: titleCase(item.kind || item.item || '?'), style: { color } },
   ]
-  for (const [id, level] of Object.entries(item.enchantments ?? {})) {
-    lines.push({ text: enchantmentLine(id, level), style: { color: GRAY } })
+  if (!hidden.has('enchantments')) {
+    for (const [id, level] of Object.entries(item.enchantments ?? {})) {
+      lines.push({ text: enchantmentLine(id, level), style: { color: GRAY } })
+    }
   }
-  if (item.unbreakable) lines.push({ text: 'Unbreakable', style: { color: BLUE } })
-  for (const line of item.lore ?? [])
-    lines.push({ text: line, style: { color: LORE, italic: true } })
+  if (item.unbreakable && !hidden.has('unbreakable')) {
+    lines.push({ text: 'Unbreakable', style: { color: BLUE } })
+  }
+  if (!hidden.has('lore')) {
+    for (const line of item.lore ?? [])
+      lines.push({ text: line, style: { color: LORE, italic: true } })
+  }
   return lines
 }

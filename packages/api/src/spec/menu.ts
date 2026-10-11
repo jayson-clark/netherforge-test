@@ -1,3 +1,4 @@
+import { TooltipComponentValues } from '@netherforge/format/types'
 import type { EventSpec, LuaClass } from '../types.ts'
 import { eventFunctions } from './events.ts'
 
@@ -669,8 +670,8 @@ export const menuShapes: LuaClass[] = [
       },
       {
         name: 'hidden_tooltip_components',
-        type: '("can_break"|"can_place_on")[]?',
-        doc: 'Lines of its tooltip to hide: `"can_break"` hides "Can break", `"can_place_on"` hides "Can place on". The blocks still apply. Left out shows the tooltip as it is; `{}` shows every line.',
+        type: `(${TooltipComponentValues.map((it) => `"${it}"`).join('|')})[]?`,
+        doc: 'Lines of its tooltip to hide, by the component that draws them: `{ "unbreakable", "attribute_modifiers" }` hides "Unbreakable" and the attribute lines ("+2 Attack Damage"). The components still apply: the item stays unbreakable and keeps its modifiers. Left out shows the tooltip as it is; `{}` shows every line. A value that isn\'t a line an item can hide is an error, and so is one the server\'s Minecraft version doesn\'t have.',
       },
       {
         name: 'food',

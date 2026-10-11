@@ -58,7 +58,7 @@ data class ItemFile(
     @Ref(RefKind.ADVENTURE_BLOCK) val canBreak: List<String>? = null,
     /** Blocks it can be placed on in adventure mode, written as [canBreak]'s. */
     @Ref(RefKind.ADVENTURE_BLOCK) val canPlaceOn: List<String>? = null,
-    /** The tooltip lines to hide: `can_break` and `can_place_on` hide their "Can break" and "Can place on" lines. */
+    /** The tooltip lines to hide, by the component that draws them: `unbreakable`, `attribute_modifiers`, `can_break`. */
     val hiddenTooltipComponents: List<TooltipComponent>? = null,
     /** Eating it. */
     val food: FoodDef? = null,
