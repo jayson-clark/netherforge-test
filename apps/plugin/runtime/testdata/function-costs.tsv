@@ -239,7 +239,8 @@ File:write	17
 File:write_json	18
 Hud:bar	17
 Hud:clear	16
-Hud:fill_bar	21
+Hud:fill_bar	24
+Hud:fill_bars	26
 Hud:icons	17
 Hud:player	15
 Hud:remove	17

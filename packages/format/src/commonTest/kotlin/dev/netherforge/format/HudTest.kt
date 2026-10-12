@@ -4,6 +4,7 @@ import dev.netherforge.format.block.VanillaFile
 import dev.netherforge.format.project.ImageInfo
 import dev.netherforge.format.project.MapProjectSource
 import dev.netherforge.format.project.Projects
+import dev.netherforge.format.resourcepack.BarFill
 import dev.netherforge.format.resourcepack.HudLine
 import dev.netherforge.format.resourcepack.HudState
 import dev.netherforge.format.resourcepack.PackFonts
@@ -85,7 +86,7 @@ class HudTest {
             return text.sumOf { c -> advances[c.toString()] ?: chars[c.toString()] ?: error("an unmeasured ${c.code.toString(16)}") }
         }
         val state = HudState(
-            bars = mapOf("health" to (13.0 to 20.0), "mana" to (2.0 to 5.0)),
+            bars = mapOf("health" to BarFill(13.0, 20.0), "mana" to BarFill(2.0, 5.0)),
             icons = mapOf("effects" to listOf("regen", "poison"))
         )
         val line = HudLine.compose(hud, state) { null }
@@ -226,5 +227,41 @@ class HudTest {
             listOf("resource_pack.replace-name" to "resource_packs/zz/pack.json"),
             snapshot.problems.filter { it.code == "resource_pack.replace-name" }.map { it.code to it.file }
         )
+    }
+
+    @Test
+    fun alignedBarsAndRowsArePlacedByWhatTheyDraw() {
+        val aligned = pack.replace(""""x": -91, "y": 30 }""", """"x": -91, "y": 30, "align": "right" }""")
+            .replace(""""x": -91, "y": 42 }""", """"x": -91, "y": 42, "align": "center" }""")
+        val snapshot = Projects.load(
+            MapProjectSource(
+                project(mapOf(VanillaFile.FILE to vanilla)) + ("resource_packs/ui/pack.json" to aligned),
+                images
+            )
+        )
+        assertEquals(emptyList(), snapshot.problems)
+        val hud = snapshot.compiledResourcePacks.getValue("ui").hud!!
+        val advances = PackFonts.advances()
+
+        // Where each run of the font's characters first moves the cursor to: its element's left edge.
+        fun lefts(line: String): List<Int> = Regex("<font:test:ui/hud>(.*?)</font>").findAll(line).map { m ->
+            m.groupValues[1].takeWhile { it.toString() in advances }.sumOf { advances.getValue(it.toString()) }
+        }.toList()
+        val health = hud.bars.getValue("health")
+        val slot = health.slot!!
+
+        // Four of the ten hearts, their right edge at -91; then the one icon, its middle at -91.
+        val line = HudLine.compose(
+            hud,
+            HudState(bars = mapOf("health" to BarFill(30.0, 40.0, 4)), icons = mapOf("effects" to listOf("poison")))
+        ) { null }
+        val poison = hud.icons.getValue("effects").icons.getValue("poison").advance!!
+        assertEquals(listOf(-91 - 4 * slot, -91 - poison / 2), lefts(line).filterIndexed { i, _ -> i == 0 || i == 1 })
+        assertEquals(4, HudLine.segments(health, 30.0, 40.0, 4).size)
+        // Three of four full: six halves of eight.
+        assertEquals(3, HudLine.segments(health, 30.0, 40.0, 4).count { it === health.full })
+        // Never more than the bar has, nor fewer than one.
+        assertEquals(10, HudLine.segments(health, 1.0, 2.0, 99).size)
+        assertEquals(1, HudLine.segments(health, 1.0, 2.0, 0).size)
     }
 }

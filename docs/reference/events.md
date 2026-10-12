@@ -2970,6 +2970,15 @@ What a HUD bar shows: `hud:bar(name)`.
 | --- | --- | --- |
 | `value` | `number` | How much of it is full, as set. |
 | `max` | `number` | Out of how much. |
+| `segments` | `integer` | How many of its segments are drawn. |
+
+## HudFillOptions
+
+How `hud:fill_bar` draws a bar.
+
+| Field | Type | |
+| --- | --- | --- |
+| `segments` | `integer?` | Draw only this many of the bar's segments, 1 to its own. Default all of them. |
 
 ## SpawnCheck
 

@@ -4271,9 +4271,17 @@ interface HudApi {
     /**
      * Fills a bar: `value` out of `max`, shown as that much of its segments (to the nearest half segment,
      * for a bar with a half picture). A `value` past `max` or below 0 is shown full or empty; a `max` of 0
-     * or less is an error.
+     * or less is an error. With `segments`, only that many of the bar's segments are drawn (1 to the bar's
+     * own), placed by the bar's `align`.
      */
-    fun fillBar(self: LuaHandle.Hud, name: String, value: Double, max: Double): Boolean
+    fun fillBar(self: LuaHandle.Hud, name: String, value: Double, max: Double, options: HudFillOptions?): Boolean
+
+    /**
+     * Fills several bars as one long bar, each `per_segment` of `max` a segment: as many segments are
+     * drawn as `max` needs, filling the first bar's, then the next's (rows of hearts, ten to a row). A bar
+     * no segment reaches is removed. Every name must be a bar; `per_segment` and `max` more than 0.
+     */
+    fun fillBars(self: LuaHandle.Hud, names: List<String>, value: Double, max: Double, perSegment: Double): Long
 
     /** What a bar shows, or `nil` when nothing set it (or they're offline). */
     fun bar(self: LuaHandle.Hud, name: String): HudBar?

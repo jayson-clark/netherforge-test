@@ -100,6 +100,11 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **HUD bars and rows that line up, and bars of any length.** A HUD bar or row
+  of icons takes `align` (`left`, `center`, `right`), placed by what it draws;
+  `hud:fill_bar(name, value, max, { segments })` draws only some of a bar's
+  segments, and `hud:fill_bars(names, value, max, per_segment)` fills several
+  bars as one, row after row (hearts ten to a row).
 - **A boss bar tied to a centity.** `bossbar:attach(centity, { range, health,
 remove_with })` shows the bar to every player near the centity and hides it
   as they go, follows its health, and removes it with the centity; `detach`

@@ -15,15 +15,16 @@ Whose HUD it is.
 
 **Returns** `Player`
 
-## `hud:fill_bar(name, value, max)`
+## `hud:fill_bar(name, value, max, options?)`
 
-Fills a bar: `value` out of `max`, shown as that much of its segments (to the nearest half segment, for a bar with a half picture). A `value` past `max` or below 0 is shown full or empty; a `max` of 0 or less is an error.
+Fills a bar: `value` out of `max`, shown as that much of its segments (to the nearest half segment, for a bar with a half picture). A `value` past `max` or below 0 is shown full or empty; a `max` of 0 or less is an error. With `segments`, only that many of the bar's segments are drawn (1 to the bar's own), placed by the bar's `align`.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `name` | `string` | The bar, as `<pack>/<key>`: a key of a resource pack's `hud.bars` (a package's as `ns:<pack>/<key>`). |
 | `value` | `number` |  |
 | `max` | `number` |  |
+| `options` (optional) | `HudFillOptions` |  |
 
 **Returns** `boolean`: `false` when they're offline.
 
@@ -31,6 +32,25 @@ Fills a bar: `value` out of `max`, shown as that much of its segments (to the ne
 local hud = player:hud()
 hud:fill_bar("ui/health", player:health() or 0, player:max_health() or 20)
 hud:fill_bar("ui/mana", 40, 100)
+```
+
+## `hud:fill_bars(names, value, max, per_segment)`
+
+Fills several bars as one long bar, each `per_segment` of `max` a segment: as many segments are drawn as `max` needs, filling the first bar's, then the next's (rows of hearts, ten to a row). A bar no segment reaches is removed. Every name must be a bar; `per_segment` and `max` more than 0.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `names` | `string[]` | Bars, `<pack>/<key>`, in the order they fill. |
+| `value` | `number` |  |
+| `max` | `number` |  |
+| `per_segment` | `number` | How much of `max` a segment stands for. |
+
+**Returns** `integer`: How many segments were drawn in all; 0 when they're offline.
+
+```lua
+-- 20 life a heart, ten hearts a row, up to three rows.
+local hud = player:hud()
+hud:fill_bars({ "ui/life1", "ui/life2", "ui/life3" }, 230, 400, 20)
 ```
 
 ## `hud:bar(name)`

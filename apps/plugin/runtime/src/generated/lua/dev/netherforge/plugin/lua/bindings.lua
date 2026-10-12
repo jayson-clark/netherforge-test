@@ -6151,12 +6151,20 @@ function Hud.player(self)
   return prim["Hud.player"](self_key)
 end
 
-function Hud.fill_bar(self, name, value, max)
+function Hud.fill_bar(self, name, value, max, options)
   local self_key = ids[self]
   if self_key == nil or not Hud_is[class_of(self)] then
     self_key = self_of(self, "Hud")
   end
-  return prim["Hud.fill_bar"](self_key, name, value, max)
+  return prim["Hud.fill_bar"](self_key, name, value, max, options)
+end
+
+function Hud.fill_bars(self, names, value, max, per_segment)
+  local self_key = ids[self]
+  if self_key == nil or not Hud_is[class_of(self)] then
+    self_key = self_of(self, "Hud")
+  end
+  return prim["Hud.fill_bars"](self_key, names, value, max, per_segment)
 end
 
 function Hud.bar(self, name)

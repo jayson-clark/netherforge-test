@@ -6114,8 +6114,21 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         val name = call.arg(2, "name", LuaCodecs.STRING)
         val value = call.arg(3, "value", LuaCodecs.NUMBER)
         val max = call.arg(4, "max", LuaCodecs.NUMBER)
-        val result = api.hud.fillBar(self, name, value, max)
+        val options = call.arg(5, "options", CODEC_142)
+        val result = api.hud.fillBar(self, name, value, max, options)
         call.push(result, LuaCodecs.BOOLEAN)
+        1
+    }
+
+    fn("Hud.fill_bars") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.Hud
+        val names = call.arg(2, "names", CODEC_23)
+        val value = call.arg(3, "value", LuaCodecs.NUMBER)
+        val max = call.arg(4, "max", LuaCodecs.NUMBER)
+        val perSegment = call.arg(5, "per_segment", LuaCodecs.NUMBER)
+        val result = api.hud.fillBars(self, names, value, max, perSegment)
+        call.push(result, LuaCodecs.INTEGER)
         1
     }
 
@@ -6124,7 +6137,7 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         val self = call.self(1) as LuaHandle.Hud
         val name = call.arg(2, "name", LuaCodecs.STRING)
         val result = api.hud.bar(self, name)
-        call.push(result, CODEC_142)
+        call.push(result, CODEC_143)
         1
     }
 
@@ -6143,7 +6156,7 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         val self = call.self(1) as LuaHandle.Hud
         val name = call.arg(2, "name", LuaCodecs.STRING)
         val result = api.hud.icons(self, name)
-        call.push(result, CODEC_143)
+        call.push(result, CODEC_144)
         1
     }
 
@@ -6324,5 +6337,6 @@ private val CODEC_138 = LuaOptional(LuaList(LuaCodecs.INTEGER))
 private val CODEC_139 = LuaOptional(SlotBinding.Codec)
 private val CODEC_140 = LuaList(LuaHandle.Menu.Codec)
 private val CODEC_141 = LuaList(LuaHandle.File.Codec)
-private val CODEC_142 = LuaOptional(HudBar.Codec)
-private val CODEC_143 = LuaOptional(LuaList(LuaCodecs.STRING))
+private val CODEC_142 = LuaOptional(HudFillOptions.Codec)
+private val CODEC_143 = LuaOptional(HudBar.Codec)
+private val CODEC_144 = LuaOptional(LuaList(LuaCodecs.STRING))

@@ -5742,28 +5742,55 @@ data class LootContext(val player: LuaHandle.Player? = null, val tool: ItemData?
 }
 
 /** What a HUD bar shows: `hud:bar(name)`. */
-data class HudBar(val value: Double, val max: Double) : LuaShape {
+data class HudBar(val value: Double, val max: Double, val segments: Long) : LuaShape {
     override fun push(call: LuaCall) = Codec.push(call, this)
 
     object Codec : ShapeCodec<HudBar>("HudBar") {
         val valueCodec = LuaCodecs.NUMBER
         val maxCodec = LuaCodecs.NUMBER
+        val segmentsCodec = LuaCodecs.INTEGER
 
         override val pinned = false
 
         override val fields: Map<String, LuaCodec<*>> = mapOf(
             "value" to valueCodec,
-            "max" to maxCodec
+            "max" to maxCodec,
+            "segments" to segmentsCodec
         )
 
         override fun read(fields: ShapeReader) = HudBar(
             value = fields.field("value", valueCodec),
-            max = fields.field("max", maxCodec)
+            max = fields.field("max", maxCodec),
+            segments = fields.field("segments", segmentsCodec)
         )
 
         override fun write(fields: ShapeWriter, value: HudBar) {
             fields.field("value", value.value, valueCodec)
             fields.field("max", value.max, maxCodec)
+            fields.field("segments", value.segments, segmentsCodec)
+        }
+    }
+}
+
+/** How `hud:fill_bar` draws a bar. */
+data class HudFillOptions(val segments: Long? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<HudFillOptions>("HudFillOptions") {
+        val segmentsCodec = LuaOptional(LuaCodecs.INTEGER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "segments" to segmentsCodec
+        )
+
+        override fun read(fields: ShapeReader) = HudFillOptions(
+            segments = fields.field("segments", segmentsCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: HudFillOptions) {
+            fields.field("segments", value.segments, segmentsCodec)
         }
     }
 }

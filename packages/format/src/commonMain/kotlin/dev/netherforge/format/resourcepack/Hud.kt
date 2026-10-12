@@ -89,7 +89,8 @@ enum class HudElement(val sprites: List<String>) {
 /**
  * A bar: [segments] pictures in a row, each [full], [half] or [empty] by how much of the max the value is (half
  * segments only with a [half] picture), filling from the left (from the right with [reverse]). Each segment takes
- * the width of the widest picture, and [gap] pixels between them.
+ * the width of the widest picture, and [gap] pixels between them. A script can show fewer of its segments (a row
+ * of hearts as long as the player's max life), and [align] says which part of what's drawn is at [x].
  */
 @Serializable
 data class HudBarDef(
@@ -102,10 +103,15 @@ data class HudBarDef(
     /** Pixels between segments. Default 0. */
     val gap: Int? = null,
     /** Fill from the right. Default false. */
-    val reverse: Boolean? = null
+    val reverse: Boolean? = null,
+    /** Which part of the segments drawn is at [x]: their left edge, middle or right edge. Default [HudAlign.LEFT]. */
+    val align: HudAlign? = null
 )
 
-/** A row of icons, of which a script shows any, in the order it says, [gap] pixels apart. */
+/**
+ * A row of icons, of which a script shows any, in the order it says, [gap] pixels apart; [align] says which part
+ * of the icons shown is at [x].
+ */
 @Serializable
 data class HudIconsDef(
     /** The icons it can show, by key: each a picture. */
@@ -113,7 +119,9 @@ data class HudIconsDef(
     val x: Int,
     val y: Int,
     /** Pixels between icons. Default 1. */
-    val gap: Int? = null
+    val gap: Int? = null,
+    /** Which part of the icons shown is at [x]: their left edge, middle or right edge. Default [HudAlign.LEFT]. */
+    val align: HudAlign? = null
 )
 
 /** A line of text on the action bar's own line, in the game's font, which scripts set (MiniMessage, glyphs too). */

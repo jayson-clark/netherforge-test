@@ -20,7 +20,10 @@ class HudTest {
     private val files = mapOf(
         "resource_packs/ui/pack.json" to """
             { "hud": {
-                "bars": { "health": { "full": "hud/full.png", "empty": "hud/empty.png", "segments": 10, "x": -91, "y": 30 } },
+                "bars": {
+                  "health": { "full": "hud/full.png", "empty": "hud/empty.png", "segments": 10, "x": -91, "y": 30 },
+                  "life2": { "full": "hud/full.png", "empty": "hud/empty.png", "segments": 10, "x": -91, "y": 40, "align": "right" }
+                },
                 "icons": { "effects": { "icons": { "poison": "hud/poison.png" }, "x": -91, "y": 42 } },
                 "texts": { "label": { "x": 0, "align": "center" } }
             } }
@@ -92,7 +95,13 @@ class HudTest {
             // Without a HUD it's sent as it is.
             server.platform.commands.run(alex, "run")
             assertEquals("AB", alex.actionbars.last())
-            server.runtime.session.huds.change(alex.ref.uuid) { it.copy(bars = mapOf("ui/health" to (5.0 to 10.0))) }
+            server.runtime.session.huds.change(alex.ref.uuid) {
+                it.copy(
+                    bars = mapOf(
+                        "ui/health" to dev.netherforge.format.resourcepack.BarFill(5.0, 10.0)
+                    )
+                )
+            }
             server.platform.commands.run(alex, "run")
             server.tick(1)
             val line = alex.actionbars.last()
@@ -101,5 +110,33 @@ class HudTest {
             server.tick(Huds.MESSAGE.toInt() + 1)
             assertTrue("AB" !in alex.actionbars.last() && "<font:test:ui/hud>" in alex.actionbars.last())
         }
+    }
+
+    @Test
+    fun `fewer segments, and several bars filled as one`() {
+        val result = LuaChecks.run(
+            """
+            local hud = nf.players.get("Alex"):hud()
+            check("four of ten", hud:fill_bar("ui/health", 3, 4, { segments = 4 }), true)
+            check("its segments", hud:bar("ui/health").segments, 4)
+            check("all by default", hud:fill_bar("ui/life2", 1, 2) and hud:bar("ui/life2").segments, 10)
+            fails("too many", function() hud:fill_bar("ui/health", 1, 2, { segments = 11 }) end, "1 to 10")
+
+            -- 20 a segment: 260 needs 13, ten in the first bar and three in the second.
+            check("drawn", hud:fill_bars({ "ui/health", "ui/life2" }, 230, 260, 20), 13)
+            local first, second = hud:bar("ui/health"), hud:bar("ui/life2")
+            check("the first, full", first.value == 200 and first.max == 200 and first.segments, 10)
+            check("the rest", second.value == 30 and second.max == 60 and second.segments, 3)
+            -- 100: five segments, so the second bar goes.
+            check("fewer", hud:fill_bars({ "ui/health", "ui/life2" }, 100, 100, 20), 5)
+            check("removed", hud:bar("ui/life2"), nil)
+            check("as far as the bars go", hud:fill_bars({ "ui/health" }, 1, 1000, 20), 10)
+            fails("per segment", function() hud:fill_bars({ "ui/health" }, 1, 2, 0) end, "per_segment")
+            fails("not a bar", function() hud:fill_bars({ "ui/effects" }, 1, 2, 1) end, "not a bar")
+            """.trimIndent(),
+            files,
+            setup = { it.platform.players.add("Alex") }
+        )
+        assertEquals(listOf("done"), result)
     }
 }

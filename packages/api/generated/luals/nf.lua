@@ -4708,12 +4708,21 @@ local Hud = {}
 ---@return Player
 function Hud:player() end
 
---- Fills a bar: `value` out of `max`, shown as that much of its segments (to the nearest half segment, for a bar with a half picture). A `value` past `max` or below 0 is shown full or empty; a `max` of 0 or less is an error.
+--- Fills a bar: `value` out of `max`, shown as that much of its segments (to the nearest half segment, for a bar with a half picture). A `value` past `max` or below 0 is shown full or empty; a `max` of 0 or less is an error. With `segments`, only that many of the bar's segments are drawn (1 to the bar's own), placed by the bar's `align`.
 ---@param name string The bar, as `<pack>/<key>`: a key of a resource pack's `hud.bars` (a package's as `ns:<pack>/<key>`).
 ---@param value number
 ---@param max number
+---@param options? HudFillOptions
 ---@return boolean # `false` when they're offline.
-function Hud:fill_bar(name, value, max) end
+function Hud:fill_bar(name, value, max, options) end
+
+--- Fills several bars as one long bar, each `per_segment` of `max` a segment: as many segments are drawn as `max` needs, filling the first bar's, then the next's (rows of hearts, ten to a row). A bar no segment reaches is removed. Every name must be a bar; `per_segment` and `max` more than 0.
+---@param names string[] Bars, `<pack>/<key>`, in the order they fill.
+---@param value number
+---@param max number
+---@param per_segment number How much of `max` a segment stands for.
+---@return integer # How many segments were drawn in all; 0 when they're offline.
+function Hud:fill_bars(names, value, max, per_segment) end
 
 --- What a bar shows, or `nil` when nothing set it (or they're offline).
 ---@param name string The bar, as `<pack>/<key>`: a key of a resource pack's `hud.bars` (a package's as `ns:<pack>/<key>`).
@@ -6116,6 +6125,11 @@ function Event:uncancel() end
 ---@class HudBar
 ---@field value number How much of it is full, as set.
 ---@field max number Out of how much.
+---@field segments integer How many of its segments are drawn.
+
+--- How `hud:fill_bar` draws a bar.
+---@class HudFillOptions
+---@field segments integer? Draw only this many of the bar's segments, 1 to its own. Default all of them.
 
 --- What a spawn condition (`nf.spawning.condition`) is asked about: one centity at one place.
 ---@class SpawnCheck
