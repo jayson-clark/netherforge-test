@@ -134,6 +134,8 @@ abstract class ProjectItemOpsContract : PlatformContract() {
             assertEquals("minecraft:diamond", stack.def.kind)
             assertEquals(2, stack.def.count, "the stack's own count stays")
             assertEquals("look2", stack.look)
+            // The new stack went by its item's `render` handlers (the runtime's) as it was made.
+            assertTrue(events.of("itemRendered").any { (it[0] as ItemData).def.kind == "minecraft:diamond" }, "rendered")
             assertEquals("minecraft:emerald", platform.inventories.contents(inventory)!![1]?.def?.kind, "not a project item")
             assertEquals(0, items.refresh(inventory))
             assertEquals(0, items.refresh(InventoryRef.Player(UUID.randomUUID())), "nobody's")
