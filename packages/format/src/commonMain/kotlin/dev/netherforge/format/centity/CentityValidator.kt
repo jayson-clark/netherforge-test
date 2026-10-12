@@ -53,6 +53,30 @@ object CentityValidator {
         file.script?.let { Rules.script(it, "$.script", sink, files) }
         file.spawning?.let { validateSpawning(it, sink, game) }
         file.body?.let { validateBody(it, sink) }
+        file.health?.let { validateHealth(file, it, sink) }
+    }
+
+    private fun validateHealth(file: CentityFile, health: HealthDef, sink: ProblemSink) {
+        if (!(health.max > 0) || !health.max.isFinite()) {
+            sink.report(ProblemCodes.CENTITY_HEALTH, "max must be more than 0", "$.health.max")
+        }
+        val bar = health.bar ?: return
+        val segments = bar.segments
+        if (segments != null && segments !in 1..ResolvedHealth.MAX_SEGMENTS) {
+            sink.report(ProblemCodes.CENTITY_HEALTH, "segments must be 1 to ${ResolvedHealth.MAX_SEGMENTS}", "$.health.bar.segments")
+        }
+        if (bar.showTicks != null && bar.showTicks < 0) {
+            sink.report(ProblemCodes.CENTITY_HEALTH, "showTicks can't be below 0", "$.health.bar.showTicks")
+        }
+        if (bar.glyph != null && bar.glyph.isEmpty()) sink.report(ProblemCodes.CENTITY_HEALTH, "glyph can't be empty", "$.health.bar.glyph")
+        val own = file.nodes[ResolvedHealth.BAR_NODE]
+        if (own != null && own.display !is TextDisplay) {
+            sink.report(
+                ProblemCodes.CENTITY_HEALTH,
+                "The node \"${ResolvedHealth.BAR_NODE}\" draws the health bar, so it must be a text display",
+                "${nodePath(ResolvedHealth.BAR_NODE)}.display"
+            )
+        }
     }
 
     private fun validateBody(body: BodyDef, sink: ProblemSink) {

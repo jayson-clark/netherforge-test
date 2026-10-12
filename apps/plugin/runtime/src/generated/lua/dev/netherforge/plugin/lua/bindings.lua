@@ -302,6 +302,62 @@ function Centity.stop_following(self)
   return prim["Centity.stop_following"](self_key)
 end
 
+function Centity.health(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.health"](self_key)
+end
+
+function Centity.max_health(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.max_health"](self_key)
+end
+
+function Centity.set_health(self, health)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.set_health"](self_key, health)
+end
+
+function Centity.set_max_health(self, max_health)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.set_max_health"](self_key, max_health)
+end
+
+function Centity.damage(self, amount, options)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.damage"](self_key, amount, options)
+end
+
+function Centity.heal(self, amount)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.heal"](self_key, amount)
+end
+
+function Centity.is_dead(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.is_dead"](self_key)
+end
+
 function Centity.has_body(self)
   local self_key = ids[self]
   if self_key == nil or not Centity_is[class_of(self)] then

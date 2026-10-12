@@ -116,6 +116,8 @@ local events = {
     ["bounce"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },
     ["stick"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },
     ["flight_end"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },
+    ["damage"] = { owner = "Centity", cancellable = true, options = {}, writable = { amount = true } },
+    ["death"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },
     ["land"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },
     ["bump"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },
     ["touch"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },

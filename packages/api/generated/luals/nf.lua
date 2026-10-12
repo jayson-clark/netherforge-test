@@ -7,7 +7,7 @@
 -- The sandbox removes io, os, package, load, loadstring, dofile, loadfile, debug, collectgarbage, warn, java.
 
 ---@alias nf.Event "tick"|"unload"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"world_dusk"|"world_dawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed"|string
----@alias Centity.Event "spawn"|"remove"|"tick"|"click"|"animation_start"|"animation_end"|"chunk_load"|"chunk_unload"|"hit"|"bounce"|"stick"|"flight_end"|"land"|"bump"|"touch"|"path_end"|string
+---@alias Centity.Event "spawn"|"remove"|"tick"|"click"|"animation_start"|"animation_end"|"chunk_load"|"chunk_unload"|"hit"|"bounce"|"stick"|"flight_end"|"damage"|"death"|"land"|"bump"|"touch"|"path_end"|string
 ---@alias Node.Event "click"|"collide"|"wake"|"sleep"
 ---@alias Entity.Event "damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
 ---@alias Living.Event "death"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
@@ -427,6 +427,8 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: Centity, event: "bounce", filter?: fun(event: FlightBlockEvent): boolean): FlightBlockEvent
 ---@overload fun(handle: Centity, event: "stick", filter?: fun(event: FlightBlockEvent): boolean): FlightBlockEvent
 ---@overload fun(handle: Centity, event: "flight_end", filter?: fun(event: FlightEndEvent): boolean): FlightEndEvent
+---@overload fun(handle: Centity, event: "damage", filter?: fun(event: CentityDamageEvent): boolean): CentityDamageEvent
+---@overload fun(handle: Centity, event: "death", filter?: fun(event: CentityDeathEvent): boolean): CentityDeathEvent
 ---@overload fun(handle: Centity, event: "land", filter?: fun(event: CentityLandEvent): boolean): CentityLandEvent
 ---@overload fun(handle: Centity, event: "bump", filter?: fun(event: CentityBumpEvent): boolean): CentityBumpEvent
 ---@overload fun(handle: Centity, event: "touch", filter?: fun(event: TouchEvent): boolean): TouchEvent
@@ -1280,6 +1282,39 @@ function Centity:follow(player) end
 ---@return boolean # `false` once it's removed.
 function Centity:stop_following() end
 
+--- How much health it has left: from its `centity.json`'s `health` (its `max` when it spawns), or what `set_max_health` gave it. `nil` for one without health, or once it's removed. Not saved: after a restart it's whole again.
+---@return number?
+function Centity:health() end
+
+--- Its health when whole, or `nil` without health (or once it's removed).
+---@return number?
+function Centity:max_health() end
+
+--- Sets how much health it has, between 0 and its `max_health`: no `damage` or `death` event, and 0 doesn't kill it (`damage` does). Its bar shows the change. `false` without health, or once it's removed.
+---@param health number
+---@return boolean
+function Centity:set_health(health) end
+
+--- Changes its health when whole (more than 0), keeping what it has but no more than the new most. One without `health` in its file gets health this way (full, and no bar). `false` once it's removed.
+---@param max_health number
+---@return boolean
+function Centity:set_max_health(max_health) end
+
+--- Takes health from it: its `damage` handlers may change the amount or cancel it, its health goes down by what's left, its bar shows, and at 0 it dies (`death`, then it's removed unless its file says otherwise). Damage to one already dead does nothing.
+---@param amount number How much, at least 0.
+---@param options? CentityDamageOptions
+---@return number? # How much it took after its handlers (0 when cancelled), or `nil` for one without health, one already dead, or once it's removed.
+function Centity:damage(amount, options) end
+
+--- Gives it back health, up to its `max_health`. Its bar shows the change.
+---@param amount number At least 0.
+---@return number? # How much it gained, or `nil` without health (or once it's removed).
+function Centity:heal(amount) end
+
+--- Whether its health has reached 0 through `damage`. `false` for one without health. A dead one its file keeps (`removeOnDeath: false`) stays dead until `set_health` gives it health again.
+---@return boolean
+function Centity:is_dead() end
+
 --- Whether it has a body: a `body` in its `centity.json`, or one `set_body` gave it. Without one the body functions do nothing (their getters answer `false`, `nil` or `vec3.zero`). `false` once it's removed.
 ---@return boolean
 function Centity:has_body() end
@@ -1485,6 +1520,8 @@ function Centity:set_view_range(blocks) end
 ---@overload fun(self: Centity, event: "bounce", handler: fun(event: FlightBlockEvent)): Subscription
 ---@overload fun(self: Centity, event: "stick", handler: fun(event: FlightBlockEvent)): Subscription
 ---@overload fun(self: Centity, event: "flight_end", handler: fun(event: FlightEndEvent)): Subscription
+---@overload fun(self: Centity, event: "damage", handler: fun(event: CentityDamageEvent)): Subscription
+---@overload fun(self: Centity, event: "death", handler: fun(event: CentityDeathEvent)): Subscription
 ---@overload fun(self: Centity, event: "land", handler: fun(event: CentityLandEvent)): Subscription
 ---@overload fun(self: Centity, event: "bump", handler: fun(event: CentityBumpEvent)): Subscription
 ---@overload fun(self: Centity, event: "touch", handler: fun(event: TouchEvent)): Subscription
@@ -1507,6 +1544,8 @@ function Centity:on(event, handler, options) end
 ---@overload fun(self: Centity, event: "bounce", handler: fun(event: FlightBlockEvent)): Subscription
 ---@overload fun(self: Centity, event: "stick", handler: fun(event: FlightBlockEvent)): Subscription
 ---@overload fun(self: Centity, event: "flight_end", handler: fun(event: FlightEndEvent)): Subscription
+---@overload fun(self: Centity, event: "damage", handler: fun(event: CentityDamageEvent)): Subscription
+---@overload fun(self: Centity, event: "death", handler: fun(event: CentityDeathEvent)): Subscription
 ---@overload fun(self: Centity, event: "land", handler: fun(event: CentityLandEvent)): Subscription
 ---@overload fun(self: Centity, event: "bump", handler: fun(event: CentityBumpEvent)): Subscription
 ---@overload fun(self: Centity, event: "touch", handler: fun(event: TouchEvent)): Subscription
@@ -5329,6 +5368,24 @@ function Event:uncancel() end
 ---@field entity Entity? For `"hit"`, the player or entity it ended on, or `nil`.
 ---@field block Block? For `"block"`, the block it ended on, or `nil`.
 ---@field owner (Entity|Centity)? Who launched it, or `nil`.
+
+--- Where damage dealt with `centity:damage` comes from, for its handlers. A key that isn't one of these is an error.
+---@class CentityDamageOptions
+---@field source (Entity|Centity)? Who or what dealt it.
+---@field cause string? What kind of damage, in your own words: `"melee"`, `"fire"`.
+
+--- A centity is about to lose health: `damage`.
+---@class CentityDamageEvent: Event
+---@field centity Centity The centity.
+---@field amount number How much it loses: assign to change it.
+---@field source (Entity|Centity)? Who or what dealt it, or `nil`.
+---@field cause string? The damage's `cause`, or `nil`.
+
+--- A centity's health reached 0: `death`.
+---@class CentityDeathEvent: Event
+---@field centity Centity The centity.
+---@field source (Entity|Centity)? What dealt the last blow, or `nil`.
+---@field cause string? The last blow's `cause`, or `nil`.
 
 --- A centity's body landed: `land`.
 ---@class CentityLandEvent: Event

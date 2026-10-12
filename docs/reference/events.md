@@ -274,6 +274,8 @@ What [Centity](centity.md) listens for.
 | `bounce` | [FlightBlockEvent](events.md#flightblockevent) |  | It's flying with `bounce` and came off a block: `event.normal` is the face it hit, `event.speed` how fast it was going into it. |
 | `stick` | [FlightBlockEvent](events.md#flightblockevent) |  | It's flying with `stick` and stuck in a block: it stays there, its flight over but not ended, until its `lifetime` is up. |
 | `flight_end` | [FlightEndEvent](events.md#flightendevent) |  | Its flight ended: it hit something with no `pierce` left (`"hit"`), met a block it neither bounces off nor sticks in (`"block"`), ran out of `lifetime` (`"lifetime"`), reached a chunk that isn't loaded (`"unloaded"`), or a script stopped it (`"stopped"`). Then, unless `remove_on_end` is `false`, it's removed: its `remove` handlers hear it next. |
+| `damage` | [CentityDamageEvent](events.md#centitydamageevent) | yes | It's about to lose health to `centity:damage`: assign `event.amount` to change how much (a defence, a weakness), or `event:cancel()` it (a moment it can't be hurt). Its health goes down by what's left, its bar shows, and at 0 it dies (`death`). Writable: `amount`. |
+| `death` | [CentityDeathEvent](events.md#centitydeathevent) |  | Its health reached 0. Then, unless its `health` says `removeOnDeath: false`, it's removed: its `remove` handlers hear it next. `event.source` and `event.cause` are what dealt the last blow. |
 | `land` | [CentityLandEvent](events.md#centitylandevent) |  | Its `body` came down onto something after falling (or jumping): once, as it lands. `event.speed` is how fast it was falling, for fall damage or a thud. |
 | `bump` | [CentityBumpEvent](events.md#centitybumpevent) |  | Its `body` ran into something it didn't land on: a wall, or a ceiling. Once each tick it does, with the face's `normal` (pointing back at it) and how fast it was going into it. |
 | `touch` | [TouchEvent](events.md#touchevent) |  | Its hitboxes started touching something's: another centity's, a player's or another entity's (each shown node's boxes, as `world:overlap_box` sees them). Once when they start touching, and again only after they've come apart. Worked out each tick only for centities something listens to this on, so a crowd nobody listens to costs nothing. Both centities hear it when two touch, each with the other in `event.other`. |
@@ -321,6 +323,22 @@ end)
 ```lua
 this:on("flight_end", function(event)
   this:world():explode(event.position, 2)
+end)
+```
+
+### centity damage
+
+```lua
+this:on("damage", function(event)
+  event.amount = math.max(1, event.amount - 4) -- armour
+end)
+```
+
+### centity death
+
+```lua
+this:on("death", function(event)
+  nf.loot.roll("slime", { location = this:location() })
 end)
 ```
 
@@ -1946,6 +1964,40 @@ Has the fields and methods of [Event](#event) too.
 | `entity` | `Entity?` | For `"hit"`, the player or entity it ended on, or `nil`. |
 | `block` | `Block?` | For `"block"`, the block it ended on, or `nil`. |
 | `owner` | `(Entity\|Centity)?` | Who launched it, or `nil`. |
+
+## CentityDamageOptions
+
+Where damage dealt with `centity:damage` comes from, for its handlers. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `source` | `(Entity\|Centity)?` | Who or what dealt it. |
+| `cause` | `string?` | What kind of damage, in your own words: `"melee"`, `"fire"`. |
+
+## CentityDamageEvent
+
+A centity is about to lose health: `damage`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity` | The centity. |
+| `amount` | `number` | How much it loses: assign to change it. |
+| `source` | `(Entity\|Centity)?` | Who or what dealt it, or `nil`. |
+| `cause` | `string?` | The damage's `cause`, or `nil`. |
+
+## CentityDeathEvent
+
+A centity's health reached 0: `death`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity` | The centity. |
+| `source` | `(Entity\|Centity)?` | What dealt the last blow, or `nil`. |
+| `cause` | `string?` | The last blow's `cause`, or `nil`. |
 
 ## CentityLandEvent
 

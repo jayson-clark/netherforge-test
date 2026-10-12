@@ -189,6 +189,9 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
     /** [placed], kept until the pose or facing changes. */
     private var placedCache: List<Matrix4>? = null
 
+    /** Its health (`centity.json`'s `health`, or `set_max_health`'s): see [Healths]. Runtime state, never saved. */
+    internal var health: Health? = null
+
     /** Its flight as a projectile (`launch`), while it flies: see [Flights]. Runtime state, never saved. */
     internal var flight: Flight? = null
 

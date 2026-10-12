@@ -229,5 +229,40 @@
     "message": "A negative stepHeight is treated as zero",
     "path": "$.body.stepHeight",
     "code": "centity.body-range"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rules/centity.json",
+    "message": "max must be more than 0",
+    "path": "$.health.max",
+    "code": "centity.health"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rules/centity.json",
+    "message": "segments must be 1 to 40",
+    "path": "$.health.bar.segments",
+    "code": "centity.health"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rules/centity.json",
+    "message": "showTicks can't be below 0",
+    "path": "$.health.bar.showTicks",
+    "code": "centity.health"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rules/centity.json",
+    "message": "glyph can't be empty",
+    "path": "$.health.bar.glyph",
+    "code": "centity.health"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rules/centity.json",
+    "message": "The node \"health_bar\" draws the health bar, so it must be a text display",
+    "path": "$.nodes.health_bar.display",
+    "code": "centity.health"
   }
 ]

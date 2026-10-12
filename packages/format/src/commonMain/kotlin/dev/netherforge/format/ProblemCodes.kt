@@ -298,6 +298,7 @@ object ProblemCodes {
     val CENTITY_PHYSICS_RANGE = warning("centity.physics-range", CENTITY, "A physics value outside 0 to 1 is clamped.")
     val CENTITY_PHYSICS_STUCK = warning("centity.physics-stuck", CENTITY, "A body's `maxSpeed` is 0, so it never moves.")
     val CENTITY_PHYSICS_FALLS = warning("centity.physics-falls", CENTITY, "A body collides with nothing, so nothing stops it falling.")
+    val CENTITY_HEALTH = error("centity.health", CENTITY, "A centity's `health` has a value it can't have.")
     val CENTITY_BODY_SIZE = error("centity.body-size", CENTITY, "A `body`'s `width` or `height` isn't positive, or is too big.")
     val CENTITY_BODY_RANGE = warning("centity.body-range", CENTITY, "A `body` value out of its range is clamped.")
     val CENTITY_SPAWNING_WORLD = error("centity.spawning-world", CENTITY, "A world in `spawning.worlds` isn't a usable world name.")

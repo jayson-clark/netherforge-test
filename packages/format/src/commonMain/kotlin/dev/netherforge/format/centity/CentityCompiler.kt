@@ -67,6 +67,7 @@ object CentityCompiler {
             file.script,
             file.spawning,
             file.body?.let(ResolvedBody::of),
+            file.health?.let(ResolvedHealth::of),
             file.properties
         )
     }

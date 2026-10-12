@@ -44,4 +44,4 @@ v:distance(w)	41
 v:length()	31
 vec3(x, y, z)	25
 world:block(v)	24
-world:blocks, 6 × 6 × 6 as classes	86
+world:blocks, 6 × 6 × 6 as classes	85

@@ -206,6 +206,40 @@ it) rises out of them. It doesn't move into a chunk that isn't loaded. While
 keeps its velocity. Nothing about it is saved: after a restart it starts at
 rest where the centity stands.
 
+## `health`
+
+```json partial
+"health": { "max": 14, "bar": { "segments": 10, "showTicks": 100 } }
+```
+
+Health it loses to scripts' `centity:damage` and dies at 0: its `damage`
+handlers may change or cancel each blow, and `death` hears it at 0, after
+which it's removed (unless `removeOnDeath` is `false`). Scripts read and set it
+([`Centity`](../reference/centity.md): `health`, `max_health`, `set_health`,
+`heal`, `is_dead`). It isn't saved: after a restart it's whole.
+
+| Key             | Meaning                                                       | Default |
+| --------------- | ------------------------------------------------------------- | ------- |
+| `max`           | Its health when whole, more than 0. Required.                 | —       |
+| `removeOnDeath` | Removed when it dies, after its `death` handlers.             | true    |
+| `bar`           | A bar over it showing what it has left (below). Absent: none. | none    |
+
+`bar` draws the health left as a line of `segments` pieces, the full ones in
+`filled` and the rest in `empty`, on a text display node called `health_bar`:
+the file's own (a text display, placed and styled as you like), or one the
+server adds `offset` blocks over the top of its hitboxes. It shows for
+`showTicks` after each change and hides again; with `showTicks` 0 it always
+shows.
+
+| Key         | Meaning                                                          | Default       |
+| ----------- | ---------------------------------------------------------------- | ------------- |
+| `segments`  | How many pieces, 1 to 40                                         | 10            |
+| `showTicks` | Ticks it shows after a change; 0 always                          | 100           |
+| `offset`    | Blocks over the top of its hitboxes, for the bar the server adds | 0.35          |
+| `glyph`     | One piece, as text                                               | `▮`           |
+| `filled`    | MiniMessage before the full pieces                               | `<red>`       |
+| `empty`     | MiniMessage before the empty ones                                | `<dark_gray>` |
+
 ## `properties`
 
 ```json partial

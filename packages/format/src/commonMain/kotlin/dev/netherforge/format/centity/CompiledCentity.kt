@@ -23,6 +23,8 @@ class CompiledCentity(
     val spawning: SpawningDef? = null,
     /** Its `body`, resolved, when it has one. */
     val body: ResolvedBody? = null,
+    /** Its `health`, resolved, when it has any. */
+    val health: ResolvedHealth? = null,
     /** Its `properties`, as the file has them. */
     val properties: Map<String, kotlinx.serialization.json.JsonElement>? = null
 ) {

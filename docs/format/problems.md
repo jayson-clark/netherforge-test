@@ -426,6 +426,10 @@ Warning. A body's `maxSpeed` is 0, so it never moves. See [centities](centity.md
 
 Warning. A body collides with nothing, so nothing stops it falling. See [centities](centity.md).
 
+### `centity.health` {#centity-health}
+
+Error. A centity's `health` has a value it can't have. See [centities](centity.md).
+
 ### `centity.body-size` {#centity-body-size}
 
 Error. A `body`'s `width` or `height` isn't positive, or is too big. See [centities](centity.md).

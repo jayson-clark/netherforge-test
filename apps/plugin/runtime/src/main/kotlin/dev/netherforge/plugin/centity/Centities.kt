@@ -148,6 +148,9 @@ class Centities(
     /** `world:overlap_*`, `sweep`, `nearest`: hitboxes here and the server's entities' boxes. */
     internal val spatial = SpatialQueries(platform, this)
 
+    /** Centities' health, damage and death, and their bars. */
+    internal val healths = Healths(scripts, this)
+
     /** Centities flying as projectiles (`launch`). */
     internal val flights = Flights(platform, scripts, spatial, entityHandle, ::remove)
 
@@ -263,6 +266,7 @@ class Centities(
         instances[id] = instance
         obstacles.add(instance)
         own(instance)
+        healths.adopt(instance)
         autoplay(instance)
         return instance
     }
@@ -326,6 +330,7 @@ class Centities(
         }
         instances[instance.id] = instance
         obstacles.add(instance)
+        healths.adopt(instance)
         autoplay(instance)
         sync(instance)
         changed(instance.id)
@@ -551,6 +556,7 @@ class Centities(
                 if (next.indexOf(name) == null) scripts.dropTarget(LuaHandle.Node(instance.id.toString(), name))
             }
             instance.redefine(next)
+            healths.adopt(instance)
             autoplay(instance)
         }
         val revived = inert.values.filter { ResourceRef(it.centity).nameIn(home()) == id }.mapNotNull { restoreOne(it) }
@@ -675,6 +681,7 @@ class Centities(
         }
         // A flight moves the whole centity, and nothing else does while it flies.
         if (instance.flight != null && !instance.removed) parts.time(FLIGHT) { flights.step(instance) }
+        if (instance.health?.shownUntil != null) healths.hideBar(instance, scripts.now)
         // A follow moves it to its player first, as a walk does; it never has both (a walk ends it).
         if (instance.follower != null && !instance.removed) parts.time(FOLLOW) { followTick(instance) }
         // Walking moves the whole centity first, so physics settles its bodies where it has been walked to.

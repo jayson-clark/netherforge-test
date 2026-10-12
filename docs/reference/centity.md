@@ -27,6 +27,8 @@ What `centity:on(event, handler)` listens for. See [Events](events.md) for how e
 | `bounce` | [FlightBlockEvent](events.md#flightblockevent) |  | It's flying with `bounce` and came off a block: `event.normal` is the face it hit, `event.speed` how fast it was going into it. |
 | `stick` | [FlightBlockEvent](events.md#flightblockevent) |  | It's flying with `stick` and stuck in a block: it stays there, its flight over but not ended, until its `lifetime` is up. |
 | `flight_end` | [FlightEndEvent](events.md#flightendevent) |  | Its flight ended: it hit something with no `pierce` left (`"hit"`), met a block it neither bounces off nor sticks in (`"block"`), ran out of `lifetime` (`"lifetime"`), reached a chunk that isn't loaded (`"unloaded"`), or a script stopped it (`"stopped"`). Then, unless `remove_on_end` is `false`, it's removed: its `remove` handlers hear it next. |
+| `damage` | [CentityDamageEvent](events.md#centitydamageevent) | yes | It's about to lose health to `centity:damage`: assign `event.amount` to change how much (a defence, a weakness), or `event:cancel()` it (a moment it can't be hurt). Its health goes down by what's left, its bar shows, and at 0 it dies (`death`). Writable: `amount`. |
+| `death` | [CentityDeathEvent](events.md#centitydeathevent) |  | Its health reached 0. Then, unless its `health` says `removeOnDeath: false`, it's removed: its `remove` handlers hear it next. `event.source` and `event.cause` are what dealt the last blow. |
 | `land` | [CentityLandEvent](events.md#centitylandevent) |  | Its `body` came down onto something after falling (or jumping): once, as it lands. `event.speed` is how fast it was falling, for fall damage or a thud. |
 | `bump` | [CentityBumpEvent](events.md#centitybumpevent) |  | Its `body` ran into something it didn't land on: a wall, or a ceiling. Once each tick it does, with the face's `normal` (pointing back at it) and how fast it was going into it. |
 | `touch` | [TouchEvent](events.md#touchevent) |  | Its hitboxes started touching something's: another centity's, a player's or another entity's (each shown node's boxes, as `world:overlap_box` sees them). Once when they start touching, and again only after they've come apart. Worked out each tick only for centities something listens to this on, so a crowd nobody listens to costs nothing. Both centities hear it when two touch, each with the other in `event.other`. |
@@ -271,6 +273,75 @@ this:follow(player)
 Stops it following its player, where it is now. `false` when it wasn't following, or once it's removed.
 
 **Returns** `boolean`: `false` once it's removed.
+
+## `centity:health()`
+
+How much health it has left: from its `centity.json`'s `health` (its `max` when it spawns), or what `set_max_health` gave it. `nil` for one without health, or once it's removed. Not saved: after a restart it's whole again.
+
+**Returns** `number?`
+
+## `centity:max_health()`
+
+Its health when whole, or `nil` without health (or once it's removed).
+
+**Returns** `number?`
+
+## `centity:set_health(health)`
+
+Sets how much health it has, between 0 and its `max_health`: no `damage` or `death` event, and 0 doesn't kill it (`damage` does). Its bar shows the change. `false` without health, or once it's removed.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `health` | `number` |  |
+
+**Returns** `boolean`
+
+## `centity:set_max_health(max_health)`
+
+Changes its health when whole (more than 0), keeping what it has but no more than the new most. One without `health` in its file gets health this way (full, and no bar). `false` once it's removed.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `max_health` | `number` |  |
+
+**Returns** `boolean`
+
+```lua
+-- A boss with more health for each player near it.
+this:set_max_health(2000 * #this:world():players())
+this:set_health(assert(this:max_health()))
+```
+
+## `centity:damage(amount, options?)`
+
+Takes health from it: its `damage` handlers may change the amount or cancel it, its health goes down by what's left, its bar shows, and at 0 it dies (`death`, then it's removed unless its file says otherwise). Damage to one already dead does nothing.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `amount` | `number` | How much, at least 0. |
+| `options` (optional) | `CentityDamageOptions` |  |
+
+**Returns** `number?`: How much it took after its handlers (0 when cancelled), or `nil` for one without health, one already dead, or once it's removed.
+
+```lua
+local dealt = target:damage(12, { source = player, cause = "melee" })
+```
+
+## `centity:heal(amount)`
+
+Gives it back health, up to its `max_health`. Its bar shows the change.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `amount` | `number` | At least 0. |
+
+**Returns** `number?`: How much it gained, or `nil` without health (or once it's removed).
+
+## `centity:is_dead()`
+
+Whether its health has reached 0 through `damage`. `false` for one without health. A dead one its file keeps (`removeOnDeath: false`) stays dead until `set_health` gives it health again.
+
+**Returns** `boolean`
 
 ## `centity:has_body()`
 

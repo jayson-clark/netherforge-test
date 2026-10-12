@@ -1053,6 +1053,45 @@ interface CentityApi {
     fun stopFollowing(self: LuaHandle.Centity): Boolean
 
     /**
+     * How much health it has left: from its `centity.json`'s `health` (its `max` when it spawns), or what
+     * `set_max_health` gave it. `nil` for one without health, or once it's removed. Not saved: after a
+     * restart it's whole again.
+     */
+    fun health(self: LuaHandle.Centity): Double?
+
+    /** Its health when whole, or `nil` without health (or once it's removed). */
+    fun maxHealth(self: LuaHandle.Centity): Double?
+
+    /**
+     * Sets how much health it has, between 0 and its `max_health`: no `damage` or `death` event, and 0
+     * doesn't kill it (`damage` does). Its bar shows the change. `false` without health, or once it's
+     * removed.
+     */
+    fun setHealth(self: LuaHandle.Centity, health: Double): Boolean
+
+    /**
+     * Changes its health when whole (more than 0), keeping what it has but no more than the new most. One
+     * without `health` in its file gets health this way (full, and no bar). `false` once it's removed.
+     */
+    fun setMaxHealth(self: LuaHandle.Centity, maxHealth: Double): Boolean
+
+    /**
+     * Takes health from it: its `damage` handlers may change the amount or cancel it, its health goes down
+     * by what's left, its bar shows, and at 0 it dies (`death`, then it's removed unless its file says
+     * otherwise). Damage to one already dead does nothing.
+     */
+    fun damage(self: LuaHandle.Centity, amount: Double, options: CentityDamageOptions?): Double?
+
+    /** Gives it back health, up to its `max_health`. Its bar shows the change. */
+    fun heal(self: LuaHandle.Centity, amount: Double): Double?
+
+    /**
+     * Whether its health has reached 0 through `damage`. `false` for one without health. A dead one its
+     * file keeps (`removeOnDeath: false`) stays dead until `set_health` gives it health again.
+     */
+    fun isDead(self: LuaHandle.Centity): Boolean
+
+    /**
      * Whether it has a body: a `body` in its `centity.json`, or one `set_body` gave it. Without one the
      * body functions do nothing (their getters answer `false`, `nil` or `vec3.zero`). `false` once it's
      * removed.

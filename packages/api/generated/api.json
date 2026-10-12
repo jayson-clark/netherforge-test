@@ -3657,6 +3657,22 @@
           "example": "this:on(\"flight_end\", function(event)\n  this:world():explode(event.position, 2)\nend)"
         },
         {
+          "name": "damage",
+          "doc": "It's about to lose health to `centity:damage`: assign `event.amount` to change how much (a defence, a weakness), or `event:cancel()` it (a moment it can't be hurt). Its health goes down by what's left, its bar shows, and at 0 it dies (`death`).",
+          "payload": "CentityDamageEvent",
+          "cancellable": true,
+          "writable": [
+            "amount"
+          ],
+          "example": "this:on(\"damage\", function(event)\n  event.amount = math.max(1, event.amount - 4) -- armour\nend)"
+        },
+        {
+          "name": "death",
+          "doc": "Its health reached 0. Then, unless its `health` says `removeOnDeath: false`, it's removed: its `remove` handlers hear it next. `event.source` and `event.cause` are what dealt the last blow.",
+          "payload": "CentityDeathEvent",
+          "example": "this:on(\"death\", function(event)\n  nf.loot.roll(\"slime\", { location = this:location() })\nend)"
+        },
+        {
           "name": "land",
           "doc": "Its `body` came down onto something after falling (or jumping): once, as it lands. `event.speed` is how fast it was falling, for fall damage or a thud.",
           "payload": "CentityLandEvent",
@@ -4003,6 +4019,110 @@
             {
               "type": "boolean",
               "doc": "`false` once it's removed."
+            }
+          ]
+        },
+        {
+          "name": "health",
+          "doc": "How much health it has left: from its `centity.json`'s `health` (its `max` when it spawns), or what `set_max_health` gave it. `nil` for one without health, or once it's removed. Not saved: after a restart it's whole again.",
+          "params": [],
+          "returns": [
+            {
+              "type": "number?"
+            }
+          ]
+        },
+        {
+          "name": "max_health",
+          "doc": "Its health when whole, or `nil` without health (or once it's removed).",
+          "params": [],
+          "returns": [
+            {
+              "type": "number?"
+            }
+          ]
+        },
+        {
+          "name": "set_health",
+          "doc": "Sets how much health it has, between 0 and its `max_health`: no `damage` or `death` event, and 0 doesn't kill it (`damage` does). Its bar shows the change. `false` without health, or once it's removed.",
+          "params": [
+            {
+              "name": "health",
+              "type": "number",
+              "doc": ""
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "set_max_health",
+          "doc": "Changes its health when whole (more than 0), keeping what it has but no more than the new most. One without `health` in its file gets health this way (full, and no bar). `false` once it's removed.",
+          "params": [
+            {
+              "name": "max_health",
+              "type": "number",
+              "doc": ""
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ],
+          "example": "-- A boss with more health for each player near it.\nthis:set_max_health(2000 * #this:world():players())\nthis:set_health(assert(this:max_health()))"
+        },
+        {
+          "name": "damage",
+          "doc": "Takes health from it: its `damage` handlers may change the amount or cancel it, its health goes down by what's left, its bar shows, and at 0 it dies (`death`, then it's removed unless its file says otherwise). Damage to one already dead does nothing.",
+          "params": [
+            {
+              "name": "amount",
+              "type": "number",
+              "doc": "How much, at least 0."
+            },
+            {
+              "name": "options",
+              "type": "CentityDamageOptions",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "number?",
+              "doc": "How much it took after its handlers (0 when cancelled), or `nil` for one without health, one already dead, or once it's removed."
+            }
+          ],
+          "example": "local dealt = target:damage(12, { source = player, cause = \"melee\" })"
+        },
+        {
+          "name": "heal",
+          "doc": "Gives it back health, up to its `max_health`. Its bar shows the change.",
+          "params": [
+            {
+              "name": "amount",
+              "type": "number",
+              "doc": "At least 0."
+            }
+          ],
+          "returns": [
+            {
+              "type": "number?",
+              "doc": "How much it gained, or `nil` without health (or once it's removed)."
+            }
+          ]
+        },
+        {
+          "name": "is_dead",
+          "doc": "Whether its health has reached 0 through `damage`. `false` for one without health. A dead one its file keeps (`removeOnDeath: false`) stays dead until `set_health` gives it health again.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean"
             }
           ]
         },
@@ -17640,6 +17760,77 @@
           "name": "owner",
           "type": "(Entity|Centity)?",
           "doc": "Who launched it, or `nil`."
+        }
+      ]
+    },
+    {
+      "name": "CentityDamageOptions",
+      "doc": "Where damage dealt with `centity:damage` comes from, for its handlers. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "source",
+          "type": "(Entity|Centity)?",
+          "doc": "Who or what dealt it."
+        },
+        {
+          "name": "cause",
+          "type": "string?",
+          "doc": "What kind of damage, in your own words: `\"melee\"`, `\"fire\"`."
+        }
+      ]
+    },
+    {
+      "name": "CentityDamageEvent",
+      "doc": "A centity is about to lose health: `damage`.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "centity",
+          "type": "Centity",
+          "doc": "The centity."
+        },
+        {
+          "name": "amount",
+          "type": "number",
+          "doc": "How much it loses: assign to change it."
+        },
+        {
+          "name": "source",
+          "type": "(Entity|Centity)?",
+          "doc": "Who or what dealt it, or `nil`."
+        },
+        {
+          "name": "cause",
+          "type": "string?",
+          "doc": "The damage's `cause`, or `nil`."
+        }
+      ]
+    },
+    {
+      "name": "CentityDeathEvent",
+      "doc": "A centity's health reached 0: `death`.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "centity",
+          "type": "Centity",
+          "doc": "The centity."
+        },
+        {
+          "name": "source",
+          "type": "(Entity|Centity)?",
+          "doc": "What dealt the last blow, or `nil`."
+        },
+        {
+          "name": "cause",
+          "type": "string?",
+          "doc": "The last blow's `cause`, or `nil`."
         }
       ]
     },

@@ -41,6 +41,8 @@ data class CentityFile(
     val animations: Map<String, AnimationDef> = emptyMap(),
     /** A body that moves the whole centity: walks, falls, jumps and collides with blocks. Absent: it stays where it's put. */
     val body: BodyDef? = null,
+    /** Health it loses to `damage` and dies at 0: a mob's, a target's. Absent: it has none. */
+    val health: HealthDef? = null,
     /** The centity's one script: a copy runs per instance, with `this` the instance. */
     val script: ScriptDef? = null,
     /** Where and how often it appears by itself, near players. Absent: it only exists where a script spawns it. */
@@ -503,6 +505,37 @@ data class BodyDef(
     val fly: Boolean? = null,
     /** Collides with the world's blocks. */
     val blocks: Boolean? = null
+)
+
+/**
+ * The `health` block: how much it takes (`max`), whether it's removed when it dies, and a bar drawn over it.
+ * [ResolvedHealth] is what an absent field means.
+ */
+@Serializable
+data class HealthDef(
+    /** Its health when whole, more than 0. */
+    val max: Double,
+    /** Removed when it dies, after its `death` handlers. Default true. */
+    val removeOnDeath: Boolean? = null,
+    /** A bar over it showing how much it has left. Absent: none. */
+    val bar: HealthBarDef? = null
+)
+
+/** A health bar drawn over a centity, as a text display: [segments] of [glyph], the full ones [filled], the rest [empty]. */
+@Serializable
+data class HealthBarDef(
+    /** How many pieces it's drawn in, 1 to 40. Default 10. */
+    val segments: Int? = null,
+    /** Ticks it shows after damage or healing, then hides; 0 shows it always. Default 100. */
+    val showTicks: Int? = null,
+    /** Blocks above the top of its hitboxes (or its position, without any) it's drawn at. Default 0.35. */
+    val offset: Double? = null,
+    /** One piece, as text. Default `▮`. */
+    val glyph: String? = null,
+    /** MiniMessage before the full pieces. Default `<red>`. */
+    @MiniMessage val filled: String? = null,
+    /** MiniMessage before the empty ones. Default `<dark_gray>`. */
+    @MiniMessage val empty: String? = null
 )
 
 @Serializable

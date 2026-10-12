@@ -100,6 +100,12 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **Health on centities.** `centity.json`'s `health` (`max`, `removeOnDeath`,
+  and a `bar` the server draws over it and shows for a while after each
+  change) with `centity:damage(amount, { source, cause })` through `damage`
+  handlers that may change or cancel it, `heal`, `health`, `set_health`,
+  `max_health`, `set_max_health` (which gives one without health some),
+  `is_dead`, and `death` at 0.
 - **Projectiles: `centity:launch`.** Any centity can fly as a projectile the
   server moves every tick: its velocity, gravity (after an optional delay) and
   drag, homing on the nearest thing it can hit, and one swept query a tick for

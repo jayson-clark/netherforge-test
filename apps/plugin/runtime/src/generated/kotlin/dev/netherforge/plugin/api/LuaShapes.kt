@@ -3147,6 +3147,108 @@ data class FlightEndEvent(val centity: LuaHandle.Centity, val reason: String, va
     }
 }
 
+/**
+ * Where damage dealt with `centity:damage` comes from, for its handlers. A key that isn't one of these
+ * is an error.
+ */
+data class CentityDamageOptions(val source: LuaHandle? = null, val cause: String? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<CentityDamageOptions>("CentityDamageOptions") {
+        val sourceCodec = LuaOptional(LuaUnions.EntityOrCentity)
+        val causeCodec = LuaOptional(LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "source" to sourceCodec,
+            "cause" to causeCodec
+        )
+
+        override fun read(fields: ShapeReader) = CentityDamageOptions(
+            source = fields.field("source", sourceCodec),
+            cause = fields.field("cause", causeCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: CentityDamageOptions) {
+            fields.field("source", value.source, sourceCodec)
+            fields.field("cause", value.cause, causeCodec)
+        }
+    }
+}
+
+/** A centity is about to lose health: `damage`. */
+data class CentityDamageEvent(val centity: LuaHandle.Centity, var amount: Double, val source: LuaHandle? = null, val cause: String? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    override fun write(field: String, call: LuaCall, index: Int) {
+        when (field) {
+            "amount" -> amount = Codec.amountCodec.read(call, index, "event.amount")
+        }
+    }
+
+    object Codec : ShapeCodec<CentityDamageEvent>("CentityDamageEvent") {
+        val centityCodec = LuaHandle.Centity.Codec
+        val amountCodec = LuaCodecs.NUMBER
+        val sourceCodec = LuaOptional(LuaUnions.EntityOrCentity)
+        val causeCodec = LuaOptional(LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "amount" to amountCodec,
+            "source" to sourceCodec,
+            "cause" to causeCodec
+        )
+
+        override fun read(fields: ShapeReader) = CentityDamageEvent(
+            centity = fields.field("centity", centityCodec),
+            amount = fields.field("amount", amountCodec),
+            source = fields.field("source", sourceCodec),
+            cause = fields.field("cause", causeCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: CentityDamageEvent) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("amount", value.amount, amountCodec)
+            fields.field("source", value.source, sourceCodec)
+            fields.field("cause", value.cause, causeCodec)
+        }
+    }
+}
+
+/** A centity's health reached 0: `death`. */
+data class CentityDeathEvent(val centity: LuaHandle.Centity, val source: LuaHandle? = null, val cause: String? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<CentityDeathEvent>("CentityDeathEvent") {
+        val centityCodec = LuaHandle.Centity.Codec
+        val sourceCodec = LuaOptional(LuaUnions.EntityOrCentity)
+        val causeCodec = LuaOptional(LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "source" to sourceCodec,
+            "cause" to causeCodec
+        )
+
+        override fun read(fields: ShapeReader) = CentityDeathEvent(
+            centity = fields.field("centity", centityCodec),
+            source = fields.field("source", sourceCodec),
+            cause = fields.field("cause", causeCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: CentityDeathEvent) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("source", value.source, sourceCodec)
+            fields.field("cause", value.cause, causeCodec)
+        }
+    }
+}
+
 /** A centity's body landed: `land`. */
 data class CentityLandEvent(val centity: LuaHandle.Centity, val speed: Double) : LuaEvent {
     override fun push(call: LuaCall) = Codec.push(call, this)

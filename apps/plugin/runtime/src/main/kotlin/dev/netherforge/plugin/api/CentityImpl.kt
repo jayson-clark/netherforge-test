@@ -92,6 +92,42 @@ internal class CentityImpl(private val session: ProjectSession) : CentityApi {
 
     private fun mover(self: LuaHandle.Centity): Mover? = instance(self)?.mover
 
+    override fun health(self: LuaHandle.Centity): Double? = instance(self)?.health?.current
+
+    override fun maxHealth(self: LuaHandle.Centity): Double? = instance(self)?.health?.max
+
+    override fun setHealth(self: LuaHandle.Centity, health: Double): Boolean {
+        if (!health.isFinite()) throw LuaApiException("bad argument 'health' (a finite number expected)")
+        val instance = instance(self)?.takeIf { it.health != null } ?: return false
+        centities.healths.set(instance, health)
+        return true
+    }
+
+    override fun setMaxHealth(self: LuaHandle.Centity, maxHealth: Double): Boolean {
+        if (!(maxHealth > 0) ||
+            !maxHealth.isFinite()
+        ) {
+            throw LuaApiException("bad argument 'max_health' (more than 0 expected, got $maxHealth)")
+        }
+        val instance = instance(self) ?: return false
+        centities.healths.setMax(instance, maxHealth)
+        return true
+    }
+
+    override fun damage(self: LuaHandle.Centity, amount: Double, options: CentityDamageOptions?): Double? {
+        if (!(amount >= 0) || !amount.isFinite()) throw LuaApiException("bad argument 'amount' (at least 0 expected, got $amount)")
+        val instance = instance(self) ?: return null
+        return centities.healths.damage(instance, amount, options?.source, options?.cause)
+    }
+
+    override fun heal(self: LuaHandle.Centity, amount: Double): Double? {
+        if (!(amount >= 0) || !amount.isFinite()) throw LuaApiException("bad argument 'amount' (at least 0 expected, got $amount)")
+        val instance = instance(self) ?: return null
+        return centities.healths.heal(instance, amount)
+    }
+
+    override fun isDead(self: LuaHandle.Centity): Boolean = instance(self)?.health?.dead == true
+
     override fun hasBody(self: LuaHandle.Centity): Boolean = mover(self) != null
 
     override fun body(self: LuaHandle.Centity): BodySettings? = mover(self)?.settings?.let { b ->
