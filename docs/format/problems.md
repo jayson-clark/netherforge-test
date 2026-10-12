@@ -1160,7 +1160,7 @@ Error. Two of the project's biomes list the same two features of a step in oppos
 
 ### `sky.color` {#sky-color}
 
-Error. A sky's colour isn't written `#rrggbb`. See [format/sky.md](sky.md).
+Error. A sky's colour isn't written `#rrggbb` (or `#aarrggbb`, for the clouds). See [format/sky.md](sky.md).
 
 ### `sky.empty` {#sky-empty}
 

@@ -41,6 +41,7 @@ object SkyKind : DocumentResourceKind<SkyFile, SkyFile>(
         val defaults = SkyTwins.defaultsOf(ctx.game.overworld)
         buildMap {
             for ((sky, file) in skies) {
+                if (ctx.leftOut(sky)) continue
                 for (step in 1..file.fadeOrDefault) {
                     for ((biome, json) in biomes) {
                         val twin = SkyTwins.keyOf(ctx.home, sky, step, biome)

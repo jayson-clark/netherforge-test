@@ -48,13 +48,62 @@ class SkyTest {
         val snapshot = load(
             "skies/good.json" to """{ "sky": "#5a0a0a", "fade": 2 }""",
             "skies/empty.json" to "{}",
-            "skies/bad.json" to """{ "sky": "red", "fade": 9 }"""
+            "skies/bad.json" to """{ "sky": "red", "fade": 9 }""",
+            // The clouds may have an alpha; nothing else may.
+            "skies/clouds.json" to """{ "clouds": "#805a0a0a", "fog": "#3a0606" }""",
+            "skies/alpha.json" to """{ "clouds": "#5a0a0a0", "sky": "#ff5a0a0a" }"""
         )
         val codes = snapshot.problems.map { "${it.file} ${it.code} ${it.path}" }.sorted()
         assertEquals(
-            listOf("skies/bad.json sky.color $.sky", "skies/bad.json sky.fade $.fade", "skies/empty.json sky.empty $"),
+            listOf(
+                "skies/alpha.json sky.color $.clouds",
+                "skies/alpha.json sky.color $.sky",
+                "skies/bad.json sky.color $.sky",
+                "skies/bad.json sky.fade $.fade",
+                "skies/empty.json sky.empty $"
+            ),
             codes
         )
+    }
+
+    @Test
+    fun aTwinsCloudsAreAlwaysWrittenWithTheirAlphaAndFadeIt() {
+        // The game's own clouds, a little see-through, as the dimension type gives them.
+        val clouded = JsonObject(
+            overworld +
+                (
+                    "attributes" to
+                        JsonObject(
+                            overworld.getValue("attributes").jsonObject + ("minecraft:visual/cloud_color" to JsonPrimitive("#ccffffff"))
+                        )
+                    )
+        )
+        val defaults = SkyTwins.defaultsOf(clouded)
+        fun clouds(sky: SkyFile, step: Int) = SkyTwins.twin(
+            plains,
+            sky,
+            step,
+            defaults
+        ).getValue("attributes").jsonObject.getValue("minecraft:visual/cloud_color").jsonPrimitive.content
+        // #rrggbb is opaque: written with its alpha, which the game needs, and faded to from the clouds' own.
+        val opaque = SkyFile(clouds = "#FF0000", fade = 2)
+        assertEquals("#ffff0000", clouds(opaque, 2))
+        assertEquals("#e6ff8080", clouds(opaque, 1))
+        // #aarrggbb as it's given, its alpha faded too.
+        val faint = SkyFile(clouds = "#40000000", fade = 2)
+        assertEquals("#40000000", clouds(faint, 2))
+        assertEquals("#86808080", clouds(faint, 1))
+        // Without the dimension's, from the sky's own.
+        assertEquals(
+            "#ffff0000",
+            SkyTwins.twin(
+                plains,
+                opaque,
+                1,
+                emptyMap()
+            ).getValue("attributes").jsonObject.getValue("minecraft:visual/cloud_color").jsonPrimitive.content
+        )
+        assertEquals("#80808080", SkyTwins.mix("#00000000", "#ffffffff", 0.5))
     }
 
     @Test

@@ -21,13 +21,16 @@ file, `skies/<id>.json`, with nothing beside it.
 | ---------- | ------------------------------------------------------------------------------------------------------- | ----------- |
 | `sky`      | The sky's colour, `#rrggbb`.                                                                            | the biome's |
 | `fog`      | The fog's: what the land in the distance fades into.                                                    | the biome's |
-| `clouds`   | The clouds'.                                                                                            | the biome's |
+| `clouds`   | The clouds': `#rrggbb` (opaque), or `#aarrggbb` with how opaque they are first, like `#805a0a0a`.       | the biome's |
 | `water`    | Water's own colour.                                                                                     | the biome's |
 | `waterFog` | The fog under water.                                                                                    | the biome's |
 | `fade`     | How many steps a fade to it takes, 1 to 8: more is smoother, and more for players to load as they join. | 3           |
 
-At least one colour is needed (`sky.empty`); each is written `#rrggbb`
-(`sky.color`), and `fade` is 1 to 8 (`sky.fade`).
+At least one colour is needed (`sky.empty`); each is written `#rrggbb`, and
+the clouds' may be `#aarrggbb` (`sky.color`); `fade` is 1 to 8 (`sky.fade`).
+A fade moves the clouds' opacity as it moves their colour: the game's own
+clouds are a little see-through (`#ccffffff`), so `"clouds": "#ff0000"` fades
+them to opaque red.
 
 ## Setting one
 
@@ -68,6 +71,10 @@ different.
   turn the moon red. Draw that with a resource pack's textures if you need it.
 - **Night still darkens it**: the game's own day and night move a sky's colours
   as they move a biome's.
+- **If the server refuses a sky's twins** as it starts (the game reads each
+  biome only then), it says why as a `runtime.datapack` problem at the sky's
+  file, and starts the next time without that sky alone, the others as they
+  were, until its file changes. Setting it until then is an error that says so.
 - **A passed-through datapack's biomes** (`datapacks/`) have no twins and keep
   their own colours under a sky.
 - Each step of each sky is as many biomes as the server has (about 65 of the

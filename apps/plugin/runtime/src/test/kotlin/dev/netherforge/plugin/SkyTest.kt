@@ -1,6 +1,11 @@
 package dev.netherforge.plugin
 
+import dev.netherforge.format.ProblemCodes
+import dev.netherforge.plugin.datapack.DatapackRefusal
+import dev.netherforge.plugin.datapack.StartupDatapackFiles
 import dev.netherforge.plugin.platform.SkyView
+import dev.netherforge.plugin.project.ProjectFiles
+import dev.netherforge.plugin.testkit.FakePlatform
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -79,6 +84,52 @@ class SkyTest {
             // A stopped session shows everyone the world's own biomes again.
             server.close()
             assertNull(shown())
+        }
+    }
+
+    @Test
+    fun `a sky whose twins the server refused is left out, the others not, with one problem at its file`() {
+        val platform = FakePlatform()
+        val project = files + mapOf(
+            "biomes/grove.json" to """{ "colors": { "sky": "#f2a7c3" } }""",
+            "modules/r/init.lua" to
+                """nf.commands.register("refused", function() log(pcall(nf.worlds.default().set_sky, nf.worlds.default(), "blood_moon")) end)"""
+        )
+        TestServer(project, platform = platform, start = false).use { server ->
+            server.player("Alex")
+            val source = ProjectFiles(server.project, true)
+            val whole = StartupDatapackFiles.forStart(
+                source.load(null).snapshot,
+                platform.datapacks.format!!,
+                platform.datapacks::textJson,
+                platform.datapacks.mainWorld,
+                source::readBytes,
+                null,
+                platform.datapacks.game
+            )
+            assertTrue(whole.canLeaveOut, "a sky's twins are something to leave out")
+            // The game's report: an entry per twin of the sky's, each the same complaint.
+            val report = (1..2).joinToString("\n") { step ->
+                """
+                > Errors in registry minecraft:worldgen/biome:
+                >> Errors in element test:sky/test/blood_moon/$step/test/grove:
+                java.lang.IllegalStateException: Failed to parse: Not a color: #5a0a0a
+                """.trimIndent()
+            }
+            platform.datapacks.refusal = DatapackRefusal(whole.hash, report)
+            server.start()
+
+            val twins = platform.datapacks.started.keys.filter { "/worldgen/biome/sky/" in it }
+            assertTrue(twins.none { "/blood_moon/" in it }, "$twins")
+            assertTrue(twins.any { "/eclipse/" in it }, "$twins")
+            val problems = server.runtime.currentProblems().filter { it.code == ProblemCodes.RUNTIME_DATAPACK.code }
+            assertEquals(listOf("skies/blood_moon.json"), problems.map { it.file })
+            assertTrue("2 of them" in problems.single().message, problems.single().message)
+
+            server.platform.commands.runConsole("refused")
+            assertTrue("refused the sky's twin biomes" in server.logs.last(), server.logs.last())
+            server.platform.commands.runConsole("mine")
+            assertTrue(server.logs.last().startsWith("mine"), server.logs.last())
         }
     }
 }

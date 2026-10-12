@@ -73,6 +73,12 @@ class Skies(
     fun check(name: String) {
         if (name !in files) throw LuaApiException("there's no sky \"$name\" (skies/${name.substringAfter(':')}.json)")
         if (steps(name) == 0) {
+            if (platform.datapacks.refused?.leavesOut(namespace())?.sky?.invoke(keyOf(name)) == true) {
+                throw LuaApiException(
+                    "sky \"$name\" isn't on the server: it refused the sky's twin biomes as it started (its problems say why), " +
+                        "so it runs without it until the file changes and the server restarts"
+                )
+            }
             throw LuaApiException(
                 "sky \"$name\" is new since the server started: a sky's colours are biomes, which the game learns as it starts, so restart it"
             )

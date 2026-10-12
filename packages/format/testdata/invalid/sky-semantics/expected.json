@@ -15,6 +15,13 @@
   },
   {
     "severity": "error",
+    "file": "skies/clouds.json",
+    "message": "\"#5a0a0a0\" isn't a colour written #rrggbb or #aarrggbb, like \"#5a0a0a\" or \"#cc5a0a0a\"",
+    "path": "$.clouds",
+    "code": "sky.color"
+  },
+  {
+    "severity": "error",
     "file": "skies/empty.json",
     "message": "A sky gives at least one colour: sky, fog, clouds, water or waterFog",
     "path": "$",

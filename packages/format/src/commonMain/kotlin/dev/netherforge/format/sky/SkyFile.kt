@@ -3,6 +3,7 @@ package dev.netherforge.format.sky
 import dev.netherforge.format.ProblemCodes
 import dev.netherforge.format.ProblemSink
 import dev.netherforge.format.biome.BiomeColors
+import dev.netherforge.format.dimensiontype.DimensionTypeColors
 import dev.netherforge.format.ref.ResourceKey
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -30,7 +31,7 @@ data class SkyFile(
     val sky: String? = null,
     /** The fog's: what the far land fades into. */
     val fog: String? = null,
-    /** The clouds'. */
+    /** The clouds': `#rrggbb` (opaque), or `#aarrggbb` with how opaque they are first. */
     val clouds: String? = null,
     /** Water's own colour. */
     val water: String? = null,
@@ -63,22 +64,35 @@ data class SkyFile(
 
 /**
  * A colour a sky gives, and where a biome keeps it in the game's format: an environment attribute (every supported
- * version keeps these there, the dimension's when the biome has none), or water's own colour in `effects`.
+ * version keeps these there, the dimension's when the biome has none), or water's own colour in `effects`. The
+ * clouds' has an [alpha]: the game reads it only as `#aarrggbb`, and refuses a biome (so the whole start-up
+ * datapack, so the server's start) that gives it `#rrggbb`.
  */
-enum class SkyColor(val field: String, val attribute: String?, val effect: String?) {
+enum class SkyColor(val field: String, val attribute: String?, val effect: String?, val alpha: Boolean = false) {
     SKY("sky", "minecraft:visual/sky_color", null),
     FOG("fog", "minecraft:visual/fog_color", null),
-    CLOUDS("clouds", "minecraft:visual/cloud_color", null),
+    CLOUDS("clouds", "minecraft:visual/cloud_color", null, alpha = true),
     WATER("water", null, "water_color"),
-    WATER_FOG("waterFog", "minecraft:visual/water_fog_color", null)
+    WATER_FOG("waterFog", "minecraft:visual/water_fog_color", null);
+
+    /** How a sky file may write it. */
+    val pattern: Regex get() = if (alpha) DimensionTypeColors.CLOUD_COLOR else BiomeColors.COLOR
+
+    /** How the game writes it: `#aarrggbb` with an [alpha] (`#rrggbb` opaque), else `#rrggbb`; null for neither. */
+    fun normalize(value: String): String? = when {
+        !pattern.matches(value) -> null
+        alpha && value.length == 7 -> "#ff" + value.drop(1).lowercase()
+        else -> value.lowercase()
+    }
 }
 
 object SkyValidator {
     fun validate(file: SkyFile, sink: ProblemSink) {
         for (color in SkyColor.entries) {
             val value = file.colors[color] ?: continue
-            if (!BiomeColors.COLOR.matches(value)) {
-                sink.report(ProblemCodes.SKY_COLOR, "\"$value\" isn't a colour written #rrggbb, like \"#5a0a0a\"", "$.${color.field}")
+            if (!color.pattern.matches(value)) {
+                val how = if (color.alpha) "#rrggbb or #aarrggbb, like \"#5a0a0a\" or \"#cc5a0a0a\"" else "#rrggbb, like \"#5a0a0a\""
+                sink.report(ProblemCodes.SKY_COLOR, "\"$value\" isn't a colour written $how", "$.${color.field}")
             }
         }
         if (file.colors.isEmpty()) {
@@ -108,6 +122,18 @@ object SkyTwins {
         ResourceKey(home, "$FOLDER/${sky.namespace}/${sky.path}/$step/${biome.namespace}/${biome.path}")
 
     /**
+     * The sky [twin] is a twin of, when it's one ([keyOf] in [home]); null for any other biome. What a report
+     * of the game's about a twin is about.
+     */
+    fun skyOf(home: String, twin: ResourceKey): ResourceKey? {
+        if (twin.namespace != home) return null
+        val parts = twin.path.split('/')
+        // sky/<namespace>/<path...>/<step>/<biome namespace>/<biome path>
+        if (parts.size < 6 || parts[0] != FOLDER || parts[parts.size - 3].toIntOrNull() == null) return null
+        return ResourceKey(parts[1], parts.subList(2, parts.size - 3).joinToString("/"))
+    }
+
+    /**
      * [biome]'s JSON as its twin at [step] of [file]'s fade. [defaults] are what a biome that gives none of a colour
      * has (the overworld's: what its sky fades from).
      */
@@ -115,9 +141,11 @@ object SkyTwins {
         val fraction = step.toDouble() / file.fadeOrDefault
         val attributes = (biome["attributes"] as? JsonObject).orEmpty().filterKeys { it != SPAWNS }.toMutableMap()
         val effects = (biome["effects"] as? JsonObject).orEmpty().toMutableMap()
-        for ((color, target) in file.colors) {
+        for ((color, given) in file.colors) {
+            // Checked already (a sky with a bad colour doesn't run); one that slipped through is left the biome's.
+            val target = color.normalize(given) ?: continue
             val own = color.attribute?.let { attributes[it] } ?: color.effect?.let { effects[it] }
-            val from = (own as? JsonPrimitive)?.contentOrNull?.takeIf(BiomeColors.COLOR::matches) ?: defaults[color] ?: target
+            val from = (own as? JsonPrimitive)?.contentOrNull?.let(color::normalize) ?: defaults[color] ?: target
             val value = JsonPrimitive(mix(from, target, fraction))
             color.attribute?.let { attributes[it] = value }
             color.effect?.let { effects[it] = value }
@@ -145,22 +173,27 @@ object SkyTwins {
         val attributes = dimensionType?.get("attributes") as? JsonObject ?: return emptyMap()
         return SkyColor.entries.mapNotNull { color ->
             val value = color.attribute?.let { attributes[it] } ?: return@mapNotNull null
-            (value as? JsonPrimitive)?.contentOrNull?.takeIf(BiomeColors.COLOR::matches)?.let { color to it }
+            (value as? JsonPrimitive)?.contentOrNull?.let(color::normalize)?.let { color to it }
         }.toMap()
     }
 
-    /** `#rrggbb` [fraction] of the way from [from] to [to], each channel rounded. */
+    /**
+     * [fraction] of the way from [from] to [to], each channel rounded: `#rrggbb`, or `#aarrggbb` (the alpha mixed
+     * as a channel too) when both are. Both are written the same way ([SkyColor.normalize]).
+     */
     fun mix(from: String, to: String, fraction: Double): String {
+        require(from.length == to.length) { "\"$from\" and \"$to\" aren't written the same way" }
         if (fraction >= 1.0) return to.lowercase()
-        val a = from.removePrefix("#").toInt(16)
-        val b = to.removePrefix("#").toInt(16)
-        fun channel(shift: Int): Int {
+        val a = from.removePrefix("#").toLong(16)
+        val b = to.removePrefix("#").toLong(16)
+        val digits = from.length - 1
+        var mixed = 0L
+        for (shift in (digits / 2 - 1) * 8 downTo 0 step 8) {
             val x = (a shr shift) and 0xff
             val y = (b shr shift) and 0xff
-            return kotlin.math.round(x + (y - x) * fraction).toInt().coerceIn(0, 255)
+            mixed = mixed or (kotlin.math.round(x + (y - x) * fraction).toLong().coerceIn(0, 255) shl shift)
         }
-        val rgb = (channel(16) shl 16) or (channel(8) shl 8) or channel(0)
-        return "#" + rgb.toString(16).padStart(6, '0')
+        return "#" + mixed.toString(16).padStart(digits, '0')
     }
 
     private const val SPAWNS = "minecraft:gameplay/natural_mob_spawns"

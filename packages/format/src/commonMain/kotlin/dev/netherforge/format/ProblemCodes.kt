@@ -653,7 +653,7 @@ object ProblemCodes {
         )
     val BIOME_FEATURE =
         error("biome.feature", BIOME, "A feature isn't a placed feature the target version has, or it's listed twice in one step.")
-    val SKY_COLOR = error("sky.color", SKY, "A sky's colour isn't written `#rrggbb`.")
+    val SKY_COLOR = error("sky.color", SKY, "A sky's colour isn't written `#rrggbb` (or `#aarrggbb`, for the clouds).")
     val SKY_EMPTY = error("sky.empty", SKY, "A sky gives no colour at all.")
     val SKY_FADE = error("sky.fade", SKY, "A sky's fade is outside 1 to 8 steps.")
     val BIOME_FEATURE_ORDER =

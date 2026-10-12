@@ -5,6 +5,7 @@ import dev.netherforge.format.datapack.GameDatapack
 import dev.netherforge.format.datapack.StartupDatapack
 import dev.netherforge.format.datapack.TextJson
 import dev.netherforge.format.project.ProjectSnapshot
+import dev.netherforge.format.ref.ResourceKey
 import kotlinx.serialization.json.Json
 import java.nio.file.Files
 import java.nio.file.Path
@@ -31,10 +32,11 @@ object StartupDatapackFiles {
         mainWorld: String?,
         readBytes: (String) -> ByteArray?,
         passThrough: Boolean = true,
-        game: GameDatapack = GameDatapack.NONE
+        game: GameDatapack = GameDatapack.NONE,
+        leaveOut: (sky: ResourceKey) -> Boolean = { false }
     ): Map<String, ByteArray> {
         val json = TextJson { mini, glyph -> Json.parseToJsonElement(text(mini, glyph)) }
-        return StartupDatapack.build(snapshot, format, json, mainWorld, passThrough, game).mapNotNull { (path, entry) ->
+        return StartupDatapack.build(snapshot, format, json, mainWorld, passThrough, game, leaveOut).mapNotNull { (path, entry) ->
             when (entry) {
                 is DatapackEntry.Text -> path to entry.text.encodeToByteArray()
                 is DatapackEntry.Copy -> readBytes(entry.projectPath)?.let { path to it }
@@ -45,7 +47,8 @@ object StartupDatapackFiles {
     /**
      * What a server loads as it starts, the one way the adapter's start-up and the restart check work it out: the
      * whole datapack, unless [refusal] (the one on record) is about exactly these files, when it's the datapack
-     * without the project's datapacks ([StartupDatapack.build]'s `passThrough`).
+     * without what the refusal named ([DatapackRefusal.leavesOut]): the skies it named, and the project's datapacks
+     * ([StartupDatapack.build]'s `passThrough`) unless it named only skies.
      */
     fun forStart(
         snapshot: ProjectSnapshot,
@@ -59,17 +62,22 @@ object StartupDatapackFiles {
         val whole = build(snapshot, format, text, mainWorld, readBytes, game = game)
         val hash = DatapackRefusal.hashOf(whole)
         val refused = refusal?.takeIf { it.hash == hash }
-        val without = { build(snapshot, format, text, mainWorld, readBytes, passThrough = false, game = game) }
-        return Start(if (refused == null) whole else without(), hash, refused) { !same(whole, without()) }
+        val files = refused?.leavesOut(snapshot.namespace)?.let { left ->
+            build(snapshot, format, text, mainWorld, readBytes, left.passThrough, game, left.sky)
+        } ?: whole
+        // The least a refusal could leave out: what it would if it named nothing it could tell.
+        val least = { build(snapshot, format, text, mainWorld, readBytes, passThrough = false, game = game) { true } }
+        return Start(files, hash, refused) { !same(whole, least()) }
     }
 
     /**
      * What [forStart] worked out: the [files] to load, the [hash] of the whole datapack, and the [refused] refusal
-     * it left the project's datapacks out for (null when they're in). [passesThrough] says whether the whole datapack
-     * has anything of theirs, so whether a refusal of it could be theirs.
+     * it left something out for (null when it's all in). [canLeaveOut] says whether the whole datapack has anything a
+     * refusal could leave out (the project's datapacks, a sky's twins), so whether one is worth hearing: a start
+     * that could leave out nothing would be refused again.
      */
-    class Start(val files: Map<String, ByteArray>, val hash: String, val refused: DatapackRefusal?, private val passing: () -> Boolean) {
-        val passesThrough: Boolean by lazy { passing() }
+    class Start(val files: Map<String, ByteArray>, val hash: String, val refused: DatapackRefusal?, private val leaving: () -> Boolean) {
+        val canLeaveOut: Boolean by lazy { leaving() }
     }
 
     /** Whether [a] and [b] are the same files with the same bytes. */

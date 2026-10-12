@@ -9,19 +9,25 @@ import { EditorBar, EditorScreen, Stage } from '@/editors/shared/EditorLayout'
 import { EditAsJson, useModelDoc } from '@/editors/shared/modelDoc'
 import { RawDocView } from '@/editors/shared/RawDocView'
 import { useFocusRequests } from '@/editors/shared/useFocusRequests'
-import { ColorField, NumberField, Section } from '@/ui/fields'
+import { ColorField, NumberField, Section, TextField } from '@/ui/fields'
 import { Hint } from '@/ui/text'
 import styles from './SkyEditor.module.css'
 
 type ColorKey = 'sky' | 'fog' | 'clouds' | 'water' | 'waterFog'
 
-const COLORS: { key: ColorKey; label: string; overworld: string }[] = [
+/** `alpha`: written `#rrggbb` or `#aarrggbb` (the game's clouds), so a text field rather than a colour picker. */
+const COLORS: { key: ColorKey; label: string; overworld: string; alpha?: boolean }[] = [
   { key: 'sky', label: 'Sky', overworld: '#78a7ff' },
   { key: 'fog', label: 'Fog', overworld: '#c0d8ff' },
-  { key: 'clouds', label: 'Clouds', overworld: '#ffffff' },
+  { key: 'clouds', label: 'Clouds', overworld: '#ccffffff', alpha: true },
   { key: 'water', label: 'Water', overworld: '#3f76e4' },
   { key: 'waterFog', label: 'Fog under water', overworld: '#050533' },
 ]
+
+/** `#aarrggbb` as CSS's `#rrggbbaa`; anything else as it is. */
+function css(color: string): string {
+  return /^#[0-9a-fA-F]{8}$/.test(color) ? `#${color.slice(3)}${color.slice(1, 3)}` : color
+}
 
 /** The default number of steps a fade takes, as format's `SkyFile.DEFAULT_FADE`. */
 const DEFAULT_FADE = 3
@@ -33,7 +39,7 @@ export function SkyEditor({ path }: { path: string }) {
 
   if (!doc) return null
   if (!model) return <RawDocView path={path} />
-  const shown = (key: ColorKey) => model[key] ?? COLORS.find((it) => it.key === key)!.overworld
+  const shown = (key: ColorKey) => css(model[key] ?? COLORS.find((it) => it.key === key)!.overworld)
   return (
     <EditorScreen>
       <EditorBar title={id}>
@@ -60,21 +66,38 @@ export function SkyEditor({ path }: { path: string }) {
       </Stage>
       <InspectorPanel>
         <Section title="Colours">
-          {COLORS.map(({ key, label, overworld }) => (
-            <ColorField
-              key={key}
-              label={label}
-              dataPath={key}
-              value={model[key]}
-              placeholder={overworld}
-              onChange={(value) =>
-                edit((d) => {
-                  if (value) d[key] = value
-                  else delete d[key]
-                })
-              }
-            />
-          ))}
+          {COLORS.map(({ key, label, overworld, alpha }) =>
+            alpha ? (
+              <TextField
+                key={key}
+                label={label}
+                dataPath={key}
+                value={model[key]}
+                placeholder={overworld}
+                onChange={(value) =>
+                  edit((d) => {
+                    const trimmed = value.trim()
+                    if (trimmed) d[key] = trimmed
+                    else delete d[key]
+                  })
+                }
+              />
+            ) : (
+              <ColorField
+                key={key}
+                label={label}
+                dataPath={key}
+                value={model[key]}
+                placeholder={overworld}
+                onChange={(value) =>
+                  edit((d) => {
+                    if (value) d[key] = value
+                    else delete d[key]
+                  })
+                }
+              />
+            ),
+          )}
           <Hint>
             A colour left empty stays each biome's own. Scripts set it with world:set_sky("{id}") or
             player:set_sky("{id}").
