@@ -31,6 +31,20 @@ interface DocumentKind<T> {
     fun parse(text: String, file: String): CanonicalJson.Parsed<T> = CanonicalJson.parse(serializer, text, file)
 
     fun write(value: T): String = CanonicalJson.write(serializer, canonical(value))
+
+    /** [value] written as the file [path]: [write], with its `$schema` pointing at `.netherforge/` from that file's folder. */
+    fun write(value: T, path: String): String = CanonicalJson.write(serializer, canonical(value), schemaAt(path))
+
+    /**
+     * The `$schema` of the file [path] (a project path, or a package path
+     * read as one): [schemaRef] with a `../` for each folder it's in, so a
+     * file in group folders (`blocks/(ores)/ruby/block.json`) still finds it.
+     */
+    fun schemaAt(path: String): String? = schemaRef?.let { ref ->
+        var target = ref
+        while (target.startsWith("../")) target = target.removePrefix("../")
+        "../".repeat(PackagePaths.split(path).second.count { it == '/' }) + target
+    }
 }
 
 /** `netherforge.json`: the project's manifest. */

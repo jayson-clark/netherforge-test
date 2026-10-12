@@ -140,7 +140,7 @@ fun canonicalize(kind: String, path: String, text: String): String {
 private fun <T> canonicalizeAs(kind: DocumentKind<T>, path: String, text: String): CanonicalResult =
     when (val parsed = kind.parse(text, path)) {
         is CanonicalJson.Parsed.Failed -> CanonicalResult(null, listOf(parsed.problem))
-        is CanonicalJson.Parsed.Ok -> CanonicalResult(kind.write(parsed.value), emptyList())
+        is CanonicalJson.Parsed.Ok -> CanonicalResult(kind.write(parsed.value, path), emptyList())
     }
 
 /**

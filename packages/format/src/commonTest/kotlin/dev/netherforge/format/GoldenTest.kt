@@ -143,7 +143,7 @@ class GoldenTest {
     }
 
     private fun <T> canonicalize(kind: DocumentKind<T>, text: String, path: String): String = when (val parsed = kind.parse(text, path)) {
-        is CanonicalJson.Parsed.Ok -> kind.write(parsed.value)
+        is CanonicalJson.Parsed.Ok -> kind.write(parsed.value, path)
         is CanonicalJson.Parsed.Failed -> fail("$path doesn't parse: ${parsed.problem.message}")
     }
 }

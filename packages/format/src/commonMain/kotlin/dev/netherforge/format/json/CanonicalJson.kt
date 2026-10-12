@@ -57,10 +57,18 @@ object CanonicalJson {
     /**
      * Writes [value] canonically. Every map is written in key order (see
      * [ordered]), whatever order it was built in, so no model needs to sort
-     * its own maps and a new map field can't be forgotten.
+     * its own maps and a new map field can't be forgotten. A [schema] replaces
+     * the `$schema` the value has, when it has one.
      */
-    fun <T> write(serializer: KSerializer<T>, value: T): String =
-        print(ordered(json.encodeToJsonElement(serializer, value), serializer.descriptor)) + "\n"
+    fun <T> write(serializer: KSerializer<T>, value: T, schema: String? = null): String {
+        var element = json.encodeToJsonElement(serializer, value)
+        if (schema != null && element is JsonObject && SCHEMA_KEY in element) {
+            element = JsonObject(element + (SCHEMA_KEY to JsonPrimitive(schema)))
+        }
+        return print(ordered(element, serializer.descriptor)) + "\n"
+    }
+
+    private const val SCHEMA_KEY = "\$schema"
 
     /**
      * [element] with the entries of every map put in canonical order, found by

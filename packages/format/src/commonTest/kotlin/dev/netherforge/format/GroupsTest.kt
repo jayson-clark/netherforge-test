@@ -1,11 +1,16 @@
 package dev.netherforge.format
 
+import dev.netherforge.format.block.BlockFile
 import dev.netherforge.format.game.GameDataBundle
+import dev.netherforge.format.project.BlockKind
+import dev.netherforge.format.project.DocumentResourceKind
 import dev.netherforge.format.project.ItemKind
 import dev.netherforge.format.project.Kinds
+import dev.netherforge.format.project.ManifestKind
 import dev.netherforge.format.project.MapProjectSource
 import dev.netherforge.format.project.PathRole
 import dev.netherforge.format.project.ProjectCache
+import dev.netherforge.format.project.ProjectManifest
 import dev.netherforge.format.project.Projects
 import dev.netherforge.format.project.ResourcePackKind
 import dev.netherforge.format.project.StructureKind
@@ -70,6 +75,27 @@ class GroupsTest {
             assertEquals("(stuff)/(more)", place.group, kind.id)
             assertEquals(kind.pathOf(kind.sampleId, "(stuff)/(more)"), place.path, kind.id)
             assertEquals("${kind.folder}/(stuff)/(more)/" + kind.locationOf(kind.sampleId).removePrefix("${kind.folder}/"), place.location)
+        }
+    }
+
+    @Test
+    fun aDocumentInAGroupPointsAtItsSchemaFromWhereItIs() {
+        fun schemaOf(text: String) = Regex("\"\\\$schema\": \"([^\"]+)\"").find(text)?.groupValues?.get(1)
+
+        val grouped = "blocks/(objects)/(small)/lamp/block.json"
+        val schema = "../../../../.netherforge/schema/block.schema.json"
+        assertEquals(schema, BlockKind.schemaAt(grouped))
+        assertEquals(BlockKind.schemaRef, BlockKind.schemaAt(BlockKind.pathOf("lamp")))
+        assertEquals(schema, BlockKind.schemaAt("acme:$grouped"))
+        assertEquals(ProjectManifest.SCHEMA, ManifestKind.schemaAt("netherforge.json"))
+        assertEquals(schema, schemaOf(BlockKind.write(BlockFile(), grouped)))
+
+        // Every kind's template, made in a group, reaches out of it.
+        for (kind in Kinds.all.filter { it.groupable && it is DocumentResourceKind<*, *> }) {
+            val files = Templates.newResource(kind, kind.sampleId, game, "(stuff)/(more)")
+            val main = kind.pathOf(kind.sampleId, "(stuff)/(more)")
+            val written = schemaOf(assertNotNull(files[main], main))
+            assertEquals("../".repeat(main.count { it == '/' }), written?.substringBefore(".netherforge"), main)
         }
     }
 

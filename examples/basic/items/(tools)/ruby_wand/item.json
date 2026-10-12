@@ -1,5 +1,5 @@
 {
-  "$schema": "../../.netherforge/schema/item.schema.json",
+  "$schema": "../../../.netherforge/schema/item.schema.json",
   "kind": "minecraft:stick",
   "name": "<red>Ruby wand",
   "lore": ["<gray>Hold right click to charge, let go to cast"],

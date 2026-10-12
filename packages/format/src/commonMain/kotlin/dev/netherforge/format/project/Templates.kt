@@ -1,6 +1,7 @@
 package dev.netherforge.format.project
 
 import dev.netherforge.format.game.GameData
+import dev.netherforge.format.json.CanonicalJson
 
 /**
  * The files NetherForge creates. Generated through the canonical writers so a
@@ -137,8 +138,23 @@ object Templates {
         if (group.isNullOrEmpty()) return files
         require(kind.groupable) { "a ${kind.id} can't go in group folders" }
         // Every file a template makes is in the kind's folder: its resource's folder, its one file, its companion.
-        return files.mapKeys { (path, _) -> "${kind.folder}/$group/" + path.removePrefix("${kind.folder}/") }
+        return files.entries.associate { (path, text) ->
+            val moved = "${kind.folder}/$group/" + path.removePrefix("${kind.folder}/")
+            moved to rewrittenAt(moved, text)
+        }
     }
+
+    /** A template's document [text] written again as the file [path], so its `$schema` reaches out of the group folders. */
+    private fun rewrittenAt(path: String, text: String): String {
+        val kind = Kinds.classify(path)?.document?.let(Kinds::document) ?: return text
+        return rewrittenAs(kind, path, text)
+    }
+
+    private fun <T> rewrittenAs(kind: DocumentKind<T>, path: String, text: String): String =
+        when (val parsed = kind.parse(text, path)) {
+            is CanonicalJson.Parsed.Ok -> kind.write(parsed.value, path)
+            is CanonicalJson.Parsed.Failed -> text
+        }
 
     /** `village_shop` → `Village shop`. */
     internal fun titleOf(id: String): String = id.replace('_', ' ').trim().replaceFirstChar { it.uppercaseChar() }.ifEmpty { id }

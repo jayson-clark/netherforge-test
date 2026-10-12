@@ -358,7 +358,7 @@ class ReferenceIndex internal constructor(
 
         /** [text] in its canonical form, or as it is when it doesn't read as a [kind] (a document with errors in it). */
         private fun <T> canonical(kind: DocumentKind<T>, file: String, text: String): String = when (val parsed = kind.parse(text, file)) {
-            is CanonicalJson.Parsed.Ok -> kind.write(parsed.value)
+            is CanonicalJson.Parsed.Ok -> kind.write(parsed.value, file)
             is CanonicalJson.Parsed.Failed -> text + "\n"
         }
 
