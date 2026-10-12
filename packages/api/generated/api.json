@@ -13393,8 +13393,76 @@
           "example": "local trinkets = event.player:storage(\"trinkets\", 4)\nfor i = 0, 3 do\n  this:slot(10 + i):bind(trinkets, i)\nend"
         },
         {
+          "name": "bind_equipment",
+          "doc": "Makes this slot a view of what a player wears in one place, as `bind` does a storage's slot: what goes in or out of it is put on or taken off at once, and when what they wear changes some other way (a right-click with armour, a script's `set_equipment`) the slot shows it by the next tick. Locked windows let players use it by hand, as a bound slot. The game doesn't check what's put on: give the slot a rule (`set_rule({ wearable = \"head\", max = 1 })`). Only a window of a menu that isn't `shared` can be bound.",
+          "params": [
+            {
+              "name": "player",
+              "type": "Player",
+              "doc": ""
+            },
+            {
+              "name": "equipment",
+              "type": "string",
+              "doc": "`head`, `chest`, `legs`, `feet` or `off_hand`."
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` once the window is gone, or they're offline."
+            }
+          ],
+          "example": "local slot = this:slot(11)\nslot:bind_equipment(event.player, \"head\")\nslot:set_rule({ wearable = \"head\", max = 1 })"
+        },
+        {
+          "name": "set_rule",
+          "doc": "Says what this slot takes, or with `nil` lets it take anything again. Whatever a player puts in, by a click, a drag, a number key or a shift-click from their own inventory into `shift_into`'s slots, is held to it: a stack it doesn't take stays where it was, and of one it does, only `max` goes in (the rest stays on the cursor). Its `click` handlers still hear what's let through. Scripts' own `set_item` aren't held to it. A shift-click from below that the game moves itself (no `shift_into`) isn't either, in a window that isn't locked.",
+          "params": [
+            {
+              "name": "rule",
+              "type": "SlotRule",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` once the window is gone."
+            }
+          ],
+          "example": "local trinkets = event.player:storage(\"trinkets\", 4)\nlocal slot = this:slot(10)\nslot:bind(trinkets, 0)\nslot:set_rule({ property = \"accessory\", max = 1 })"
+        },
+        {
+          "name": "rule",
+          "doc": "What this slot takes, or `nil` when it takes anything (or the window is gone).",
+          "params": [],
+          "returns": [
+            {
+              "type": "SlotRule?"
+            }
+          ]
+        },
+        {
+          "name": "accepts",
+          "doc": "Whether this slot's rule takes this item (any count of it). `true` for a slot without a rule; `false` once the window is gone.",
+          "params": [
+            {
+              "name": "item",
+              "type": "Item",
+              "doc": ""
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
           "name": "unbind",
-          "doc": "Stops showing a storage's slot here. The slot is emptied, since what it showed is still in the storage. Its player leaving unbinds every slot bound to their storage.",
+          "doc": "Stops showing a storage's slot (or a player's equipment) here. The slot is emptied, since what it showed is still where it was. Its player leaving unbinds every slot bound to their storage or equipment.",
           "params": [],
           "returns": [
             {
@@ -19181,19 +19249,62 @@
     },
     {
       "name": "SlotBinding",
-      "doc": "Which slot of a storage a menu slot shows: `slot:binding()`.",
+      "doc": "What a menu slot shows: `slot:binding()`. A slot of a storage (`storage` and `index`), or what a player wears (`player` and `equipment`).",
       "methods": false,
       "functions": [],
       "fields": [
         {
           "name": "storage",
-          "type": "Inventory",
+          "type": "Inventory?",
           "doc": "The storage (`player:storage`)."
         },
         {
           "name": "index",
-          "type": "integer",
-          "doc": "Its slot, from 0."
+          "type": "integer?",
+          "doc": "The storage's slot, from 0."
+        },
+        {
+          "name": "player",
+          "type": "Player?",
+          "doc": "Whose equipment."
+        },
+        {
+          "name": "equipment",
+          "type": "string?",
+          "doc": "`head`, `chest`, `legs`, `feet` or `off_hand`."
+        }
+      ]
+    },
+    {
+      "name": "SlotRule",
+      "doc": "What a menu slot takes (`slot:set_rule`). A stack goes in when it's any of `items`, `kinds`, `property` or `wearable` (or when none is given), and never more of it than `max`. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "items",
+          "type": "string[]?",
+          "doc": "The project's items it takes, by id."
+        },
+        {
+          "name": "kinds",
+          "type": "string[]?",
+          "doc": "The game's items it takes, by id or `#tag` (`#minecraft:head_armor`); a project item's stacks never count as their kind."
+        },
+        {
+          "name": "property",
+          "type": "string?",
+          "doc": "A project item with this key in its `properties` (and not `false`)."
+        },
+        {
+          "name": "wearable",
+          "type": "string?",
+          "doc": "What's worn there: `head`, `chest`, `legs`, `feet` or `body`, by its `equipment` slot or, for the game's own items, the slot's armour tag (`#minecraft:head_armor`...)."
+        },
+        {
+          "name": "max",
+          "type": "integer?",
+          "doc": "The most items it holds: 1 for a ring. Default a full stack."
         }
       ]
     },

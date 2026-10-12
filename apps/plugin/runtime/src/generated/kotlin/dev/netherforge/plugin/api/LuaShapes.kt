@@ -4323,29 +4323,83 @@ data class AdvancementProgress(val done: List<String>, val remaining: List<Strin
     }
 }
 
-/** Which slot of a storage a menu slot shows: `slot:binding()`. */
-data class SlotBinding(val storage: LuaHandle.Inventory, val index: Long) : LuaShape {
+/**
+ * What a menu slot shows: `slot:binding()`. A slot of a storage (`storage` and `index`), or what a
+ * player wears (`player` and `equipment`).
+ */
+data class SlotBinding(val storage: LuaHandle.Inventory? = null, val index: Long? = null, val player: LuaHandle.Player? = null, val equipment: String? = null) : LuaShape {
     override fun push(call: LuaCall) = Codec.push(call, this)
 
     object Codec : ShapeCodec<SlotBinding>("SlotBinding") {
-        val storageCodec = LuaHandle.Inventory.Codec
-        val indexCodec = LuaCodecs.INTEGER
+        val storageCodec = LuaOptional(LuaHandle.Inventory.Codec)
+        val indexCodec = LuaOptional(LuaCodecs.INTEGER)
+        val playerCodec = LuaOptional(LuaHandle.Player.Codec)
+        val equipmentCodec = LuaOptional(LuaCodecs.STRING)
 
         override val pinned = false
 
         override val fields: Map<String, LuaCodec<*>> = mapOf(
             "storage" to storageCodec,
-            "index" to indexCodec
+            "index" to indexCodec,
+            "player" to playerCodec,
+            "equipment" to equipmentCodec
         )
 
         override fun read(fields: ShapeReader) = SlotBinding(
             storage = fields.field("storage", storageCodec),
-            index = fields.field("index", indexCodec)
+            index = fields.field("index", indexCodec),
+            player = fields.field("player", playerCodec),
+            equipment = fields.field("equipment", equipmentCodec)
         )
 
         override fun write(fields: ShapeWriter, value: SlotBinding) {
             fields.field("storage", value.storage, storageCodec)
             fields.field("index", value.index, indexCodec)
+            fields.field("player", value.player, playerCodec)
+            fields.field("equipment", value.equipment, equipmentCodec)
+        }
+    }
+}
+
+/**
+ * What a menu slot takes (`slot:set_rule`). A stack goes in when it's any of `items`, `kinds`,
+ * `property` or `wearable` (or when none is given), and never more of it than `max`. A key that isn't
+ * one of these is an error.
+ */
+data class SlotRule(val items: List<String>? = null, val kinds: List<String>? = null, val property: String? = null, val wearable: String? = null, val max: Long? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<SlotRule>("SlotRule") {
+        val itemsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val kindsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val propertyCodec = LuaOptional(LuaCodecs.STRING)
+        val wearableCodec = LuaOptional(LuaCodecs.STRING)
+        val maxCodec = LuaOptional(LuaCodecs.INTEGER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "items" to itemsCodec,
+            "kinds" to kindsCodec,
+            "property" to propertyCodec,
+            "wearable" to wearableCodec,
+            "max" to maxCodec
+        )
+
+        override fun read(fields: ShapeReader) = SlotRule(
+            items = fields.field("items", itemsCodec),
+            kinds = fields.field("kinds", kindsCodec),
+            property = fields.field("property", propertyCodec),
+            wearable = fields.field("wearable", wearableCodec),
+            max = fields.field("max", maxCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: SlotRule) {
+            fields.field("items", value.items, itemsCodec)
+            fields.field("kinds", value.kinds, kindsCodec)
+            fields.field("property", value.property, propertyCodec)
+            fields.field("wearable", value.wearable, wearableCodec)
+            fields.field("max", value.max, maxCodec)
         }
     }
 }

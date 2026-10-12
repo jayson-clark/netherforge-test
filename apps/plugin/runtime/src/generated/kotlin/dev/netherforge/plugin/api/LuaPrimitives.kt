@@ -5615,6 +5615,42 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         1
     }
 
+    fn("Slot.bind_equipment") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.Slot
+        val player = call.arg(2, "player", LuaHandle.Player.Codec)
+        val equipment = call.arg(3, "equipment", LuaCodecs.STRING)
+        val result = api.slot.bindEquipment(self, player, equipment)
+        call.push(result, LuaCodecs.BOOLEAN)
+        1
+    }
+
+    fn("Slot.set_rule") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.Slot
+        val rule = call.arg(2, "rule", CODEC_139)
+        val result = api.slot.setRule(self, rule)
+        call.push(result, LuaCodecs.BOOLEAN)
+        1
+    }
+
+    fn("Slot.rule") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.Slot
+        val result = api.slot.rule(self)
+        call.push(result, CODEC_139)
+        1
+    }
+
+    fn("Slot.accepts") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.Slot
+        val item = call.arg(2, "item", LuaCodecs.ITEM)
+        val result = api.slot.accepts(self, item)
+        call.push(result, LuaCodecs.BOOLEAN)
+        1
+    }
+
     fn("Slot.unbind") { call ->
         val lua = call.lua
         val self = call.self(1) as LuaHandle.Slot
@@ -5627,7 +5663,7 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         val lua = call.lua
         val self = call.self(1) as LuaHandle.Slot
         val result = api.slot.binding(self)
-        call.push(result, CODEC_139)
+        call.push(result, CODEC_140)
         1
     }
 
@@ -5700,7 +5736,7 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         val lua = call.lua
         val self = call.self(1) as LuaHandle.MenuTemplate
         val result = api.menuTemplate.windows(self)
-        call.push(result, CODEC_140)
+        call.push(result, CODEC_141)
         1
     }
 
@@ -5988,7 +6024,7 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         val lua = call.lua
         val self = call.self(1) as LuaHandle.File
         val result = api.file.children(self)
-        call.push(result, CODEC_141)
+        call.push(result, CODEC_142)
         1
     }
 
@@ -6114,7 +6150,7 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         val name = call.arg(2, "name", LuaCodecs.STRING)
         val value = call.arg(3, "value", LuaCodecs.NUMBER)
         val max = call.arg(4, "max", LuaCodecs.NUMBER)
-        val options = call.arg(5, "options", CODEC_142)
+        val options = call.arg(5, "options", CODEC_143)
         val result = api.hud.fillBar(self, name, value, max, options)
         call.push(result, LuaCodecs.BOOLEAN)
         1
@@ -6137,7 +6173,7 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         val self = call.self(1) as LuaHandle.Hud
         val name = call.arg(2, "name", LuaCodecs.STRING)
         val result = api.hud.bar(self, name)
-        call.push(result, CODEC_143)
+        call.push(result, CODEC_144)
         1
     }
 
@@ -6156,7 +6192,7 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         val self = call.self(1) as LuaHandle.Hud
         val name = call.arg(2, "name", LuaCodecs.STRING)
         val result = api.hud.icons(self, name)
-        call.push(result, CODEC_144)
+        call.push(result, CODEC_145)
         1
     }
 
@@ -6334,9 +6370,10 @@ private val CODEC_135 = LuaList(DatabaseStatement.Codec)
 private val CODEC_136 = LuaList(DatabaseResult.Codec)
 private val CODEC_137 = LuaOptional(LuaHandle.MenuTemplate.Codec)
 private val CODEC_138 = LuaOptional(LuaList(LuaCodecs.INTEGER))
-private val CODEC_139 = LuaOptional(SlotBinding.Codec)
-private val CODEC_140 = LuaList(LuaHandle.Menu.Codec)
-private val CODEC_141 = LuaList(LuaHandle.File.Codec)
-private val CODEC_142 = LuaOptional(HudFillOptions.Codec)
-private val CODEC_143 = LuaOptional(HudBar.Codec)
-private val CODEC_144 = LuaOptional(LuaList(LuaCodecs.STRING))
+private val CODEC_139 = LuaOptional(SlotRule.Codec)
+private val CODEC_140 = LuaOptional(SlotBinding.Codec)
+private val CODEC_141 = LuaList(LuaHandle.Menu.Codec)
+private val CODEC_142 = LuaList(LuaHandle.File.Codec)
+private val CODEC_143 = LuaOptional(HudFillOptions.Codec)
+private val CODEC_144 = LuaOptional(HudBar.Codec)
+private val CODEC_145 = LuaOptional(LuaList(LuaCodecs.STRING))

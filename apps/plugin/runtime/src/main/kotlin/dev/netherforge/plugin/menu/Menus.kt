@@ -85,7 +85,9 @@ class Menus(
      */
     private val skinTitle: (skin: String, shift: Int) -> String?,
     /** How wide MiniMessage words draw in the default font, exactly, or null when that can't be known. */
-    private val measure: (String) -> Int? = { null }
+    private val measure: (String) -> Int? = { null },
+    /** What players wear, for slots bound to it (`bind_equipment`). */
+    private val wardrobe: Wardrobe = Wardrobe.NONE
 ) : RuntimeService {
     override val name get() = "menus"
 
@@ -97,6 +99,32 @@ class Menus(
 
     /** Which slot of a storage a window's slot shows. */
     data class Binding(val storage: InventoryRef.Storage, val index: Int)
+
+    /** A slot that shows what [player] wears in [slot] (`head`, `chest`, `legs`, `feet`, `off_hand`). */
+    data class Worn(val player: UUID, val slot: String)
+
+    /** What players wear: read and put on, by the Lua name of the place. False when they're offline. */
+    interface Wardrobe {
+        fun worn(player: UUID, slot: String): ItemData?
+
+        fun wear(player: UUID, slot: String, item: ItemData?): Boolean
+
+        /** Whether they're online, so what they wear can be read. */
+        fun online(player: UUID): Boolean
+
+        companion object {
+            val NONE = object : Wardrobe {
+                override fun worn(player: UUID, slot: String): ItemData? = null
+
+                override fun wear(player: UUID, slot: String, item: ItemData?) = false
+
+                override fun online(player: UUID) = false
+            }
+        }
+    }
+
+    /** What a slot takes: [takes] says which stacks, [max] how many of one (null for a full stack); [source] is as the script gave it. */
+    class Rule(val source: Any, val max: Int?, val takes: (ItemData) -> Boolean)
 
     /** Where a shift-click from the player's inventory goes: the window's slots bound to [storage]'s, from [first] to [last]. */
     data class ShiftInto(val storage: InventoryRef.Storage, val first: Int, val last: Int)
@@ -129,6 +157,15 @@ class Menus(
 
         /** Its slots bound to a storage's, by slot. */
         internal val bindings = HashMap<Int, Binding>()
+
+        /** Its slots bound to what a player wears, by slot. */
+        internal val worn = HashMap<Int, Worn>()
+
+        /** What its slots take, for those a script gave a rule, by slot. */
+        internal val rules = HashMap<Int, Rule>()
+
+        /** Whether [slot] shows a storage's slot or a player's equipment: theirs to use by hand. */
+        internal fun bound(slot: Int) = slot in bindings || slot in worn
 
         /** Where a shift-click from the player's own inventory goes, when a script set it; null for the game's own rules. */
         var shiftInto: ShiftInto? = null
@@ -175,7 +212,10 @@ class Menus(
     }
 
     override fun tick(phase: TickPhase) {
-        if (phase == TickPhase.UPKEEP) retireUnseen()
+        if (phase == TickPhase.UPKEEP) {
+            retireUnseen()
+            showWorn()
+        }
     }
 
     /** A scope stopped: the templates it made go. */
@@ -360,10 +400,54 @@ class Menus(
             if (!scripts.emit(path, event, precancelled = false)) shiftIn(window, click)
             return true
         }
+        val rule = click.slot?.takeIf { click.top }?.let { window.rules[it] }
+        val limited = rule?.let { ruled(window, click, it) ?: return true }
         // A locked window's bound slots are still the player's to put things in and take them out of, by hand.
-        val byHand = click.top && click.slot != null && click.slot in window.bindings && click.click != "double"
-        return scripts.emit(path, event, precancelled = window.locked && click.movesItems && !byHand)
+        val byHand = click.top && click.slot != null && window.bound(click.slot) && click.click != "double"
+        val cancelled = scripts.emit(path, event, precancelled = window.locked && click.movesItems && !byHand)
+        if (cancelled || limited == null || limited === ALLOWED) return cancelled
+        // More than the rule's max would go in: the engine puts in what fits, and the game's own move is stopped.
+        limited()
+        return true
     }
+
+    /**
+     * What a click on a slot with [rule] does about it: null refuses it (a stack the slot doesn't take); a move to make
+     * by hand when only some of the stack may go in; or [ALLOWED] when the game's own move is fine.
+     */
+    private fun ruled(window: Window, click: MenuClick, rule: Rule): (() -> Unit)? {
+        val slot = click.slot ?: return ALLOWED
+        val held = item(window, slot)
+        when (click.click) {
+            "left", "right" -> {
+                val cursor = click.cursor ?: return ALLOWED
+                if (!rule.takes(cursor)) return null
+                val max = rule.max ?: return ALLOWED
+                val count = cursor.def.count ?: 1
+                val stacks = held != null && ops.room(window.uuid, slot, cursor) > 0
+                if (held != null && !stacks) return ALLOWED.takeIf { count <= max }
+                val has = held?.def?.count ?: 0
+                val wanted = if (click.click == "right") 1 else count
+                if (has + wanted <= max) return ALLOWED
+                val put = minOf(max - has, wanted, ops.room(window.uuid, slot, cursor))
+                if (put <= 0) return null
+                return {
+                    setItem(window, slot, cursor.copy(def = cursor.def.copy(count = has + put)))
+                    val rest = count - put
+                    setCursor(window, click.player.uuid, if (rest > 0) cursor.copy(def = cursor.def.copy(count = rest)) else null)
+                }
+            }
+            "number_key" -> {
+                val incoming = click.hotbar?.let { inventories.contents(InventoryRef.Player(click.player.uuid))?.getOrNull(it) }
+                    ?: return ALLOWED
+                return ALLOWED.takeIf { rule.takes(incoming) && (incoming.def.count ?: 1) <= (rule.max ?: Int.MAX_VALUE) }
+            }
+            else -> return ALLOWED
+        }
+    }
+
+    /** Whether [rule] (none takes anything) takes [item]. */
+    private fun fits(rule: Rule?, item: ItemData): Boolean = rule == null || rule.takes(item)
 
     /**
      * Moves the stack a shift-click took from the player's inventory into the slots of [window] that show the storage
@@ -385,7 +469,9 @@ class Menus(
                 if (left <= 0) break
                 val held = item(window, slot)
                 if ((held != null) != partial) continue
-                val room = ops.room(window.uuid, slot, moving)
+                val rule = window.rules[slot]
+                if (!fits(rule, moving)) continue
+                val room = minOf(ops.room(window.uuid, slot, moving), (rule?.max ?: Int.MAX_VALUE) - (held?.def?.count ?: 0))
                 if (room <= 0 || !offer(window, click, slot, moving)) continue
                 val amount = minOf(room, left)
                 val stack = moving.copy(def = moving.def.copy(count = (held?.def?.count ?: 0) + amount))
@@ -424,7 +510,14 @@ class Menus(
         val menu = LuaHandle.Menu(window.id)
         val event = MenuDragEvent(playerHandle(player), menu, slots.map { it.toLong() }, cursor, window.context)
         val path = listOfNotNull(Events.MENU_DRAG to menu, templateOf(window)?.let { Events.MENUTEMPLATE_DRAG to it })
-        return scripts.emit(path, event, precancelled = window.locked && slots.isNotEmpty() && !slots.all { it in window.bindings })
+        // A drag puts some of the cursor in each slot: refused over a slot that doesn't take it or holds fewer than it brings.
+        val refused = cursor != null &&
+            slots.any { slot ->
+                val rule = window.rules[slot] ?: return@any false
+                !rule.takes(cursor) || (rule.max != null && (cursor.def.count ?: 1) > rule.max)
+            }
+        if (refused) return true
+        return scripts.emit(path, event, precancelled = window.locked && slots.isNotEmpty() && !slots.all { window.bound(it) })
     }
 
     // ---- storage bindings ------------------------------------------------------
@@ -436,27 +529,58 @@ class Menus(
     fun bind(window: Window, slot: Int, storage: InventoryRef.Storage, index: Int): Boolean {
         if (window.gone) return false
         val held = inventories.contents(storage) ?: return false
+        window.worn.remove(slot)
         window.bindings[slot] = Binding(storage, index)
         ops.setItem(window.uuid, slot, held[index])
         return true
     }
 
-    /** Stops [slot] showing a storage's, and empties it: what it showed is still in the storage. False when it wasn't bound. */
+    /** Makes [slot] of [window] show what [player] wears in [where]. False when the window is gone or they're offline. */
+    fun bindWorn(window: Window, slot: Int, player: UUID, where: String): Boolean {
+        if (window.gone || !wardrobe.online(player)) return false
+        window.bindings.remove(slot)
+        window.worn[slot] = Worn(player, where)
+        ops.setItem(window.uuid, slot, wardrobe.worn(player, where))
+        return true
+    }
+
+    /** Stops [slot] showing a storage's or what someone wears, and empties it: what it showed is still there. False when it wasn't bound. */
     fun unbind(window: Window, slot: Int): Boolean {
-        window.bindings.remove(slot) ?: return false
+        if (window.bindings.remove(slot) == null && window.worn.remove(slot) == null) return false
         ops.setItem(window.uuid, slot, null)
         return true
     }
 
     fun binding(window: Window, slot: Int): Binding? = window.bindings[slot]
 
+    fun worn(window: Window, slot: Int): Worn? = window.worn[slot]
+
+    /** Gives [slot] of [window] a rule, or takes it away. */
+    fun setRule(window: Window, slot: Int, rule: Rule?) {
+        if (rule == null) window.rules.remove(slot) else window.rules[slot] = rule
+    }
+
+    fun rule(window: Window, slot: Int): Rule? = window.rules[slot]
+
+    /** Every slot bound to what someone wears shows what they wear now: it changes other ways than through the window. */
+    private fun showWorn() {
+        for (window in windows.values) {
+            if (window.gone || window.worn.isEmpty()) continue
+            for ((slot, worn) in window.worn.entries.toList()) {
+                if (!wardrobe.online(worn.player)) {
+                    unbind(window, slot)
+                    continue
+                }
+                val wearing = wardrobe.worn(worn.player, worn.slot)
+                if (wearing != ops.item(window.uuid, slot)) ops.setItem(window.uuid, slot, wearing)
+            }
+        }
+    }
+
     /** The game moved items in [slots] of [uuid]: what the bound ones hold now is the storage's. */
     fun changed(uuid: UUID, slots: Set<Int>) {
         val window = windowOf(uuid) ?: return
-        for (slot in slots) {
-            val binding = window.bindings[slot] ?: continue
-            if (!inventories.setItem(binding.storage, binding.index, ops.item(uuid, slot))) unbind(window, slot)
-        }
+        for (slot in slots) wroteThrough(window, slot)
     }
 
     /** A script changed [storage]: every slot bound to it shows what it has now. */
@@ -478,6 +602,10 @@ class Menus(
 
     /** A script wrote [slot] of [window] (already written): when it's bound, the storage holds it too. */
     private fun wroteThrough(window: Window, slot: Int) {
+        window.worn[slot]?.let { worn ->
+            if (!wardrobe.wear(worn.player, worn.slot, ops.item(window.uuid, slot))) unbind(window, slot)
+            return
+        }
         val binding = window.bindings[slot] ?: return
         if (!inventories.setItem(binding.storage, binding.index, ops.item(window.uuid, slot))) unbind(window, slot)
     }
@@ -488,12 +616,23 @@ class Menus(
             val held = inventories.contents(binding.storage)
             if (held == null) unbind(window, slot) else ops.setItem(window.uuid, slot, held[binding.index])
         }
+        for ((slot, worn) in window.worn.entries.toList()) {
+            if (wardrobe.online(
+                    worn.player
+                )
+            ) {
+                ops.setItem(window.uuid, slot, wardrobe.worn(worn.player, worn.slot))
+            } else {
+                unbind(window, slot)
+            }
+        }
     }
 
     /** [player] left: every slot bound to one of their storages stops showing it. */
     override fun playerQuit(player: PlayerRef) {
         for (window in windows.values) {
             for ((slot, binding) in window.bindings.entries.toList()) if (binding.storage.player == player.uuid) unbind(window, slot)
+            for ((slot, worn) in window.worn.entries.toList()) if (worn.player == player.uuid) unbind(window, slot)
         }
     }
 
@@ -539,6 +678,8 @@ class Menus(
                 window.locked = next.locked
                 build(window)
                 window.bindings.keys.removeAll { it >= next.size }
+                window.worn.keys.removeAll { it >= next.size }
+                window.rules.keys.removeAll { it >= next.size }
                 showBound(window)
                 for (viewer in viewers) ops.open(window.uuid, viewer)
             } else {
@@ -548,7 +689,7 @@ class Menus(
                 if (previous.locked != next.locked) window.locked = next.locked
                 for (slot in (previous.slots.keys + next.slots.keys).toSortedSet()) {
                     // A bound slot shows its storage's, whatever the file says.
-                    if (slot in window.bindings) continue
+                    if (window.bound(slot)) continue
                     val before = previous.slots[slot]?.item
                     val after = next.slots[slot]?.item
                     if (before != after) ops.setItem(window.uuid, slot, after?.let { ItemData(it) })
@@ -585,7 +726,9 @@ class Menus(
     /** Puts [item] wherever it fits (bound slots too, and so their storage). Returns how many didn't (all of them when the window is gone). */
     fun add(window: Window?, item: ItemData): Int {
         if (window == null) return item.def.count ?: 1
-        return ops.add(window.uuid, item).also { for (slot in window.bindings.keys.toList()) wroteThrough(window, slot) }
+        return ops.add(window.uuid, item).also {
+            for (slot in (window.bindings.keys + window.worn.keys).toList()) wroteThrough(window, slot)
+        }
     }
 
     /** Every filled slot. */
@@ -691,6 +834,8 @@ class Menus(
         window.gone = true
         // Only a picture of the storage: nothing to write.
         window.bindings.clear()
+        window.worn.clear()
+        window.rules.clear()
         windows.remove(window.id)
         byUuid.remove(window.uuid)
         retiring.remove(window)
@@ -719,6 +864,9 @@ class Menus(
     private fun playerHandle(player: PlayerRef) = LuaHandle.Player(player.uuid.toString())
 
     companion object {
+        /** A click the game moves itself, as it would without a rule. */
+        private val ALLOWED: () -> Unit = {}
+
         /** The file's title; with no title and no skin, the menu's name, so a plain window isn't blank. */
         fun defaultTitle(definition: CompiledMenu): String? = definition.title ?: definition.name.takeIf { definition.skin == null }
     }

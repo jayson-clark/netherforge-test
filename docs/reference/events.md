@@ -2389,12 +2389,26 @@ How far a player is with an advancement, by its criteria's names as the advancem
 
 ## SlotBinding
 
-Which slot of a storage a menu slot shows: `slot:binding()`.
+What a menu slot shows: `slot:binding()`. A slot of a storage (`storage` and `index`), or what a player wears (`player` and `equipment`).
 
 | Field | Type | |
 | --- | --- | --- |
-| `storage` | `Inventory` | The storage (`player:storage`). |
-| `index` | `integer` | Its slot, from 0. |
+| `storage` | `Inventory?` | The storage (`player:storage`). |
+| `index` | `integer?` | The storage's slot, from 0. |
+| `player` | `Player?` | Whose equipment. |
+| `equipment` | `string?` | `head`, `chest`, `legs`, `feet` or `off_hand`. |
+
+## SlotRule
+
+What a menu slot takes (`slot:set_rule`). A stack goes in when it's any of `items`, `kinds`, `property` or `wearable` (or when none is given), and never more of it than `max`. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `items` | `string[]?` | The project's items it takes, by id. |
+| `kinds` | `string[]?` | The game's items it takes, by id or `#tag` (`#minecraft:head_armor`); a project item's stacks never count as their kind. |
+| `property` | `string?` | A project item with this key in its `properties` (and not `false`). |
+| `wearable` | `string?` | What's worn there: `head`, `chest`, `legs`, `feet` or `body`, by its `equipment` slot or, for the game's own items, the slot's armour tag (`#minecraft:head_armor`...). |
+| `max` | `integer?` | The most items it holds: 1 for a ring. Default a full stack. |
 
 ## Item
 

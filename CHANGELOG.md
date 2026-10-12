@@ -100,6 +100,13 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **Menu slots with rules, and slots that show what a player wears.**
+  `slot:set_rule({ items, kinds, property, wearable, max })` says what a slot
+  takes, held to clicks, drags, number keys and `shift_into`, with only `max`
+  going in; `slot:rule()` and `slot:accepts(item)`.
+  `slot:bind_equipment(player, "head")` shows and changes what they wear.
+  `slot:binding()` gives `player` and `equipment` for those, and its `storage`
+  and `index` are now optional.
 - **HUD bars and rows that line up, and bars of any length.** A HUD bar or row
   of icons takes `align` (`left`, `center`, `right`), placed by what it draws;
   `hud:fill_bar(name, value, max, { segments })` draws only some of a bar's

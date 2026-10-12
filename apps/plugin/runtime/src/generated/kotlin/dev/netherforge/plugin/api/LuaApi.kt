@@ -3953,8 +3953,38 @@ interface SlotApi {
     fun bind(self: LuaHandle.Slot, storage: LuaHandle.Inventory, index: Long?): Boolean
 
     /**
-     * Stops showing a storage's slot here. The slot is emptied, since what it showed is still in the
-     * storage. Its player leaving unbinds every slot bound to their storage.
+     * Makes this slot a view of what a player wears in one place, as `bind` does a storage's slot: what
+     * goes in or out of it is put on or taken off at once, and when what they wear changes some other way
+     * (a right-click with armour, a script's `set_equipment`) the slot shows it by the next tick. Locked
+     * windows let players use it by hand, as a bound slot. The game doesn't check what's put on: give the
+     * slot a rule (`set_rule({ wearable = "head", max = 1 })`). Only a window of a menu that isn't
+     * `shared` can be bound.
+     */
+    fun bindEquipment(self: LuaHandle.Slot, player: LuaHandle.Player, equipment: String): Boolean
+
+    /**
+     * Says what this slot takes, or with `nil` lets it take anything again. Whatever a player puts in, by
+     * a click, a drag, a number key or a shift-click from their own inventory into `shift_into`'s slots,
+     * is held to it: a stack it doesn't take stays where it was, and of one it does, only `max` goes in
+     * (the rest stays on the cursor). Its `click` handlers still hear what's let through. Scripts' own
+     * `set_item` aren't held to it. A shift-click from below that the game moves itself (no `shift_into`)
+     * isn't either, in a window that isn't locked.
+     */
+    fun setRule(self: LuaHandle.Slot, rule: SlotRule?): Boolean
+
+    /** What this slot takes, or `nil` when it takes anything (or the window is gone). */
+    fun rule(self: LuaHandle.Slot): SlotRule?
+
+    /**
+     * Whether this slot's rule takes this item (any count of it). `true` for a slot without a rule;
+     * `false` once the window is gone.
+     */
+    fun accepts(self: LuaHandle.Slot, item: ItemData): Boolean
+
+    /**
+     * Stops showing a storage's slot (or a player's equipment) here. The slot is emptied, since what it
+     * showed is still where it was. Its player leaving unbinds every slot bound to their storage or
+     * equipment.
      */
     fun unbind(self: LuaHandle.Slot): Boolean
 

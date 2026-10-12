@@ -4230,7 +4230,27 @@ function Slot:set_item(item) end
 ---@return boolean # `false` once the window is gone, or the storage's player is offline.
 function Slot:bind(storage, index) end
 
---- Stops showing a storage's slot here. The slot is emptied, since what it showed is still in the storage. Its player leaving unbinds every slot bound to their storage.
+--- Makes this slot a view of what a player wears in one place, as `bind` does a storage's slot: what goes in or out of it is put on or taken off at once, and when what they wear changes some other way (a right-click with armour, a script's `set_equipment`) the slot shows it by the next tick. Locked windows let players use it by hand, as a bound slot. The game doesn't check what's put on: give the slot a rule (`set_rule({ wearable = "head", max = 1 })`). Only a window of a menu that isn't `shared` can be bound.
+---@param player Player
+---@param equipment string `head`, `chest`, `legs`, `feet` or `off_hand`.
+---@return boolean # `false` once the window is gone, or they're offline.
+function Slot:bind_equipment(player, equipment) end
+
+--- Says what this slot takes, or with `nil` lets it take anything again. Whatever a player puts in, by a click, a drag, a number key or a shift-click from their own inventory into `shift_into`'s slots, is held to it: a stack it doesn't take stays where it was, and of one it does, only `max` goes in (the rest stays on the cursor). Its `click` handlers still hear what's let through. Scripts' own `set_item` aren't held to it. A shift-click from below that the game moves itself (no `shift_into`) isn't either, in a window that isn't locked.
+---@param rule? SlotRule
+---@return boolean # `false` once the window is gone.
+function Slot:set_rule(rule) end
+
+--- What this slot takes, or `nil` when it takes anything (or the window is gone).
+---@return SlotRule?
+function Slot:rule() end
+
+--- Whether this slot's rule takes this item (any count of it). `true` for a slot without a rule; `false` once the window is gone.
+---@param item Item
+---@return boolean
+function Slot:accepts(item) end
+
+--- Stops showing a storage's slot (or a player's equipment) here. The slot is emptied, since what it showed is still where it was. Its player leaving unbinds every slot bound to their storage or equipment.
 ---@return boolean # `false` when it wasn't bound, or the window is gone.
 function Slot:unbind() end
 
@@ -5744,10 +5764,20 @@ function Event:uncancel() end
 ---@field done string[] The criteria they've met.
 ---@field remaining string[] The criteria left.
 
---- Which slot of a storage a menu slot shows: `slot:binding()`.
+--- What a menu slot shows: `slot:binding()`. A slot of a storage (`storage` and `index`), or what a player wears (`player` and `equipment`).
 ---@class SlotBinding
----@field storage Inventory The storage (`player:storage`).
----@field index integer Its slot, from 0.
+---@field storage Inventory? The storage (`player:storage`).
+---@field index integer? The storage's slot, from 0.
+---@field player Player? Whose equipment.
+---@field equipment string? `head`, `chest`, `legs`, `feet` or `off_hand`.
+
+--- What a menu slot takes (`slot:set_rule`). A stack goes in when it's any of `items`, `kinds`, `property` or `wearable` (or when none is given), and never more of it than `max`. A key that isn't one of these is an error.
+---@class SlotRule
+---@field items string[]? The project's items it takes, by id.
+---@field kinds string[]? The game's items it takes, by id or `#tag` (`#minecraft:head_armor`); a project item's stacks never count as their kind.
+---@field property string? A project item with this key in its `properties` (and not `false`).
+---@field wearable string? What's worn there: `head`, `chest`, `legs`, `feet` or `body`, by its `equipment` slot or, for the game's own items, the slot's armour tag (`#minecraft:head_armor`...).
+---@field max integer? The most items it holds: 1 for a ring. Default a full stack.
 
 --- An item stack as a plain table: what `menu:item` returns and what `menu:set_item` takes. Only `kind` is required, or `item` instead. Read one, change a field and write it back, and nothing else about it changes: whatever the stack carries that these fields can't say (a book's pages, another plugin's data) rides along in `raw`, which you never write yourself. A field that isn't one of these is an error.
 ---@class Item

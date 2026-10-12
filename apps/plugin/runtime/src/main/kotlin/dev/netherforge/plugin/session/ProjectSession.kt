@@ -384,7 +384,19 @@ class ProjectSession internal constructor(
     )
 
     /** Menu windows and their scripts: shared ones exist before any module's body runs. */
-    val menus = service(Menus(platform.menus, platform.inventories, scripts, source::read, ::placeOf, packs::skinTitle, ::measureText))
+    val menus = service(
+        Menus(platform.menus, platform.inventories, scripts, source::read, ::placeOf, packs::skinTitle, ::measureText, wardrobe())
+    )
+
+    /** What players wear, for menu slots bound to it. */
+    private fun wardrobe() = object : Menus.Wardrobe {
+        override fun worn(player: UUID, slot: String) = platform.worldEntities.equipment(player, slot)
+
+        override fun wear(player: UUID, slot: String, item: dev.netherforge.plugin.platform.ItemData?) =
+            platform.worldEntities.setEquipment(player, slot, item)
+
+        override fun online(player: UUID) = platform.players.get(player) != null
+    }
 
     val dialogs = service(Dialogs(platform.dialogs, scripts, source::read, ::placeOf, { namespace }) { log.warn(it) })
 

@@ -371,8 +371,8 @@ reload or the server crashing.
   slots. A shift-click from the player's own inventory is locked too, unless
   the window says where it goes with `menu:shift_into(storage, first?, last?)`:
   then it fills the bound slots of that storage, first slot first, and nothing
-  else. To accept only some items, cancel the slot's `click` (`event.item` is
-  the stack going in).
+  else. To accept only some items, give the slot a rule (below), or cancel
+  its `click` (`event.item` is the stack going in).
 - Only a window of its own can be bound, not a `shared` one.
 - Scripts read and change a storage like any inventory: `item`, `set_item`,
   `add_item`, `remove_item`, `has_item`. A slot showing it updates at once.
@@ -386,6 +386,36 @@ reload or the server crashing.
 A window shown to two players (`menu:open_for`) can move one player's items
 into another's inventory, and two players' files are saved separately: keep
 bound windows for their own player.
+
+### What a slot takes, and what a player wears
+
+`slot:set_rule(rule)` says what a slot takes: project items by id (`items`),
+the game's by id or `#tag` (`kinds`), project items with a key in their
+`properties` (`property`), things worn in a place (`wearable`), and how many
+of them (`max`). Clicks, drags, number keys and `shift_into` are held to it:
+a stack it doesn't take stays put, and of one it does, only `max` goes in.
+`slot:accepts(item)` asks it.
+
+`slot:bind_equipment(player, "head")` makes a slot show what the player wears
+there (`head`, `chest`, `legs`, `feet` or `off_hand`): what goes in is put on
+at once, and what they put on some other way shows by the next tick.
+
+```lua
+this:on("open", function(event)
+  local rings = event.player:storage("rings", 5)
+  for i = 0, 4 do
+    local slot = this:slot(2 + i)
+    slot:bind(rings, i)
+    slot:set_rule({ property = "accessory", max = 1 })
+  end
+  for i, place in ipairs({ "head", "chest", "legs", "feet" }) do
+    local slot = this:slot(10 + i)
+    slot:bind_equipment(event.player, place)
+    slot:set_rule({ wearable = place, max = 1 })
+  end
+  this:shift_into(rings)
+end)
+```
 
 ## Measuring text
 

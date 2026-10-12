@@ -1,11 +1,15 @@
 package dev.netherforge.plugin.api
 
+import dev.netherforge.format.game.GameIds
+import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.menu.Menus
 import dev.netherforge.plugin.platform.InventoryRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.session.ProjectSession
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
 import java.util.UUID
 
 /** The window a menu handle names, or null once it's gone. */
@@ -232,6 +236,73 @@ internal class SlotImpl(private val session: ProjectSession) : SlotApi {
         return menus.bind(window, slotIn(window, self.index), ref, at.toInt())
     }
 
+    override fun bindEquipment(self: LuaHandle.Slot, player: LuaHandle.Player, equipment: String): Boolean {
+        if (equipment !in BINDABLE) {
+            throw LuaApiException("bad argument 'equipment' (${BINDABLE.joinToString()}, got \"$equipment\")")
+        }
+        val window = session.window(self.menu) ?: return false
+        if (window.shared) {
+            throw LuaApiException(
+                "a shared menu's window can't show what a player wears: everyone would see one player's (bind a window of their own)"
+            )
+        }
+        val uuid = runCatching { UUID.fromString(player.id) }.getOrNull() ?: return false
+        return menus.bindWorn(window, slotIn(window, self.index), uuid, equipment)
+    }
+
+    override fun setRule(self: LuaHandle.Slot, rule: SlotRule?): Boolean {
+        val built = rule?.let(::settle)
+        val window = session.window(self.menu) ?: return false
+        menus.setRule(window, slotIn(window, self.index), built)
+        return true
+    }
+
+    override fun rule(self: LuaHandle.Slot): SlotRule? {
+        val window = session.window(self.menu) ?: return null
+        return menus.rule(window, slotIn(window, self.index))?.source as SlotRule?
+    }
+
+    override fun accepts(self: LuaHandle.Slot, item: ItemData): Boolean {
+        val window = session.window(self.menu) ?: return false
+        return menus.rule(window, slotIn(window, self.index))?.takes?.invoke(item) ?: true
+    }
+
+    /** [rule] as a slot holds it to stacks, checked: its items must be the project's, its places real ones. */
+    private fun settle(rule: SlotRule): Menus.Rule {
+        val items = rule.items?.map { id ->
+            session.items.idOf(id) ?: throw LuaApiException("bad argument 'rule.items' (no item \"$id\")")
+        }?.toSet()
+        val kinds = rule.kinds?.map { GameIds.normalize(it.removePrefix("#")) to it.startsWith("#") }
+        val wearable = rule.wearable?.also {
+            if (it !in WEARABLE) throw LuaApiException("bad argument 'rule.wearable' (${WEARABLE.joinToString()}, got \"$it\")")
+        }
+        val max = rule.max?.also { if (it < 1) throw LuaApiException("bad argument 'rule.max' (at least 1, got $it)") }?.toInt()
+        val property = rule.property
+        val any = items == null && kinds == null && property == null && wearable == null
+        val game = session.platform.game
+        return Menus.Rule(rule, max) { stack ->
+            val project = stack.def.item?.let { session.items.idOf(it.text) }
+            val kind = GameIds.normalize(stack.def.kind)
+            fun isKind(id: String, tag: Boolean) = if (tag) kind in game.tag(RegistryKey.ITEM, id).orEmpty() else kind == id
+            any ||
+                (project != null && items != null && project in items) ||
+                (project == null && kinds != null && kinds.any { (id, tag) -> isKind(id, tag) }) ||
+                (
+                    project != null &&
+                        property != null &&
+                        session.items.properties(project)?.get(property).let { it != null && it != JsonNull && it != JsonPrimitive(false) }
+                    ) ||
+                (
+                    wearable != null &&
+                        (
+                            stack.def.equipment?.slot?.name?.lowercase()
+                                ?: wearable.takeIf { project == null && isKind("minecraft:${it}_armor", true) }
+                            ) ==
+                        wearable
+                    )
+        }
+    }
+
     override fun unbind(self: LuaHandle.Slot): Boolean {
         val window = session.window(self.menu) ?: return false
         return menus.unbind(window, slotIn(window, self.index))
@@ -239,8 +310,18 @@ internal class SlotImpl(private val session: ProjectSession) : SlotApi {
 
     override fun binding(self: LuaHandle.Slot): SlotBinding? {
         val window = session.window(self.menu) ?: return null
-        val binding = menus.binding(window, slotIn(window, self.index)) ?: return null
+        val slot = slotIn(window, self.index)
+        menus.worn(window, slot)?.let { return SlotBinding(player = LuaHandle.Player(it.player.toString()), equipment = it.slot) }
+        val binding = menus.binding(window, slot) ?: return null
         return SlotBinding(InventoryKeys.of(binding.storage), binding.index.toLong())
+    }
+
+    private companion object {
+        /** What a slot can show of what a player wears. */
+        val BINDABLE = listOf("head", "chest", "legs", "feet", "off_hand")
+
+        /** Where a rule's `wearable` says a stack is worn. */
+        val WEARABLE = listOf("head", "chest", "legs", "feet", "body")
     }
 }
 

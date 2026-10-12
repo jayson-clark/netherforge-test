@@ -5186,6 +5186,38 @@ function Slot.bind(self, storage, index)
   return prim["Slot.bind"](self_key, storage, index)
 end
 
+function Slot.bind_equipment(self, player, equipment)
+  local self_key = ids[self]
+  if self_key == nil or not Slot_is[class_of(self)] then
+    self_key = self_of(self, "Slot")
+  end
+  return prim["Slot.bind_equipment"](self_key, player, equipment)
+end
+
+function Slot.set_rule(self, rule)
+  local self_key = ids[self]
+  if self_key == nil or not Slot_is[class_of(self)] then
+    self_key = self_of(self, "Slot")
+  end
+  return prim["Slot.set_rule"](self_key, rule)
+end
+
+function Slot.rule(self)
+  local self_key = ids[self]
+  if self_key == nil or not Slot_is[class_of(self)] then
+    self_key = self_of(self, "Slot")
+  end
+  return prim["Slot.rule"](self_key)
+end
+
+function Slot.accepts(self, item)
+  local self_key = ids[self]
+  if self_key == nil or not Slot_is[class_of(self)] then
+    self_key = self_of(self, "Slot")
+  end
+  return prim["Slot.accepts"](self_key, item)
+end
+
 function Slot.unbind(self)
   local self_key = ids[self]
   if self_key == nil or not Slot_is[class_of(self)] then

@@ -370,6 +370,8 @@ class FakePlatform(
                     "minecraft:glass_bottle",
                     "minecraft:glowstone_dust",
                     "minecraft:golden_helmet",
+                    // What menu slots that show a player's head take, by the game's tag.
+                    "minecraft:iron_helmet",
                     "minecraft:iron_ingot",
                     "minecraft:iron_pickaxe",
                     "minecraft:sweet_berries"
@@ -454,7 +456,10 @@ class FakePlatform(
                 "minecraft:worldgen/feature" to listOf("minecraft:amethyst_geode", "minecraft:glow_lichen")
             ),
             tags = mapOf(
-                RegistryKey.ITEM.id to mapOf("minecraft:planks" to listOf("minecraft:dark_oak_planks", "minecraft:oak_planks")),
+                RegistryKey.ITEM.id to mapOf(
+                    "minecraft:planks" to listOf("minecraft:dark_oak_planks", "minecraft:oak_planks"),
+                    "minecraft:head_armor" to listOf("minecraft:golden_helmet", "minecraft:iron_helmet")
+                ),
                 RegistryKey.BLOCK.id to mapOf(
                     "minecraft:mineable/pickaxe" to listOf("minecraft:stone", "minecraft:stone_bricks"),
                     "minecraft:mineable/axe" to listOf("minecraft:oak_planks", "minecraft:note_block"),
