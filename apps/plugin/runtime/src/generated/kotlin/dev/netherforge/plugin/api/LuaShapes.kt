@@ -4537,32 +4537,59 @@ data class HudBar(val value: Double, val max: Double) : LuaShape {
 }
 
 /** A block is about to be placed. */
-data class ProjectBlockPlaceEvent(val player: LuaHandle.Player? = null, val block: LuaHandle.CustomBlock, val item: ItemData? = null) : LuaEvent {
+data class ProjectBlockPlaceEvent(val player: LuaHandle.Player? = null, val block: LuaHandle.CustomBlock, val item: ItemData? = null, val facing: String? = null) : LuaEvent {
     override fun push(call: LuaCall) = Codec.push(call, this)
 
     object Codec : ShapeCodec<ProjectBlockPlaceEvent>("ProjectBlockPlaceEvent") {
         val playerCodec = LuaOptional(LuaHandle.Player.Codec)
         val blockCodec = LuaHandle.CustomBlock.Codec
         val itemCodec = LuaOptional(LuaCodecs.ITEM)
+        val facingCodec = LuaOptional(LuaChoice(listOf("north", "east", "south", "west", "up", "down")))
 
         override val pinned = false
 
         override val fields: Map<String, LuaCodec<*>> = mapOf(
             "player" to playerCodec,
             "block" to blockCodec,
-            "item" to itemCodec
+            "item" to itemCodec,
+            "facing" to facingCodec
         )
 
         override fun read(fields: ShapeReader) = ProjectBlockPlaceEvent(
             player = fields.field("player", playerCodec),
             block = fields.field("block", blockCodec),
-            item = fields.field("item", itemCodec)
+            item = fields.field("item", itemCodec),
+            facing = fields.field("facing", facingCodec)
         )
 
         override fun write(fields: ShapeWriter, value: ProjectBlockPlaceEvent) {
             fields.field("player", value.player, playerCodec)
             fields.field("block", value.block, blockCodec)
             fields.field("item", value.item, itemCodec)
+            fields.field("facing", value.facing, facingCodec)
+        }
+    }
+}
+
+/** How `project_block:place` places one. A key that isn't one of these is an error. */
+data class BlockPlaceOptions(val facing: String? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<BlockPlaceOptions>("BlockPlaceOptions") {
+        val facingCodec = LuaOptional(LuaChoice(listOf("north", "east", "south", "west", "up", "down")))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "facing" to facingCodec
+        )
+
+        override fun read(fields: ShapeReader) = BlockPlaceOptions(
+            facing = fields.field("facing", facingCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: BlockPlaceOptions) {
+            fields.field("facing", value.facing, facingCodec)
         }
     }
 }

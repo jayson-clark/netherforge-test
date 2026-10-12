@@ -5,6 +5,7 @@ import dev.netherforge.format.ProblemCodes
 import dev.netherforge.format.Vec3
 import dev.netherforge.format.block.BlockCarrier
 import dev.netherforge.format.block.BlockCarriers
+import dev.netherforge.format.block.BlockFacing
 import dev.netherforge.format.block.BlockFile
 import dev.netherforge.format.block.BlockTool
 import dev.netherforge.format.block.GameBlockFile
@@ -143,13 +144,13 @@ internal class CustomBlocks(
 
     /** What the server remembers of a block in a chunk (saved with it): [id] is the block's name as the project knows it. */
     @Serializable
-    private class Record(val id: String, val centity: String? = null)
+    private class Record(val id: String, val centity: String? = null, val facing: String? = null)
 
     /**
      * A block in a loaded chunk. [kept] is whether it's the one [ChunkBlocks.kept] has; one that isn't is made
      * afresh from its name each time it's looked up.
      */
-    private class Placed(var name: String, var centity: UUID?, var next: Long, val kept: Boolean = true) {
+    private class Placed(var name: String, var centity: UUID?, var next: Long, val kept: Boolean = true, var facing: BlockFacing? = null) {
         /** Whether a block that needn't keep a record has one anyway (its table is kept by it). */
         var pinned = false
     }
@@ -203,6 +204,16 @@ internal class CustomBlocks(
         if (number == 0) return null
         return blocks.kept[at] ?: Placed(names[number - 1], null, 0, kept = false)
     }
+
+    /**
+     * What a chunk's legend says a state is: a block's name, and for a block that turns the way it faced in it
+     * (`chair#east`), so a block whose states move still faces the way it did.
+     */
+    private fun legendValue(name: String, facing: BlockFacing?) = if (facing == null) name else "$name#${facing.id}"
+
+    private fun legendName(value: String) = value.substringBefore('#')
+
+    private fun legendFacing(value: String) = value.substringAfter('#', "").takeIf { it.isNotEmpty() }?.let(BlockFacing::of)
 
     private fun readLegend(json: String?): Map<String, String> =
         json?.let { runCatching { Json.decodeFromString<Map<String, String>>(it) }.getOrNull() }.orEmpty()
@@ -296,7 +307,7 @@ internal class CustomBlocks(
     /** Tells the server which of the world's own breaks and changes this service wants to hear of. */
     private fun watchWorld() {
         val drops = gameRules.filterValues { it.file.drops != null }.keys
-        val falls = if (usable) defs.values.filter { it.file.fallsOrDefault }.mapNotNull { stateOf(it.id) }.toSet() else emptySet()
+        val falls = if (usable) defs.values.filter { it.file.fallsOrDefault }.flatMap { statesOf(it.id) }.toSet() else emptySet()
         platform.blocks.watch(drops, falls)
     }
 
@@ -352,6 +363,46 @@ internal class CustomBlocks(
 
     /** The note block state [name] (a block as the project names it) is held as; null for a block that has none. */
     fun stateOf(name: String): String? = plan?.stateOf(name)?.toString()
+
+    /** The state [name] is held as facing [facing] (its one state for a block that doesn't turn), or null for a way it can't face. */
+    fun stateOf(name: String, facing: BlockFacing?): String? = plan?.stateOf(name, facing)?.toString()
+
+    /** Every state [name] is held in: one, or one per way it faces. */
+    private fun statesOf(name: String): List<String> = plan?.uses.orEmpty().filter { it.name == name }.map { it.state.toString() }
+
+    /** The ways [name] can face, none for a block that doesn't turn. */
+    fun facingsOf(name: String): List<BlockFacing> = defs[name]?.file?.rotationOrDefault?.facings.orEmpty()
+
+    /** The way the block at a position faces: from its state, so a block of the project's that turns; null otherwise. */
+    fun facingAt(world: String, x: Int, y: Int, z: Int): BlockFacing? {
+        placedAt(world, x, y, z) ?: return null
+        val state = platform.blocks.get(world, x, y, z)?.state ?: return null
+        return plan?.facingOf(state)
+    }
+
+    /**
+     * Turns the block at a position to [facing], keeping everything else about it. False when it isn't one of the
+     * project's blocks, its chunk isn't loaded, or it can't face that way (it doesn't turn, or not up or down).
+     */
+    fun turn(world: String, x: Int, y: Int, z: Int, facing: BlockFacing): Boolean {
+        val placed = placedAt(world, x, y, z) ?: return false
+        val state = stateOf(placed.name, facing)?.takeIf { facing in facingsOf(placed.name) } ?: return false
+        if (!platform.blocks.set(world, x, y, z, state, false)) return false
+        val key = ChunkKey(world, x shr 4, z shr 4)
+        val at = BlockVector(x, y, z)
+        val kept = chunks[key]?.kept?.get(at)
+        if (kept != null) {
+            kept.facing = facing
+            if (recorded(placed.name) || kept.pinned) writeRecord(world, x, y, z, record(placed.name, kept.centity, facing))
+            kept.centity?.let { id -> centities().find(id)?.let { centities().turn(it, yawOf(facing)) } }
+        } else {
+            noteLegend(key, placed.name, facing)
+        }
+        return true
+    }
+
+    /** A centity drawn over a block that faces [facing] is turned with it, about its own up: the model's y turn. */
+    private fun yawOf(facing: BlockFacing?): Double = (facing?.y ?: 0).toDouble()
 
     /** The project block a placed note block state is, or null (a vanilla note block, a block of a state no block has). */
     fun nameOfState(state: String): String? = byState[state]?.takeIf { it in defs }
@@ -508,7 +559,9 @@ internal class CustomBlocks(
         for (at in blockData().tablesIn(key.world, key.x, key.z)) {
             val placed = get(blocks, at) ?: continue
             if (placed.pinned || recorded(placed.name)) continue
-            writeRecord(key.world, at.x, at.y, at.z, record(placed.name, null))
+            val facing = platform.blocks.get(key.world, at.x, at.y, at.z)?.state?.let { plan?.facingOf(it) }
+            writeRecord(key.world, at.x, at.y, at.z, record(placed.name, null, facing))
+            placed.facing = facing
             placed.pinned = true
             put(blocks, at, placed)
         }
@@ -542,20 +595,21 @@ internal class CustomBlocks(
                 writeRecord(key.world, at.x, at.y, at.z, null)
                 continue
             }
-            val expected = plan.stateOf(read.id)?.toString()
+            val facing = read.facing?.let(BlockFacing::of)
+            val expected = plan.stateOf(read.id, facing)?.toString()
             val state = stateAt(at)
             val centity = read.centity?.let { runCatching { UUID.fromString(it) }.getOrNull() }
             when {
                 // A block the project has no longer (or has with errors): it stays as it was, inert, until it's back.
                 expected == null || read.id !in defs -> Unit
-                state == expected -> keep(key, at, read.id, centity, tracked)
+                state == expected -> keep(key, at, read.id, centity, tracked, facing)
                 else -> {
                     val now = platform.blocks.get(key.world, at.x, at.y, at.z)?.state
                     val parsed = now?.let(BlockState::parse)
                     if (parsed != null && plan.isCarrier(parsed)) {
                         // The block's state moved with the project's blocks: put it right, quietly.
                         platform.blocks.set(key.world, at.x, at.y, at.z, expected, false)
-                        keep(key, at, read.id, centity, tracked)
+                        keep(key, at, read.id, centity, tracked, facing)
                     } else {
                         // Whatever it was, it isn't there now: its table and its centity go.
                         gone(key.world, at, centity)
@@ -565,24 +619,27 @@ internal class CustomBlocks(
             }
         }
         // What each state found is: the block it was placed as, else (a generated chunk, a paste) the one it is now.
-        val nameOf = states.map { state ->
+        val valueOf = states.map { state ->
             legend[state] ?: byState[state]?.takeIf { adoptsLeaves || plan.stateOf(it)?.let(::isLeaves) != true }
+                ?.let { legendValue(it, plan.facingOf(state)) }
         }
-        val expectedOf = nameOf.map { name -> name?.let { plan.stateOf(it)?.toString() } }
+        val nameOf = valueOf.map { it?.let(::legendName) }
+        val facingOf = valueOf.map { it?.let(::legendFacing) }
+        val expectedOf = nameOf.mapIndexed { i, name -> name?.let { plan.stateOf(it, facingOf[i])?.toString() } }
         found.forEach { x, y, z, i ->
             val name = nameOf[i - 1] ?: return@forEach
             val at = BlockVector(key.x * 16 + x, y, key.z * 16 + z)
             if (at in recorded) return@forEach
             if (name !in defs) {
                 // A block the project has no longer (or has with errors): pinned by a record, inert, until it's back.
-                writeRecord(key.world, at.x, at.y, at.z, record(name, null))
+                writeRecord(key.world, at.x, at.y, at.z, record(name, null, facingOf[i - 1]))
                 return@forEach
             }
             val expected = expectedOf[i - 1] ?: return@forEach
             // The block's state moved with the project's blocks: put it right, quietly.
             if (expected != states[i - 1]) platform.blocks.set(key.world, at.x, at.y, at.z, expected, false)
             if (recorded(name) || ticks(name)) {
-                put(tracked, at, placed(key, at, name, null))
+                put(tracked, at, placed(key, at, name, null).also { it.facing = facingOf[i - 1] })
                 if (recorded(name)) adopted(key.world, at, name, tracked)
             } else {
                 tracked.names[x, y, z] = number(name)
@@ -606,8 +663,9 @@ internal class CustomBlocks(
      * A recorded block that's still there, tracked: one that needn't keep a record (one from before legends) and has
      * no table to keep loses it, and the legend has it from now on.
      */
-    private fun keep(key: ChunkKey, at: BlockVector, name: String, centity: UUID?, tracked: ChunkBlocks) {
+    private fun keep(key: ChunkKey, at: BlockVector, name: String, centity: UUID?, tracked: ChunkBlocks, facing: BlockFacing? = null) {
         val placed = placed(key, at, name, centity)
+        placed.facing = facing
         if (!recorded(name) && centity == null) {
             if (blockData().has(key.world, at.x, at.y, at.z)) {
                 placed.pinned = true
@@ -627,7 +685,7 @@ internal class CustomBlocks(
         for (number in 1..names.size) {
             val name = names[number - 1]
             if (!present[number] || recorded(name)) continue
-            plan.stateOf(name)?.let { legend[it.toString()] = name }
+            for (use in plan.uses) if (use.name == name) legend[use.state.toString()] = legendValue(name, use.facing)
         }
         return legend
     }
@@ -648,8 +706,8 @@ internal class CustomBlocks(
     /** A carrier state nobody recorded: now a block of the project, as if it had been placed. */
     private fun adopted(world: String, at: BlockVector, name: String, tracked: ChunkBlocks) {
         val placed = tracked.kept.getValue(at)
-        placed.centity = spawnCentity(world, at, defs[name] ?: return)
-        writeRecord(world, at.x, at.y, at.z, record(name, placed.centity))
+        placed.centity = spawnCentity(world, at, defs[name] ?: return, placed.facing)
+        writeRecord(world, at.x, at.y, at.z, record(name, placed.centity, placed.facing))
     }
 
     /** A block drawn by a centity whose instance is missing gets a new one. */
@@ -659,16 +717,17 @@ internal class CustomBlocks(
         if (def.file.centity == null) return
         val id = placed.centity
         if (id != null && (centities().find(id) != null || centities().inertRecords().any { it.id == id })) return
-        placed.centity = spawnCentity(world, at, def)
-        writeRecord(world, at.x, at.y, at.z, record(placed.name, placed.centity))
+        placed.centity = spawnCentity(world, at, def, placed.facing)
+        writeRecord(world, at.x, at.y, at.z, record(placed.name, placed.centity, placed.facing))
     }
 
-    private fun record(name: String, centity: UUID?) = Json.encodeToString(Record(name, centity?.toString()))
+    private fun record(name: String, centity: UUID?, facing: BlockFacing? = null) =
+        Json.encodeToString(Record(name, centity?.toString(), facing?.id))
 
-    private fun spawnCentity(world: String, at: BlockVector, def: Def): UUID? {
+    private fun spawnCentity(world: String, at: BlockVector, def: Def, facing: BlockFacing? = null): UUID? {
         val reference = def.file.centity ?: return null
         val centity = reference.nameIn(namespace()) ?: return null
-        val instance = centities().spawn(centity, Location(world, at.x + 0.5, at.y.toDouble(), at.z + 0.5))
+        val instance = centities().spawn(centity, Location(world, at.x + 0.5, at.y.toDouble(), at.z + 0.5), yawOf(facing))
         if (instance == null) log.warn("Block ${def.id}'s centity \"$reference\" couldn't be spawned at $world ${at.x} ${at.y} ${at.z}")
         return instance?.id
     }
@@ -695,35 +754,42 @@ internal class CustomBlocks(
      * chunk isn't loaded. What was there is replaced, and a custom block that
      * was there is forgotten first. No script hears of it.
      */
-    fun place(name: String, world: String, x: Int, y: Int, z: Int): Boolean {
+    fun place(name: String, world: String, x: Int, y: Int, z: Int, facing: BlockFacing? = null): Boolean {
         if (!usable || name !in defs) return false
-        val state = stateOf(name) ?: return false
+        val turned = facing?.takeIf { it in facingsOf(name) }
+        val state = stateOf(name, turned) ?: return false
         if (!platform.blocks.set(world, x, y, z, state, false)) return false
-        register(name, world, BlockVector(x, y, z))
+        register(name, world, BlockVector(x, y, z), plan?.facingOf(state))
         return true
     }
 
     /** Takes [name] into the chunk's tracked blocks, with the record and centity; whatever custom block was there goes first. */
-    private fun register(name: String, world: String, at: BlockVector) {
+    private fun register(name: String, world: String, at: BlockVector, facing: BlockFacing? = null) {
         val def = defs.getValue(name)
         val key = ChunkKey(world, at.x shr 4, at.z shr 4)
         val blocks = chunks.getOrPut(key) { ChunkBlocks() }
         take(blocks, at)?.let { gone(world, at, it.centity) }
-        val placed = Placed(name, null, ticks() + (def.file.tick ?: 0))
-        placed.centity = spawnCentity(world, at, def)
+        val placed = Placed(name, null, ticks() + (def.file.tick ?: 0), facing = facing)
+        placed.centity = spawnCentity(world, at, def, facing)
         put(blocks, at, placed)
         if (recorded(name)) {
-            writeRecord(world, at.x, at.y, at.z, record(name, placed.centity))
+            writeRecord(world, at.x, at.y, at.z, record(name, placed.centity, facing))
         } else {
             // Known by its state: the chunk's legend says which block that is (and a record of what was there goes).
             writeRecord(world, at.x, at.y, at.z, null)
-            val state = stateOf(name)
-            val before = platform.blocks.legend(world, key.x, key.z)
-            val legend = readLegend(before)
-            if (state != null && legend[state] != name) writeLegend(key, before, legend + (state to name))
+            noteLegend(key, name, facing)
         }
         if (def.file.tick != null) ticking += key
         if (def.file.fallsOrDefault) pendingFalls += world to at
+    }
+
+    /** Says in the chunk's legend which block (and way) [name]'s state facing [facing] is, if it doesn't yet. */
+    private fun noteLegend(key: ChunkKey, name: String, facing: BlockFacing?) {
+        val state = stateOf(name, facing) ?: return
+        val before = platform.blocks.legend(key.world, key.x, key.z)
+        val legend = readLegend(before)
+        val value = legendValue(name, facing)
+        if (legend[state] != value) writeLegend(key, before, legend + (state to value))
     }
 
     /** Forgets what's recorded at a position (its block was removed, or replaced by something else). */
@@ -747,7 +813,7 @@ internal class CustomBlocks(
      */
     fun replaced(world: String, x: Int, y: Int, z: Int, state: String) {
         val placed = placedAt(world, x, y, z) ?: return
-        if (stateOf(placed.name) == state) return
+        if (state in statesOf(placed.name)) return
         forget(world, BlockVector(x, y, z))
     }
 
@@ -1185,9 +1251,32 @@ internal class CustomBlocks(
 
     private fun customPosition(block: BlockRef) = BlockPosition.pack(block.x, block.y, block.z)
 
+    /**
+     * The way a block [player] places faces: toward them, as a furnace or a chair does. Up at them when they look
+     * down on it and it can face up (down, looking up at it); else back along where they look, north, east, south
+     * or west. Null for a block that doesn't turn.
+     */
+    private fun facingToward(player: UUID, name: String): BlockFacing? {
+        val facings = facingsOf(name)
+        if (facings.isEmpty()) return null
+        val at = platform.players.location(player) ?: return BlockFacing.NORTH
+        val pitch = at.pitch
+        if (BlockFacing.UP in facings && pitch >= STEEP) return BlockFacing.UP
+        if (BlockFacing.DOWN in facings && pitch <= -STEEP) return BlockFacing.DOWN
+        // Where they look: yaw 0 is south, 90 west, 180 north, 270 east; the block faces back at them.
+        val yaw = (at.yaw % 360 + 360) % 360
+        return when (((yaw + 45) / 90).toInt() % 4) {
+            0 -> BlockFacing.NORTH
+            1 -> BlockFacing.EAST
+            2 -> BlockFacing.SOUTH
+            else -> BlockFacing.WEST
+        }
+    }
+
     private fun placeFromItem(player: PlayerRef, name: String, against: BlockRef, face: String, item: ItemData, hand: String) {
         val def = defs[name] ?: return
-        val state = stateOf(name) ?: return
+        val facing = facingToward(player.uuid, name)
+        val state = stateOf(name, facing) ?: return
         val (dx, dy, dz) = offset(face)
         val x = against.x + dx
         val y = against.y + dy
@@ -1203,12 +1292,13 @@ internal class CustomBlocks(
             val event = ProjectBlockPlaceEvent(
                 LuaHandle.Player(player.uuid.toString()),
                 LuaHandle.CustomBlock(world, BlockPosition.pack(x, y, z)),
-                item
+                item,
+                facing?.id
             )
             if (scripts.emit(Events.PROJECTBLOCK_PLACE, target, event)) return
         }
         if (!platform.blocks.place(player.uuid, world, x, y, z, state, BlockVector(against.x, against.y, against.z), hand)) return
-        register(name, world, BlockVector(x, y, z))
+        register(name, world, BlockVector(x, y, z), facing)
         sound(world, Vec3(x + 0.5, y + 0.5, z + 0.5), def.file.sounds?.place, def.file.placeSound)
         if (platform.players.gameMode(player.uuid) != CREATIVE) consume(player.uuid, hand, item)
     }
@@ -1302,8 +1392,8 @@ internal class CustomBlocks(
     /** A falling block of the project's lands as [block]: the block it was, placed there. */
     fun fallingLanded(entity: UUID, block: BlockRef) {
         val was = falling.remove(entity) ?: return
-        if (was.name !in defs || stateOf(was.name) != block.state) return
-        register(was.name, block.world, BlockVector(block.x, block.y, block.z))
+        if (was.name !in defs || block.state !in statesOf(was.name)) return
+        register(was.name, block.world, BlockVector(block.x, block.y, block.z), plan?.facingOf(block.state))
     }
 
     /**
@@ -1488,6 +1578,9 @@ internal class CustomBlocks(
 
         /** The cracks' stages a block's progress is shown in: the game's ten. */
         const val CRACKS = 10
+
+        /** How steeply a player looks down (or up) to place a block that turns every way facing up (or down): 45°. */
+        const val STEEP = 45.0
 
         /** Chunks checked a tick: a tracked chunk is looked at again every `chunks / SWEEP_PER_TICK` ticks. */
         const val SWEEP_PER_TICK = 2

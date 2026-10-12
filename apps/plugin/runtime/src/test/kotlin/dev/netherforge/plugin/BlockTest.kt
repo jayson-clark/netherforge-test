@@ -1,6 +1,7 @@
 package dev.netherforge.plugin
 
 import dev.netherforge.format.block.BlockCarrier
+import dev.netherforge.format.block.BlockFacing
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.ref.ResourceRef
@@ -8,6 +9,7 @@ import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.ClickButton
 import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.ItemData
+import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.platform.PickAnswer
 import dev.netherforge.plugin.testkit.BlockAt
 import dev.netherforge.plugin.testkit.FakePlatform
@@ -502,6 +504,56 @@ class BlockTest {
             assertNull(server.custom().at("world", 40, 70, 40))
             assertNull(server.platform.blocks.records.keys.firstOrNull { it.x == 40 })
             assertNull(server.platform.blocks.data[BlockAt("world", 40, 70, 40)])
+        }
+    }
+
+    @Test
+    fun `a block that turns faces who places it, a script turns it, and it keeps facing when its states move`() {
+        val chair = mapOf(
+            "blocks/chair/block.json" to """{ "model": "ui/ore", "rotation": "horizontal" }""",
+            "items/chair_item/item.json" to """{ "kind": "minecraft:paper", "block": "chair" }""",
+            "modules/t/init.lua" to """
+                nf.commands.register("chair", function()
+                  local world = nf.worlds.default()
+                  local placed = nf.blocks.get("chair"):place(world:block(vec3(2, 64, 2)):location(), { facing = "east" })
+                  log("placed " .. placed:facing())
+                  log("turned " .. tostring(placed:set_facing("south")) .. " " .. placed:facing())
+                  log("up " .. tostring(placed:set_facing("up")) .. " " .. placed:facing())
+                  local ok, err = pcall(function()
+                    nf.blocks.get("chair"):place(world:block(vec3(3, 64, 2)):location(), { facing = "up" })
+                  end)
+                  log("bad " .. tostring(ok) .. " " .. tostring(err:find("can't face up", 1, true) ~= nil))
+                  log("plain " .. tostring(nf.blocks.get("ore"):place(world:block(vec3(4, 64, 2)):location()):facing()))
+                end)
+            """.trimIndent()
+        )
+        server(chair).use { server ->
+            server.platform.commands.runConsole("chair")
+            assertEquals(emptyList(), server.errors.map { it.message })
+            assertEquals(listOf("placed east", "turned true south", "up false south", "bad false true", "plain nil"), server.logs)
+            assertEquals(server.custom().stateOf("chair", BlockFacing.SOUTH), server.state(2, 64, 2))
+
+            // A player looking north places it facing south, at them.
+            val chairItem = ItemData(ItemDef(kind = "minecraft:paper", item = ResourceRef("chair_item"), count = 2))
+            server.hold(chairItem)
+            server.platform.players.byId.getValue(server.alex.ref.uuid).location =
+                Location("world", 5.5, 64.0, 9.5, yaw = 180.0, pitch = 10.0)
+            server.runtime.events.playerInteract(
+                server.alex.ref,
+                ClickButton.RIGHT,
+                ground.copy(x = 5, z = 5),
+                "up",
+                chairItem,
+                "main_hand"
+            )
+            assertEquals(server.custom().stateOf("chair", BlockFacing.SOUTH), server.state(5, 64, 5))
+
+            // A block named before it takes the first states: the chairs move to theirs and still face the way they did.
+            server.write("blocks/aaa/block.json", "{}")
+            assertTrue(server.reload("blocks/aaa/block.json").resources.single().ok)
+            assertEquals(server.custom().stateOf("chair", BlockFacing.SOUTH), server.state(2, 64, 2))
+            assertEquals(server.custom().stateOf("chair", BlockFacing.SOUTH), server.state(5, 64, 5))
+            assertEquals(BlockFacing.SOUTH, server.custom().facingAt("world", 5, 64, 5))
         }
     }
 

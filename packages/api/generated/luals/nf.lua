@@ -3282,6 +3282,15 @@ function CustomBlock:id() end
 ---@return ProjectBlock?
 function CustomBlock:project() end
 
+--- The way its front faces, for a block that turns (`rotation` in its `block.json`): what it was placed facing, or turned to since. `nil` for a block that doesn't turn, or once what's here isn't one.
+---@return "north"|"east"|"south"|"west"|"up"|"down"?
+function CustomBlock:facing() end
+
+--- Turns it to face another way, keeping everything else about it: its table, its centity (turned with it). `false` when it doesn't turn that way (it doesn't turn, or turns only `horizontal` and this is up or down), or once what's here isn't one of the project's blocks.
+---@param facing "north"|"east"|"south"|"west"|"up"|"down" Which way its front faces.
+---@return boolean
+function CustomBlock:set_facing(facing) end
+
 --- A project block from `blocks/<id>/block.json`: `this` in the block's script, and what `nf.blocks.get` hands out. It's the kind of block, not one placed in the world: its handlers hear what players do with any block of it (see `CustomBlock` for one placed). If the block is deleted, its methods answer `nil` or `false` and its handlers go.
 ---@class ProjectBlock
 local ProjectBlock = {}
@@ -3296,8 +3305,9 @@ function ProjectBlock:exists() end
 
 --- Places one at the block position a location is in, as `world:set_block` would: whatever is there is replaced, and nothing drops. Its `place` handlers are not asked (a script placing a block isn't a player placing one), and it isn't a `block_place` either. If the block has a centity, it's spawned over the block. `nil` when the chunk isn't loaded, or when the game has no state of its carrier left to hold the block in (the project has more blocks of that carrier than that).
 ---@param location Location Where.
+---@param options? BlockPlaceOptions
 ---@return CustomBlock?
-function ProjectBlock:place(location) end
+function ProjectBlock:place(location, options) end
 
 --- Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
 ---@param event ProjectBlock.Event The event's name.
@@ -5449,6 +5459,11 @@ function Event:uncancel() end
 ---@field player Player? Who is placing it, or `nil` for a script.
 ---@field block CustomBlock Where it goes: what is there now is replaced, so `block:custom()` is `nil` until it has been placed (`this:id()` says which block is being placed).
 ---@field item Item? The stack placing it, or `nil` for a script.
+---@field facing "north"|"east"|"south"|"west"|"up"|"down"? The way it will face, for a block that turns: toward the player placing it. `nil` for one that doesn't turn.
+
+--- How `project_block:place` places one. A key that isn't one of these is an error.
+---@class BlockPlaceOptions
+---@field facing "north"|"east"|"south"|"west"|"up"|"down"? The way its front faces, for a block that turns (`rotation` in its `block.json`): a way it can't face is an error. Default north.
 
 --- A block was clicked.
 ---@class ProjectBlockClickEvent: Event

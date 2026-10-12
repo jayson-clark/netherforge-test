@@ -3635,6 +3635,22 @@ function CustomBlock.project(self)
   return prim["CustomBlock.project"](self_key)
 end
 
+function CustomBlock.facing(self)
+  local self_key = ids[self]
+  if self_key == nil or not CustomBlock_is[class_of(self)] then
+    self_key = self_of(self, "CustomBlock")
+  end
+  return prim["CustomBlock.facing"](self_key)
+end
+
+function CustomBlock.set_facing(self, facing)
+  local self_key = ids[self]
+  if self_key == nil or not CustomBlock_is[class_of(self)] then
+    self_key = self_of(self, "CustomBlock")
+  end
+  return prim["CustomBlock.set_facing"](self_key, facing)
+end
+
 -- ProjectBlock --------------------------------------------------------------
 
 local ProjectBlock = class("ProjectBlock")
@@ -3665,12 +3681,12 @@ function ProjectBlock.exists(self)
   return prim["ProjectBlock.exists"](self_key)
 end
 
-function ProjectBlock.place(self, location)
+function ProjectBlock.place(self, location, options)
   local self_key = ids[self]
   if self_key == nil or not ProjectBlock_is[class_of(self)] then
     self_key = self_of(self, "ProjectBlock")
   end
-  return prim["ProjectBlock.place"](self_key, location)
+  return prim["ProjectBlock.place"](self_key, location, options)
 end
 
 function ProjectBlock.on(self, event, handler, options)

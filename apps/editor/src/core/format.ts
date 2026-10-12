@@ -100,6 +100,7 @@ export type {
   BlockSounds,
   BlockTool,
   BlockCarrier,
+  BlockRotation,
   EquipmentDef,
   Curves,
   DialogBody,

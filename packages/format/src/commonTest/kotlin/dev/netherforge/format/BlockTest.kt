@@ -2,7 +2,9 @@ package dev.netherforge.format
 
 import dev.netherforge.format.block.BlockCarrier
 import dev.netherforge.format.block.BlockCarriers
+import dev.netherforge.format.block.BlockFacing
 import dev.netherforge.format.block.BlockFile
+import dev.netherforge.format.block.BlockRotation
 import dev.netherforge.format.block.BlockTool
 import dev.netherforge.format.block.VanillaBlockStates
 import dev.netherforge.format.block.VanillaFile
@@ -99,6 +101,49 @@ class BlockTest {
         val over = assertNotNull(BlockCarriers.plan(many, "test", game("harp", "zombie")))
         assertEquals(listOf("b11", "b12"), over.overflow)
         assertEquals(10, over.uses.size)
+    }
+
+    @Test
+    fun aBlockThatTurnsTakesAStatePerWayItFacesEachDrawnTurned() {
+        val chair = block("ui/chair").copy(rotation = BlockRotation.HORIZONTAL)
+        val statue = block("ui/chair").copy(rotation = BlockRotation.ALL)
+        val blocks = mapOf("chair" to chair, "plain" to block(), "statue" to statue)
+        val plan = assertNotNull(BlockCarriers.plan(blocks, "test", game()))
+        // Four states for the chair, one for the plain block, six for the statue, in name order.
+        assertEquals(plan.pool!!.carriers.take(11), plan.uses.map { it.state })
+        assertEquals(BlockRotation.HORIZONTAL.facings, plan.uses.filter { it.name == "chair" }.map { it.facing })
+        assertEquals(plan.stateOf("chair", BlockFacing.NORTH), plan.stateOf("chair"))
+        val east = assertNotNull(plan.stateOf("chair", BlockFacing.EAST)).toString()
+        assertEquals("chair", plan.nameOf(east))
+        assertEquals(BlockFacing.EAST, plan.facingOf(east))
+        assertNull(plan.stateOf("chair", BlockFacing.UP), "a horizontal block can't face up")
+        assertNull(plan.facingOf(plan.stateOf("plain").toString()))
+        assertEquals(plan.stateOf("plain"), plan.stateOf("plain", BlockFacing.EAST), "a block that doesn't turn has its one state")
+
+        // Drawn as its north-facing model turned: east a quarter about y, up a quarter back about x.
+        val packs = CompiledResourcePack.compileAll(
+            "test",
+            mapOf("ui" to ResourcePackFile(blocks = mapOf("chair" to BlockModelDef(texture = "block/chair.png"))))
+        ).values.toList()
+        val variants = Json.parseToJsonElement(
+            (
+                PackLayout.build(packs, listOf(75, 0), "Test", plan) {
+                    null
+                }.getValue("assets/minecraft/blockstates/note_block.json") as PackLayout.Entry.Text
+                ).text
+        ).jsonObject.getValue("variants").jsonObject
+        fun variant(name: String, facing: BlockFacing) = variants.getValue(
+            plan.stateOf(name, facing)!!.properties.entries.sortedBy { it.key }.joinToString(",") { "${it.key}=${it.value}" }
+        ).jsonObject
+        assertEquals(setOf("model"), variant("chair", BlockFacing.NORTH).keys)
+        assertEquals(90, variant("chair", BlockFacing.EAST).getValue("y").jsonPrimitive.content.toInt())
+        assertEquals(270, variant("statue", BlockFacing.UP).getValue("x").jsonPrimitive.content.toInt())
+        assertEquals("test:block/ui/chair", variant("statue", BlockFacing.DOWN).getValue("model").jsonPrimitive.content)
+
+        // A block that turns takes all its states or none: here only ten are left for blocks.
+        val tight = assertNotNull(BlockCarriers.plan(mapOf("a" to statue, "b" to statue, "c" to block()), "test", game("harp", "zombie")))
+        assertEquals(listOf("b"), tight.overflow)
+        assertEquals(listOf("a", "c"), tight.uses.map { it.name }.distinct())
     }
 
     @Test

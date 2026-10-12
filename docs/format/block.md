@@ -23,6 +23,7 @@ with its script beside it.
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
 | `model`        | `<pack>/<key>`: its look, an entry of a resource pack's [`blocks`](resource-pack.md#block-models). Without one it's drawn as the game block it's held as.                                     |              |
 | `carrier`      | What it's held as, which decides how it behaves physically: `note_block`, `tripwire` or `leaves`. See [carriers](#carriers).                                                                  | `note_block` |
+| `rotation`     | Which ways it can face: `none`, `horizontal` (north, east, south, west) or `all` (up and down too). See [facing](#facing).                                                                    | `none`       |
 | `hardness`     | How long it takes to mine, as the game counts it (stone 1.5, dirt 0.5, obsidian 50). 0 breaks at once, -1 can't be broken by hand.                                                            | 1.5          |
 | `tool`         | `pickaxe`, `axe`, `shovel` or `hoe`: what mines it fastest.                                                                                                                                   | none         |
 | `requiresTool` | It drops nothing unless it's mined with the right `tool`.                                                                                                                                     | false        |
@@ -51,6 +52,31 @@ plugin's protection may refuse it, as for any block a player places; so may
 the block's own `place` handlers, and the space must be free of players and
 mobs, as for a stone. Nothing is used up when it's refused. A script places
 one with `ProjectBlock:place(location)`.
+
+## Facing
+
+A block with `rotation` faces the way it's placed, as a furnace or a chair
+does. Its look is drawn facing **north** (its front on the model's north
+side), and the built resource pack turns it for each other way. A player
+places it facing them: back along the way they look, or, for `all`, up when
+they look down on it steeply (more than 45°) and down when they look up at it.
+
+| `rotation`   | Ways it faces                      | Carrier states it takes |
+| ------------ | ---------------------------------- | ----------------------- |
+| `none`       | north only, as drawn               | 1                       |
+| `horizontal` | north, east, south, west           | 4                       |
+| `all`        | north, east, south, west, up, down | 6                       |
+
+Each way is a state of its carrier of its own, so a block that turns takes
+4 or 6 of the carrier's states (a leaves block of the game has 6 to give,
+tripwire 96): `block.carriers` says when the project's blocks take more than
+the game has. A centity drawn over a block that turns is turned with it, about
+its own up (`up` and `down` turn only the block's look).
+
+Scripts read and change it: `custom_block:facing()` (`"east"`, or `nil` for a
+block that doesn't turn), `custom_block:set_facing("south")`, and
+`project_block:place(location, { facing = "west" })`. The `place` event's
+`facing` is the way a player's block is about to face.
 
 ## Carriers
 

@@ -87,8 +87,10 @@ Centity:to_world	57
 Centity:view_range	15
 Centity:world	15
 Centity:yaw	15
+CustomBlock:facing	15
 CustomBlock:id	15
 CustomBlock:project	15
+CustomBlock:set_facing	17
 Cutscene:is_active	15
 Cutscene:kind	15
 Cutscene:length	15
@@ -468,7 +470,7 @@ ProjectBlock:exists	15
 ProjectBlock:id	15
 ProjectBlock:on	141
 ProjectBlock:once	148
-ProjectBlock:place	31
+ProjectBlock:place	34
 ProjectItem:create	17
 ProjectItem:exists	15
 ProjectItem:id	15

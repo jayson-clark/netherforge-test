@@ -4,5 +4,6 @@
   "carrier": "leaves",
   "hardness": 0.5,
   "tool": "pickaxe",
-  "drops": "ruby_crystal"
+  "drops": "ruby_crystal",
+  "rotation": "all"
 }

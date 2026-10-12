@@ -2473,6 +2473,15 @@ Has the fields and methods of [Event](#event) too.
 | `player` | `Player?` | Who is placing it, or `nil` for a script. |
 | `block` | `CustomBlock` | Where it goes: what is there now is replaced, so `block:custom()` is `nil` until it has been placed (`this:id()` says which block is being placed). |
 | `item` | `Item?` | The stack placing it, or `nil` for a script. |
+| `facing` | `"north"\|"east"\|"south"\|"west"\|"up"\|"down"?` | The way it will face, for a block that turns: toward the player placing it. `nil` for one that doesn't turn. |
+
+## BlockPlaceOptions
+
+How `project_block:place` places one. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `facing` | `"north"\|"east"\|"south"\|"west"\|"up"\|"down"?` | The way its front faces, for a block that turns (`rotation` in its `block.json`): a way it can't face is an error. Default north. |
 
 ## ProjectBlockClickEvent
 

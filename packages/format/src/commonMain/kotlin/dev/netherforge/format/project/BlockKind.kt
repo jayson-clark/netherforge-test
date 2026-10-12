@@ -4,6 +4,7 @@ import dev.netherforge.format.ProblemCodes
 import dev.netherforge.format.block.BlockCarrier
 import dev.netherforge.format.block.BlockCarriers
 import dev.netherforge.format.block.BlockFile
+import dev.netherforge.format.block.BlockRotation
 import dev.netherforge.format.block.BlockValidator
 import dev.netherforge.format.block.VanillaFile
 import dev.netherforge.format.game.GameData
@@ -40,6 +41,9 @@ object BlockKind : DocumentResourceKind<BlockFile, BlockFile>(
      * (`client/vanilla.json`), and some fields mean nothing for a carrier.
      * A block's `sound` must be one the game has place and break sounds for.
      */
+    /** How many of its carrier's states a block takes: one, or one per way it faces. */
+    private fun statesOf(block: BlockFile): Int = maxOf(block.rotationOrDefault.facings.size, 1)
+
     override fun crossCheck(value: BlockFile, ctx: KindContext) {
         val game = ctx.game
         if (value.sound != null && game != null) {
@@ -51,11 +55,20 @@ object BlockKind : DocumentResourceKind<BlockFile, BlockFile>(
         val carrier = value.carrierOrDefault
         val noun = CanonicalJson.serialName(carrier).replace('_', ' ')
         val capacity = BlockCarriers.capacity(ctx.game, carrier)
-        val rank = ctx.models(BlockKind).filterValues { it.carrierOrDefault == carrier }.keys.sorted().indexOf(ctx.id)
-        if (capacity > 0 && rank >= capacity) {
+        // The states the blocks before it take, in name order (a block that turns takes one per way it faces), and its own.
+        val sharing = ctx.models(BlockKind).filterValues { it.carrierOrDefault == carrier }
+        val taken = sharing.filterKeys { it < ctx.id }.values.sumOf { statesOf(it) }
+        if (capacity > 0 && taken + statesOf(value) > capacity) {
+            val turns = if (value.rotationOrDefault != BlockRotation.NONE) {
+                " (it turns, which takes a state for each of its ${value.rotationOrDefault.facings.size} ways)"
+            } else {
+                ""
+            }
             ctx.sink.report(
                 ProblemCodes.BLOCK_CARRIERS,
-                "The game has $capacity $noun states to hold blocks in, and this is $noun block number ${rank + 1}",
+                "The game has $capacity $noun states to hold blocks in, and the $noun blocks up to this one take ${taken + statesOf(
+                    value
+                )}$turns",
                 "$"
             )
         }
@@ -111,5 +124,11 @@ fun BlockKind.plan(blocks: Map<String, Loaded<BlockFile, BlockFile>>, home: Stri
     if (blocks.isEmpty()) {
         null
     } else {
-        BlockCarriers.plan(blocks.mapValues { it.value.compiled }, home, game, blocks.mapValues { it.value.value.carrierOrDefault })
+        BlockCarriers.plan(
+            blocks.mapValues { it.value.compiled },
+            home,
+            game,
+            blocks.mapValues { it.value.value.carrierOrDefault },
+            blocks.mapValues { it.value.value.rotationOrDefault }
+        )
     }

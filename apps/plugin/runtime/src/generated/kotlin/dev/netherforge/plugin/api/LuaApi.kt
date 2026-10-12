@@ -2924,6 +2924,19 @@ interface CustomBlockApi {
 
     /** The project block it's one of, or `nil` once what's here isn't one. */
     fun project(self: LuaHandle.CustomBlock): LuaHandle.ProjectBlock?
+
+    /**
+     * The way its front faces, for a block that turns (`rotation` in its `block.json`): what it was placed
+     * facing, or turned to since. `nil` for a block that doesn't turn, or once what's here isn't one.
+     */
+    fun facing(self: LuaHandle.CustomBlock): String?
+
+    /**
+     * Turns it to face another way, keeping everything else about it: its table, its centity (turned with
+     * it). `false` when it doesn't turn that way (it doesn't turn, or turns only `horizontal` and this is
+     * up or down), or once what's here isn't one of the project's blocks.
+     */
+    fun setFacing(self: LuaHandle.CustomBlock, facing: String): Boolean
 }
 
 /**
@@ -2946,7 +2959,7 @@ interface ProjectBlockApi {
      * over the block. `nil` when the chunk isn't loaded, or when the game has no state of its carrier left
      * to hold the block in (the project has more blocks of that carrier than that).
      */
-    fun place(self: LuaHandle.ProjectBlock, location: LuaLocation): LuaHandle.CustomBlock?
+    fun place(self: LuaHandle.ProjectBlock, location: LuaLocation, options: BlockPlaceOptions?): LuaHandle.CustomBlock?
 }
 
 /**
