@@ -233,13 +233,31 @@ export const centityClass: LuaClass = {
       returns: [{ type: 'boolean' }],
     },
     {
+      name: 'is_temporary',
+      doc: "Whether a script spawned it temporary (`nf.centities.spawn`'s `temporary` or `lifetime`), and it still is: it isn't saved, and it goes when the script that spawned it unloads, or when its lifetime is up. `false` for one `keep` has kept, and once it's removed.",
+      params: [],
+      returns: [{ type: 'boolean' }],
+    },
+    {
+      name: 'lifetime',
+      doc: "How many ticks a temporary centity with a `lifetime` has left before it's removed, or `nil` for one without (or once it's removed).",
+      params: [],
+      returns: [{ type: 'integer?' }],
+    },
+    {
+      name: 'set_lifetime',
+      doc: "Gives it this many ticks more before it's removed, from now. A centity with a lifetime is temporary, so one that wasn't becomes so: it's no longer saved, and goes when its lifetime is up (one spawned temporary still goes with its script too). Leave it out (or `nil`) to take its lifetime away; it stays temporary until `keep`.",
+      params: [{ name: 'ticks', type: 'integer', doc: 'At least 1.', optional: true }],
+      returns: [{ type: 'boolean', doc: "`false` once it's removed." }],
+    },
+    {
       name: 'keep',
-      doc: 'Makes a natural centity a normal one: it is saved from now on (it comes back after a restart), is never removed for being far from players, and no longer counts against its cap. Nothing happens to one that is already normal.',
+      doc: 'Makes a natural or temporary centity a normal one: it is saved from now on (it comes back after a restart), is never removed for being far from players or because a script unloaded or a lifetime ran out, and no longer counts against a cap. Nothing happens to one that is already normal.',
       params: [],
       returns: [
         {
           type: 'boolean',
-          doc: 'Whether it was natural: `false` for one that was already normal, and once it is removed.',
+          doc: 'Whether it was natural or temporary: `false` for one that was already normal, and once it is removed.',
         },
       ],
       example:
@@ -1222,6 +1240,24 @@ export const centityShapes: LuaClass[] = [
         name: 'reached',
         type: 'boolean',
         doc: `Whether it got there: to the end of its path, within ${PATH_REACH} blocks of where it was sent (or of what it went after, which it stops short of); \`false\` when it gave up.`,
+      },
+    ],
+  },
+  {
+    name: 'CentitySpawnOptions',
+    doc: "How `nf.centities.spawn` spawns one. A key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      {
+        name: 'temporary',
+        type: 'boolean?',
+        doc: "Not saved: its entities aren't kept with their chunk, the server forgets it on a restart, and it's removed when the script that spawned it unloads (a reload of it, or its centity removed), so nothing it made is left behind. What a shot, a damage number or a summoned helper is. `keep()` makes it a normal one. Default `false`.",
+      },
+      {
+        name: 'lifetime',
+        type: 'integer?',
+        doc: "Removed this many ticks after it's spawned (its `remove` handlers hear it), loaded or not: at least 1. A centity with a lifetime is temporary too. Default: none.",
       },
     ],
   },

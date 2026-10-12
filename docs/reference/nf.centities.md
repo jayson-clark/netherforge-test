@@ -24,7 +24,7 @@ local stats = nf.centities.properties("green_slime")
 log(stats.hp)
 ```
 
-## `nf.centities.spawn(kind, location_or_position)`
+## `nf.centities.spawn(kind, location_or_position, options?)`
 
 Puts a new instance of a centity into the world. Its entities exist, its script's body has run and its `spawn` handlers have heard it by the time this returns. A centity the project doesn't have is an error.
 
@@ -32,6 +32,7 @@ Puts a new instance of a centity into the world. Its entities exist, its script'
 | --- | --- | --- |
 | `kind` | `string` | Which centity: its folder name under `centities/`. |
 | `location_or_position` | `Location\|Vec3` | Where its position (the anchor) goes: a `Location` (it faces the location's `yaw`, when it has one), or a position in the calling centity's world (the server's first world, in a module). Without a yaw it faces south (yaw 0). |
+| `options` (optional) | `CentitySpawnOptions` |  |
 
 **Returns** `Centity?`: The new instance, or `nil` when the world doesn't exist.
 

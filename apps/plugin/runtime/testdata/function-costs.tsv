@@ -60,9 +60,11 @@ Centity:is_hidden_from	17
 Centity:is_in_liquid	15
 Centity:is_natural	15
 Centity:is_on_ground	15
+Centity:is_temporary	15
 Centity:jump	17
 Centity:keep	15
 Centity:kind	15
+Centity:lifetime	15
 Centity:location	15
 Centity:look_at	48
 Centity:move_to	27
@@ -84,6 +86,7 @@ Centity:set_animation_speed	19
 Centity:set_body	31
 Centity:set_glow_color	17
 Centity:set_glowing	17
+Centity:set_lifetime	17
 Centity:set_velocity	48
 Centity:set_view_range	17
 Centity:set_walk_velocity	55
@@ -620,7 +623,7 @@ nf.bossbars.create	12
 nf.centities.all	38
 nf.centities.get	8
 nf.centities.properties	8
-nf.centities.spawn	259
+nf.centities.spawn	263
 nf.commands.register	12
 nf.config	7
 nf.cutscenes.current	8

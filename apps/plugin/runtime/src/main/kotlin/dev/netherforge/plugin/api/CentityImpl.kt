@@ -64,6 +64,20 @@ internal class CentityImpl(private val session: ProjectSession) : CentityApi {
 
     override fun isNatural(self: LuaHandle.Centity): Boolean = instance(self)?.natural == true
 
+    override fun isTemporary(self: LuaHandle.Centity): Boolean = instance(self)?.temporary == true
+
+    override fun lifetime(self: LuaHandle.Centity): Long? {
+        val expires = instance(self)?.expires ?: return null
+        return maxOf(0L, expires - session.scripts.now)
+    }
+
+    override fun setLifetime(self: LuaHandle.Centity, ticks: Long?): Boolean {
+        if (ticks != null && ticks < 1) throw LuaApiException("bad argument 'ticks' (at least 1 expected, got $ticks)")
+        val instance = instance(self) ?: return false
+        centities.setLifetime(instance, ticks)
+        return true
+    }
+
     override fun keep(self: LuaHandle.Centity): Boolean = instance(self)?.let(centities::keep) == true
 
     override fun data(self: LuaHandle.Centity): Any? {

@@ -110,13 +110,27 @@ internal class NfPlayersImpl(private val session: ProjectSession) : NfPlayersApi
 internal class NfCentitiesImpl(private val session: ProjectSession) : NfCentitiesApi {
     private val centities get() = session.centities
 
-    override fun spawn(caller: Caller, kind: String, locationOrPosition: LocationOrVec3): LuaHandle.Centity? {
+    override fun spawn(
+        caller: Caller,
+        kind: String,
+        locationOrPosition: LocationOrVec3,
+        options: CentitySpawnOptions?
+    ): LuaHandle.Centity? {
         val id = session.names.resource(CentityKind, kind)
         val place = locationOrPosition.place
         val scope = caller.scope
+        val lifetime = options?.lifetime
+        if (lifetime != null && lifetime < 1) throw LuaApiException("bad argument 'options.lifetime' (at least 1 expected, got $lifetime)")
         if (centities.definition(id) == null) throw LuaApiException(session.notInProject("centity", kind, centities.definitionIds()))
         val at = place.resolve(place.world?.name ?: session.scriptWorld(scope))
-        val instance = centities.spawn(id, at, place.yaw ?: 0.0) ?: return null
+        val instance = centities.spawn(
+            id,
+            at,
+            place.yaw ?: 0.0,
+            temporary = options?.temporary == true,
+            owner = scope.id,
+            lifetime = lifetime
+        ) ?: return null
         return LuaHandle.Centity(instance.id.toString())
     }
 

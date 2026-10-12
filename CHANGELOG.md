@@ -100,6 +100,12 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **Temporary centities.** `nf.centities.spawn(kind, place, { temporary = true })`
+  spawns one that's never saved (its entities aren't kept with their chunk)
+  and is removed when the script that spawned it unloads, so a reload or a
+  restart leaves no stuck shot or helper behind; `lifetime = ticks` removes
+  it that long after, loaded or not. `centity:is_temporary()`, `lifetime()`
+  and `set_lifetime()`, and `keep()` makes one normal.
 - **`properties` on items, blocks and centities.** Any JSON a file carries
   for scripts (`{ "damage": 12, "class": "melee" }`), read with
   `ProjectItem:properties()`, `ProjectBlock:properties()`,

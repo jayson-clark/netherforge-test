@@ -100,6 +100,22 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
     var natural = false
         internal set
 
+    /**
+     * A script spawned it temporary (`nf.centities.spawn`'s `temporary` or `lifetime`): not saved, its entities not
+     * persistent, removed when [owner] (the scope that spawned it) is released or at [expires]. `keep()` ends it.
+     */
+    var temporary = false
+        internal set
+
+    /** The scope a [temporary] instance goes with, by id: whoever spawned it, or set its lifetime. */
+    internal var owner: Int? = null
+
+    /** The server tick a [temporary] instance with a lifetime is removed at, or null. */
+    internal var expires: Long? = null
+
+    /** Never saved, its entities never persistent: [natural] or [temporary]. */
+    val transient: Boolean get() = natural || temporary
+
     /** Ticks it has been ticked since it was attached. */
     var age = 0L
 

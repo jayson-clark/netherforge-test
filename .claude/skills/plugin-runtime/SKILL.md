@@ -729,6 +729,12 @@ resolved rules are rebuilt).
   picked a node (a click through a `raycast` node's padding keeps nothing),
   before scripts hear the click.
   A natural instance whose centity is deleted is discarded, never made inert.
+- **Script-temporary** (`nf.centities.spawn(kind, place, { temporary, lifetime })`): `Instance.temporary`, with
+  `owner` (the spawning scope's id) and `expires` (a server tick). Persistence treats `Instance.transient`
+  (natural or temporary) alike: never staged, entities non-persistent. `Centities.scopeReleased` removes the
+  owner's, `pass()` removes the expired before anything ticks (unloaded ones too), and `stop()` removes every
+  temporary one before the scripts stop, so a full reload or a restart leaves nothing behind. `set_lifetime`
+  makes a normal instance temporary (the store forgets its row); `keep` ends both kinds. Tests: `TemporaryCentityTest`.
   Every `NaturalSpawner.PASS_INTERVAL` ticks a sweep removes the natural
   instances with no player within their `despawnDistance` (in their world).
 - **Tests.** `NaturalSpawningTest` runs it on the fake: `FakeWorlds.biomes`,

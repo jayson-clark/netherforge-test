@@ -36,6 +36,7 @@ import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.platform.Ray
 import dev.netherforge.plugin.profile.TickParts
 import dev.netherforge.plugin.project.Resource
+import dev.netherforge.plugin.script.Scope
 import dev.netherforge.plugin.script.ScopeOwner
 import dev.netherforge.plugin.script.Scripts
 import dev.netherforge.plugin.session.ReloadBatch
@@ -164,6 +165,8 @@ class Centities(
 
     /** Scripts stop; the store gets what changed, places and facings included. */
     override fun stop() {
+        // A temporary instance belongs to scripts that are stopping: nothing of it is kept.
+        for (instance in instances.values.toList()) if (instance.temporary) remove(instance)
         stopAll()
         flush()
         savePlacements { true }
@@ -190,7 +193,7 @@ class Centities(
 
     private fun savePlacements(which: (Instance) -> Boolean) {
         for (instance in instances.values) {
-            if (!instance.natural && which(instance) && stored[instance.id] != placement(instance)) put(record(instance))
+            if (!instance.transient && which(instance) && stored[instance.id] != placement(instance)) put(record(instance))
         }
     }
 
@@ -222,7 +225,7 @@ class Centities(
         for (id in dirty) {
             val instance = instances[id]
             // A temporary instance is never in the store: the store knows an instance only once `keep` makes it a normal one.
-            if (instance?.natural == true) continue
+            if (instance?.transient == true) continue
             val record = instance?.let(::record) ?: inert[id]
             if (record != null) {
                 put(record)
@@ -296,14 +299,28 @@ class Centities(
      * (the location's own facing is ignored). Its entities exist, its
      * script's body has run and `spawn` has been heard by the time this
      * returns. Null when there's no such centity or no such world. A
-     * [natural] one is temporary (see [Instance.natural]): the spawner makes those.
+     * [natural] one is temporary (see [Instance.natural]): the spawner makes those. A [temporary] one
+     * (see [Instance.temporary]) goes with the scope [owner] and, given [lifetime], that many ticks from now.
      */
-    fun spawn(centity: String, at: Location, yaw: Double = 0.0, natural: Boolean = false): Instance? {
+    fun spawn(
+        centity: String,
+        at: Location,
+        yaw: Double = 0.0,
+        natural: Boolean = false,
+        temporary: Boolean = false,
+        owner: Int? = null,
+        lifetime: Long? = null
+    ): Instance? {
         val definition = definitions[centity] ?: return null
         if (!platform.worlds.exists(at.world)) return null
         val instance = Instance(UUID.randomUUID(), definition, at.copy(yaw = 0.0, pitch = 0.0), yaw)
         // Before anything is made: its entities are made temporary as they're claimed, and its script's `spawn` can ask.
         instance.natural = natural
+        instance.temporary = temporary || lifetime != null
+        if (instance.temporary) {
+            instance.owner = owner
+            instance.expires = lifetime?.let { scripts.now + it }
+        }
         instances[instance.id] = instance
         obstacles.add(instance)
         autoplay(instance)
@@ -377,13 +394,16 @@ class Centities(
     fun naturals(): List<Instance> = instances.values.filter { it.natural && !it.removed }
 
     /**
-     * Makes a natural instance a normal one: its entities are saved with
-     * their chunks and the store hears of it at the end of the tick, so it
-     * survives a restart. False when it wasn't natural.
+     * Makes a natural or temporary instance a normal one: its entities are
+     * saved with their chunks and the store hears of it at the end of the
+     * tick, so it survives a restart. False when it was neither.
      */
     fun keep(instance: Instance): Boolean {
-        if (instance.removed || !instance.natural) return false
+        if (instance.removed || !instance.transient) return false
         instance.natural = false
+        instance.temporary = false
+        instance.owner = null
+        instance.expires = null
         for (entity in instance.entityIds()) platform.entities.setPersistent(entity, true)
         changed(instance.id)
         return true
@@ -508,7 +528,7 @@ class Centities(
                 instances.remove(instance.id)
                 obstacles.remove(instance)
                 instance.entityIds().forEach { owners.remove(it) }
-                if (instance.natural) {
+                if (instance.transient) {
                     // Nothing to come back to life for: it was never saved.
                     discard(record(instance))
                     scripts.dropTarget(handle(instance))
@@ -545,8 +565,36 @@ class Centities(
     /** Instances whose last tick threw: reported once, not every tick. */
     private val failing = HashSet<UUID>()
 
+    /** A scope that spawned temporary instances is gone: so are they. */
+    override fun scopeReleased(scope: Scope) {
+        for (instance in instances.values.toList()) {
+            if (instance.temporary && instance.owner == scope.id && !instance.removed) remove(instance)
+        }
+    }
+
+    /**
+     * Gives [instance] [ticks] more before it's removed (null: no end). One that wasn't temporary becomes so,
+     * going by its lifetime alone (no scope spawned it temporary); one that was keeps going with its scope too.
+     */
+    fun setLifetime(instance: Instance, ticks: Long?) {
+        if (instance.removed) return
+        if (!instance.temporary) {
+            instance.temporary = true
+            for (entity in instance.entityIds()) platform.entities.setPersistent(entity, false)
+            // The store forgets it at the end of the tick: it isn't saved any more.
+            changed(instance.id)
+            stored.remove(instance.id)?.let { store.delete(instance.id) }
+        }
+        instance.expires = ticks?.let { scripts.now + it }
+    }
+
     private fun pass() {
         paths.beginTick()
+        // Lifetimes run out whether or not their chunk is loaded.
+        for (instance in instances.values.toList()) {
+            val expires = instance.expires
+            if (expires != null && scripts.now >= expires && !instance.removed) remove(instance)
+        }
         for (instance in instances.values.toList()) {
             if (instance.removed) continue
             val loaded = parts.time(LOADED) { loaded(instance) }
@@ -843,7 +891,7 @@ class Centities(
             entities.spawnAnchor(anchor, EntityTag(instance.id, ANCHOR_NODE, EntityRole.ANCHOR))?.let { entity ->
                 instance.anchorEntity = entity
                 owners[entity] = instance to ANCHOR_NODE
-                if (instance.natural) entities.setPersistent(entity, false)
+                if (instance.transient) entities.setPersistent(entity, false)
                 for (player in instance.hiddenFrom) entities.setHidden(player, entity, true)
             }
         }
@@ -885,7 +933,7 @@ class Centities(
         into[node] = entity
         owners[entity] = instance to node
         // A temporary instance's entities aren't saved with their chunk, so a crash can't leave them behind.
-        if (instance.natural) platform.entities.setPersistent(entity, false)
+        if (instance.transient) platform.entities.setPersistent(entity, false)
         for (player in instance.hiddenFrom) platform.entities.setHidden(player, entity, true)
     }
 

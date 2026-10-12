@@ -2752,6 +2752,33 @@ data class CentityPathEndEvent(val centity: LuaHandle.Centity, val reached: Bool
     }
 }
 
+/** How `nf.centities.spawn` spawns one. A key that isn't one of these is an error. */
+data class CentitySpawnOptions(val temporary: Boolean? = null, val lifetime: Long? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<CentitySpawnOptions>("CentitySpawnOptions") {
+        val temporaryCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val lifetimeCodec = LuaOptional(LuaCodecs.INTEGER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "temporary" to temporaryCodec,
+            "lifetime" to lifetimeCodec
+        )
+
+        override fun read(fields: ShapeReader) = CentitySpawnOptions(
+            temporary = fields.field("temporary", temporaryCodec),
+            lifetime = fields.field("lifetime", lifetimeCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: CentitySpawnOptions) {
+            fields.field("temporary", value.temporary, temporaryCodec)
+            fields.field("lifetime", value.lifetime, lifetimeCodec)
+        }
+    }
+}
+
 /**
  * A centity's body, as `centity:body()` gives it and `centity:set_body` takes it: the fields of
  * `centity.json`'s `body`, in Lua spelling. Every field is optional to `set_body`. A key that isn't

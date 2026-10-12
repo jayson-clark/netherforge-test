@@ -297,7 +297,7 @@ interface NfCentitiesApi {
      * its `spawn` handlers have heard it by the time this returns. A centity the project doesn't have is
      * an error.
      */
-    fun spawn(caller: Caller, kind: String, locationOrPosition: LocationOrVec3): LuaHandle.Centity?
+    fun spawn(caller: Caller, kind: String, locationOrPosition: LocationOrVec3, options: CentitySpawnOptions?): LuaHandle.Centity?
 
     /**
      * The live centity instance with this id, or `nil` once it's gone. Ids come from `centity:id()` and
@@ -888,9 +888,30 @@ interface CentityApi {
     fun isNatural(self: LuaHandle.Centity): Boolean
 
     /**
-     * Makes a natural centity a normal one: it is saved from now on (it comes back after a restart), is
-     * never removed for being far from players, and no longer counts against its cap. Nothing happens to
-     * one that is already normal.
+     * Whether a script spawned it temporary (`nf.centities.spawn`'s `temporary` or `lifetime`), and it
+     * still is: it isn't saved, and it goes when the script that spawned it unloads, or when its lifetime
+     * is up. `false` for one `keep` has kept, and once it's removed.
+     */
+    fun isTemporary(self: LuaHandle.Centity): Boolean
+
+    /**
+     * How many ticks a temporary centity with a `lifetime` has left before it's removed, or `nil` for one
+     * without (or once it's removed).
+     */
+    fun lifetime(self: LuaHandle.Centity): Long?
+
+    /**
+     * Gives it this many ticks more before it's removed, from now. A centity with a lifetime is temporary,
+     * so one that wasn't becomes so: it's no longer saved, and goes when its lifetime is up (one spawned
+     * temporary still goes with its script too). Leave it out (or `nil`) to take its lifetime away; it
+     * stays temporary until `keep`.
+     */
+    fun setLifetime(self: LuaHandle.Centity, ticks: Long?): Boolean
+
+    /**
+     * Makes a natural or temporary centity a normal one: it is saved from now on (it comes back after a
+     * restart), is never removed for being far from players or because a script unloaded or a lifetime ran
+     * out, and no longer counts against a cap. Nothing happens to one that is already normal.
      */
     fun keep(self: LuaHandle.Centity): Boolean
 

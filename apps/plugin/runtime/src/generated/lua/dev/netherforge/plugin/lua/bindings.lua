@@ -113,6 +113,30 @@ function Centity.is_natural(self)
   return prim["Centity.is_natural"](self_key)
 end
 
+function Centity.is_temporary(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.is_temporary"](self_key)
+end
+
+function Centity.lifetime(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.lifetime"](self_key)
+end
+
+function Centity.set_lifetime(self, ticks)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.set_lifetime"](self_key, ticks)
+end
+
 function Centity.keep(self)
   local self_key = ids[self]
   if self_key == nil or not Centity_is[class_of(self)] then
@@ -6343,8 +6367,8 @@ namespaces["nf.centities"] = function(scope, ns)
     return prim["nf.centities.properties"](scope, kind)
   end
 
-  function ns.spawn(kind, location_or_position)
-    return prim["nf.centities.spawn"](scope, kind, location_or_position)
+  function ns.spawn(kind, location_or_position, options)
+    return prim["nf.centities.spawn"](scope, kind, location_or_position, options)
   end
 
   function ns.get(id)

@@ -1780,6 +1780,15 @@ Has the fields and methods of [Event](#event) too.
 | `centity` | `Centity` | The instance. |
 | `reached` | `boolean` | Whether it got there: to the end of its path, within 2 blocks of where it was sent (or of what it went after, which it stops short of); `false` when it gave up. |
 
+## CentitySpawnOptions
+
+How `nf.centities.spawn` spawns one. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `temporary` | `boolean?` | Not saved: its entities aren't kept with their chunk, the server forgets it on a restart, and it's removed when the script that spawned it unloads (a reload of it, or its centity removed), so nothing it made is left behind. What a shot, a damage number or a summoned helper is. `keep()` makes it a normal one. Default `false`. |
+| `lifetime` | `integer?` | Removed this many ticks after it's spawned (its `remove` handlers hear it), loaded or not: at least 1. A centity with a lifetime is temporary too. Default: none. |
+
 ## BodySettings
 
 A centity's body, as `centity:body()` gives it and `centity:set_body` takes it: the fields of `centity.json`'s `body`, in Lua spelling. Every field is optional to `set_body`. A key that isn't one of these is an error.

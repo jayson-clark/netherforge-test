@@ -200,6 +200,7 @@ export const nfCentities = namespace(
           type: 'Location|Vec3',
           doc: "Where its position (the anchor) goes: a `Location` (it faces the location's `yaw`, when it has one), or a position in the calling centity's world (the server's first world, in a module). Without a yaw it faces south (yaw 0).",
         },
+        { name: 'options', type: 'CentitySpawnOptions', doc: '', optional: true },
       ],
       returns: [
         { type: 'Centity?', doc: "The new instance, or `nil` when the world doesn't exist." },
