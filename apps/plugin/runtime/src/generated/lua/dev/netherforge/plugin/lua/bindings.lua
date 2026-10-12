@@ -3237,6 +3237,17 @@ function World.blocks(self, from, to, options)
   return prim["World.blocks"](self_key, from[1], from[2], from[3], to[1], to[2], to[3], options)
 end
 
+function World.flood(self, start, options)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  if genuine_mt(start) ~= Vec3_mt then
+    want_vec3(start, "start")
+  end
+  return prim["World.flood"](self_key, start[1], start[2], start[3], options)
+end
+
 function World.set_block(self, position, state, options)
   local self_key = ids[self]
   if self_key == nil or not World_is[class_of(self)] then

@@ -277,6 +277,17 @@ export const worldClass: LuaClass = {
         'local box = world:blocks(vec3(0, 60, 0), vec3(15, 70, 15), { what = "class" })\nif box then\n  -- A block within the box, counted from its corner.\n  local function at(x, y, z)\n    return box.cells[1 + x + box.size_x * (z + box.size_z * y)]\n  end\n  if at(0, 0, 0) == 2 then log("solid") end\nend',
     },
     {
+      name: 'flood',
+      doc: `Fills outward from a block through every block \`options.through\` names, one neighbour at a time, as far as it reaches: the blocks of a tree (\`through = { "#minecraft:logs" }\`), the air of a room (\`through = { "passable" }\`), a lake. It answers every block it filled (\`positions\`, nearest first by steps) and every block it stopped at (\`edges\`: a room's walls), with what each is when asked (\`kinds\`), and \`stopped\` says why it didn't finish when it didn't: it hit its \`limit\`, a chunk that isn't loaded or the world's top or bottom (\`"unloaded"\`: a room open to the sky or the unknown), or its \`bounds\`. It runs in the server, reading the blocks a box at a time, so a fill of thousands of blocks costs a script one call. A start block it can't fill through answers no positions, and the start as an edge. ${UNLOADED}`,
+      params: [
+        { name: 'start', type: 'Vec3', doc: 'Any point in the block to start from.' },
+        { name: 'options', type: 'FloodOptions', doc: '' },
+      ],
+      returns: [{ type: 'FloodResult?', doc: '`nil` once the world has gone.' }],
+      example:
+        'local room = world:flood(assert(player:position()), { through = { "passable" }, except = { "#minecraft:doors" }, limit = 750, kinds = true })\nif room and not room.stopped then\n  log(#room.positions .. " blocks of air, walled in by " .. #room.edges)\nend',
+    },
+    {
       name: 'set_block',
       doc: `Changes the block at a position. A block state the server doesn't have (an unknown block, property or value) is an error. ${UNLOADED}`,
       params: [
@@ -1287,6 +1298,69 @@ export const worldShapes: LuaClass[] = [
       name: 'fluids',
       type: 'boolean?',
       doc: 'Whether water and lava stop it, as solid blocks. Default `false`: it goes through them.',
+    },
+  ]),
+  shape(
+    'FloodOptions',
+    'How `world:flood` fills. A block is named as it is in a game block file: an id (`"minecraft:oak_log"`), a `#tag` (`"#minecraft:logs"`) or a project block\'s id (`"ruby_ore"`), or by what it is: `"solid"` (what players stand on), `"liquid"` (water and lava) or `"passable"` (neither: air, torches, flowers). A key that isn\'t one of these is an error.',
+    [
+      {
+        name: 'through',
+        type: 'string[]',
+        doc: 'The blocks it fills: each one it reaches that any of these names. Required.',
+      },
+      {
+        name: 'except',
+        type: 'string[]?',
+        doc: 'Blocks it doesn\'t fill even when `through` names them: `{ "#minecraft:doors" }` keeps a room\'s air from leaking out through a door. Default none.',
+      },
+      {
+        name: 'directions',
+        type: 'Vec3[]?',
+        doc: 'Which neighbours it goes on to from each block, as offsets of whole blocks (`vec3(0, 1, 0)` is the one above), at most 2 on each axis. Default the six that share a face: `vec3(1, 0, 0)`, `vec3(-1, 0, 0)` and so on. A tree felled up and sideways but never down leaves out every offset with y = -1.',
+      },
+      {
+        name: 'limit',
+        type: 'integer?',
+        doc: 'The most blocks it fills, at least 1, at most 32,768. Default 4,096. `stopped` is `"limit"` when there was more.',
+      },
+      {
+        name: 'bounds',
+        type: 'Bounds?',
+        doc: '`{ min = Vec3, max = Vec3 }`: it never fills a block outside this box (both corners\' blocks included), and `stopped` is `"bounds"` when it would have. Default: no box.',
+      },
+      {
+        name: 'kinds',
+        type: 'boolean?',
+        doc: 'Also answer what each block is (`kinds`, `edge_kinds`): its id without properties (`"minecraft:oak_log"`), or a project block\'s id. Default `false`.',
+      },
+    ],
+  ),
+  shape('FloodResult', 'What `world:flood` filled.', [
+    {
+      name: 'positions',
+      type: 'Vec3[]',
+      doc: 'Every block it filled, as its lowest corner (whole numbers), the start first, then outward a step at a time.',
+    },
+    {
+      name: 'edges',
+      type: 'Vec3[]',
+      doc: "Every block next to one it filled that it didn't fill (a tree's leaves, a room's walls and door), once each. Not a block in an unloaded chunk or outside its `bounds`.",
+    },
+    {
+      name: 'kinds',
+      type: 'string[]?',
+      doc: 'With `kinds = true`, what each of `positions` is, in the same order. `nil` otherwise.',
+    },
+    {
+      name: 'edge_kinds',
+      type: 'string[]?',
+      doc: 'With `kinds = true`, what each of `edges` is, in the same order. `nil` otherwise.',
+    },
+    {
+      name: 'stopped',
+      type: '"limit"|"unloaded"|"bounds"?',
+      doc: 'Why it didn\'t fill everything it reaches: `"limit"` (more past its limit), `"unloaded"` (a chunk that isn\'t loaded, or the world\'s top or bottom, in its way) or `"bounds"`. `nil` when it filled all of it: a closed room, a whole tree.',
     },
   ]),
   shape(

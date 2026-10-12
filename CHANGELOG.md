@@ -100,6 +100,13 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **`world:flood`.** A breadth-first fill run in the server, reading the
+  world a chunk-sized box at a time: through the blocks `through` names (ids,
+  `#tags`, project blocks, or `solid`, `liquid`, `passable`) but not `except`,
+  along the six faces or any `directions`, up to a `limit` and within
+  `bounds`. It answers the blocks it filled and the blocks it stopped at (a
+  room's walls), what each is with `kinds = true`, and why it stopped short
+  (`limit`, `unloaded`, `bounds`): a felled tree or a house check in one call.
 - **Temporary centities.** `nf.centities.spawn(kind, place, { temporary = true })`
   spawns one that's never saved (its entities aren't kept with their chunk)
   and is removed when the script that spawned it unloads, so a reload or a

@@ -3024,6 +3024,12 @@ function World:block(position) end
 ---@return BlockBox?
 function World:blocks(from, to, options) end
 
+--- Fills outward from a block through every block `options.through` names, one neighbour at a time, as far as it reaches: the blocks of a tree (`through = { "#minecraft:logs" }`), the air of a room (`through = { "passable" }`), a lake. It answers every block it filled (`positions`, nearest first by steps) and every block it stopped at (`edges`: a room's walls), with what each is when asked (`kinds`), and `stopped` says why it didn't finish when it didn't: it hit its `limit`, a chunk that isn't loaded or the world's top or bottom (`"unloaded"`: a room open to the sky or the unknown), or its `bounds`. It runs in the server, reading the blocks a box at a time, so a fill of thousands of blocks costs a script one call. A start block it can't fill through answers no positions, and the start as an edge. Blocks in chunks that aren't loaded can't be read or changed: that answers `nil` or `false`, and never loads the chunk (`world:load_chunk` does).
+---@param start Vec3 Any point in the block to start from.
+---@param options FloodOptions
+---@return FloodResult? # `nil` once the world has gone.
+function World:flood(start, options) end
+
 --- Changes the block at a position. A block state the server doesn't have (an unknown block, property or value) is an error. Blocks in chunks that aren't loaded can't be read or changed: that answers `nil` or `false`, and never loads the chunk (`world:load_chunk` does).
 ---@param position Vec3 Any point in the block.
 ---@param state string A block state: `"minecraft:stone"`, `"minecraft:oak_stairs[facing=east]"`. Properties left out take their defaults.
@@ -5636,6 +5642,23 @@ function Event:uncancel() end
 ---@field ignore Entity[]? Entities it goes through: the one it's cast from, usually. Default none.
 ---@field centities boolean? Whether centities' hitboxes stop it. Default `true`.
 ---@field fluids boolean? Whether water and lava stop it, as solid blocks. Default `false`: it goes through them.
+
+--- How `world:flood` fills. A block is named as it is in a game block file: an id (`"minecraft:oak_log"`), a `#tag` (`"#minecraft:logs"`) or a project block's id (`"ruby_ore"`), or by what it is: `"solid"` (what players stand on), `"liquid"` (water and lava) or `"passable"` (neither: air, torches, flowers). A key that isn't one of these is an error.
+---@class FloodOptions
+---@field through string[] The blocks it fills: each one it reaches that any of these names. Required.
+---@field except string[]? Blocks it doesn't fill even when `through` names them: `{ "#minecraft:doors" }` keeps a room's air from leaking out through a door. Default none.
+---@field directions Vec3[]? Which neighbours it goes on to from each block, as offsets of whole blocks (`vec3(0, 1, 0)` is the one above), at most 2 on each axis. Default the six that share a face: `vec3(1, 0, 0)`, `vec3(-1, 0, 0)` and so on. A tree felled up and sideways but never down leaves out every offset with y = -1.
+---@field limit integer? The most blocks it fills, at least 1, at most 32,768. Default 4,096. `stopped` is `"limit"` when there was more.
+---@field bounds Bounds? `{ min = Vec3, max = Vec3 }`: it never fills a block outside this box (both corners' blocks included), and `stopped` is `"bounds"` when it would have. Default: no box.
+---@field kinds boolean? Also answer what each block is (`kinds`, `edge_kinds`): its id without properties (`"minecraft:oak_log"`), or a project block's id. Default `false`.
+
+--- What `world:flood` filled.
+---@class FloodResult
+---@field positions Vec3[] Every block it filled, as its lowest corner (whole numbers), the start first, then outward a step at a time.
+---@field edges Vec3[] Every block next to one it filled that it didn't fill (a tree's leaves, a room's walls and door), once each. Not a block in an unloaded chunk or outside its `bounds`.
+---@field kinds string[]? With `kinds = true`, what each of `positions` is, in the same order. `nil` otherwise.
+---@field edge_kinds string[]? With `kinds = true`, what each of `edges` is, in the same order. `nil` otherwise.
+---@field stopped "limit"|"unloaded"|"bounds"? Why it didn't fill everything it reaches: `"limit"` (more past its limit), `"unloaded"` (a chunk that isn't loaded, or the world's top or bottom, in its way) or `"bounds"`. `nil` when it filled all of it: a closed room, a whole tree.
 
 --- What a spatial query (`world:overlap_box`, `overlap_sphere`, `overlap_cone`, `nearest`) finds. A key that isn't one of these is an error.
 ---@class QueryOptions

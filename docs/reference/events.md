@@ -2546,6 +2546,31 @@ What a ray can hit. A key that isn't one of these is an error.
 | `centities` | `boolean?` | Whether centities' hitboxes stop it. Default `true`. |
 | `fluids` | `boolean?` | Whether water and lava stop it, as solid blocks. Default `false`: it goes through them. |
 
+## FloodOptions
+
+How `world:flood` fills. A block is named as it is in a game block file: an id (`"minecraft:oak_log"`), a `#tag` (`"#minecraft:logs"`) or a project block's id (`"ruby_ore"`), or by what it is: `"solid"` (what players stand on), `"liquid"` (water and lava) or `"passable"` (neither: air, torches, flowers). A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `through` | `string[]` | The blocks it fills: each one it reaches that any of these names. Required. |
+| `except` | `string[]?` | Blocks it doesn't fill even when `through` names them: `{ "#minecraft:doors" }` keeps a room's air from leaking out through a door. Default none. |
+| `directions` | `Vec3[]?` | Which neighbours it goes on to from each block, as offsets of whole blocks (`vec3(0, 1, 0)` is the one above), at most 2 on each axis. Default the six that share a face: `vec3(1, 0, 0)`, `vec3(-1, 0, 0)` and so on. A tree felled up and sideways but never down leaves out every offset with y = -1. |
+| `limit` | `integer?` | The most blocks it fills, at least 1, at most 32,768. Default 4,096. `stopped` is `"limit"` when there was more. |
+| `bounds` | `Bounds?` | `{ min = Vec3, max = Vec3 }`: it never fills a block outside this box (both corners' blocks included), and `stopped` is `"bounds"` when it would have. Default: no box. |
+| `kinds` | `boolean?` | Also answer what each block is (`kinds`, `edge_kinds`): its id without properties (`"minecraft:oak_log"`), or a project block's id. Default `false`. |
+
+## FloodResult
+
+What `world:flood` filled.
+
+| Field | Type | |
+| --- | --- | --- |
+| `positions` | `Vec3[]` | Every block it filled, as its lowest corner (whole numbers), the start first, then outward a step at a time. |
+| `edges` | `Vec3[]` | Every block next to one it filled that it didn't fill (a tree's leaves, a room's walls and door), once each. Not a block in an unloaded chunk or outside its `bounds`. |
+| `kinds` | `string[]?` | With `kinds = true`, what each of `positions` is, in the same order. `nil` otherwise. |
+| `edge_kinds` | `string[]?` | With `kinds = true`, what each of `edges` is, in the same order. `nil` otherwise. |
+| `stopped` | `"limit"\|"unloaded"\|"bounds"?` | Why it didn't fill everything it reaches: `"limit"` (more past its limit), `"unloaded"` (a chunk that isn't loaded, or the world's top or bottom, in its way) or `"bounds"`. `nil` when it filled all of it: a closed room, a whole tree. |
+
 ## QueryOptions
 
 What a spatial query (`world:overlap_box`, `overlap_sphere`, `overlap_cone`, `nearest`) finds. A key that isn't one of these is an error.

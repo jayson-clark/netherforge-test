@@ -2712,6 +2712,20 @@ interface WorldApi {
     fun blocks(self: LuaHandle.World, from: Vec3, to: Vec3, options: BlockBoxOptions?): BlockBox?
 
     /**
+     * Fills outward from a block through every block `options.through` names, one neighbour at a time, as
+     * far as it reaches: the blocks of a tree (`through = { "#minecraft:logs" }`), the air of a room
+     * (`through = { "passable" }`), a lake. It answers every block it filled (`positions`, nearest first
+     * by steps) and every block it stopped at (`edges`: a room's walls), with what each is when asked
+     * (`kinds`), and `stopped` says why it didn't finish when it didn't: it hit its `limit`, a chunk that
+     * isn't loaded or the world's top or bottom (`"unloaded"`: a room open to the sky or the unknown), or
+     * its `bounds`. It runs in the server, reading the blocks a box at a time, so a fill of thousands of
+     * blocks costs a script one call. A start block it can't fill through answers no positions, and the
+     * start as an edge. Blocks in chunks that aren't loaded can't be read or changed: that answers `nil`
+     * or `false`, and never loads the chunk (`world:load_chunk` does).
+     */
+    fun flood(self: LuaHandle.World, start: Vec3, options: FloodOptions): FloodResult?
+
+    /**
      * Changes the block at a position. A block state the server doesn't have (an unknown block, property
      * or value) is an error. Blocks in chunks that aren't loaded can't be read or changed: that answers
      * `nil` or `false`, and never loads the chunk (`world:load_chunk` does).

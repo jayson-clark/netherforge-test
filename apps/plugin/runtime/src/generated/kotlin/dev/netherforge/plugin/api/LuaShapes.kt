@@ -4670,6 +4670,93 @@ data class RaycastOptions(val blocks: Boolean? = null, val entities: Boolean? = 
 }
 
 /**
+ * How `world:flood` fills. A block is named as it is in a game block file: an id
+ * (`"minecraft:oak_log"`), a `#tag` (`"#minecraft:logs"`) or a project block's id (`"ruby_ore"`), or
+ * by what it is: `"solid"` (what players stand on), `"liquid"` (water and lava) or `"passable"`
+ * (neither: air, torches, flowers). A key that isn't one of these is an error.
+ */
+data class FloodOptions(val through: List<String>, val except: List<String>? = null, val directions: List<Vec3>? = null, val limit: Long? = null, val bounds: Bounds? = null, val kinds: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<FloodOptions>("FloodOptions") {
+        val throughCodec = LuaList(LuaCodecs.STRING)
+        val exceptCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val directionsCodec = LuaOptional(LuaList(LuaCodecs.VEC3))
+        val limitCodec = LuaOptional(LuaCodecs.INTEGER)
+        val boundsCodec = LuaOptional(Bounds.Codec)
+        val kindsCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "through" to throughCodec,
+            "except" to exceptCodec,
+            "directions" to directionsCodec,
+            "limit" to limitCodec,
+            "bounds" to boundsCodec,
+            "kinds" to kindsCodec
+        )
+
+        override fun read(fields: ShapeReader) = FloodOptions(
+            through = fields.field("through", throughCodec),
+            except = fields.field("except", exceptCodec),
+            directions = fields.field("directions", directionsCodec),
+            limit = fields.field("limit", limitCodec),
+            bounds = fields.field("bounds", boundsCodec),
+            kinds = fields.field("kinds", kindsCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: FloodOptions) {
+            fields.field("through", value.through, throughCodec)
+            fields.field("except", value.except, exceptCodec)
+            fields.field("directions", value.directions, directionsCodec)
+            fields.field("limit", value.limit, limitCodec)
+            fields.field("bounds", value.bounds, boundsCodec)
+            fields.field("kinds", value.kinds, kindsCodec)
+        }
+    }
+}
+
+/** What `world:flood` filled. */
+data class FloodResult(val positions: List<Vec3>, val edges: List<Vec3>, val kinds: List<String>? = null, val edgeKinds: List<String>? = null, val stopped: String? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<FloodResult>("FloodResult") {
+        val positionsCodec = LuaList(LuaCodecs.VEC3)
+        val edgesCodec = LuaList(LuaCodecs.VEC3)
+        val kindsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val edgeKindsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val stoppedCodec = LuaOptional(LuaChoice(listOf("limit", "unloaded", "bounds")))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "positions" to positionsCodec,
+            "edges" to edgesCodec,
+            "kinds" to kindsCodec,
+            "edge_kinds" to edgeKindsCodec,
+            "stopped" to stoppedCodec
+        )
+
+        override fun read(fields: ShapeReader) = FloodResult(
+            positions = fields.field("positions", positionsCodec),
+            edges = fields.field("edges", edgesCodec),
+            kinds = fields.field("kinds", kindsCodec),
+            edgeKinds = fields.field("edge_kinds", edgeKindsCodec),
+            stopped = fields.field("stopped", stoppedCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: FloodResult) {
+            fields.field("positions", value.positions, positionsCodec)
+            fields.field("edges", value.edges, edgesCodec)
+            fields.field("kinds", value.kinds, kindsCodec)
+            fields.field("edge_kinds", value.edgeKinds, edgeKindsCodec)
+            fields.field("stopped", value.stopped, stoppedCodec)
+        }
+    }
+}
+
+/**
  * What a spatial query (`world:overlap_box`, `overlap_sphere`, `overlap_cone`, `nearest`) finds. A key
  * that isn't one of these is an error.
  */
