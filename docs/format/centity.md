@@ -165,6 +165,47 @@ All optional. Rates are per second.
 | `blocks`      | Collide with the world                                        | true                         |
 | `entities`    | Collide with other centities' hitboxes                        | true                         |
 
+## `body`
+
+```json partial
+"body": { "width": 0.9, "height": 0.75, "stepHeight": 0, "bounce": 0.2 }
+```
+
+A body moves the **whole centity**: an upright box, `width` square and
+`height` tall, standing with its bottom middle at the centity's position,
+which the server walks, drops, jumps and stops against the blocks' collision
+shapes every tick (a slab is half a block, a fence a block and a half). It's
+what a mob, a critter or a rolling boulder moves by, where a node's `physics`
+tumbles one node. Scripts steer it ([`Centity`](../reference/centity.md):
+`set_walk_velocity`, `jump`, `set_velocity`) and read what it's doing
+(`is_on_ground`, `is_in_liquid`, `wall`; the `land` and `bump` events). Its
+hitboxes are separate: they're what clicks and queries test.
+
+All optional. Rates are per second, as `physics`'s are.
+
+| Key               | Meaning                                                                         | Default |
+| ----------------- | ------------------------------------------------------------------------------- | ------- |
+| `width`           | Blocks across, square: more than 0, at most 16                                  | 0.6     |
+| `height`          | Blocks tall: more than 0, at most 32                                            | 1.8     |
+| `gravity`         | Downward acceleration, blocks/s²                                                | 32      |
+| `maxFallSpeed`    | The fastest it falls, blocks/s                                                  | 78.4    |
+| `drag`            | Fraction of its speed shed per second in the air (every axis), 0 to 1           | 0.33    |
+| `liquidDrag`      | The same in water or lava                                                       | 0.98    |
+| `liquidGravity`   | How much of `gravity` pulls it in water or lava: 0 floats, 1 sinks as in air    | 0.25    |
+| `acceleration`    | How fast it reaches the speed it walks at, on the ground (or flying), blocks/s² | 20      |
+| `airAcceleration` | The same in the air: how much it can steer while it falls or jumps              | 5       |
+| `friction`        | How fast it slows to a stop on the ground when it isn't walking, blocks/s²      | 24      |
+| `stepHeight`      | The tallest step it walks straight up, blocks; 0 means it must jump             | 0.6     |
+| `bounce`          | 0 stops dead against what it hits, 1 bounces off at the speed it came           | 0       |
+| `fly`             | No gravity: walking steers it in any direction, and drag slows it on every axis | false   |
+| `blocks`          | Collides with the world's blocks; `false` passes through them                   | true    |
+
+A body that starts inside blocks (spawned there, or the world changed round
+it) rises out of them. It doesn't move into a chunk that isn't loaded. While
+`move_to` walks the centity, the walk moves it and the body waits; a teleport
+keeps its velocity. Nothing about it is saved: after a restart it starts at
+rest where the centity stands.
+
 ## `script`
 
 ```json partial

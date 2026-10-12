@@ -270,6 +270,127 @@ function Centity.stop_following(self)
   return prim["Centity.stop_following"](self_key)
 end
 
+function Centity.has_body(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.has_body"](self_key)
+end
+
+function Centity.body(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.body"](self_key)
+end
+
+function Centity.set_body(self, settings)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.set_body"](self_key, settings)
+end
+
+function Centity.velocity(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  local result_x, result_y, result_z = prim["Centity.velocity"](self_key)
+  if result_x == nil then
+    return nil
+  end
+  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+end
+
+function Centity.set_velocity(self, velocity)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  if genuine_mt(velocity) ~= Vec3_mt then
+    want_vec3(velocity, "velocity")
+  end
+  return prim["Centity.set_velocity"](self_key, velocity[1], velocity[2], velocity[3])
+end
+
+function Centity.add_velocity(self, velocity)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  if genuine_mt(velocity) ~= Vec3_mt then
+    want_vec3(velocity, "velocity")
+  end
+  return prim["Centity.add_velocity"](self_key, velocity[1], velocity[2], velocity[3])
+end
+
+function Centity.walk_velocity(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  local result_x, result_y, result_z = prim["Centity.walk_velocity"](self_key)
+  if result_x == nil then
+    return nil
+  end
+  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+end
+
+function Centity.set_walk_velocity(self, velocity)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  local velocity_x, velocity_y, velocity_z
+  if velocity ~= nil then
+    if genuine_mt(velocity) ~= Vec3_mt then
+      want_vec3_opt(velocity, "velocity")
+    end
+    velocity_x, velocity_y, velocity_z = velocity[1], velocity[2], velocity[3]
+  end
+  return prim["Centity.set_walk_velocity"](self_key, velocity_x, velocity_y, velocity_z)
+end
+
+function Centity.jump(self, height)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.jump"](self_key, height)
+end
+
+function Centity.is_on_ground(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.is_on_ground"](self_key)
+end
+
+function Centity.is_in_liquid(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.is_in_liquid"](self_key)
+end
+
+function Centity.wall(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  local result_x, result_y, result_z = prim["Centity.wall"](self_key)
+  if result_x == nil then
+    return nil
+  end
+  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+end
+
 function Centity.move_to(self, target, options)
   local self_key = ids[self]
   if self_key == nil or not Centity_is[class_of(self)] then

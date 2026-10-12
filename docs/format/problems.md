@@ -426,6 +426,14 @@ Warning. A body's `maxSpeed` is 0, so it never moves. See [centities](centity.md
 
 Warning. A body collides with nothing, so nothing stops it falling. See [centities](centity.md).
 
+### `centity.body-size` {#centity-body-size}
+
+Error. A `body`'s `width` or `height` isn't positive, or is too big. See [centities](centity.md).
+
+### `centity.body-range` {#centity-body-range}
+
+Warning. A `body` value out of its range is clamped. See [centities](centity.md).
+
 ### `centity.spawning-world` {#centity-spawning-world}
 
 Error. A world in `spawning.worlds` isn't a usable world name. See [centities](centity.md).

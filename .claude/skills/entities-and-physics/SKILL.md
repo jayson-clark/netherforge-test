@@ -42,6 +42,22 @@ casts one block ray first and shortens the capsule to it, so nothing past the bl
 pass so every instance has moved: `SpatialQueries.contacts` per listening instance, compared with
 `Instance.touching`. Tests: `SpatialQueryTest`.
 
+## Bodies (`centity.json`'s `body`)
+
+A centity's `body` moves the whole centity, where a node's `physics` moves one node. Format: `BodyDef`
+(the file), `ResolvedBody` (defaults and clamps, what the validator's `centity.body-*` problems say),
+`CompiledCentity.body`. Runtime: `Instance.mover` (a `Mover`: settings, velocity, walk, what its last
+move found; reset by `redefine`) and `centity/Movers.kt`, stepped in the pipeline after a walk and
+before physics (skipped while `move_to` walks it). One step: drag, then gravity (less in a liquid,
+read from the block at its middle), then the walk's approach (so a walk lands on exactly the speed it
+asks for); then the move, Minecraft's way: one `RegionShapes` read of the blocks around the swept box
+(unloaded chunks are full cubes), clipped up or down first, then the longer sideways axis first; a
+blocked sideways move on the ground is tried again from `stepHeight` higher and kept if it got
+further. A body that starts overlapping a block rises out. `jumpSpeed` halves its way to the launch
+speed whose apex, integrated tick by tick exactly as the step does, is the height asked. The anchor is
+set directly (only into a chunk whose entities are loaded), as a walk sets it; `land` and `bump` are
+raised from what the step returns. Tests: `CentityBodyTest`.
+
 ## Physics: where things are
 
 | Path (`apps/plugin/runtime/.../`) | Owns                                                                              |

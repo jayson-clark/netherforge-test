@@ -173,6 +173,9 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
     /** [placed], kept until the pose or facing changes. */
     private var placedCache: List<Matrix4>? = null
 
+    /** Its `body` as it runs, when it has one: see [Movers]. Runtime state: a reload starts it again from the file's. */
+    var mover: Mover? = declared.body?.let(::Mover)
+
     /** What its hitboxes touch now (other instances' and entities' ids), while something listens to its `touch`: see [SpatialQueries.contacts]. */
     internal var touching: Set<UUID> = emptySet()
 
@@ -312,6 +315,7 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
         animations.stopAll()
         // A walk was sized from the old hitboxes, and its `path_end` handlers went with the old script.
         walk = null
+        mover = next.body?.let(::Mover)
         needsReconcile = true
         forceSync = true
         posed()

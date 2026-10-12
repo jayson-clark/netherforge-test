@@ -14,7 +14,9 @@ import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.api.AnimationEvent
+import dev.netherforge.plugin.api.CentityBumpEvent
 import dev.netherforge.plugin.api.CentityEvent
+import dev.netherforge.plugin.api.CentityLandEvent
 import dev.netherforge.plugin.api.CentityPathEndEvent
 import dev.netherforge.plugin.api.ClickEvent
 import dev.netherforge.plugin.api.EventType
@@ -126,6 +128,9 @@ class Centities(
     private val owners = HashMap<UUID, Pair<Instance, String>>()
 
     val physics = Physics(platform, this)
+
+    /** Centities' `body`: walking, falling and jumping against the blocks. */
+    internal val movers = Movers(platform)
 
     /** Centities walking where `move_to` sent them. */
     val paths = CentityPaths(platform, this)
@@ -562,6 +567,16 @@ class Centities(
         touches()
     }
 
+    /** What a body's move did, to whoever listens: `land`, then a `bump` for each face it ran into. */
+    private fun moved(instance: Instance, moved: Mover.Moved) {
+        val landed = moved.landed
+        if (landed != null && !instance.removed) emit(Events.CENTITY_LAND, instance, CentityLandEvent(handle(instance), landed))
+        for (bump in moved.bumps) {
+            if (instance.removed) break
+            emit(Events.CENTITY_BUMP, instance, CentityBumpEvent(handle(instance), bump.normal, bump.speed))
+        }
+    }
+
     /**
      * `touch`: after every instance has moved this tick, each one something listens to `touch` on hears
      * what its hitboxes started touching since the last tick. One nobody listens to keeps no contacts.
@@ -611,6 +626,11 @@ class Centities(
         if (instance.follower != null && !instance.removed) parts.time(FOLLOW) { followTick(instance) }
         // Walking moves the whole centity first, so physics settles its bodies where it has been walked to.
         if (instance.walk != null && !instance.removed) parts.time(WALK) { paths.step(instance) }
+        // Its body moves the whole centity, before physics settles node bodies where it has gone; a walk moves it instead.
+        if (instance.mover != null && instance.walk == null && !instance.removed) {
+            val moved = parts.time(BODY) { movers.step(instance) }
+            if (moved != null) moved(instance, moved)
+        }
         if (instance.hasBodies && !instance.removed) parts.time(PHYSICS) { physics.step(instance, SECONDS_PER_TICK) }
         // Rates are handler options (`every`): only a tick some handler is due on is raised, and none when nobody listens.
         if (!instance.removed && scripts.due(handle(instance), Events.CENTITY_TICK, scripts.now)) {
@@ -1208,6 +1228,7 @@ class Centities(
         private const val SCRIPTS = "$PART/scripts"
         private const val SYNC = "$PART/sync"
         private const val TOUCH = "$PART/touch"
+        private const val BODY = "$PART/body"
         private const val SYNC_GONE = "$SYNC/reconcile"
         private const val SYNC_ANCHOR = "$SYNC/anchor"
         private const val SYNC_PLACE = "$SYNC/place"

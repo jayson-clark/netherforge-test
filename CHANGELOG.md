@@ -100,6 +100,16 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **A `body` for centities.** `centity.json`'s `body` (width, height, gravity,
+  drag, liquid drag and gravity, acceleration on the ground and in the air,
+  friction, step height, bounce, `fly`, `blocks`) makes the server walk, drop,
+  jump and stop the whole centity against the blocks' real collision shapes
+  every tick, stepping up what its step height allows, as Minecraft moves an
+  entity: what a mob or a critter moves by, without a script integrating it.
+  Scripts steer it with `set_walk_velocity`, `set_velocity`, `add_velocity`
+  and `jump(height)` (worked out from its gravity and drag), read
+  `is_on_ground`, `is_in_liquid` and `wall`, hear `land` and `bump`, and
+  change it at runtime with `set_body` (which gives a centity one too).
 - **`centity:bounds()` and `touch`.** The box around a centity's shown
   hitboxes, and an event when its hitboxes start touching another centity's,
   a player's or an entity's, worked out only for centities something listens

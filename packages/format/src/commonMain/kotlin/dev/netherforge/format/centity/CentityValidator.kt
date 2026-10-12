@@ -52,6 +52,42 @@ object CentityValidator {
         validateAnimations(file, sink)
         file.script?.let { Rules.script(it, "$.script", sink, files) }
         file.spawning?.let { validateSpawning(it, sink, game) }
+        file.body?.let { validateBody(it, sink) }
+    }
+
+    private fun validateBody(body: BodyDef, sink: ProblemSink) {
+        val at = "$.body"
+        for ((field, value, most) in listOf(
+            Triple("width", body.width, ResolvedBody.MAX_WIDTH),
+            Triple("height", body.height, ResolvedBody.MAX_HEIGHT)
+        )) {
+            if (value != null && (value <= 0 || value > most)) {
+                sink.report(
+                    ProblemCodes.CENTITY_BODY_SIZE,
+                    "$field must be more than 0 and at most ${CanonicalJson.formatNumber(most.toString())} blocks",
+                    "$at.$field"
+                )
+            }
+        }
+        for ((field, value) in listOf("drag" to body.drag, "liquidDrag" to body.liquidDrag, "bounce" to body.bounce)) {
+            if (value != null && (value < 0 || value > 1)) {
+                sink.report(ProblemCodes.CENTITY_BODY_RANGE, "$field is clamped to between 0 and 1", "$at.$field")
+            }
+        }
+        for ((field, value) in listOf(
+            "maxFallSpeed" to body.maxFallSpeed,
+            "liquidGravity" to body.liquidGravity,
+            "acceleration" to body.acceleration,
+            "airAcceleration" to body.airAcceleration,
+            "friction" to body.friction,
+            "stepHeight" to body.stepHeight
+        )) {
+            if (value != null &&
+                value < 0
+            ) {
+                sink.report(ProblemCodes.CENTITY_BODY_RANGE, "A negative $field is treated as zero", "$at.$field")
+            }
+        }
     }
 
     private fun validateSpawning(spawning: SpawningDef, sink: ProblemSink, game: GameData?) {

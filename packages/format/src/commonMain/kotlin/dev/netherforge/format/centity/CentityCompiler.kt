@@ -59,6 +59,6 @@ object CentityCompiler {
             )
         }
 
-        return CompiledCentity(id, file.name, nodes, animations, file.script, file.spawning)
+        return CompiledCentity(id, file.name, nodes, animations, file.script, file.spawning, file.body?.let(ResolvedBody::of))
     }
 }

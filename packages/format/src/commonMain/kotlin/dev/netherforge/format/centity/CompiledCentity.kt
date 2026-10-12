@@ -20,7 +20,9 @@ class CompiledCentity(
     /** The centity's one script, run once per instance. */
     val script: ScriptDef? = null,
     /** The rules for natural spawns, when the file has any. */
-    val spawning: SpawningDef? = null
+    val spawning: SpawningDef? = null,
+    /** Its `body`, resolved, when it has one. */
+    val body: ResolvedBody? = null
 ) {
     private val indexByName = nodes.withIndex().associate { (i, node) -> node.name to i }
     private val animationByName = animations.associateBy { it.name }

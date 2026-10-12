@@ -260,6 +260,8 @@ What [Centity](centity.md) listens for.
 | `animation_end` | [AnimationEvent](events.md#animationevent) |  | An animation reached its end: a `once` clip has finished, a `hold` clip is holding its last pose. Looping clips never end. |
 | `chunk_load` | [CentityEvent](events.md#centityevent) |  | Its chunk came back into memory (someone came near), so it's ticking again. |
 | `chunk_unload` | [CentityEvent](events.md#centityevent) |  | Its chunk was unloaded (everyone went away): it stops ticking until `chunk_load`. Its handlers stay. |
+| `land` | [CentityLandEvent](events.md#centitylandevent) |  | Its `body` came down onto something after falling (or jumping): once, as it lands. `event.speed` is how fast it was falling, for fall damage or a thud. |
+| `bump` | [CentityBumpEvent](events.md#centitybumpevent) |  | Its `body` ran into something it didn't land on: a wall, or a ceiling. Once each tick it does, with the face's `normal` (pointing back at it) and how fast it was going into it. |
 | `touch` | [TouchEvent](events.md#touchevent) |  | Its hitboxes started touching something's: another centity's, a player's or another entity's (each shown node's boxes, as `world:overlap_box` sees them). Once when they start touching, and again only after they've come apart. Worked out each tick only for centities something listens to this on, so a crowd nobody listens to costs nothing. Both centities hear it when two touch, each with the other in `event.other`. |
 | `path_end` | [CentityPathEndEvent](events.md#centitypathendevent) |  | It stopped walking where `move_to` sent it: it got there (to the end of its path, or within 2 blocks of what it went after), or gave up (no way further, its way blocked with no other way round, or what it went after has gone or left its world). Not after `stop_pathing`, a new `move_to`, `teleport` or a reload of its centity. |
 
@@ -287,6 +289,26 @@ end)
 this:on("click", function(event)
   this:play_animation("open")
   event.player:send_message("<gold>Opened")
+end)
+```
+
+### centity land
+
+```lua
+this:on("land", function(event)
+  if event.speed > 12 then
+    this:emit("game:hurt", { amount = event.speed - 12 })
+  end
+end)
+```
+
+### centity bump
+
+```lua
+this:on("bump", function(event)
+  if event.normal.y == 0 and this:is_on_ground() then
+    this:jump(1.2)
+  end
 end)
 ```
 
@@ -1745,6 +1767,50 @@ Has the fields and methods of [Event](#event) too.
 | --- | --- | --- |
 | `centity` | `Centity` | The instance. |
 | `reached` | `boolean` | Whether it got there: to the end of its path, within 2 blocks of where it was sent (or of what it went after, which it stops short of); `false` when it gave up. |
+
+## BodySettings
+
+A centity's body, as `centity:body()` gives it and `centity:set_body` takes it: the fields of `centity.json`'s `body`, in Lua spelling. Every field is optional to `set_body`. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `width` | `number?` | Blocks across, square: more than 0, at most 16. |
+| `height` | `number?` | Blocks tall: more than 0, at most 32. |
+| `gravity` | `number?` | Downward acceleration, blocks per second squared. |
+| `max_fall_speed` | `number?` | The fastest it falls, blocks per second. |
+| `drag` | `number?` | Fraction of its speed shed per second in the air, 0 to 1. |
+| `liquid_drag` | `number?` | The same in water or lava. |
+| `liquid_gravity` | `number?` | How much of its gravity pulls it in water or lava: 0 floats, 1 sinks as in air. |
+| `acceleration` | `number?` | How fast it reaches its walk on the ground (or flying), blocks per second squared. |
+| `air_acceleration` | `number?` | The same in the air. |
+| `friction` | `number?` | How fast it slows to a stop on the ground when it isn't walking, blocks per second squared. |
+| `step_height` | `number?` | The tallest step it walks straight up, blocks. |
+| `bounce` | `number?` | 0 stops dead against what it hits, 1 bounces off at full speed. |
+| `fly` | `boolean?` | No gravity: walking steers it in any direction. |
+| `blocks` | `boolean?` | Collides with the world's blocks. |
+
+## CentityLandEvent
+
+A centity's body landed: `land`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity` | The centity. |
+| `speed` | `number` | How fast it was falling as it landed, blocks per second. |
+
+## CentityBumpEvent
+
+A centity's body ran into something: `bump`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity` | The centity. |
+| `normal` | `Vec3` | The direction straight out of the face it hit: `vec3(0, -1, 0)` for a ceiling. |
+| `speed` | `number` | How fast it was going into it, blocks per second. |
 
 ## Bounds
 

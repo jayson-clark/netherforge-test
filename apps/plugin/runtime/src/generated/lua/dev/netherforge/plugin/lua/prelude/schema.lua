@@ -110,6 +110,8 @@ local events = {
     ["animation_end"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },
     ["chunk_load"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },
     ["chunk_unload"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },
+    ["land"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },
+    ["bump"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },
     ["touch"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },
     ["path_end"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },
   },

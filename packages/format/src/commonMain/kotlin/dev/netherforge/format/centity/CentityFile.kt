@@ -38,6 +38,8 @@ data class CentityFile(
     val name: String? = null,
     val nodes: Map<String, NodeDef> = emptyMap(),
     val animations: Map<String, AnimationDef> = emptyMap(),
+    /** A body that moves the whole centity: walks, falls, jumps and collides with blocks. Absent: it stays where it's put. */
+    val body: BodyDef? = null,
     /** The centity's one script: a copy runs per instance, with `this` the instance. */
     val script: ScriptDef? = null,
     /** Where and how often it appears by itself, near players. Absent: it only exists where a script spawns it. */
@@ -456,6 +458,44 @@ data class PhysicsDef(
     val blocks: Boolean? = null,
     /** Collide with other centities' hitboxes. */
     val entities: Boolean? = null
+)
+
+/**
+ * The `body` block: an upright box, [width] square and [height] tall, standing with its bottom middle at the
+ * centity's position, that the runtime moves every tick: gravity, drag, walking, jumping and the blocks'
+ * collision shapes. It moves the whole centity (its anchor), unlike a node's `physics`, which moves one node.
+ * Rates are per second, as [PhysicsDef]'s; [ResolvedBody] is what an absent field means.
+ */
+@Serializable
+data class BodyDef(
+    /** Blocks across, square. */
+    val width: Double? = null,
+    /** Blocks tall. */
+    val height: Double? = null,
+    /** Downward acceleration, blocks per second squared. */
+    val gravity: Double? = null,
+    /** The fastest it falls, blocks per second. */
+    val maxFallSpeed: Double? = null,
+    /** Fraction of its speed shed per second in the air (flying: on every axis). */
+    val drag: Double? = null,
+    /** Fraction of its speed shed per second in water or lava. */
+    val liquidDrag: Double? = null,
+    /** How much of [gravity] pulls it in water or lava: 0 floats where it is, 1 sinks as in air. */
+    val liquidGravity: Double? = null,
+    /** How fast it reaches the speed it walks at on the ground (and flying), blocks per second squared. */
+    val acceleration: Double? = null,
+    /** The same in the air, when it isn't flying: how much it can steer while it falls or jumps. */
+    val airAcceleration: Double? = null,
+    /** How fast it slows to a stop on the ground when it isn't walking, blocks per second squared. */
+    val friction: Double? = null,
+    /** The tallest step it walks straight up, blocks. 0: it must jump. */
+    val stepHeight: Double? = null,
+    /** 0 stops dead against what it hits, 1 bounces off at the speed it came. */
+    val bounce: Double? = null,
+    /** Flies: no gravity, and walking steers it in any direction. */
+    val fly: Boolean? = null,
+    /** Collides with the world's blocks. */
+    val blocks: Boolean? = null
 )
 
 @Serializable

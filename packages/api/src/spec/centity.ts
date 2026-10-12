@@ -128,6 +128,20 @@ const centityEvents: EventSpec[] = [
     payload: 'CentityEvent',
   },
   {
+    name: 'land',
+    doc: 'Its `body` came down onto something after falling (or jumping): once, as it lands. `event.speed` is how fast it was falling, for fall damage or a thud.',
+    payload: 'CentityLandEvent',
+    example:
+      'this:on("land", function(event)\n  if event.speed > 12 then\n    this:emit("game:hurt", { amount = event.speed - 12 })\n  end\nend)',
+  },
+  {
+    name: 'bump',
+    doc: "Its `body` ran into something it didn't land on: a wall, or a ceiling. Once each tick it does, with the face's `normal` (pointing back at it) and how fast it was going into it.",
+    payload: 'CentityBumpEvent',
+    example:
+      'this:on("bump", function(event)\n  if event.normal.y == 0 and this:is_on_ground() then\n    this:jump(1.2)\n  end\nend)',
+  },
+  {
     name: 'touch',
     doc: "Its hitboxes started touching something's: another centity's, a player's or another entity's (each shown node's boxes, as `world:overlap_box` sees them). Once when they start touching, and again only after they've come apart. Worked out each tick only for centities something listens to this on, so a crowd nobody listens to costs nothing. Both centities hear it when two touch, each with the other in `event.other`.",
     payload: 'TouchEvent',
@@ -178,6 +192,10 @@ const NODE_DEFINITION =
 /** What nodes a script adds are, once, for every function that adds or removes one. */
 const ADDED_NODES =
   "A node a script adds is **runtime state**, like a rest pose a script sets: it takes part in everything a declared node does (its transform follows its parent, a display and an interaction entity are spawned for it and sent to players, a hitbox takes clicks and `click` bubbles up through its parents, a `physics` body is simulated and collides, `raycast` hits it) except what a file names: an animation clip can't drive it, because clips are written against the file's nodes, though it follows its animated parent. It is **not saved**: after a restart, and when its centity is reloaded, it's gone, and the script's body, which runs again, is where to add it. Only nodes a script added can be removed; the nodes `centity.json` declares can't be."
+
+/** What's true of a body's settings at runtime. */
+const BODY_RUNTIME =
+  "A body's settings are runtime state, like a node's pose: they last until its centity is reloaded or the server restarts, when it's back to its file's."
 
 /** A spawned centity instance. `this` in its script. */
 export const centityClass: LuaClass = {
@@ -358,6 +376,96 @@ export const centityClass: LuaClass = {
       doc: "Stops it following its player, where it is now. `false` when it wasn't following, or once it's removed.",
       params: [],
       returns: [{ type: 'boolean', doc: "`false` once it's removed." }],
+    },
+    {
+      name: 'has_body',
+      doc: "Whether it has a body: a `body` in its `centity.json`, or one `set_body` gave it. Without one the body functions do nothing (their getters answer `false`, `nil` or `vec3.zero`). `false` once it's removed.",
+      params: [],
+      returns: [{ type: 'boolean' }],
+    },
+    {
+      name: 'body',
+      doc: "Its body's settings as they are now: what its `centity.json`'s `body` says, every field filled in, with what `set_body` changed. `nil` without a body, or once it's removed.",
+      params: [],
+      returns: [{ type: 'BodySettings?' }],
+    },
+    {
+      name: 'set_body',
+      doc: `Changes its body's settings: only the fields given, the rest as they are. One without a body gets one, the fields left out as \`centity.json\`'s defaults. ${BODY_RUNTIME} A value out of range is clamped as in the file; a width or height that isn't more than 0 is an error.`,
+      params: [{ name: 'settings', type: 'BodySettings', doc: '' }],
+      returns: [{ type: 'boolean', doc: "`false` once it's removed." }],
+      example:
+        "-- Wings: it flies until they're clipped.\nthis:set_body({ fly = true, drag = 0.6 })",
+    },
+    {
+      name: 'velocity',
+      doc: "How fast its body is moving, in blocks per second along the world's axes: `vec3.zero` without a body, `nil` once it's removed.",
+      params: [],
+      returns: [{ type: 'Vec3?' }],
+    },
+    {
+      name: 'set_velocity',
+      doc: "Replaces its body's velocity: a knock back, a dash, a launch. The body carries on from it under gravity and drag, and walking eases it back to its walk.",
+      params: [
+        { name: 'velocity', type: 'Vec3', doc: "Blocks per second, along the world's axes." },
+      ],
+      returns: [{ type: 'boolean', doc: '`false` without a body.' }],
+      example:
+        'this:set_velocity((this:position() - player:position()):normalized() * 8 + vec3(0, 6, 0))',
+    },
+    {
+      name: 'add_velocity',
+      doc: "Adds to its body's velocity.",
+      params: [
+        { name: 'velocity', type: 'Vec3', doc: "Blocks per second, along the world's axes." },
+      ],
+      returns: [{ type: 'boolean', doc: '`false` without a body.' }],
+    },
+    {
+      name: 'walk_velocity',
+      doc: "The velocity its body is walking at (`set_walk_velocity`), or `nil` when it isn't walking, has no body, or is removed.",
+      params: [],
+      returns: [{ type: 'Vec3?' }],
+    },
+    {
+      name: 'set_walk_velocity',
+      doc: "Walks its body: every tick it speeds up or slows down toward this velocity by its `acceleration` (`air_acceleration` while it's off the ground), so it reaches it smoothly and keeps to it, round whatever pushes it about, until it's changed. Only the sideways part counts, unless it flies, when it steers it in any direction. Leave it out (or `nil`) to stop walking: on the ground it then slows to a stop by its `friction`. Walking doesn't turn it: `set_yaw` or `look_at` does.",
+      params: [
+        {
+          name: 'velocity',
+          type: 'Vec3',
+          doc: "Blocks per second, along the world's axes: a direction times a speed.",
+          optional: true,
+        },
+      ],
+      returns: [{ type: 'boolean', doc: '`false` without a body.' }],
+      example:
+        'local target = player:position()\nlocal here = this:position()\nif target and here then\n  this:set_walk_velocity((target - here):flat():normalized() * 3)\nend',
+    },
+    {
+      name: 'jump',
+      doc: "Sends its body up fast enough to rise `height` blocks, worked out from its gravity and drag: what a jump over a block (1.2) needs. Whether it's on the ground is for the script to check (`is_on_ground`), so a double jump is one more call.",
+      params: [{ name: 'height', type: 'number', doc: 'Blocks, at least 0.' }],
+      returns: [{ type: 'boolean', doc: '`false` without a body.' }],
+      example: 'if this:is_on_ground() and this:wall() then\n  this:jump(1.2)\nend',
+    },
+    {
+      name: 'is_on_ground',
+      doc: 'Whether its body is standing on something: a block, as of its last move. `false` without a body.',
+      params: [],
+      returns: [{ type: 'boolean' }],
+    },
+    {
+      name: 'is_in_liquid',
+      doc: 'Whether its body is in water or lava (the block at its middle). `false` without a body.',
+      params: [],
+      returns: [{ type: 'boolean' }],
+    },
+    {
+      name: 'wall',
+      doc: 'The face of what stopped its body sideways on its last move, as the direction straight out of it (`vec3(-1, 0, 0)` for a wall to its east), or `nil` when nothing did, or without a body. What a walker turns round at, or jumps over.',
+      params: [],
+      returns: [{ type: 'Vec3?' }],
     },
     ...pathFunctions,
     {
@@ -1108,6 +1216,87 @@ export const centityShapes: LuaClass[] = [
         type: 'boolean',
         doc: `Whether it got there: to the end of its path, within ${PATH_REACH} blocks of where it was sent (or of what it went after, which it stops short of); \`false\` when it gave up.`,
       },
+    ],
+  },
+  {
+    name: 'BodySettings',
+    doc: "A centity's body, as `centity:body()` gives it and `centity:set_body` takes it: the fields of `centity.json`'s `body`, in Lua spelling. Every field is optional to `set_body`. A key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      { name: 'width', type: 'number?', doc: 'Blocks across, square: more than 0, at most 16.' },
+      { name: 'height', type: 'number?', doc: 'Blocks tall: more than 0, at most 32.' },
+      {
+        name: 'gravity',
+        type: 'number?',
+        doc: 'Downward acceleration, blocks per second squared.',
+      },
+      { name: 'max_fall_speed', type: 'number?', doc: 'The fastest it falls, blocks per second.' },
+      {
+        name: 'drag',
+        type: 'number?',
+        doc: 'Fraction of its speed shed per second in the air, 0 to 1.',
+      },
+      { name: 'liquid_drag', type: 'number?', doc: 'The same in water or lava.' },
+      {
+        name: 'liquid_gravity',
+        type: 'number?',
+        doc: 'How much of its gravity pulls it in water or lava: 0 floats, 1 sinks as in air.',
+      },
+      {
+        name: 'acceleration',
+        type: 'number?',
+        doc: 'How fast it reaches its walk on the ground (or flying), blocks per second squared.',
+      },
+      { name: 'air_acceleration', type: 'number?', doc: 'The same in the air.' },
+      {
+        name: 'friction',
+        type: 'number?',
+        doc: "How fast it slows to a stop on the ground when it isn't walking, blocks per second squared.",
+      },
+      {
+        name: 'step_height',
+        type: 'number?',
+        doc: 'The tallest step it walks straight up, blocks.',
+      },
+      {
+        name: 'bounce',
+        type: 'number?',
+        doc: '0 stops dead against what it hits, 1 bounces off at full speed.',
+      },
+      { name: 'fly', type: 'boolean?', doc: 'No gravity: walking steers it in any direction.' },
+      { name: 'blocks', type: 'boolean?', doc: "Collides with the world's blocks." },
+    ],
+  },
+  {
+    name: 'CentityLandEvent',
+    doc: "A centity's body landed: `land`.",
+    methods: false,
+    functions: [],
+    extends: 'Event',
+    fields: [
+      { name: 'centity', type: 'Centity', doc: 'The centity.' },
+      {
+        name: 'speed',
+        type: 'number',
+        doc: 'How fast it was falling as it landed, blocks per second.',
+      },
+    ],
+  },
+  {
+    name: 'CentityBumpEvent',
+    doc: "A centity's body ran into something: `bump`.",
+    methods: false,
+    functions: [],
+    extends: 'Event',
+    fields: [
+      { name: 'centity', type: 'Centity', doc: 'The centity.' },
+      {
+        name: 'normal',
+        type: 'Vec3',
+        doc: 'The direction straight out of the face it hit: `vec3(0, -1, 0)` for a ceiling.',
+      },
+      { name: 'speed', type: 'number', doc: 'How fast it was going into it, blocks per second.' },
     ],
   },
   {

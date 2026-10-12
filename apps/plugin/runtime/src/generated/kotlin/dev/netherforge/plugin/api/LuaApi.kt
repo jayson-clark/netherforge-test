@@ -991,6 +991,78 @@ interface CentityApi {
     fun stopFollowing(self: LuaHandle.Centity): Boolean
 
     /**
+     * Whether it has a body: a `body` in its `centity.json`, or one `set_body` gave it. Without one the
+     * body functions do nothing (their getters answer `false`, `nil` or `vec3.zero`). `false` once it's
+     * removed.
+     */
+    fun hasBody(self: LuaHandle.Centity): Boolean
+
+    /**
+     * Its body's settings as they are now: what its `centity.json`'s `body` says, every field filled in,
+     * with what `set_body` changed. `nil` without a body, or once it's removed.
+     */
+    fun body(self: LuaHandle.Centity): BodySettings?
+
+    /**
+     * Changes its body's settings: only the fields given, the rest as they are. One without a body gets
+     * one, the fields left out as `centity.json`'s defaults. A body's settings are runtime state, like a
+     * node's pose: they last until its centity is reloaded or the server restarts, when it's back to its
+     * file's. A value out of range is clamped as in the file; a width or height that isn't more than 0 is
+     * an error.
+     */
+    fun setBody(self: LuaHandle.Centity, settings: BodySettings): Boolean
+
+    /**
+     * How fast its body is moving, in blocks per second along the world's axes: `vec3.zero` without a
+     * body, `nil` once it's removed.
+     */
+    fun velocity(self: LuaHandle.Centity): Vec3?
+
+    /**
+     * Replaces its body's velocity: a knock back, a dash, a launch. The body carries on from it under
+     * gravity and drag, and walking eases it back to its walk.
+     */
+    fun setVelocity(self: LuaHandle.Centity, velocity: Vec3): Boolean
+
+    /** Adds to its body's velocity. */
+    fun addVelocity(self: LuaHandle.Centity, velocity: Vec3): Boolean
+
+    /**
+     * The velocity its body is walking at (`set_walk_velocity`), or `nil` when it isn't walking, has no
+     * body, or is removed.
+     */
+    fun walkVelocity(self: LuaHandle.Centity): Vec3?
+
+    /**
+     * Walks its body: every tick it speeds up or slows down toward this velocity by its `acceleration`
+     * (`air_acceleration` while it's off the ground), so it reaches it smoothly and keeps to it, round
+     * whatever pushes it about, until it's changed. Only the sideways part counts, unless it flies, when
+     * it steers it in any direction. Leave it out (or `nil`) to stop walking: on the ground it then slows
+     * to a stop by its `friction`. Walking doesn't turn it: `set_yaw` or `look_at` does.
+     */
+    fun setWalkVelocity(self: LuaHandle.Centity, velocity: Vec3?): Boolean
+
+    /**
+     * Sends its body up fast enough to rise `height` blocks, worked out from its gravity and drag: what a
+     * jump over a block (1.2) needs. Whether it's on the ground is for the script to check
+     * (`is_on_ground`), so a double jump is one more call.
+     */
+    fun jump(self: LuaHandle.Centity, height: Double): Boolean
+
+    /** Whether its body is standing on something: a block, as of its last move. `false` without a body. */
+    fun isOnGround(self: LuaHandle.Centity): Boolean
+
+    /** Whether its body is in water or lava (the block at its middle). `false` without a body. */
+    fun isInLiquid(self: LuaHandle.Centity): Boolean
+
+    /**
+     * The face of what stopped its body sideways on its last move, as the direction straight out of it
+     * (`vec3(-1, 0, 0)` for a wall to its east), or `nil` when nothing did, or without a body. What a
+     * walker turns round at, or jumps over.
+     */
+    fun wall(self: LuaHandle.Centity): Vec3?
+
+    /**
      * Makes the whole centity walk somewhere, finding its way round the blocks in the way: to a place in
      * its own world, or after an entity or another centity, looking for a new path to wherever that is
      * every 10 ticks. When it stops, its `path_end` handlers hear whether it got there. A walk goes by the

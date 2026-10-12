@@ -3,10 +3,12 @@ package dev.netherforge.plugin.api
 import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.Billboard
 import dev.netherforge.format.centity.BlockDisplay
+import dev.netherforge.format.centity.BodyDef
 import dev.netherforge.format.centity.Channel
 import dev.netherforge.format.centity.ItemDisplay
 import dev.netherforge.format.centity.LoopMode
 import dev.netherforge.format.centity.ModelDisplay
+import dev.netherforge.format.centity.ResolvedBody
 import dev.netherforge.format.centity.TextAlignment
 import dev.netherforge.format.centity.TextDisplay
 import dev.netherforge.format.game.BlockState
@@ -19,6 +21,7 @@ import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.centity.Centities
 import dev.netherforge.plugin.centity.CentityPaths
 import dev.netherforge.plugin.centity.Instance
+import dev.netherforge.plugin.centity.Mover
 import dev.netherforge.plugin.centity.PathSettings
 import dev.netherforge.plugin.centity.PathTarget
 import dev.netherforge.plugin.centity.Physics
@@ -69,6 +72,113 @@ internal class CentityImpl(private val session: ProjectSession) : CentityApi {
 
     override fun node(self: LuaHandle.Centity, name: String): LuaHandle.Node? =
         instance(self)?.indexOf(name)?.let { LuaHandle.Node(self.id, name) }
+
+    private fun mover(self: LuaHandle.Centity): Mover? = instance(self)?.mover
+
+    override fun hasBody(self: LuaHandle.Centity): Boolean = mover(self) != null
+
+    override fun body(self: LuaHandle.Centity): BodySettings? = mover(self)?.settings?.let { b ->
+        BodySettings(
+            width = b.width,
+            height = b.height,
+            gravity = b.gravity,
+            maxFallSpeed = b.maxFallSpeed,
+            drag = b.drag,
+            liquidDrag = b.liquidDrag,
+            liquidGravity = b.liquidGravity,
+            acceleration = b.acceleration,
+            airAcceleration = b.airAcceleration,
+            friction = b.friction,
+            stepHeight = b.stepHeight,
+            bounce = b.bounce,
+            fly = b.fly,
+            blocks = b.blocks
+        )
+    }
+
+    override fun setBody(self: LuaHandle.Centity, settings: BodySettings): Boolean {
+        for ((name, value) in listOf("width" to settings.width, "height" to settings.height)) {
+            if (value != null &&
+                (!(value > 0) || !value.isFinite())
+            ) {
+                throw LuaApiException("bad argument 'settings.$name' (more than 0 expected, got $value)")
+            }
+        }
+        val instance = instance(self) ?: return false
+        val old = instance.mover?.settings ?: ResolvedBody.of(BodyDef())
+        val next = ResolvedBody.of(
+            BodyDef(
+                width = settings.width ?: old.width,
+                height = settings.height ?: old.height,
+                gravity = settings.gravity ?: old.gravity,
+                maxFallSpeed = settings.maxFallSpeed ?: old.maxFallSpeed,
+                drag = settings.drag ?: old.drag,
+                liquidDrag = settings.liquidDrag ?: old.liquidDrag,
+                liquidGravity = settings.liquidGravity ?: old.liquidGravity,
+                acceleration = settings.acceleration ?: old.acceleration,
+                airAcceleration = settings.airAcceleration ?: old.airAcceleration,
+                friction = settings.friction ?: old.friction,
+                stepHeight = settings.stepHeight ?: old.stepHeight,
+                bounce = settings.bounce ?: old.bounce,
+                fly = settings.fly ?: old.fly,
+                blocks = settings.blocks ?: old.blocks
+            )
+        )
+        val mover = instance.mover
+        if (mover == null) instance.mover = Mover(next) else mover.settings = next
+        return true
+    }
+
+    override fun velocity(self: LuaHandle.Centity): Vec3? {
+        val instance = instance(self) ?: return null
+        return instance.mover?.velocity ?: Vec3.ZERO
+    }
+
+    override fun setVelocity(self: LuaHandle.Centity, velocity: Vec3): Boolean {
+        val mover = mover(self) ?: return false
+        mover.velocity = finiteVelocity(velocity, "velocity")
+        if (velocity.y > 0) mover.onGround = false
+        return true
+    }
+
+    override fun addVelocity(self: LuaHandle.Centity, velocity: Vec3): Boolean {
+        val mover = mover(self) ?: return false
+        mover.velocity = mover.velocity + finiteVelocity(velocity, "velocity")
+        if (velocity.y > 0) mover.onGround = false
+        return true
+    }
+
+    override fun walkVelocity(self: LuaHandle.Centity): Vec3? = mover(self)?.walk
+
+    override fun setWalkVelocity(self: LuaHandle.Centity, velocity: Vec3?): Boolean {
+        val mover = mover(self) ?: return false
+        mover.walk = velocity?.let { finiteVelocity(it, "velocity") }
+        return true
+    }
+
+    override fun jump(self: LuaHandle.Centity, height: Double): Boolean {
+        if (!(height >= 0) || !height.isFinite()) throw LuaApiException("bad argument 'height' (at least 0 expected, got $height)")
+        val mover = mover(self) ?: return false
+        mover.velocity = Vec3(mover.velocity.x, mover.jumpSpeed(height), mover.velocity.z)
+        mover.onGround = false
+        return true
+    }
+
+    override fun isOnGround(self: LuaHandle.Centity): Boolean = mover(self)?.onGround == true
+
+    override fun isInLiquid(self: LuaHandle.Centity): Boolean = mover(self)?.inLiquid == true
+
+    override fun wall(self: LuaHandle.Centity): Vec3? = mover(self)?.wall
+
+    private fun finiteVelocity(v: Vec3, name: String): Vec3 {
+        if (!v.x.isFinite() ||
+            !v.y.isFinite() ||
+            !v.z.isFinite()
+        ) {
+            throw LuaApiException("bad argument '$name' (a finite velocity expected)")
+        }
+        return v
+    }
 
     override fun bounds(self: LuaHandle.Centity): Bounds? {
         val instance = instance(self) ?: return null

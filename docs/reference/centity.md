@@ -23,6 +23,8 @@ What `centity:on(event, handler)` listens for. See [Events](events.md) for how e
 | `animation_end` | [AnimationEvent](events.md#animationevent) |  | An animation reached its end: a `once` clip has finished, a `hold` clip is holding its last pose. Looping clips never end. |
 | `chunk_load` | [CentityEvent](events.md#centityevent) |  | Its chunk came back into memory (someone came near), so it's ticking again. |
 | `chunk_unload` | [CentityEvent](events.md#centityevent) |  | Its chunk was unloaded (everyone went away): it stops ticking until `chunk_load`. Its handlers stay. |
+| `land` | [CentityLandEvent](events.md#centitylandevent) |  | Its `body` came down onto something after falling (or jumping): once, as it lands. `event.speed` is how fast it was falling, for fall damage or a thud. |
+| `bump` | [CentityBumpEvent](events.md#centitybumpevent) |  | Its `body` ran into something it didn't land on: a wall, or a ceiling. Once each tick it does, with the face's `normal` (pointing back at it) and how fast it was going into it. |
 | `touch` | [TouchEvent](events.md#touchevent) |  | Its hitboxes started touching something's: another centity's, a player's or another entity's (each shown node's boxes, as `world:overlap_box` sees them). Once when they start touching, and again only after they've come apart. Worked out each tick only for centities something listens to this on, so a crowd nobody listens to costs nothing. Both centities hear it when two touch, each with the other in `event.other`. |
 | `path_end` | [CentityPathEndEvent](events.md#centitypathendevent) |  | It stopped walking where `move_to` sent it: it got there (to the end of its path, or within 2 blocks of what it went after), or gave up (no way further, its way blocked with no other way round, or what it went after has gone or left its world). Not after `stop_pathing`, a new `move_to`, `teleport` or a reload of its centity. |
 
@@ -232,6 +234,121 @@ this:follow(player)
 Stops it following its player, where it is now. `false` when it wasn't following, or once it's removed.
 
 **Returns** `boolean`: `false` once it's removed.
+
+## `centity:has_body()`
+
+Whether it has a body: a `body` in its `centity.json`, or one `set_body` gave it. Without one the body functions do nothing (their getters answer `false`, `nil` or `vec3.zero`). `false` once it's removed.
+
+**Returns** `boolean`
+
+## `centity:body()`
+
+Its body's settings as they are now: what its `centity.json`'s `body` says, every field filled in, with what `set_body` changed. `nil` without a body, or once it's removed.
+
+**Returns** `BodySettings?`
+
+## `centity:set_body(settings)`
+
+Changes its body's settings: only the fields given, the rest as they are. One without a body gets one, the fields left out as `centity.json`'s defaults. A body's settings are runtime state, like a node's pose: they last until its centity is reloaded or the server restarts, when it's back to its file's. A value out of range is clamped as in the file; a width or height that isn't more than 0 is an error.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `settings` | `BodySettings` |  |
+
+**Returns** `boolean`: `false` once it's removed.
+
+```lua
+-- Wings: it flies until they're clipped.
+this:set_body({ fly = true, drag = 0.6 })
+```
+
+## `centity:velocity()`
+
+How fast its body is moving, in blocks per second along the world's axes: `vec3.zero` without a body, `nil` once it's removed.
+
+**Returns** `Vec3?`
+
+## `centity:set_velocity(velocity)`
+
+Replaces its body's velocity: a knock back, a dash, a launch. The body carries on from it under gravity and drag, and walking eases it back to its walk.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `velocity` | `Vec3` | Blocks per second, along the world's axes. |
+
+**Returns** `boolean`: `false` without a body.
+
+```lua
+this:set_velocity((this:position() - player:position()):normalized() * 8 + vec3(0, 6, 0))
+```
+
+## `centity:add_velocity(velocity)`
+
+Adds to its body's velocity.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `velocity` | `Vec3` | Blocks per second, along the world's axes. |
+
+**Returns** `boolean`: `false` without a body.
+
+## `centity:walk_velocity()`
+
+The velocity its body is walking at (`set_walk_velocity`), or `nil` when it isn't walking, has no body, or is removed.
+
+**Returns** `Vec3?`
+
+## `centity:set_walk_velocity(velocity?)`
+
+Walks its body: every tick it speeds up or slows down toward this velocity by its `acceleration` (`air_acceleration` while it's off the ground), so it reaches it smoothly and keeps to it, round whatever pushes it about, until it's changed. Only the sideways part counts, unless it flies, when it steers it in any direction. Leave it out (or `nil`) to stop walking: on the ground it then slows to a stop by its `friction`. Walking doesn't turn it: `set_yaw` or `look_at` does.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `velocity` (optional) | `Vec3` | Blocks per second, along the world's axes: a direction times a speed. |
+
+**Returns** `boolean`: `false` without a body.
+
+```lua
+local target = player:position()
+local here = this:position()
+if target and here then
+  this:set_walk_velocity((target - here):flat():normalized() * 3)
+end
+```
+
+## `centity:jump(height)`
+
+Sends its body up fast enough to rise `height` blocks, worked out from its gravity and drag: what a jump over a block (1.2) needs. Whether it's on the ground is for the script to check (`is_on_ground`), so a double jump is one more call.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `height` | `number` | Blocks, at least 0. |
+
+**Returns** `boolean`: `false` without a body.
+
+```lua
+if this:is_on_ground() and this:wall() then
+  this:jump(1.2)
+end
+```
+
+## `centity:is_on_ground()`
+
+Whether its body is standing on something: a block, as of its last move. `false` without a body.
+
+**Returns** `boolean`
+
+## `centity:is_in_liquid()`
+
+Whether its body is in water or lava (the block at its middle). `false` without a body.
+
+**Returns** `boolean`
+
+## `centity:wall()`
+
+The face of what stopped its body sideways on its last move, as the direction straight out of it (`vec3(-1, 0, 0)` for a wall to its east), or `nil` when nothing did, or without a body. What a walker turns round at, or jumps over.
+
+**Returns** `Vec3?`
 
 ## `centity:move_to(target, options?)`
 

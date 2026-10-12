@@ -2752,6 +2752,143 @@ data class CentityPathEndEvent(val centity: LuaHandle.Centity, val reached: Bool
     }
 }
 
+/**
+ * A centity's body, as `centity:body()` gives it and `centity:set_body` takes it: the fields of
+ * `centity.json`'s `body`, in Lua spelling. Every field is optional to `set_body`. A key that isn't
+ * one of these is an error.
+ */
+data class BodySettings(val width: Double? = null, val height: Double? = null, val gravity: Double? = null, val maxFallSpeed: Double? = null, val drag: Double? = null, val liquidDrag: Double? = null, val liquidGravity: Double? = null, val acceleration: Double? = null, val airAcceleration: Double? = null, val friction: Double? = null, val stepHeight: Double? = null, val bounce: Double? = null, val fly: Boolean? = null, val blocks: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<BodySettings>("BodySettings") {
+        val widthCodec = LuaOptional(LuaCodecs.NUMBER)
+        val heightCodec = LuaOptional(LuaCodecs.NUMBER)
+        val gravityCodec = LuaOptional(LuaCodecs.NUMBER)
+        val maxFallSpeedCodec = LuaOptional(LuaCodecs.NUMBER)
+        val dragCodec = LuaOptional(LuaCodecs.NUMBER)
+        val liquidDragCodec = LuaOptional(LuaCodecs.NUMBER)
+        val liquidGravityCodec = LuaOptional(LuaCodecs.NUMBER)
+        val accelerationCodec = LuaOptional(LuaCodecs.NUMBER)
+        val airAccelerationCodec = LuaOptional(LuaCodecs.NUMBER)
+        val frictionCodec = LuaOptional(LuaCodecs.NUMBER)
+        val stepHeightCodec = LuaOptional(LuaCodecs.NUMBER)
+        val bounceCodec = LuaOptional(LuaCodecs.NUMBER)
+        val flyCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val blocksCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "width" to widthCodec,
+            "height" to heightCodec,
+            "gravity" to gravityCodec,
+            "max_fall_speed" to maxFallSpeedCodec,
+            "drag" to dragCodec,
+            "liquid_drag" to liquidDragCodec,
+            "liquid_gravity" to liquidGravityCodec,
+            "acceleration" to accelerationCodec,
+            "air_acceleration" to airAccelerationCodec,
+            "friction" to frictionCodec,
+            "step_height" to stepHeightCodec,
+            "bounce" to bounceCodec,
+            "fly" to flyCodec,
+            "blocks" to blocksCodec
+        )
+
+        override fun read(fields: ShapeReader) = BodySettings(
+            width = fields.field("width", widthCodec),
+            height = fields.field("height", heightCodec),
+            gravity = fields.field("gravity", gravityCodec),
+            maxFallSpeed = fields.field("max_fall_speed", maxFallSpeedCodec),
+            drag = fields.field("drag", dragCodec),
+            liquidDrag = fields.field("liquid_drag", liquidDragCodec),
+            liquidGravity = fields.field("liquid_gravity", liquidGravityCodec),
+            acceleration = fields.field("acceleration", accelerationCodec),
+            airAcceleration = fields.field("air_acceleration", airAccelerationCodec),
+            friction = fields.field("friction", frictionCodec),
+            stepHeight = fields.field("step_height", stepHeightCodec),
+            bounce = fields.field("bounce", bounceCodec),
+            fly = fields.field("fly", flyCodec),
+            blocks = fields.field("blocks", blocksCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: BodySettings) {
+            fields.field("width", value.width, widthCodec)
+            fields.field("height", value.height, heightCodec)
+            fields.field("gravity", value.gravity, gravityCodec)
+            fields.field("max_fall_speed", value.maxFallSpeed, maxFallSpeedCodec)
+            fields.field("drag", value.drag, dragCodec)
+            fields.field("liquid_drag", value.liquidDrag, liquidDragCodec)
+            fields.field("liquid_gravity", value.liquidGravity, liquidGravityCodec)
+            fields.field("acceleration", value.acceleration, accelerationCodec)
+            fields.field("air_acceleration", value.airAcceleration, airAccelerationCodec)
+            fields.field("friction", value.friction, frictionCodec)
+            fields.field("step_height", value.stepHeight, stepHeightCodec)
+            fields.field("bounce", value.bounce, bounceCodec)
+            fields.field("fly", value.fly, flyCodec)
+            fields.field("blocks", value.blocks, blocksCodec)
+        }
+    }
+}
+
+/** A centity's body landed: `land`. */
+data class CentityLandEvent(val centity: LuaHandle.Centity, val speed: Double) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<CentityLandEvent>("CentityLandEvent") {
+        val centityCodec = LuaHandle.Centity.Codec
+        val speedCodec = LuaCodecs.NUMBER
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "speed" to speedCodec
+        )
+
+        override fun read(fields: ShapeReader) = CentityLandEvent(
+            centity = fields.field("centity", centityCodec),
+            speed = fields.field("speed", speedCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: CentityLandEvent) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("speed", value.speed, speedCodec)
+        }
+    }
+}
+
+/** A centity's body ran into something: `bump`. */
+data class CentityBumpEvent(val centity: LuaHandle.Centity, val normal: Vec3, val speed: Double) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<CentityBumpEvent>("CentityBumpEvent") {
+        val centityCodec = LuaHandle.Centity.Codec
+        val normalCodec = LuaCodecs.VEC3
+        val speedCodec = LuaCodecs.NUMBER
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "normal" to normalCodec,
+            "speed" to speedCodec
+        )
+
+        override fun read(fields: ShapeReader) = CentityBumpEvent(
+            centity = fields.field("centity", centityCodec),
+            normal = fields.field("normal", normalCodec),
+            speed = fields.field("speed", speedCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: CentityBumpEvent) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("normal", value.normal, normalCodec)
+            fields.field("speed", value.speed, speedCodec)
+        }
+    }
+}
+
 /** A box along the world's axes: `centity:bounds()`. */
 data class Bounds(val min: Vec3, val max: Vec3) : LuaShape {
     override fun push(call: LuaCall) = Codec.push(call, this)

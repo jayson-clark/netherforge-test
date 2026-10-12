@@ -7,7 +7,7 @@
 -- The sandbox removes io, os, package, load, loadstring, dofile, loadfile, debug, collectgarbage, warn, java.
 
 ---@alias nf.Event "tick"|"unload"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed"|string
----@alias Centity.Event "spawn"|"remove"|"tick"|"click"|"animation_start"|"animation_end"|"chunk_load"|"chunk_unload"|"touch"|"path_end"|string
+---@alias Centity.Event "spawn"|"remove"|"tick"|"click"|"animation_start"|"animation_end"|"chunk_load"|"chunk_unload"|"land"|"bump"|"touch"|"path_end"|string
 ---@alias Node.Event "click"|"collide"|"wake"|"sleep"
 ---@alias Entity.Event "damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
 ---@alias Living.Event "death"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
@@ -417,6 +417,8 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: Centity, event: "animation_end", filter?: fun(event: AnimationEvent): boolean): AnimationEvent
 ---@overload fun(handle: Centity, event: "chunk_load", filter?: fun(event: CentityEvent): boolean): CentityEvent
 ---@overload fun(handle: Centity, event: "chunk_unload", filter?: fun(event: CentityEvent): boolean): CentityEvent
+---@overload fun(handle: Centity, event: "land", filter?: fun(event: CentityLandEvent): boolean): CentityLandEvent
+---@overload fun(handle: Centity, event: "bump", filter?: fun(event: CentityBumpEvent): boolean): CentityBumpEvent
 ---@overload fun(handle: Centity, event: "touch", filter?: fun(event: TouchEvent): boolean): TouchEvent
 ---@overload fun(handle: Centity, event: "path_end", filter?: fun(event: CentityPathEndEvent): boolean): CentityPathEndEvent
 ---@overload fun(handle: Node, event: "click", filter?: fun(event: ClickEvent): boolean): ClickEvent
@@ -1225,6 +1227,59 @@ function Centity:follow(player) end
 ---@return boolean # `false` once it's removed.
 function Centity:stop_following() end
 
+--- Whether it has a body: a `body` in its `centity.json`, or one `set_body` gave it. Without one the body functions do nothing (their getters answer `false`, `nil` or `vec3.zero`). `false` once it's removed.
+---@return boolean
+function Centity:has_body() end
+
+--- Its body's settings as they are now: what its `centity.json`'s `body` says, every field filled in, with what `set_body` changed. `nil` without a body, or once it's removed.
+---@return BodySettings?
+function Centity:body() end
+
+--- Changes its body's settings: only the fields given, the rest as they are. One without a body gets one, the fields left out as `centity.json`'s defaults. A body's settings are runtime state, like a node's pose: they last until its centity is reloaded or the server restarts, when it's back to its file's. A value out of range is clamped as in the file; a width or height that isn't more than 0 is an error.
+---@param settings BodySettings
+---@return boolean # `false` once it's removed.
+function Centity:set_body(settings) end
+
+--- How fast its body is moving, in blocks per second along the world's axes: `vec3.zero` without a body, `nil` once it's removed.
+---@return Vec3?
+function Centity:velocity() end
+
+--- Replaces its body's velocity: a knock back, a dash, a launch. The body carries on from it under gravity and drag, and walking eases it back to its walk.
+---@param velocity Vec3 Blocks per second, along the world's axes.
+---@return boolean # `false` without a body.
+function Centity:set_velocity(velocity) end
+
+--- Adds to its body's velocity.
+---@param velocity Vec3 Blocks per second, along the world's axes.
+---@return boolean # `false` without a body.
+function Centity:add_velocity(velocity) end
+
+--- The velocity its body is walking at (`set_walk_velocity`), or `nil` when it isn't walking, has no body, or is removed.
+---@return Vec3?
+function Centity:walk_velocity() end
+
+--- Walks its body: every tick it speeds up or slows down toward this velocity by its `acceleration` (`air_acceleration` while it's off the ground), so it reaches it smoothly and keeps to it, round whatever pushes it about, until it's changed. Only the sideways part counts, unless it flies, when it steers it in any direction. Leave it out (or `nil`) to stop walking: on the ground it then slows to a stop by its `friction`. Walking doesn't turn it: `set_yaw` or `look_at` does.
+---@param velocity? Vec3 Blocks per second, along the world's axes: a direction times a speed.
+---@return boolean # `false` without a body.
+function Centity:set_walk_velocity(velocity) end
+
+--- Sends its body up fast enough to rise `height` blocks, worked out from its gravity and drag: what a jump over a block (1.2) needs. Whether it's on the ground is for the script to check (`is_on_ground`), so a double jump is one more call.
+---@param height number Blocks, at least 0.
+---@return boolean # `false` without a body.
+function Centity:jump(height) end
+
+--- Whether its body is standing on something: a block, as of its last move. `false` without a body.
+---@return boolean
+function Centity:is_on_ground() end
+
+--- Whether its body is in water or lava (the block at its middle). `false` without a body.
+---@return boolean
+function Centity:is_in_liquid() end
+
+--- The face of what stopped its body sideways on its last move, as the direction straight out of it (`vec3(-1, 0, 0)` for a wall to its east), or `nil` when nothing did, or without a body. What a walker turns round at, or jumps over.
+---@return Vec3?
+function Centity:wall() end
+
 --- Makes the whole centity walk somewhere, finding its way round the blocks in the way: to a place in its own world, or after an entity or another centity, looking for a new path to wherever that is every 10 ticks. When it stops, its `path_end` handlers hear whether it got there. A walk goes by the centity's **feet**: the middle of the bottom of its hitboxes as they're placed when it sets off (its position, for a centity without any). The way is found over the blocks' collision shapes, sized to its hitboxes (other centities aren't in the way), and walked a little each tick, before physics and scripts: it steps up and drops down as the options allow, falls when nothing holds it up, and finds another way when a block appears across its path. With `fly = true` it flies instead, through the air in any direction. A new `move_to`, `stop_pathing` and `teleport` end the walk it was on, and so does a reload of its centity (its script's body can set off again). Walks aren't saved, and a centity whose chunk unloads waits where it is until it loads again. Its physics bodies are carried along with it.
 ---@param target Location|Vec3|Entity|Centity Where its feet go: a position in its world, a `Location` (in its world: another world is `false`), or an entity or centity to go after.
 ---@param options? CentityPathOptions
@@ -1360,6 +1415,8 @@ function Centity:set_view_range(blocks) end
 ---@overload fun(self: Centity, event: "animation_end", handler: fun(event: AnimationEvent)): Subscription
 ---@overload fun(self: Centity, event: "chunk_load", handler: fun(event: CentityEvent)): Subscription
 ---@overload fun(self: Centity, event: "chunk_unload", handler: fun(event: CentityEvent)): Subscription
+---@overload fun(self: Centity, event: "land", handler: fun(event: CentityLandEvent)): Subscription
+---@overload fun(self: Centity, event: "bump", handler: fun(event: CentityBumpEvent)): Subscription
 ---@overload fun(self: Centity, event: "touch", handler: fun(event: TouchEvent)): Subscription
 ---@overload fun(self: Centity, event: "path_end", handler: fun(event: CentityPathEndEvent)): Subscription
 function Centity:on(event, handler, options) end
@@ -1376,6 +1433,8 @@ function Centity:on(event, handler, options) end
 ---@overload fun(self: Centity, event: "animation_end", handler: fun(event: AnimationEvent)): Subscription
 ---@overload fun(self: Centity, event: "chunk_load", handler: fun(event: CentityEvent)): Subscription
 ---@overload fun(self: Centity, event: "chunk_unload", handler: fun(event: CentityEvent)): Subscription
+---@overload fun(self: Centity, event: "land", handler: fun(event: CentityLandEvent)): Subscription
+---@overload fun(self: Centity, event: "bump", handler: fun(event: CentityBumpEvent)): Subscription
 ---@overload fun(self: Centity, event: "touch", handler: fun(event: TouchEvent)): Subscription
 ---@overload fun(self: Centity, event: "path_end", handler: fun(event: CentityPathEndEvent)): Subscription
 function Centity:once(event, handler) end
@@ -5065,6 +5124,34 @@ function Event:uncancel() end
 ---@class CentityPathEndEvent: Event
 ---@field centity Centity The instance.
 ---@field reached boolean Whether it got there: to the end of its path, within 2 blocks of where it was sent (or of what it went after, which it stops short of); `false` when it gave up.
+
+--- A centity's body, as `centity:body()` gives it and `centity:set_body` takes it: the fields of `centity.json`'s `body`, in Lua spelling. Every field is optional to `set_body`. A key that isn't one of these is an error.
+---@class BodySettings
+---@field width number? Blocks across, square: more than 0, at most 16.
+---@field height number? Blocks tall: more than 0, at most 32.
+---@field gravity number? Downward acceleration, blocks per second squared.
+---@field max_fall_speed number? The fastest it falls, blocks per second.
+---@field drag number? Fraction of its speed shed per second in the air, 0 to 1.
+---@field liquid_drag number? The same in water or lava.
+---@field liquid_gravity number? How much of its gravity pulls it in water or lava: 0 floats, 1 sinks as in air.
+---@field acceleration number? How fast it reaches its walk on the ground (or flying), blocks per second squared.
+---@field air_acceleration number? The same in the air.
+---@field friction number? How fast it slows to a stop on the ground when it isn't walking, blocks per second squared.
+---@field step_height number? The tallest step it walks straight up, blocks.
+---@field bounce number? 0 stops dead against what it hits, 1 bounces off at full speed.
+---@field fly boolean? No gravity: walking steers it in any direction.
+---@field blocks boolean? Collides with the world's blocks.
+
+--- A centity's body landed: `land`.
+---@class CentityLandEvent: Event
+---@field centity Centity The centity.
+---@field speed number How fast it was falling as it landed, blocks per second.
+
+--- A centity's body ran into something: `bump`.
+---@class CentityBumpEvent: Event
+---@field centity Centity The centity.
+---@field normal Vec3 The direction straight out of the face it hit: `vec3(0, -1, 0)` for a ceiling.
+---@field speed number How fast it was going into it, blocks per second.
 
 --- A box along the world's axes: `centity:bounds()`.
 ---@class Bounds

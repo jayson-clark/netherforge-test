@@ -201,5 +201,33 @@
     "message": "A budget below 500 is raised to 500",
     "path": "$.script.budget",
     "code": "script.budget"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rules/centity.json",
+    "message": "width must be more than 0 and at most 16 blocks",
+    "path": "$.body.width",
+    "code": "centity.body-size"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rules/centity.json",
+    "message": "height must be more than 0 and at most 32 blocks",
+    "path": "$.body.height",
+    "code": "centity.body-size"
+  },
+  {
+    "severity": "warning",
+    "file": "centities/rules/centity.json",
+    "message": "drag is clamped to between 0 and 1",
+    "path": "$.body.drag",
+    "code": "centity.body-range"
+  },
+  {
+    "severity": "warning",
+    "file": "centities/rules/centity.json",
+    "message": "A negative stepHeight is treated as zero",
+    "path": "$.body.stepHeight",
+    "code": "centity.body-range"
   }
 ]
