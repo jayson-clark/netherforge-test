@@ -8,7 +8,8 @@
  * `opencode.json` beside it is OpenCode's project-wide JSON config, which
  * also accepts MCP server definitions under `mcp`. The server wants the
  * install's bearer token on every request, so both files are this computer's,
- * not the project's. The project's `.gitignore` leaves them out.
+ * not the project's. The project's `.gitignore` leaves them out: the template's does, and
+ * the editor adds the lines to an older project's before it first writes either file.
  */
 import type { Backend } from '@/core/backend/types'
 
@@ -89,8 +90,51 @@ export async function syncMcpConfig(
   if (!add && !status.enabled) return false
   const next = withNetherforgeServer(text, status)
   if (next === null) return false
+  await ignoreTokenFiles(backend, files)
   await backend.writeText(MCP_CONFIG_FILE, next)
   return true
+}
+
+// --- .gitignore ---
+
+export const GITIGNORE_FILE = '.gitignore'
+
+/** The files carrying this computer's token, which a project's `.gitignore` must leave out. */
+export const TOKEN_FILES = [MCP_CONFIG_FILE, 'opencode.json'] as const
+
+/** Whether one of [lines] (a `.gitignore`'s) leaves [file], at the project's root, out. */
+const ignores = (lines: readonly string[], file: string) =>
+  lines.some((line) => {
+    const pattern = line.trim()
+    return pattern === file || pattern === `/${file}`
+  })
+
+/**
+ * [existing] (`.gitignore`'s text, or null when there's none) with a line for each of
+ * [TOKEN_FILES] it doesn't already ignore, under a comment saying why; null when it ignores
+ * them all. A project made before a file joined the list (`opencode.json`) gets it here, before
+ * the editor first writes its token there.
+ */
+export function withTokenFilesIgnored(existing: string | null): string | null {
+  const lines = (existing ?? '').split(/\r?\n/)
+  const missing = TOKEN_FILES.filter((file) => !ignores(lines, file))
+  if (missing.length === 0) return null
+  const base = existing === null || existing === '' ? '' : existing.replace(/\n?$/, '\n')
+  return (
+    base +
+    "# Connects coding agents to this computer's editor, with its token: not for sharing.\n" +
+    missing.join('\n') +
+    '\n'
+  )
+}
+
+/** Makes sure the open project's `.gitignore` leaves the token files out, before one is written. */
+async function ignoreTokenFiles(backend: Backend, files: readonly string[]): Promise<void> {
+  const exists = files.includes(GITIGNORE_FILE)
+  const text = exists ? await backend.readText(GITIGNORE_FILE).catch(() => undefined) : null
+  if (text === undefined) return
+  const next = withTokenFilesIgnored(text)
+  if (next !== null) await backend.writeText(GITIGNORE_FILE, next)
 }
 
 /** For agents configured from a terminal. */
@@ -171,6 +215,7 @@ export async function syncOpencodeConfig(
   if (!add && !status.enabled) return false
   const next = withOpencodeServer(text, status)
   if (next === null) return false
+  await ignoreTokenFiles(backend, files)
   await backend.writeText(OPENCODE_CONFIG_FILE, next)
   return true
 }
