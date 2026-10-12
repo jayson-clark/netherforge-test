@@ -206,6 +206,17 @@ it) rises out of them. It doesn't move into a chunk that isn't loaded. While
 keeps its velocity. Nothing about it is saved: after a restart it starts at
 rest where the centity stands.
 
+## `properties`
+
+```json partial
+"properties": { "damage": 12, "class": "melee", "tags": ["blade"] }
+```
+
+The project's own facts about this centity, as any JSON: what scripts read with
+`centity:properties()` on an instance, or `nf.centities.properties(kind)` without one, so data that belongs to it lives in its file instead of
+a table a script keeps in step. Nothing but scripts reads it, and changing it
+reloads it like any change to its file.
+
 ## `script`
 
 ```json partial

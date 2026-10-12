@@ -214,6 +214,19 @@ describe('the API spec', () => {
     }
   })
 
+  it("names no payload field after what every event object has (the prelude's event core refuses it)", () => {
+    // `RESERVED` and `Event`'s members in the runtime's prelude/events.lua: a handler can't assign these.
+    const reserved = new Set(['name', 'current', 'cancelled', 'stopped'])
+    for (const [cls, event] of events) {
+      const fields = api.shapes.find((it) => it.name === event.payload)?.fields ?? []
+      for (const field of fields)
+        expect(
+          reserved.has(field.name) && event.writable?.includes(field.name),
+          `${cls} ${event.name}: ${field.name}`,
+        ).toBe(false)
+    }
+  })
+
   it('makes only payload fields writable, and only on payloads that have them', () => {
     for (const [cls, event] of events) {
       const fields = api.shapes.find((it) => it.name === event.payload)?.fields ?? []

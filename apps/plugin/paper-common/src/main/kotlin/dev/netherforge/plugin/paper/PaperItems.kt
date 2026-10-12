@@ -112,6 +112,9 @@ object PaperItems {
     @Volatile
     var looks: (String) -> ItemLook? = { null }
 
+    /** A restyled stack as its item's `render` handlers finish it: the runtime's ([PlatformEvents.itemRendered]). */
+    var render: (ItemData) -> ItemData = { it }
+
     /** The state each project block is held as now, by the name the server knows it by: the runtime's answer, set when it binds. */
     @Volatile
     var blockStates: (String) -> String? = { null }
@@ -561,7 +564,7 @@ object PaperItems {
         val id = stamps.get(ITEM_KEY, PersistentDataType.STRING)
         val look = id?.let(looks)
         if (look == null || stamps.get(LOOK_KEY, PersistentDataType.STRING) == look.hash) return readapted(stack)
-        val fresh = toStack(ItemData(ProjectItems.restyle(describe(stack), reference(id), look.def))) ?: return null
+        val fresh = toStack(render(ItemData(ProjectItems.restyle(describe(stack), reference(id), look.def)))) ?: return null
         fresh.editPersistentDataContainer { stamps.copyTo(it, false) }
         // The look's lists were just written; any it doesn't have, the stack kept, for the states of now.
         return readapted(fresh) ?: fresh

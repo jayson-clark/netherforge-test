@@ -153,6 +153,14 @@ function Centity.add_node(self, name, definition)
   return prim["Centity.add_node"](self_key, name, definition)
 end
 
+function Centity.properties(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.properties"](self_key)
+end
+
 function Centity.bounds(self)
   local self_key = ids[self]
   if self_key == nil or not Centity_is[class_of(self)] then
@@ -3914,6 +3922,14 @@ function ProjectBlock.id(self)
   return prim["ProjectBlock.id"](self_key)
 end
 
+function ProjectBlock.properties(self)
+  local self_key = ids[self]
+  if self_key == nil or not ProjectBlock_is[class_of(self)] then
+    self_key = self_of(self, "ProjectBlock")
+  end
+  return prim["ProjectBlock.properties"](self_key)
+end
+
 function ProjectBlock.exists(self)
   local self_key = ids[self]
   if self_key == nil or not ProjectBlock_is[class_of(self)] then
@@ -5249,6 +5265,14 @@ function ProjectItem.create(self, overrides)
   return prim["ProjectItem.create"](self_key, overrides)
 end
 
+function ProjectItem.properties(self)
+  local self_key = ids[self]
+  if self_key == nil or not ProjectItem_is[class_of(self)] then
+    self_key = self_of(self, "ProjectItem")
+  end
+  return prim["ProjectItem.properties"](self_key)
+end
+
 function ProjectItem.on(self, event, handler, options)
   if ids[self] == nil or not ProjectItem_is[class_of(self)] then
     self_of(self, "ProjectItem")
@@ -6315,6 +6339,10 @@ namespaces["nf.structures"] = function(scope, ns)
 end
 
 namespaces["nf.centities"] = function(scope, ns)
+  function ns.properties(kind)
+    return prim["nf.centities.properties"](scope, kind)
+  end
+
   function ns.spawn(kind, location_or_position)
     return prim["nf.centities.spawn"](scope, kind, location_or_position)
   end

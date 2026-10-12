@@ -288,6 +288,15 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         3
     }
 
+    fn("nf.centities.properties") { call ->
+        val lua = call.lua
+        val caller = marshal.caller(lua, 1)
+        val kind = call.arg(2, "kind", LuaCodecs.STRING)
+        val result = api.nfCentities.properties(caller, kind)
+        call.push(result, LuaCodecs.DYNAMIC)
+        1
+    }
+
     fn("nf.centities.spawn") { call ->
         val lua = call.lua
         val caller = marshal.caller(lua, 1)
@@ -876,6 +885,14 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         val definition = call.arg(3, "definition", CODEC_13)
         val result = api.centity.addNode(self, name, definition)
         call.push(result, CODEC_36)
+        1
+    }
+
+    fn("Centity.properties") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.Centity
+        val result = api.centity.properties(self)
+        call.push(result, LuaCodecs.DYNAMIC)
         1
     }
 
@@ -4361,6 +4378,14 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         1
     }
 
+    fn("ProjectBlock.properties") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.ProjectBlock
+        val result = api.projectBlock.properties(self)
+        call.push(result, LuaCodecs.DYNAMIC)
+        1
+    }
+
     fn("ProjectBlock.exists") { call ->
         val lua = call.lua
         val self = call.self(1) as LuaHandle.ProjectBlock
@@ -5400,6 +5425,14 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         val overrides = call.arg(2, "overrides", CODEC_13)
         val result = api.projectItem.create(self, overrides)
         call.push(result, CODEC_45)
+        1
+    }
+
+    fn("ProjectItem.properties") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.ProjectItem
+        val result = api.projectItem.properties(self)
+        call.push(result, LuaCodecs.DYNAMIC)
         1
     }
 

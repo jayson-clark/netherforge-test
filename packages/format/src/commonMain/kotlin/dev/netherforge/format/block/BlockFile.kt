@@ -6,6 +6,7 @@ import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.format.script.ScriptDef
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 /**
  * `blocks/<id>/block.json`: a block of the project's own, which players
@@ -54,6 +55,12 @@ data class BlockFile(
     val sound: String? = null,
     /** Sounds of its own for when it's placed and broken, played instead of [sound]'s. */
     val sounds: BlockSounds? = null,
+    /**
+     * The project's own facts about it, any JSON (`{ "damage": 12, "class": "melee" }`): what scripts read with
+     * `ProjectBlock:properties()`, so data that belongs to the block lives in its file rather than in a table a script keeps.
+     * Nothing else reads it.
+     */
+    val properties: Map<String, JsonElement>? = null,
     /** `<id>`: a centity drawn over the block, for a shape that isn't a cube. It's spawned when the block is placed and goes with it. */
     @Ref(RefKind.CENTITY) val centity: ResourceRef? = null,
     /**

@@ -120,6 +120,12 @@ internal class NfCentitiesImpl(private val session: ProjectSession) : NfCentitie
         return LuaHandle.Centity(instance.id.toString())
     }
 
+    override fun properties(caller: Caller, kind: String): Any? {
+        val id = session.names.resource(CentityKind, kind)
+        val definition = centities.definition(id) ?: throw LuaApiException(session.notInProject("centity", kind, centities.definitionIds()))
+        return JsonObject(definition.properties.orEmpty())
+    }
+
     override fun get(caller: Caller, id: String): LuaHandle.Centity? =
         centities.find(id)?.takeIf { !it.removed }?.let { LuaHandle.Centity(id) }
 

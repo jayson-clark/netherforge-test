@@ -172,6 +172,20 @@ export const nfCentities = namespace(
   'Centity instances: spawning new ones and finding live ones.',
   [
     {
+      name: 'properties',
+      doc: "A centity's `properties` from its `centity.json`, without one spawned: what `centity:properties()` answers for every instance of it. An empty table when the file has none; a centity the project doesn't have is an error. A new table each call.",
+      params: [
+        {
+          name: 'kind',
+          type: 'string',
+          doc: 'Its folder name under `centities/`.',
+          names: 'centity',
+        },
+      ],
+      returns: [{ type: 'table' }],
+      example: 'local stats = nf.centities.properties("green_slime")\nlog(stats.hp)',
+    },
+    {
       name: 'spawn',
       doc: "Puts a new instance of a centity into the world. Its entities exist, its script's body has run and its `spawn` handlers have heard it by the time this returns. A centity the project doesn't have is an error.",
       params: [

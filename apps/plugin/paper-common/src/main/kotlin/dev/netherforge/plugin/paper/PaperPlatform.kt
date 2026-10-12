@@ -147,6 +147,7 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
     ) {
         PaperText.glyphs = glyphs
         PaperItems.looks = items
+        PaperItems.render = events::itemRendered
         PaperItems.forgetReads()
         PaperItems.blockStates = blocks
         PaperItems.namespace = namespace

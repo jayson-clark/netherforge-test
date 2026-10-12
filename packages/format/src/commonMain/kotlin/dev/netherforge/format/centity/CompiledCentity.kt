@@ -22,7 +22,9 @@ class CompiledCentity(
     /** The rules for natural spawns, when the file has any. */
     val spawning: SpawningDef? = null,
     /** Its `body`, resolved, when it has one. */
-    val body: ResolvedBody? = null
+    val body: ResolvedBody? = null,
+    /** Its `properties`, as the file has them. */
+    val properties: Map<String, kotlinx.serialization.json.JsonElement>? = null
 ) {
     private val indexByName = nodes.withIndex().associate { (i, node) -> node.name to i }
     private val animationByName = animations.associateBy { it.name }

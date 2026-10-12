@@ -283,6 +283,7 @@ local events = {
     ["hit"] = { owner = "ProjectItem", cancellable = true, options = {}, writable = { amount = true } },
     ["break_block"] = { owner = "ProjectItem", cancellable = true, options = {}, writable = { drops = true, experience = true } },
     ["drop"] = { owner = "ProjectItem", cancellable = true, options = {}, writable = {} },
+    ["render"] = { owner = "ProjectItem", cancellable = false, options = {}, writable = { display_name = true, lore = true } },
     ["pickup"] = { owner = "ProjectItem", cancellable = true, options = {}, writable = {} },
   },
   ["Effect"] = {

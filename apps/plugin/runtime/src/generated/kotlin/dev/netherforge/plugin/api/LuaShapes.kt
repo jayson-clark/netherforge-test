@@ -3063,6 +3063,44 @@ data class Brightness(val blockLight: Long? = null, val skyLight: Long? = null) 
     }
 }
 
+/** A stack of a project item is being made, or rewritten to its item's changed file: `render`. */
+data class ItemRenderEvent(val item: ItemData, var displayName: String? = null, var lore: List<String>? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    override fun write(field: String, call: LuaCall, index: Int) {
+        when (field) {
+            "display_name" -> displayName = Codec.displayNameCodec.read(call, index, "event.display_name")
+            "lore" -> lore = Codec.loreCodec.read(call, index, "event.lore")
+        }
+    }
+
+    object Codec : ShapeCodec<ItemRenderEvent>("ItemRenderEvent") {
+        val itemCodec = LuaCodecs.ITEM
+        val displayNameCodec = LuaOptional(LuaCodecs.TEXT)
+        val loreCodec = LuaOptional(LuaList(LuaCodecs.TEXT))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "item" to itemCodec,
+            "display_name" to displayNameCodec,
+            "lore" to loreCodec
+        )
+
+        override fun read(fields: ShapeReader) = ItemRenderEvent(
+            item = fields.field("item", itemCodec),
+            displayName = fields.field("display_name", displayNameCodec),
+            lore = fields.field("lore", loreCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: ItemRenderEvent) {
+            fields.field("item", value.item, itemCodec)
+            fields.field("display_name", value.displayName, displayNameCodec)
+            fields.field("lore", value.lore, loreCodec)
+        }
+    }
+}
+
 /**
  * Which entities `world:entities` lists. Every key is optional; an entity is listed when it matches
  * all of those given. A key that isn't one of these is an error.

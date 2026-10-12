@@ -286,6 +286,13 @@ interface NfStructuresApi {
 /** Centity instances: spawning new ones and finding live ones. */
 interface NfCentitiesApi {
     /**
+     * A centity's `properties` from its `centity.json`, without one spawned: what `centity:properties()`
+     * answers for every instance of it. An empty table when the file has none; a centity the project
+     * doesn't have is an error. A new table each call.
+     */
+    fun properties(caller: Caller, kind: String): Any?
+
+    /**
      * Puts a new instance of a centity into the world. Its entities exist, its script's body has run and
      * its `spawn` handlers have heard it by the time this returns. A centity the project doesn't have is
      * an error.
@@ -911,6 +918,13 @@ interface CentityApi {
      * removed.
      */
     fun addNode(self: LuaHandle.Centity, name: String, definition: LuaValue?): LuaHandle.Node?
+
+    /**
+     * Its `properties` from its `centity.json`: the project's own facts about it, any JSON (`{ damage =
+     * 12, class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An
+     * empty table when the file has none, `nil` once it's gone.
+     */
+    fun properties(self: LuaHandle.Centity): Any?
 
     /**
      * The box around all its hitboxes as they're shown now (each shown node's boxes, turned and placed),
@@ -3120,6 +3134,13 @@ interface ProjectBlockApi {
     /** Its id: its folder name under `blocks/`. */
     fun id(self: LuaHandle.ProjectBlock): String
 
+    /**
+     * Its `properties` from its `block.json`: the project's own facts about it, any JSON (`{ damage = 12,
+     * class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An
+     * empty table when the file has none, `nil` once the block is gone.
+     */
+    fun properties(self: LuaHandle.ProjectBlock): Any?
+
     /** Whether the project still has it. */
     fun exists(self: LuaHandle.ProjectBlock): Boolean
 
@@ -3775,6 +3796,13 @@ interface ProjectItemApi {
      * the item is gone.
      */
     fun create(self: LuaHandle.ProjectItem, overrides: LuaValue?): ItemData?
+
+    /**
+     * Its `properties` from its `item.json`: the project's own facts about it, any JSON (`{ damage = 12,
+     * class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An
+     * empty table when the file has none, `nil` once the item is gone.
+     */
+    fun properties(self: LuaHandle.ProjectItem): Any?
 }
 
 /**

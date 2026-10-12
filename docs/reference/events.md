@@ -698,6 +698,7 @@ What [ProjectItem](projectitem.md) listens for.
 | `hit` | [EntityDamageEvent](events.md#entitydamageevent) | yes | A player is attacking an entity with a stack of this item in their main hand: `event.attacker` is the player, `event.entity` who is hit, `event.amount` the damage (writable). Read the stack with `event.attacker:held_item()`. Then the entity's own `damage`, then `nf.on("entity_damage")`, with the same event. Bubbles. Writable: `amount`. |
 | `break_block` | [BlockBreakEvent](events.md#blockbreakevent) | yes | A player is breaking a block with a stack of this item in their main hand (read it with `event.player:held_item()`). Then the world's own `block_break`, then `nf.on("block_break")`, with the same event; assign `event.drops` and `event.experience` to change what it drops. Bubbles. Writable: `drops`, `experience`. |
 | `drop` | [PlayerItemEvent](events.md#playeritemevent) | yes | A player is dropping a stack of this item (`event.item`). Then the player's own `drop_item`, then `nf.on("player_drop_item")`, with the same event, so `event:cancel()` here cancels it for all of them and `event:stop()` keeps it from them. Bubbles. |
+| `render` | [ItemRenderEvent](events.md#itemrenderevent) |  | The server is making a stack of this item, or rewriting one to the item's file after it changed: assign `event.display_name` and `event.lore` to give it a name and lore worked out from the stack (its `data`, its count), which the file's can't say: a prefix in the name, stats in the lore. It's heard for every stack `nf.items.create`, `ProjectItem:create` and a loot roll make, and for every stack that takes a changed file's look, so a name worked out here survives the file changing (one set any other way goes back to the file's then). A stack whose `data` a script changes keeps its name until it's made again: hand it to `nf.items.create` with its `data` to work it out anew. Writable: `display_name`, `lore`. |
 | `pickup` | [PlayerPickupItemEvent](events.md#playerpickupitemevent) | yes | A player is picking up a stack of this item (`event.item`) from the item entity `event.entity`. Then the player's own `pickup_item`, then `nf.on("player_pickup_item")`, with the same event, so `event:cancel()` here cancels it for all of them and `event:stop()` keeps it from them. Bubbles. |
 
 ### projectitem use
@@ -713,6 +714,17 @@ end)
 ```lua
 this:on("hit", function(event)
   event.amount = event.amount * 2
+end)
+```
+
+### projectitem render
+
+```lua
+this:on("render", function(event)
+  local prefix = event.item.data and event.item.data.prefix
+  if prefix then
+    event.display_name = "<green>" .. prefix .. " Copper Sword"
+  end
 end)
 ```
 
@@ -1867,6 +1879,18 @@ Fixed light levels a display is drawn with: `node:set_brightness`.
 | --- | --- | --- |
 | `block_light` | `integer?` | Light from blocks (torches, lamps), 0 to 15. Required. |
 | `sky_light` | `integer?` | Light from the sky, 0 to 15. Required. |
+
+## ItemRenderEvent
+
+A stack of a project item is being made, or rewritten to its item's changed file: `render`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `item` | `Item` | The stack as it is about to be, with its `data` and `count`. Changing this table changes nothing: assign `display_name` and `lore`. |
+| `display_name` | `Text?` | Its name: the file's (or what made it said), until a handler assigns another. `nil` for the game's own name. |
+| `lore` | `Text[]?` | Its lore lines, the same way. `nil` for none. |
 
 ## EntityFilter
 

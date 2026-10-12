@@ -8,6 +8,7 @@ import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaValue
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.session.ProjectSession
+import kotlinx.serialization.json.JsonObject
 
 /** `nf.items`: the project's items, and stacks of them. */
 internal class NfItemsImpl(private val session: ProjectSession, private val api: RuntimeApi) : NfItemsApi {
@@ -56,6 +57,8 @@ internal class ProjectItemImpl(private val session: ProjectSession, private val 
     override fun id(self: LuaHandle.ProjectItem): String = session.names.spell(self.id)
 
     override fun exists(self: LuaHandle.ProjectItem): Boolean = session.items.has(self.id)
+
+    override fun properties(self: LuaHandle.ProjectItem): Any? = session.items.properties(self.id)?.let(::JsonObject)
 
     override fun create(self: LuaHandle.ProjectItem, overrides: LuaValue?): ItemData? {
         if (!session.items.has(self.id)) return null

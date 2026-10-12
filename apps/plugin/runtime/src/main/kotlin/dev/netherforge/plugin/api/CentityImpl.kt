@@ -33,6 +33,7 @@ import dev.netherforge.plugin.physics.Quat
 import dev.netherforge.plugin.platform.DisplayBrightness
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.session.ProjectSession
+import kotlinx.serialization.json.JsonObject
 import java.util.UUID
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -178,6 +179,11 @@ internal class CentityImpl(private val session: ProjectSession) : CentityApi {
             throw LuaApiException("bad argument '$name' (a finite velocity expected)")
         }
         return v
+    }
+
+    override fun properties(self: LuaHandle.Centity): Any? = instance(self)?.definition?.properties.orEmpty().let(::JsonObject).takeIf {
+        instance(self) !=
+            null
     }
 
     override fun bounds(self: LuaHandle.Centity): Bounds? {

@@ -9,6 +9,21 @@ A table of functions: call them with a dot.
 
 
 
+## `nf.centities.properties(kind)`
+
+A centity's `properties` from its `centity.json`, without one spawned: what `centity:properties()` answers for every instance of it. An empty table when the file has none; a centity the project doesn't have is an error. A new table each call.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `kind` | `string` | Its folder name under `centities/`. |
+
+**Returns** `table`
+
+```lua
+local stats = nf.centities.properties("green_slime")
+log(stats.hp)
+```
+
 ## `nf.centities.spawn(kind, location_or_position)`
 
 Puts a new instance of a centity into the world. Its entities exist, its script's body has run and its `spawn` handlers have heard it by the time this returns. A centity the project doesn't have is an error.

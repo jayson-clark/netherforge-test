@@ -95,7 +95,8 @@ class FakeProjectItems(private val platform: FakePlatform) : ProjectItemOps {
             val id = held?.def?.item ?: continue
             val look = platform.itemLooks(id.text) ?: continue
             if (held.look == look.hash) continue
-            slots[index] = ItemData(ProjectItems.restyle(held.def, id, look.def), held.raw, look.hash)
+            val restyled = ItemData(ProjectItems.restyle(held.def, id, look.def), held.raw, look.hash)
+            slots[index] = platform.events?.itemRendered(restyled) ?: restyled
             changed++
         }
         return changed

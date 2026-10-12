@@ -278,6 +278,13 @@ export const centityClass: LuaClass = {
         'local lamp = assert(this:add_node("lamp", {\n  transform = { translation = vec3(0, 2, 0) },\n  display = { type = "block", block = "minecraft:sea_lantern" },\n  hitbox = {},\n}))\nlamp:on("click", function(event)\n  lamp:remove()\nend)',
     },
     {
+      name: 'properties',
+      doc: 'Its `properties` from its `centity.json`: the project\'s own facts about it, any JSON (`{ damage = 12, class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An empty table when the file has none, `nil` once it\'s gone.',
+      params: [],
+      returns: [{ type: 'table?' }],
+      example: 'local stats = assert(this:properties())\nlog(stats.damage)',
+    },
+    {
       name: 'bounds',
       doc: "The box around all its hitboxes as they're shown now (each shown node's boxes, turned and placed), in the world: what `world:overlap_box` and the other spatial queries test against. `nil` for a centity with no hitboxes showing, or once it's removed.",
       params: [],

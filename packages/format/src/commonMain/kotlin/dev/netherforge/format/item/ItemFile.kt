@@ -7,6 +7,7 @@ import dev.netherforge.format.script.ScriptDef
 import dev.netherforge.format.text.MiniMessage
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 /**
  * `items/<id>/item.json`: a project item, an item kind of the project's own.
@@ -79,6 +80,12 @@ data class ItemFile(
     val drawWithoutAmmo: Boolean? = null,
     /** `<id>`: a block of the project's that a player places by right-clicking with it (one is used up each time, but in creative). */
     @Ref(RefKind.BLOCK) val block: ResourceRef? = null,
+    /**
+     * The project's own facts about it, any JSON (`{ "damage": 12, "class": "melee" }`): what scripts read with
+     * `ProjectItem:properties()`, so data that belongs to the item lives in its file rather than in a table a script keeps.
+     * Nothing else reads it.
+     */
+    val properties: Map<String, JsonElement>? = null,
     /** The item's one script, with `this` the item: it hears what players do with every stack of it. */
     val script: ScriptDef? = null
 ) {

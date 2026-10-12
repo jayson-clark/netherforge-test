@@ -19,6 +19,7 @@ import kotlinx.serialization.descriptors.element
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -43,7 +44,13 @@ data class CentityFile(
     /** The centity's one script: a copy runs per instance, with `this` the instance. */
     val script: ScriptDef? = null,
     /** Where and how often it appears by itself, near players. Absent: it only exists where a script spawns it. */
-    val spawning: SpawningDef? = null
+    val spawning: SpawningDef? = null,
+    /**
+     * The project's own facts about it, any JSON (`{ "damage": 12, "class": "melee" }`): what scripts read with
+     * `Centity:properties()`, so data that belongs to the centity lives in its file rather than in a table a script keeps.
+     * Nothing else reads it.
+     */
+    val properties: Map<String, JsonElement>? = null
 ) {
     companion object {
         const val FILE_NAME = "centity.json"

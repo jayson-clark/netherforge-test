@@ -34,6 +34,7 @@ with its script beside it.
 | `falls`        | It falls like sand when nothing is under it. See [falling](#falling).                                                                                                                         | false        |
 | `tick`         | Ticks between its `tick` events, for each placed block (1 to 72000). Without it nothing ticks.                                                                                                | none         |
 | `script`       | The block's one Lua script. See [`script`](#script).                                                                                                                                          |              |
+| `properties`   | The project's own data about the block, any JSON, for scripts. See [`properties`](#properties).                                                                                               |              |
 
 The id is the folder's name, and it's how scripts name it
 (`nf.blocks.get("ruby_ore")`) and how an item places it.
@@ -259,6 +260,17 @@ rolled with the player and the tool they held as the context, so conditions on
 the tool and on enchantments work (`enchantment` conditions for silk touch and
 fortune). The rolled items are what the `break` event's `drops` holds: a
 handler may change them, and they drop where the block was.
+
+## `properties`
+
+```json partial
+"properties": { "damage": 12, "class": "melee", "tags": ["blade"] }
+```
+
+The project's own facts about this block, as any JSON: what scripts read with
+`nf.blocks.get(id):properties()`, so data that belongs to it lives in its file instead of
+a table a script keeps in step. Nothing but scripts reads it, and changing it
+changes nothing in the world.
 
 ## `script`
 

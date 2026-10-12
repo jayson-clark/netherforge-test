@@ -23,6 +23,13 @@ interface PlatformEvents {
     fun tick()
 
     /**
+     * [stack], a project item's stack the platform just rewrote to its item's current look
+     * ([ProjectItemOps.refresh]), as its item's `render` handlers finish it (a name and lore worked out from
+     * its data): what to put in its place. [stack] itself when nobody listens.
+     */
+    fun itemRendered(stack: ItemData): ItemData
+
+    /**
      * A click on a block or the air with [hand] (`main_hand` or `off_hand`),
      * holding [item], on [face] of [block] (both null for the air). True
      * cancels it.

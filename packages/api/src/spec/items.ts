@@ -61,6 +61,14 @@ const itemEvents: EventSpec[] = [
     bubbles: true,
   },
   {
+    name: 'render',
+    doc: "The server is making a stack of this item, or rewriting one to the item's file after it changed: assign `event.display_name` and `event.lore` to give it a name and lore worked out from the stack (its `data`, its count), which the file's can't say: a prefix in the name, stats in the lore. It's heard for every stack `nf.items.create`, `ProjectItem:create` and a loot roll make, and for every stack that takes a changed file's look, so a name worked out here survives the file changing (one set any other way goes back to the file's then). A stack whose `data` a script changes keeps its name until it's made again: hand it to `nf.items.create` with its `data` to work it out anew.",
+    payload: 'ItemRenderEvent',
+    writable: ['display_name', 'lore'],
+    example:
+      'this:on("render", function(event)\n  local prefix = event.item.data and event.item.data.prefix\n  if prefix then\n    event.display_name = "<green>" .. prefix .. " Copper Sword"\n  end\nend)',
+  },
+  {
     name: 'pickup',
     doc: `A player is picking up a stack of this item (\`event.item\`) from the item entity \`event.entity\`. ${thenPlayer('pickup_item')}`,
     payload: 'PlayerPickupItemEvent',
@@ -102,6 +110,13 @@ export const projectItemClass: LuaClass = {
         },
       ],
       returns: [{ type: 'Item?' }],
+    },
+    {
+      name: 'properties',
+      doc: 'Its `properties` from its `item.json`: the project\'s own facts about it, any JSON (`{ damage = 12, class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An empty table when the file has none, `nil` once the item is gone.',
+      params: [],
+      returns: [{ type: 'table?' }],
+      example: 'local stats = assert(this:properties())\nlog(stats.damage)',
     },
     ...eventFunctions(
       'ProjectItem',
@@ -170,3 +185,27 @@ export const nfItems: LuaClass = {
     },
   ],
 }
+
+/** The tables items' events take and give. */
+export const itemShapes: LuaClass[] = [
+  {
+    name: 'ItemRenderEvent',
+    doc: "A stack of a project item is being made, or rewritten to its item's changed file: `render`.",
+    methods: false,
+    functions: [],
+    extends: 'Event',
+    fields: [
+      {
+        name: 'item',
+        type: 'Item',
+        doc: 'The stack as it is about to be, with its `data` and `count`. Changing this table changes nothing: assign `display_name` and `lore`.',
+      },
+      {
+        name: 'display_name',
+        type: 'Text?',
+        doc: "Its name: the file's (or what made it said), until a handler assigns another. `nil` for the game's own name.",
+      },
+      { name: 'lore', type: 'Text[]?', doc: 'Its lore lines, the same way. `nil` for none.' },
+    ],
+  },
+]

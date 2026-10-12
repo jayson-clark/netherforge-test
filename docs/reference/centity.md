@@ -114,6 +114,17 @@ lamp:on("click", function(event)
 end)
 ```
 
+## `centity:properties()`
+
+Its `properties` from its `centity.json`: the project's own facts about it, any JSON (`{ damage = 12, class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An empty table when the file has none, `nil` once it's gone.
+
+**Returns** `table?`
+
+```lua
+local stats = assert(this:properties())
+log(stats.damage)
+```
+
 ## `centity:bounds()`
 
 The box around all its hitboxes as they're shown now (each shown node's boxes, turned and placed), in the world: what `world:overlap_box` and the other spatial queries test against. `nil` for a centity with no hitboxes showing, or once it's removed.

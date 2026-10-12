@@ -9,6 +9,7 @@ import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.api.EventType
 import dev.netherforge.plugin.api.Events
+import dev.netherforge.plugin.api.ItemRenderEvent
 import dev.netherforge.plugin.api.LuaEvent
 import dev.netherforge.plugin.api.LuaHandle
 import dev.netherforge.plugin.lua.LuaApiException
@@ -25,6 +26,7 @@ import dev.netherforge.plugin.session.ReloadBatch
 import dev.netherforge.plugin.session.RuntimeService
 import dev.netherforge.plugin.session.SessionProject
 import dev.netherforge.plugin.session.TickPhase
+import kotlinx.serialization.json.JsonElement
 import java.util.UUID
 
 /**
@@ -111,6 +113,29 @@ class Items(
 
     fun ids(): List<String> = synchronized(records) { records.keys.sorted() }
 
+    /** [id]'s `properties` from its file (empty when it has none), or null when the project has no such item. */
+    fun properties(id: String): Map<String, JsonElement>? = synchronized(records) {
+        records[id]?.file?.properties.orEmpty().takeIf {
+            id in
+                records
+        }
+    }
+
+    /**
+     * [stack], a stack of one of the project's items being made or given its item's new look, as the item's
+     * `render` handlers finish it: the name and lore they assign. [stack] itself when it's no project item's
+     * or nobody listens, so a stack nobody renders costs one lookup.
+     */
+    fun render(stack: ItemData): ItemData {
+        val id = stack.def.item?.let { idOf(it.text) } ?: return stack
+        val handle = LuaHandle.ProjectItem(id)
+        if (!scripts.listening(handle, Events.PROJECTITEM_RENDER)) return stack
+        val event = ItemRenderEvent(stack, stack.def.name, stack.def.lore)
+        scripts.emit(Events.PROJECTITEM_RENDER, handle, event)
+        if (event.displayName == stack.def.name && event.lore == stack.def.lore) return stack
+        return stack.copy(def = stack.def.copy(name = event.displayName, lore = event.lore))
+    }
+
     /** Takes every item: its look, before any window or script builds a stack. Their scripts start in [start]. */
     override fun define(project: SessionProject) {
         synchronized(records) {
@@ -172,7 +197,7 @@ class Items(
     fun create(id: String, overrides: ItemDef? = null): ItemData {
         val look = look(id) ?: throw LuaApiException("there's no item \"$id\" (${ItemKind.pathOf(id)})")
         val def = ProjectItems.resolve((overrides ?: ItemDef()).copy(item = ResourceRef(id)), look.def)
-        return ItemData(def.copy(count = def.count ?: 1))
+        return render(ItemData(def.copy(count = def.count ?: 1)))
     }
 
     /** Checks the stacks in [inventory] (an inventory someone opened, a player's own). */

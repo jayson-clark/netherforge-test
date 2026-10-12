@@ -67,6 +67,8 @@ class RecordingEvents : PlatformEvents {
     // Every tick: nothing a suite needs, and the most frequent call by far.
     override fun tick() {}
 
+    override fun itemRendered(stack: ItemData): ItemData = stack
+
     override fun playerInteract(player: PlayerRef, button: ClickButton, block: BlockRef?, face: String?, item: ItemData?, hand: String) =
         hear("playerInteract", player, button, block, face, item, hand)
 

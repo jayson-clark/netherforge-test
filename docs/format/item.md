@@ -48,6 +48,7 @@ that describe its look and behaviour. What one stack holds (`count`, `damage`,
 | `drawWithoutAmmo`         | A bow (`minecraft:bow`) that draws and shoots with no arrows, and uses none up. See below.                                                |
 | `block`                   | `<id>`: a [block](block.md) of the project's that a right click with it places.                                                           |
 | `script`                  | The item's one Lua script. See [`script`](#script).                                                                                       |
+| `properties`              | The project's own data about the item, any JSON, for scripts. See [`properties`](#properties).                                            |
 
 Each means what it means on any [item](menu.md#items), and is checked the
 same way (the same problem codes, at the same paths), except `block`, which
@@ -105,6 +106,23 @@ up. The stack takes the definition's fields as they are now, and keeps what's
 its own: its count, its damage, its script `data`, whatever other plugins
 stored on it, and its enchantments when the definition sets none. A stack
 whose item no longer exists is left as it is.
+
+A name or lore worked out from one stack's own `data` (a prefix, a stat
+rolled for it) is the item script's `render` event's to give: it's heard for
+every stack `nf.items.create` and a loot roll make, and again whenever a stack
+takes the definition's new fields, so it survives the file changing. A name
+a script sets on a stack any other way goes back to the definition's then.
+
+## `properties`
+
+```json partial
+"properties": { "damage": 12, "class": "melee", "tags": ["blade"] }
+```
+
+The project's own facts about this item, as any JSON: what scripts read with
+`nf.items.get(id):properties()` (or `this:properties()` in its script), so data that belongs to it lives in its file instead of
+a table a script keeps in step. Nothing but scripts reads it, and changing it
+doesn't change its stacks' look, so they're never rewritten for it.
 
 ## `script`
 

@@ -75,6 +75,7 @@ Centity:pause_animation	17
 Centity:play_animation	23
 Centity:playing_animations	15
 Centity:position	24
+Centity:properties	15
 Centity:remove	16
 Centity:resume_animation	17
 Centity:roots	15
@@ -487,11 +488,13 @@ ProjectBlock:id	15
 ProjectBlock:on	141
 ProjectBlock:once	148
 ProjectBlock:place	34
+ProjectBlock:properties	15
 ProjectItem:create	17
 ProjectItem:exists	15
 ProjectItem:id	15
 ProjectItem:on	141
 ProjectItem:once	148
+ProjectItem:properties	15
 Random:integer	85
 Random:number	92
 Random:pick	28
@@ -616,6 +619,7 @@ nf.blocks.get	8
 nf.bossbars.create	12
 nf.centities.all	38
 nf.centities.get	8
+nf.centities.properties	8
 nf.centities.spawn	259
 nf.commands.register	12
 nf.config	7

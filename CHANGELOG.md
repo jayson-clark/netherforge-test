@@ -100,6 +100,17 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **`properties` on items, blocks and centities.** Any JSON a file carries
+  for scripts (`{ "damage": 12, "class": "melee" }`), read with
+  `ProjectItem:properties()`, `ProjectBlock:properties()`,
+  `centity:properties()` and `nf.centities.properties(kind)`, so data that
+  belongs to a resource lives in its file instead of a generated Lua table.
+  An item's `properties` aren't part of its stacks' look.
+- **An item's `render` event.** Heard for every stack `nf.items.create`,
+  `ProjectItem:create` and a loot roll make, and for every stack rewritten to
+  a changed item file: its handlers assign `display_name` and `lore` worked
+  out from the stack's own `data` (a prefix, a rolled stat), which then
+  survive the file changing instead of going back to the file's.
 - **A `body` for centities.** `centity.json`'s `body` (width, height, gravity,
   drag, liquid drag and gravity, acceleration on the ground and in the air,
   friction, step height, bounce, `fly`, `blocks`) makes the server walk, drop,

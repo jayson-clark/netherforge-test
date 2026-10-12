@@ -60,6 +60,8 @@ class ServerEvents internal constructor(private val runtime: NetherForgeRuntime)
 
     override fun tick() = runtime.tick()
 
+    override fun itemRendered(stack: ItemData): ItemData = items.render(stack)
+
     /** A player's event with [item]: heard first by its project item's [itemEvent] handlers, when it's a stack of one. */
     private fun <P : LuaEvent> itemEvent(
         itemEvent: EventType<P>,

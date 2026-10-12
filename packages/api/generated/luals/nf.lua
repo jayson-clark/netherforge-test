@@ -20,7 +20,7 @@
 ---@alias MenuTemplate.Event "open"|"close"|"click"|"drag"
 ---@alias Dialog.Event "press"|"close"
 ---@alias Button.Event "press"
----@alias ProjectItem.Event "use"|"interact"|"interact_entity"|"consume"|"hit"|"break_block"|"drop"|"pickup"
+---@alias ProjectItem.Event "use"|"interact"|"interact_entity"|"consume"|"hit"|"break_block"|"drop"|"render"|"pickup"
 ---@alias Effect.Event "end"
 ---@alias Cutscene.Event "end"|"cue"
 
@@ -526,6 +526,7 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: ProjectItem, event: "hit", filter?: fun(event: EntityDamageEvent): boolean): EntityDamageEvent
 ---@overload fun(handle: ProjectItem, event: "break_block", filter?: fun(event: BlockBreakEvent): boolean): BlockBreakEvent
 ---@overload fun(handle: ProjectItem, event: "drop", filter?: fun(event: PlayerItemEvent): boolean): PlayerItemEvent
+---@overload fun(handle: ProjectItem, event: "render", filter?: fun(event: ItemRenderEvent): boolean): ItemRenderEvent
 ---@overload fun(handle: ProjectItem, event: "pickup", filter?: fun(event: PlayerPickupItemEvent): boolean): PlayerPickupItemEvent
 ---@overload fun(handle: Effect, event: "end", filter?: fun(event: EffectEndEvent): boolean): EffectEndEvent
 ---@overload fun(handle: Cutscene, event: "end", filter?: fun(event: CutsceneEndEvent): boolean): CutsceneEndEvent
@@ -703,6 +704,11 @@ function nf.structures.size(id) end
 --- Centity instances: spawning new ones and finding live ones.
 ---@class nf.centities
 nf.centities = {}
+
+--- A centity's `properties` from its `centity.json`, without one spawned: what `centity:properties()` answers for every instance of it. An empty table when the file has none; a centity the project doesn't have is an error. A new table each call.
+---@param kind CentityId Its folder name under `centities/`.
+---@return table
+function nf.centities.properties(kind) end
 
 --- Puts a new instance of a centity into the world. Its entities exist, its script's body has run and its `spawn` handlers have heard it by the time this returns. A centity the project doesn't have is an error.
 ---@param kind CentityId Which centity: its folder name under `centities/`.
@@ -1173,6 +1179,10 @@ function Centity:roots() end
 ---@param definition? table A table in the shape of one node of `centity.json`, minus its `parent` (it hangs from the node you call this on), in Lua spelling: `transform` (`{ translation?, rotation?, scale? }`, each a `Vec3`: where it starts, as a rest pose a script can change afterwards), `display` (`{ type = "block", block = "minecraft:stone" }`, `{ type = "item", item = "minecraft:diamond", item_transform? }` or `{ type = "text", text = "<red>Hi", billboard?, alignment?, background?, line_width?, see_through?, shadow? }`), `hitbox` (`{ boxes?, shape?, raycast?, fitted_to? }`, a box being `{ min = Vec3, max = Vec3 }`) and `physics` (`{ gravity?, mass?, bounciness?, friction?, drag?, angular_drag?, max_speed?, max_spin?, collider?, shape?, rotates?, sleeps?, blocks?, entities? }`). Every field is optional: a node with none is a pivot to hang others from. Held to the same rules as `centity.json`, by the same validator: a key it does not take, a value of the wrong type, or a block, item or hitbox the file would be refused for is an error.
 ---@return Node?
 function Centity:add_node(name, definition) end
+
+--- Its `properties` from its `centity.json`: the project's own facts about it, any JSON (`{ damage = 12, class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An empty table when the file has none, `nil` once it's gone.
+---@return table?
+function Centity:properties() end
 
 --- The box around all its hitboxes as they're shown now (each shown node's boxes, turned and placed), in the world: what `world:overlap_box` and the other spatial queries test against. `nil` for a centity with no hitboxes showing, or once it's removed.
 ---@return Bounds?
@@ -3429,6 +3439,10 @@ local ProjectBlock = {}
 ---@return string
 function ProjectBlock:id() end
 
+--- Its `properties` from its `block.json`: the project's own facts about it, any JSON (`{ damage = 12, class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An empty table when the file has none, `nil` once the block is gone.
+---@return table?
+function ProjectBlock:properties() end
+
 --- Whether the project still has it.
 ---@return boolean
 function ProjectBlock:exists() end
@@ -4150,6 +4164,10 @@ function ProjectItem:exists() end
 ---@return Item?
 function ProjectItem:create(overrides) end
 
+--- Its `properties` from its `item.json`: the project's own facts about it, any JSON (`{ damage = 12, class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An empty table when the file has none, `nil` once the item is gone.
+---@return table?
+function ProjectItem:properties() end
+
 --- Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
 ---@param event ProjectItem.Event The event's name.
 ---@param handler fun(event: Event) Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`.
@@ -4162,6 +4180,7 @@ function ProjectItem:create(overrides) end
 ---@overload fun(self: ProjectItem, event: "hit", handler: fun(event: EntityDamageEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "break_block", handler: fun(event: BlockBreakEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "drop", handler: fun(event: PlayerItemEvent)): Subscription
+---@overload fun(self: ProjectItem, event: "render", handler: fun(event: ItemRenderEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "pickup", handler: fun(event: PlayerPickupItemEvent)): Subscription
 function ProjectItem:on(event, handler, options) end
 
@@ -4176,6 +4195,7 @@ function ProjectItem:on(event, handler, options) end
 ---@overload fun(self: ProjectItem, event: "hit", handler: fun(event: EntityDamageEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "break_block", handler: fun(event: BlockBreakEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "drop", handler: fun(event: PlayerItemEvent)): Subscription
+---@overload fun(self: ProjectItem, event: "render", handler: fun(event: ItemRenderEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "pickup", handler: fun(event: PlayerPickupItemEvent)): Subscription
 function ProjectItem:once(event, handler) end
 
@@ -5186,6 +5206,12 @@ function Event:uncancel() end
 ---@class Brightness
 ---@field block_light integer? Light from blocks (torches, lamps), 0 to 15. Required.
 ---@field sky_light integer? Light from the sky, 0 to 15. Required.
+
+--- A stack of a project item is being made, or rewritten to its item's changed file: `render`.
+---@class ItemRenderEvent: Event
+---@field item Item The stack as it is about to be, with its `data` and `count`. Changing this table changes nothing: assign `display_name` and `lore`.
+---@field display_name Text? Its name: the file's (or what made it said), until a handler assigns another. `nil` for the game's own name.
+---@field lore Text[]? Its lore lines, the same way. `nil` for none.
 
 --- Which entities `world:entities` lists. Every key is optional; an entity is listed when it matches all of those given. A key that isn't one of these is an error.
 ---@class EntityFilter
