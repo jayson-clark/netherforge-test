@@ -330,6 +330,17 @@ class FakePlatform(
                         "waterlogged" to listOf("true", "false")
                     ),
                     defaults = mapOf("facing" to "north", "half" to "bottom", "shape" to "straight", "waterlogged" to "false")
+                ),
+                // A door a centity's walk opens and shuts (`move_to`'s `open_doors`).
+                "minecraft:oak_door" to BlockInfo(
+                    properties = mapOf(
+                        "facing" to listOf("north", "south", "west", "east"),
+                        "half" to listOf("upper", "lower"),
+                        "hinge" to listOf("left", "right"),
+                        "open" to listOf("true", "false"),
+                        "powered" to listOf("true", "false")
+                    ),
+                    defaults = mapOf("facing" to "north", "half" to "lower", "hinge" to "left", "open" to "false", "powered" to "false")
                 )
             ) + CONCRETE.associateWith { BlockInfo() } + LUMEN_VALE_BLOCKS,
             registries = mapOf(
@@ -464,7 +475,8 @@ class FakePlatform(
                     "minecraft:mineable/pickaxe" to listOf("minecraft:stone", "minecraft:stone_bricks"),
                     "minecraft:mineable/axe" to listOf("minecraft:oak_planks", "minecraft:note_block"),
                     "minecraft:planks" to listOf("minecraft:oak_planks"),
-                    "minecraft:leaves" to listOf("minecraft:birch_leaves", "minecraft:oak_leaves")
+                    "minecraft:leaves" to listOf("minecraft:birch_leaves", "minecraft:oak_leaves"),
+                    "minecraft:wooden_doors" to listOf("minecraft:oak_door")
                 ),
                 RegistryKey.BIOME.id to mapOf(
                     "minecraft:is_end" to listOf("minecraft:the_end"),
@@ -507,7 +519,12 @@ class FakePlatform(
                     Box(Vec3.ZERO, Vec3(1.0, 0.5, 1.0)),
                     Box(Vec3(0.5, 0.5, 0.0), Vec3(1.0, 1.0, 1.0))
                 )
-            ) + CONCRETE.associateWith { CUBE }
+            ) + CONCRETE.associateWith { CUBE } +
+                // A door opened against its south side, as a walk opens one to go through.
+                listOf("lower", "upper").associate {
+                    "minecraft:oak_door[facing=north,half=$it,hinge=left,open=true,powered=false]" to
+                        listOf(Box(Vec3(0.0, 0.0, 0.8125), Vec3(1.0, 1.0, 1.0)))
+                }
         )
     }
 }

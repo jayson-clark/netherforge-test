@@ -7,7 +7,10 @@ import dev.netherforge.plugin.pathing.BlockShapes
 import dev.netherforge.plugin.platform.Platform
 
 /** One block of a door (or a fence gate) a walk opened. */
-internal data class Doorway(val x: Int, val y: Int, val z: Int)
+internal data class Doorway(val x: Int, val y: Int, val z: Int) {
+    /** Whether [feet] stand in this door's column of blocks (a door's two blocks are each a doorway). */
+    fun holds(feet: Vec3): Boolean = kotlin.math.floor(feet.x).toInt() == x && kotlin.math.floor(feet.z).toInt() == z
+}
 
 /**
  * The game's wooden doors and fence gates for walks that go through them (`move_to`'s `open_doors`): a search
@@ -31,8 +34,8 @@ internal class Doors(private val platform: Platform) {
         }
     }
 
-    /** Opens the shut doors on [walk]'s way within reach of its feet, and shuts the ones it opened and has left behind. */
-    fun pass(world: String, walk: Walk) {
+    /** Opens the shut doors on [walk]'s way within reach of its feet, and shuts the ones it [opened] and has left behind. */
+    fun pass(world: String, walk: Walk, opened: MutableList<Doorway>) {
         val feet = walk.feet
         // Along its path from its feet, a little at a time (a straight stretch is only its two ends), as far as it reaches.
         var at = feet
@@ -42,7 +45,7 @@ internal class Doors(private val platform: Platform) {
         while (left > 0) {
             for (dy in 0 until DOOR_HEIGHT) {
                 val cell = Doorway(kotlin.math.floor(at.x).toInt(), kotlin.math.floor(at.y).toInt() + dy, kotlin.math.floor(at.z).toInt())
-                if (seen.add(cell)) open(world, walk, cell)
+                if (seen.add(cell)) open(world, opened, cell)
             }
             if (next >= walk.points.size) break
             val to = walk.points[next]
@@ -56,20 +59,18 @@ internal class Doors(private val platform: Platform) {
                 left -= STEP
             }
         }
-        shut(world, walk) { distance(Vec3(it.x + 0.5, it.y.toDouble(), it.z + 0.5), feet) > LEAVE }
+        shut(world, opened) { distance(Vec3(it.x + 0.5, it.y.toDouble(), it.z + 0.5), feet) > LEAVE }
     }
 
-    private fun open(world: String, walk: Walk, cell: Doorway) {
+    private fun open(world: String, opened: MutableList<Doorway>, cell: Doorway) {
         val state = doorAt(world, cell.x, cell.y, cell.z) ?: return
         if (!state.contains("open=false")) return
-        if (platform.blocks.set(world, cell.x, cell.y, cell.z, state.replace("open=false", "open=true"), false)) walk.opened += cell
+        if (platform.blocks.set(world, cell.x, cell.y, cell.z, state.replace("open=false", "open=true"), false)) opened += cell
     }
 
-    /** Shuts every door [walk] opened: its walk is over. */
-    fun shutAll(world: String, walk: Walk) = shut(world, walk) { true }
-
-    private fun shut(world: String, walk: Walk, done: (Doorway) -> Boolean) {
-        val iterator = walk.opened.iterator()
+    /** Shuts the doors in [opened] that are [done] with, and forgets them (one shut or broken since is just forgotten). */
+    fun shut(world: String, opened: MutableList<Doorway>, done: (Doorway) -> Boolean) {
+        val iterator = opened.iterator()
         while (iterator.hasNext()) {
             val door = iterator.next()
             if (!done(door)) continue

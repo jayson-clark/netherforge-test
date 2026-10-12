@@ -374,6 +374,7 @@ class Centities(
         instance.removing = true
         emit(Events.CENTITY_REMOVE, instance, CentityEvent(handle(instance)))
         instance.removed = true
+        paths.shutAll(instance)
         stopScripts(instance)
         scripts.dropTarget(handle(instance))
         for (entity in instance.entityIds()) {
@@ -429,8 +430,10 @@ class Centities(
      */
     fun teleport(instance: Instance, to: Location, yaw: Double? = null): Boolean {
         if (instance.removed || !platform.worlds.exists(to.world)) return false
-        // A teleport ends a walk, as `stop_pathing` does: no `path_end`. It ends a follow too.
+        // A teleport ends a walk, as `stop_pathing` does: no `path_end`. It ends a follow too, and the doors it
+        // opened shut, since it has gone from them.
         instance.walk = null
+        paths.shutAll(instance)
         unfollow(instance)
         instance.anchor = to.copy(yaw = 0.0, pitch = 0.0)
         if (yaw != null) instance.turnTo(yaw)
@@ -688,6 +691,8 @@ class Centities(
         if (instance.follower != null && !instance.removed) parts.time(FOLLOW) { followTick(instance) }
         // Walking moves the whole centity first, so physics settles its bodies where it has been walked to.
         if (instance.walk != null && !instance.removed) parts.time(WALK) { paths.step(instance) }
+        // Doors a walk opened and didn't get to shut (it was stopped or replaced on the way) shut once it's out of them.
+        if (instance.walk == null && instance.openedDoors.isNotEmpty() && !instance.removed) paths.shutBehind(instance)
         // Its body moves the whole centity, before physics settles node bodies where it has gone; a walk moves it instead.
         if (instance.mover != null && instance.walk == null && instance.flight == null && !instance.removed) {
             val moved = parts.time(BODY) { movers.step(instance) }

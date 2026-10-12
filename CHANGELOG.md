@@ -102,7 +102,8 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   query looks only at what's near it; `world:raycast` uses it too now.
 - **Centities walk through doors.** `move_to`'s `open_doors` goes through the
   game's wooden doors and fence gates, opening each as the walk comes to it and
-  shutting it once it's through.
+  shutting it once it's through, even when the walk is stopped or replaced on
+  the way (once the centity is out of the doorway) or it's teleported.
 - **`netherforge render` and `gallery`.** An item or a block as its
   inventory icon, or a centity in its base pose, to a PNG, as the editor draws
   them (the project's resource pack looks, and the game's from the imported

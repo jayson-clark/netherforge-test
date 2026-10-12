@@ -146,6 +146,12 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
     /** Where `move_to` is walking it, if anywhere: see [CentityPaths]. Runtime state, dropped by [redefine]. */
     internal var walk: Walk? = null
 
+    /**
+     * The doors its walks opened (`open_doors`), each block of them, to shut once it's through: its own rather than
+     * a walk's, so a walk stopped or replaced on the way still shuts them behind it. Kept across reloads.
+     */
+    internal val openedDoors = ArrayList<Doorway>(0)
+
     /** The entities no longer match the definition (a reload happened while unloaded). */
     var needsReconcile = true
 
