@@ -23,6 +23,10 @@ What `centity:on(event, handler)` listens for. See [Events](events.md) for how e
 | `animation_end` | [AnimationEvent](events.md#animationevent) |  | An animation reached its end: a `once` clip has finished, a `hold` clip is holding its last pose. Looping clips never end. |
 | `chunk_load` | [CentityEvent](events.md#centityevent) |  | Its chunk came back into memory (someone came near), so it's ticking again. |
 | `chunk_unload` | [CentityEvent](events.md#centityevent) |  | Its chunk was unloaded (everyone went away): it stops ticking until `chunk_load`. Its handlers stay. |
+| `hit` | [FlightHitEvent](events.md#flighthitevent) | yes | It's flying (`launch`) and its path touched something it can hit: a centity's hitbox, a player or another entity, in the order it meets them, each once (or again after `rehit` ticks). `event:cancel()` lets it pass through as if it weren't there, without using up a `pierce`. Otherwise it goes on through only while it has `pierce` left; past that, this is where it ends (`flight_end`, `"hit"`). |
+| `bounce` | [FlightBlockEvent](events.md#flightblockevent) |  | It's flying with `bounce` and came off a block: `event.normal` is the face it hit, `event.speed` how fast it was going into it. |
+| `stick` | [FlightBlockEvent](events.md#flightblockevent) |  | It's flying with `stick` and stuck in a block: it stays there, its flight over but not ended, until its `lifetime` is up. |
+| `flight_end` | [FlightEndEvent](events.md#flightendevent) |  | Its flight ended: it hit something with no `pierce` left (`"hit"`), met a block it neither bounces off nor sticks in (`"block"`), ran out of `lifetime` (`"lifetime"`), reached a chunk that isn't loaded (`"unloaded"`), or a script stopped it (`"stopped"`). Then, unless `remove_on_end` is `false`, it's removed: its `remove` handlers hear it next. |
 | `land` | [CentityLandEvent](events.md#centitylandevent) |  | Its `body` came down onto something after falling (or jumping): once, as it lands. `event.speed` is how fast it was falling, for fall damage or a thud. |
 | `bump` | [CentityBumpEvent](events.md#centitybumpevent) |  | Its `body` ran into something it didn't land on: a wall, or a ceiling. Once each tick it does, with the face's `normal` (pointing back at it) and how fast it was going into it. |
 | `touch` | [TouchEvent](events.md#touchevent) |  | Its hitboxes started touching something's: another centity's, a player's or another entity's (each shown node's boxes, as `world:overlap_box` sees them). Once when they start touching, and again only after they've come apart. Worked out each tick only for centities something listens to this on, so a crowd nobody listens to costs nothing. Both centities hear it when two touch, each with the other in `event.other`. |
@@ -382,6 +386,34 @@ Whether its body is in water or lava (the block at its middle). `false` without 
 The face of what stopped its body sideways on its last move, as the direction straight out of it (`vec3(-1, 0, 0)` for a wall to its east), or `nil` when nothing did, or without a body. What a walker turns round at, or jumps over.
 
 **Returns** `Vec3?`
+
+## `centity:launch(options)`
+
+Makes it a projectile: from now on the server flies the whole centity every tick at its velocity, under its gravity and drag, and sweeps its path (a sphere of `radius`) for what it hits: centities' hitboxes, players and entities (`hit`), and blocks (it ends, bounces or sticks: `flight_end`, `bounce`, `stick`). It flies until it ends, then is removed unless told not to. Nothing about a flight is saved. A launch over a flight replaces it. One with a `body` stops walking while it flies, and walks again after. Every value is in blocks and seconds, as everywhere.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `options` | `LaunchOptions` |  |
+
+**Returns** `boolean`: `false` once it's removed.
+
+```lua
+local eye, facing = assert(player:eye_position()), assert(player:direction())
+local arrow = assert(nf.centities.spawn("arrow", eye, { temporary = true }))
+arrow:launch({ velocity = facing * 40, gravity = 20, radius = 0.15, owner = player, aim = "aim", pierce = 1 })
+```
+
+## `centity:is_launched()`
+
+Whether it's flying as a projectile (`launch`), stuck in a block or lying where it came to rest included: until its flight ends. `false` once it's removed.
+
+**Returns** `boolean`
+
+## `centity:stop_flight()`
+
+Ends its flight where it is, as if it had ended by itself: `flight_end` hears `"stopped"`, and it's removed unless `remove_on_end` was `false`.
+
+**Returns** `boolean`: Whether it was flying: `false` when it wasn't, or once it's removed.
 
 ## `centity:move_to(target, options?)`
 

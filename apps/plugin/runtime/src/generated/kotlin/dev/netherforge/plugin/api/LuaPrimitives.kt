@@ -1148,6 +1148,31 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         3
     }
 
+    fn("Centity.launch") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.Centity
+        val options = call.arg(2, "options", LaunchOptions.Codec)
+        val result = api.centity.launch(self, options)
+        call.push(result, LuaCodecs.BOOLEAN)
+        1
+    }
+
+    fn("Centity.is_launched") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.Centity
+        val result = api.centity.isLaunched(self)
+        call.push(result, LuaCodecs.BOOLEAN)
+        1
+    }
+
+    fn("Centity.stop_flight") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.Centity
+        val result = api.centity.stopFlight(self)
+        call.push(result, LuaCodecs.BOOLEAN)
+        1
+    }
+
     fn("Centity.move_to") { call ->
         val lua = call.lua
         val self = call.self(1) as LuaHandle.Centity

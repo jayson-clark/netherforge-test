@@ -260,6 +260,10 @@ What [Centity](centity.md) listens for.
 | `animation_end` | [AnimationEvent](events.md#animationevent) |  | An animation reached its end: a `once` clip has finished, a `hold` clip is holding its last pose. Looping clips never end. |
 | `chunk_load` | [CentityEvent](events.md#centityevent) |  | Its chunk came back into memory (someone came near), so it's ticking again. |
 | `chunk_unload` | [CentityEvent](events.md#centityevent) |  | Its chunk was unloaded (everyone went away): it stops ticking until `chunk_load`. Its handlers stay. |
+| `hit` | [FlightHitEvent](events.md#flighthitevent) | yes | It's flying (`launch`) and its path touched something it can hit: a centity's hitbox, a player or another entity, in the order it meets them, each once (or again after `rehit` ticks). `event:cancel()` lets it pass through as if it weren't there, without using up a `pierce`. Otherwise it goes on through only while it has `pierce` left; past that, this is where it ends (`flight_end`, `"hit"`). |
+| `bounce` | [FlightBlockEvent](events.md#flightblockevent) |  | It's flying with `bounce` and came off a block: `event.normal` is the face it hit, `event.speed` how fast it was going into it. |
+| `stick` | [FlightBlockEvent](events.md#flightblockevent) |  | It's flying with `stick` and stuck in a block: it stays there, its flight over but not ended, until its `lifetime` is up. |
+| `flight_end` | [FlightEndEvent](events.md#flightendevent) |  | Its flight ended: it hit something with no `pierce` left (`"hit"`), met a block it neither bounces off nor sticks in (`"block"`), ran out of `lifetime` (`"lifetime"`), reached a chunk that isn't loaded (`"unloaded"`), or a script stopped it (`"stopped"`). Then, unless `remove_on_end` is `false`, it's removed: its `remove` handlers hear it next. |
 | `land` | [CentityLandEvent](events.md#centitylandevent) |  | Its `body` came down onto something after falling (or jumping): once, as it lands. `event.speed` is how fast it was falling, for fall damage or a thud. |
 | `bump` | [CentityBumpEvent](events.md#centitybumpevent) |  | Its `body` ran into something it didn't land on: a wall, or a ceiling. Once each tick it does, with the face's `normal` (pointing back at it) and how fast it was going into it. |
 | `touch` | [TouchEvent](events.md#touchevent) |  | Its hitboxes started touching something's: another centity's, a player's or another entity's (each shown node's boxes, as `world:overlap_box` sees them). Once when they start touching, and again only after they've come apart. Worked out each tick only for centities something listens to this on, so a crowd nobody listens to costs nothing. Both centities hear it when two touch, each with the other in `event.other`. |
@@ -289,6 +293,24 @@ end)
 this:on("click", function(event)
   this:play_animation("open")
   event.player:send_message("<gold>Opened")
+end)
+```
+
+### centity hit
+
+```lua
+this:on("hit", function(event)
+  if event.target then
+    event.target:emit("game:struck", { damage = 4 })
+  end
+end)
+```
+
+### centity flight_end
+
+```lua
+this:on("flight_end", function(event)
+  this:world():explode(event.position, 2)
 end)
 ```
 
@@ -1809,6 +1831,88 @@ A centity's body, as `centity:body()` gives it and `centity:set_body` takes it: 
 | `bounce` | `number?` | 0 stops dead against what it hits, 1 bounces off at full speed. |
 | `fly` | `boolean?` | No gravity: walking steers it in any direction. |
 | `blocks` | `boolean?` | Collides with the world's blocks. |
+
+## LaunchOptions
+
+How `centity:launch` flies it. Everything but `velocity` is optional. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `velocity` | `Vec3` | Blocks per second, along the world's axes. Required. |
+| `gravity` | `number?` | Downward acceleration, blocks per second squared. Default 0: it flies straight. |
+| `gravity_delay` | `integer?` | Ticks it flies straight before gravity takes it, as a thrown knife's first stretch. Default 0. |
+| `drag` | `number?` | Fraction of its speed shed per second, 0 to 1. Default 0. |
+| `radius` | `number?` | How wide its path is swept for hits, as a sphere's radius in blocks; blocks stop its middle. Default 0.1. |
+| `pierce` | `integer?` | How many hits it goes on through before one ends it. Default 0: the first ends it. |
+| `rehit` | `integer?` | Ticks before it can hit the same thing again. Default: it hits each thing once. |
+| `hits` | `QueryOptions?` | What it can hit, as a spatial query's options say (`centities`, `players`, `entities`, `kinds`, `exclude`, `line_of_sight` aside). It never hits itself or its `owner`. Default: everything. |
+| `owner` | `(Entity\|Centity)?` | Who launched it: never hit, and handed to every event. Default none. |
+| `blocks` | `boolean?` | Whether blocks stop it (their collision shapes). Default `true`. |
+| `bounce` | `number?` | Comes off a block instead of ending: the fraction of its speed into the face it keeps, 0 to 1. Default: it doesn't bounce. |
+| `friction` | `number?` | With `bounce`: the fraction of its speed along the face it keeps, 0 to 1. Default 1. |
+| `max_bounces` | `integer?` | With `bounce`: how many it makes before the next block ends it. Default: no end. |
+| `rest_speed` | `number?` | With `bounce`: below this speed, blocks per second, after a bounce off a floor it stops and lies there (a grenade) until its `lifetime` is up. Default 1. |
+| `stick` | `boolean?` | Sticks in the first block it hits (`stick`) instead of ending: it stays there until its `lifetime` is up. Default `false`. |
+| `homing` | `Homing?` | Turns toward the nearest thing it can hit within reach. Default: it doesn't. |
+| `lifetime` | `integer?` | Ticks from launch before it ends (`flight_end`, `"lifetime"`), flying, stuck or lying still. At least 1. Default 600: half a minute. |
+| `aim` | `string?` | A node that's turned every tick so its +Z points the way it flies (an arrow's nose). Default: none is turned. |
+| `remove_on_end` | `boolean?` | Whether it's removed when its flight ends, after `flight_end`. Default `true`. |
+
+## Homing
+
+How a projectile seeks: `LaunchOptions.homing`.
+
+| Field | Type | |
+| --- | --- | --- |
+| `range` | `number` | How far it looks, in blocks. Required. |
+| `turn` | `number?` | The most it turns toward its target, in degrees per second. Default 180. |
+
+## FlightHitEvent
+
+A projectile touched something it can hit: `hit`. Exactly one of `target` and `entity` is set.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity` | The projectile. |
+| `target` | `Centity?` | The centity it hit, or `nil`. |
+| `node` | `Node?` | Which of `target`'s nodes (its hitbox), or `nil`. |
+| `entity` | `Entity?` | The player or entity it hit, or `nil`. |
+| `position` | `Vec3` | Where its middle was when it first touched. |
+| `velocity` | `Vec3` | How fast it was going, blocks per second. |
+| `owner` | `(Entity\|Centity)?` | Who launched it, or `nil`. |
+
+## FlightBlockEvent
+
+A projectile met a block it bounces off (`bounce`) or sticks in (`stick`).
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity` | The projectile. |
+| `block` | `Block` | The block. |
+| `position` | `Vec3` | Where it met it. |
+| `normal` | `Vec3` | The direction straight out of the face it met. |
+| `speed` | `number` | How fast it was going into it, blocks per second. |
+| `owner` | `(Entity\|Centity)?` | Who launched it, or `nil`. |
+
+## FlightEndEvent
+
+A projectile's flight ended: `flight_end`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity` | The projectile. |
+| `reason` | `"hit"\|"block"\|"lifetime"\|"unloaded"\|"stopped"` | Why: see `flight_end`. |
+| `position` | `Vec3` | Where it ended. |
+| `target` | `Centity?` | For `"hit"`, the centity it ended on, or `nil`. |
+| `entity` | `Entity?` | For `"hit"`, the player or entity it ended on, or `nil`. |
+| `block` | `Block?` | For `"block"`, the block it ended on, or `nil`. |
+| `owner` | `(Entity\|Centity)?` | Who launched it, or `nil`. |
 
 ## CentityLandEvent
 

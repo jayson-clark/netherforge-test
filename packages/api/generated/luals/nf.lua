@@ -7,7 +7,7 @@
 -- The sandbox removes io, os, package, load, loadstring, dofile, loadfile, debug, collectgarbage, warn, java.
 
 ---@alias nf.Event "tick"|"unload"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed"|string
----@alias Centity.Event "spawn"|"remove"|"tick"|"click"|"animation_start"|"animation_end"|"chunk_load"|"chunk_unload"|"land"|"bump"|"touch"|"path_end"|string
+---@alias Centity.Event "spawn"|"remove"|"tick"|"click"|"animation_start"|"animation_end"|"chunk_load"|"chunk_unload"|"hit"|"bounce"|"stick"|"flight_end"|"land"|"bump"|"touch"|"path_end"|string
 ---@alias Node.Event "click"|"collide"|"wake"|"sleep"
 ---@alias Entity.Event "damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
 ---@alias Living.Event "death"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
@@ -417,6 +417,10 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: Centity, event: "animation_end", filter?: fun(event: AnimationEvent): boolean): AnimationEvent
 ---@overload fun(handle: Centity, event: "chunk_load", filter?: fun(event: CentityEvent): boolean): CentityEvent
 ---@overload fun(handle: Centity, event: "chunk_unload", filter?: fun(event: CentityEvent): boolean): CentityEvent
+---@overload fun(handle: Centity, event: "hit", filter?: fun(event: FlightHitEvent): boolean): FlightHitEvent
+---@overload fun(handle: Centity, event: "bounce", filter?: fun(event: FlightBlockEvent): boolean): FlightBlockEvent
+---@overload fun(handle: Centity, event: "stick", filter?: fun(event: FlightBlockEvent): boolean): FlightBlockEvent
+---@overload fun(handle: Centity, event: "flight_end", filter?: fun(event: FlightEndEvent): boolean): FlightEndEvent
 ---@overload fun(handle: Centity, event: "land", filter?: fun(event: CentityLandEvent): boolean): CentityLandEvent
 ---@overload fun(handle: Centity, event: "bump", filter?: fun(event: CentityBumpEvent): boolean): CentityBumpEvent
 ---@overload fun(handle: Centity, event: "touch", filter?: fun(event: TouchEvent): boolean): TouchEvent
@@ -1304,6 +1308,19 @@ function Centity:is_in_liquid() end
 ---@return Vec3?
 function Centity:wall() end
 
+--- Makes it a projectile: from now on the server flies the whole centity every tick at its velocity, under its gravity and drag, and sweeps its path (a sphere of `radius`) for what it hits: centities' hitboxes, players and entities (`hit`), and blocks (it ends, bounces or sticks: `flight_end`, `bounce`, `stick`). It flies until it ends, then is removed unless told not to. Nothing about a flight is saved. A launch over a flight replaces it. One with a `body` stops walking while it flies, and walks again after. Every value is in blocks and seconds, as everywhere.
+---@param options LaunchOptions
+---@return boolean # `false` once it's removed.
+function Centity:launch(options) end
+
+--- Whether it's flying as a projectile (`launch`), stuck in a block or lying where it came to rest included: until its flight ends. `false` once it's removed.
+---@return boolean
+function Centity:is_launched() end
+
+--- Ends its flight where it is, as if it had ended by itself: `flight_end` hears `"stopped"`, and it's removed unless `remove_on_end` was `false`.
+---@return boolean # Whether it was flying: `false` when it wasn't, or once it's removed.
+function Centity:stop_flight() end
+
 --- Makes the whole centity walk somewhere, finding its way round the blocks in the way: to a place in its own world, or after an entity or another centity, looking for a new path to wherever that is every 10 ticks. When it stops, its `path_end` handlers hear whether it got there. A walk goes by the centity's **feet**: the middle of the bottom of its hitboxes as they're placed when it sets off (its position, for a centity without any). The way is found over the blocks' collision shapes, sized to its hitboxes (other centities aren't in the way), and walked a little each tick, before physics and scripts: it steps up and drops down as the options allow, falls when nothing holds it up, and finds another way when a block appears across its path. With `fly = true` it flies instead, through the air in any direction. A new `move_to`, `stop_pathing` and `teleport` end the walk it was on, and so does a reload of its centity (its script's body can set off again). Walks aren't saved, and a centity whose chunk unloads waits where it is until it loads again. Its physics bodies are carried along with it.
 ---@param target Location|Vec3|Entity|Centity Where its feet go: a position in its world, a `Location` (in its world: another world is `false`), or an entity or centity to go after.
 ---@param options? CentityPathOptions
@@ -1439,6 +1456,10 @@ function Centity:set_view_range(blocks) end
 ---@overload fun(self: Centity, event: "animation_end", handler: fun(event: AnimationEvent)): Subscription
 ---@overload fun(self: Centity, event: "chunk_load", handler: fun(event: CentityEvent)): Subscription
 ---@overload fun(self: Centity, event: "chunk_unload", handler: fun(event: CentityEvent)): Subscription
+---@overload fun(self: Centity, event: "hit", handler: fun(event: FlightHitEvent)): Subscription
+---@overload fun(self: Centity, event: "bounce", handler: fun(event: FlightBlockEvent)): Subscription
+---@overload fun(self: Centity, event: "stick", handler: fun(event: FlightBlockEvent)): Subscription
+---@overload fun(self: Centity, event: "flight_end", handler: fun(event: FlightEndEvent)): Subscription
 ---@overload fun(self: Centity, event: "land", handler: fun(event: CentityLandEvent)): Subscription
 ---@overload fun(self: Centity, event: "bump", handler: fun(event: CentityBumpEvent)): Subscription
 ---@overload fun(self: Centity, event: "touch", handler: fun(event: TouchEvent)): Subscription
@@ -1457,6 +1478,10 @@ function Centity:on(event, handler, options) end
 ---@overload fun(self: Centity, event: "animation_end", handler: fun(event: AnimationEvent)): Subscription
 ---@overload fun(self: Centity, event: "chunk_load", handler: fun(event: CentityEvent)): Subscription
 ---@overload fun(self: Centity, event: "chunk_unload", handler: fun(event: CentityEvent)): Subscription
+---@overload fun(self: Centity, event: "hit", handler: fun(event: FlightHitEvent)): Subscription
+---@overload fun(self: Centity, event: "bounce", handler: fun(event: FlightBlockEvent)): Subscription
+---@overload fun(self: Centity, event: "stick", handler: fun(event: FlightBlockEvent)): Subscription
+---@overload fun(self: Centity, event: "flight_end", handler: fun(event: FlightEndEvent)): Subscription
 ---@overload fun(self: Centity, event: "land", handler: fun(event: CentityLandEvent)): Subscription
 ---@overload fun(self: Centity, event: "bump", handler: fun(event: CentityBumpEvent)): Subscription
 ---@overload fun(self: Centity, event: "touch", handler: fun(event: TouchEvent)): Subscription
@@ -5186,6 +5211,62 @@ function Event:uncancel() end
 ---@field bounce number? 0 stops dead against what it hits, 1 bounces off at full speed.
 ---@field fly boolean? No gravity: walking steers it in any direction.
 ---@field blocks boolean? Collides with the world's blocks.
+
+--- How `centity:launch` flies it. Everything but `velocity` is optional. A key that isn't one of these is an error.
+---@class LaunchOptions
+---@field velocity Vec3 Blocks per second, along the world's axes. Required.
+---@field gravity number? Downward acceleration, blocks per second squared. Default 0: it flies straight.
+---@field gravity_delay integer? Ticks it flies straight before gravity takes it, as a thrown knife's first stretch. Default 0.
+---@field drag number? Fraction of its speed shed per second, 0 to 1. Default 0.
+---@field radius number? How wide its path is swept for hits, as a sphere's radius in blocks; blocks stop its middle. Default 0.1.
+---@field pierce integer? How many hits it goes on through before one ends it. Default 0: the first ends it.
+---@field rehit integer? Ticks before it can hit the same thing again. Default: it hits each thing once.
+---@field hits QueryOptions? What it can hit, as a spatial query's options say (`centities`, `players`, `entities`, `kinds`, `exclude`, `line_of_sight` aside). It never hits itself or its `owner`. Default: everything.
+---@field owner (Entity|Centity)? Who launched it: never hit, and handed to every event. Default none.
+---@field blocks boolean? Whether blocks stop it (their collision shapes). Default `true`.
+---@field bounce number? Comes off a block instead of ending: the fraction of its speed into the face it keeps, 0 to 1. Default: it doesn't bounce.
+---@field friction number? With `bounce`: the fraction of its speed along the face it keeps, 0 to 1. Default 1.
+---@field max_bounces integer? With `bounce`: how many it makes before the next block ends it. Default: no end.
+---@field rest_speed number? With `bounce`: below this speed, blocks per second, after a bounce off a floor it stops and lies there (a grenade) until its `lifetime` is up. Default 1.
+---@field stick boolean? Sticks in the first block it hits (`stick`) instead of ending: it stays there until its `lifetime` is up. Default `false`.
+---@field homing Homing? Turns toward the nearest thing it can hit within reach. Default: it doesn't.
+---@field lifetime integer? Ticks from launch before it ends (`flight_end`, `"lifetime"`), flying, stuck or lying still. At least 1. Default 600: half a minute.
+---@field aim string? A node that's turned every tick so its +Z points the way it flies (an arrow's nose). Default: none is turned.
+---@field remove_on_end boolean? Whether it's removed when its flight ends, after `flight_end`. Default `true`.
+
+--- How a projectile seeks: `LaunchOptions.homing`.
+---@class Homing
+---@field range number How far it looks, in blocks. Required.
+---@field turn number? The most it turns toward its target, in degrees per second. Default 180.
+
+--- A projectile touched something it can hit: `hit`. Exactly one of `target` and `entity` is set.
+---@class FlightHitEvent: Event
+---@field centity Centity The projectile.
+---@field target Centity? The centity it hit, or `nil`.
+---@field node Node? Which of `target`'s nodes (its hitbox), or `nil`.
+---@field entity Entity? The player or entity it hit, or `nil`.
+---@field position Vec3 Where its middle was when it first touched.
+---@field velocity Vec3 How fast it was going, blocks per second.
+---@field owner (Entity|Centity)? Who launched it, or `nil`.
+
+--- A projectile met a block it bounces off (`bounce`) or sticks in (`stick`).
+---@class FlightBlockEvent: Event
+---@field centity Centity The projectile.
+---@field block Block The block.
+---@field position Vec3 Where it met it.
+---@field normal Vec3 The direction straight out of the face it met.
+---@field speed number How fast it was going into it, blocks per second.
+---@field owner (Entity|Centity)? Who launched it, or `nil`.
+
+--- A projectile's flight ended: `flight_end`.
+---@class FlightEndEvent: Event
+---@field centity Centity The projectile.
+---@field reason "hit"|"block"|"lifetime"|"unloaded"|"stopped" Why: see `flight_end`.
+---@field position Vec3 Where it ended.
+---@field target Centity? For `"hit"`, the centity it ended on, or `nil`.
+---@field entity Entity? For `"hit"`, the player or entity it ended on, or `nil`.
+---@field block Block? For `"block"`, the block it ended on, or `nil`.
+---@field owner (Entity|Centity)? Who launched it, or `nil`.
 
 --- A centity's body landed: `land`.
 ---@class CentityLandEvent: Event

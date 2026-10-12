@@ -58,12 +58,14 @@ Centity:is_animation_playing	17
 Centity:is_glowing	15
 Centity:is_hidden_from	17
 Centity:is_in_liquid	15
+Centity:is_launched	15
 Centity:is_natural	15
 Centity:is_on_ground	15
 Centity:is_temporary	15
 Centity:jump	17
 Centity:keep	15
 Centity:kind	15
+Centity:launch	79
 Centity:lifetime	15
 Centity:location	15
 Centity:look_at	48
@@ -93,6 +95,7 @@ Centity:set_walk_velocity	55
 Centity:set_yaw	18
 Centity:show_to	17
 Centity:stop_animation	18
+Centity:stop_flight	15
 Centity:stop_following	15
 Centity:stop_pathing	15
 Centity:teleport	41

@@ -1098,6 +1098,28 @@ interface CentityApi {
     fun wall(self: LuaHandle.Centity): Vec3?
 
     /**
+     * Makes it a projectile: from now on the server flies the whole centity every tick at its velocity,
+     * under its gravity and drag, and sweeps its path (a sphere of `radius`) for what it hits: centities'
+     * hitboxes, players and entities (`hit`), and blocks (it ends, bounces or sticks: `flight_end`,
+     * `bounce`, `stick`). It flies until it ends, then is removed unless told not to. Nothing about a
+     * flight is saved. A launch over a flight replaces it. One with a `body` stops walking while it flies,
+     * and walks again after. Every value is in blocks and seconds, as everywhere.
+     */
+    fun launch(self: LuaHandle.Centity, options: LaunchOptions): Boolean
+
+    /**
+     * Whether it's flying as a projectile (`launch`), stuck in a block or lying where it came to rest
+     * included: until its flight ends. `false` once it's removed.
+     */
+    fun isLaunched(self: LuaHandle.Centity): Boolean
+
+    /**
+     * Ends its flight where it is, as if it had ended by itself: `flight_end` hears `"stopped"`, and it's
+     * removed unless `remove_on_end` was `false`.
+     */
+    fun stopFlight(self: LuaHandle.Centity): Boolean
+
+    /**
      * Makes the whole centity walk somewhere, finding its way round the blocks in the way: to a place in
      * its own world, or after an entity or another centity, looking for a new path to wherever that is
      * every 10 ticks. When it stops, its `path_end` handlers hear whether it got there. A walk goes by the

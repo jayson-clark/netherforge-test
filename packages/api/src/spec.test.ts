@@ -521,9 +521,11 @@ describe('the naming rules', () => {
   })
 
   it('says what caused an event with cause, and reason only for why something ended', () => {
-    // `reason` is only on an `end` event's payload (a particle effect's).
+    // `reason` is only on an ending's payload: an `end` event's (a particle effect's) or a `*_end` one's (a flight's).
     const endPayloads = new Set(
-      events.filter(([, it]) => it.name === 'end').map(([, it]) => it.payload),
+      events
+        .filter(([, it]) => it.name === 'end' || it.name.endsWith('_end'))
+        .map(([, it]) => it.payload),
     )
     const payloads = new Set(events.map(([, it]) => it.payload))
     const wrong = api.shapes

@@ -189,6 +189,9 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
     /** [placed], kept until the pose or facing changes. */
     private var placedCache: List<Matrix4>? = null
 
+    /** Its flight as a projectile (`launch`), while it flies: see [Flights]. Runtime state, never saved. */
+    internal var flight: Flight? = null
+
     /** Its `body` as it runs, when it has one: see [Movers]. Runtime state: a reload starts it again from the file's. */
     var mover: Mover? = declared.body?.let(::Mover)
 

@@ -148,6 +148,9 @@ class Centities(
     /** `world:overlap_*`, `sweep`, `nearest`: hitboxes here and the server's entities' boxes. */
     internal val spatial = SpatialQueries(platform, this)
 
+    /** Centities flying as projectiles (`launch`). */
+    internal val flights = Flights(platform, scripts, spatial, entityHandle, ::remove)
+
     fun find(id: UUID): Instance? = instances[id]
 
     fun find(id: String): Instance? = runCatching { UUID.fromString(id) }.getOrNull()?.let { instances[it] }
@@ -670,12 +673,14 @@ class Centities(
                 emit(Events.CENTITY_ANIMATION_END, instance, AnimationEvent(handle(instance), clip))
             }
         }
+        // A flight moves the whole centity, and nothing else does while it flies.
+        if (instance.flight != null && !instance.removed) parts.time(FLIGHT) { flights.step(instance) }
         // A follow moves it to its player first, as a walk does; it never has both (a walk ends it).
         if (instance.follower != null && !instance.removed) parts.time(FOLLOW) { followTick(instance) }
         // Walking moves the whole centity first, so physics settles its bodies where it has been walked to.
         if (instance.walk != null && !instance.removed) parts.time(WALK) { paths.step(instance) }
         // Its body moves the whole centity, before physics settles node bodies where it has gone; a walk moves it instead.
-        if (instance.mover != null && instance.walk == null && !instance.removed) {
+        if (instance.mover != null && instance.walk == null && instance.flight == null && !instance.removed) {
             val moved = parts.time(BODY) { movers.step(instance) }
             if (moved != null) moved(instance, moved)
         }
@@ -1277,6 +1282,7 @@ class Centities(
         private const val SYNC = "$PART/sync"
         private const val TOUCH = "$PART/touch"
         private const val BODY = "$PART/body"
+        private const val FLIGHT = "$PART/flight"
         private const val SYNC_GONE = "$SYNC/reconcile"
         private const val SYNC_ANCHOR = "$SYNC/anchor"
         private const val SYNC_PLACE = "$SYNC/place"

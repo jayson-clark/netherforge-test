@@ -439,13 +439,13 @@ internal class WorldImpl(private val session: ProjectSession) : WorldApi {
             Vec3(min(min.x, max.x), min(min.y, max.y), min(min.z, max.z)),
             Vec3(max(min.x, max.x), max(min.y, max.y), max(min.z, max.z))
         )
-        return session.query(self, shape, options?.let(::filterOf))
+        return session.query(self, shape, options?.let(session::queryFilter))
     }
 
     override fun overlapSphere(self: LuaHandle.World, center: Vec3, radius: Double, options: QueryOptions?): List<QueryHit> {
         finite(center, "center")
         nonNegative(radius, "radius")
-        return session.query(self, QueryShape.Sphere(center, radius), options?.let(::filterOf))
+        return session.query(self, QueryShape.Sphere(center, radius), options?.let(session::queryFilter))
     }
 
     override fun overlapCone(
@@ -460,7 +460,7 @@ internal class WorldImpl(private val session: ProjectSession) : WorldApi {
         val axis = unit(direction, "direction")
         nonNegative(length, "length")
         if (!(angle in 0.0..180.0)) throw LuaApiException("bad argument 'angle' (0 to 180 expected, got $angle)")
-        return session.query(self, QueryShape.Cone(origin, axis, length, angle), options?.let(::filterOf))
+        return session.query(self, QueryShape.Cone(origin, axis, length, angle), options?.let(session::queryFilter))
     }
 
     override fun sweep(self: LuaHandle.World, from: Vec3, to: Vec3, options: SweepOptions?): List<QueryHit> {
@@ -469,7 +469,7 @@ internal class WorldImpl(private val session: ProjectSession) : WorldApi {
         val radius = options?.radius ?: 0.0
         nonNegative(radius, "options.radius")
         val filter = options?.let {
-            filterOf(QueryOptions(it.centities, it.players, it.entities, it.kinds, it.exclude, it.limit, it.lineOfSight))
+            session.queryFilter(QueryOptions(it.centities, it.players, it.entities, it.kinds, it.exclude, it.limit, it.lineOfSight))
         }
         val world = live(self) ?: return emptyList()
         val span = to - from
@@ -496,33 +496,8 @@ internal class WorldImpl(private val session: ProjectSession) : WorldApi {
     override fun nearest(self: LuaHandle.World, position: Vec3, radius: Double, options: QueryOptions?): QueryHit? {
         finite(position, "position")
         nonNegative(radius, "radius")
-        val filter = (options?.let(::filterOf) ?: QueryFilter()).copy(limit = 1)
+        val filter = (options?.let(session::queryFilter) ?: QueryFilter()).copy(limit = 1)
         return session.query(self, QueryShape.Sphere(position, radius), filter).firstOrNull()
-    }
-
-    /** A query's options in the runtime's terms: kinds as the project names centities and the game entity types. */
-    private fun filterOf(options: QueryOptions): QueryFilter {
-        val limit = options.limit
-        if (limit != null && limit < 1) throw LuaApiException("bad argument 'options.limit' (at least 1 expected, got $limit)")
-        val kinds = options.kinds?.flatMapTo(HashSet()) { kind ->
-            buildList {
-                if (GameIds.isValid(kind)) add(GameIds.normalize(kind))
-                runCatching { session.names.resource(CentityKind, kind) }.getOrNull()?.let(::add)
-            }
-        }
-        val exclude = options.exclude.orEmpty()
-        return QueryFilter(
-            centities = options.centities != false,
-            players = options.players != false,
-            entities = options.entities != false,
-            kinds = kinds,
-            excludeCentities = exclude.filterIsInstance<LuaHandle.Centity>().mapNotNullTo(HashSet()) {
-                runCatching { UUID.fromString(it.id) }.getOrNull()
-            },
-            excludeEntities = exclude.filterIsInstance<LuaHandle.Entity>().mapNotNullTo(HashSet()) { it.uuidOrNull() },
-            lineOfSight = options.lineOfSight == true,
-            limit = limit?.coerceAtMost(Int.MAX_VALUE.toLong())?.toInt() ?: Int.MAX_VALUE
-        )
     }
 
     override fun entities(self: LuaHandle.World, filter: EntityFilter?): List<LuaHandle.Entity> {
@@ -672,7 +647,33 @@ private fun distance(a: Vec3, b: Vec3): Double {
     return sqrt(dx * dx + dy * dy + dz * dz)
 }
 
-/** What a spatial query in [self] finds as `world:overlap_*`, `sweep` and `nearest` hand it back; empty once the world has gone. */
+/** A query's options in the runtime's terms: kinds as the project names centities and the game entity types. */
+internal fun ProjectSession.queryFilter(options: QueryOptions): QueryFilter {
+    val limit = options.limit
+    if (limit != null && limit < 1) throw LuaApiException("bad argument 'options.limit' (at least 1 expected, got $limit)")
+    val kinds = options.kinds?.flatMapTo(HashSet()) { kind ->
+        buildList {
+            if (GameIds.isValid(kind)) add(GameIds.normalize(kind))
+            runCatching { names.resource(CentityKind, kind) }.getOrNull()?.let(::add)
+        }
+    }
+    val exclude = options.exclude.orEmpty()
+    return QueryFilter(
+        centities = options.centities != false,
+        players = options.players != false,
+        entities = options.entities != false,
+        kinds = kinds,
+        excludeCentities = exclude.filterIsInstance<LuaHandle.Centity>().mapNotNullTo(HashSet()) {
+            runCatching { UUID.fromString(it.id) }.getOrNull()
+        },
+        excludeEntities = exclude.filterIsInstance<LuaHandle.Entity>().mapNotNullTo(HashSet()) { it.uuidOrNull() },
+        lineOfSight = options.lineOfSight == true,
+        limit = limit?.coerceAtMost(Int.MAX_VALUE.toLong())?.toInt() ?: Int.MAX_VALUE
+    )
+}
+
+/** What a spatial query in [self] finds as
+ `world:overlap_*`, `sweep` and `nearest` hand it back; empty once the world has gone. */
 internal fun ProjectSession.query(self: LuaHandle.World, shape: QueryShape, filter: QueryFilter?): List<QueryHit> {
     if (!platform.worlds.exists(self.name)) return emptyList()
     return centities.spatial.find(self.name, shape, filter ?: QueryFilter()).map { found ->

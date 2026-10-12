@@ -2858,6 +2858,268 @@ data class BodySettings(val width: Double? = null, val height: Double? = null, v
     }
 }
 
+/**
+ * How `centity:launch` flies it. Everything but `velocity` is optional. A key that isn't one of these
+ * is an error.
+ */
+data class LaunchOptions(val velocity: Vec3, val gravity: Double? = null, val gravityDelay: Long? = null, val drag: Double? = null, val radius: Double? = null, val pierce: Long? = null, val rehit: Long? = null, val hits: QueryOptions? = null, val owner: LuaHandle? = null, val blocks: Boolean? = null, val bounce: Double? = null, val friction: Double? = null, val maxBounces: Long? = null, val restSpeed: Double? = null, val stick: Boolean? = null, val homing: Homing? = null, val lifetime: Long? = null, val aim: String? = null, val removeOnEnd: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<LaunchOptions>("LaunchOptions") {
+        val velocityCodec = LuaCodecs.VEC3
+        val gravityCodec = LuaOptional(LuaCodecs.NUMBER)
+        val gravityDelayCodec = LuaOptional(LuaCodecs.INTEGER)
+        val dragCodec = LuaOptional(LuaCodecs.NUMBER)
+        val radiusCodec = LuaOptional(LuaCodecs.NUMBER)
+        val pierceCodec = LuaOptional(LuaCodecs.INTEGER)
+        val rehitCodec = LuaOptional(LuaCodecs.INTEGER)
+        val hitsCodec = LuaOptional(QueryOptions.Codec)
+        val ownerCodec = LuaOptional(LuaUnions.EntityOrCentity)
+        val blocksCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val bounceCodec = LuaOptional(LuaCodecs.NUMBER)
+        val frictionCodec = LuaOptional(LuaCodecs.NUMBER)
+        val maxBouncesCodec = LuaOptional(LuaCodecs.INTEGER)
+        val restSpeedCodec = LuaOptional(LuaCodecs.NUMBER)
+        val stickCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val homingCodec = LuaOptional(Homing.Codec)
+        val lifetimeCodec = LuaOptional(LuaCodecs.INTEGER)
+        val aimCodec = LuaOptional(LuaCodecs.STRING)
+        val removeOnEndCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "velocity" to velocityCodec,
+            "gravity" to gravityCodec,
+            "gravity_delay" to gravityDelayCodec,
+            "drag" to dragCodec,
+            "radius" to radiusCodec,
+            "pierce" to pierceCodec,
+            "rehit" to rehitCodec,
+            "hits" to hitsCodec,
+            "owner" to ownerCodec,
+            "blocks" to blocksCodec,
+            "bounce" to bounceCodec,
+            "friction" to frictionCodec,
+            "max_bounces" to maxBouncesCodec,
+            "rest_speed" to restSpeedCodec,
+            "stick" to stickCodec,
+            "homing" to homingCodec,
+            "lifetime" to lifetimeCodec,
+            "aim" to aimCodec,
+            "remove_on_end" to removeOnEndCodec
+        )
+
+        override fun read(fields: ShapeReader) = LaunchOptions(
+            velocity = fields.field("velocity", velocityCodec),
+            gravity = fields.field("gravity", gravityCodec),
+            gravityDelay = fields.field("gravity_delay", gravityDelayCodec),
+            drag = fields.field("drag", dragCodec),
+            radius = fields.field("radius", radiusCodec),
+            pierce = fields.field("pierce", pierceCodec),
+            rehit = fields.field("rehit", rehitCodec),
+            hits = fields.field("hits", hitsCodec),
+            owner = fields.field("owner", ownerCodec),
+            blocks = fields.field("blocks", blocksCodec),
+            bounce = fields.field("bounce", bounceCodec),
+            friction = fields.field("friction", frictionCodec),
+            maxBounces = fields.field("max_bounces", maxBouncesCodec),
+            restSpeed = fields.field("rest_speed", restSpeedCodec),
+            stick = fields.field("stick", stickCodec),
+            homing = fields.field("homing", homingCodec),
+            lifetime = fields.field("lifetime", lifetimeCodec),
+            aim = fields.field("aim", aimCodec),
+            removeOnEnd = fields.field("remove_on_end", removeOnEndCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: LaunchOptions) {
+            fields.field("velocity", value.velocity, velocityCodec)
+            fields.field("gravity", value.gravity, gravityCodec)
+            fields.field("gravity_delay", value.gravityDelay, gravityDelayCodec)
+            fields.field("drag", value.drag, dragCodec)
+            fields.field("radius", value.radius, radiusCodec)
+            fields.field("pierce", value.pierce, pierceCodec)
+            fields.field("rehit", value.rehit, rehitCodec)
+            fields.field("hits", value.hits, hitsCodec)
+            fields.field("owner", value.owner, ownerCodec)
+            fields.field("blocks", value.blocks, blocksCodec)
+            fields.field("bounce", value.bounce, bounceCodec)
+            fields.field("friction", value.friction, frictionCodec)
+            fields.field("max_bounces", value.maxBounces, maxBouncesCodec)
+            fields.field("rest_speed", value.restSpeed, restSpeedCodec)
+            fields.field("stick", value.stick, stickCodec)
+            fields.field("homing", value.homing, homingCodec)
+            fields.field("lifetime", value.lifetime, lifetimeCodec)
+            fields.field("aim", value.aim, aimCodec)
+            fields.field("remove_on_end", value.removeOnEnd, removeOnEndCodec)
+        }
+    }
+}
+
+/** How a projectile seeks: `LaunchOptions.homing`. */
+data class Homing(val range: Double, val turn: Double? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<Homing>("Homing") {
+        val rangeCodec = LuaCodecs.NUMBER
+        val turnCodec = LuaOptional(LuaCodecs.NUMBER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "range" to rangeCodec,
+            "turn" to turnCodec
+        )
+
+        override fun read(fields: ShapeReader) = Homing(
+            range = fields.field("range", rangeCodec),
+            turn = fields.field("turn", turnCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: Homing) {
+            fields.field("range", value.range, rangeCodec)
+            fields.field("turn", value.turn, turnCodec)
+        }
+    }
+}
+
+/** A projectile touched something it can hit: `hit`. Exactly one of `target` and `entity` is set. */
+data class FlightHitEvent(val centity: LuaHandle.Centity, val target: LuaHandle.Centity? = null, val node: LuaHandle.Node? = null, val entity: LuaHandle.Entity? = null, val position: Vec3, val velocity: Vec3, val owner: LuaHandle? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<FlightHitEvent>("FlightHitEvent") {
+        val centityCodec = LuaHandle.Centity.Codec
+        val targetCodec = LuaOptional(LuaHandle.Centity.Codec)
+        val nodeCodec = LuaOptional(LuaHandle.Node.Codec)
+        val entityCodec = LuaOptional(LuaHandle.Entity.Codec)
+        val positionCodec = LuaCodecs.VEC3
+        val velocityCodec = LuaCodecs.VEC3
+        val ownerCodec = LuaOptional(LuaUnions.EntityOrCentity)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "target" to targetCodec,
+            "node" to nodeCodec,
+            "entity" to entityCodec,
+            "position" to positionCodec,
+            "velocity" to velocityCodec,
+            "owner" to ownerCodec
+        )
+
+        override fun read(fields: ShapeReader) = FlightHitEvent(
+            centity = fields.field("centity", centityCodec),
+            target = fields.field("target", targetCodec),
+            node = fields.field("node", nodeCodec),
+            entity = fields.field("entity", entityCodec),
+            position = fields.field("position", positionCodec),
+            velocity = fields.field("velocity", velocityCodec),
+            owner = fields.field("owner", ownerCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: FlightHitEvent) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("target", value.target, targetCodec)
+            fields.field("node", value.node, nodeCodec)
+            fields.field("entity", value.entity, entityCodec)
+            fields.field("position", value.position, positionCodec)
+            fields.field("velocity", value.velocity, velocityCodec)
+            fields.field("owner", value.owner, ownerCodec)
+        }
+    }
+}
+
+/** A projectile met a block it bounces off (`bounce`) or sticks in (`stick`). */
+data class FlightBlockEvent(val centity: LuaHandle.Centity, val block: LuaHandle.Block, val position: Vec3, val normal: Vec3, val speed: Double, val owner: LuaHandle? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<FlightBlockEvent>("FlightBlockEvent") {
+        val centityCodec = LuaHandle.Centity.Codec
+        val blockCodec = LuaHandle.Block.Codec
+        val positionCodec = LuaCodecs.VEC3
+        val normalCodec = LuaCodecs.VEC3
+        val speedCodec = LuaCodecs.NUMBER
+        val ownerCodec = LuaOptional(LuaUnions.EntityOrCentity)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "block" to blockCodec,
+            "position" to positionCodec,
+            "normal" to normalCodec,
+            "speed" to speedCodec,
+            "owner" to ownerCodec
+        )
+
+        override fun read(fields: ShapeReader) = FlightBlockEvent(
+            centity = fields.field("centity", centityCodec),
+            block = fields.field("block", blockCodec),
+            position = fields.field("position", positionCodec),
+            normal = fields.field("normal", normalCodec),
+            speed = fields.field("speed", speedCodec),
+            owner = fields.field("owner", ownerCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: FlightBlockEvent) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("block", value.block, blockCodec)
+            fields.field("position", value.position, positionCodec)
+            fields.field("normal", value.normal, normalCodec)
+            fields.field("speed", value.speed, speedCodec)
+            fields.field("owner", value.owner, ownerCodec)
+        }
+    }
+}
+
+/** A projectile's flight ended: `flight_end`. */
+data class FlightEndEvent(val centity: LuaHandle.Centity, val reason: String, val position: Vec3, val target: LuaHandle.Centity? = null, val entity: LuaHandle.Entity? = null, val block: LuaHandle.Block? = null, val owner: LuaHandle? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<FlightEndEvent>("FlightEndEvent") {
+        val centityCodec = LuaHandle.Centity.Codec
+        val reasonCodec = LuaChoice(listOf("hit", "block", "lifetime", "unloaded", "stopped"))
+        val positionCodec = LuaCodecs.VEC3
+        val targetCodec = LuaOptional(LuaHandle.Centity.Codec)
+        val entityCodec = LuaOptional(LuaHandle.Entity.Codec)
+        val blockCodec = LuaOptional(LuaHandle.Block.Codec)
+        val ownerCodec = LuaOptional(LuaUnions.EntityOrCentity)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "reason" to reasonCodec,
+            "position" to positionCodec,
+            "target" to targetCodec,
+            "entity" to entityCodec,
+            "block" to blockCodec,
+            "owner" to ownerCodec
+        )
+
+        override fun read(fields: ShapeReader) = FlightEndEvent(
+            centity = fields.field("centity", centityCodec),
+            reason = fields.field("reason", reasonCodec),
+            position = fields.field("position", positionCodec),
+            target = fields.field("target", targetCodec),
+            entity = fields.field("entity", entityCodec),
+            block = fields.field("block", blockCodec),
+            owner = fields.field("owner", ownerCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: FlightEndEvent) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("reason", value.reason, reasonCodec)
+            fields.field("position", value.position, positionCodec)
+            fields.field("target", value.target, targetCodec)
+            fields.field("entity", value.entity, entityCodec)
+            fields.field("block", value.block, blockCodec)
+            fields.field("owner", value.owner, ownerCodec)
+        }
+    }
+}
+
 /** A centity's body landed: `land`. */
 data class CentityLandEvent(val centity: LuaHandle.Centity, val speed: Double) : LuaEvent {
     override fun push(call: LuaCall) = Codec.push(call, this)

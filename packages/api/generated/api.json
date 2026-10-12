@@ -3558,6 +3558,29 @@
           "payload": "CentityEvent"
         },
         {
+          "name": "hit",
+          "doc": "It's flying (`launch`) and its path touched something it can hit: a centity's hitbox, a player or another entity, in the order it meets them, each once (or again after `rehit` ticks). `event:cancel()` lets it pass through as if it weren't there, without using up a `pierce`. Otherwise it goes on through only while it has `pierce` left; past that, this is where it ends (`flight_end`, `\"hit\"`).",
+          "payload": "FlightHitEvent",
+          "cancellable": true,
+          "example": "this:on(\"hit\", function(event)\n  if event.target then\n    event.target:emit(\"game:struck\", { damage = 4 })\n  end\nend)"
+        },
+        {
+          "name": "bounce",
+          "doc": "It's flying with `bounce` and came off a block: `event.normal` is the face it hit, `event.speed` how fast it was going into it.",
+          "payload": "FlightBlockEvent"
+        },
+        {
+          "name": "stick",
+          "doc": "It's flying with `stick` and stuck in a block: it stays there, its flight over but not ended, until its `lifetime` is up.",
+          "payload": "FlightBlockEvent"
+        },
+        {
+          "name": "flight_end",
+          "doc": "Its flight ended: it hit something with no `pierce` left (`\"hit\"`), met a block it neither bounces off nor sticks in (`\"block\"`), ran out of `lifetime` (`\"lifetime\"`), reached a chunk that isn't loaded (`\"unloaded\"`), or a script stopped it (`\"stopped\"`). Then, unless `remove_on_end` is `false`, it's removed: its `remove` handlers hear it next.",
+          "payload": "FlightEndEvent",
+          "example": "this:on(\"flight_end\", function(event)\n  this:world():explode(event.position, 2)\nend)"
+        },
+        {
           "name": "land",
           "doc": "Its `body` came down onto something after falling (or jumping): once, as it lands. `event.speed` is how fast it was falling, for fall damage or a thud.",
           "payload": "CentityLandEvent",
@@ -4064,6 +4087,45 @@
           "returns": [
             {
               "type": "Vec3?"
+            }
+          ]
+        },
+        {
+          "name": "launch",
+          "doc": "Makes it a projectile: from now on the server flies the whole centity every tick at its velocity, under its gravity and drag, and sweeps its path (a sphere of `radius`) for what it hits: centities' hitboxes, players and entities (`hit`), and blocks (it ends, bounces or sticks: `flight_end`, `bounce`, `stick`). It flies until it ends, then is removed unless told not to. Nothing about a flight is saved. A launch over a flight replaces it. One with a `body` stops walking while it flies, and walks again after. Every value is in blocks and seconds, as everywhere.",
+          "params": [
+            {
+              "name": "options",
+              "type": "LaunchOptions",
+              "doc": ""
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` once it's removed."
+            }
+          ],
+          "example": "local eye, facing = assert(player:eye_position()), assert(player:direction())\nlocal arrow = assert(nf.centities.spawn(\"arrow\", eye, { temporary = true }))\narrow:launch({ velocity = facing * 40, gravity = 20, radius = 0.15, owner = player, aim = \"aim\", pierce = 1 })"
+        },
+        {
+          "name": "is_launched",
+          "doc": "Whether it's flying as a projectile (`launch`), stuck in a block or lying where it came to rest included: until its flight ends. `false` once it's removed.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "stop_flight",
+          "doc": "Ends its flight where it is, as if it had ended by itself: `flight_end` hears `\"stopped\"`, and it's removed unless `remove_on_end` was `false`.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "Whether it was flying: `false` when it wasn't, or once it's removed."
             }
           ]
         },
@@ -17132,6 +17194,254 @@
           "name": "blocks",
           "type": "boolean?",
           "doc": "Collides with the world's blocks."
+        }
+      ]
+    },
+    {
+      "name": "LaunchOptions",
+      "doc": "How `centity:launch` flies it. Everything but `velocity` is optional. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "velocity",
+          "type": "Vec3",
+          "doc": "Blocks per second, along the world's axes. Required."
+        },
+        {
+          "name": "gravity",
+          "type": "number?",
+          "doc": "Downward acceleration, blocks per second squared. Default 0: it flies straight."
+        },
+        {
+          "name": "gravity_delay",
+          "type": "integer?",
+          "doc": "Ticks it flies straight before gravity takes it, as a thrown knife's first stretch. Default 0."
+        },
+        {
+          "name": "drag",
+          "type": "number?",
+          "doc": "Fraction of its speed shed per second, 0 to 1. Default 0."
+        },
+        {
+          "name": "radius",
+          "type": "number?",
+          "doc": "How wide its path is swept for hits, as a sphere's radius in blocks; blocks stop its middle. Default 0.1."
+        },
+        {
+          "name": "pierce",
+          "type": "integer?",
+          "doc": "How many hits it goes on through before one ends it. Default 0: the first ends it."
+        },
+        {
+          "name": "rehit",
+          "type": "integer?",
+          "doc": "Ticks before it can hit the same thing again. Default: it hits each thing once."
+        },
+        {
+          "name": "hits",
+          "type": "QueryOptions?",
+          "doc": "What it can hit, as a spatial query's options say (`centities`, `players`, `entities`, `kinds`, `exclude`, `line_of_sight` aside). It never hits itself or its `owner`. Default: everything."
+        },
+        {
+          "name": "owner",
+          "type": "(Entity|Centity)?",
+          "doc": "Who launched it: never hit, and handed to every event. Default none."
+        },
+        {
+          "name": "blocks",
+          "type": "boolean?",
+          "doc": "Whether blocks stop it (their collision shapes). Default `true`."
+        },
+        {
+          "name": "bounce",
+          "type": "number?",
+          "doc": "Comes off a block instead of ending: the fraction of its speed into the face it keeps, 0 to 1. Default: it doesn't bounce."
+        },
+        {
+          "name": "friction",
+          "type": "number?",
+          "doc": "With `bounce`: the fraction of its speed along the face it keeps, 0 to 1. Default 1."
+        },
+        {
+          "name": "max_bounces",
+          "type": "integer?",
+          "doc": "With `bounce`: how many it makes before the next block ends it. Default: no end."
+        },
+        {
+          "name": "rest_speed",
+          "type": "number?",
+          "doc": "With `bounce`: below this speed, blocks per second, after a bounce off a floor it stops and lies there (a grenade) until its `lifetime` is up. Default 1."
+        },
+        {
+          "name": "stick",
+          "type": "boolean?",
+          "doc": "Sticks in the first block it hits (`stick`) instead of ending: it stays there until its `lifetime` is up. Default `false`."
+        },
+        {
+          "name": "homing",
+          "type": "Homing?",
+          "doc": "Turns toward the nearest thing it can hit within reach. Default: it doesn't."
+        },
+        {
+          "name": "lifetime",
+          "type": "integer?",
+          "doc": "Ticks from launch before it ends (`flight_end`, `\"lifetime\"`), flying, stuck or lying still. At least 1. Default 600: half a minute."
+        },
+        {
+          "name": "aim",
+          "type": "string?",
+          "doc": "A node that's turned every tick so its +Z points the way it flies (an arrow's nose). Default: none is turned."
+        },
+        {
+          "name": "remove_on_end",
+          "type": "boolean?",
+          "doc": "Whether it's removed when its flight ends, after `flight_end`. Default `true`."
+        }
+      ]
+    },
+    {
+      "name": "Homing",
+      "doc": "How a projectile seeks: `LaunchOptions.homing`.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "range",
+          "type": "number",
+          "doc": "How far it looks, in blocks. Required."
+        },
+        {
+          "name": "turn",
+          "type": "number?",
+          "doc": "The most it turns toward its target, in degrees per second. Default 180."
+        }
+      ]
+    },
+    {
+      "name": "FlightHitEvent",
+      "doc": "A projectile touched something it can hit: `hit`. Exactly one of `target` and `entity` is set.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "centity",
+          "type": "Centity",
+          "doc": "The projectile."
+        },
+        {
+          "name": "target",
+          "type": "Centity?",
+          "doc": "The centity it hit, or `nil`."
+        },
+        {
+          "name": "node",
+          "type": "Node?",
+          "doc": "Which of `target`'s nodes (its hitbox), or `nil`."
+        },
+        {
+          "name": "entity",
+          "type": "Entity?",
+          "doc": "The player or entity it hit, or `nil`."
+        },
+        {
+          "name": "position",
+          "type": "Vec3",
+          "doc": "Where its middle was when it first touched."
+        },
+        {
+          "name": "velocity",
+          "type": "Vec3",
+          "doc": "How fast it was going, blocks per second."
+        },
+        {
+          "name": "owner",
+          "type": "(Entity|Centity)?",
+          "doc": "Who launched it, or `nil`."
+        }
+      ]
+    },
+    {
+      "name": "FlightBlockEvent",
+      "doc": "A projectile met a block it bounces off (`bounce`) or sticks in (`stick`).",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "centity",
+          "type": "Centity",
+          "doc": "The projectile."
+        },
+        {
+          "name": "block",
+          "type": "Block",
+          "doc": "The block."
+        },
+        {
+          "name": "position",
+          "type": "Vec3",
+          "doc": "Where it met it."
+        },
+        {
+          "name": "normal",
+          "type": "Vec3",
+          "doc": "The direction straight out of the face it met."
+        },
+        {
+          "name": "speed",
+          "type": "number",
+          "doc": "How fast it was going into it, blocks per second."
+        },
+        {
+          "name": "owner",
+          "type": "(Entity|Centity)?",
+          "doc": "Who launched it, or `nil`."
+        }
+      ]
+    },
+    {
+      "name": "FlightEndEvent",
+      "doc": "A projectile's flight ended: `flight_end`.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "centity",
+          "type": "Centity",
+          "doc": "The projectile."
+        },
+        {
+          "name": "reason",
+          "type": "\"hit\"|\"block\"|\"lifetime\"|\"unloaded\"|\"stopped\"",
+          "doc": "Why: see `flight_end`."
+        },
+        {
+          "name": "position",
+          "type": "Vec3",
+          "doc": "Where it ended."
+        },
+        {
+          "name": "target",
+          "type": "Centity?",
+          "doc": "For `\"hit\"`, the centity it ended on, or `nil`."
+        },
+        {
+          "name": "entity",
+          "type": "Entity?",
+          "doc": "For `\"hit\"`, the player or entity it ended on, or `nil`."
+        },
+        {
+          "name": "block",
+          "type": "Block?",
+          "doc": "For `\"block\"`, the block it ended on, or `nil`."
+        },
+        {
+          "name": "owner",
+          "type": "(Entity|Centity)?",
+          "doc": "Who launched it, or `nil`."
         }
       ]
     },

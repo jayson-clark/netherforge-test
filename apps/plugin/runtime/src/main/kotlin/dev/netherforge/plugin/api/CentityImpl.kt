@@ -20,11 +20,13 @@ import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.centity.Centities
 import dev.netherforge.plugin.centity.CentityPaths
+import dev.netherforge.plugin.centity.Flight
 import dev.netherforge.plugin.centity.Instance
 import dev.netherforge.plugin.centity.Mover
 import dev.netherforge.plugin.centity.PathSettings
 import dev.netherforge.plugin.centity.PathTarget
 import dev.netherforge.plugin.centity.Physics
+import dev.netherforge.plugin.centity.QueryFilter
 import dev.netherforge.plugin.data.ScriptData
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaValue
@@ -146,10 +148,15 @@ internal class CentityImpl(private val session: ProjectSession) : CentityApi {
 
     override fun velocity(self: LuaHandle.Centity): Vec3? {
         val instance = instance(self) ?: return null
-        return instance.mover?.velocity ?: Vec3.ZERO
+        return instance.flight?.velocity ?: instance.mover?.velocity ?: Vec3.ZERO
     }
 
     override fun setVelocity(self: LuaHandle.Centity, velocity: Vec3): Boolean {
+        instance(self)?.flight?.let { flight ->
+            flight.velocity = finiteVelocity(velocity, "velocity")
+            flight.still = false
+            return true
+        }
         val mover = mover(self) ?: return false
         mover.velocity = finiteVelocity(velocity, "velocity")
         if (velocity.y > 0) mover.onGround = false
@@ -157,6 +164,11 @@ internal class CentityImpl(private val session: ProjectSession) : CentityApi {
     }
 
     override fun addVelocity(self: LuaHandle.Centity, velocity: Vec3): Boolean {
+        instance(self)?.flight?.let { flight ->
+            flight.velocity = flight.velocity + finiteVelocity(velocity, "velocity")
+            flight.still = false
+            return true
+        }
         val mover = mover(self) ?: return false
         mover.velocity = mover.velocity + finiteVelocity(velocity, "velocity")
         if (velocity.y > 0) mover.onGround = false
@@ -176,6 +188,95 @@ internal class CentityImpl(private val session: ProjectSession) : CentityApi {
         val mover = mover(self) ?: return false
         mover.velocity = Vec3(mover.velocity.x, mover.jumpSpeed(height), mover.velocity.z)
         mover.onGround = false
+        return true
+    }
+
+    override fun launch(self: LuaHandle.Centity, options: LaunchOptions): Boolean {
+        finiteVelocity(options.velocity, "options.velocity")
+        fun atLeast(value: Double?, least: Double, name: String) {
+            if (value != null &&
+                (!(value >= least) || !value.isFinite())
+            ) {
+                throw LuaApiException("bad argument 'options.$name' (at least $least expected, got $value)")
+            }
+        }
+        fun within(value: Double?, name: String) {
+            if (value != null && !(value in 0.0..1.0)) throw LuaApiException("bad argument 'options.$name' (0 to 1 expected, got $value)")
+        }
+        atLeast(options.radius, 0.0, "radius")
+        atLeast(options.restSpeed, 0.0, "rest_speed")
+        within(options.drag, "drag")
+        within(options.bounce, "bounce")
+        within(options.friction, "friction")
+        for ((name, value) in listOf(
+            "pierce" to options.pierce,
+            "gravity_delay" to options.gravityDelay,
+            "max_bounces" to options.maxBounces
+        )) {
+            if (value != null && value < 0) throw LuaApiException("bad argument 'options.$name' (at least 0 expected, got $value)")
+        }
+        for ((name, value) in listOf("rehit" to options.rehit, "lifetime" to options.lifetime)) {
+            if (value != null && value < 1) throw LuaApiException("bad argument 'options.$name' (at least 1 expected, got $value)")
+        }
+        options.homing?.let {
+            atLeast(it.range, 0.0, "homing.range")
+            atLeast(it.turn, 0.0, "homing.turn")
+        }
+        val gravity = options.gravity ?: 0.0
+        if (!gravity.isFinite()) throw LuaApiException("bad argument 'options.gravity' (a finite number expected)")
+        val instance = instance(self) ?: return false
+        options.aim?.let {
+            if (instance.indexOf(it) ==
+                null
+            ) {
+                throw LuaApiException("bad argument 'options.aim' (the centity has no node \"$it\")")
+            }
+        }
+        var filter = options.hits?.let(session::queryFilter) ?: QueryFilter()
+        val owner = options.owner
+        when (owner) {
+            is LuaHandle.Centity -> runCatching { UUID.fromString(owner.id) }.getOrNull()?.let {
+                filter =
+                    filter.copy(excludeCentities = filter.excludeCentities + it)
+            }
+            is LuaHandle.Entity -> owner.uuidOrNull()?.let { filter = filter.copy(excludeEntities = filter.excludeEntities + it) }
+            else -> {}
+        }
+        // A query's own limit and line of sight aren't a flight's: it meets what's in its way, in order.
+        filter = filter.copy(limit = Int.MAX_VALUE, lineOfSight = false)
+        // A walk would fight it for the anchor.
+        instance.walk = null
+        instance.flight = Flight(
+            velocity = options.velocity,
+            gravity = gravity,
+            gravityDelay = options.gravityDelay ?: 0,
+            drag = options.drag ?: 0.0,
+            radius = options.radius ?: DEFAULT_RADIUS,
+            pierce = options.pierce ?: 0,
+            rehit = options.rehit,
+            filter = filter,
+            owner = owner,
+            blocks = options.blocks != false,
+            bounce = options.bounce,
+            friction = options.friction ?: 1.0,
+            maxBounces = options.maxBounces,
+            restSpeed = options.restSpeed ?: DEFAULT_REST_SPEED,
+            stick = options.stick == true,
+            homingRange = options.homing?.range,
+            homingTurn = options.homing?.turn ?: DEFAULT_HOMING_TURN,
+            lifetime = options.lifetime ?: DEFAULT_LIFETIME,
+            aim = options.aim,
+            removeOnEnd = options.removeOnEnd != false
+        ).also { centities.flights.aim(instance, it) }
+        return true
+    }
+
+    override fun isLaunched(self: LuaHandle.Centity): Boolean = instance(self)?.flight != null
+
+    override fun stopFlight(self: LuaHandle.Centity): Boolean {
+        val instance = instance(self) ?: return false
+        val flight = instance.flight ?: return false
+        centities.flights.end(instance, flight, "stopped", Vec3(instance.anchor.x, instance.anchor.y, instance.anchor.z))
         return true
     }
 
@@ -930,7 +1031,8 @@ private fun Vec3.cross(o: Vec3) = Vec3(y * o.z - z * o.y, z * o.x - x * o.z, x *
  * vector) with +X level: the basis right = up × forward, up' = forward × right.
  * Straight up or down, where "level" means nothing, +X stays east.
  */
-private fun lookRotation(forward: Vec3): Vec3 {
+/** The rotation (degrees, X then Y then Z) that points +Z along the unit [forward], keeping +X level. */
+internal fun lookRotation(forward: Vec3): Vec3 {
     val flat = Vec3(0.0, 1.0, 0.0).cross(forward)
     val right = if (flat.length() < 1e-9) Vec3(1.0, 0.0, 0.0) else flat.normalized()
     val up = forward.cross(right)
@@ -947,3 +1049,9 @@ private fun lookRotation(forward: Vec3): Vec3 {
     v[10] = forward.z
     return Quat.fromBasis(basis).toEuler()
 }
+
+/** What a launch without them flies with. */
+private const val DEFAULT_RADIUS = 0.1
+private const val DEFAULT_REST_SPEED = 1.0
+private const val DEFAULT_HOMING_TURN = 180.0
+private const val DEFAULT_LIFETIME = 600L

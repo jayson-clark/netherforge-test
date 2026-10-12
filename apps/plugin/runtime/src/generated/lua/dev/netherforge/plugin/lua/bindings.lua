@@ -423,6 +423,30 @@ function Centity.wall(self)
   return with_mt({ result_x, result_y, result_z }, Vec3_mt)
 end
 
+function Centity.launch(self, options)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.launch"](self_key, options)
+end
+
+function Centity.is_launched(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.is_launched"](self_key)
+end
+
+function Centity.stop_flight(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.stop_flight"](self_key)
+end
+
 function Centity.move_to(self, target, options)
   local self_key = ids[self]
   if self_key == nil or not Centity_is[class_of(self)] then

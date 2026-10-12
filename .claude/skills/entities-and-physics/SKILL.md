@@ -58,6 +58,18 @@ speed whose apex, integrated tick by tick exactly as the step does, is the heigh
 set directly (only into a chunk whose entities are loaded), as a walk sets it; `land` and `bump` are
 raised from what the step returns. Tests: `CentityBodyTest`.
 
+## Flights (`centity:launch`)
+
+`Instance.flight` (a `Flight`: the launch's options resolved, with its velocity, age, bounces, whether it's
+`still` (stuck or resting) and `hitAt`, what it hit and when), stepped by `centity/Flights.kt` first in the
+pipeline; while it flies a walk is ended and the body waits. One step: homing (the nearest a `Sphere` query
+finds, turned toward by at most its rate), gravity after its delay, drag; one block ray from here to there,
+then one `Capsule` query up to the block for what the path touches, in order, each raising `hit` (cancelled:
+it passes) and using a `pierce` or ending it; then the block: stick, bounce (the normal part by `bounce`, the
+part along the face by `friction`, resting on a floor below `rest_speed`) or end. A handler that removes it,
+stops it or launches it again ends that step (`instance.flight !== flight`). `end` raises `flight_end` and
+removes it unless `remove_on_end` is false. Tests: `FlightTest`.
+
 ## Physics: where things are
 
 | Path (`apps/plugin/runtime/.../`) | Owns                                                                              |

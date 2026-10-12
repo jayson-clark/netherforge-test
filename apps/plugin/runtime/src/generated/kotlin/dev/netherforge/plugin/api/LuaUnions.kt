@@ -166,4 +166,5 @@ object LuaUnions {
     val CentityOrEntity: LuaCodec<LuaHandle> = LuaHandleUnion(listOf(LuaHandle.Centity.Codec, LuaHandle.Entity.Codec))
     val CentityOrNodeOrPlayerOrEntity: LuaCodec<LuaHandle> = LuaHandleUnion(listOf(LuaHandle.Centity.Codec, LuaHandle.Node.Codec, LuaHandle.Player.Codec, LuaHandle.Entity.Codec))
     val EntityOrBlock: LuaCodec<LuaHandle> = LuaHandleUnion(listOf(LuaHandle.Entity.Codec, LuaHandle.Block.Codec))
+    val EntityOrCentity: LuaCodec<LuaHandle> = LuaHandleUnion(listOf(LuaHandle.Entity.Codec, LuaHandle.Centity.Codec))
 }

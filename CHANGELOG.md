@@ -100,6 +100,16 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **Projectiles: `centity:launch`.** Any centity can fly as a projectile the
+  server moves every tick: its velocity, gravity (after an optional delay) and
+  drag, homing on the nearest thing it can hit, and one swept query a tick for
+  what its path touches, in order (`hit`, which a handler cancels to let it
+  through, and `pierce` to go on through that many). A block ends it, bounces
+  it (`bounce`, with `friction` along the face, `max_bounces`, and coming to
+  rest on a floor below `rest_speed`) or holds it (`stick`). It ends with
+  `flight_end` (hit, block, lifetime, unloaded, stopped) and is removed then
+  unless `remove_on_end = false`; an `aim` node is turned along its flight.
+  `is_launched`, `stop_flight`, and `velocity`/`set_velocity` for one in flight.
 - **`world:flood`.** A breadth-first fill run in the server, reading the
   world a chunk-sized box at a time: through the blocks `through` names (ids,
   `#tags`, project blocks, or `solid`, `liquid`, `passable`) but not `except`,
