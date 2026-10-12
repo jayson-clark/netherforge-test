@@ -119,10 +119,80 @@ function steps.after_reload()
   log("after reload", #all, kept)
 end
 
+-- A rope strung between two points, and a tween and an additive animation on a real server's displays.
+function steps.layers()
+  local c =
+    nf.centities.spawn("it_rope", vec3(X + 0.5, -60, Z + 4.5), { temporary = true, lifetime = 200 })
+  c:node("chain"):rope_between(vec3(X, -58, Z + 4), vec3(X + 2, -58, Z + 4))
+  local rig = c:node("rig")
+  rig:set_scale(vec3(2, 2, 2))
+  c:play_animation("squash")
+  rig:tween({ translation = vec3(0, 1, 0), ticks = 4, easing = "linear" })
+  nf.after(6, function()
+    local first = c:node("chain[1]"):world_position()
+    log(
+      "layers",
+      f(first.x),
+      f(first.y),
+      tostring(c:node("chain[5]"):is_visible()),
+      f(rig:scale().y),
+      f(rig:translation().y)
+    )
+  end)
+end
+
+-- netherforge.json's gameRules, set on the world when the project loaded.
+function steps.rules()
+  log("rules", tostring(world:game_rule("keep_inventory")))
+end
+
+-- A window whose first slot shows a storage's and takes one diamond at most, and whose second shows what the
+-- player wears on their head and takes only what's worn there.
+function steps.gear(event)
+  local player = event.player
+  player:inventory():clear()
+  player:set_equipment("head", nil)
+  player:give_item({ kind = "minecraft:diamond", count = 5 })
+  player:give_item({ kind = "minecraft:iron_helmet" })
+  local menu = player:open_menu("it_gear")
+  local ring = menu:slot(0)
+  ring:bind(player:storage("it_rings", 1), 0)
+  ring:set_rule({ kinds = { "minecraft:diamond" }, max = 1 })
+  local head = menu:slot(1)
+  head:bind_equipment(player, "head")
+  head:set_rule({ wearable = "head", max = 1 })
+  log("gear", tostring(menu:slot(1):binding().equipment))
+end
+
+-- Where the player's diamonds are, as the server has them: inventory, cursor, storage.
+function steps.count(event)
+  local player = event.player
+  local held = 0
+  for _, stack in pairs(player:inventory():items()) do
+    if stack.kind == "minecraft:diamond" then
+      held = held + (stack.count or 1)
+    end
+  end
+  local menu = player:menu()
+  local cursor = menu and menu:cursor_item(player)
+  local ring = player:storage("it_rings", 1):item(0)
+  log("count", held, cursor and (cursor.count or 1) or 0, ring and (ring.count or 1) or 0)
+end
+
+function steps.worn(event)
+  local head = event.player:equipment("head")
+  local ring = event.player:storage("it_rings", 1):item(0)
+  log(
+    "worn",
+    head and head.kind or "nil",
+    ring and (ring.kind .. "x" .. (ring.count or 1)) or "nil"
+  )
+end
+
 nf.commands.register(
   "it-builtins",
   { arguments = { { name = "step", type = "word" } } },
   function(event)
-    steps[event.arguments.step]()
+    steps[event.arguments.step](event)
   end
 )

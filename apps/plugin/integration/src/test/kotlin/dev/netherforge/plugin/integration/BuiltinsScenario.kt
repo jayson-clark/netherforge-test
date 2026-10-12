@@ -1,6 +1,7 @@
 package dev.netherforge.plugin.integration
 
 import dev.netherforge.plugin.integration.support.Scenario
+import dev.netherforge.plugin.integration.support.TestProject
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 
@@ -11,6 +12,17 @@ import org.junit.jupiter.api.Test
  * blocks, a temporary centity gone with the module that spawned it, and `properties`.
  */
 class BuiltinsScenario : Scenario("builtins") {
+    override fun prepare(project: TestProject) {
+        // A game rule netherforge.json sets on the main world.
+        val manifest = "netherforge.json"
+        val text = project.read(manifest)
+        check("\"worlds\": {" in text) { "examples/basic names no worlds" }
+        project.write(
+            manifest,
+            text.replace("\"worlds\": {", "\"worlds\": {\n    \"world\": { \"gameRules\": { \"keep_inventory\": true } },")
+        )
+    }
+
     @Test
     @Order(1)
     fun `a body lands on a slab, steps along it, and stops at a wall`() {
@@ -47,6 +59,22 @@ class BuiltinsScenario : Scenario("builtins") {
         editor.reload("modules/it_builtins/init.lua")
         editor.run("it-builtins after_reload")
         editor.logged("after reload", "1", "true")
+    }
+
+    @Test
+    @Order(5)
+    fun `a rope is strung, and a tween and an additive animation pose a real centity`() {
+        editor.run("it-builtins layers")
+        // Four half-block links over two blocks, the first centred a quarter of the way; the squash halves the
+        // script's size; the tween has lifted it a block.
+        editor.logged("layers", "208.250", "-58.000", "false", "1.000", "1.000")
+    }
+
+    @Test
+    @Order(6)
+    fun `netherforge json's game rules are set on the world`() {
+        editor.run("it-builtins rules")
+        editor.logged("rules", "true")
         editor.run("forceload remove 192 192 223 223")
     }
 }

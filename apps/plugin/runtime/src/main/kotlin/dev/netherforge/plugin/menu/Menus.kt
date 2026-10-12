@@ -406,8 +406,10 @@ class Menus(
         val byHand = click.top && click.slot != null && window.bound(click.slot) && click.click != "double"
         val cancelled = scripts.emit(path, event, precancelled = window.locked && click.movesItems && !byHand)
         if (cancelled || limited == null || limited === ALLOWED) return cancelled
-        // More than the rule's max would go in: the engine puts in what fits, and the game's own move is stopped.
+        // More than the rule's max would go in: the engine puts in what fits, and the game's own move is stopped. The
+        // client guessed the whole stack went in, so it's sent the window again (the next tick, after the cancel).
         limited()
+        ops.refresh(window.uuid)
         return true
     }
 

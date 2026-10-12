@@ -72,7 +72,7 @@ A node has no script of its own. The centity's script reaches a node with
 
 ```json partial
 "chain": {
-  "display": { "type": "item", "item": "minecraft:chain" },
+  "display": { "type": "item", "item": "minecraft:iron_chain" },
   "rope": { "links": 12, "linkLength": 0.35 }
 }
 ```
