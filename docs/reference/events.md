@@ -64,6 +64,8 @@ What `nf.on` listens for.
 | `entity_damage` | [EntityDamageEvent](events.md#entitydamageevent) | yes | Something is hurting an entity (a player included): after the entity's own `damage` handlers. `event:cancel()` stops it; assign `event.amount` to change how much it takes. Writable: `amount`. |
 | `entity_death` | [EntityDeathEvent](events.md#entitydeathevent) |  | An entity died (a player included): after the entity's own `death` handlers, and for a player after `player_death`. Assign `event.drops` and `event.experience` to change what it drops. Writable: `drops`, `experience`. |
 | `entity_spawn` | [EntitySpawnEvent](events.md#entityspawnevent) | yes | An entity is coming into a world (not a player joining, and never the entities centities are drawn with): after the world's own `entity_spawn` handlers. `event:cancel()` stops it. |
+| `world_dusk` | [DaylightEvent](events.md#daylightevent) |  | Night fell in a world: its time of day went from day (23000 to 12999) into night (13000 to 22999), by the clock or by `/time set`. After the world's own `dusk` handlers. |
+| `world_dawn` | [DaylightEvent](events.md#daylightevent) |  | Day broke in a world: its time of day went from night (13000 to 22999) into day (23000 to 12999), by the clock or by `/time set`. After the world's own `dawn` handlers. |
 | `player_input` | [PlayerInputEvent](events.md#playerinputevent) |  | A player's movement keys changed: what they hold down now, as their game sends it (forward, back, left, right, jump, sneak, sprint), whether or not they can move. For steering something they ride or controlling a centity. The server only watches input while something listens, so it costs nothing otherwise. |
 | `player_change_slot` | [PlayerChangeSlotEvent](events.md#playerchangeslotevent) | yes | A player picked another hotbar slot: a number key or the scroll wheel. `event:cancel()` keeps the slot they had. |
 | `player_swing` | [PlayerSwingEvent](events.md#playerswingevent) | yes | A player swung an arm: every left click, on a block, an entity or the air, and some right clicks. The one way to hear a left click on the air. `event:cancel()` stops others seeing the swing, but not what the click does. |
@@ -192,6 +194,14 @@ nf.on("entity_damage", function(event)
   if event.cause == "fall" and event.entity:is_player() then
     event.amount = event.amount / 2
   end
+end)
+```
+
+### nf world_dusk
+
+```lua
+nf.on("world_dusk", function(event)
+  log("night falls over", event.world:name())
 end)
 ```
 
@@ -492,6 +502,8 @@ What [World](world.md) listens for.
 | `block_break` | [BlockBreakEvent](events.md#blockbreakevent) | yes | A player is breaking a block in this world: before `nf.on("block_break")`, with the same event, so `event:cancel()` here stops it and `event:stop()` keeps it from `nf`. Assign `event.drops` and `event.experience` to change what it drops. Bubbles. Writable: `drops`, `experience`. |
 | `block_place` | [BlockPlaceEvent](events.md#blockplaceevent) | yes | A player is placing a block in this world: before `nf.on("block_place")`, with the same event. Bubbles. |
 | `entity_spawn` | [EntitySpawnEvent](events.md#entityspawnevent) | yes | An entity is coming into this world: before `nf.on("entity_spawn")`, with the same event, so `event:cancel()` here stops it and `event:stop()` keeps it from `nf`. Bubbles. |
+| `dusk` | [DaylightEvent](events.md#daylightevent) |  | Night fell here: the time of day went from day (23000 to 12999) into night (13000 to 22999), by the clock or by `/time set`. Heard before `nf.on("world_dusk")`, with the same event, so `event:stop()` keeps it from there. The runtime looks at the clock every tick, and only while something listens; a jump from one night to the next (a whole day skipped) is no change, so nothing is heard. Bubbles. |
+| `dawn` | [DaylightEvent](events.md#daylightevent) |  | Day broke here: the time of day went from night (13000 to 22999) into day (23000 to 12999), by the clock or by `/time set` (sleeping through the night too). Heard before `nf.on("world_dawn")`, with the same event, so `event:stop()` keeps it from there. Bubbles. |
 | `block_explode` | [ExplodeEvent](events.md#explodeevent) | yes | A block exploded: a bed in the nether or the end, a respawn anchor charged away from the overworld. `event:cancel()` stops the explosion breaking anything; assign `event.breaks_blocks = false` to keep every block standing but still hurt what is near, or `event.yield` to change how much of what breaks drops. In this world: heard before `nf.on("block_explode")`, with the same event, so `event:stop()` keeps it from there. Bubbles. Writable: `breaks_blocks`, `yield`. |
 | `block_ignite` | [BlockIgniteEvent](events.md#blockigniteevent) | yes | A block is catching fire: flint and steel, a fire charge, lava, lightning, fire spreading, an explosion. `event:cancel()` keeps it from burning. In this world: heard before `nf.on("block_ignite")`, with the same event, so `event:stop()` keeps it from there. Bubbles. |
 | `block_burn` | [BlockBurnEvent](events.md#blockburnevent) | yes | A block is burning away in a fire. `event:cancel()` keeps it there (it may still catch fire again). In this world: heard before `nf.on("block_burn")`, with the same event, so `event:stop()` keeps it from there. Bubbles. |
@@ -531,6 +543,16 @@ end)
 nf.worlds.default():on("entity_spawn", function(event)
   if event.entity:kind() == "minecraft:phantom" then
     event:cancel()
+  end
+end)
+```
+
+### world dusk
+
+```lua
+nf.worlds.default():on("dusk", function(event)
+  for _, player in ipairs(event.world:players()) do
+    player:send_message("<gray>Night falls.")
   end
 end)
 ```
@@ -825,6 +847,17 @@ Has the fields and methods of [Event](#event) too.
 | `setting` | `string` | The setting's name, as `netherforge.json` declares it. |
 | `value` | `any` | What it is now, as `nf.config` gives it. |
 | `previous` | `any` | What it was. |
+
+## DaylightEvent
+
+Night is falling or day is breaking in a world.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `world` | `World` | The world. |
+| `time_of_day` | `integer` | The world's time of day when it was seen, in ticks, as `world:time_of_day()` says: 13000 or a little past at dusk, 23000 or a little past at dawn, or wherever `/time set` put it. |
 
 ## TickEvent
 

@@ -569,7 +569,9 @@ World:flood	142
 World:game_rule	17
 World:highest_block	48
 World:is_chunk_loaded	48
+World:is_day	15
 World:is_managed	15
+World:is_night	15
 World:load_chunk	48
 World:locate_biome	70
 World:location	78

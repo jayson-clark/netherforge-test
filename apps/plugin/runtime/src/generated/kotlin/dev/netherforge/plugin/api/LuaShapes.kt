@@ -56,6 +56,33 @@ data class SettingChangedEvent(val setting: String, val value: Any? = null, val 
     }
 }
 
+/** Night is falling or day is breaking in a world. */
+data class DaylightEvent(val world: LuaHandle.World, val timeOfDay: Long) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<DaylightEvent>("DaylightEvent") {
+        val worldCodec = LuaHandle.World.Codec
+        val timeOfDayCodec = LuaCodecs.INTEGER
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "world" to worldCodec,
+            "time_of_day" to timeOfDayCodec
+        )
+
+        override fun read(fields: ShapeReader) = DaylightEvent(
+            world = fields.field("world", worldCodec),
+            timeOfDay = fields.field("time_of_day", timeOfDayCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: DaylightEvent) {
+            fields.field("world", value.world, worldCodec)
+            fields.field("time_of_day", value.timeOfDay, timeOfDayCodec)
+        }
+    }
+}
+
 /** A server tick went by. */
 data class TickEvent(val tick: Long) : LuaEvent {
     override fun push(call: LuaCall) = Codec.push(call, this)

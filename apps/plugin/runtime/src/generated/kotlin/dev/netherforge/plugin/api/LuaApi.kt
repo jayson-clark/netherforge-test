@@ -2643,6 +2643,18 @@ interface WorldApi {
      */
     fun setTimeOfDay(self: LuaHandle.World, ticks: Long): Boolean
 
+    /**
+     * Whether it is night here: the time of day is 13000 to 22999, from dusk to just before sunrise, as
+     * `/time set night` and a centity's `"night"` spawn time mean it. `false` once the world has gone.
+     */
+    fun isNight(self: LuaHandle.World): Boolean
+
+    /**
+     * Whether it is day here: the time of day is 23000 to 12999, the rest of `is_night`'s. `false` once
+     * the world has gone.
+     */
+    fun isDay(self: LuaHandle.World): Boolean
+
     /** How many whole days have gone by in this world, or `nil` once it has gone. */
     fun dayCount(self: LuaHandle.World): Long?
 

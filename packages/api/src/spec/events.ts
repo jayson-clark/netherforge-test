@@ -109,6 +109,14 @@ export const shapes: LuaClass[] = [
     { name: 'value', type: 'any', doc: 'What it is now, as `nf.config` gives it.' },
     { name: 'previous', type: 'any', doc: 'What it was.' },
   ]),
+  payload('DaylightEvent', 'Night is falling or day is breaking in a world.', [
+    { name: 'world', type: 'World', doc: 'The world.' },
+    {
+      name: 'time_of_day',
+      type: 'integer',
+      doc: "The world's time of day when it was seen, in ticks, as `world:time_of_day()` says: 13000 or a little past at dusk, 23000 or a little past at dawn, or wherever `/time set` put it.",
+    },
+  ]),
   payload('TickEvent', 'A server tick went by.', [
     {
       name: 'tick',
@@ -577,6 +585,18 @@ export const nfEvents: EventSpec[] = [
     payload: 'EntitySpawnEvent',
     cancellable: true,
     raised: inWorld('entity_spawn', 'world'),
+  },
+  {
+    name: 'world_dusk',
+    doc: "Night fell in a world: its time of day went from day (23000 to 12999) into night (13000 to 22999), by the clock or by `/time set`. After the world's own `dusk` handlers.",
+    payload: 'DaylightEvent',
+    example:
+      'nf.on("world_dusk", function(event)\n  log("night falls over", event.world:name())\nend)',
+  },
+  {
+    name: 'world_dawn',
+    doc: "Day broke in a world: its time of day went from night (13000 to 22999) into day (23000 to 12999), by the clock or by `/time set`. After the world's own `dawn` handlers.",
+    payload: 'DaylightEvent',
   },
   ...gameNkEvents,
   {

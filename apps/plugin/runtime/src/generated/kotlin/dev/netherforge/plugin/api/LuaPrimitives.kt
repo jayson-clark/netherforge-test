@@ -3676,6 +3676,22 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         1
     }
 
+    fn("World.is_night") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.World
+        val result = api.world.isNight(self)
+        call.push(result, LuaCodecs.BOOLEAN)
+        1
+    }
+
+    fn("World.is_day") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.World
+        val result = api.world.isDay(self)
+        call.push(result, LuaCodecs.BOOLEAN)
+        1
+    }
+
     fn("World.day_count") { call ->
         val lua = call.lua
         val self = call.self(1) as LuaHandle.World
@@ -5862,7 +5878,7 @@ private val CODEC_32 = LuaOptional(LuaHandle.Cutscene.Codec)
 private val CODEC_33 = LuaOptional(LuaHandle.File.Codec)
 private val CODEC_34 = LuaOptional(TimeOptions.Codec)
 private val CODEC_35 = LuaOptional(NoiseOptions.Codec)
-private val CODEC_36 = LuaChoice(listOf("tick", "player_join", "player_quit", "player_chat", "player_interact", "player_interact_entity", "player_move", "player_teleport", "player_change_world", "player_death", "player_respawn", "player_drop_item", "player_pickup_item", "player_use_item", "player_consume_item", "player_swap_hands", "player_sneak", "player_command", "block_break", "block_place", "entity_damage", "entity_death", "entity_spawn", "player_input", "player_change_slot", "player_swing", "player_sprint", "player_fly", "player_jump", "player_change_game_mode", "player_change_food", "player_gain_experience", "player_change_level", "player_kick", "player_complete_advancement", "player_stop_using_item", "player_break_item", "entity_heal", "projectile_launch", "projectile_hit", "entity_shoot_bow", "entity_target", "entity_explode", "block_explode", "entity_combust", "entity_change_effect", "block_ignite", "block_burn", "block_spread", "block_flow", "block_grow", "block_fade", "block_form", "leaves_decay", "piston_extend", "piston_retract", "block_redstone", "sign_change", "block_start_break", "block_drop_item", "weather_change", "thunder_change", "lightning_strike", "chunk_load", "chunk_generated", "chunk_unload", "world_load", "world_unload", "entity_mount", "entity_dismount", "vehicle_move", "vehicle_damage", "vehicle_destroy", "player_open_inventory", "player_close_inventory", "player_craft", "player_prepare_craft", "player_prepare_anvil", "player_prepare_smithing", "player_prepare_grindstone", "player_enchant_item", "furnace_smelt", "server_list_ping", "centity_click", "centity_natural_spawn", "menu_open", "menu_close", "menu_click", "dialog_press", "setting_changed"))
+private val CODEC_36 = LuaChoice(listOf("tick", "player_join", "player_quit", "player_chat", "player_interact", "player_interact_entity", "player_move", "player_teleport", "player_change_world", "player_death", "player_respawn", "player_drop_item", "player_pickup_item", "player_use_item", "player_consume_item", "player_swap_hands", "player_sneak", "player_command", "block_break", "block_place", "entity_damage", "entity_death", "entity_spawn", "world_dusk", "world_dawn", "player_input", "player_change_slot", "player_swing", "player_sprint", "player_fly", "player_jump", "player_change_game_mode", "player_change_food", "player_gain_experience", "player_change_level", "player_kick", "player_complete_advancement", "player_stop_using_item", "player_break_item", "entity_heal", "projectile_launch", "projectile_hit", "entity_shoot_bow", "entity_target", "entity_explode", "block_explode", "entity_combust", "entity_change_effect", "block_ignite", "block_burn", "block_spread", "block_flow", "block_grow", "block_fade", "block_form", "leaves_decay", "piston_extend", "piston_retract", "block_redstone", "sign_change", "block_start_break", "block_drop_item", "weather_change", "thunder_change", "lightning_strike", "chunk_load", "chunk_generated", "chunk_unload", "world_load", "world_unload", "entity_mount", "entity_dismount", "vehicle_move", "vehicle_damage", "vehicle_destroy", "player_open_inventory", "player_close_inventory", "player_craft", "player_prepare_craft", "player_prepare_anvil", "player_prepare_smithing", "player_prepare_grindstone", "player_enchant_item", "furnace_smelt", "server_list_ping", "centity_click", "centity_natural_spawn", "menu_open", "menu_close", "menu_click", "dialog_press", "setting_changed"))
 private val CODEC_37 = LuaOptional(LuaHandle.Node.Codec)
 private val CODEC_38 = LuaList(LuaHandle.Node.Codec)
 private val CODEC_39 = LuaOptional(Bounds.Codec)

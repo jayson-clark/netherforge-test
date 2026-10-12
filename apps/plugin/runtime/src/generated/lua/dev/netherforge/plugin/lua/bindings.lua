@@ -3124,6 +3124,22 @@ function World.set_time_of_day(self, ticks)
   return prim["World.set_time_of_day"](self_key, ticks)
 end
 
+function World.is_night(self)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  return prim["World.is_night"](self_key)
+end
+
+function World.is_day(self)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  return prim["World.is_day"](self_key)
+end
+
 function World.day_count(self)
   local self_key = ids[self]
   if self_key == nil or not World_is[class_of(self)] then

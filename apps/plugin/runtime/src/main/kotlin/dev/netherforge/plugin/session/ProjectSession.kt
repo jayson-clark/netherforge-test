@@ -67,6 +67,7 @@ import dev.netherforge.plugin.store.PackageSchemas
 import dev.netherforge.plugin.testing.ScriptTests
 import dev.netherforge.plugin.world.BlockData
 import dev.netherforge.plugin.world.BossBars
+import dev.netherforge.plugin.world.Daylight
 import dev.netherforge.plugin.world.Effects
 import dev.netherforge.plugin.world.EntityData
 import dev.netherforge.plugin.world.HiddenEntities
@@ -267,6 +268,9 @@ class ProjectSession internal constructor(
     /** The worlds the project made and may unload. */
     internal val managedWorlds =
         service(ManagedWorlds(platform, async, log, runtime.store.worlds, namespace, { source.rootFolder }) { snapshot })
+
+    /** Worlds' `dusk` and `dawn`: their clocks, looked at while a script listens. */
+    internal val daylight = service(Daylight(platform, scripts))
 
     /** The spawn rates `netherforge.json` sets for the worlds it names. */
     internal val spawnRates = service(WorldSpawnRates(platform) { snapshot.manifest?.worlds })

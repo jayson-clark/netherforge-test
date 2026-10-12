@@ -107,6 +107,12 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   `bounds`. It answers the blocks it filled and the blocks it stopped at (a
   room's walls), what each is with `kinds = true`, and why it stopped short
   (`limit`, `unloaded`, `bounds`): a felled tree or a house check in one call.
+- **Dusk and dawn.** A world's `dusk` and `dawn` events (then `nf`'s
+  `world_dusk` and `world_dawn`) are heard when its time of day crosses into
+  night (13000 to 22999, as a centity's `"night"` spawn time means it) or back
+  into day, whether the clock ran there or `/time set` jumped there, with the
+  world and its `time_of_day`. Clocks are only looked at while something
+  listens. `world:is_night()` and `world:is_day()` say which it is now.
 - **Temporary centities.** `nf.centities.spawn(kind, place, { temporary = true })`
   spawns one that's never saved (its entities aren't kept with their chunk)
   and is removed when the script that spawned it unloads, so a reload or a
