@@ -31,6 +31,7 @@ import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.platform.Platform
 import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.platform.Ray
+import dev.netherforge.plugin.profile.TickParts
 import dev.netherforge.plugin.project.Resource
 import dev.netherforge.plugin.script.ScopeOwner
 import dev.netherforge.plugin.script.Scripts
@@ -99,6 +100,8 @@ class Centities(
     private val restored: List<InstanceRecord>,
     /** The project's namespace: records name centities in full, the registry as the project does. */
     private val home: () -> String,
+    /** Where the profiler takes what each step of an instance's tick costs (`world/centities/sync`). */
+    private val parts: TickParts = TickParts.OFF,
     /** An instance was removed for good (or its inert record was): what's kept for it elsewhere goes too. */
     private val onRemoved: (UUID) -> Unit = {}
 ) : RuntimeService {
@@ -535,7 +538,7 @@ class Centities(
         paths.beginTick()
         for (instance in instances.values.toList()) {
             if (instance.removed) continue
-            val loaded = loaded(instance)
+            val loaded = parts.time(LOADED) { loaded(instance) }
             val was = instance.chunkLoaded
             if (was != null && was != loaded) {
                 instance.chunkLoaded = loaded
@@ -555,23 +558,24 @@ class Centities(
     private fun tick(instance: Instance) {
         instance.age++
         if (instance.animations.active) {
-            val ended = instance.animations.advance(SECONDS_PER_TICK)
-            instance.animate()
+            val ended = parts.time(ANIMATE) {
+                instance.animations.advance(SECONDS_PER_TICK).also { instance.animate() }
+            }
             for (clip in ended) {
                 if (instance.removed) break
                 emit(Events.CENTITY_ANIMATION_END, instance, AnimationEvent(handle(instance), clip))
             }
         }
         // A follow moves it to its player first, as a walk does; it never has both (a walk ends it).
-        if (instance.follower != null && !instance.removed) followTick(instance)
+        if (instance.follower != null && !instance.removed) parts.time(FOLLOW) { followTick(instance) }
         // Walking moves the whole centity first, so physics settles its bodies where it has been walked to.
-        if (instance.walk != null && !instance.removed) paths.step(instance)
-        if (instance.hasBodies && !instance.removed) physics.step(instance, SECONDS_PER_TICK)
+        if (instance.walk != null && !instance.removed) parts.time(WALK) { paths.step(instance) }
+        if (instance.hasBodies && !instance.removed) parts.time(PHYSICS) { physics.step(instance, SECONDS_PER_TICK) }
         // Rates are handler options (`every`): only a tick some handler is due on is raised, and none when nobody listens.
         if (!instance.removed && scripts.due(handle(instance), Events.CENTITY_TICK, scripts.now)) {
-            emit(Events.CENTITY_TICK, instance, TickEvent(scripts.now))
+            parts.time(SCRIPTS) { emit(Events.CENTITY_TICK, instance, TickEvent(scripts.now)) }
         }
-        if (!instance.removed) sync(instance)
+        if (!instance.removed) parts.time(SYNC) { sync(instance) }
     }
 
     /**
@@ -610,21 +614,24 @@ class Centities(
     /** Brings the instance's entities in line with its state, writing only what changed. */
     fun sync(instance: Instance) {
         if (instance.removed || !loaded(instance)) return
-        dropGone(instance)
-        if (instance.needsReconcile) reconcile(instance)
-        sweepOrphans(instance)
+        parts.time(SYNC_GONE) {
+            dropGone(instance)
+            if (instance.needsReconcile) reconcile(instance)
+            sweepOrphans(instance)
+        }
         // A mounted follower is redrawn every tick: the game's place for its rider moves with a sneak, not only a walk.
         if (!instance.poseDirty && !instance.forceSync && !instance.moved && !instance.followMounted) return
 
         val anchor = instance.anchor
         val entities = platform.entities
-        val vehicle = syncAnchor(instance)
-        val world = shiftedBy(instance.placed(), riderShift(instance, vehicle))
+        val vehicle = parts.time(SYNC_ANCHOR) { syncAnchor(instance) }
+        val world = parts.time(SYNC_PLACE) { shiftedBy(instance.placed(), riderShift(instance, vehicle)) }
         val cull = cullSize(world)
         val ahead = Lookahead(instance)
         for ((index, node) in instance.definition.nodes.withIndex()) {
             val shown = instance.shown(index)
             instance.displays[node.name]?.let { entity ->
+                val from = if (parts.active) parts.now() else 0L
                 val display = instance.display(index)
                 val contentChanged = instance.contentChanged(index)
                 if (contentChanged && display != null && !entities.updateDisplay(entity, display)) {
@@ -639,9 +646,11 @@ class Centities(
                 if (instance.forceSync && vehicle != null) ride(instance, vehicle, entity)
                 // One that couldn't get on the anchor entity is moved on its own.
                 if ((instance.moved || instance.forceSync) && entity !in instance.riders) entities.teleport(entity, anchor)
-                syncPose(instance, index, entity, if (shown) world[index] else HIDDEN, shown, cull, ahead)
+                if (parts.active) parts.add(SYNC_DISPLAYS, parts.now() - from)
+                parts.time(SYNC_POSES) { syncPose(instance, index, entity, if (shown) world[index] else HIDDEN, shown, cull, ahead) }
             }
             instance.hitboxes[node.name]?.let { entity ->
+                val from = if (parts.active) parts.now() else 0L
                 // An unclickable hitbox is collapsed like a hidden one, so clicks pass it by.
                 val bounds = if (shown && instance.clickable(index)) {
                     Hitboxes.bounds(boxesOf(instance, index), world[index])
@@ -666,6 +675,7 @@ class Centities(
                     entities.resizeHitbox(entity, bounds.width, bounds.height)
                 }
                 instance.pushedHitboxes[entity] = bounds
+                if (parts.active) parts.add(SYNC_HITBOXES, parts.now() - from)
             }
         }
         instance.markSynced()
@@ -1133,6 +1143,22 @@ class Centities(
 
     companion object {
         const val SECONDS_PER_TICK = 0.05
+
+        // What the profiler names the parts of an instance's tick (`get_profile`'s `parts`).
+        private const val PART = "world/centities"
+        private const val LOADED = "$PART/loaded"
+        private const val ANIMATE = "$PART/animate"
+        private const val FOLLOW = "$PART/follow"
+        private const val WALK = "$PART/walk"
+        private const val PHYSICS = "$PART/physics"
+        private const val SCRIPTS = "$PART/scripts"
+        private const val SYNC = "$PART/sync"
+        private const val SYNC_GONE = "$SYNC/reconcile"
+        private const val SYNC_ANCHOR = "$SYNC/anchor"
+        private const val SYNC_PLACE = "$SYNC/place"
+        private const val SYNC_DISPLAYS = "$SYNC/displays"
+        private const val SYNC_POSES = "$SYNC/poses"
+        private const val SYNC_HITBOXES = "$SYNC/hitboxes"
 
         /** How far a click may reach for the narrow phase; past any reach the server allows. */
         const val REACH = 8.0

@@ -261,7 +261,7 @@ function registerTools(server: McpServer, ctx: ToolContext) {
     {
       title: 'Dev server profile',
       description:
-        "Where the dev server's ticks go, as the editor's Profiler panel shows it: measured exactly by the plugin on every tick (not sampled), totalled since the last reset. `functions` is every function scripts ran (a handler by its event, a timer, a task, a command…) with its script and the file and line it starts on; `scopes` is every module and every centity instance's, window's or dialog's script. Times are milliseconds: `total`, `mean` per call, `max` the slowest call (a scope's slowest tick). `steps` is NetherForge's tick by step over the last ticks. To measure one thing: call with `reset: true`, do it (a bot, a command), wait a few seconds for the stream, then call again.",
+        "Where the dev server's ticks go, as the editor's Profiler panel shows it: measured exactly by the plugin on every tick (not sampled), totalled since the last reset. `functions` is every function scripts ran (a handler by its event, a timer, a task, a command…) with its script and the file and line it starts on; `scopes` is every module and every centity instance's, window's or dialog's script. Times are milliseconds: `total`, `mean` per call, `max` the slowest call (a scope's slowest tick). `steps` is NetherForge's tick by step over the last ticks, and `partsMeanMs` what each step is made of: each service's share (`world/centities`) and the parts a service times itself (`world/centities/sync/poses`), a part inside its parent. To measure one thing: call with `reset: true`, do it (a bot, a command), wait a few seconds for the stream, then call again.",
       inputSchema: {
         sort: z
           .enum(SORTS)
@@ -294,9 +294,12 @@ function registerTools(server: McpServer, ctx: ToolContext) {
       }
       const { ticks, measured } = data
       const steps: Record<string, number> = {}
+      const parts: Record<string, number> = {}
       for (const tick of ticks) {
         for (const [name, nanos] of Object.entries(tick.phases))
           steps[name] = (steps[name] ?? 0) + nanos
+        for (const [name, nanos] of Object.entries(tick.parts ?? {}))
+          parts[name] = (parts[name] ?? 0) + nanos
       }
       const worst = ticks.reduce<(typeof ticks)[number] | null>(
         (slowest, tick) => (slowest === null || tick.nanos > slowest.nanos ? tick : slowest),
@@ -313,6 +316,12 @@ function registerTools(server: McpServer, ctx: ToolContext) {
           stepsMeanMs: Object.fromEntries(
             Object.entries(steps).map(([name, nanos]) => [name, millis(nanos / ticks.length)]),
           ),
+          // Each step's parts by path (`world/centities/sync`), slowest first; a part is inside its parent.
+          partsMeanMs: Object.fromEntries(
+            Object.entries(parts)
+              .sort(([, a], [, b]) => b - a)
+              .map(([name, nanos]) => [name, millis(nanos / ticks.length)]),
+          ),
           scriptsMeanMs: millis(
             ticks.reduce((sum, it) => sum + (it.scripts ?? 0), 0) / Math.max(ticks.length, 1),
           ),
@@ -321,6 +330,9 @@ function registerTools(server: McpServer, ctx: ToolContext) {
             ms: millis(worst.nanos),
             steps: Object.fromEntries(
               Object.entries(worst.phases).map(([name, nanos]) => [name, millis(nanos)]),
+            ),
+            parts: Object.fromEntries(
+              Object.entries(worst.parts ?? {}).map(([name, nanos]) => [name, millis(nanos)]),
             ),
             topScopes: (worst.top ?? []).map((it) => ({ scope: it.scope, ms: millis(it.nanos) })),
           },

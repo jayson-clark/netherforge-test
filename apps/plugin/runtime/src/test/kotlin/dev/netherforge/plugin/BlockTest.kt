@@ -367,6 +367,34 @@ class BlockTest {
     }
 
     @Test
+    fun `the sweep passes over a chunk nothing changed, and notices a block something else took away`() {
+        server(
+            mapOf(
+                "modules/t/init.lua" to """
+                    nf.blocks.get("ore"):place(nf.worlds.default():block(vec3(4, 64, 4)):location())
+                    nf.commands.register("there", function()
+                      log("there " .. tostring(nf.worlds.default():block(vec3(4, 64, 4)):custom() ~= nil))
+                    end)
+                """.trimIndent()
+            )
+        ).use { server ->
+            val blocks = server.platform.blocks
+            // A sweep reads the chunk once, then only sums it up while nothing changes.
+            server.tick(20)
+            val finds = blocks.finds
+            server.tick(200)
+            assertEquals(finds, blocks.finds, "an unchanged chunk isn't read again")
+            assertTrue(blocks.fingerprints > 0)
+            // Something other than NetherForge (a paste, another plugin) takes it away: the sweep notices.
+            server.platform.worlds.blocks[dev.netherforge.plugin.testkit.BlockAt("world", 4, 64, 4)] = "minecraft:stone"
+            server.tick(200)
+            assertTrue(blocks.finds > finds, "a changed chunk is read again")
+            server.platform.commands.runConsole("there")
+            assertEquals("there false", server.logs.last())
+        }
+    }
+
+    @Test
     fun `a ticking block hears tick every interval, with its own data`() {
         server().use { server ->
             server.custom().place("ore", "world", 0, 64, 0)

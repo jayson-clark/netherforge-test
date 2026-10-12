@@ -45,8 +45,13 @@ class Profiler(
     /** The server and plugin, for a report's heading. */
     private val server: () -> String,
     /** The wall clock, for a report's name and start. */
-    private val now: () -> ZonedDateTime = ZonedDateTime::now
+    private val now: () -> ZonedDateTime = ZonedDateTime::now,
+    /** What the tick's parts are timed with ([parts]). */
+    clock: () -> Long = System::nanoTime
 ) {
+    /** What each step of the tick is made of ([TickParts]): services time their own parts into it. */
+    val parts = TickParts(clock)
+
     /** Whether the editor wants the stream. Set from the bridge's thread. */
     @Volatile
     var streaming: Boolean = false
@@ -101,7 +106,8 @@ class Profiler(
             nanos,
             phases,
             scripts = scopes.sumOf { it.nanos },
-            top = scopes.sortedByDescending { it.nanos }.take(TOP_SCOPES).map { it.copy(max = it.nanos) }
+            top = scopes.sortedByDescending { it.nanos }.take(TOP_SCOPES).map { it.copy(max = it.nanos) },
+            parts = parts.take()
         )
         batch.ticks += sample
         val recording = recording

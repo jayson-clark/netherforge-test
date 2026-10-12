@@ -3,6 +3,7 @@ package dev.netherforge.plugin.paper.version
 import com.destroystokyo.paper.entity.ai.Goal
 import dev.netherforge.plugin.paper.PaperVersion
 import dev.netherforge.plugin.paper.ServerRegistries
+import dev.netherforge.plugin.platform.ChunkGrid
 import io.papermc.paper.configuration.GlobalConfiguration
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
@@ -12,23 +13,110 @@ import net.minecraft.world.inventory.ContainerListener
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.context.UseOnContext
 import net.minecraft.world.level.block.Blocks
+import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument
+import net.minecraft.world.level.chunk.LevelChunk
+import net.minecraft.world.level.chunk.Palette
 import net.minecraft.world.level.gameevent.GameEvent
 import net.minecraft.world.phys.BlockHitResult
 import net.minecraft.world.phys.Vec3
 import org.bukkit.Instrument
+import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
+import org.bukkit.block.data.BlockData
 import org.bukkit.craftbukkit.CraftWorld
+import org.bukkit.craftbukkit.block.data.CraftBlockData
 import org.bukkit.craftbukkit.entity.CraftPlayer
 import org.bukkit.entity.Mob
 import org.bukkit.entity.Player
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.util.Vector
 import org.spigotmc.WatchdogThread
+import java.util.Collections
+import java.util.IdentityHashMap
+import java.util.WeakHashMap
 
 /** This adapter's [PaperVersion], listed in `META-INF/services`. */
+
 class Version : PaperVersion {
+    override fun fingerprintStates(world: World, chunkX: Int, chunkZ: Int, wanted: Collection<BlockData>): Long? {
+        val chunk = (world as CraftWorld).handle.chunkSource.getChunkNow(chunkX, chunkZ) ?: return null
+        val states = serverStates(wanted)
+        var print = 1L
+        val memos = sectionMemos(chunk, states)
+        for ((i, section) in chunk.sections.withIndex()) {
+            if (section.hasOnlyAir()) continue
+            val raw = PaletteData.of(section.states) ?: return null
+            if (!memos.mayHold(i, raw.palette) { section.states.maybeHas(states::contains) }) continue
+            print = print * 31 + i
+            print = print * 31 + raw.storage.raw.contentHashCode()
+            // The palette's states too: the same numbers in the storage could stand for other states.
+            val palette = raw.palette
+            for (id in 0 until palette.size) print = print * 31 + System.identityHashCode(palette.valueFor(id))
+        }
+        return print
+    }
+
+    /** The server's own states of [wanted], by identity: worked out once for the same collection, as callers ask again and again. */
+    private fun serverStates(wanted: Collection<BlockData>): Set<BlockState> {
+        lastStates?.takeIf { it.first === wanted }?.let { return it.second }
+        val states = Collections.newSetFromMap(IdentityHashMap<BlockState, Boolean>())
+        for (data in wanted) states += (data as CraftBlockData).state
+        lastStates = wanted to states
+        return states
+    }
+
+    private var lastStates: Pair<Collection<BlockData>, Set<BlockState>>? = null
+
+    /**
+     * Whether each of a chunk's sections may hold any of the states asked about, as last worked out: by its
+     * palette's identity and size, since a palette only grows, and a new one is a new object. The same answer
+     * then holds without running the question over every entry of every section's palette.
+     */
+    private class SectionMemos(val states: Set<BlockState>, size: Int) {
+        private val palettes = arrayOfNulls<Any>(size)
+        private val sizes = IntArray(size)
+        private val answers = BooleanArray(size)
+
+        inline fun mayHold(section: Int, palette: Palette<*>, ask: () -> Boolean): Boolean {
+            if (palettes[section] === palette && sizes[section] == palette.size) return answers[section]
+            val answer = ask()
+            palettes[section] = palette
+            sizes[section] = palette.size
+            answers[section] = answer
+            return answer
+        }
+    }
+
+    private val memos = WeakHashMap<LevelChunk, SectionMemos>()
+
+    private fun sectionMemos(chunk: LevelChunk, states: Set<BlockState>): SectionMemos {
+        val known = memos[chunk]
+        if (known != null && known.states === states) return known
+        return SectionMemos(states, chunk.sections.size).also { memos[chunk] = it }
+    }
+
+    override fun findStates(world: World, chunkX: Int, chunkZ: Int, wanted: Map<BlockData, Int>, found: ChunkGrid): Boolean {
+        val chunk = (world as CraftWorld).handle.chunkSource.getChunkNow(chunkX, chunkZ) ?: return false
+        // The server's own states, by identity: a state is one object for as long as the server runs.
+        val numbers = IdentityHashMap<BlockState, Int>()
+        for ((data, number) in wanted) numbers[(data as CraftBlockData).state] = number
+        val bottom = chunk.minSectionY
+        for ((i, section) in chunk.sections.withIndex()) {
+            if (section.hasOnlyAir() || !section.states.maybeHas(numbers::containsKey)) continue
+            val y0 = (bottom + i) shl 4
+            // Every block in one pass over the section's storage, in its order: x fastest, then z, then y.
+            var index = 0
+            section.states.getAll { state ->
+                val number = numbers[state]
+                if (number != null) found[index and 15, y0 + (index shr 8), (index shr 4) and 15] = number
+                index++
+            }
+        }
+        return true
+    }
+
     override fun goalPriorities(mob: Mob): Map<Goal<Mob>, Int> = dev.netherforge.plugin.paper.version.goalPriorities(mob)
 
     override fun saveAdvancements(player: Player) = (player as CraftPlayer).handle.advancements.save()

@@ -186,7 +186,13 @@ data class ProfileTick(
     /** What scripts' own code took, wherever in the tick it ran. */
     val scripts: Long = 0,
     /** The scopes that took the most this tick, the most first (at most three). */
-    val top: List<ScopeTime> = emptyList()
+    val top: List<ScopeTime> = emptyList(),
+    /**
+     * What the steps are made of, by path: each service's share of a step
+     * (`world/centities`) and the parts a service times itself
+     * (`world/centities/sync`). A part's time is inside its parent's.
+     */
+    val parts: Map<String, Long> = emptyMap()
 )
 
 /**

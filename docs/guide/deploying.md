@@ -354,9 +354,18 @@ your scripts run (each handler, timer, task, command), timed exactly rather
 than sampled. When it's done it writes two files into
 `plugins/NetherForge/profiles/` and tells you (and the console) where:
 `profile-<date>-<time>.txt`, a summary to read first (the tick's mean,
-median, 95th percentile and worst, each step's, then the functions and the
-scripts taking the most time, each with its file and line), and a `.json`
-beside it with every number, every tick included. Only one runs at a time.
+median, 95th percentile and worst, each step's, then what each step is made
+of, then the functions and the scripts taking the most time, each with its
+file and line), and a `.json` beside it with every number, every tick
+included. Only one runs at a time.
+
+What a step is made of is each of NetherForge's services' share of it
+(`world/centities`, `world/blocks`, `world/natural spawning`) and, inside
+the busiest, their own parts: for centities `animate`, `walk`, `physics`,
+`scripts` (their `tick` handlers) and `sync` (with `poses`, `displays`,
+`hitboxes`, `anchor`, `reconcile`); for the project's blocks `mining`,
+`looks`, `falling`, `ticks` and `sweep`. A part is inside the one its path
+starts with, so `world/centities/sync/poses` is part of `world/centities/sync`.
 The profiler costs a little on every call into a script, so a production
 server measures only while one records; the editor's dev server always does
 (its Profiler panel).

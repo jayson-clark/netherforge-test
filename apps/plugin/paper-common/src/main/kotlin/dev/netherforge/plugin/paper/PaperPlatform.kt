@@ -60,7 +60,7 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
     /** The vanilla note blocks' part, taken over once the project has blocks that are held as note block states. */
     private val noteBlocks = PaperNoteBlocks(plugin, version)
     private val carriers = PaperCarriers(plugin, version, noteBlocks)
-    override val blocks = PaperBlocks(plugin, carriers)
+    override val blocks = PaperBlocks(plugin, carriers, version)
     override val particles = PaperParticles()
     override val sounds = PaperSounds()
 

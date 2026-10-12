@@ -28,6 +28,11 @@ data class ProfileReport(
     val tick: Stats,
     /** Each step of the tick, in the order they run. */
     val phases: Map<String, Stats>,
+    /**
+     * What the steps are made of, by path, the most expensive first: each service's share of a step
+     * (`world/centities`) and the parts a service times itself (`world/centities/sync`), each inside its parent.
+     */
+    val parts: Map<String, Stats> = emptyMap(),
     /** Scripts' own code, wherever in the tick it ran. */
     val scripts: Stats,
     /** Every scope that ran, the most expensive first. */
@@ -67,6 +72,10 @@ data class ProfileReport(
         appendLine()
         appendLine("NetherForge's tick (ms): ${line(tick)}")
         for ((name, stats) in phases) appendLine("  ${name.padEnd(PHASE_WIDTH)} ${line(stats)}")
+        if (parts.isNotEmpty()) {
+            appendLine("What the steps are made of (ms; each part inside the one its path starts with):")
+            for ((name, stats) in parts.entries.take(SHOWN)) appendLine("  $name: ${line(stats)}")
+        }
         appendLine("Scripts' own code (ms): ${line(scripts)}")
         appendLine()
         appendLine("Functions by total time (ms; mean and worst per call):")
@@ -144,12 +153,15 @@ data class ProfileReport(
             val ticks = totals.ticks.toList()
             val numbers = ticks.map { it.tick }
             val phaseNames = ticks.flatMap { it.phases.keys }.distinct()
+            val partNames = ticks.flatMap { it.parts.keys }.distinct()
             return ProfileReport(
                 started = started.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
                 seconds = seconds,
                 server = server,
                 tick = Stats.of(ticks.map { it.nanos }, numbers),
                 phases = phaseNames.associateWith { name -> Stats.of(ticks.map { it.phases[name] ?: 0 }, numbers) },
+                parts = partNames.associateWith { name -> Stats.of(ticks.map { it.parts[name] ?: 0 }, numbers) }
+                    .entries.sortedByDescending { it.value.mean }.associate { it.key to it.value },
                 scripts = Stats.of(ticks.map { it.scripts }, numbers),
                 scopes = totals.scopeTimes(),
                 handlers = totals.handlerTimes(),

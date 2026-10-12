@@ -364,6 +364,7 @@ class FakeBlocks(private val platform: FakePlatform) : BlockOps {
 
     override fun find(world: String, chunkX: Int, chunkZ: Int, states: List<String>): ChunkGrid? {
         if (!platform.worlds.isChunkLoaded(world, chunkX, chunkZ)) return null
+        finds++
         val found = ChunkGrid()
         for ((at, state) in platform.worlds.blocks) {
             if (at.world != world || at.x shr 4 != chunkX || at.z shr 4 != chunkZ) continue
@@ -372,6 +373,22 @@ class FakeBlocks(private val platform: FakePlatform) : BlockOps {
         }
         return found
     }
+
+    // What find finds, summed up: equal when it would find the same.
+    override fun fingerprint(world: String, chunkX: Int, chunkZ: Int, states: List<String>): Long? {
+        if (!platform.worlds.isChunkLoaded(world, chunkX, chunkZ)) return null
+        fingerprints++
+        return platform.worlds.blocks.entries
+            .filter { (at, state) -> at.world == world && at.x shr 4 == chunkX && at.z shr 4 == chunkZ && state in states }
+            .map { (at, state) -> "${at.x},${at.y},${at.z}=$state" }
+            .sorted()
+            .hashCode()
+            .toLong()
+    }
+
+    /** How many chunks were fingerprinted, and how many read in full ([find]), for a test. */
+    var fingerprints = 0
+    var finds = 0
 
     /** What a state's hardness is, by block id, where a test says; a few of the game's, else 1. */
     val hardnesses = mutableMapOf(

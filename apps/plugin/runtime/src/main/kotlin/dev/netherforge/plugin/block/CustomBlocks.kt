@@ -48,6 +48,7 @@ import dev.netherforge.plugin.platform.Platform
 import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.platform.SoundPlay
 import dev.netherforge.plugin.platform.WatchedEvent
+import dev.netherforge.plugin.profile.TickParts
 import dev.netherforge.plugin.project.Resource
 import dev.netherforge.plugin.script.Scope
 import dev.netherforge.plugin.script.ScopeOwner
@@ -126,7 +127,9 @@ internal class CustomBlocks(
     private val centities: () -> Centities,
     private val effects: () -> Effects,
     private val blockData: () -> BlockData,
-    private val problemsChanged: () -> Unit
+    private val problemsChanged: () -> Unit,
+    /** Where the profiler takes what each step of the tick costs (`world/blocks/sweep`). */
+    private val parts: TickParts = TickParts.OFF
 ) : RuntimeService {
     override val name get() = "blocks"
 
@@ -207,7 +210,7 @@ internal class CustomBlocks(
     /** Writes a chunk's legend when it's changed (a chunk written to is saved again). */
     private fun writeLegend(key: ChunkKey, before: String?, legend: Map<String, String>) {
         val json = if (legend.isEmpty()) null else Json.encodeToString<Map<String, String>>(LinkedHashMap(legend.toSortedMap()))
-        if (json != before) platform.blocks.setLegend(key.world, key.x, key.z, json)
+        if (json != before) writeLegend(key.world, key.x, key.z, json)
     }
 
     private data class ChunkKey(val world: String, val x: Int, val z: Int)
@@ -234,6 +237,9 @@ internal class CustomBlocks(
 
     /** Chunks to check next, a few every tick. */
     private val sweepQueue = ArrayDeque<ChunkKey>()
+
+    /** Each chunk's [fingerprint] the last time [sweep] reconciled it. */
+    private val swept = HashMap<ChunkKey, Long>()
 
     /**
      * A player mining one of the project's blocks, which the server counts ([mine]) and breaks for them: [factor]
@@ -336,6 +342,8 @@ internal class CustomBlocks(
         chunks.clear()
         ticking.clear()
         sweepQueue.clear()
+        swept.clear()
+        legends.clear()
     }
 
     override fun problems(): List<Problem> = problems
@@ -380,6 +388,8 @@ internal class CustomBlocks(
         val next = BlockKind.plan(blocks, home, platform.game)
         plan = next
         byState = next?.uses?.associate { it.state.toString() to it.name }.orEmpty()
+        // The plan says what each state is: every chunk is read again under it.
+        swept.clear()
         problems = buildList {
             if (blocks.isNotEmpty() && next == null) {
                 add(
@@ -498,7 +508,7 @@ internal class CustomBlocks(
         for (at in blockData().tablesIn(key.world, key.x, key.z)) {
             val placed = get(blocks, at) ?: continue
             if (placed.pinned || recorded(placed.name)) continue
-            platform.blocks.setRecord(key.world, at.x, at.y, at.z, record(placed.name, null))
+            writeRecord(key.world, at.x, at.y, at.z, record(placed.name, null))
             placed.pinned = true
             put(blocks, at, placed)
         }
@@ -513,12 +523,12 @@ internal class CustomBlocks(
      */
     private fun reconcile(key: ChunkKey, generated: Boolean = false) {
         val plan = plan ?: return
-        val records = platform.blocks.records(key.world, key.x, key.z) ?: return
+        val records = parts.time("world/blocks/sweep/records") { platform.blocks.records(key.world, key.x, key.z) } ?: return
         val legendText = platform.blocks.legend(key.world, key.x, key.z)
         val legend = readLegend(legendText)
         // The states blocks are held in now, and those the legend says they were placed in.
         val states = (byState.keys + legend.keys).toList()
-        val found = platform.blocks.find(key.world, key.x, key.z, states) ?: return
+        val found = parts.time("world/blocks/sweep/find") { platform.blocks.find(key.world, key.x, key.z, states) } ?: return
         fun stateAt(at: BlockVector): String? = found[at.x and 15, at.y, at.z and 15].takeIf { it != 0 }?.let { states[it - 1] }
         val previous = chunks[key]
         val tracked = ChunkBlocks()
@@ -529,7 +539,7 @@ internal class CustomBlocks(
             recorded += at
             val read = runCatching { Json.decodeFromString<Record>(record.json) }.getOrNull()
             if (read == null) {
-                platform.blocks.setRecord(key.world, at.x, at.y, at.z, null)
+                writeRecord(key.world, at.x, at.y, at.z, null)
                 continue
             }
             val expected = plan.stateOf(read.id)?.toString()
@@ -549,7 +559,7 @@ internal class CustomBlocks(
                     } else {
                         // Whatever it was, it isn't there now: its table and its centity go.
                         gone(key.world, at, centity)
-                        platform.blocks.setRecord(key.world, at.x, at.y, at.z, null)
+                        writeRecord(key.world, at.x, at.y, at.z, null)
                     }
                 }
             }
@@ -565,7 +575,7 @@ internal class CustomBlocks(
             if (at in recorded) return@forEach
             if (name !in defs) {
                 // A block the project has no longer (or has with errors): pinned by a record, inert, until it's back.
-                platform.blocks.setRecord(key.world, at.x, at.y, at.z, record(name, null))
+                writeRecord(key.world, at.x, at.y, at.z, record(name, null))
                 return@forEach
             }
             val expected = expectedOf[i - 1] ?: return@forEach
@@ -602,7 +612,7 @@ internal class CustomBlocks(
             if (blockData().has(key.world, at.x, at.y, at.z)) {
                 placed.pinned = true
             } else {
-                platform.blocks.setRecord(key.world, at.x, at.y, at.z, null)
+                writeRecord(key.world, at.x, at.y, at.z, null)
                 placed.pinned = false
             }
         }
@@ -639,7 +649,7 @@ internal class CustomBlocks(
     private fun adopted(world: String, at: BlockVector, name: String, tracked: ChunkBlocks) {
         val placed = tracked.kept.getValue(at)
         placed.centity = spawnCentity(world, at, defs[name] ?: return)
-        platform.blocks.setRecord(world, at.x, at.y, at.z, record(name, placed.centity))
+        writeRecord(world, at.x, at.y, at.z, record(name, placed.centity))
     }
 
     /** A block drawn by a centity whose instance is missing gets a new one. */
@@ -650,7 +660,7 @@ internal class CustomBlocks(
         val id = placed.centity
         if (id != null && (centities().find(id) != null || centities().inertRecords().any { it.id == id })) return
         placed.centity = spawnCentity(world, at, def)
-        platform.blocks.setRecord(world, at.x, at.y, at.z, record(placed.name, placed.centity))
+        writeRecord(world, at.x, at.y, at.z, record(placed.name, placed.centity))
     }
 
     private fun record(name: String, centity: UUID?) = Json.encodeToString(Record(name, centity?.toString()))
@@ -703,10 +713,10 @@ internal class CustomBlocks(
         placed.centity = spawnCentity(world, at, def)
         put(blocks, at, placed)
         if (recorded(name)) {
-            platform.blocks.setRecord(world, at.x, at.y, at.z, record(name, placed.centity))
+            writeRecord(world, at.x, at.y, at.z, record(name, placed.centity))
         } else {
             // Known by its state: the chunk's legend says which block that is (and a record of what was there goes).
-            platform.blocks.setRecord(world, at.x, at.y, at.z, null)
+            writeRecord(world, at.x, at.y, at.z, null)
             val state = stateOf(name)
             val before = platform.blocks.legend(world, key.x, key.z)
             val legend = readLegend(before)
@@ -726,7 +736,7 @@ internal class CustomBlocks(
             ticking.remove(key)
         }
         gone(world, at, placed.centity)
-        platform.blocks.setRecord(world, at.x, at.y, at.z, null)
+        writeRecord(world, at.x, at.y, at.z, null)
         return placed
     }
 
@@ -1341,10 +1351,16 @@ internal class CustomBlocks(
             for (player in slowed.toList()) unslow(player)
             return
         }
-        mine()
-        watchLooks()
+        parts.time("world/blocks/mining") { mine() }
+        parts.time("world/blocks/looks") { watchLooks() }
         if (!usable) return
-        fall()
+        parts.time("world/blocks/falling") { fall() }
+        parts.time("world/blocks/ticks") { tickBlocks() }
+        parts.time("world/blocks/sweep") { sweep() }
+    }
+
+    /** Raises `tick` on each placed block due one, while its block's script listens. */
+    private fun tickBlocks() {
         val now = ticks()
         for (key in ticking.toList()) {
             val blocks = chunks[key] ?: continue
@@ -1362,16 +1378,79 @@ internal class CustomBlocks(
                 )
             }
         }
-        sweep()
     }
 
-    /** Looks at a few chunks a tick, each every so often: a block something else took away, or a paste, is noticed within seconds. */
+    /**
+     * Looks at a few chunks a tick, each every so often: a block something else took away, or a paste, is noticed
+     * within seconds. A chunk whose blocks, records and legend are as they were the last time it was looked at
+     * ([fingerprint]) is passed over: most never change, and reading one is the expensive part.
+     */
     private fun sweep() {
-        if (sweepQueue.isEmpty()) sweepQueue.addAll(chunks.keys)
+        if (sweepQueue.isEmpty()) {
+            sweepQueue.addAll(chunks.keys)
+            swept.keys.retainAll(chunks.keys)
+            legends.keys.retainAll(chunks.keys)
+        }
         repeat(SWEEP_PER_TICK) {
             val key = sweepQueue.removeFirstOrNull() ?: return
-            if (key in chunks) reconcile(key)
+            if (key !in chunks) return@repeat
+            val before = fingerprint(key)
+            if (before != null && swept[key] == before) return@repeat
+            parts.time("world/blocks/sweep/reconcile") { reconcile(key) }
+            // What it is now, after reconciling put it right.
+            val after = fingerprint(key)
+            if (after == null || key !in chunks) swept.remove(key) else swept[key] = after
         }
+    }
+
+    /**
+     * What a chunk's custom blocks are, summed up: the blocks that could be any carrier state, and its legend. Its
+     * records aren't read: only this writes them ([writeRecord]), which forgets the chunk was swept. Null when the
+     * server can't tell (the chunk is then always read).
+     */
+    private fun fingerprint(key: ChunkKey): Long? {
+        val legendText = parts.time("world/blocks/sweep/legend") { platform.blocks.legend(key.world, key.x, key.z) }
+        val states = printStates(key, legendText)
+        val blocks =
+            parts.time("world/blocks/sweep/fingerprint") { platform.blocks.fingerprint(key.world, key.x, key.z, states) } ?: return null
+        return blocks * 31 + legendText.hashCode()
+    }
+
+    /**
+     * The carrier states a chunk's fingerprint watches: today's, and every one a legend has said a block was
+     * placed in. More than any one chunk needs, which only makes it watch more, and the same list from chunk to
+     * chunk, so the server works out what to look for once ([BlockOps.fingerprint] keeps it by the list).
+     */
+    private fun printStates(key: ChunkKey, legendText: String?): List<String> {
+        val legend = legends[key]?.takeIf { it.first == legendText }?.second
+            ?: readLegend(legendText).keys.also { legends[key] = legendText to it }
+        val current = watched
+        if (current != null && current.first === byState && current.second.containsAll(legend)) return current.third
+        val states = LinkedHashSet(byState.keys).apply {
+            current?.takeIf { it.first === byState }?.second?.let(::addAll)
+            addAll(legend)
+        }
+        val list = states.toList()
+        watched = Triple(byState, states, list)
+        return list
+    }
+
+    /** What [printStates] watches now: under which states, as a set and as the list it hands out. */
+    private var watched: Triple<Map<String, String>, Set<String>, List<String>>? = null
+
+    /** Each swept chunk's legend, as text and the states it names, read again only when the text changes. */
+    private val legends = HashMap<ChunkKey, Pair<String?, Set<String>>>()
+
+    /** Stores a block's record, and forgets its chunk was swept: the sweep reads it again. */
+    private fun writeRecord(world: String, x: Int, y: Int, z: Int, json: String?): Boolean {
+        swept.remove(ChunkKey(world, x shr 4, z shr 4))
+        return platform.blocks.setRecord(world, x, y, z, json)
+    }
+
+    /** Stores a chunk's legend, and forgets the chunk was swept. */
+    private fun writeLegend(world: String, chunkX: Int, chunkZ: Int, json: String?): Boolean {
+        swept.remove(ChunkKey(world, chunkX, chunkZ))
+        return platform.blocks.setLegend(world, chunkX, chunkZ, json)
     }
 
     private companion object {

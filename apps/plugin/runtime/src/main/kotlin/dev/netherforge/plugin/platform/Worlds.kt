@@ -74,6 +74,13 @@ interface BlockOps {
      */
     fun find(world: String, chunkX: Int, chunkZ: Int, states: List<String>): ChunkGrid?
 
+    /**
+     * A number that changes whenever the blocks of a loaded chunk that could be any of [states] change: the same
+     * number means [find] would find the same, so the chunk needn't be read again. Much cheaper than [find]. Null
+     * when the server can't tell that way, or the chunk isn't loaded: then anything may have changed.
+     */
+    fun fingerprint(world: String, chunkX: Int, chunkZ: Int, states: List<String>): Long? = null
+
     /** The block state [state]'s hardness: how long the game takes to mine it. Null for a state the server doesn't have. */
     fun hardness(state: String): Double?
 

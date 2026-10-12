@@ -2,6 +2,9 @@ package dev.netherforge.plugin.paper
 
 import com.destroystokyo.paper.entity.ai.Goal
 import dev.netherforge.format.game.RegistryKey
+import dev.netherforge.plugin.platform.ChunkGrid
+import org.bukkit.World
+import org.bukkit.block.data.BlockData
 import org.bukkit.entity.Mob
 import org.bukkit.entity.Player
 import org.bukkit.inventory.EquipmentSlot
@@ -18,6 +21,21 @@ import java.util.ServiceLoader
  * ([load]). See the minecraft-versions skill.
  */
 interface PaperVersion {
+    /**
+     * Where in loaded chunk [chunkX], [chunkZ] of [world] any of [wanted] is: each one's number there, into
+     * [found] (x and z within the chunk). Reads only the sections whose palettes may hold one, straight from the
+     * server's own chunk, where the API would copy the whole chunk and read every block. False when this server
+     * can't be read that way, or the chunk isn't loaded: the caller then reads it through the API.
+     */
+    fun findStates(world: World, chunkX: Int, chunkZ: Int, wanted: Map<BlockData, Int>, found: ChunkGrid): Boolean = false
+
+    /**
+     * A number that changes whenever the sections of loaded chunk [chunkX], [chunkZ] that may hold any of [wanted]
+     * change (`BlockOps.fingerprint`): a hash of their palettes and raw storage, read straight from the server's
+     * chunk. Null when this server can't be read that way, or the chunk isn't loaded.
+     */
+    fun fingerprintStates(world: World, chunkX: Int, chunkZ: Int, wanted: Collection<BlockData>): Long? = null
+
     /**
      * Every goal's priority on [mob], keyed by the very [Goal] objects Paper's
      * `MobGoals` hands out for it. Paper's goal API has no priorities; they
