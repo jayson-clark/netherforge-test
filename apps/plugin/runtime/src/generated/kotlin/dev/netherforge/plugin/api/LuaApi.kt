@@ -860,6 +860,33 @@ interface NfTestApi {
      * simulated: read the result.
      */
     fun raise(caller: Caller, event: String, payload: LuaValue?): RaisedEvent
+
+    /**
+     * Clicks for a player as their client would, with what they hold filled in, and raises what the server
+     * would for it: `player_interact` (the held project item's `interact` first, and a click on one of the
+     * project's blocks reaches it), then, for a right click with an item that nothing cancelled,
+     * `player_use_item` (the project item's `use` first). A left click is the attack button at a block or
+     * the air: it doesn't break the block (`world:break_block` does that). A click on an entity is
+     * `nf.test.raise("player_interact_entity", ...)`. Nothing the game would then do (an item thrown, a
+     * door opened) is simulated: read what the handlers did.
+     */
+    fun click(caller: Caller, player: LuaHandle.Player, button: String, options: TestClickOptions?): Boolean
+
+    /**
+     * Lets go of the right button for a player who was using an item (drawing a bow, raising a shield,
+     * eating) before it finished, as their client would: raises `player_stop_using_item` with the item in
+     * their main hand, or in their off hand when the main one is empty. Like the server, it is heard by
+     * the player before `nf.on`. An error when both hands are empty.
+     */
+    fun release(caller: Caller, player: LuaHandle.Player, ticks: Long)
+
+    /**
+     * The movement keys a player holds now, as their client says when they change: raises `player_input`
+     * (the player's `input` first, then `nf.on`). A key left out is not held, so `nf.test.input(player,
+     * {})` lets go of every key. It only raises the event: the player doesn't move, sneak or sprint for
+     * it.
+     */
+    fun input(caller: Caller, player: LuaHandle.Player, held: TestInputKeys)
 }
 
 /**

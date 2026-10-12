@@ -123,6 +123,15 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   a surface (a shot bouncing off a sweep's hit), and
   `point:closest_on_segment(start, finish)` is the nearest point of a line
   segment (how far something is from a beam, with `distance`).
+- **`nf.test.click`, `release` and `input`.** A script test clicks for a
+  player as their client would, with what they hold filled in:
+  `nf.test.click(player, "right")` raises `player_interact` and then
+  `player_use_item` (through the held project item's `interact` and `use`)
+  and answers whether a handler let it through, with `hand`, `block` and
+  `face` options; `nf.test.release(player, ticks)` raises
+  `player_stop_using_item` for what they hold; and
+  `nf.test.input(player, { forward = true })` raises `player_input` with the
+  keys held. No more hand-built payloads for the commonest inputs.
 - **Temporary centities.** `nf.centities.spawn(kind, place, { temporary = true })`
   spawns one that's never saved (its entities aren't kept with their chunk)
   and is removed when the script that spawned it unloads, so a reload or a

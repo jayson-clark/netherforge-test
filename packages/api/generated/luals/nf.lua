@@ -1145,6 +1145,23 @@ function nf.test.player(name) end
 ---@return RaisedEvent # Whether a handler cancelled it, and the event as the handlers left it.
 function nf.test.raise(event, payload) end
 
+--- Clicks for a player as their client would, with what they hold filled in, and raises what the server would for it: `player_interact` (the held project item's `interact` first, and a click on one of the project's blocks reaches it), then, for a right click with an item that nothing cancelled, `player_use_item` (the project item's `use` first). A left click is the attack button at a block or the air: it doesn't break the block (`world:break_block` does that). A click on an entity is `nf.test.raise("player_interact_entity", ...)`. Nothing the game would then do (an item thrown, a door opened) is simulated: read what the handlers did.
+---@param player Player Who clicks: one online, from `nf.test.player`.
+---@param button "left"|"right" Which button: `"right"` uses what they hold.
+---@param options? TestClickOptions Which hand, and the block clicked. Leave it out for the main hand at the air.
+---@return boolean # `true` when it went through, `false` when a handler cancelled it.
+function nf.test.click(player, button, options) end
+
+--- Lets go of the right button for a player who was using an item (drawing a bow, raising a shield, eating) before it finished, as their client would: raises `player_stop_using_item` with the item in their main hand, or in their off hand when the main one is empty. Like the server, it is heard by the player before `nf.on`. An error when both hands are empty.
+---@param player Player Who lets go: one online.
+---@param ticks integer How long they held it, in ticks: a bow drawn for 20 is fully drawn. 0 or more.
+function nf.test.release(player, ticks) end
+
+--- The movement keys a player holds now, as their client says when they change: raises `player_input` (the player's `input` first, then `nf.on`). A key left out is not held, so `nf.test.input(player, {})` lets go of every key. It only raises the event: the player doesn't move, sneak or sprint for it.
+---@param player Player Whose keys: one online.
+---@param held TestInputKeys The keys held down, each `true`.
+function nf.test.input(player, held) end
+
 --- One spawned centity: `this` in the centity's script, and what `nf.centities.spawn`, `nf.centities.get` and `nf.centities.all` return. A handle stays valid as long as the instance exists; after it's removed its methods return `nil` or `false` rather than erroring.
 --- A `data()` table, `Item.data` and `nf.json` can keep one: it is saved as what identifies it and comes back as a handle.
 ---@class Centity
@@ -5877,6 +5894,22 @@ function Event:uncancel() end
 ---@class NoiseOptions
 ---@field seed integer? Which noise: each seed is a different pattern. Default 0.
 ---@field scale number? What the coordinates are multiplied by first: smaller is smoother and wider (0.05 changes over about 20 blocks). Default 1.
+
+--- How `nf.test.click` clicks. Every key is optional; a key that isn't one of these is an error.
+---@class TestClickOptions
+---@field hand "main_hand"|"off_hand"? Which hand clicks, and whose item is used. Default `"main_hand"`.
+---@field block Block? The block clicked, which must be in a loaded chunk. Default: none, a click at the air.
+---@field face "up"|"down"|"north"|"south"|"east"|"west"? Which face of `block` was clicked. Default `"up"`; only with `block`.
+
+--- The keys `nf.test.input` holds down: each `true` is held, and one left out (or `false`) isn't. A key that isn't one of these is an error.
+---@class TestInputKeys
+---@field forward boolean? Forward (W).
+---@field backward boolean? Back (S).
+---@field left boolean? Left (A).
+---@field right boolean? Right (D).
+---@field jump boolean? Jump (space).
+---@field sneak boolean? Sneak (shift).
+---@field sprint boolean? Sprint (control).
 
 --- What `nf.test.raise` gives back.
 ---@class RaisedEvent

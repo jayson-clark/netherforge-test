@@ -3503,6 +3503,71 @@
             }
           ],
           "example": "local alex = nf.test.player(\"Alex\")\nlocal result = nf.test.raise(\"player_chat\", { player = alex, message = \"hello\", format = \"<message>\" })\nassert(not result.cancelled)\nassert(result.event.message == \"hello\")"
+        },
+        {
+          "name": "click",
+          "doc": "Clicks for a player as their client would, with what they hold filled in, and raises what the server would for it: `player_interact` (the held project item's `interact` first, and a click on one of the project's blocks reaches it), then, for a right click with an item that nothing cancelled, `player_use_item` (the project item's `use` first). A left click is the attack button at a block or the air: it doesn't break the block (`world:break_block` does that). A click on an entity is `nf.test.raise(\"player_interact_entity\", ...)`. Nothing the game would then do (an item thrown, a door opened) is simulated: read what the handlers did.",
+          "params": [
+            {
+              "name": "player",
+              "type": "Player",
+              "doc": "Who clicks: one online, from `nf.test.player`."
+            },
+            {
+              "name": "button",
+              "type": "\"left\"|\"right\"",
+              "doc": "Which button: `\"right\"` uses what they hold."
+            },
+            {
+              "name": "options",
+              "type": "TestClickOptions",
+              "doc": "Which hand, and the block clicked. Leave it out for the main hand at the air.",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`true` when it went through, `false` when a handler cancelled it."
+            }
+          ],
+          "example": "local alex = nf.test.player(\"Alex\")\nalex:set_held_item({ kind = \"minecraft:ender_pearl\" })\nassert(nf.test.click(alex, \"right\"))"
+        },
+        {
+          "name": "release",
+          "doc": "Lets go of the right button for a player who was using an item (drawing a bow, raising a shield, eating) before it finished, as their client would: raises `player_stop_using_item` with the item in their main hand, or in their off hand when the main one is empty. Like the server, it is heard by the player before `nf.on`. An error when both hands are empty.",
+          "params": [
+            {
+              "name": "player",
+              "type": "Player",
+              "doc": "Who lets go: one online."
+            },
+            {
+              "name": "ticks",
+              "type": "integer",
+              "doc": "How long they held it, in ticks: a bow drawn for 20 is fully drawn. 0 or more."
+            }
+          ],
+          "returns": [],
+          "example": "local alex = nf.test.player(\"Alex\")\nalex:set_held_item({ kind = \"minecraft:bow\" })\nnf.test.click(alex, \"right\")\nnf.test.release(alex, 20)"
+        },
+        {
+          "name": "input",
+          "doc": "The movement keys a player holds now, as their client says when they change: raises `player_input` (the player's `input` first, then `nf.on`). A key left out is not held, so `nf.test.input(player, {})` lets go of every key. It only raises the event: the player doesn't move, sneak or sprint for it.",
+          "params": [
+            {
+              "name": "player",
+              "type": "Player",
+              "doc": "Whose keys: one online."
+            },
+            {
+              "name": "held",
+              "type": "TestInputKeys",
+              "doc": "The keys held down, each `true`."
+            }
+          ],
+          "returns": [],
+          "example": "local alex = nf.test.player(\"Alex\")\nnf.test.input(alex, { forward = true, jump = true })"
         }
       ]
     },
@@ -19885,6 +19950,72 @@
           "name": "scale",
           "type": "number?",
           "doc": "What the coordinates are multiplied by first: smaller is smoother and wider (0.05 changes over about 20 blocks). Default 1."
+        }
+      ]
+    },
+    {
+      "name": "TestClickOptions",
+      "doc": "How `nf.test.click` clicks. Every key is optional; a key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "hand",
+          "type": "\"main_hand\"|\"off_hand\"?",
+          "doc": "Which hand clicks, and whose item is used. Default `\"main_hand\"`."
+        },
+        {
+          "name": "block",
+          "type": "Block?",
+          "doc": "The block clicked, which must be in a loaded chunk. Default: none, a click at the air."
+        },
+        {
+          "name": "face",
+          "type": "\"up\"|\"down\"|\"north\"|\"south\"|\"east\"|\"west\"?",
+          "doc": "Which face of `block` was clicked. Default `\"up\"`; only with `block`."
+        }
+      ]
+    },
+    {
+      "name": "TestInputKeys",
+      "doc": "The keys `nf.test.input` holds down: each `true` is held, and one left out (or `false`) isn't. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "forward",
+          "type": "boolean?",
+          "doc": "Forward (W)."
+        },
+        {
+          "name": "backward",
+          "type": "boolean?",
+          "doc": "Back (S)."
+        },
+        {
+          "name": "left",
+          "type": "boolean?",
+          "doc": "Left (A)."
+        },
+        {
+          "name": "right",
+          "type": "boolean?",
+          "doc": "Right (D)."
+        },
+        {
+          "name": "jump",
+          "type": "boolean?",
+          "doc": "Jump (space)."
+        },
+        {
+          "name": "sneak",
+          "type": "boolean?",
+          "doc": "Sneak (shift)."
+        },
+        {
+          "name": "sprint",
+          "type": "boolean?",
+          "doc": "Sprint (control)."
         }
       ]
     },

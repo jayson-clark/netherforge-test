@@ -2889,6 +2889,30 @@ Which noise `nf.random.noise2` and `noise3` give. A key that isn't one of these 
 | `seed` | `integer?` | Which noise: each seed is a different pattern. Default 0. |
 | `scale` | `number?` | What the coordinates are multiplied by first: smaller is smoother and wider (0.05 changes over about 20 blocks). Default 1. |
 
+## TestClickOptions
+
+How `nf.test.click` clicks. Every key is optional; a key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `hand` | `"main_hand"\|"off_hand"?` | Which hand clicks, and whose item is used. Default `"main_hand"`. |
+| `block` | `Block?` | The block clicked, which must be in a loaded chunk. Default: none, a click at the air. |
+| `face` | `"up"\|"down"\|"north"\|"south"\|"east"\|"west"?` | Which face of `block` was clicked. Default `"up"`; only with `block`. |
+
+## TestInputKeys
+
+The keys `nf.test.input` holds down: each `true` is held, and one left out (or `false`) isn't. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `forward` | `boolean?` | Forward (W). |
+| `backward` | `boolean?` | Back (S). |
+| `left` | `boolean?` | Left (A). |
+| `right` | `boolean?` | Right (D). |
+| `jump` | `boolean?` | Jump (space). |
+| `sneak` | `boolean?` | Sneak (shift). |
+| `sprint` | `boolean?` | Sprint (control). |
+
 ## RaisedEvent
 
 What `nf.test.raise` gives back.

@@ -6761,6 +6761,18 @@ namespaces["nf.test"] = function(scope, ns)
   function ns.raise(event, payload)
     return prim["nf.test.raise"](scope, event, payload)
   end
+
+  function ns.click(player, button, options)
+    return prim["nf.test.click"](scope, player, button, options)
+  end
+
+  function ns.release(player, ticks)
+    prim["nf.test.release"](scope, player, ticks)
+  end
+
+  function ns.input(player, held)
+    prim["nf.test.input"](scope, player, held)
+  end
 end
 
 return {
