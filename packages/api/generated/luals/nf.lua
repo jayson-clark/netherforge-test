@@ -2900,6 +2900,13 @@ function World:max_height() end
 ---@return Block?
 function World:block(position) end
 
+--- Every block in a box, read in one call: for code that needs many blocks at once (a mob's collision, a flood fill of a room), where a `world:block` and a `:kind()` per block would cost each one. The corners are floored to the blocks they're in and both are included, in any order. What each block is given as is `options.what`. At most 32,768 blocks (32 × 32 × 32): a bigger box is an error. `nil` when any of the box is in a chunk that isn't loaded, or the world has gone.
+---@param from Vec3 One corner: any point in its block.
+---@param to Vec3 The opposite corner, included: any point in its block.
+---@param options? BlockBoxOptions
+---@return BlockBox?
+function World:blocks(from, to, options) end
+
 --- Changes the block at a position. A block state the server doesn't have (an unknown block, property or value) is an error. Blocks in chunks that aren't loaded can't be read or changed: that answers `nil` or `false`, and never loads the chunk (`world:load_chunk` does).
 ---@param position Vec3 Any point in the block.
 ---@param state string A block state: `"minecraft:stone"`, `"minecraft:oak_stairs[facing=east]"`. Properties left out take their defaults.
@@ -5337,6 +5344,19 @@ function Event:uncancel() end
 ---@field mirror "none"|"left_right"|"front_back"? Whether it's mirrored first: `"left_right"` flips it along z, `"front_back"` along x. Default `"none"`.
 ---@field integrity number? How much of it is placed, 0 to 1: each block is kept with this chance. Default 1: all of it.
 ---@field entities boolean? Whether the entities saved with it are placed too. Default `true`.
+
+--- What `world:blocks` gives for each block. A key that isn't one of these is an error.
+---@class BlockBoxOptions
+---@field what "kind"|"solid"|"class"? What a block is given as: `"kind"` its block id (`"minecraft:stone"`), `"solid"` whether it's solid, as `block:is_solid()` says, or `"class"` a number, `0` for a block nothing stands in the way of (air, grass, a torch), `1` for water or lava, `2` for a solid one. Default `"kind"`.
+---@field custom boolean? Whether a block of the project's own gives its id (`"wooden_chair"`, as `block:custom():id()` says) in place of what `what` would make of the note block it's held as. Default `false`.
+
+--- What `world:blocks` read: each block of the box, in one list, and the box's size and corner.
+---@class BlockBox
+---@field cells (string|integer|boolean)[] Each block, x fastest, then z, then y: the block `x`, `y`, `z` from the corner is at `1 + x + size_x * (z + size_z * y)`. What each is depends on `options.what` (and `options.custom`).
+---@field size_x integer How many blocks the box is along x.
+---@field size_y integer How many blocks the box is along y.
+---@field size_z integer How many blocks the box is along z.
+---@field corner Vec3 The block the box starts from: the lowest x, y and z of its corners, floored.
 
 --- How a block is changed. A key that isn't one of these is an error.
 ---@class BlockSetOptions

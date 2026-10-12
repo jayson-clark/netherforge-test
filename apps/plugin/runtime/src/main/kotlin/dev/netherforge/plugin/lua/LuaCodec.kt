@@ -7,6 +7,7 @@ import dev.netherforge.plugin.item.ItemMatch
 import dev.netherforge.plugin.platform.ItemData
 import party.iroiro.luajava.Lua
 import party.iroiro.luajava.lua54.Lua54Natives
+import java.util.IdentityHashMap
 
 /**
  * How one node of the spec's type grammar crosses between Lua and Kotlin:
@@ -377,11 +378,45 @@ class LuaList<T>(private val item: LuaCodec<T>) : LuaCodec<List<T>> {
     override fun push(call: LuaCall, value: List<T>) {
         val lua = call.lua
         lua.createTable(value.size, 0)
-        value.forEachIndexed { k, it ->
-            lua.checkStack(2)
-            item.push(call, it)
-            lua.rawSetI(-2, k + 1)
+        if (value.size < SHARED_FROM) {
+            value.forEachIndexed { k, it ->
+                lua.checkStack(2)
+                item.push(call, it)
+                lua.rawSetI(-2, k + 1)
+            }
+            return
         }
+        // A long list repeats its values (each block of a box is one of a few kinds): a string, the one value
+        // that costs to push, is pushed once and copied from then on. Only a string: a table pushed twice
+        // would be one table in two places.
+        val list = lua.top
+        lua.createTable(0, 0)
+        val strings = lua.top
+        val seen = IdentityHashMap<Any, Int>()
+        value.forEachIndexed { k, it ->
+            lua.checkStack(3)
+            val kept = if (it != null) seen[it] else null
+            if (kept != null) {
+                lua.rawGetI(strings, kept)
+            } else {
+                item.push(call, it)
+                if (it != null && seen.size < MAX_SHARED && lua.type(-1) == Lua.LuaType.STRING) {
+                    seen[it] = seen.size + 1
+                    lua.pushValue(-1)
+                    lua.rawSetI(strings, seen.size)
+                }
+            }
+            lua.rawSetI(list, k + 1)
+        }
+        lua.pop(1)
+    }
+
+    private companion object {
+        /** How long a list is before its strings are pushed once each. */
+        const val SHARED_FROM = 64
+
+        /** How many different strings it keeps to copy: one list of mostly different strings gains nothing. */
+        const val MAX_SHARED = 1024
     }
 }
 

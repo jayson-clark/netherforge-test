@@ -2548,6 +2548,15 @@ interface WorldApi {
     fun block(self: LuaHandle.World, position: Vec3): LuaHandle.Block?
 
     /**
+     * Every block in a box, read in one call: for code that needs many blocks at once (a mob's collision,
+     * a flood fill of a room), where a `world:block` and a `:kind()` per block would cost each one. The
+     * corners are floored to the blocks they're in and both are included, in any order. What each block is
+     * given as is `options.what`. At most 32,768 blocks (32 × 32 × 32): a bigger box is an error. `nil`
+     * when any of the box is in a chunk that isn't loaded, or the world has gone.
+     */
+    fun blocks(self: LuaHandle.World, from: Vec3, to: Vec3, options: BlockBoxOptions?): BlockBox?
+
+    /**
      * Changes the block at a position. A block state the server doesn't have (an unknown block, property
      * or value) is an error. Blocks in chunks that aren't loaded can't be read or changed: that answers
      * `nil` or `false`, and never loads the chunk (`world:load_chunk` does).

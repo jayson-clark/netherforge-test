@@ -136,7 +136,8 @@ Where a shift-click from the player's own inventory goes: into the slots of this
 
 ```lua
 nf.on("menu_open", function(event)
-  local trinkets = event.player:storage("trinkets", 4)
+  -- nil while they're offline, which a player opening a menu never is.
+  local trinkets = assert(event.player:storage("trinkets", 4))
   this:slot(10):bind(trinkets, 0)
   this:shift_into(trinkets)
 end)

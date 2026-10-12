@@ -199,6 +199,18 @@ export const worldClass: LuaClass = {
       example: 'local below = this:world():block(this:position() - vec3(0, 1, 0))',
     },
     {
+      name: 'blocks',
+      doc: "Every block in a box, read in one call: for code that needs many blocks at once (a mob's collision, a flood fill of a room), where a `world:block` and a `:kind()` per block would cost each one. The corners are floored to the blocks they're in and both are included, in any order. What each block is given as is `options.what`. At most 32,768 blocks (32 × 32 × 32): a bigger box is an error. `nil` when any of the box is in a chunk that isn't loaded, or the world has gone.",
+      params: [
+        { name: 'from', type: 'Vec3', doc: 'One corner: any point in its block.' },
+        { name: 'to', type: 'Vec3', doc: 'The opposite corner, included: any point in its block.' },
+        { name: 'options', type: 'BlockBoxOptions', doc: '', optional: true },
+      ],
+      returns: [{ type: 'BlockBox?' }],
+      example:
+        'local box = world:blocks(vec3(0, 60, 0), vec3(15, 70, 15), { what = "class" })\nif box then\n  -- A block within the box, counted from its corner.\n  local function at(x, y, z)\n    return box.cells[1 + x + box.size_x * (z + box.size_z * y)]\n  end\n  if at(0, 0, 0) == 2 then log("solid") end\nend',
+    },
+    {
       name: 'set_block',
       doc: `Changes the block at a position. A block state the server doesn't have (an unknown block, property or value) is an error. ${UNLOADED}`,
       params: [
@@ -947,6 +959,41 @@ export const worldShapes: LuaClass[] = [
         name: 'entities',
         type: 'boolean?',
         doc: 'Whether the entities saved with it are placed too. Default `true`.',
+      },
+    ],
+  ),
+  shape(
+    'BlockBoxOptions',
+    "What `world:blocks` gives for each block. A key that isn't one of these is an error.",
+    [
+      {
+        name: 'what',
+        type: '"kind"|"solid"|"class"?',
+        doc: 'What a block is given as: `"kind"` its block id (`"minecraft:stone"`), `"solid"` whether it\'s solid, as `block:is_solid()` says, or `"class"` a number, `0` for a block nothing stands in the way of (air, grass, a torch), `1` for water or lava, `2` for a solid one. Default `"kind"`.',
+      },
+      {
+        name: 'custom',
+        type: 'boolean?',
+        doc: 'Whether a block of the project\'s own gives its id (`"wooden_chair"`, as `block:custom():id()` says) in place of what `what` would make of the note block it\'s held as. Default `false`.',
+      },
+    ],
+  ),
+  shape(
+    'BlockBox',
+    "What `world:blocks` read: each block of the box, in one list, and the box's size and corner.",
+    [
+      {
+        name: 'cells',
+        type: '(string|integer|boolean)[]',
+        doc: 'Each block, x fastest, then z, then y: the block `x`, `y`, `z` from the corner is at `1 + x + size_x * (z + size_z * y)`. What each is depends on `options.what` (and `options.custom`).',
+      },
+      { name: 'size_x', type: 'integer', doc: 'How many blocks the box is along x.' },
+      { name: 'size_y', type: 'integer', doc: 'How many blocks the box is along y.' },
+      { name: 'size_z', type: 'integer', doc: 'How many blocks the box is along z.' },
+      {
+        name: 'corner',
+        type: 'Vec3',
+        doc: 'The block the box starts from: the lowest x, y and z of its corners, floored.',
       },
     ],
   ),

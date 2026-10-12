@@ -4057,6 +4057,72 @@ data class StructurePlaceOptions(val rotation: Long? = null, val mirror: String?
     }
 }
 
+/** What `world:blocks` gives for each block. A key that isn't one of these is an error. */
+data class BlockBoxOptions(val what: String? = null, val custom: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<BlockBoxOptions>("BlockBoxOptions") {
+        val whatCodec = LuaOptional(LuaChoice(listOf("kind", "solid", "class")))
+        val customCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "what" to whatCodec,
+            "custom" to customCodec
+        )
+
+        override fun read(fields: ShapeReader) = BlockBoxOptions(
+            what = fields.field("what", whatCodec),
+            custom = fields.field("custom", customCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: BlockBoxOptions) {
+            fields.field("what", value.what, whatCodec)
+            fields.field("custom", value.custom, customCodec)
+        }
+    }
+}
+
+/** What `world:blocks` read: each block of the box, in one list, and the box's size and corner. */
+data class BlockBox(val cells: List<StringOrIntegerOrBoolean>, val sizeX: Long, val sizeY: Long, val sizeZ: Long, val corner: Vec3) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<BlockBox>("BlockBox") {
+        val cellsCodec = LuaList(StringOrIntegerOrBoolean.Codec)
+        val sizeXCodec = LuaCodecs.INTEGER
+        val sizeYCodec = LuaCodecs.INTEGER
+        val sizeZCodec = LuaCodecs.INTEGER
+        val cornerCodec = LuaCodecs.VEC3
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "cells" to cellsCodec,
+            "size_x" to sizeXCodec,
+            "size_y" to sizeYCodec,
+            "size_z" to sizeZCodec,
+            "corner" to cornerCodec
+        )
+
+        override fun read(fields: ShapeReader) = BlockBox(
+            cells = fields.field("cells", cellsCodec),
+            sizeX = fields.field("size_x", sizeXCodec),
+            sizeY = fields.field("size_y", sizeYCodec),
+            sizeZ = fields.field("size_z", sizeZCodec),
+            corner = fields.field("corner", cornerCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: BlockBox) {
+            fields.field("cells", value.cells, cellsCodec)
+            fields.field("size_x", value.sizeX, sizeXCodec)
+            fields.field("size_y", value.sizeY, sizeYCodec)
+            fields.field("size_z", value.sizeZ, sizeZCodec)
+            fields.field("corner", value.corner, cornerCodec)
+        }
+    }
+}
+
 /** How a block is changed. A key that isn't one of these is an error. */
 data class BlockSetOptions(val update: Boolean? = null) : LuaShape {
     override fun push(call: LuaCall) = Codec.push(call, this)

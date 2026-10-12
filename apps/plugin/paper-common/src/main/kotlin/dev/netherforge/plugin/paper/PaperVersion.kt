@@ -37,6 +37,23 @@ interface PaperVersion {
     fun fingerprintStates(world: World, chunkX: Int, chunkZ: Int, wanted: Collection<BlockData>): Long? = null
 
     /**
+     * Every block from [x0], [y0], [z0] to [x1], [y1], [z1] (both included, the first the lowest) into [cells], as
+     * an index into [states], which this fills: x fastest, then z, then y, read straight from the server's
+     * chunks. False when any of it is in a chunk that isn't loaded, or this server can't be read that way.
+     */
+    fun readBox(
+        world: World,
+        x0: Int,
+        y0: Int,
+        z0: Int,
+        x1: Int,
+        y1: Int,
+        z1: Int,
+        cells: IntArray,
+        states: MutableList<BlockData>
+    ): Boolean = false
+
+    /**
      * Every goal's priority on [mob], keyed by the very [Goal] objects Paper's
      * `MobGoals` hands out for it. Paper's goal API has no priorities; they
      * live on the server's own goal selectors.

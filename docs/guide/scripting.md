@@ -226,6 +226,12 @@ does a little every tick never runs out.
 
 The budget is counted every 1,000 instructions, so it's exact to within that.
 
+A call nested in another (the handlers of a custom event you emit, the script
+of a centity you spawn) runs on a budget of its own, and what it ran counts
+against the caller's too; the work NetherForge does around it (delivering the
+event, setting the script up) doesn't. Functions NetherForge implements count
+only as the call to them, however much they do.
+
 For long jobs, do a slice per tick. `nf.instructions_left()` says roughly how many
 instructions this call has left:
 
@@ -313,6 +319,11 @@ What tends to cost:
   is every `Vec3`; keep what you can between calls.
 - **`player_move`.** It's raised per block a player moves, only while some
   script listens. Stop listening when you don't need it.
+- **Reading many blocks.** `world:block(position):kind()` is a call and a
+  handle per block. For a box of them (what a mob collides with, a room to
+  flood-fill) read them all with one `world:blocks(from, to, options)`: about
+  a hundred instructions for the whole box, as kinds, as solid or not, or as
+  classes (air, liquid, solid).
 
 ## `require`
 

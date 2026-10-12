@@ -75,6 +75,31 @@ interface BlockOps {
     fun find(world: String, chunkX: Int, chunkZ: Int, states: List<String>): ChunkGrid?
 
     /**
+     * Every block from [x0], [y0], [z0] to [x1], [y1], [z1] (both included, the first the lowest), as an index into
+     * the states the box holds: x fastest, then z, then y. Null when any of it is in a chunk that isn't loaded, or
+     * the world isn't there. This reads block by block; a server reads the chunks' sections at once.
+     */
+    fun box(world: String, x0: Int, y0: Int, z0: Int, x1: Int, y1: Int, z1: Int): BlockBoxRead? {
+        val states = ArrayList<BoxState>()
+        val index = HashMap<BoxState, Int>()
+        val cells = IntArray((x1 - x0 + 1) * (y1 - y0 + 1) * (z1 - z0 + 1))
+        var i = 0
+        for (y in y0..y1) {
+            for (z in z0..z1) {
+                for (x in x0..x1) {
+                    val block = get(world, x, y, z) ?: return null
+                    val state = BoxState(block.state, block.solid, block.liquid)
+                    cells[i++] = index.getOrPut(state) {
+                        states += state
+                        states.size - 1
+                    }
+                }
+            }
+        }
+        return BlockBoxRead(states, cells)
+    }
+
+    /**
      * A number that changes whenever the blocks of a loaded chunk that could be any of [states] change: the same
      * number means [find] would find the same, so the chunk needn't be read again. Much cheaper than [find]. Null
      * when the server can't tell that way, or the chunk isn't loaded: then anything may have changed.
@@ -174,6 +199,12 @@ interface BlockOps {
 
 /** A custom block the server remembers at a position: [json] is what the runtime stored with [BlockOps.setRecord]. */
 data class BlockRecord(val x: Int, val y: Int, val z: Int, val json: String)
+
+/** What [BlockOps.box] read: each block an index into [states], x fastest, then z, then y. */
+class BlockBoxRead(val states: List<BoxState>, val cells: IntArray)
+
+/** One state a box holds (canonical), and whether it's solid and whether it's water or lava, as [BlockSnapshot] says. */
+data class BoxState(val state: String, val solid: Boolean, val liquid: Boolean)
 
 /** What a ray cast through the world's blocks hit: the block, where, and the normal of the face. */
 data class BlockHit(val x: Int, val y: Int, val z: Int, val position: Vec3, val normal: Vec3)

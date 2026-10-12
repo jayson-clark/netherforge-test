@@ -1,4 +1,5 @@
 # Instructions what scripts do all the time costs them (ApiCostTest). UPDATE_GOLDEN=1 rewrites it.
+6 × 6 × 6 blocks, each world:block():is_solid()	20518
 a tick handler, before its first line	12
 block:kind()	19
 centity:data().hp	16
@@ -43,3 +44,4 @@ v:distance(w)	41
 v:length()	31
 vec3(x, y, z)	25
 world:block(v)	24
+world:blocks, 6 × 6 × 6 as classes	86

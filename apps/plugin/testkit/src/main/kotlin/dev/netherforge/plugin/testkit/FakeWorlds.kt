@@ -294,11 +294,13 @@ class FakeBlocks(private val platform: FakePlatform) : BlockOps {
     override fun get(world: String, x: Int, y: Int, z: Int): BlockSnapshot? {
         if (!loaded(world, x, z)) return null
         val state = platform.worlds.state(world, x, y, z)
+        val liquid = state.substringBefore('[') == "minecraft:water" || state.substringBefore('[') == "minecraft:lava"
         return BlockSnapshot(
             state,
             state == "minecraft:air",
-            platform.worlds.shape(state).isNotEmpty(),
-            false,
+            // As the server says: water and lava are never solid.
+            !liquid && platform.worlds.shape(state).isNotEmpty(),
+            liquid,
             platform.worlds.lights[BlockAt(world, x, y, z)] ?: platform.worlds.defaultLight,
             15
         )

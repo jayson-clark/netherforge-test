@@ -367,6 +367,53 @@ class BlockTest {
     }
 
     @Test
+    fun `world blocks reads a box in one call, as kinds, solids or classes, the project's own by id`() {
+        server(
+            mapOf(
+                "modules/t/init.lua" to """
+                    local world = nf.worlds.default()
+                    world:set_block(vec3(0, 70, 0), "minecraft:stone")
+                    world:set_block(vec3(1, 70, 0), "minecraft:water")
+                    world:set_block(vec3(1, 71, 0), "minecraft:air")
+                    nf.blocks.get("ore"):place(world:block(vec3(0, 71, 0)):location())
+                    nf.commands.register("box", function()
+                      -- Corners in any order, any point in their blocks.
+                      local box = world:blocks(vec3(1.9, 71.5, 0.2), vec3(0, 70, 0))
+                      log(box.size_x, box.size_y, box.size_z, tostring(box.corner), #box.cells)
+                      log(box.cells[1], box.cells[2], box.cells[3], box.cells[4])
+                      local classes = world:blocks(vec3(0, 70, 0), vec3(1, 71, 0), { what = "class" })
+                      log(classes.cells[1], classes.cells[2], classes.cells[4])
+                      local solid = world:blocks(vec3(0, 70, 0), vec3(1, 71, 0), { what = "solid" })
+                      log(solid.cells[1], solid.cells[2], solid.cells[4])
+                      local custom = world:blocks(vec3(0, 70, 0), vec3(1, 71, 0), { what = "class", custom = true })
+                      log(custom.cells[1], custom.cells[3])
+                      local ok, err = pcall(world.blocks, world, vec3(0, 0, 0), vec3(32, 31, 31))
+                      log(ok, err:find("more than the 32768", 1, true) ~= nil)
+                      log(tostring(world:blocks(vec3(80, 64, 80), vec3(81, 64, 81))))
+                    end)
+                """.trimIndent()
+            )
+        ).use { server ->
+            server.platform.worlds.unloaded += Triple("world", 5, 5)
+            server.platform.commands.runConsole("box")
+            assertEquals(emptyList(), server.errors.map { it.message })
+            assertEquals(
+                listOf(
+                    "2\t2\t1\tvec3(0, 70, 0)\t4",
+                    // x fastest, then z, then y: (0,70,0), (1,70,0), then (0,71,0), (1,71,0).
+                    "minecraft:stone\tminecraft:water\tminecraft:note_block\tminecraft:air",
+                    "2\t1\t0",
+                    "true\tfalse\tfalse",
+                    "2\tore",
+                    "false\ttrue",
+                    "nil"
+                ),
+                server.logs
+            )
+        }
+    }
+
+    @Test
     fun `the sweep passes over a chunk nothing changed, and notices a block something else took away`() {
         server(
             mapOf(

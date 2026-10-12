@@ -58,6 +58,48 @@ class Version : PaperVersion {
         return print
     }
 
+    override fun readBox(
+        world: World,
+        x0: Int,
+        y0: Int,
+        z0: Int,
+        x1: Int,
+        y1: Int,
+        z1: Int,
+        cells: IntArray,
+        states: MutableList<BlockData>
+    ): Boolean {
+        val level = (world as CraftWorld).handle
+        val sizeX = x1 - x0 + 1
+        val sizeZ = z1 - z0 + 1
+        val numbers = IdentityHashMap<BlockState, Int>()
+        val outside = Blocks.VOID_AIR.defaultBlockState()
+        for (chunkX in (x0 shr 4)..(x1 shr 4)) {
+            for (chunkZ in (z0 shr 4)..(z1 shr 4)) {
+                val chunk = level.chunkSource.getChunkNow(chunkX, chunkZ) ?: return false
+                val sections = chunk.sections
+                val fromX = maxOf(x0, chunkX shl 4)
+                val toX = minOf(x1, (chunkX shl 4) + 15)
+                val fromZ = maxOf(z0, chunkZ shl 4)
+                val toZ = minOf(z1, (chunkZ shl 4) + 15)
+                for (y in y0..y1) {
+                    val section = sections.getOrNull(chunk.getSectionIndex(y))
+                    for (z in fromZ..toZ) {
+                        var i = (fromX - x0) + sizeX * ((z - z0) + sizeZ * (y - y0))
+                        for (x in fromX..toX) {
+                            val state = section?.getBlockState(x and 15, y and 15, z and 15) ?: outside
+                            cells[i++] = numbers.getOrPut(state) {
+                                states += CraftBlockData.createData(state)
+                                states.size - 1
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return true
+    }
+
     /** The server's own states of [wanted], by identity: worked out once for the same collection, as callers ask again and again. */
     private fun serverStates(wanted: Collection<BlockData>): Set<BlockState> {
         lastStates?.takeIf { it.first === wanted }?.let { return it.second }

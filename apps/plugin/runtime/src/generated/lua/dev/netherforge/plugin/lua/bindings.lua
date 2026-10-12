@@ -3014,6 +3014,20 @@ function World.block(self, position)
   return prim["World.block"](self_key, position[1], position[2], position[3])
 end
 
+function World.blocks(self, from, to, options)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  if genuine_mt(from) ~= Vec3_mt then
+    want_vec3(from, "from")
+  end
+  if genuine_mt(to) ~= Vec3_mt then
+    want_vec3(to, "to")
+  end
+  return prim["World.blocks"](self_key, from[1], from[2], from[3], to[1], to[2], to[3], options)
+end
+
 function World.set_block(self, position, state, options)
   local self_key = ids[self]
   if self_key == nil or not World_is[class_of(self)] then

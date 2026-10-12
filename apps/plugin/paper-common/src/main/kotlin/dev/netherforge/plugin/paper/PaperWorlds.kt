@@ -13,12 +13,14 @@ import dev.netherforge.format.particle.DustTransitionData
 import dev.netherforge.format.particle.SpawnData
 import dev.netherforge.format.project.SpawnCategory
 import dev.netherforge.plugin.platform.BiomeSearch
+import dev.netherforge.plugin.platform.BlockBoxRead
 import dev.netherforge.plugin.platform.BlockHit
 import dev.netherforge.plugin.platform.BlockOps
 import dev.netherforge.plugin.platform.BlockRecord
 import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.BlockSnapshot
 import dev.netherforge.plugin.platform.BlockVector
+import dev.netherforge.plugin.platform.BoxState
 import dev.netherforge.plugin.platform.ChunkGrid
 import dev.netherforge.plugin.platform.GameRuleType
 import dev.netherforge.plugin.platform.ItemData
@@ -439,6 +441,28 @@ class PaperBlocks(
             }
         }
         return found
+    }
+
+    override fun box(world: String, x0: Int, y0: Int, z0: Int, x1: Int, y1: Int, z1: Int): BlockBoxRead? {
+        val bukkit = Bukkit.getWorld(world) ?: return null
+        val cells = IntArray((x1 - x0 + 1) * (y1 - y0 + 1) * (z1 - z0 + 1))
+        val read = ArrayList<org.bukkit.block.data.BlockData>()
+        if (version?.readBox(bukkit, x0, y0, z0, x1, y1, z1, cells, read) != true) {
+            // Not this way: block by block, which says null for an unloaded chunk.
+            for (x in (x0 shr 4)..(x1 shr 4)) for (z in (z0 shr 4)..(z1 shr 4)) if (!bukkit.isChunkLoaded(x, z)) return null
+            return super.box(world, x0, y0, z0, x1, y1, z1)
+        }
+        return BlockBoxRead(
+            read.map { data ->
+                val text = data.asString
+                BoxState(
+                    BlockState.parse(text)?.toString() ?: text,
+                    solid = data.material.isSolid,
+                    liquid = data.material == Material.WATER || data.material == Material.LAVA
+                )
+            },
+            cells
+        )
     }
 
     override fun fingerprint(world: String, chunkX: Int, chunkZ: Int, states: List<String>): Long? {

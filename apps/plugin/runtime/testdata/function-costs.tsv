@@ -531,6 +531,7 @@ Team:set_prefix	17
 Team:set_suffix	17
 Team:suffix	15
 World:block	48
+World:blocks	85
 World:border	15
 World:centities	47
 World:day_count	15

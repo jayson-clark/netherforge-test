@@ -172,6 +172,29 @@ The block at a position: a handle that reads the world live, so it sees later ch
 local below = this:world():block(this:position() - vec3(0, 1, 0))
 ```
 
+## `world:blocks(from, to, options?)`
+
+Every block in a box, read in one call: for code that needs many blocks at once (a mob's collision, a flood fill of a room), where a `world:block` and a `:kind()` per block would cost each one. The corners are floored to the blocks they're in and both are included, in any order. What each block is given as is `options.what`. At most 32,768 blocks (32 × 32 × 32): a bigger box is an error. `nil` when any of the box is in a chunk that isn't loaded, or the world has gone.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `from` | `Vec3` | One corner: any point in its block. |
+| `to` | `Vec3` | The opposite corner, included: any point in its block. |
+| `options` (optional) | `BlockBoxOptions` |  |
+
+**Returns** `BlockBox?`
+
+```lua
+local box = world:blocks(vec3(0, 60, 0), vec3(15, 70, 15), { what = "class" })
+if box then
+  -- A block within the box, counted from its corner.
+  local function at(x, y, z)
+    return box.cells[1 + x + box.size_x * (z + box.size_z * y)]
+  end
+  if at(0, 0, 0) == 2 then log("solid") end
+end
+```
+
 ## `world:set_block(position, state, options?)`
 
 Changes the block at a position. A block state the server doesn't have (an unknown block, property or value) is an error. Blocks in chunks that aren't loaded can't be read or changed: that answers `nil` or `false`, and never loads the chunk (`world:load_chunk` does).

@@ -35,6 +35,9 @@ class ApiCostTest {
         "world:block(v)" to "local _ = world:block(v)",
         "block:kind()" to "local _ = block:kind()",
         "centity:data().hp" to "local _ = centity:data().hp",
+        "world:blocks, 6 × 6 × 6 as classes" to "local _ = world:blocks(v, w + vec3(4, 4, 4), classes)",
+        "6 × 6 × 6 blocks, each world:block():is_solid()" to
+            "for x = 0, 5 do for y = 0, 5 do for z = 0, 5 do local _ = world:block(v + vec3(x, y, z)):is_solid() end end end",
         "player:send_message(text)" to "player:send_message('hi')",
         // Hand-written functions.
         "nf.math.clamp" to "local _ = nf.math.clamp(1, 2, 3)",
@@ -89,6 +92,7 @@ class ApiCostTest {
             }
             inventory:set_item(1, rich)
             local stack = inventory:item(1)
+            local classes = { what = "class" }
             local function f() end
             for _ = 1, 100 do
               nf.on("cost:many", f)
