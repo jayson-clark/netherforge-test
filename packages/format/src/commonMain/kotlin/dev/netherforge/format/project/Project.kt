@@ -10,6 +10,7 @@ import dev.netherforge.format.datapack.DatapackLayout
 import dev.netherforge.format.datapack.PackMeta
 import dev.netherforge.format.game.FeatureTable
 import dev.netherforge.format.game.GameData
+import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.game.MinecraftVersion
 import dev.netherforge.format.hasErrors
 import dev.netherforge.format.json.CanonicalJson
@@ -29,6 +30,7 @@ import dev.netherforge.format.text.DefaultFontFile
 import dev.netherforge.format.text.DefaultFontValidator
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -854,6 +856,14 @@ object Projects {
                     "\"$name\" isn't a world name (${Names.WORLD_NAME_RULE})",
                     CanonicalJson.childPath("$.worlds", name)
                 )
+            }
+            config.gameRules?.forEach { (rule, value) ->
+                val at = CanonicalJson.childPath(CanonicalJson.childPath(CanonicalJson.childPath("$.worlds", name), "gameRules"), rule)
+                if (!GameIds.isValid(rule)) {
+                    sink.report(ProblemCodes.PROJECT_WORLD_RULE, "\"$rule\" isn't a game rule's id (keep_inventory)", at)
+                } else if (value.isString || (value.booleanOrNull == null && value.content.toIntOrNull() == null)) {
+                    sink.report(ProblemCodes.PROJECT_WORLD_RULE, "$rule is true, false or a whole number, as the rule takes", at)
+                }
             }
             for ((field, values) in listOf("spawnLimits" to config.spawnLimits, "spawnIntervals" to config.spawnIntervals)) {
                 values?.forEach { (category, value) ->

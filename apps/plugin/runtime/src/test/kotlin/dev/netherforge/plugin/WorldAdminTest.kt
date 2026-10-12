@@ -481,4 +481,25 @@ class WorldAdminTest {
             assertEquals(1, worlds.spawnLimit("elsewhere", SpawnCategory.AMBIENT))
         }
     }
+
+    @Test
+    fun `netherforge json sets the game rules of the worlds it names, and says which it can't`() {
+        TestServer(
+            mapOf(
+                TestServer.MANIFEST to spawnManifest(
+                    """{ "world": { "gameRules": { "keep_inventory": true, "minecraft:random_tick_speed": 0, "do_insomnia": false } } }"""
+                )
+            )
+        ).use { server ->
+            val worlds = server.platform.worlds
+            assertEquals(true, worlds.gameRule("world", "minecraft:keep_inventory"))
+            assertEquals(0, worlds.gameRule("world", "minecraft:random_tick_speed"))
+            assertTrue(
+                server.platform.log.lines.any {
+                    "do_insomnia" in it && "doesn't have" in it
+                },
+                server.platform.log.lines.joinToString("\n")
+            )
+        }
+    }
 }

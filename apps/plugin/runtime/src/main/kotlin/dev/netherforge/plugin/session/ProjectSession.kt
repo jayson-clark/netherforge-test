@@ -277,7 +277,7 @@ class ProjectSession internal constructor(
     internal val daylight = service(Daylight(platform, scripts))
 
     /** The spawn rates `netherforge.json` sets for the worlds it names. */
-    internal val spawnRates = service(WorldSpawnRates(platform) { snapshot.manifest?.worlds })
+    internal val spawnRates = service(WorldSpawnRates(platform, { log.warn(it) }) { snapshot.manifest?.worlds })
 
     /** The boss bars scripts made, each its script's. */
     internal val bossBars = service(

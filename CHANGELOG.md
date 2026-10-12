@@ -100,6 +100,10 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **Game rules in `netherforge.json`.** A world in `worlds` takes `gameRules`
+  (`"keep_inventory": true`), set when it loads and on reload, beside its spawn
+  limits; a rule this server lacks is skipped and logged. New problem code
+  `project.world-rule`.
 - **`nf.test.terrain`.** A stand-in for a terrain script's `terrain` (noises,
   height, area, biome, plans with per-cell numbers), from options, to test
   worldgen modules on their own.

@@ -52,6 +52,10 @@ Warning. The project has no name. See [the project format](project.md).
 
 Error. A name in `managedWorlds` or `worlds` isn't a world name. See [the project format](project.md).
 
+### `project.world-rule` {#project-world-rule}
+
+Error. A world's `gameRules` names no rule id, or gives one a value that isn't true, false or a whole number. See [the project format](project.md).
+
 ### `project.world-spawn` {#project-world-spawn}
 
 Error. A world's spawn limit or interval in `worlds` is below 0. See [the project format](project.md).

@@ -7,7 +7,7 @@
   "minecraft": "26.3",
   "worlds": {
     "../escape": { "spawnLimits": { "monster": 10 } },
-    "realm": { "terrain": "no_such_generator", "seed": 5 },
+    "realm": { "terrain": "no_such_generator", "seed": 5, "gameRules": { "Bad Rule": true, "keep_inventory": "yes" } },
     "arena": { "spawnLimits": { "animal": 5, "monster": -1 }, "spawnIntervals": { "axolotl": -20 } }
   }
 }

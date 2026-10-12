@@ -112,6 +112,12 @@ object ProblemCodes {
         error("project.feature", PROJECT, "Something the project uses arrived in a newer Minecraft than `minecraft` names.")
     val PROJECT_NAME = warning("project.name", PROJECT, "The project has no name.")
     val PROJECT_WORLD_NAME = error("project.world-name", PROJECT, "A name in `managedWorlds` or `worlds` isn't a world name.")
+    val PROJECT_WORLD_RULE =
+        error(
+            "project.world-rule",
+            PROJECT,
+            "A world's `gameRules` names no rule id, or gives one a value that isn't true, false or a whole number."
+        )
     val PROJECT_WORLD_SPAWN = error("project.world-spawn", PROJECT, "A world's spawn limit or interval in `worlds` is below 0.")
     val PROJECT_WORLD_HEIGHT =
         error(
