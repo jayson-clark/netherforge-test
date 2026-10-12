@@ -122,9 +122,13 @@ the opaque carry-through is `raw`): `PaperItems` keeps it as JSON text under `ne
 in the stack's persistent data container, so it goes wherever the item goes
 and is part of the lossless check; `data = {}` from Lua clears it, leaving it
 out leaves it alone. It holds what a `data()` table may (`Vec3`s,
-`Location`s, `Entity` (a `Player` too) and `Centity` handles): `RuntimeApi.item` writes the
-item table with the one Lua↔JSON codec (so `ItemDef.data` is tagged JSON,
-easy to compare as JSON for item matching), and `LuaItems.write` hands it
+`Location`s, `Entity` (a `Player` too) and `Centity` handles): `RuntimeApi.item` reads the
+item table as the one Lua↔JSON codec would (so `ItemDef.data` is tagged JSON,
+easy to compare as JSON for item matching), but in Kotlin (`LuaHost.fieldsJson`),
+because the codec is Lua and its instructions are the script's: plain fields cost
+nothing, and plain `data` is written as the codec's very text (keys in Lua's `<`
+order, asked of Lua); only typed values, floats and odd keys fall back to the codec
+(`ItemTableCostTest`), and `LuaItems.write` hands it
 back as that JSON, which `pushValue` turns back into typed values. An item
 match (`ItemMatch`, a partial item) is read the same way. Reading is strict
 (`LuaItems.read`): unknown field, wrong type, something in `data` that can't

@@ -31,7 +31,6 @@ import dev.netherforge.plugin.script.Scripts
 import dev.netherforge.plugin.session.ProjectSession
 import dev.netherforge.plugin.testing.NfTestImpl
 import dev.netherforge.plugin.world.MobGoals
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -164,11 +163,14 @@ internal class RuntimeApi(private val session: ProjectSession) :
         return readItem(JsonObject(session.names.item(table) + ("item" to JsonPrimitive(id)))).def
     }
 
-    /** The item table at [index] as JSON, as it would be saved: problem paths from [root]. */
+    /**
+     * The item table at [index] as JSON, as it would be saved: problem paths
+     * from [root]. Read without running the codec (`LuaHost.fieldsJson`), so
+     * a plain table costs the script nothing; only a `data` holding typed
+     * values or floats pays for the codec's instructions.
+     */
     private fun itemTable(lua: Lua, index: Int, root: String): JsonElement {
-        val encoded = host.encodeData(lua, index, root)
-        encoded.problems.firstOrNull()?.let { throw LuaApiException(it) }
-        val table = Json.parseToJsonElement(requireNotNull(encoded.text))
+        val table = host.fieldsJson(lua, index, root, kept = "data")
         ((table as? JsonObject)?.get("data"))?.toString()?.let { text ->
             if (ScriptData.isTooBig(text)) throw LuaApiException(tooBigData(root, text))
         }

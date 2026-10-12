@@ -110,7 +110,7 @@ local function quote(s)
   if cut then
     s = sub(s, 1, MAX_STRING)
   end
-  s = raw.gsub(s, '[%c"\\]', function(c)
+  s = raw.gsub(s, '[\0-\31"\\\127]', function(c)
     return QUOTED[c] or format("\\%d", byte(c))
   end)
   return '"' .. s .. (cut and '…"' or '"')

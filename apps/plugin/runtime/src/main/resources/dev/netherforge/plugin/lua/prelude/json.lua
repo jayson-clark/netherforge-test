@@ -78,12 +78,33 @@ do
     ["\t"] = "\\t",
   }
 
+  local function json_escape(c)
+    return json_escapes[c] or format("\\u%04x", c:byte())
+  end
+
+  -- What a JSON string escapes: ASCII's control characters, quotes and backslashes. Not
+  -- `%c`, which is the C library's and, in a locale like the JVM's, takes the
+  -- bytes 0x80-0x9F too: the middle of a UTF-8 character ("✓").
+  local ESCAPED = '[\0-\31"\\\127]'
+
   local function json_string(s)
-    return '"'
-      .. raw.gsub(s, '[%c"\\]', function(c)
-        return json_escapes[c] or format("\\u%04x", c:byte())
-      end)
-      .. '"'
+    if not raw.find(s, ESCAPED) then
+      return '"' .. s .. '"'
+    end
+    return '"' .. raw.gsub(s, ESCAPED, json_escape) .. '"'
+  end
+
+  -- A string, boolean or integer as JSON (none of them can fail), or nil for anything else.
+  local function json_scalar(value)
+    local kind = type(value)
+    if kind == "string" then
+      return json_string(value)
+    elseif kind == "boolean" then
+      return value and "true" or "false"
+    elseif math_type(value) == "integer" then
+      return format("%d", value)
+    end
+    return nil
   end
 
   -- A number as JSON, or nil for one JSON can't hold (NaN, infinities). A
@@ -231,7 +252,11 @@ do
           out[#out + 1] = ","
         end
         local item = rawget(value, i)
-        if
+        -- A plain value needs no path: only what can fail is told where it was.
+        local text = json_scalar(item)
+        if text ~= nil then
+          out[#out + 1] = text
+        elseif
           item == nil or not encode_data(item, key_path(path, i), out, problems, seen, depth + 1)
         then
           out[#out + 1] = "null"
@@ -254,7 +279,12 @@ do
         out[mark + 1] = (first and "" or ",")
           .. json_string(tag_like(key) and "$" .. key or key)
           .. ":"
-        if encode_data(rawget(value, key), key_path(path, key), out, problems, seen, depth + 1) then
+        local item = rawget(value, key)
+        local text = json_scalar(item)
+        if text ~= nil then
+          out[mark + 2] = text
+          first = false
+        elseif encode_data(item, key_path(path, key), out, problems, seen, depth + 1) then
           first = false
         else
           for i = #out, mark + 1, -1 do
