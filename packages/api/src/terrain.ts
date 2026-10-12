@@ -477,7 +477,6 @@ export const terrainApi: TerrainApiSpec = {
     },
   ],
   removed: [
-    'nf',
     'io',
     'os',
     'debug',

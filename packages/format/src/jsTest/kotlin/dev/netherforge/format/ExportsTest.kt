@@ -316,14 +316,20 @@ class ExportsTest {
     @Test
     fun aTerrainPreviewerDrawsOrSaysWhatStopsIt() {
         val previewer =
-            terrainPreviewer("flat", """{ "terrain": { "base": 64 }, "layers": [{ "block": "minecraft:grass_block" }] }""", null, null)
+            terrainPreviewer(
+                "flat",
+                """{ "terrain": { "base": 64 }, "layers": [{ "block": "minecraft:grass_block" }] }""",
+                null,
+                null,
+                null
+            )
         val map = assertIs<TerrainMap>(decode(TerrainPreviewResult.serializer(), previewer.map("7", 0, 0, 4, 4, -64, 320)))
         assertEquals("map", obj(previewer.map("7", 0, 0, 4, 4, -64, 320)).getValue("type").jsonPrimitive.content)
         assertTrue(map.toString().isNotEmpty())
         previewer.close()
         val failed =
             assertIs<TerrainFailed>(
-                decode(TerrainPreviewResult.serializer(), terrainPreviewer("x", "{", null, null).map("1", 0, 0, 2, 1, -64, 320))
+                decode(TerrainPreviewResult.serializer(), terrainPreviewer("x", "{", null, null, null).map("1", 0, 0, 2, 1, -64, 320))
             )
         assertEquals(listOf("parse"), failed.problems.map { it.code })
     }

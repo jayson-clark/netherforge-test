@@ -156,4 +156,29 @@ class TerrainStructureTest {
         assertEquals("minecraft:oak_stairs[facing=east]", scripted.palette[chunk[2, 100, 1]].label)
         assertEquals("ruby_ore", scripted.palette[chunk[3, 100, 1]].label)
     }
+
+    @Test
+    fun vec3AndNfMathAreThereAsInOtherScripts(): LuaTest = withLua { lua ->
+        val (_, failures) = generate(
+            lua,
+            """
+            local v = vec3(1, 2, 2)
+            assert(v:length() == 3 and v.x == 1 and tostring(v) == "vec3(1, 2, 2)", tostring(v))
+            assert((v + vec3.one) == vec3(2, 3, 3) and (v * 2).z == 4 and vec3.up:cross(vec3.east) == vec3(0, 0, -1))
+            assert(vec3(0, -3, 0):reflect(vec3.up) == vec3(0, 3, 0) and vec3(5, 0, 0):clamp_length(2) == vec3(2, 0, 0))
+            assert(not pcall(function() v.x = 3 end))
+            assert(nf.math.clamp(5, 0, 2) == 2 and nf.math.lerp(0, 10, 0.5) == 5 and nf.math.remap(5, 0, 10, 0, 1) == 0.5)
+            assert(nf.math.ease("ease_in", 0.5) == 0.25 and not pcall(nf.math.ease, "bouncy", 0.5))
+            assert(nf.players == nil and nf.random == nil)
+            return {
+              decorate = function(chunk)
+                local p = vec3(chunk:min_x(), 100, chunk:min_z()):floor()
+                chunk:set(p.x, p.y, p.z, "minecraft:gold_block")
+              end,
+            }
+            """,
+            0 to 0
+        )
+        assertEquals(emptyList(), failures)
+    }
 }

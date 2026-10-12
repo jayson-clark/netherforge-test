@@ -2,7 +2,7 @@
 
 # Terrain scripts
 
-What a terrain's script (`terrain/<id>.lua`, named by its file's [`script`](../format/terrain.md#script)) can call. It isn't a server script: it runs in Lua states of its own on the server's chunk threads, and in the editor's preview, so it has no `nf` and nothing of the server, and gives the same blocks for a seed every time. Its body is given the world as `...` and returns its stages:
+What a terrain's script (`terrain/<id>.lua`, named by its file's [`script`](../format/terrain.md#script)) can call. It isn't a server script: it runs in Lua states of its own on the server's chunk threads, and in the editor's preview, so it has nothing of the server (of `nf`, only `nf.math`), and gives the same blocks for a seed every time. Its body is given the world as `...` and returns its stages:
 
 ```lua
 ---@type Terrain
@@ -19,7 +19,7 @@ end
 return stages
 ```
 
-Lua 5.4's basics are there (`string`, `table`, `math`, `utf8`, `coroutine`, `pairs`, `pcall`, `setmetatable`, …) and `require` of the project's modules; the sandbox removes `nf`, `io`, `os`, `debug`, `load`, `loadfile`, `dofile`, `collectgarbage`, `print`, `package`, `math.randomseed`, `string.dump`. `math.random` is seeded for each call from the world's seed and where the call is (the column, the chunk), so it's the same there every time.
+Lua 5.4's basics are there (`string`, `table`, `math`, `utf8`, `coroutine`, `pairs`, `pcall`, `setmetatable`, …), `vec3` and `nf.math` as in other scripts, and `require` of the project's modules; the sandbox removes `io`, `os`, `debug`, `load`, `loadfile`, `dofile`, `collectgarbage`, `print`, `package`, `math.randomseed`, `string.dump`. `math.random` is seeded for each call from the world's seed and where the call is (the column, the chunk), so it's the same there every time.
 
 ## Stages
 

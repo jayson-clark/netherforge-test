@@ -159,6 +159,284 @@ env.math.random = function(...)
   return random(...)
 end
 
+-- `vec3` and `nf.math`, as other scripts have them, so a module of maths works in both (the rest of `nf` is the
+-- server's, and isn't here).
+do
+  local sqrt, sin, cos, rad, abs = math.sqrt, math.sin, math.cos, math.rad, math.abs
+  local Vec3 = {}
+  local fields = { x = 1, y = 2, z = 3 }
+  local Vec3_mt
+  local function new(x, y, z)
+    return setmetatable({ x, y, z }, Vec3_mt)
+  end
+  local function is_vec3(v)
+    return getmetatable(v) == "Vec3"
+  end
+  local function number_text(n)
+    if n == floor(n) and abs(n) < 2 ^ 53 then
+      return format("%d", n)
+    end
+    return tostring(n)
+  end
+  local function want_vec3(v, name)
+    if not is_vec3(v) then
+      error(format("bad argument '%s' (Vec3 expected, got %s)", name, type(v)), 3)
+    end
+  end
+  local function want_num(v, name)
+    if type(v) ~= "number" then
+      error(format("bad argument '%s' (number expected, got %s)", name, type(v)), 3)
+    end
+  end
+  Vec3_mt = {
+    __index = function(v, key)
+      local i = fields[key]
+      if i ~= nil then
+        return rawget(v, i)
+      end
+      return Vec3[key]
+    end,
+    __newindex = function(_, key)
+      error(format("vectors can't be changed (setting '%s'): make a new one, like v:with_x(n)", tostring(key)), 2)
+    end,
+    __add = function(a, b)
+      if not is_vec3(a) or not is_vec3(b) then
+        error("a Vec3 can only be added to another Vec3", 2)
+      end
+      return new(a[1] + b[1], a[2] + b[2], a[3] + b[3])
+    end,
+    __sub = function(a, b)
+      if not is_vec3(a) or not is_vec3(b) then
+        error("a Vec3 can only be subtracted from another Vec3", 2)
+      end
+      return new(a[1] - b[1], a[2] - b[2], a[3] - b[3])
+    end,
+    __unm = function(a)
+      return new(-a[1], -a[2], -a[3])
+    end,
+    __mul = function(a, b)
+      if type(a) == "number" then
+        a, b = b, a
+      end
+      if type(b) == "number" then
+        return new(a[1] * b, a[2] * b, a[3] * b)
+      end
+      if is_vec3(a) and is_vec3(b) then
+        return new(a[1] * b[1], a[2] * b[2], a[3] * b[3])
+      end
+      error("a Vec3 can only be multiplied by a number or another Vec3", 2)
+    end,
+    __div = function(a, b)
+      if not is_vec3(a) or type(b) ~= "number" then
+        error("a Vec3 can only be divided by a number", 2)
+      end
+      return new(a[1] / b, a[2] / b, a[3] / b)
+    end,
+    __eq = function(a, b)
+      return is_vec3(a) and is_vec3(b) and a[1] == b[1] and a[2] == b[2] and a[3] == b[3]
+    end,
+    __tostring = function(v)
+      return "vec3(" .. number_text(v[1]) .. ", " .. number_text(v[2]) .. ", " .. number_text(v[3]) .. ")"
+    end,
+    __metatable = "Vec3",
+  }
+  function Vec3.length(v)
+    return sqrt(v[1] * v[1] + v[2] * v[2] + v[3] * v[3])
+  end
+  function Vec3.length_squared(v)
+    return v[1] * v[1] + v[2] * v[2] + v[3] * v[3]
+  end
+  function Vec3.normalized(v)
+    local length = sqrt(v[1] * v[1] + v[2] * v[2] + v[3] * v[3])
+    if length == 0 then
+      return new(0, 0, 0)
+    end
+    return new(v[1] / length, v[2] / length, v[3] / length)
+  end
+  function Vec3.dot(a, b)
+    want_vec3(b, "other")
+    return a[1] * b[1] + a[2] * b[2] + a[3] * b[3]
+  end
+  function Vec3.cross(a, b)
+    want_vec3(b, "other")
+    return new(a[2] * b[3] - a[3] * b[2], a[3] * b[1] - a[1] * b[3], a[1] * b[2] - a[2] * b[1])
+  end
+  function Vec3.distance(a, b)
+    want_vec3(b, "other")
+    local dx, dy, dz = a[1] - b[1], a[2] - b[2], a[3] - b[3]
+    return sqrt(dx * dx + dy * dy + dz * dz)
+  end
+  function Vec3.distance_squared(a, b)
+    want_vec3(b, "other")
+    local dx, dy, dz = a[1] - b[1], a[2] - b[2], a[3] - b[3]
+    return dx * dx + dy * dy + dz * dz
+  end
+  function Vec3.lerp(a, b, f)
+    want_vec3(b, "to")
+    want_num(f, "fraction")
+    return new(a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f, a[3] + (b[3] - a[3]) * f)
+  end
+  function Vec3.clamp_length(v, max_length)
+    want_num(max_length, "max_length")
+    if max_length < 0 then
+      error("bad argument 'max_length' (a length can't be negative)", 2)
+    end
+    local squared = v[1] * v[1] + v[2] * v[2] + v[3] * v[3]
+    if squared <= max_length * max_length then
+      return v
+    end
+    local scale = max_length / sqrt(squared)
+    return new(v[1] * scale, v[2] * scale, v[3] * scale)
+  end
+  function Vec3.reflect(v, normal)
+    want_vec3(normal, "normal")
+    local length = sqrt(normal[1] * normal[1] + normal[2] * normal[2] + normal[3] * normal[3])
+    if length == 0 then
+      error("bad argument 'normal' (a surface's normal can't be zero)", 2)
+    end
+    local nx, ny, nz = normal[1] / length, normal[2] / length, normal[3] / length
+    local twice = 2 * (v[1] * nx + v[2] * ny + v[3] * nz)
+    return new(v[1] - twice * nx, v[2] - twice * ny, v[3] - twice * nz)
+  end
+  function Vec3.closest_on_segment(p, start, finish)
+    want_vec3(start, "start")
+    want_vec3(finish, "finish")
+    local dx, dy, dz = finish[1] - start[1], finish[2] - start[2], finish[3] - start[3]
+    local squared = dx * dx + dy * dy + dz * dz
+    if squared == 0 then
+      return start
+    end
+    local t = ((p[1] - start[1]) * dx + (p[2] - start[2]) * dy + (p[3] - start[3]) * dz) / squared
+    if t < 0 then
+      t = 0
+    elseif t > 1 then
+      t = 1
+    end
+    return new(start[1] + dx * t, start[2] + dy * t, start[3] + dz * t)
+  end
+  function Vec3.flat(v)
+    return new(v[1], 0, v[3])
+  end
+  function Vec3.with_x(v, x)
+    return new(x, v[2], v[3])
+  end
+  function Vec3.with_y(v, y)
+    return new(v[1], y, v[3])
+  end
+  function Vec3.with_z(v, z)
+    return new(v[1], v[2], z)
+  end
+  function Vec3.floor(v)
+    return new(floor(v[1]), floor(v[2]), floor(v[3]))
+  end
+  function Vec3.round(v)
+    return new(floor(v[1] + 0.5), floor(v[2] + 0.5), floor(v[3] + 0.5))
+  end
+  function Vec3.rotated(v, axis, degrees)
+    want_vec3(axis, "axis")
+    want_num(degrees, "degrees")
+    local length = sqrt(axis[1] * axis[1] + axis[2] * axis[2] + axis[3] * axis[3])
+    if length == 0 then
+      error("bad argument 'axis' (a rotation needs an axis that isn't zero)", 2)
+    end
+    local kx, ky, kz = axis[1] / length, axis[2] / length, axis[3] / length
+    local c, s = cos(rad(degrees)), sin(rad(degrees))
+    local dot = (kx * v[1] + ky * v[2] + kz * v[3]) * (1 - c)
+    return new(
+      v[1] * c + (ky * v[3] - kz * v[2]) * s + kx * dot,
+      v[2] * c + (kz * v[1] - kx * v[3]) * s + ky * dot,
+      v[3] * c + (kx * v[2] - ky * v[1]) * s + kz * dot
+    )
+  end
+  function Vec3.unpack(v)
+    return v[1], v[2], v[3]
+  end
+  local library = {
+    zero = new(0, 0, 0),
+    one = new(1, 1, 1),
+    up = new(0, 1, 0),
+    down = new(0, -1, 0),
+    north = new(0, 0, -1),
+    south = new(0, 0, 1),
+    east = new(1, 0, 0),
+    west = new(-1, 0, 0),
+  }
+  function library.from_yaw_pitch(yaw, pitch)
+    want_num(yaw, "yaw")
+    want_num(pitch, "pitch")
+    local y, p = rad(yaw), rad(pitch)
+    return new(-sin(y) * cos(p), -sin(p), cos(y) * cos(p))
+  end
+  env.vec3 = setmetatable({}, {
+    __index = library,
+    __call = function(_, x, y, z)
+      want_num(x, "x")
+      want_num(y, "y")
+      want_num(z, "z")
+      return new(x, y, z)
+    end,
+    __newindex = function()
+      error("vec3 can't be changed", 2)
+    end,
+    __metatable = false,
+  })
+
+  local maths = {}
+  function maths.lerp(from, to, fraction)
+    return from + (to - from) * fraction
+  end
+  function maths.clamp(value, low, high)
+    if low > high then
+      error(format("bad argument 'min' (%s is greater than max, %s)", low, high), 2)
+    end
+    if value < low then
+      return low
+    elseif value > high then
+      return high
+    end
+    return value
+  end
+  function maths.remap(value, from_min, from_max, to_min, to_max)
+    if from_min == from_max then
+      error(format("bad argument 'from_max' (the range from %s to itself has no size)", from_min), 2)
+    end
+    return to_min + (value - from_min) * (to_max - to_min) / (from_max - from_min)
+  end
+  local curves = {
+    linear = function(t)
+      return t
+    end,
+    step = function(t)
+      return t >= 1 and 1 or 0
+    end,
+    ease_in = function(t)
+      return t * t
+    end,
+    ease_out = function(t)
+      return 1 - (1 - t) * (1 - t)
+    end,
+    ease_in_out = function(t)
+      if t < 0.5 then
+        return 2 * t * t
+      end
+      return 1 - 2 * (1 - t) * (1 - t)
+    end,
+  }
+  function maths.ease(easing, fraction)
+    local curve = curves[easing]
+    if curve == nil then
+      error(format("bad argument 'easing' (linear, step, ease_in, ease_out or ease_in_out, got %s)", tostring(easing)), 2)
+    end
+    if fraction < 0 then
+      fraction = 0
+    elseif fraction > 1 then
+      fraction = 1
+    end
+    return curve(fraction)
+  end
+  env.nf = { math = setmetatable({}, { __index = maths, __newindex = function() error("nf.math can't be changed", 2) end, __metatable = false }) }
+end
+
 -- A coroutine is counted like the call that made it.
 env.coroutine = copy(coroutine)
 env.coroutine.create = function(body)

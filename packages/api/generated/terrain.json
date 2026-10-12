@@ -974,7 +974,6 @@
     }
   ],
   "removed": [
-    "nf",
     "io",
     "os",
     "debug",
