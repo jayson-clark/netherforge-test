@@ -100,6 +100,12 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **`netherforge render` and `gallery`.** An item or a block as its
+  inventory icon, or a centity in its base pose, to a PNG, as the editor draws
+  them (the project's resource pack looks, and the game's from the imported
+  client), without a browser; `gallery` draws them all with an `index.html`.
+  The model geometry the editor draws with is now the shared
+  `@netherforge/models` package, with a software rasteriser beside it.
 - **Generators: `netherforge generate` and an SDK.** `netherforge.json`'s
   `generate` lists the commands that write a project's generated files;
   `netherforge generate` runs them in order and formats the project. The

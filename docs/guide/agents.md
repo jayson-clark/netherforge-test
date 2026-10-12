@@ -102,6 +102,18 @@ picture (and at the colour legend it prints) to check terrain, biomes and
 decorations without the editor, and a terrain with problems prints them as
 `check` does.
 
+```sh
+node .netherforge/bin/netherforge.mjs render centities/wisp/centity.json --out wisp.png
+node .netherforge/bin/netherforge.mjs gallery --out build/gallery
+```
+
+`render` draws an item or a block as its inventory icon, or a centity in its
+base pose from the front, its right and above, as the editor draws them: the
+project's resource pack looks, and the game's own from the Minecraft client
+the editor imported. `gallery` draws every item, block and centity into a
+folder with an `index.html` of them all. An agent can look at the pictures to
+check art it changed.
+
 `lock` writes `netherforge.lock` as the project's
 [dependencies](../format/packages.md) resolve now (the editor does it too,
 whenever they change), and `build` writes the bundle a production server runs
