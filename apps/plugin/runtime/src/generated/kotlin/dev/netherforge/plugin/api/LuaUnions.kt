@@ -163,6 +163,7 @@ sealed interface Vec3OrChoice {
 
 /** The unions of handle classes, each a [LuaHandle] of one of them, tried in order. */
 object LuaUnions {
+    val CentityOrEntity: LuaCodec<LuaHandle> = LuaHandleUnion(listOf(LuaHandle.Centity.Codec, LuaHandle.Entity.Codec))
     val CentityOrNodeOrPlayerOrEntity: LuaCodec<LuaHandle> = LuaHandleUnion(listOf(LuaHandle.Centity.Codec, LuaHandle.Node.Codec, LuaHandle.Player.Codec, LuaHandle.Entity.Codec))
     val EntityOrBlock: LuaCodec<LuaHandle> = LuaHandleUnion(listOf(LuaHandle.Entity.Codec, LuaHandle.Block.Codec))
 }

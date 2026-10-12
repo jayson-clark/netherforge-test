@@ -42,6 +42,7 @@ Centity:add_node	19
 Centity:animation_speed	17
 Centity:animation_tick	17
 Centity:animations	15
+Centity:bounds	15
 Centity:data	15
 Centity:emit	58
 Centity:exists	15
@@ -557,8 +558,12 @@ World:max_height	15
 World:min_height	15
 World:moon_phase	15
 World:name	15
+World:nearest	65
 World:on	141
 World:once	148
+World:overlap_box	96
+World:overlap_cone	100
+World:overlap_sphere	65
 World:place_structure	56
 World:play_sound	55
 World:players	15
@@ -580,6 +585,7 @@ World:spawn_limit	17
 World:spawn_location	15
 World:spawn_particle	92
 World:strike_lightning	51
+World:sweep	99
 World:time_of_day	15
 World:unload	21
 World:weather	15

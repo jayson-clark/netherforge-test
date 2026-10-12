@@ -23,6 +23,7 @@ What `centity:on(event, handler)` listens for. See [Events](events.md) for how e
 | `animation_end` | [AnimationEvent](events.md#animationevent) |  | An animation reached its end: a `once` clip has finished, a `hold` clip is holding its last pose. Looping clips never end. |
 | `chunk_load` | [CentityEvent](events.md#centityevent) |  | Its chunk came back into memory (someone came near), so it's ticking again. |
 | `chunk_unload` | [CentityEvent](events.md#centityevent) |  | Its chunk was unloaded (everyone went away): it stops ticking until `chunk_load`. Its handlers stay. |
+| `touch` | [TouchEvent](events.md#touchevent) |  | Its hitboxes started touching something's: another centity's, a player's or another entity's (each shown node's boxes, as `world:overlap_box` sees them). Once when they start touching, and again only after they've come apart. Worked out each tick only for centities something listens to this on, so a crowd nobody listens to costs nothing. Both centities hear it when two touch, each with the other in `event.other`. |
 | `path_end` | [CentityPathEndEvent](events.md#centitypathendevent) |  | It stopped walking where `move_to` sent it: it got there (to the end of its path, or within 2 blocks of what it went after), or gave up (no way further, its way blocked with no other way round, or what it went after has gone or left its world). Not after `stop_pathing`, a new `move_to`, `teleport` or a reload of its centity. |
 
 ## `centity:id()`
@@ -109,6 +110,20 @@ local lamp = assert(this:add_node("lamp", {
 lamp:on("click", function(event)
   lamp:remove()
 end)
+```
+
+## `centity:bounds()`
+
+The box around all its hitboxes as they're shown now (each shown node's boxes, turned and placed), in the world: what `world:overlap_box` and the other spatial queries test against. `nil` for a centity with no hitboxes showing, or once it's removed.
+
+**Returns** `Bounds?`
+
+```lua
+local box = this:bounds()
+if box then
+  local top = vec3((box.min.x + box.max.x) / 2, box.max.y, (box.min.z + box.max.z) / 2)
+  world:spawn_particle("minecraft:heart", top)
+end
 ```
 
 ## `centity:location()`

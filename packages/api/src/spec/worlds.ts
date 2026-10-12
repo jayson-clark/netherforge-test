@@ -26,6 +26,45 @@ export const FILL_LIMIT = 32768
  */
 export const BIOME_SEARCH_LIMIT = 6400
 
+/** What the spatial queries (`overlap_*`, `sweep`, `nearest`) find, for their docs. */
+const QUERY_FINDS =
+  "It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node."
+
+/** What every spatial query's options take: `QueryOptions`, and the start of `SweepOptions`. */
+const QUERY_FIELDS: Field[] = [
+  { name: 'centities', type: 'boolean?', doc: 'Whether it finds centities. Default `true`.' },
+  { name: 'players', type: 'boolean?', doc: 'Whether it finds players. Default `true`.' },
+  {
+    name: 'entities',
+    type: 'boolean?',
+    doc: "Whether it finds entities that aren't players (mobs, dropped items, arrows...). Default `true`.",
+  },
+  {
+    name: 'kinds',
+    type: 'string[]?',
+    doc: 'Only centities of these kinds (their folder names), and entities of these types (`"minecraft:zombie"`). Default: any.',
+  },
+  {
+    name: 'exclude',
+    type: '(Centity|Entity)[]?',
+    doc: 'What it leaves out: whatever is asking, usually. Default none.',
+  },
+  {
+    name: 'limit',
+    type: 'integer?',
+    doc: 'At most this many, the nearest. At least 1. Default: all.',
+  },
+  {
+    name: 'line_of_sight',
+    type: 'boolean?',
+    doc: "Only what a ray from the query's own point (the middle of a box, the centre of a sphere, a cone's tip, a sweep's start) reaches without a block in the way, aimed at its hitbox's nearest point. Default `false`.",
+  },
+]
+
+/** Where the spatial queries look. */
+const QUERY_LOADED =
+  "Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone."
+
 const UNLOADED =
   "Blocks in chunks that aren't loaded can't be read or changed: that answers `nil` or `false`, and never loads the chunk (`world:load_chunk` does)."
 
@@ -448,6 +487,80 @@ export const worldClass: LuaClass = {
       returns: [{ type: 'RaycastHit?' }],
       example:
         'local world, eyes, facing = player:world(), player:eye_position(), player:direction()\nlocal hit = world and eyes and facing and world:raycast(eyes, facing, 20)\nif hit and hit.centity then\n  hit.centity:play_animation("wobble")\nend',
+    },
+    {
+      name: 'overlap_box',
+      doc: `Everything whose hitbox is inside or touches a box, nearest the box's middle first. ${QUERY_FINDS} ${QUERY_LOADED}`,
+      params: [
+        { name: 'min', type: 'Vec3', doc: 'One corner, in the world.' },
+        {
+          name: 'max',
+          type: 'Vec3',
+          doc: 'The opposite corner. The corners may come in either order.',
+        },
+        { name: 'options', type: 'QueryOptions', doc: '', optional: true },
+      ],
+      returns: [{ type: 'QueryHit[]' }],
+      example:
+        'local corner = vec3(0, 64, 0)\nfor _, hit in ipairs(world:overlap_box(corner, corner + vec3(4, 3, 4), { players = false })) do\n  if hit.centity then\n    hit.centity:remove()\n  end\nend',
+    },
+    {
+      name: 'overlap_sphere',
+      doc: `Everything whose hitbox comes within \`radius\` of a point, nearest first: what an explosion or an aura reaches. ${QUERY_FINDS} ${QUERY_LOADED}`,
+      params: [
+        { name: 'center', type: 'Vec3', doc: 'The middle, in the world.' },
+        { name: 'radius', type: 'number', doc: 'In blocks, at least 0.' },
+        { name: 'options', type: 'QueryOptions', doc: '', optional: true },
+      ],
+      returns: [{ type: 'QueryHit[]' }],
+      example:
+        'for _, hit in ipairs(world:overlap_sphere(vec3(0, 64, 0), 4, { entities = false })) do\n  log(hit.distance)\nend',
+    },
+    {
+      name: 'overlap_cone',
+      doc: `Everything whose hitbox reaches into a cone from a point, nearest first: what a swing or a breath in front of someone reaches. A hitbox counts when its point nearest the cone's axis is within \`length\` of the tip and within \`angle\` of the axis, or the tip is inside it. ${QUERY_FINDS} ${QUERY_LOADED}`,
+      params: [
+        { name: 'origin', type: 'Vec3', doc: "The cone's tip, in the world." },
+        { name: 'direction', type: 'Vec3', doc: 'Which way it opens: any length but zero.' },
+        {
+          name: 'length',
+          type: 'number',
+          doc: 'How far it reaches from the tip, in blocks, at least 0.',
+        },
+        {
+          name: 'angle',
+          type: 'number',
+          doc: 'How wide it opens, in degrees from its axis to its side: 0 to 180 (90 is everything in front, 180 a sphere).',
+        },
+        { name: 'options', type: 'QueryOptions', doc: '', optional: true },
+      ],
+      returns: [{ type: 'QueryHit[]' }],
+      example:
+        'local eyes, facing = assert(player:eye_position()), assert(player:direction())\nfor _, hit in ipairs(world:overlap_cone(eyes, facing, 3, 45, { exclude = { player } })) do\n  if hit.centity then\n    hit.centity:emit("game:struck", { by = player })\n  end\nend',
+    },
+    {
+      name: 'sweep',
+      doc: `Moves a sphere of \`options.radius\` (0, a point, by default) from one point to another and answers everything it touches on the way, in the order it meets them: what a fast or piercing shot passes through in a tick, which a ray (stopping at the first thing) can't say. Blocks stop it unless \`blocks = false\`: the block it meets is then the last hit, with its \`normal\`, and nothing past it is found. ${QUERY_FINDS} ${QUERY_LOADED}`,
+      params: [
+        { name: 'from', type: 'Vec3', doc: 'Where it starts, in the world.' },
+        { name: 'to', type: 'Vec3', doc: 'Where it would end.' },
+        { name: 'options', type: 'SweepOptions', doc: '', optional: true },
+      ],
+      returns: [{ type: 'QueryHit[]' }],
+      example:
+        'local position, velocity = vec3(0, 65, 0), vec3(2, 0, 0)\nlocal hits = world:sweep(position, position + velocity, { radius = 0.25, players = false })\nfor _, hit in ipairs(hits) do\n  if hit.block then\n    break -- it struck a wall\n  elseif hit.centity then\n    hit.centity:emit("game:hit", { damage = 5 })\n  end\nend',
+    },
+    {
+      name: 'nearest',
+      doc: `The nearest thing whose hitbox comes within \`radius\` of a point, or \`nil\` when there's nothing: what a homing shot or a mob looking for a target wants. With \`line_of_sight = true\`, only something a ray from the point reaches without a block in the way. ${QUERY_FINDS} ${QUERY_LOADED}`,
+      params: [
+        { name: 'position', type: 'Vec3', doc: 'Where to look from, in the world.' },
+        { name: 'radius', type: 'number', doc: 'How far to look, in blocks, at least 0.' },
+        { name: 'options', type: 'QueryOptions', doc: '', optional: true },
+      ],
+      returns: [{ type: 'QueryHit?' }],
+      example:
+        'local target = world:nearest(assert(this:position()), 16, { centities = false, line_of_sight = true })\nif target and target.entity then\n  this:look_at(target.position)\nend',
     },
     {
       name: 'game_rule',
@@ -1176,6 +1289,64 @@ export const worldShapes: LuaClass[] = [
       doc: 'Whether water and lava stop it, as solid blocks. Default `false`: it goes through them.',
     },
   ]),
+  shape(
+    'QueryOptions',
+    "What a spatial query (`world:overlap_box`, `overlap_sphere`, `overlap_cone`, `nearest`) finds. A key that isn't one of these is an error.",
+    QUERY_FIELDS,
+  ),
+  {
+    name: 'SweepOptions',
+    doc: "How `world:sweep` moves and what it finds: everything `QueryOptions` takes, and these. A key that isn't one of them is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      ...QUERY_FIELDS,
+      {
+        name: 'radius',
+        type: 'number?',
+        doc: "The moving sphere's radius, in blocks, at least 0. Default 0: a point.",
+      },
+      {
+        name: 'blocks',
+        type: 'boolean?',
+        doc: "Whether blocks stop it (their collision shapes, as `raycast` sees them). Default `true`. A block stops the sphere's middle, not its edge.",
+      },
+      {
+        name: 'fluids',
+        type: 'boolean?',
+        doc: 'Whether water and lava stop it, as solid blocks. Default `false`.',
+      },
+    ],
+  },
+  shape(
+    'QueryHit',
+    'One thing a spatial query found. Exactly one of `centity`, `entity` and `block` is set: a `block` only ends a `world:sweep`.',
+    [
+      { name: 'centity', type: 'Centity?', doc: 'The centity found, or `nil`.' },
+      {
+        name: 'node',
+        type: 'Node?',
+        doc: "Which of `centity`'s nodes was nearest (its hitbox), or `nil` for anything else.",
+      },
+      { name: 'entity', type: 'Entity?', doc: 'The player or entity found, or `nil`.' },
+      { name: 'block', type: 'Block?', doc: 'The block a `world:sweep` stopped at, or `nil`.' },
+      {
+        name: 'position',
+        type: 'Vec3',
+        doc: "Where: for an overlap or `nearest`, the point of the hitbox nearest the query's own point; for a `sweep`, where the sphere's middle is when it first touches (on a block, where it stops).",
+      },
+      {
+        name: 'distance',
+        type: 'number',
+        doc: "How far that is from the query's own point; along the way, for a `sweep`. 0 when the point is inside the hitbox.",
+      },
+      {
+        name: 'normal',
+        type: 'Vec3?',
+        doc: "For a `sweep`'s block, the unit direction straight out of the face it met: what a bounce reflects off. `nil` otherwise.",
+      },
+    ],
+  ),
   shape(
     'RaycastHit',
     'What `world:raycast` hit: where, and what. Exactly one of `block`, `entity` and `centity` is set.',

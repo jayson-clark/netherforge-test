@@ -173,6 +173,9 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
     /** [placed], kept until the pose or facing changes. */
     private var placedCache: List<Matrix4>? = null
 
+    /** What its hitboxes touch now (other instances' and entities' ids), while something listens to its `touch`: see [SpatialQueries.contacts]. */
+    internal var touching: Set<UUID> = emptySet()
+
     /** Its hitboxes as [ObstacleGrid] measured them, kept until the pose, facing, visibility or a display changes. */
     internal var obstacles: ObstacleGrid.Obstacles? = null
 

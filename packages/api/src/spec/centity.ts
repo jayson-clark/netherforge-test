@@ -128,6 +128,13 @@ const centityEvents: EventSpec[] = [
     payload: 'CentityEvent',
   },
   {
+    name: 'touch',
+    doc: "Its hitboxes started touching something's: another centity's, a player's or another entity's (each shown node's boxes, as `world:overlap_box` sees them). Once when they start touching, and again only after they've come apart. Worked out each tick only for centities something listens to this on, so a crowd nobody listens to costs nothing. Both centities hear it when two touch, each with the other in `event.other`.",
+    payload: 'TouchEvent',
+    example:
+      'this:on("touch", function(event)\n  if event.other then\n    event.other:emit("game:bumped", { by = this })\n  end\nend)',
+  },
+  {
     name: 'path_end',
     doc: `It stopped walking where \`move_to\` sent it: it got there (to the end of its path, or within ${PATH_REACH} blocks of what it went after), or gave up (no way further, its way blocked with no other way round, or what it went after has gone or left its world). Not after \`stop_pathing\`, a new \`move_to\`, \`teleport\` or a reload of its centity.`,
     payload: 'CentityPathEndEvent',
@@ -251,6 +258,14 @@ export const centityClass: LuaClass = {
       returns: [{ type: 'Node?' }],
       example:
         'local lamp = assert(this:add_node("lamp", {\n  transform = { translation = vec3(0, 2, 0) },\n  display = { type = "block", block = "minecraft:sea_lantern" },\n  hitbox = {},\n}))\nlamp:on("click", function(event)\n  lamp:remove()\nend)',
+    },
+    {
+      name: 'bounds',
+      doc: "The box around all its hitboxes as they're shown now (each shown node's boxes, turned and placed), in the world: what `world:overlap_box` and the other spatial queries test against. `nil` for a centity with no hitboxes showing, or once it's removed.",
+      params: [],
+      returns: [{ type: 'Bounds?' }],
+      example:
+        'local box = this:bounds()\nif box then\n  local top = vec3((box.min.x + box.max.x) / 2, box.max.y, (box.min.z + box.max.z) / 2)\n  world:spawn_particle("minecraft:heart", top)\nend',
     },
     {
       name: 'location',
@@ -1093,6 +1108,34 @@ export const centityShapes: LuaClass[] = [
         type: 'boolean',
         doc: `Whether it got there: to the end of its path, within ${PATH_REACH} blocks of where it was sent (or of what it went after, which it stops short of); \`false\` when it gave up.`,
       },
+    ],
+  },
+  {
+    name: 'Bounds',
+    doc: "A box along the world's axes: `centity:bounds()`.",
+    methods: false,
+    functions: [],
+    fields: [
+      { name: 'min', type: 'Vec3', doc: 'Its lowest corner.' },
+      { name: 'max', type: 'Vec3', doc: 'Its highest corner.' },
+    ],
+  },
+  {
+    name: 'TouchEvent',
+    doc: "A centity's hitboxes started touching something's: `touch`.",
+    methods: false,
+    functions: [],
+    extends: 'Event',
+    fields: [
+      { name: 'centity', type: 'Centity', doc: 'The centity that hears it.' },
+      { name: 'node', type: 'Node', doc: 'Which of its nodes touched (its hitbox).' },
+      { name: 'other', type: 'Centity?', doc: 'The other centity, or `nil`.' },
+      {
+        name: 'other_node',
+        type: 'Node?',
+        doc: "Which of the other centity's nodes it touched, or `nil`.",
+      },
+      { name: 'entity', type: 'Entity?', doc: 'The player or entity it touched, or `nil`.' },
     ],
   },
   {

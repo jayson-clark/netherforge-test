@@ -2752,6 +2752,72 @@ data class CentityPathEndEvent(val centity: LuaHandle.Centity, val reached: Bool
     }
 }
 
+/** A box along the world's axes: `centity:bounds()`. */
+data class Bounds(val min: Vec3, val max: Vec3) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<Bounds>("Bounds") {
+        val minCodec = LuaCodecs.VEC3
+        val maxCodec = LuaCodecs.VEC3
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "min" to minCodec,
+            "max" to maxCodec
+        )
+
+        override fun read(fields: ShapeReader) = Bounds(
+            min = fields.field("min", minCodec),
+            max = fields.field("max", maxCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: Bounds) {
+            fields.field("min", value.min, minCodec)
+            fields.field("max", value.max, maxCodec)
+        }
+    }
+}
+
+/** A centity's hitboxes started touching something's: `touch`. */
+data class TouchEvent(val centity: LuaHandle.Centity, val node: LuaHandle.Node, val other: LuaHandle.Centity? = null, val otherNode: LuaHandle.Node? = null, val entity: LuaHandle.Entity? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<TouchEvent>("TouchEvent") {
+        val centityCodec = LuaHandle.Centity.Codec
+        val nodeCodec = LuaHandle.Node.Codec
+        val otherCodec = LuaOptional(LuaHandle.Centity.Codec)
+        val otherNodeCodec = LuaOptional(LuaHandle.Node.Codec)
+        val entityCodec = LuaOptional(LuaHandle.Entity.Codec)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "node" to nodeCodec,
+            "other" to otherCodec,
+            "other_node" to otherNodeCodec,
+            "entity" to entityCodec
+        )
+
+        override fun read(fields: ShapeReader) = TouchEvent(
+            centity = fields.field("centity", centityCodec),
+            node = fields.field("node", nodeCodec),
+            other = fields.field("other", otherCodec),
+            otherNode = fields.field("other_node", otherNodeCodec),
+            entity = fields.field("entity", entityCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: TouchEvent) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("node", value.node, nodeCodec)
+            fields.field("other", value.other, otherCodec)
+            fields.field("other_node", value.otherNode, otherNodeCodec)
+            fields.field("entity", value.entity, entityCodec)
+        }
+    }
+}
+
 /** How `centity:play_animation` plays an animation this time. The file says how it plays by default. */
 data class AnimationOptions(val speed: Double? = null, val fromTick: Double? = null, val loop: Boolean? = null, val blendTicks: Long? = null) : LuaShape {
     override fun push(call: LuaCall) = Codec.push(call, this)
@@ -4397,6 +4463,168 @@ data class RaycastOptions(val blocks: Boolean? = null, val entities: Boolean? = 
             fields.field("ignore", value.ignore, ignoreCodec)
             fields.field("centities", value.centities, centitiesCodec)
             fields.field("fluids", value.fluids, fluidsCodec)
+        }
+    }
+}
+
+/**
+ * What a spatial query (`world:overlap_box`, `overlap_sphere`, `overlap_cone`, `nearest`) finds. A key
+ * that isn't one of these is an error.
+ */
+data class QueryOptions(val centities: Boolean? = null, val players: Boolean? = null, val entities: Boolean? = null, val kinds: List<String>? = null, val exclude: List<LuaHandle>? = null, val limit: Long? = null, val lineOfSight: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<QueryOptions>("QueryOptions") {
+        val centitiesCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val playersCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val entitiesCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val kindsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val excludeCodec = LuaOptional(LuaList(LuaUnions.CentityOrEntity))
+        val limitCodec = LuaOptional(LuaCodecs.INTEGER)
+        val lineOfSightCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centities" to centitiesCodec,
+            "players" to playersCodec,
+            "entities" to entitiesCodec,
+            "kinds" to kindsCodec,
+            "exclude" to excludeCodec,
+            "limit" to limitCodec,
+            "line_of_sight" to lineOfSightCodec
+        )
+
+        override fun read(fields: ShapeReader) = QueryOptions(
+            centities = fields.field("centities", centitiesCodec),
+            players = fields.field("players", playersCodec),
+            entities = fields.field("entities", entitiesCodec),
+            kinds = fields.field("kinds", kindsCodec),
+            exclude = fields.field("exclude", excludeCodec),
+            limit = fields.field("limit", limitCodec),
+            lineOfSight = fields.field("line_of_sight", lineOfSightCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: QueryOptions) {
+            fields.field("centities", value.centities, centitiesCodec)
+            fields.field("players", value.players, playersCodec)
+            fields.field("entities", value.entities, entitiesCodec)
+            fields.field("kinds", value.kinds, kindsCodec)
+            fields.field("exclude", value.exclude, excludeCodec)
+            fields.field("limit", value.limit, limitCodec)
+            fields.field("line_of_sight", value.lineOfSight, lineOfSightCodec)
+        }
+    }
+}
+
+/**
+ * How `world:sweep` moves and what it finds: everything `QueryOptions` takes, and these. A key that
+ * isn't one of them is an error.
+ */
+data class SweepOptions(val centities: Boolean? = null, val players: Boolean? = null, val entities: Boolean? = null, val kinds: List<String>? = null, val exclude: List<LuaHandle>? = null, val limit: Long? = null, val lineOfSight: Boolean? = null, val radius: Double? = null, val blocks: Boolean? = null, val fluids: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<SweepOptions>("SweepOptions") {
+        val centitiesCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val playersCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val entitiesCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val kindsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val excludeCodec = LuaOptional(LuaList(LuaUnions.CentityOrEntity))
+        val limitCodec = LuaOptional(LuaCodecs.INTEGER)
+        val lineOfSightCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val radiusCodec = LuaOptional(LuaCodecs.NUMBER)
+        val blocksCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val fluidsCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centities" to centitiesCodec,
+            "players" to playersCodec,
+            "entities" to entitiesCodec,
+            "kinds" to kindsCodec,
+            "exclude" to excludeCodec,
+            "limit" to limitCodec,
+            "line_of_sight" to lineOfSightCodec,
+            "radius" to radiusCodec,
+            "blocks" to blocksCodec,
+            "fluids" to fluidsCodec
+        )
+
+        override fun read(fields: ShapeReader) = SweepOptions(
+            centities = fields.field("centities", centitiesCodec),
+            players = fields.field("players", playersCodec),
+            entities = fields.field("entities", entitiesCodec),
+            kinds = fields.field("kinds", kindsCodec),
+            exclude = fields.field("exclude", excludeCodec),
+            limit = fields.field("limit", limitCodec),
+            lineOfSight = fields.field("line_of_sight", lineOfSightCodec),
+            radius = fields.field("radius", radiusCodec),
+            blocks = fields.field("blocks", blocksCodec),
+            fluids = fields.field("fluids", fluidsCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: SweepOptions) {
+            fields.field("centities", value.centities, centitiesCodec)
+            fields.field("players", value.players, playersCodec)
+            fields.field("entities", value.entities, entitiesCodec)
+            fields.field("kinds", value.kinds, kindsCodec)
+            fields.field("exclude", value.exclude, excludeCodec)
+            fields.field("limit", value.limit, limitCodec)
+            fields.field("line_of_sight", value.lineOfSight, lineOfSightCodec)
+            fields.field("radius", value.radius, radiusCodec)
+            fields.field("blocks", value.blocks, blocksCodec)
+            fields.field("fluids", value.fluids, fluidsCodec)
+        }
+    }
+}
+
+/**
+ * One thing a spatial query found. Exactly one of `centity`, `entity` and `block` is set: a `block`
+ * only ends a `world:sweep`.
+ */
+data class QueryHit(val centity: LuaHandle.Centity? = null, val node: LuaHandle.Node? = null, val entity: LuaHandle.Entity? = null, val block: LuaHandle.Block? = null, val position: Vec3, val distance: Double, val normal: Vec3? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<QueryHit>("QueryHit") {
+        val centityCodec = LuaOptional(LuaHandle.Centity.Codec)
+        val nodeCodec = LuaOptional(LuaHandle.Node.Codec)
+        val entityCodec = LuaOptional(LuaHandle.Entity.Codec)
+        val blockCodec = LuaOptional(LuaHandle.Block.Codec)
+        val positionCodec = LuaCodecs.VEC3
+        val distanceCodec = LuaCodecs.NUMBER
+        val normalCodec = LuaOptional(LuaCodecs.VEC3)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "node" to nodeCodec,
+            "entity" to entityCodec,
+            "block" to blockCodec,
+            "position" to positionCodec,
+            "distance" to distanceCodec,
+            "normal" to normalCodec
+        )
+
+        override fun read(fields: ShapeReader) = QueryHit(
+            centity = fields.field("centity", centityCodec),
+            node = fields.field("node", nodeCodec),
+            entity = fields.field("entity", entityCodec),
+            block = fields.field("block", blockCodec),
+            position = fields.field("position", positionCodec),
+            distance = fields.field("distance", distanceCodec),
+            normal = fields.field("normal", normalCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: QueryHit) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("node", value.node, nodeCodec)
+            fields.field("entity", value.entity, entityCodec)
+            fields.field("block", value.block, blockCodec)
+            fields.field("position", value.position, positionCodec)
+            fields.field("distance", value.distance, distanceCodec)
+            fields.field("normal", value.normal, normalCodec)
         }
     }
 }

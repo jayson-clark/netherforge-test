@@ -913,6 +913,13 @@ interface CentityApi {
     fun addNode(self: LuaHandle.Centity, name: String, definition: LuaValue?): LuaHandle.Node?
 
     /**
+     * The box around all its hitboxes as they're shown now (each shown node's boxes, turned and placed),
+     * in the world: what `world:overlap_box` and the other spatial queries test against. `nil` for a
+     * centity with no hitboxes showing, or once it's removed.
+     */
+    fun bounds(self: LuaHandle.Centity): Bounds?
+
+    /**
      * Where it stands, in which world, and which way it faces, or `nil` once it's removed. The location's
      * `yaw` is the centity's (`centity:yaw()`); its `pitch` is `nil`, because a centity only turns about
      * the vertical.
@@ -2703,6 +2710,57 @@ interface WorldApi {
      * `nil` when it hits nothing, and in a world that has gone. Blocks in unloaded chunks aren't hit.
      */
     fun raycast(self: LuaHandle.World, from: Vec3, direction: Vec3, maxDistance: Double, options: RaycastOptions?): RaycastHit?
+
+    /**
+     * Everything whose hitbox is inside or touches a box, nearest the box's middle first. It finds
+     * centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden
+     * node has none), players and other entities by theirs, as `options` allows: everything, by default. A
+     * centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or
+     * `nil`) in a world that has gone.
+     */
+    fun overlapBox(self: LuaHandle.World, min: Vec3, max: Vec3, options: QueryOptions?): List<QueryHit>
+
+    /**
+     * Everything whose hitbox comes within `radius` of a point, nearest first: what an explosion or an
+     * aura reaches. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and
+     * physics see them; a hidden node has none), players and other entities by theirs, as `options`
+     * allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded
+     * chunks is found. An empty list (or `nil`) in a world that has gone.
+     */
+    fun overlapSphere(self: LuaHandle.World, center: Vec3, radius: Double, options: QueryOptions?): List<QueryHit>
+
+    /**
+     * Everything whose hitbox reaches into a cone from a point, nearest first: what a swing or a breath in
+     * front of someone reaches. A hitbox counts when its point nearest the cone's axis is within `length`
+     * of the tip and within `angle` of the axis, or the tip is inside it. It finds centities by their
+     * hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none),
+     * players and other entities by theirs, as `options` allows: everything, by default. A centity is
+     * found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in
+     * a world that has gone.
+     */
+    fun overlapCone(self: LuaHandle.World, origin: Vec3, direction: Vec3, length: Double, angle: Double, options: QueryOptions?): List<QueryHit>
+
+    /**
+     * Moves a sphere of `options.radius` (0, a point, by default) from one point to another and answers
+     * everything it touches on the way, in the order it meets them: what a fast or piercing shot passes
+     * through in a tick, which a ray (stopping at the first thing) can't say. Blocks stop it unless
+     * `blocks = false`: the block it meets is then the last hit, with its `normal`, and nothing past it is
+     * found. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see
+     * them; a hidden node has none), players and other entities by theirs, as `options` allows:
+     * everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks
+     * is found. An empty list (or `nil`) in a world that has gone.
+     */
+    fun sweep(self: LuaHandle.World, from: Vec3, to: Vec3, options: SweepOptions?): List<QueryHit>
+
+    /**
+     * The nearest thing whose hitbox comes within `radius` of a point, or `nil` when there's nothing: what
+     * a homing shot or a mob looking for a target wants. With `line_of_sight = true`, only something a ray
+     * from the point reaches without a block in the way. It finds centities by their hitboxes (each shown
+     * node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities
+     * by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest
+     * node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+     */
+    fun nearest(self: LuaHandle.World, position: Vec3, radius: Double, options: QueryOptions?): QueryHit?
 
     /**
      * A game rule's value: a `boolean` or an `integer`, depending on the rule. `nil` once the world has

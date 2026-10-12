@@ -22,6 +22,7 @@ import dev.netherforge.plugin.api.Events
 import dev.netherforge.plugin.api.LuaEvent
 import dev.netherforge.plugin.api.LuaHandle
 import dev.netherforge.plugin.api.TickEvent
+import dev.netherforge.plugin.api.TouchEvent
 import dev.netherforge.plugin.platform.ClickButton
 import dev.netherforge.plugin.platform.DisplayLook
 import dev.netherforge.plugin.platform.DisplayPose
@@ -102,6 +103,8 @@ class Centities(
     private val home: () -> String,
     /** Where the profiler takes what each step of an instance's tick costs (`world/centities/sync`). */
     private val parts: TickParts = TickParts.OFF,
+    /** The handle an entity is given in an event (a `Player`, a `Mob`...): the session's, which asks the server what it is. */
+    private val entityHandle: (UUID) -> LuaHandle.Entity = { LuaHandle.Entity(it.toString()) },
     /** An instance was removed for good (or its inert record was): what's kept for it elsewhere goes too. */
     private val onRemoved: (UUID) -> Unit = {}
 ) : RuntimeService {
@@ -133,8 +136,11 @@ class Centities(
 
     fun all(): List<Instance> = instances.values.toList()
 
-    /** Every instance's hitboxes by where they are, for physics. */
+    /** Every instance's hitboxes by where they are, for physics and the spatial queries. */
     internal val obstacles = ObstacleGrid(::boxesOf)
+
+    /** `world:overlap_*`, `sweep`, `nearest`: hitboxes here and the server's entities' boxes. */
+    internal val spatial = SpatialQueries(platform, this)
 
     fun find(id: UUID): Instance? = instances[id]
 
@@ -551,6 +557,41 @@ class Centities(
                 failing.remove(instance.id)
             } catch (e: Exception) {
                 if (failing.add(instance.id)) log.error("Centity ${instance.centity} (${instance.id}) failed to tick", e)
+            }
+        }
+        touches()
+    }
+
+    /**
+     * `touch`: after every instance has moved this tick, each one something listens to `touch` on hears
+     * what its hitboxes started touching since the last tick. One nobody listens to keeps no contacts.
+     */
+    private fun touches() {
+        for (instance in instances.values.toList()) {
+            if (instance.removed) continue
+            if (!scripts.listening(handle(instance), Events.CENTITY_TOUCH) || !loaded(instance)) {
+                instance.touching = emptySet()
+                continue
+            }
+            val now = parts.time(TOUCH) { spatial.contacts(instance) }
+            val before = instance.touching
+            instance.touching = now.keys
+            val id = instance.id.toString()
+            for ((other, contact) in now) {
+                if (other in before) continue
+                if (instance.removed) break
+                val nodes = instance.definition.nodes
+                emit(
+                    Events.CENTITY_TOUCH,
+                    instance,
+                    TouchEvent(
+                        centity = handle(instance),
+                        node = LuaHandle.Node(id, nodes[contact.node].name),
+                        other = contact.other?.let(::handle),
+                        otherNode = contact.other?.let { LuaHandle.Node(it.id.toString(), it.definition.nodes[contact.otherNode].name) },
+                        entity = contact.entity?.let(entityHandle)
+                    )
+                )
             }
         }
     }
@@ -1050,7 +1091,20 @@ class Centities(
      */
     fun raycast(world: String, origin: Vec3, direction: Vec3, maxDistance: Double): HitboxHit? {
         var best: HitboxHit? = null
-        for (instance in instances.values) {
+        // Only the instances whose boxes reach the box around the ray: the grid files them by where they are.
+        val end = origin + direction * maxDistance
+        val candidates = ArrayList<Instance>()
+        obstacles.near(
+            world,
+            minOf(origin.x, end.x),
+            minOf(origin.y, end.y),
+            minOf(origin.z, end.z),
+            maxOf(origin.x, end.x),
+            maxOf(origin.y, end.y),
+            maxOf(origin.z, end.z),
+            candidates
+        )
+        for (instance in candidates) {
             if (instance.removed || instance.anchor.world != world || !loaded(instance)) continue
             val from = instance.fromAnchor(origin)
             val (index, hit) = nearestHitbox(instance, from, direction, best?.distance ?: maxDistance) ?: continue
@@ -1153,6 +1207,7 @@ class Centities(
         private const val PHYSICS = "$PART/physics"
         private const val SCRIPTS = "$PART/scripts"
         private const val SYNC = "$PART/sync"
+        private const val TOUCH = "$PART/touch"
         private const val SYNC_GONE = "$SYNC/reconcile"
         private const val SYNC_ANCHOR = "$SYNC/anchor"
         private const val SYNC_PLACE = "$SYNC/place"

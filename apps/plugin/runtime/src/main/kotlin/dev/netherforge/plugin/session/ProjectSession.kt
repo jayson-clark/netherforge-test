@@ -27,6 +27,7 @@ import dev.netherforge.plugin.api.Events
 import dev.netherforge.plugin.api.GameEventDispatch
 import dev.netherforge.plugin.api.LuaHandle
 import dev.netherforge.plugin.api.RuntimeApi
+import dev.netherforge.plugin.api.entityHandle
 import dev.netherforge.plugin.api.mobHandle
 import dev.netherforge.plugin.async.AsyncWork
 import dev.netherforge.plugin.block.CustomBlocks
@@ -356,7 +357,8 @@ class ProjectSession internal constructor(
             runtime.store.instances,
             handover.instances,
             { namespace },
-            runtime.profiler.parts
+            runtime.profiler.parts,
+            { entityHandle(it) }
         ) {
             data.remove(ScriptData.Owner.Centity(it))
         }

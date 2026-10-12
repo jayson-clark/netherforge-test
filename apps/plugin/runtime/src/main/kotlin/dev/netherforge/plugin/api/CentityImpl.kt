@@ -70,6 +70,13 @@ internal class CentityImpl(private val session: ProjectSession) : CentityApi {
     override fun node(self: LuaHandle.Centity, name: String): LuaHandle.Node? =
         instance(self)?.indexOf(name)?.let { LuaHandle.Node(self.id, name) }
 
+    override fun bounds(self: LuaHandle.Centity): Bounds? {
+        val instance = instance(self) ?: return null
+        val box = centities.obstacles.of(instance).bounds ?: return null
+        val a = instance.anchor
+        return Bounds(Vec3(box.min.x + a.x, box.min.y + a.y, box.min.z + a.z), Vec3(box.max.x + a.x, box.max.y + a.y, box.max.z + a.z))
+    }
+
     override fun location(self: LuaHandle.Centity): LuaLocation? =
         instance(self)?.let { LuaLocation(LuaHandle.World(it.anchor.world), Vec3(it.anchor.x, it.anchor.y, it.anchor.z), it.yaw) }
 

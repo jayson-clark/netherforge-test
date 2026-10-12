@@ -7,7 +7,7 @@
 -- The sandbox removes io, os, package, load, loadstring, dofile, loadfile, debug, collectgarbage, warn, java.
 
 ---@alias nf.Event "tick"|"unload"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed"|string
----@alias Centity.Event "spawn"|"remove"|"tick"|"click"|"animation_start"|"animation_end"|"chunk_load"|"chunk_unload"|"path_end"|string
+---@alias Centity.Event "spawn"|"remove"|"tick"|"click"|"animation_start"|"animation_end"|"chunk_load"|"chunk_unload"|"touch"|"path_end"|string
 ---@alias Node.Event "click"|"collide"|"wake"|"sleep"
 ---@alias Entity.Event "damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
 ---@alias Living.Event "death"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
@@ -417,6 +417,7 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: Centity, event: "animation_end", filter?: fun(event: AnimationEvent): boolean): AnimationEvent
 ---@overload fun(handle: Centity, event: "chunk_load", filter?: fun(event: CentityEvent): boolean): CentityEvent
 ---@overload fun(handle: Centity, event: "chunk_unload", filter?: fun(event: CentityEvent): boolean): CentityEvent
+---@overload fun(handle: Centity, event: "touch", filter?: fun(event: TouchEvent): boolean): TouchEvent
 ---@overload fun(handle: Centity, event: "path_end", filter?: fun(event: CentityPathEndEvent): boolean): CentityPathEndEvent
 ---@overload fun(handle: Node, event: "click", filter?: fun(event: ClickEvent): boolean): ClickEvent
 ---@overload fun(handle: Node, event: "collide", filter?: fun(event: CollideEvent): boolean): CollideEvent
@@ -1171,6 +1172,10 @@ function Centity:roots() end
 ---@return Node?
 function Centity:add_node(name, definition) end
 
+--- The box around all its hitboxes as they're shown now (each shown node's boxes, turned and placed), in the world: what `world:overlap_box` and the other spatial queries test against. `nil` for a centity with no hitboxes showing, or once it's removed.
+---@return Bounds?
+function Centity:bounds() end
+
 --- Where it stands, in which world, and which way it faces, or `nil` once it's removed. The location's `yaw` is the centity's (`centity:yaw()`); its `pitch` is `nil`, because a centity only turns about the vertical.
 ---@return Location?
 function Centity:location() end
@@ -1355,6 +1360,7 @@ function Centity:set_view_range(blocks) end
 ---@overload fun(self: Centity, event: "animation_end", handler: fun(event: AnimationEvent)): Subscription
 ---@overload fun(self: Centity, event: "chunk_load", handler: fun(event: CentityEvent)): Subscription
 ---@overload fun(self: Centity, event: "chunk_unload", handler: fun(event: CentityEvent)): Subscription
+---@overload fun(self: Centity, event: "touch", handler: fun(event: TouchEvent)): Subscription
 ---@overload fun(self: Centity, event: "path_end", handler: fun(event: CentityPathEndEvent)): Subscription
 function Centity:on(event, handler, options) end
 
@@ -1370,6 +1376,7 @@ function Centity:on(event, handler, options) end
 ---@overload fun(self: Centity, event: "animation_end", handler: fun(event: AnimationEvent)): Subscription
 ---@overload fun(self: Centity, event: "chunk_load", handler: fun(event: CentityEvent)): Subscription
 ---@overload fun(self: Centity, event: "chunk_unload", handler: fun(event: CentityEvent)): Subscription
+---@overload fun(self: Centity, event: "touch", handler: fun(event: TouchEvent)): Subscription
 ---@overload fun(self: Centity, event: "path_end", handler: fun(event: CentityPathEndEvent)): Subscription
 function Centity:once(event, handler) end
 
@@ -3035,6 +3042,43 @@ function World:strike_lightning(position, options) end
 ---@param options? RaycastOptions
 ---@return RaycastHit?
 function World:raycast(from, direction, max_distance, options) end
+
+--- Everything whose hitbox is inside or touches a box, nearest the box's middle first. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+---@param min Vec3 One corner, in the world.
+---@param max Vec3 The opposite corner. The corners may come in either order.
+---@param options? QueryOptions
+---@return QueryHit[]
+function World:overlap_box(min, max, options) end
+
+--- Everything whose hitbox comes within `radius` of a point, nearest first: what an explosion or an aura reaches. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+---@param center Vec3 The middle, in the world.
+---@param radius number In blocks, at least 0.
+---@param options? QueryOptions
+---@return QueryHit[]
+function World:overlap_sphere(center, radius, options) end
+
+--- Everything whose hitbox reaches into a cone from a point, nearest first: what a swing or a breath in front of someone reaches. A hitbox counts when its point nearest the cone's axis is within `length` of the tip and within `angle` of the axis, or the tip is inside it. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+---@param origin Vec3 The cone's tip, in the world.
+---@param direction Vec3 Which way it opens: any length but zero.
+---@param length number How far it reaches from the tip, in blocks, at least 0.
+---@param angle number How wide it opens, in degrees from its axis to its side: 0 to 180 (90 is everything in front, 180 a sphere).
+---@param options? QueryOptions
+---@return QueryHit[]
+function World:overlap_cone(origin, direction, length, angle, options) end
+
+--- Moves a sphere of `options.radius` (0, a point, by default) from one point to another and answers everything it touches on the way, in the order it meets them: what a fast or piercing shot passes through in a tick, which a ray (stopping at the first thing) can't say. Blocks stop it unless `blocks = false`: the block it meets is then the last hit, with its `normal`, and nothing past it is found. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+---@param from Vec3 Where it starts, in the world.
+---@param to Vec3 Where it would end.
+---@param options? SweepOptions
+---@return QueryHit[]
+function World:sweep(from, to, options) end
+
+--- The nearest thing whose hitbox comes within `radius` of a point, or `nil` when there's nothing: what a homing shot or a mob looking for a target wants. With `line_of_sight = true`, only something a ray from the point reaches without a block in the way. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+---@param position Vec3 Where to look from, in the world.
+---@param radius number How far to look, in blocks, at least 0.
+---@param options? QueryOptions
+---@return QueryHit?
+function World:nearest(position, radius, options) end
 
 --- A game rule's value: a `boolean` or an `integer`, depending on the rule. `nil` once the world has gone. A rule the server doesn't have is an error.
 ---@param rule string Its id, as the server names it: `"keep_inventory"`, `"random_tick_speed"`.
@@ -5022,6 +5066,19 @@ function Event:uncancel() end
 ---@field centity Centity The instance.
 ---@field reached boolean Whether it got there: to the end of its path, within 2 blocks of where it was sent (or of what it went after, which it stops short of); `false` when it gave up.
 
+--- A box along the world's axes: `centity:bounds()`.
+---@class Bounds
+---@field min Vec3 Its lowest corner.
+---@field max Vec3 Its highest corner.
+
+--- A centity's hitboxes started touching something's: `touch`.
+---@class TouchEvent: Event
+---@field centity Centity The centity that hears it.
+---@field node Node Which of its nodes touched (its hitbox).
+---@field other Centity? The other centity, or `nil`.
+---@field other_node Node? Which of the other centity's nodes it touched, or `nil`.
+---@field entity Entity? The player or entity it touched, or `nil`.
+
 --- How `centity:play_animation` plays an animation this time. The file says how it plays by default.
 ---@class AnimationOptions
 ---@field speed number? 1 is as authored (the default), 2 twice as fast, 0.5 half. Not negative.
@@ -5447,6 +5504,39 @@ function Event:uncancel() end
 ---@field ignore Entity[]? Entities it goes through: the one it's cast from, usually. Default none.
 ---@field centities boolean? Whether centities' hitboxes stop it. Default `true`.
 ---@field fluids boolean? Whether water and lava stop it, as solid blocks. Default `false`: it goes through them.
+
+--- What a spatial query (`world:overlap_box`, `overlap_sphere`, `overlap_cone`, `nearest`) finds. A key that isn't one of these is an error.
+---@class QueryOptions
+---@field centities boolean? Whether it finds centities. Default `true`.
+---@field players boolean? Whether it finds players. Default `true`.
+---@field entities boolean? Whether it finds entities that aren't players (mobs, dropped items, arrows...). Default `true`.
+---@field kinds string[]? Only centities of these kinds (their folder names), and entities of these types (`"minecraft:zombie"`). Default: any.
+---@field exclude (Centity|Entity)[]? What it leaves out: whatever is asking, usually. Default none.
+---@field limit integer? At most this many, the nearest. At least 1. Default: all.
+---@field line_of_sight boolean? Only what a ray from the query's own point (the middle of a box, the centre of a sphere, a cone's tip, a sweep's start) reaches without a block in the way, aimed at its hitbox's nearest point. Default `false`.
+
+--- How `world:sweep` moves and what it finds: everything `QueryOptions` takes, and these. A key that isn't one of them is an error.
+---@class SweepOptions
+---@field centities boolean? Whether it finds centities. Default `true`.
+---@field players boolean? Whether it finds players. Default `true`.
+---@field entities boolean? Whether it finds entities that aren't players (mobs, dropped items, arrows...). Default `true`.
+---@field kinds string[]? Only centities of these kinds (their folder names), and entities of these types (`"minecraft:zombie"`). Default: any.
+---@field exclude (Centity|Entity)[]? What it leaves out: whatever is asking, usually. Default none.
+---@field limit integer? At most this many, the nearest. At least 1. Default: all.
+---@field line_of_sight boolean? Only what a ray from the query's own point (the middle of a box, the centre of a sphere, a cone's tip, a sweep's start) reaches without a block in the way, aimed at its hitbox's nearest point. Default `false`.
+---@field radius number? The moving sphere's radius, in blocks, at least 0. Default 0: a point.
+---@field blocks boolean? Whether blocks stop it (their collision shapes, as `raycast` sees them). Default `true`. A block stops the sphere's middle, not its edge.
+---@field fluids boolean? Whether water and lava stop it, as solid blocks. Default `false`.
+
+--- One thing a spatial query found. Exactly one of `centity`, `entity` and `block` is set: a `block` only ends a `world:sweep`.
+---@class QueryHit
+---@field centity Centity? The centity found, or `nil`.
+---@field node Node? Which of `centity`'s nodes was nearest (its hitbox), or `nil` for anything else.
+---@field entity Entity? The player or entity found, or `nil`.
+---@field block Block? The block a `world:sweep` stopped at, or `nil`.
+---@field position Vec3 Where: for an overlap or `nearest`, the point of the hitbox nearest the query's own point; for a `sweep`, where the sphere's middle is when it first touches (on a block, where it stops).
+---@field distance number How far that is from the query's own point; along the way, for a `sweep`. 0 when the point is inside the hitbox.
+---@field normal Vec3? For a `sweep`'s block, the unit direction straight out of the face it met: what a bounce reflects off. `nil` otherwise.
 
 --- What `world:raycast` hit: where, and what. Exactly one of `block`, `entity` and `centity` is set.
 ---@class RaycastHit

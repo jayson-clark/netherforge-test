@@ -260,6 +260,7 @@ What [Centity](centity.md) listens for.
 | `animation_end` | [AnimationEvent](events.md#animationevent) |  | An animation reached its end: a `once` clip has finished, a `hold` clip is holding its last pose. Looping clips never end. |
 | `chunk_load` | [CentityEvent](events.md#centityevent) |  | Its chunk came back into memory (someone came near), so it's ticking again. |
 | `chunk_unload` | [CentityEvent](events.md#centityevent) |  | Its chunk was unloaded (everyone went away): it stops ticking until `chunk_load`. Its handlers stay. |
+| `touch` | [TouchEvent](events.md#touchevent) |  | Its hitboxes started touching something's: another centity's, a player's or another entity's (each shown node's boxes, as `world:overlap_box` sees them). Once when they start touching, and again only after they've come apart. Worked out each tick only for centities something listens to this on, so a crowd nobody listens to costs nothing. Both centities hear it when two touch, each with the other in `event.other`. |
 | `path_end` | [CentityPathEndEvent](events.md#centitypathendevent) |  | It stopped walking where `move_to` sent it: it got there (to the end of its path, or within 2 blocks of what it went after), or gave up (no way further, its way blocked with no other way round, or what it went after has gone or left its world). Not after `stop_pathing`, a new `move_to`, `teleport` or a reload of its centity. |
 
 ### centity spawn
@@ -286,6 +287,16 @@ end)
 this:on("click", function(event)
   this:play_animation("open")
   event.player:send_message("<gold>Opened")
+end)
+```
+
+### centity touch
+
+```lua
+this:on("touch", function(event)
+  if event.other then
+    event.other:emit("game:bumped", { by = this })
+  end
 end)
 ```
 
@@ -1735,6 +1746,29 @@ Has the fields and methods of [Event](#event) too.
 | `centity` | `Centity` | The instance. |
 | `reached` | `boolean` | Whether it got there: to the end of its path, within 2 blocks of where it was sent (or of what it went after, which it stops short of); `false` when it gave up. |
 
+## Bounds
+
+A box along the world's axes: `centity:bounds()`.
+
+| Field | Type | |
+| --- | --- | --- |
+| `min` | `Vec3` | Its lowest corner. |
+| `max` | `Vec3` | Its highest corner. |
+
+## TouchEvent
+
+A centity's hitboxes started touching something's: `touch`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity` | The centity that hears it. |
+| `node` | `Node` | Which of its nodes touched (its hitbox). |
+| `other` | `Centity?` | The other centity, or `nil`. |
+| `other_node` | `Node?` | Which of the other centity's nodes it touched, or `nil`. |
+| `entity` | `Entity?` | The player or entity it touched, or `nil`. |
+
 ## AnimationOptions
 
 How `centity:play_animation` plays an animation this time. The file says how it plays by default.
@@ -2412,6 +2446,51 @@ What a ray can hit. A key that isn't one of these is an error.
 | `ignore` | `Entity[]?` | Entities it goes through: the one it's cast from, usually. Default none. |
 | `centities` | `boolean?` | Whether centities' hitboxes stop it. Default `true`. |
 | `fluids` | `boolean?` | Whether water and lava stop it, as solid blocks. Default `false`: it goes through them. |
+
+## QueryOptions
+
+What a spatial query (`world:overlap_box`, `overlap_sphere`, `overlap_cone`, `nearest`) finds. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centities` | `boolean?` | Whether it finds centities. Default `true`. |
+| `players` | `boolean?` | Whether it finds players. Default `true`. |
+| `entities` | `boolean?` | Whether it finds entities that aren't players (mobs, dropped items, arrows...). Default `true`. |
+| `kinds` | `string[]?` | Only centities of these kinds (their folder names), and entities of these types (`"minecraft:zombie"`). Default: any. |
+| `exclude` | `(Centity\|Entity)[]?` | What it leaves out: whatever is asking, usually. Default none. |
+| `limit` | `integer?` | At most this many, the nearest. At least 1. Default: all. |
+| `line_of_sight` | `boolean?` | Only what a ray from the query's own point (the middle of a box, the centre of a sphere, a cone's tip, a sweep's start) reaches without a block in the way, aimed at its hitbox's nearest point. Default `false`. |
+
+## SweepOptions
+
+How `world:sweep` moves and what it finds: everything `QueryOptions` takes, and these. A key that isn't one of them is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centities` | `boolean?` | Whether it finds centities. Default `true`. |
+| `players` | `boolean?` | Whether it finds players. Default `true`. |
+| `entities` | `boolean?` | Whether it finds entities that aren't players (mobs, dropped items, arrows...). Default `true`. |
+| `kinds` | `string[]?` | Only centities of these kinds (their folder names), and entities of these types (`"minecraft:zombie"`). Default: any. |
+| `exclude` | `(Centity\|Entity)[]?` | What it leaves out: whatever is asking, usually. Default none. |
+| `limit` | `integer?` | At most this many, the nearest. At least 1. Default: all. |
+| `line_of_sight` | `boolean?` | Only what a ray from the query's own point (the middle of a box, the centre of a sphere, a cone's tip, a sweep's start) reaches without a block in the way, aimed at its hitbox's nearest point. Default `false`. |
+| `radius` | `number?` | The moving sphere's radius, in blocks, at least 0. Default 0: a point. |
+| `blocks` | `boolean?` | Whether blocks stop it (their collision shapes, as `raycast` sees them). Default `true`. A block stops the sphere's middle, not its edge. |
+| `fluids` | `boolean?` | Whether water and lava stop it, as solid blocks. Default `false`. |
+
+## QueryHit
+
+One thing a spatial query found. Exactly one of `centity`, `entity` and `block` is set: a `block` only ends a `world:sweep`.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity?` | The centity found, or `nil`. |
+| `node` | `Node?` | Which of `centity`'s nodes was nearest (its hitbox), or `nil` for anything else. |
+| `entity` | `Entity?` | The player or entity found, or `nil`. |
+| `block` | `Block?` | The block a `world:sweep` stopped at, or `nil`. |
+| `position` | `Vec3` | Where: for an overlap or `nearest`, the point of the hitbox nearest the query's own point; for a `sweep`, where the sphere's middle is when it first touches (on a block, where it stops). |
+| `distance` | `number` | How far that is from the query's own point; along the way, for a `sweep`. 0 when the point is inside the hitbox. |
+| `normal` | `Vec3?` | For a `sweep`'s block, the unit direction straight out of the face it met: what a bounce reflects off. `nil` otherwise. |
 
 ## RaycastHit
 

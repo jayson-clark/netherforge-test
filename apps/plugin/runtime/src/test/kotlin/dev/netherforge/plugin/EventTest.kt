@@ -123,7 +123,7 @@ class EventTest {
     fun `a name a class doesn't have, or a wrong option, is an error at the call`() {
         for ((line, message) in listOf(
             "this:on(\"clik\", function() end)" to
-                "no event \"clik\" for Centity (events: animation_end, animation_start, chunk_load, chunk_unload, click, path_end, remove, spawn, tick; a custom event's name has a ':' in it)",
+                "no event \"clik\" for Centity (events: animation_end, animation_start, chunk_load, chunk_unload, click, path_end, remove, spawn, tick, touch; a custom event's name has a ':' in it)",
             "this:node(\"root\"):on(\"tick\", function() end)" to "no event \"tick\" for Node (events: click, collide, sleep, wake)",
             "this:node(\"root\"):on(\"door:open\", function() end)" to "only nf and Centity take custom events",
             "this:on(\"click\", function() end, { every = 2 })" to "option 'every' doesn't apply to the click event",

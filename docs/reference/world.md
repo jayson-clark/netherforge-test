@@ -463,6 +463,111 @@ if hit and hit.centity then
 end
 ```
 
+## `world:overlap_box(min, max, options?)`
+
+Everything whose hitbox is inside or touches a box, nearest the box's middle first. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `min` | `Vec3` | One corner, in the world. |
+| `max` | `Vec3` | The opposite corner. The corners may come in either order. |
+| `options` (optional) | `QueryOptions` |  |
+
+**Returns** `QueryHit[]`
+
+```lua
+local corner = vec3(0, 64, 0)
+for _, hit in ipairs(world:overlap_box(corner, corner + vec3(4, 3, 4), { players = false })) do
+  if hit.centity then
+    hit.centity:remove()
+  end
+end
+```
+
+## `world:overlap_sphere(center, radius, options?)`
+
+Everything whose hitbox comes within `radius` of a point, nearest first: what an explosion or an aura reaches. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `center` | `Vec3` | The middle, in the world. |
+| `radius` | `number` | In blocks, at least 0. |
+| `options` (optional) | `QueryOptions` |  |
+
+**Returns** `QueryHit[]`
+
+```lua
+for _, hit in ipairs(world:overlap_sphere(vec3(0, 64, 0), 4, { entities = false })) do
+  log(hit.distance)
+end
+```
+
+## `world:overlap_cone(origin, direction, length, angle, options?)`
+
+Everything whose hitbox reaches into a cone from a point, nearest first: what a swing or a breath in front of someone reaches. A hitbox counts when its point nearest the cone's axis is within `length` of the tip and within `angle` of the axis, or the tip is inside it. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `origin` | `Vec3` | The cone's tip, in the world. |
+| `direction` | `Vec3` | Which way it opens: any length but zero. |
+| `length` | `number` | How far it reaches from the tip, in blocks, at least 0. |
+| `angle` | `number` | How wide it opens, in degrees from its axis to its side: 0 to 180 (90 is everything in front, 180 a sphere). |
+| `options` (optional) | `QueryOptions` |  |
+
+**Returns** `QueryHit[]`
+
+```lua
+local eyes, facing = assert(player:eye_position()), assert(player:direction())
+for _, hit in ipairs(world:overlap_cone(eyes, facing, 3, 45, { exclude = { player } })) do
+  if hit.centity then
+    hit.centity:emit("game:struck", { by = player })
+  end
+end
+```
+
+## `world:sweep(from, to, options?)`
+
+Moves a sphere of `options.radius` (0, a point, by default) from one point to another and answers everything it touches on the way, in the order it meets them: what a fast or piercing shot passes through in a tick, which a ray (stopping at the first thing) can't say. Blocks stop it unless `blocks = false`: the block it meets is then the last hit, with its `normal`, and nothing past it is found. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `from` | `Vec3` | Where it starts, in the world. |
+| `to` | `Vec3` | Where it would end. |
+| `options` (optional) | `SweepOptions` |  |
+
+**Returns** `QueryHit[]`
+
+```lua
+local position, velocity = vec3(0, 65, 0), vec3(2, 0, 0)
+local hits = world:sweep(position, position + velocity, { radius = 0.25, players = false })
+for _, hit in ipairs(hits) do
+  if hit.block then
+    break -- it struck a wall
+  elseif hit.centity then
+    hit.centity:emit("game:hit", { damage = 5 })
+  end
+end
+```
+
+## `world:nearest(position, radius, options?)`
+
+The nearest thing whose hitbox comes within `radius` of a point, or `nil` when there's nothing: what a homing shot or a mob looking for a target wants. With `line_of_sight = true`, only something a ray from the point reaches without a block in the way. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `position` | `Vec3` | Where to look from, in the world. |
+| `radius` | `number` | How far to look, in blocks, at least 0. |
+| `options` (optional) | `QueryOptions` |  |
+
+**Returns** `QueryHit?`
+
+```lua
+local target = world:nearest(assert(this:position()), 16, { centities = false, line_of_sight = true })
+if target and target.entity then
+  this:look_at(target.position)
+end
+```
+
 ## `world:game_rule(rule)`
 
 A game rule's value: a `boolean` or an `integer`, depending on the rule. `nil` once the world has gone. A rule the server doesn't have is an error.

@@ -153,6 +153,14 @@ function Centity.add_node(self, name, definition)
   return prim["Centity.add_node"](self_key, name, definition)
 end
 
+function Centity.bounds(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.bounds"](self_key)
+end
+
 function Centity.location(self)
   local self_key = ids[self]
   if self_key == nil or not Centity_is[class_of(self)] then
@@ -3246,6 +3254,70 @@ function World.raycast(self, from, direction, max_distance, options)
     want_vec3(direction, "direction")
   end
   return prim["World.raycast"](self_key, from[1], from[2], from[3], direction[1], direction[2], direction[3], max_distance, options)
+end
+
+function World.overlap_box(self, min, max, options)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  if genuine_mt(min) ~= Vec3_mt then
+    want_vec3(min, "min")
+  end
+  if genuine_mt(max) ~= Vec3_mt then
+    want_vec3(max, "max")
+  end
+  return prim["World.overlap_box"](self_key, min[1], min[2], min[3], max[1], max[2], max[3], options)
+end
+
+function World.overlap_sphere(self, center, radius, options)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  if genuine_mt(center) ~= Vec3_mt then
+    want_vec3(center, "center")
+  end
+  return prim["World.overlap_sphere"](self_key, center[1], center[2], center[3], radius, options)
+end
+
+function World.overlap_cone(self, origin, direction, length, angle, options)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  if genuine_mt(origin) ~= Vec3_mt then
+    want_vec3(origin, "origin")
+  end
+  if genuine_mt(direction) ~= Vec3_mt then
+    want_vec3(direction, "direction")
+  end
+  return prim["World.overlap_cone"](self_key, origin[1], origin[2], origin[3], direction[1], direction[2], direction[3], length, angle, options)
+end
+
+function World.sweep(self, from, to, options)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  if genuine_mt(from) ~= Vec3_mt then
+    want_vec3(from, "from")
+  end
+  if genuine_mt(to) ~= Vec3_mt then
+    want_vec3(to, "to")
+  end
+  return prim["World.sweep"](self_key, from[1], from[2], from[3], to[1], to[2], to[3], options)
+end
+
+function World.nearest(self, position, radius, options)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  if genuine_mt(position) ~= Vec3_mt then
+    want_vec3(position, "position")
+  end
+  return prim["World.nearest"](self_key, position[1], position[2], position[3], radius, options)
 end
 
 function World.game_rule(self, rule)

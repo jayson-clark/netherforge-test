@@ -90,6 +90,21 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Added
 
+- **Spatial queries.** `world:overlap_box`, `overlap_sphere` and `overlap_cone`
+  find everything whose hitbox reaches into a region (centities by each shown
+  node's boxes, players and entities by theirs), nearest first;
+  `world:sweep` moves a sphere along a segment and answers everything it
+  passes in order, stopping at a block (with its face's normal) unless told
+  not to, so piercing and bouncing shots need no loop of their own; and
+  `world:nearest` finds the nearest thing, optionally only one in line of
+  sight. Options filter by what it is, by kind, by an exclude list and by a
+  limit. Centities are found through the grid physics files hitboxes in, so a
+  query looks only at what's near it; `world:raycast` uses it too now.
+- **`centity:bounds()` and `touch`.** The box around a centity's shown
+  hitboxes, and an event when its hitboxes start touching another centity's,
+  a player's or an entity's, worked out only for centities something listens
+  to it on.
+
 - **Mining rules and drops for the game's own blocks.** A `game_blocks/<id>.json`
   file gives some of the game's blocks (ids, and tags like `#minecraft:logs`)
   a `hardness`, `tool`, `requiresTool` and `drops` of the project's, so a

@@ -2,6 +2,7 @@ package dev.netherforge.plugin.testkit
 
 import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.Box
+import dev.netherforge.plugin.platform.EntityBox
 import dev.netherforge.plugin.platform.EntityCategory
 import dev.netherforge.plugin.platform.EntityFlag
 import dev.netherforge.plugin.platform.EntityHit
@@ -403,6 +404,26 @@ class FakeWorldEntities(private val platform: FakePlatform) : WorldEntityOps {
             if (best == null || distance < best.first) best = distance to EntityHit(body.id, origin + direction * distance, normal)
         }
         return best?.second
+    }
+
+    override fun boxes(world: String, region: Box): List<EntityBox> {
+        val found = mutableListOf<EntityBox>()
+        for (body in platform.players.byId.values + mobs.values.filter { platform.worlds.entitiesLoaded(it.location) }) {
+            if (body.location.world != world) continue
+            if (body is FakePlayer && body.gameMode == "spectator") continue
+            val l = body.location
+            val half = body.width / 2
+            val box = Box(Vec3(l.x - half, l.y, l.z - half), Vec3(l.x + half, l.y + body.height, l.z + half))
+            val apart = box.max.x < region.min.x ||
+                box.min.x > region.max.x ||
+                box.max.y < region.min.y ||
+                box.min.y > region.max.y ||
+                box.max.z < region.min.z ||
+                box.min.z > region.max.z
+            if (apart) continue
+            found += EntityBox(body.id, body.kind, body is FakePlayer, box)
+        }
+        return found
     }
 
     /**
