@@ -141,6 +141,41 @@ function steps.layers()
   end)
 end
 
+-- A walk through a shut oak door in a wall: refused without open_doors, through and shut behind it with them.
+function steps.doors()
+  local z = Z + 8
+  for _, dz in ipairs({ -6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6 }) do
+    put(vec3(X + 4, -62, z + dz), "minecraft:stone")
+    put(vec3(X + 4, -61, z + dz), "minecraft:stone")
+  end
+  put(
+    vec3(X + 4, -62, z),
+    "minecraft:oak_door[facing=east,half=lower,hinge=left,open=false,powered=false]"
+  )
+  put(
+    vec3(X + 4, -61, z),
+    "minecraft:oak_door[facing=east,half=upper,hinge=left,open=false,powered=false]"
+  )
+  local c =
+    nf.centities.spawn("it_rope", vec3(X + 1.5, -62, z + 0.5), { temporary = true, lifetime = 400 })
+  local goal = vec3(X + 7.5, -62, z + 0.5)
+  c:move_to(goal, { range = 6, width = 0.6 })
+  local target = c:path_target()
+  local shut = target == nil or target:distance(goal) > 1
+  c:on("path_end", function(event)
+    local door = world:block(vec3(X + 4, -62, z)):state()
+    log(
+      "doors",
+      tostring(shut),
+      tostring(event.reached),
+      f(c:position().x),
+      tostring(door:find("open=false") ~= nil)
+    )
+    clear()
+  end)
+  c:move_to(goal, { range = 6, width = 0.6, open_doors = true, speed = 4 })
+end
+
 -- netherforge.json's gameRules, set on the world when the project loaded.
 function steps.rules()
   log("rules", tostring(world:game_rule("keep_inventory")))

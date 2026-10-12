@@ -37,7 +37,8 @@ internal data class PathSettings(
     val height: Double? = null,
     val stepHeight: Double = CentityPaths.DEFAULT_STEP_HEIGHT,
     val maxDrop: Double = CentityPaths.DEFAULT_MAX_DROP,
-    val range: Double = CentityPaths.DEFAULT_RANGE
+    val range: Double = CentityPaths.DEFAULT_RANGE,
+    val openDoors: Boolean = false
 )
 
 /**
@@ -77,6 +78,9 @@ internal class Walk(
     /** New paths it has had to find since it last reached a point of one. */
     var repaths = 0
 
+    /** The doors it opened on its way (`open_doors`), each block of them, to shut once it's through. */
+    val opened = ArrayList<Doorway>(0)
+
     fun follow(path: PathResult) {
         points = path.points
         complete = path.complete
@@ -110,6 +114,8 @@ internal class Walk(
  * without `path_end`, as `stop_pathing` does.
  */
 class CentityPaths(private val platform: Platform, private val centities: Centities) {
+    private val doors = Doors(platform)
+
     /** Places searched this tick by walks finding a new path on their own. */
     private var spent = 0
 
@@ -168,6 +174,7 @@ class CentityPaths(private val platform: Platform, private val centities: Centit
     private fun move(instance: Instance, walk: Walk) {
         val settings = walk.settings
         val from = walk.feet
+        if (settings.openDoors) doors.pass(instance.anchor.world, walk)
         // Where it passes this tick: each point of the path it reaches, then where it stops.
         val passed = ArrayList<Vec3>(4)
         passed += from
@@ -348,6 +355,7 @@ class CentityPaths(private val platform: Platform, private val centities: Centit
     }
 
     private fun end(instance: Instance, walk: Walk, reached: Boolean) {
+        doors.shutAll(instance.anchor.world, walk)
         if (instance.walk === walk) instance.walk = null
         centities.pathEnded(instance, reached)
     }
@@ -362,7 +370,8 @@ class CentityPaths(private val platform: Platform, private val centities: Centit
         settings: PathSettings,
         budgeted: Boolean = false
     ): PathResult {
-        val space = Space(BrickShapes(platform.worlds, world), walker)
+        val bricks = BrickShapes(platform.worlds, world)
+        val space = Space(if (settings.openDoors) doors.through(world, bricks) else bricks, walker)
         val limits = SearchLimits(settings.range)
         val path = if (settings.fly) {
             AirSearch.find(space, from, goal, limits)

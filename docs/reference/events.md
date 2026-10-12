@@ -1877,6 +1877,7 @@ How a centity walks where `centity:move_to` sends it. A key that isn't one of th
 | `height` | `number?` | How tall a gap it needs, in blocks: more than 0, at most 16. Default: its hitboxes' height (1 without hitboxes). |
 | `step_height` | `number?` | Walking: how high a step it goes straight up, in blocks: at least 0. Default 1, a block, as a mob jumps one. |
 | `max_drop` | `number?` | Walking: how far down it will drop off an edge, in blocks: at least 0. Default 3. |
+| `open_doors` | `boolean?` | Walking: goes through the game's wooden doors and fence gates (`#minecraft:wooden_doors`, `#minecraft:fence_gates`), opening each as it comes to it and shutting it again once it's through (one it found open stays open). Iron doors stay in its way. Default `false`. |
 | `range` | `number?` | How far from where it sets off it looks for a way, in blocks: more than 0, at most 128. A target further away than this is `false`. Default 48. One search looks at no more than 4096 places, so a long way round may only take it part of the way. |
 
 ## CentityPathEndEvent

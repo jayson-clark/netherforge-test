@@ -1405,6 +1405,11 @@ export const centityShapes: LuaClass[] = [
         doc: `Walking: how far down it will drop off an edge, in blocks: at least 0. Default ${DEFAULT_MAX_DROP}.`,
       },
       {
+        name: 'open_doors',
+        type: 'boolean?',
+        doc: "Walking: goes through the game's wooden doors and fence gates (`#minecraft:wooden_doors`, `#minecraft:fence_gates`), opening each as it comes to it and shutting it again once it's through (one it found open stays open). Iron doors stay in its way. Default `false`.",
+      },
+      {
         name: 'range',
         type: 'number?',
         doc: `How far from where it sets off it looks for a way, in blocks: more than 0, at most ${MAX_RANGE}. A target further away than this is \`false\`. Default ${DEFAULT_RANGE}. One search looks at no more than ${NODE_LIMIT} places, so a long way round may only take it part of the way.`,

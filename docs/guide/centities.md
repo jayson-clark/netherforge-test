@@ -330,7 +330,9 @@ nothing holds it up; a block put across its path makes it find another way.
 It turns to face its way as it goes (`face = false` keeps its facing). With
 `fly = true` it flies instead, through the air in any direction, and finding a
 way costs the server more. Its nodes, hitboxes and physics bodies all go with
-it.
+it. With `open_doors = true` it goes through the game's wooden doors and fence
+gates, opening each as it comes to it and shutting it behind it, as a
+villager does (give it a `width` that fits a doorway, 0.6 for a person).
 
 A walk isn't saved: a restart or a reload of its centity ends it (the
 script's body runs again and can set off again). A centity whose chunk

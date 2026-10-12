@@ -502,7 +502,8 @@ internal class CentityImpl(private val session: ProjectSession) : CentityApi {
             height = height,
             stepHeight = step ?: CentityPaths.DEFAULT_STEP_HEIGHT,
             maxDrop = drop ?: CentityPaths.DEFAULT_MAX_DROP,
-            range = range ?: CentityPaths.DEFAULT_RANGE
+            range = range ?: CentityPaths.DEFAULT_RANGE,
+            openDoors = options?.openDoors == true
         )
     }
 

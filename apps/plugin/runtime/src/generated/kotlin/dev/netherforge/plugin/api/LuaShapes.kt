@@ -2702,7 +2702,7 @@ data class PlayerStopUsingItemEvent(val player: LuaHandle.Player, val item: Item
 }
 
 /** How a centity walks where `centity:move_to` sends it. A key that isn't one of these is an error. */
-data class CentityPathOptions(val speed: Double? = null, val fly: Boolean? = null, val face: Boolean? = null, val width: Double? = null, val height: Double? = null, val stepHeight: Double? = null, val maxDrop: Double? = null, val range: Double? = null) : LuaShape {
+data class CentityPathOptions(val speed: Double? = null, val fly: Boolean? = null, val face: Boolean? = null, val width: Double? = null, val height: Double? = null, val stepHeight: Double? = null, val maxDrop: Double? = null, val openDoors: Boolean? = null, val range: Double? = null) : LuaShape {
     override fun push(call: LuaCall) = Codec.push(call, this)
 
     object Codec : ShapeCodec<CentityPathOptions>("CentityPathOptions") {
@@ -2713,6 +2713,7 @@ data class CentityPathOptions(val speed: Double? = null, val fly: Boolean? = nul
         val heightCodec = LuaOptional(LuaCodecs.NUMBER)
         val stepHeightCodec = LuaOptional(LuaCodecs.NUMBER)
         val maxDropCodec = LuaOptional(LuaCodecs.NUMBER)
+        val openDoorsCodec = LuaOptional(LuaCodecs.BOOLEAN)
         val rangeCodec = LuaOptional(LuaCodecs.NUMBER)
 
         override val pinned = false
@@ -2725,6 +2726,7 @@ data class CentityPathOptions(val speed: Double? = null, val fly: Boolean? = nul
             "height" to heightCodec,
             "step_height" to stepHeightCodec,
             "max_drop" to maxDropCodec,
+            "open_doors" to openDoorsCodec,
             "range" to rangeCodec
         )
 
@@ -2736,6 +2738,7 @@ data class CentityPathOptions(val speed: Double? = null, val fly: Boolean? = nul
             height = fields.field("height", heightCodec),
             stepHeight = fields.field("step_height", stepHeightCodec),
             maxDrop = fields.field("max_drop", maxDropCodec),
+            openDoors = fields.field("open_doors", openDoorsCodec),
             range = fields.field("range", rangeCodec)
         )
 
@@ -2747,6 +2750,7 @@ data class CentityPathOptions(val speed: Double? = null, val fly: Boolean? = nul
             fields.field("height", value.height, heightCodec)
             fields.field("step_height", value.stepHeight, stepHeightCodec)
             fields.field("max_drop", value.maxDrop, maxDropCodec)
+            fields.field("open_doors", value.openDoors, openDoorsCodec)
             fields.field("range", value.range, rangeCodec)
         }
     }

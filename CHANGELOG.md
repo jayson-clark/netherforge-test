@@ -100,6 +100,9 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **Centities walk through doors.** `move_to`'s `open_doors` goes through the
+  game's wooden doors and fence gates, opening each as the walk comes to it and
+  shutting it once it's through.
 - **`netherforge render` and `gallery`.** An item or a block as its
   inventory icon, or a centity in its base pose, to a PNG, as the editor draws
   them (the project's resource pack looks, and the game's from the imported

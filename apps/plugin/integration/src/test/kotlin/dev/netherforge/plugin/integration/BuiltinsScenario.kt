@@ -72,6 +72,14 @@ class BuiltinsScenario : Scenario("builtins") {
 
     @Test
     @Order(6)
+    fun `a walk opens a door in its way, and shuts it behind it`() {
+        editor.run("it-builtins doors")
+        // Without open_doors the wall stops it; with them it walks through, and the door is shut again.
+        editor.logged("doors", "true", "true", "215.500", "true")
+    }
+
+    @Test
+    @Order(7)
     fun `netherforge json's game rules are set on the world`() {
         editor.run("it-builtins rules")
         editor.logged("rules", "true")
