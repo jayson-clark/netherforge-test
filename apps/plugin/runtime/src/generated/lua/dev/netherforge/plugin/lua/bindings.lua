@@ -7135,6 +7135,13 @@ namespaces["nf.test"] = function(scope, ns)
   function ns.input(player, held)
     prim["nf.test.input"](scope, player, held)
   end
+
+  function ns.terrain(options)
+    if options ~= nil and type_of(options) ~= "table" then
+      want_opt(options, "table", "options")
+    end
+    return hand["nf.test"].terrain(scope, options)
+  end
 end
 
 return {

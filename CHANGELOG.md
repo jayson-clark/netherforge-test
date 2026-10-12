@@ -100,6 +100,9 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **`nf.test.terrain`.** A stand-in for a terrain script's `terrain` (noises,
+  height, area, biome, plans with per-cell numbers), from options, to test
+  worldgen modules on their own.
 - **`vec3` and `nf.math` in terrain scripts.** A terrain script (and the modules
   it requires) has `vec3` with every `Vec3` method and operator, and `nf.math`
   (`lerp`, `clamp`, `remap`, `ease`), as other scripts do; the rest of `nf`

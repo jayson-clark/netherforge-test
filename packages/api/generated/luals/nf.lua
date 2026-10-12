@@ -1177,6 +1177,11 @@ function nf.test.player(name) end
 ---@return RaisedEvent # Whether a handler cancelled it, and the event as the handlers left it.
 function nf.test.raise(event, payload) end
 
+--- A stand-in for a terrain script's `terrain` (what its `...` is), to test worldgen modules on their own: `noise(name):at(...)`, `height`, `area`, `biome`, `seed`, `min_y`, `max_y`, `sea_level` and `plan` as a terrain script has them, each answering what `options` says. `noises` maps a noise's name to its value everywhere, or to a function of the place (`x, y, z`, or `x, z` for a column) giving it; a noise it doesn't name is 0. `height`, `area` and `biome` are a value or a function of the place, `seed`, `min_y`, `max_y` and `sea_level` numbers (defaults 64, `"default"`, `minecraft:plains`, 0, -64, 319 and 63). A plan makes each cell once, with `math.random` seeded for that cell. Chunks, structures and scatters aren't stood in for: `netherforge preview` draws the real thing.
+---@param options? table
+---@return table
+function nf.test.terrain(options) end
+
 --- Clicks for a player as their client would, with what they hold filled in, and raises what the server would for it: `player_interact` (the held project item's `interact` first, and a click on one of the project's blocks reaches it), then, for a right click with an item that nothing cancelled, `player_use_item` (the project item's `use` first). A left click is the attack button at a block or the air: it doesn't break the block (`world:break_block` does that). A click on an entity is `nf.test.raise("player_interact_entity", ...)`. Nothing the game would then do (an item thrown, a door opened) is simulated: read what the handlers did.
 ---@param player Player Who clicks: one online, from `nf.test.player`.
 ---@param button "left"|"right" Which button: `"right"` uses what they hold.

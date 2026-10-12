@@ -233,6 +233,43 @@ class ScriptTestRunnerTest {
     }
 
     @Test
+    fun `nf_test_terrain stands in for a terrain script's terrain`() {
+        val (events, _) = run(
+            mapOf(
+                "modules/worldgen/init.lua" to """
+                    local M = {}
+                    function M.init(terrain)
+                      M.ridges = terrain.noise("ridges")
+                      M.towns = terrain.plan("towns", 64, function(cell_x, cell_z) return { x = cell_x, at = math.random(1, 1000000) } end)
+                      M.terrain = terrain
+                    end
+                    function M.kind(x, z) return M.ridges:at(x, z) > 0.5 and "mountains" or "plains" end
+                    return M
+                """,
+                "tests/terrain_test.lua" to """
+                    local worldgen = require("worldgen")
+                    nf.test.case("the stand-in answers what it's told", function()
+                      worldgen.init(nf.test.terrain({ noises = { ridges = 0.9 }, height = function(x, z) return 60 + x end, sea_level = 40 }))
+                      assert(worldgen.kind(0, 0) == "mountains")
+                      local t = worldgen.terrain
+                      assert(t.height(5, 0) == 65 and t.sea_level() == 40 and t.min_y() == -64 and t.max_y() == 319)
+                      assert(t.noise("other"):at(1, 2, 3) == 0 and t.area(0, 0) == "default" and t.biome(0, 0, 0) == "minecraft:plains")
+                      local a = worldgen.towns:get(2, 3)
+                      assert(a.x == 2 and worldgen.towns:get(2, 3) == a, "made once")
+                      local same, cell_x = worldgen.towns:at(130, 200)
+                      assert(same == a and cell_x == 2)
+                      assert(worldgen.towns:size() == 64)
+                      worldgen.init(nf.test.terrain({ noises = { ridges = function(x) return x > 10 and 1 or 0 end } }))
+                      assert(worldgen.kind(0, 0) == "plains" and worldgen.kind(11, 0) == "mountains")
+                      assert(worldgen.towns:get(2, 3).at == a.at, "a cell's numbers are its own")
+                    end)
+                """
+            )
+        )
+        expectStatuses(events, Status.PASSED)
+    }
+
+    @Test
     fun `click, release and input raise what the server would, with the held item filled in`() {
         val (events, _) = run(
             mapOf(

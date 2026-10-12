@@ -127,6 +127,24 @@ about it; what only the real game computes (damage, pathfinding in real
 terrain, redstone) isn't simulated, and the integration tests that run real
 Paper cover it.
 
+### Worldgen modules
+
+A terrain script's modules can be tested without a world: `nf.test.terrain`
+gives a stand-in for the script's `terrain`, with the noises and heights the
+test chooses (a number everywhere, or a function of the place) and real
+plans, each cell made once with numbers of its own.
+
+```lua
+local landforms = require("worldgen.landforms")
+
+nf.test.case("high relief is mountains", function()
+  landforms.init(nf.test.terrain({ noises = { ranges = 0.9, peaks = 1 } }))
+  assert(landforms.kind(700, 200) == "mountains")
+end)
+```
+
+What a chunk looks like is `netherforge preview`'s to draw.
+
 ## Running them
 
 ```sh

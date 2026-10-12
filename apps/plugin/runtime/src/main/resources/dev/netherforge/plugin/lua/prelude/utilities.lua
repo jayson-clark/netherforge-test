@@ -20,7 +20,7 @@ local type, pairs, error, tostring, setmetatable = type, pairs, error, tostring,
 local want_number = args.want_number
 local new = handles.new
 
-local utilities = { random = {}, math = {}, Random = {} }
+local utilities = { random = {}, math = {}, Random = {}, test = {} }
 
 do
   local Random, random, math_random, ult, sort, huge =
@@ -237,10 +237,96 @@ do
   end
 end
 
+-- nf.test.terrain: a stand-in for a terrain script's `terrain`, for testing worldgen modules on their own.
+do
+  local floor, randomseed = math.floor, math.randomseed
+
+  -- An option that's a value, or a function of the place giving one.
+  local function at(option, default, ...)
+    if option == nil then
+      return default
+    end
+    if type(option) == "function" then
+      return option(...)
+    end
+    return option
+  end
+
+  function utilities.test.terrain(_, options)
+    options = options or {}
+    if type(options) ~= "table" then
+      error(format("bad argument 'options' (table expected, got %s)", type(options)), 2)
+    end
+    local noises = options.noises or {}
+    local seed = options.seed or 0
+    local terrain = {}
+    function terrain.seed()
+      return seed
+    end
+    function terrain.min_y()
+      return options.min_y or -64
+    end
+    function terrain.max_y()
+      return options.max_y or 319
+    end
+    function terrain.sea_level()
+      return options.sea_level or 63
+    end
+    function terrain.noise(name)
+      local value = noises[name]
+      return {
+        at = function(_, x, y, z)
+          return at(value, 0, x, y, z)
+        end,
+      }
+    end
+    function terrain.height(x, z)
+      return floor(at(options.height, 64, x, z))
+    end
+    function terrain.area(x, y, z)
+      return at(options.area, "default", x, y, z)
+    end
+    function terrain.biome(x, y, z)
+      return at(options.biome, "minecraft:plains", x, y, z)
+    end
+    function terrain.plan(name, size, make)
+      local cells = {}
+      local plan = {}
+      local function cell(cell_x, cell_z)
+        local key = cell_x .. "," .. cell_z
+        local made = cells[key]
+        if made == nil then
+          -- Numbers of the cell's own, the same whenever it's made.
+          randomseed(seed + cell_x * 7919 + cell_z * 104729 + #name)
+          made = make(cell_x, cell_z)
+          if made == nil then
+            made = false
+          end
+          cells[key] = made
+        end
+        return made or nil
+      end
+      function plan.get(_, cell_x, cell_z)
+        return cell(cell_x, cell_z)
+      end
+      function plan.at(_, x, z)
+        local cell_x, cell_z = x // size, z // size
+        return cell(cell_x, cell_z), cell_x, cell_z
+      end
+      function plan.size()
+        return size
+      end
+      return plan
+    end
+    return terrain
+  end
+end
+
 return {
   body = {
     ["nf.random"] = utilities.random,
     ["nf.math"] = utilities.math,
+    ["nf.test"] = utilities.test,
     Random = utilities.Random,
   },
 }

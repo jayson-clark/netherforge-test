@@ -51,6 +51,7 @@ local handwritten = {
   nf = {},
   ["nf.random"] = utilities.body["nf.random"],
   ["nf.math"] = utilities.body["nf.math"],
+  ["nf.test"] = utilities.body["nf.test"],
 }
 
 -- Every class with events of its own has `on`, `once` and, if it takes custom
