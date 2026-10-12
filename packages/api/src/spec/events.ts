@@ -613,6 +613,14 @@ export const nfEvents: EventSpec[] = [
       'nf.on("recipe_craft", function(event)\n  if event.result.item == "copper_sword" then\n    local sword = event.result\n    sword.data = { prefix = "Sharp" }\n    event.result = nf.items.create("copper_sword", sword)\n  end\nend)',
   },
   {
+    name: 'item_view',
+    doc: "Any stack is being sent to one player's game (their inventory, a window they have open, their cursor): after its project item's own `view` handlers, for a stack of one, and for every other stack too. Assign `event.display_name` and `event.lore` to change how it looks to `event.player` alone; nothing the server keeps changes. While nobody listens, stacks are sent as they are; while someone does, every stack sent is worked out here first, so prefer an item's own `view` when only some items change.",
+    payload: 'ItemViewEvent',
+    writable: ['display_name', 'lore'],
+    example:
+      'nf.on("item_view", function(event)\n  if event.player:menu() and event.item.kind == "minecraft:diamond" then\n    event.display_name = "<aqua>Diamond <gray>(sells for 50)"\n  end\nend)',
+  },
+  {
     name: 'centity_natural_spawn',
     doc: "A centity is about to appear by itself, from the `spawning` block of its `centity.json`: once for each one of a group, before it exists. `event:cancel()` refuses it (it doesn't count against anything, and the spawner tries again later); assign `event.location` to move it. It is asked after the spawner has checked the place against the centity's rules, and before the centity's own `spawn`.",
     payload: 'CentityNaturalSpawnEvent',

@@ -150,11 +150,45 @@ export const nfTest = (nfEvents: EventSpec[]): LuaClass => ({
       example:
         'local alex = nf.test.player("Alex")\nnf.test.input(alex, { forward = true, jump = true })',
     },
+    {
+      name: 'shown',
+      doc: "A stack as a player's game was last sent it, after the `view` handlers: what their tooltip says, where the server keeps the real stack (read that from `player:inventory()` or `menu:item`). The fake server sends what changed at the end of each tick, as a real one does, and what `player:refresh_items` finds looks different, so `nf.test.advance(1)` after a change. `nil` for an empty slot, or one their game hasn't been sent.",
+      params: [
+        { name: 'player', type: 'Player', doc: 'Whose game: one online.' },
+        {
+          name: 'slot',
+          type: 'integer|"cursor"',
+          doc: 'A slot of their inventory, numbered as `player:inventory()` numbers them; with `menu`, of the window they have open. `"cursor"` for the stack on their cursor.',
+        },
+        {
+          name: 'options',
+          type: 'TestShownOptions',
+          doc: 'Leave it out for their own inventory.',
+          optional: true,
+        },
+      ],
+      returns: [{ type: 'Item?' }],
+      example:
+        'local alex = nf.test.player("Alex")\nalex:set_held_item(nf.items.create("ruby"))\nnf.test.advance(1)\nlocal shown = assert(nf.test.shown(alex, 0))\nassert(shown.lore ~= nil)',
+    },
   ],
 })
 
 /** What `nf.test.raise` returns, and what `nf.test.click` and `nf.test.input` take. */
 export const testShapes: LuaClass[] = [
+  {
+    name: 'TestShownOptions',
+    doc: "Where `nf.test.shown` looks. A key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      {
+        name: 'menu',
+        type: 'boolean?',
+        doc: 'Whether `slot` is one of the window they have open, numbered from 0 as `menu:slot` numbers them.',
+      },
+    ],
+  },
   {
     name: 'TestClickOptions',
     doc: "How `nf.test.click` clicks. Every key is optional; a key that isn't one of these is an error.",

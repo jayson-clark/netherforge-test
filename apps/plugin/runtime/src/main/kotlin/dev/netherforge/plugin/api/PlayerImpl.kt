@@ -352,6 +352,12 @@ internal class PlayerImpl(private val session: ProjectSession) : PlayerApi {
 
     override fun menu(self: LuaHandle.Player): LuaHandle.Menu? = window(self)?.let { LuaHandle.Menu(it.id) }
 
+    override fun refreshItems(self: LuaHandle.Player): Boolean {
+        val uuid = online(self) ?: return false
+        session.items.refreshView(uuid)
+        return true
+    }
+
     override fun closeMenu(self: LuaHandle.Player): Boolean {
         val window = window(self) ?: return false
         return session.menus.close(window, self.uuidOrNull())

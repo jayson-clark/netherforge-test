@@ -1,5 +1,6 @@
 package dev.netherforge.plugin.contract
 
+import dev.netherforge.format.bridge.BotAction
 import dev.netherforge.format.bridge.BotPack
 import dev.netherforge.format.dialog.DialogButton
 import dev.netherforge.format.dialog.DialogFile
@@ -7,6 +8,7 @@ import dev.netherforge.format.dialog.DialogType
 import dev.netherforge.format.item.EquipSlot
 import dev.netherforge.format.item.EquipmentDef
 import dev.netherforge.format.item.ItemDef
+import dev.netherforge.format.menu.MenuType
 import dev.netherforge.format.recipe.Ingredient
 import dev.netherforge.format.recipe.RecipeFile
 import dev.netherforge.format.recipe.RecipeType
@@ -16,11 +18,16 @@ import dev.netherforge.plugin.platform.DialogSpec
 import dev.netherforge.plugin.platform.InventoryRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.ItemLook
+import dev.netherforge.plugin.platform.ItemView
+import dev.netherforge.plugin.platform.ItemViewOps
+import dev.netherforge.plugin.platform.MenuClick
 import dev.netherforge.plugin.platform.PackOffer
+import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.platform.ProjectItemOps
 import dev.netherforge.plugin.platform.RecipeOps
 import dev.netherforge.plugin.platform.RecipeSpec
 import dev.netherforge.plugin.platform.ResourcePackOps
+import dev.netherforge.plugin.platform.WindowSpec
 import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -243,5 +250,92 @@ abstract class RecipeOpsContract : PlatformContract() {
             assertFalse(recipes.discover(player.uuid, "contract_none"), "no such recipe")
             assertFalse(recipes.discover(UUID.randomUUID(), "minecraft:bread"), "offline")
         }
+    }
+}
+
+/**
+ * [ItemViewOps]: a stack looks to the player it's sent to as the runtime says ([RecordingEvents.view]), in their
+ * inventory and in a window they have open, while the server, and everyone else, keeps it as it is.
+ */
+abstract class ItemViewOpsContract : PlatformContract() {
+    private val views: ItemViewOps get() = platform.itemViews
+
+    private fun shownLore(player: PlayerRef, slot: Int): List<String>? = screen(player).inventory.firstOrNull { it.slot == slot }?.lore
+
+    @Test
+    fun `a stack looks different to one player alone, and stays as it is on the server`() {
+        val looker = join()
+        val other = join()
+        events.view = { player, stack ->
+            if (player == looker.uuid && stack.def.kind == "minecraft:emerald") ItemView("Shiny", listOf("Sells for 5")) else null
+        }
+        afterwards { events.view = null }
+        main {
+            assertTrue(platform.inventories.setItem(InventoryRef.Player(looker.uuid), 0, item("minecraft:emerald", 3)))
+            assertTrue(platform.inventories.setItem(InventoryRef.Player(other.uuid), 0, item("minecraft:emerald", 3)))
+        }
+        val shown = awaitScreen(looker, "the emerald as it looks to them") { state ->
+            state.inventory.any { it.slot == 0 && it.lore == listOf("Sells for 5") }
+        }.inventory.first { it.slot == 0 }
+        assertEquals(listOf<Any?>("minecraft:emerald", 3, "Shiny"), listOf(shown.item, shown.count, shown.name))
+        settled()
+        assertEquals(emptyList(), shownLore(other, 0), "another player is sent it as it is")
+        main {
+            val real = platform.inventories.item(InventoryRef.Player(looker.uuid), 0)!!.def
+            assertNull(real.lore, "the server keeps no lore")
+            assertNull(real.name)
+            assertEquals(3, real.count)
+        }
+        assertTrue(events.of("itemViewing").isNotEmpty(), "asked whether it may look different first")
+        assertTrue(
+            events.of("itemViewed").any {
+                it[0] == looker.uuid && (it[1] as ItemData).def.lore == null
+            },
+            "asked with the real stack"
+        )
+    }
+
+    @Test
+    fun `a refresh sends again what now looks different, and only then`() {
+        val player = join()
+        var lore: List<String>? = null
+        events.view = { _, stack -> lore?.takeIf { stack.def.kind == "minecraft:emerald" }?.let { ItemView(null, it) } }
+        afterwards { events.view = null }
+        main { assertTrue(platform.inventories.setItem(InventoryRef.Player(player.uuid), 0, item("minecraft:emerald"))) }
+        awaitScreen(player, "the emerald") { state -> state.inventory.any { it.slot == 0 } }
+        settled()
+        lore = listOf("In the shop")
+        settled()
+        assertEquals(emptyList(), shownLore(player, 0), "nothing changed on the server, so nothing is sent")
+        main { assertTrue(views.refresh(player.uuid)) }
+        awaitScreen(player, "the emerald as it looks now") { shownLore(player, 0) == listOf("In the shop") }
+        lore = null
+        main { assertTrue(views.refresh(player.uuid)) }
+        awaitScreen(player, "the emerald as it is again") { shownLore(player, 0) == emptyList<String>() }
+        main { assertFalse(views.refresh(UUID.randomUUID()), "nobody's") }
+    }
+
+    @Test
+    fun `a window's stacks look different to its viewer, and a click on one is heard with the real stack`() {
+        val player = join()
+        val window = UUID.randomUUID()
+        events.view = { _, stack -> if (stack.def.kind == "minecraft:diamond") ItemView(null, listOf("Sells for 50")) else null }
+        afterwards { events.view = null }
+        main {
+            platform.menus.create(window, WindowSpec(MenuType.CHEST, 9, "<gold>Contract"))
+            assertTrue(platform.menus.setItem(window, 4, item("minecraft:diamond", 2)))
+            assertTrue(platform.menus.open(window, player.uuid))
+        }
+        afterwards { platform.menus.destroy(window) }
+        awaitScreen(player, "the diamond as it looks to them") { state ->
+            state.menu?.items?.any { it.slot == 4 && it.lore == listOf("Sells for 50") } == true
+        }
+        events.cancelling += "menuClicked"
+        act(player, BotAction.ClickSlot(4))
+        eventually("the click heard") { events.of("menuClicked").isNotEmpty() }
+        val click = events.of("menuClicked").single()[1] as MenuClick
+        assertEquals("minecraft:diamond", click.item?.def?.kind)
+        assertNull(click.item?.def?.lore, "the server's own stack")
+        main { assertNull(platform.menus.item(window, 4)!!.def.lore) }
     }
 }

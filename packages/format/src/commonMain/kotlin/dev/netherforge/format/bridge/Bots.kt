@@ -463,7 +463,10 @@ data class BotState(
     val sprinting: Boolean,
     /** The hotbar slot held (0–8). */
     val selectedSlot: Int,
-    /** The player's inventory: hotbar 0–8, the rest 9–35, armor 36–39, off hand 40. Only slots that hold something. */
+    /**
+     * The player's inventory as the client was sent it (a stack can look different to one player than the server
+     * holds it): hotbar 0–8, the rest 9–35, armor 36–39, off hand 40. Only slots that hold something.
+     */
     val inventory: List<BotItem>,
     val menu: BotMenu? = null,
     val dialog: BotDialog? = null,

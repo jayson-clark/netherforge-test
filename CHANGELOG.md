@@ -90,6 +90,15 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Added
 
+- **Items that look different to one player.** A project item's `view` event
+  (and `nf.on("item_view")` for every stack) changes the name and lore a stack
+  shows to the one player it's sent to: their inventory, a window they have
+  open, their cursor. The server keeps the real stack, so it still stacks, is
+  saved as it is, and reads as it is to scripts and to everyone else; a stack
+  a creative-mode client sends back is mapped back to the real one.
+  `player:refresh_items()` sends whatever now looks different (a shop menu
+  opening or closing), and `nf.test.shown` reads what a test player's game was
+  sent.
 - **Spatial queries.** `world:overlap_box`, `overlap_sphere` and `overlap_cone`
   find everything whose hitbox reaches into a region (centities by each shown
   node's boxes, players and entities by theirs), nearest first;

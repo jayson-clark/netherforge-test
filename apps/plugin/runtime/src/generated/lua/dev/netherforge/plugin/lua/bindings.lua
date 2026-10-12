@@ -3001,6 +3001,14 @@ function Player.menu(self)
   return prim["Player.menu"](self_key)
 end
 
+function Player.refresh_items(self)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.refresh_items"](self_key)
+end
+
 function Player.close_menu(self)
   local self_key = ids[self]
   if self_key == nil or not Player_is[class_of(self)] then
@@ -7134,6 +7142,10 @@ namespaces["nf.test"] = function(scope, ns)
 
   function ns.input(player, held)
     prim["nf.test.input"](scope, player, held)
+  end
+
+  function ns.shown(player, slot, options)
+    return prim["nf.test.shown"](scope, player, slot, options)
   end
 
   function ns.terrain(options)

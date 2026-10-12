@@ -10,6 +10,7 @@ import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.GameEventFunnel
 import dev.netherforge.plugin.platform.GameEvents
 import dev.netherforge.plugin.platform.ItemData
+import dev.netherforge.plugin.platform.ItemView
 import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.platform.MenuClick
 import dev.netherforge.plugin.platform.PickAnswer
@@ -69,6 +70,18 @@ class RecordingEvents : PlatformEvents {
 
     /** Heard, and the stack as it is: no handlers here. */
     override fun itemRendered(stack: ItemData): ItemData = stack.also { hear("itemRendered", it) }
+
+    /** How a stack looks to the player it's sent to, as a suite says: as it is, until one sets this. */
+    @Volatile
+    var view: ((player: UUID, stack: ItemData) -> ItemView?)? = null
+
+    /** Whether a suite set a [view]; heard only then, since it's asked for every stack sent. */
+    override fun itemViewing(reference: String?): Boolean = (view != null).also { if (it) hear("itemViewing", reference) }
+
+    override fun itemViewed(player: UUID, stack: ItemData): ItemView? {
+        hear("itemViewed", player, stack)
+        return view?.invoke(player, stack)
+    }
 
     override fun playerInteract(player: PlayerRef, button: ClickButton, block: BlockRef?, face: String?, item: ItemData?, hand: String) =
         hear("playerInteract", player, button, block, face, item, hand)

@@ -341,6 +341,52 @@ A template lasts as long as the script that made it: when that script
 unloads, or you call `template:remove()`, its windows close and its handlers
 go. See the [MenuTemplate reference](../reference/menutemplate.md).
 
+## Prices on a player's own items
+
+A shop often wants to say what the player's own items would sell for, but only
+while the shop is open. Don't write that into their items' lore: give the
+item a `view` handler, which changes how a stack looks to one player without
+changing the stack. Their real items keep stacking with new ones, and nothing
+is left behind if the server stops with the shop open.
+
+```lua
+-- items/ruby/script.lua
+local this = this --[[@as ProjectItem]]
+
+this:on("view", function(event)
+  local menu = event.player:menu()
+  if menu and menu:kind() == "shop" then
+    local lore = event.lore or {}
+    lore[#lore + 1] = "<gold>Sells for 5 coins"
+    event.lore = lore
+  end
+end)
+```
+
+```lua
+-- menus/shop/script.lua
+local this = this --[[@as Menu]]
+
+this:on("open", function(event)
+  event.player:refresh_items()
+end)
+
+this:on("close", function(event)
+  event.player:refresh_items()
+end)
+```
+
+The game is only sent a stack again when the stack changes, so the menu's
+`open` and `close` handlers call `player:refresh_items()`: at the end of the
+tick, the handlers work out everything the player can see again (their
+inventory, the window, their cursor), and only the stacks that now look
+different are sent. Anything that reads the stacks, `player:inventory()`, a
+click's `event.item`, `event.item` in the handler itself, gets the real stack,
+and a stack a creative-mode player's game sends back comes back as the real one.
+To price items that aren't the project's, or every item at once, listen with
+`nf.on("item_view", ...)` instead; while it has a handler, every stack sent to
+every player goes through it, so keep it quick.
+
 ## Items a player keeps
 
 A menu's window holds its items only while it's open. For items a player keeps

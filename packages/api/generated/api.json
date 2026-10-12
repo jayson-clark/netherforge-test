@@ -1339,6 +1339,16 @@
           "example": "nf.on(\"recipe_craft\", function(event)\n  if event.result.item == \"copper_sword\" then\n    local sword = event.result\n    sword.data = { prefix = \"Sharp\" }\n    event.result = nf.items.create(\"copper_sword\", sword)\n  end\nend)"
         },
         {
+          "name": "item_view",
+          "doc": "Any stack is being sent to one player's game (their inventory, a window they have open, their cursor): after its project item's own `view` handlers, for a stack of one, and for every other stack too. Assign `event.display_name` and `event.lore` to change how it looks to `event.player` alone; nothing the server keeps changes. While nobody listens, stacks are sent as they are; while someone does, every stack sent is worked out here first, so prefer an item's own `view` when only some items change.",
+          "payload": "ItemViewEvent",
+          "writable": [
+            "display_name",
+            "lore"
+          ],
+          "example": "nf.on(\"item_view\", function(event)\n  if event.player:menu() and event.item.kind == \"minecraft:diamond\" then\n    event.display_name = \"<aqua>Diamond <gray>(sells for 50)\"\n  end\nend)"
+        },
+        {
           "name": "centity_natural_spawn",
           "doc": "A centity is about to appear by itself, from the `spawning` block of its `centity.json`: once for each one of a group, before it exists. `event:cancel()` refuses it (it doesn't count against anything, and the spawner tries again later); assign `event.location` to move it. It is asked after the spawner has checked the place against the centity's rules, and before the centity's own `spawn`.",
           "payload": "CentityNaturalSpawnEvent",
@@ -3566,7 +3576,7 @@
           "params": [
             {
               "name": "event",
-              "type": "\"tick\"|\"player_join\"|\"player_quit\"|\"player_chat\"|\"player_interact\"|\"player_interact_entity\"|\"player_move\"|\"player_teleport\"|\"player_change_world\"|\"player_death\"|\"player_respawn\"|\"player_drop_item\"|\"player_pickup_item\"|\"player_use_item\"|\"player_consume_item\"|\"player_swap_hands\"|\"player_sneak\"|\"player_command\"|\"block_break\"|\"block_place\"|\"entity_damage\"|\"entity_death\"|\"entity_spawn\"|\"world_dusk\"|\"world_dawn\"|\"player_input\"|\"player_change_slot\"|\"player_swing\"|\"player_sprint\"|\"player_fly\"|\"player_jump\"|\"player_change_game_mode\"|\"player_change_food\"|\"player_gain_experience\"|\"player_change_level\"|\"player_kick\"|\"player_complete_advancement\"|\"player_stop_using_item\"|\"player_break_item\"|\"entity_heal\"|\"projectile_launch\"|\"projectile_hit\"|\"entity_shoot_bow\"|\"entity_target\"|\"entity_explode\"|\"block_explode\"|\"entity_combust\"|\"entity_change_effect\"|\"block_ignite\"|\"block_burn\"|\"block_spread\"|\"block_flow\"|\"block_grow\"|\"block_fade\"|\"block_form\"|\"leaves_decay\"|\"piston_extend\"|\"piston_retract\"|\"block_redstone\"|\"sign_change\"|\"block_start_break\"|\"block_drop_item\"|\"weather_change\"|\"thunder_change\"|\"lightning_strike\"|\"chunk_load\"|\"chunk_generated\"|\"chunk_unload\"|\"world_load\"|\"world_unload\"|\"entity_mount\"|\"entity_dismount\"|\"vehicle_move\"|\"vehicle_damage\"|\"vehicle_destroy\"|\"player_open_inventory\"|\"player_close_inventory\"|\"player_craft\"|\"player_prepare_craft\"|\"player_prepare_anvil\"|\"player_prepare_smithing\"|\"player_prepare_grindstone\"|\"player_enchant_item\"|\"furnace_smelt\"|\"server_list_ping\"|\"centity_click\"|\"recipe_craft\"|\"centity_natural_spawn\"|\"menu_open\"|\"menu_close\"|\"menu_click\"|\"dialog_press\"|\"setting_changed\"",
+              "type": "\"tick\"|\"player_join\"|\"player_quit\"|\"player_chat\"|\"player_interact\"|\"player_interact_entity\"|\"player_move\"|\"player_teleport\"|\"player_change_world\"|\"player_death\"|\"player_respawn\"|\"player_drop_item\"|\"player_pickup_item\"|\"player_use_item\"|\"player_consume_item\"|\"player_swap_hands\"|\"player_sneak\"|\"player_command\"|\"block_break\"|\"block_place\"|\"entity_damage\"|\"entity_death\"|\"entity_spawn\"|\"world_dusk\"|\"world_dawn\"|\"player_input\"|\"player_change_slot\"|\"player_swing\"|\"player_sprint\"|\"player_fly\"|\"player_jump\"|\"player_change_game_mode\"|\"player_change_food\"|\"player_gain_experience\"|\"player_change_level\"|\"player_kick\"|\"player_complete_advancement\"|\"player_stop_using_item\"|\"player_break_item\"|\"entity_heal\"|\"projectile_launch\"|\"projectile_hit\"|\"entity_shoot_bow\"|\"entity_target\"|\"entity_explode\"|\"block_explode\"|\"entity_combust\"|\"entity_change_effect\"|\"block_ignite\"|\"block_burn\"|\"block_spread\"|\"block_flow\"|\"block_grow\"|\"block_fade\"|\"block_form\"|\"leaves_decay\"|\"piston_extend\"|\"piston_retract\"|\"block_redstone\"|\"sign_change\"|\"block_start_break\"|\"block_drop_item\"|\"weather_change\"|\"thunder_change\"|\"lightning_strike\"|\"chunk_load\"|\"chunk_generated\"|\"chunk_unload\"|\"world_load\"|\"world_unload\"|\"entity_mount\"|\"entity_dismount\"|\"vehicle_move\"|\"vehicle_damage\"|\"vehicle_destroy\"|\"player_open_inventory\"|\"player_close_inventory\"|\"player_craft\"|\"player_prepare_craft\"|\"player_prepare_anvil\"|\"player_prepare_smithing\"|\"player_prepare_grindstone\"|\"player_enchant_item\"|\"furnace_smelt\"|\"server_list_ping\"|\"centity_click\"|\"recipe_craft\"|\"item_view\"|\"centity_natural_spawn\"|\"menu_open\"|\"menu_close\"|\"menu_click\"|\"dialog_press\"|\"setting_changed\"",
               "doc": "The event's name, as `nf.on` takes it."
             },
             {
@@ -3667,6 +3677,34 @@
           ],
           "returns": [],
           "example": "local alex = nf.test.player(\"Alex\")\nnf.test.input(alex, { forward = true, jump = true })"
+        },
+        {
+          "name": "shown",
+          "doc": "A stack as a player's game was last sent it, after the `view` handlers: what their tooltip says, where the server keeps the real stack (read that from `player:inventory()` or `menu:item`). The fake server sends what changed at the end of each tick, as a real one does, and what `player:refresh_items` finds looks different, so `nf.test.advance(1)` after a change. `nil` for an empty slot, or one their game hasn't been sent.",
+          "params": [
+            {
+              "name": "player",
+              "type": "Player",
+              "doc": "Whose game: one online."
+            },
+            {
+              "name": "slot",
+              "type": "integer|\"cursor\"",
+              "doc": "A slot of their inventory, numbered as `player:inventory()` numbers them; with `menu`, of the window they have open. `\"cursor\"` for the stack on their cursor."
+            },
+            {
+              "name": "options",
+              "type": "TestShownOptions",
+              "doc": "Leave it out for their own inventory.",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "Item?"
+            }
+          ],
+          "example": "local alex = nf.test.player(\"Alex\")\nalex:set_held_item(nf.items.create(\"ruby\"))\nnf.test.advance(1)\nlocal shown = assert(nf.test.shown(alex, 0))\nassert(shown.lore ~= nil)"
         }
       ]
     },
@@ -9259,6 +9297,18 @@
           ]
         },
         {
+          "name": "refresh_items",
+          "doc": "Sends their game every stack it shows again where it would now look different to them: their inventory, the window they have open and their cursor, each worked out again by the `view` handlers (and `nf.on(\"item_view\")`). Stacks are sent by themselves when they change, but not when only what a `view` handler works its look out from does, so call this then: when a shop menu opens or closes, say. It's done once at the end of the tick however often it's called, and only stacks that look different from what their game was last sent are sent.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` when they're offline."
+            }
+          ],
+          "example": "nf.on(\"menu_open\", function(event)\n  event.player:refresh_items()\nend)\nnf.on(\"menu_close\", function(event)\n  event.player:refresh_items()\nend)"
+        },
+        {
           "name": "close_menu",
           "doc": "Closes the project menu they have open. Anything else on their screen (a chest, their own inventory) stays open.",
           "params": [],
@@ -14274,6 +14324,17 @@
           "example": "this:on(\"render\", function(event)\n  local prefix = event.item.data and event.item.data.prefix\n  if prefix then\n    event.display_name = \"<green>\" .. prefix .. \" Copper Sword\"\n  end\nend)"
         },
         {
+          "name": "view",
+          "doc": "A stack of this item is being sent to one player's game: their inventory (hotbar, armour and offhand too), a window they have open, the stack on their cursor. Assign `event.display_name` and `event.lore` to change how it looks to `event.player` alone, now: a price while they have a shop open, a hint for their class. Nothing the server keeps changes: not the stack, how it stacks, what's saved, what anyone else sees, nor what scripts read from inventories. Both start as the stack's own (after its `render`), so this adds to them. The game is sent a stack again only when it changes, so call `player:refresh_items()` when what this works out from changes (a menu opening or closing). If a handler fails, the stack is sent as it is. Then `nf.on(\"item_view\")`, with the same event; `event:stop()` keeps it from there.",
+          "payload": "ItemViewEvent",
+          "bubbles": true,
+          "writable": [
+            "display_name",
+            "lore"
+          ],
+          "example": "this:on(\"view\", function(event)\n  local menu = event.player:menu()\n  if menu and menu:kind() == \"shop\" then\n    local lore = event.lore or {}\n    lore[#lore + 1] = \"<gold>Sells for 5 coins\"\n    event.lore = lore\n  end\nend)"
+        },
+        {
           "name": "pickup",
           "doc": "A player is picking up a stack of this item (`event.item`) from the item entity `event.entity`. Then the player's own `pickup_item`, then `nf.on(\"player_pickup_item\")`, with the same event, so `event:cancel()` here cancels it for all of them and `event:stop()` keeps it from them.",
           "payload": "PlayerPickupItemEvent",
@@ -19027,6 +19088,35 @@
       ]
     },
     {
+      "name": "ItemViewEvent",
+      "doc": "A stack is being sent to one player's game, to be shown as this player alone sees it: `view` on a project item, `item_view` on `nf`.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "player",
+          "type": "Player",
+          "doc": "Whose game it is sent to."
+        },
+        {
+          "name": "item",
+          "type": "Item",
+          "doc": "The real stack, as the server keeps it. Changing this table changes nothing: assign `display_name` and `lore`."
+        },
+        {
+          "name": "display_name",
+          "type": "Text?",
+          "doc": "The name this player is shown: the stack's own until a handler assigns another. `nil` for the game's own name."
+        },
+        {
+          "name": "lore",
+          "type": "Text[]?",
+          "doc": "The lore lines this player is shown, the same way. `nil` for none."
+        }
+      ]
+    },
+    {
       "name": "ItemRenderEvent",
       "doc": "A stack of a project item is being made, or rewritten to its item's changed file: `render`.",
       "methods": false,
@@ -21548,6 +21638,19 @@
           "name": "scale",
           "type": "number?",
           "doc": "What the coordinates are multiplied by first: smaller is smoother and wider (0.05 changes over about 20 blocks). Default 1."
+        }
+      ]
+    },
+    {
+      "name": "TestShownOptions",
+      "doc": "Where `nf.test.shown` looks. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "menu",
+          "type": "boolean?",
+          "doc": "Whether `slot` is one of the window they have open, numbered from 0 as `menu:slot` numbers them."
         }
       ]
     },

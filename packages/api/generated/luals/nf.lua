@@ -6,7 +6,7 @@
 -- project's modules: "Lua.runtime.path": ["modules/?.lua", "modules/?/init.lua"].
 -- The sandbox removes io, os, package, load, loadstring, dofile, loadfile, debug, collectgarbage, warn, java.
 
----@alias nf.Event "tick"|"unload"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"world_dusk"|"world_dawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"recipe_craft"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed"|string
+---@alias nf.Event "tick"|"unload"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"world_dusk"|"world_dawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"recipe_craft"|"item_view"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed"|string
 ---@alias Centity.Event "spawn"|"remove"|"tick"|"click"|"animation_start"|"animation_end"|"chunk_load"|"chunk_unload"|"hit"|"bounce"|"stick"|"flight_end"|"damage"|"death"|"land"|"bump"|"touch"|"path_end"|"buff_add"|"buff_end"|string
 ---@alias Node.Event "click"|"collide"|"wake"|"sleep"
 ---@alias Entity.Event "damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
@@ -20,7 +20,7 @@
 ---@alias MenuTemplate.Event "open"|"close"|"click"|"drag"
 ---@alias Dialog.Event "press"|"close"
 ---@alias Button.Event "press"
----@alias ProjectItem.Event "use"|"interact"|"interact_entity"|"consume"|"hit"|"break_block"|"drop"|"render"|"pickup"
+---@alias ProjectItem.Event "use"|"interact"|"interact_entity"|"consume"|"hit"|"break_block"|"drop"|"render"|"view"|"pickup"
 ---@alias Effect.Event "end"
 ---@alias Cutscene.Event "end"|"cue"
 
@@ -172,6 +172,7 @@ nf = {}
 ---@overload fun(event: "server_list_ping", handler: fun(event: ServerListPingEvent)): Subscription
 ---@overload fun(event: "centity_click", handler: fun(event: ClickEvent)): Subscription
 ---@overload fun(event: "recipe_craft", handler: fun(event: RecipeCraftEvent)): Subscription
+---@overload fun(event: "item_view", handler: fun(event: ItemViewEvent)): Subscription
 ---@overload fun(event: "centity_natural_spawn", handler: fun(event: CentityNaturalSpawnEvent)): Subscription
 ---@overload fun(event: "menu_open", handler: fun(event: MenuEvent)): Subscription
 ---@overload fun(event: "menu_close", handler: fun(event: MenuEvent)): Subscription
@@ -272,6 +273,7 @@ function nf.on(event, handler, options) end
 ---@overload fun(event: "server_list_ping", handler: fun(event: ServerListPingEvent)): Subscription
 ---@overload fun(event: "centity_click", handler: fun(event: ClickEvent)): Subscription
 ---@overload fun(event: "recipe_craft", handler: fun(event: RecipeCraftEvent)): Subscription
+---@overload fun(event: "item_view", handler: fun(event: ItemViewEvent)): Subscription
 ---@overload fun(event: "centity_natural_spawn", handler: fun(event: CentityNaturalSpawnEvent)): Subscription
 ---@overload fun(event: "menu_open", handler: fun(event: MenuEvent)): Subscription
 ---@overload fun(event: "menu_close", handler: fun(event: MenuEvent)): Subscription
@@ -413,6 +415,7 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: nf, event: "server_list_ping", filter?: fun(event: ServerListPingEvent): boolean): ServerListPingEvent
 ---@overload fun(handle: nf, event: "centity_click", filter?: fun(event: ClickEvent): boolean): ClickEvent
 ---@overload fun(handle: nf, event: "recipe_craft", filter?: fun(event: RecipeCraftEvent): boolean): RecipeCraftEvent
+---@overload fun(handle: nf, event: "item_view", filter?: fun(event: ItemViewEvent): boolean): ItemViewEvent
 ---@overload fun(handle: nf, event: "centity_natural_spawn", filter?: fun(event: CentityNaturalSpawnEvent): boolean): CentityNaturalSpawnEvent
 ---@overload fun(handle: nf, event: "menu_open", filter?: fun(event: MenuEvent): boolean): MenuEvent
 ---@overload fun(handle: nf, event: "menu_close", filter?: fun(event: MenuEvent): boolean): MenuEvent
@@ -549,6 +552,7 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: ProjectItem, event: "break_block", filter?: fun(event: BlockBreakEvent): boolean): BlockBreakEvent
 ---@overload fun(handle: ProjectItem, event: "drop", filter?: fun(event: PlayerItemEvent): boolean): PlayerItemEvent
 ---@overload fun(handle: ProjectItem, event: "render", filter?: fun(event: ItemRenderEvent): boolean): ItemRenderEvent
+---@overload fun(handle: ProjectItem, event: "view", filter?: fun(event: ItemViewEvent): boolean): ItemViewEvent
 ---@overload fun(handle: ProjectItem, event: "pickup", filter?: fun(event: PlayerPickupItemEvent): boolean): PlayerPickupItemEvent
 ---@overload fun(handle: Effect, event: "end", filter?: fun(event: EffectEndEvent): boolean): EffectEndEvent
 ---@overload fun(handle: Cutscene, event: "end", filter?: fun(event: CutsceneEndEvent): boolean): CutsceneEndEvent
@@ -1172,7 +1176,7 @@ function nf.test.advance(ticks) end
 function nf.test.player(name) end
 
 --- Raises a server-wide event as the server would, to the scripts: whoever listens to `event` with `nf.on` hears it, and, for an event the server raises about a player, an entity or a world, the handlers on that handle (`player:on("chat")`) hear it first, in the order the server uses. Each can `stop()` or `cancel()` it or set its writable fields. The few events the runtime stages itself (a death, damage, a click on a centity) reach `nf.on` handlers only. `payload` is what the event carries, the same table its handlers read (`event.player`, `event.message`): a field the event does not have is an error naming the fields. What the server would then do with a cancelled event is not simulated: read the result.
----@param event "tick"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"world_dusk"|"world_dawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"recipe_craft"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed" The event's name, as `nf.on` takes it.
+---@param event "tick"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"world_dusk"|"world_dawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"recipe_craft"|"item_view"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed" The event's name, as `nf.on` takes it.
 ---@param payload? table The payload: its fields by name. Leave it out for an event that has none.
 ---@return RaisedEvent # Whether a handler cancelled it, and the event as the handlers left it.
 function nf.test.raise(event, payload) end
@@ -1198,6 +1202,13 @@ function nf.test.release(player, ticks) end
 ---@param player Player Whose keys: one online.
 ---@param held TestInputKeys The keys held down, each `true`.
 function nf.test.input(player, held) end
+
+--- A stack as a player's game was last sent it, after the `view` handlers: what their tooltip says, where the server keeps the real stack (read that from `player:inventory()` or `menu:item`). The fake server sends what changed at the end of each tick, as a real one does, and what `player:refresh_items` finds looks different, so `nf.test.advance(1)` after a change. `nil` for an empty slot, or one their game hasn't been sent.
+---@param player Player Whose game: one online.
+---@param slot integer|"cursor" A slot of their inventory, numbered as `player:inventory()` numbers them; with `menu`, of the window they have open. `"cursor"` for the stack on their cursor.
+---@param options? TestShownOptions Leave it out for their own inventory.
+---@return Item?
+function nf.test.shown(player, slot, options) end
 
 --- One spawned centity: `this` in the centity's script, and what `nf.centities.spawn`, `nf.centities.get` and `nf.centities.all` return. A handle stays valid as long as the instance exists; after it's removed its methods return `nil` or `false` rather than erroring.
 --- A `data()` table, `Item.data` and `nf.json` can keep one: it is saved as what identifies it and comes back as a handle.
@@ -2884,6 +2895,10 @@ function Player:open_menu(menu, options) end
 ---@return Menu?
 function Player:menu() end
 
+--- Sends their game every stack it shows again where it would now look different to them: their inventory, the window they have open and their cursor, each worked out again by the `view` handlers (and `nf.on("item_view")`). Stacks are sent by themselves when they change, but not when only what a `view` handler works its look out from does, so call this then: when a shop menu opens or closes, say. It's done once at the end of the tick however often it's called, and only stacks that look different from what their game was last sent are sent.
+---@return boolean # `false` when they're offline.
+function Player:refresh_items() end
+
 --- Closes the project menu they have open. Anything else on their screen (a chest, their own inventory) stays open.
 ---@return boolean # `false` when they're offline or have no menu of ours open.
 function Player:close_menu() end
@@ -4502,6 +4517,7 @@ function ProjectItem:properties() end
 ---@overload fun(self: ProjectItem, event: "break_block", handler: fun(event: BlockBreakEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "drop", handler: fun(event: PlayerItemEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "render", handler: fun(event: ItemRenderEvent)): Subscription
+---@overload fun(self: ProjectItem, event: "view", handler: fun(event: ItemViewEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "pickup", handler: fun(event: PlayerPickupItemEvent)): Subscription
 function ProjectItem:on(event, handler, options) end
 
@@ -4517,6 +4533,7 @@ function ProjectItem:on(event, handler, options) end
 ---@overload fun(self: ProjectItem, event: "break_block", handler: fun(event: BlockBreakEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "drop", handler: fun(event: PlayerItemEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "render", handler: fun(event: ItemRenderEvent)): Subscription
+---@overload fun(self: ProjectItem, event: "view", handler: fun(event: ItemViewEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "pickup", handler: fun(event: PlayerPickupItemEvent)): Subscription
 function ProjectItem:once(event, handler) end
 
@@ -5715,6 +5732,13 @@ function Event:uncancel() end
 ---@field near Vec3? Where its stations are looked for. Default: where the player stands.
 ---@field stations string[]? Stations counted as near whatever the blocks are.
 
+--- A stack is being sent to one player's game, to be shown as this player alone sees it: `view` on a project item, `item_view` on `nf`.
+---@class ItemViewEvent: Event
+---@field player Player Whose game it is sent to.
+---@field item Item The real stack, as the server keeps it. Changing this table changes nothing: assign `display_name` and `lore`.
+---@field display_name Text? The name this player is shown: the stack's own until a handler assigns another. `nil` for the game's own name.
+---@field lore Text[]? The lore lines this player is shown, the same way. `nil` for none.
+
 --- A stack of a project item is being made, or rewritten to its item's changed file: `render`.
 ---@class ItemRenderEvent: Event
 ---@field item Item The stack as it is about to be, with its `data` and `count`. Changing this table changes nothing: assign `display_name` and `lore`.
@@ -6336,6 +6360,10 @@ function Event:uncancel() end
 ---@class NoiseOptions
 ---@field seed integer? Which noise: each seed is a different pattern. Default 0.
 ---@field scale number? What the coordinates are multiplied by first: smaller is smoother and wider (0.05 changes over about 20 blocks). Default 1.
+
+--- Where `nf.test.shown` looks. A key that isn't one of these is an error.
+---@class TestShownOptions
+---@field menu boolean? Whether `slot` is one of the window they have open, numbered from 0 as `menu:slot` numbers them.
 
 --- How `nf.test.click` clicks. Every key is optional; a key that isn't one of these is an error.
 ---@class TestClickOptions

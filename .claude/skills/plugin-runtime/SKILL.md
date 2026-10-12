@@ -24,7 +24,8 @@ group is required**, and so is every method in it (no nulls, no do-nothing
 defaults): `menus`, `dialogs`, `resourcePacks`, `particles`,
 `sounds`, `bossBars`, `sidebars`, `recipes`, `loot` (`platform/Loot.kt`: the game's own loot tables,
 rolled by the server from a seed), `projectItems` (rewriting stale project
-item stacks; see menus-and-dialogs), `teams`, `playerList`, `attributes` (`platform/Attributes.kt`:
+item stacks; see menus-and-dialogs), `itemViews` (stacks as they look to the one player they're sent to,
+and refreshing them; see menus-and-dialogs), `teams`, `playerList`, `attributes` (`platform/Attributes.kt`:
 an entity's attribute instances, modifiers by namespaced id), `pathfinding`
 (`platform/PathfindingOps.kt`: a mob's own navigation; Paper has no event for a
 path ending, so `world/MobPaths.kt` checks the walks `move_to` started once a

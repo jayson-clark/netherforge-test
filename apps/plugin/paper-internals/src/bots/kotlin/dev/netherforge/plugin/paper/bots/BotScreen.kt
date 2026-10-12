@@ -23,6 +23,7 @@ import net.minecraft.network.protocol.game.ClientboundSetScorePacket
 import net.minecraft.server.dialog.Dialog
 import net.minecraft.world.BossEvent
 import net.minecraft.world.entity.EntityType
+import net.minecraft.world.inventory.InventoryMenu
 import net.minecraft.world.inventory.MenuType
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.scores.DisplaySlot
@@ -68,6 +69,36 @@ internal class BotScreen {
     private var fadeIn = DEFAULT_FADE_IN
     private var stay = DEFAULT_STAY
     private var fadeOut = DEFAULT_FADE_OUT
+
+    /**
+     * The stack the client was last sent for slot [slot] of the player's inventory (numbered as the runtime numbers
+     * it: hotbar 0–8, the rest 9–35, armour 36–39 from the feet, the offhand 40), where its inventory screen draws
+     * it; null for a slot it has no place for (41 on) or before it was sent the inventory. What the server holds
+     * can differ: a stack can look different to one player (`ItemViewOps`).
+     */
+    fun shown(slot: Int): ItemStack? {
+        val index = when (slot) {
+            in 0..8 -> InventoryMenu.USE_ROW_SLOT_START + slot
+            in InventoryMenu.INV_SLOT_START until InventoryMenu.INV_SLOT_END -> slot
+            in ARMOR_FEET..ARMOR_HEAD -> InventoryMenu.ARMOR_SLOT_END - 1 - (slot - ARMOR_FEET)
+            OFF_HAND -> InventoryMenu.SHIELD_SLOT
+            else -> return null
+        }
+        return inventory.items.getOrNull(index)
+    }
+
+    /**
+     * Copies the player's slots at the end of the open menu into the inventory: the client's windows all show the
+     * one inventory, so what the server sends a menu's copy of a slot is in the inventory too, after it closes.
+     */
+    fun shareInventory() {
+        val menu = menu ?: return
+        if (menu.items.size < PLAYER_SLOTS || inventory.items.size < InventoryMenu.USE_ROW_SLOT_END) return
+        val base = menu.items.size - PLAYER_SLOTS
+        inventory.items = inventory.items.toMutableList().apply {
+            for (i in 0 until PLAYER_SLOTS) set(InventoryMenu.INV_SLOT_START + i, menu.items[base + i])
+        }
+    }
 
     /** The open container a click goes to: the menu, or the inventory when none is. */
     fun clicked(): Container = menu ?: inventory
@@ -309,6 +340,11 @@ internal class BotScreen {
         const val DEFAULT_STAY = 70
         const val DEFAULT_FADE_OUT = 20
         const val ACTION_BAR_TICKS = 60
+
+        /** The runtime's numbers for the feet and head armour slots and the offhand. */
+        private const val ARMOR_FEET = 36
+        private const val ARMOR_HEAD = 39
+        private const val OFF_HAND = 40
 
         /** An item stack as a [BotItem]; null when the slot is empty. */
         fun item(slot: Int, stack: ItemStack): BotItem? {

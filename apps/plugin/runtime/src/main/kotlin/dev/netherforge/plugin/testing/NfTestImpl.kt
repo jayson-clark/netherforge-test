@@ -3,6 +3,7 @@ package dev.netherforge.plugin.testing
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.plugin.api.BlockPosition
 import dev.netherforge.plugin.api.Caller
+import dev.netherforge.plugin.api.IntegerOrChoice
 import dev.netherforge.plugin.api.LuaEvent
 import dev.netherforge.plugin.api.LuaHandle
 import dev.netherforge.plugin.api.NfTestApi
@@ -12,6 +13,7 @@ import dev.netherforge.plugin.api.RaisableEvents
 import dev.netherforge.plugin.api.RaisedEvent
 import dev.netherforge.plugin.api.TestClickOptions
 import dev.netherforge.plugin.api.TestInputKeys
+import dev.netherforge.plugin.api.TestShownOptions
 import dev.netherforge.plugin.api.uuidOrNull
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaFunction
@@ -19,6 +21,7 @@ import dev.netherforge.plugin.lua.LuaValue
 import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.ClickButton
 import dev.netherforge.plugin.platform.GameEvent
+import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.session.ProjectSession
 import dev.netherforge.plugin.session.handle
@@ -108,6 +111,17 @@ internal class NfTestImpl(private val session: ProjectSession) : NfTestApi {
                 held.sprint == true
             )
         )
+    }
+
+    override fun shown(caller: Caller, player: LuaHandle.Player, slot: IntegerOrChoice, options: TestShownOptions?): ItemData? {
+        val ref = online(player)
+        val index = when (slot) {
+            is IntegerOrChoice.Integer -> Math.toIntExact(slot.value).also {
+                if (it < 0) throw LuaApiException("bad argument 'slot' (0 or more expected, got $it)")
+            }
+            is IntegerOrChoice.Choice -> null
+        }
+        return harness.shown(ref.uuid, index, options?.menu == true)
     }
 
     /** [player] as the server knows them: one online, or an error (a test clicks only for someone there). */

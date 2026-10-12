@@ -539,4 +539,51 @@ class ScriptTestRunnerTest {
             root.toFile().deleteRecursively()
         }
     }
+
+    @Test
+    fun `shown is a stack as the player's game was sent it, after the view handlers`() {
+        val (events, _) = run(
+            mapOf(
+                "items/ruby/item.json" to """{ "kind": "minecraft:diamond", "lore": ["A gem."], "script": { "file": "script.lua" } }""",
+                "items/ruby/script.lua" to """
+                    local this = this --[[@as ProjectItem]]
+                    this:on("view", function(event)
+                      local menu = event.player:menu()
+                      if menu and menu:kind() == "shop" then
+                        event.lore = { event.lore[1], "<gold>Sells for 5" }
+                      end
+                    end)
+                """,
+                "menus/shop/menu.json" to """
+                    { "rows": 1, "script": { "file": "script.lua" }, "slots": { "4": { "item": { "item": "ruby" } } } }
+                """,
+                "menus/shop/script.lua" to """
+                    local this = this --[[@as Menu]]
+                    this:on("open", function(event) event.player:refresh_items() end)
+                    this:on("close", function(event) event.player:refresh_items() end)
+                """,
+                "tests/view_test.lua" to """
+                    nf.test.case("the shop prices the player's own rubies", function()
+                      local alex = nf.test.player("Alex")
+                      local sam = nf.test.player("Sam")
+                      alex:inventory():set_item(0, nf.items.create("ruby"))
+                      sam:inventory():set_item(0, nf.items.create("ruby"))
+                      nf.test.advance(1)
+                      assert(#nf.test.shown(alex, 0).lore == 1, "no shop open")
+                      alex:open_menu("shop")
+                      nf.test.advance(1)
+                      assert(nf.test.shown(alex, 0).lore[2] == "<gold>Sells for 5", "their own ruby")
+                      assert(nf.test.shown(alex, 4, { menu = true }).lore[2] == "<gold>Sells for 5", "the shop's")
+                      assert(#nf.test.shown(sam, 0).lore == 1, "someone else's")
+                      assert(#alex:inventory():item(0).lore == 1, "the real stack")
+                      assert(nf.test.shown(alex, "cursor") == nil, "nothing on the cursor")
+                      alex:close_menu()
+                      nf.test.advance(1)
+                      assert(#nf.test.shown(alex, 0).lore == 1, "the shop closed")
+                    end)
+                """
+            )
+        )
+        expectStatuses(events, Status.PASSED)
+    }
 }

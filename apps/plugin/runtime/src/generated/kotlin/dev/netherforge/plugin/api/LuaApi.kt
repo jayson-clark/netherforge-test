@@ -916,6 +916,15 @@ interface NfTestApi {
      * it.
      */
     fun input(caller: Caller, player: LuaHandle.Player, held: TestInputKeys)
+
+    /**
+     * A stack as a player's game was last sent it, after the `view` handlers: what their tooltip says,
+     * where the server keeps the real stack (read that from `player:inventory()` or `menu:item`). The fake
+     * server sends what changed at the end of each tick, as a real one does, and what
+     * `player:refresh_items` finds looks different, so `nf.test.advance(1)` after a change. `nil` for an
+     * empty slot, or one their game hasn't been sent.
+     */
+    fun shown(caller: Caller, player: LuaHandle.Player, slot: IntegerOrChoice, options: TestShownOptions?): ItemData?
 }
 
 /**
@@ -2645,6 +2654,16 @@ interface PlayerApi {
      * ours).
      */
     fun menu(self: LuaHandle.Player): LuaHandle.Menu?
+
+    /**
+     * Sends their game every stack it shows again where it would now look different to them: their
+     * inventory, the window they have open and their cursor, each worked out again by the `view` handlers
+     * (and `nf.on("item_view")`). Stacks are sent by themselves when they change, but not when only what a
+     * `view` handler works its look out from does, so call this then: when a shop menu opens or closes,
+     * say. It's done once at the end of the tick however often it's called, and only stacks that look
+     * different from what their game was last sent are sent.
+     */
+    fun refreshItems(self: LuaHandle.Player): Boolean
 
     /**
      * Closes the project menu they have open. Anything else on their screen (a chest, their own inventory)

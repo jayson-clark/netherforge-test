@@ -19,6 +19,7 @@ import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.ItemLook
+import dev.netherforge.plugin.platform.ItemView
 import dev.netherforge.plugin.platform.StackFilter
 import io.papermc.paper.datacomponent.DataComponentType
 import io.papermc.paper.datacomponent.DataComponentTypes
@@ -542,6 +543,16 @@ object PaperItems {
         if (filter.kind != null && stack.type.key.toString() != filter.kind) return false
         if (filter.item == null) return true
         return projectItem(stack)?.let(::reference)?.text == filter.item
+    }
+
+    /** A copy of [stack] with [view]'s name and lore in place of its own: how it looks to one player. */
+    fun viewed(stack: ItemStack, view: ItemView): ItemStack {
+        val shown = stack.clone()
+        shown.editMeta { meta ->
+            meta.displayName(view.name?.let(::text))
+            meta.lore(view.lore?.map(::text))
+        }
+        return shown
     }
 
     /** The project item [stack] is a stack of (the namespaced id it carries: `shop:ruby`), or null; reads only the stamp. */

@@ -128,6 +128,7 @@ What `nf.on` listens for.
 | `server_list_ping` | [ServerListPingEvent](events.md#serverlistpingevent) | yes | Someone's server list is asking about the server: what it says, how many are on and how many fit. `event:cancel()` doesn't answer, so the server shows as offline to them. The ping waits on the main thread for the handlers (at most two seconds, then it's answered as it was), so keep them quick. The server only waits while something listens. Writable: `description`, `online`, `max_players`, `hide_players`. |
 | `centity_click` | [ClickEvent](events.md#clickevent) |  | A player clicked any centity: the end of a click's path, after the clicked node, the nodes above it and the centity itself, unless one of them called `event:stop()`. |
 | `recipe_craft` | [RecipeCraftEvent](events.md#recipecraftevent) |  | `nf.recipes.craft` is making a `station` recipe once: its materials are taken, and `event.result` is about to be given. Assign `event.result` to give something else (the same item with a rolled prefix, a stack of a different size). Heard once for each making, so each gets its own; while nobody listens, the makings are given in stacks. Writable: `result`. |
+| `item_view` | [ItemViewEvent](events.md#itemviewevent) |  | Any stack is being sent to one player's game (their inventory, a window they have open, their cursor): after its project item's own `view` handlers, for a stack of one, and for every other stack too. Assign `event.display_name` and `event.lore` to change how it looks to `event.player` alone; nothing the server keeps changes. While nobody listens, stacks are sent as they are; while someone does, every stack sent is worked out here first, so prefer an item's own `view` when only some items change. Writable: `display_name`, `lore`. |
 | `centity_natural_spawn` | [CentityNaturalSpawnEvent](events.md#centitynaturalspawnevent) | yes | A centity is about to appear by itself, from the `spawning` block of its `centity.json`: once for each one of a group, before it exists. `event:cancel()` refuses it (it doesn't count against anything, and the spawner tries again later); assign `event.location` to move it. It is asked after the spawner has checked the place against the centity's rules, and before the centity's own `spawn`. Writable: `location`. |
 | `menu_open` | [MenuEvent](events.md#menuevent) |  | Someone opened any menu window: after that window's own `open` handlers. |
 | `menu_close` | [MenuEvent](events.md#menuevent) |  | Someone closed any menu window: after that window's own `close` handlers. |
@@ -244,6 +245,16 @@ nf.on("recipe_craft", function(event)
     local sword = event.result
     sword.data = { prefix = "Sharp" }
     event.result = nf.items.create("copper_sword", sword)
+  end
+end)
+```
+
+### nf item_view
+
+```lua
+nf.on("item_view", function(event)
+  if event.player:menu() and event.item.kind == "minecraft:diamond" then
+    event.display_name = "<aqua>Diamond <gray>(sells for 50)"
   end
 end)
 ```
@@ -798,6 +809,7 @@ What [ProjectItem](projectitem.md) listens for.
 | `break_block` | [BlockBreakEvent](events.md#blockbreakevent) | yes | A player is breaking a block with a stack of this item in their main hand (read it with `event.player:held_item()`). Then the world's own `block_break`, then `nf.on("block_break")`, with the same event; assign `event.drops` and `event.experience` to change what it drops. Bubbles. Writable: `drops`, `experience`. |
 | `drop` | [PlayerItemEvent](events.md#playeritemevent) | yes | A player is dropping a stack of this item (`event.item`). Then the player's own `drop_item`, then `nf.on("player_drop_item")`, with the same event, so `event:cancel()` here cancels it for all of them and `event:stop()` keeps it from them. Bubbles. |
 | `render` | [ItemRenderEvent](events.md#itemrenderevent) |  | The server is making a stack of this item, or rewriting one to the item's file after it changed: assign `event.display_name` and `event.lore` to give it a name and lore worked out from the stack (its `data`, its count), which the file's can't say: a prefix in the name, stats in the lore. It's heard for every stack `nf.items.create`, `ProjectItem:create` and a loot roll make, and for every stack that takes a changed file's look, so a name worked out here survives the file changing (one set any other way goes back to the file's then). A stack whose `data` a script changes keeps its name until it's made again: hand it to `nf.items.create` with its `data` to work it out anew. Writable: `display_name`, `lore`. |
+| `view` | [ItemViewEvent](events.md#itemviewevent) |  | A stack of this item is being sent to one player's game: their inventory (hotbar, armour and offhand too), a window they have open, the stack on their cursor. Assign `event.display_name` and `event.lore` to change how it looks to `event.player` alone, now: a price while they have a shop open, a hint for their class. Nothing the server keeps changes: not the stack, how it stacks, what's saved, what anyone else sees, nor what scripts read from inventories. Both start as the stack's own (after its `render`), so this adds to them. The game is sent a stack again only when it changes, so call `player:refresh_items()` when what this works out from changes (a menu opening or closing). If a handler fails, the stack is sent as it is. Then `nf.on("item_view")`, with the same event; `event:stop()` keeps it from there. Bubbles. Writable: `display_name`, `lore`. |
 | `pickup` | [PlayerPickupItemEvent](events.md#playerpickupitemevent) | yes | A player is picking up a stack of this item (`event.item`) from the item entity `event.entity`. Then the player's own `pickup_item`, then `nf.on("player_pickup_item")`, with the same event, so `event:cancel()` here cancels it for all of them and `event:stop()` keeps it from them. Bubbles. |
 
 ### projectitem use
@@ -823,6 +835,19 @@ this:on("render", function(event)
   local prefix = event.item.data and event.item.data.prefix
   if prefix then
     event.display_name = "<green>" .. prefix .. " Copper Sword"
+  end
+end)
+```
+
+### projectitem view
+
+```lua
+this:on("view", function(event)
+  local menu = event.player:menu()
+  if menu and menu:kind() == "shop" then
+    local lore = event.lore or {}
+    lore[#lore + 1] = "<gold>Sells for 5 coins"
+    event.lore = lore
   end
 end)
 ```
@@ -2243,6 +2268,19 @@ How `nf.recipes.craft` makes a recipe. A key that isn't one of these is an error
 | `near` | `Vec3?` | Where its stations are looked for. Default: where the player stands. |
 | `stations` | `string[]?` | Stations counted as near whatever the blocks are. |
 
+## ItemViewEvent
+
+A stack is being sent to one player's game, to be shown as this player alone sees it: `view` on a project item, `item_view` on `nf`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `player` | `Player` | Whose game it is sent to. |
+| `item` | `Item` | The real stack, as the server keeps it. Changing this table changes nothing: assign `display_name` and `lore`. |
+| `display_name` | `Text?` | The name this player is shown: the stack's own until a handler assigns another. `nil` for the game's own name. |
+| `lore` | `Text[]?` | The lore lines this player is shown, the same way. `nil` for none. |
+
 ## ItemRenderEvent
 
 A stack of a project item is being made, or rewritten to its item's changed file: `render`.
@@ -3242,6 +3280,14 @@ Which noise `nf.random.noise2` and `noise3` give. A key that isn't one of these 
 | --- | --- | --- |
 | `seed` | `integer?` | Which noise: each seed is a different pattern. Default 0. |
 | `scale` | `number?` | What the coordinates are multiplied by first: smaller is smoother and wider (0.05 changes over about 20 blocks). Default 1. |
+
+## TestShownOptions
+
+Where `nf.test.shown` looks. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `menu` | `boolean?` | Whether `slot` is one of the window they have open, numbered from 0 as `menu:slot` numbers them. |
 
 ## TestClickOptions
 

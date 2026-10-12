@@ -63,7 +63,7 @@ Raises a server-wide event as the server would, to the scripts: whoever listens 
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `event` | `"tick"\|"player_join"\|"player_quit"\|"player_chat"\|"player_interact"\|"player_interact_entity"\|"player_move"\|"player_teleport"\|"player_change_world"\|"player_death"\|"player_respawn"\|"player_drop_item"\|"player_pickup_item"\|"player_use_item"\|"player_consume_item"\|"player_swap_hands"\|"player_sneak"\|"player_command"\|"block_break"\|"block_place"\|"entity_damage"\|"entity_death"\|"entity_spawn"\|"world_dusk"\|"world_dawn"\|"player_input"\|"player_change_slot"\|"player_swing"\|"player_sprint"\|"player_fly"\|"player_jump"\|"player_change_game_mode"\|"player_change_food"\|"player_gain_experience"\|"player_change_level"\|"player_kick"\|"player_complete_advancement"\|"player_stop_using_item"\|"player_break_item"\|"entity_heal"\|"projectile_launch"\|"projectile_hit"\|"entity_shoot_bow"\|"entity_target"\|"entity_explode"\|"block_explode"\|"entity_combust"\|"entity_change_effect"\|"block_ignite"\|"block_burn"\|"block_spread"\|"block_flow"\|"block_grow"\|"block_fade"\|"block_form"\|"leaves_decay"\|"piston_extend"\|"piston_retract"\|"block_redstone"\|"sign_change"\|"block_start_break"\|"block_drop_item"\|"weather_change"\|"thunder_change"\|"lightning_strike"\|"chunk_load"\|"chunk_generated"\|"chunk_unload"\|"world_load"\|"world_unload"\|"entity_mount"\|"entity_dismount"\|"vehicle_move"\|"vehicle_damage"\|"vehicle_destroy"\|"player_open_inventory"\|"player_close_inventory"\|"player_craft"\|"player_prepare_craft"\|"player_prepare_anvil"\|"player_prepare_smithing"\|"player_prepare_grindstone"\|"player_enchant_item"\|"furnace_smelt"\|"server_list_ping"\|"centity_click"\|"recipe_craft"\|"centity_natural_spawn"\|"menu_open"\|"menu_close"\|"menu_click"\|"dialog_press"\|"setting_changed"` | The event's name, as `nf.on` takes it. |
+| `event` | `"tick"\|"player_join"\|"player_quit"\|"player_chat"\|"player_interact"\|"player_interact_entity"\|"player_move"\|"player_teleport"\|"player_change_world"\|"player_death"\|"player_respawn"\|"player_drop_item"\|"player_pickup_item"\|"player_use_item"\|"player_consume_item"\|"player_swap_hands"\|"player_sneak"\|"player_command"\|"block_break"\|"block_place"\|"entity_damage"\|"entity_death"\|"entity_spawn"\|"world_dusk"\|"world_dawn"\|"player_input"\|"player_change_slot"\|"player_swing"\|"player_sprint"\|"player_fly"\|"player_jump"\|"player_change_game_mode"\|"player_change_food"\|"player_gain_experience"\|"player_change_level"\|"player_kick"\|"player_complete_advancement"\|"player_stop_using_item"\|"player_break_item"\|"entity_heal"\|"projectile_launch"\|"projectile_hit"\|"entity_shoot_bow"\|"entity_target"\|"entity_explode"\|"block_explode"\|"entity_combust"\|"entity_change_effect"\|"block_ignite"\|"block_burn"\|"block_spread"\|"block_flow"\|"block_grow"\|"block_fade"\|"block_form"\|"leaves_decay"\|"piston_extend"\|"piston_retract"\|"block_redstone"\|"sign_change"\|"block_start_break"\|"block_drop_item"\|"weather_change"\|"thunder_change"\|"lightning_strike"\|"chunk_load"\|"chunk_generated"\|"chunk_unload"\|"world_load"\|"world_unload"\|"entity_mount"\|"entity_dismount"\|"vehicle_move"\|"vehicle_damage"\|"vehicle_destroy"\|"player_open_inventory"\|"player_close_inventory"\|"player_craft"\|"player_prepare_craft"\|"player_prepare_anvil"\|"player_prepare_smithing"\|"player_prepare_grindstone"\|"player_enchant_item"\|"furnace_smelt"\|"server_list_ping"\|"centity_click"\|"recipe_craft"\|"item_view"\|"centity_natural_spawn"\|"menu_open"\|"menu_close"\|"menu_click"\|"dialog_press"\|"setting_changed"` | The event's name, as `nf.on` takes it. |
 | `payload` (optional) | `table` | The payload: its fields by name. Leave it out for an event that has none. |
 
 **Returns** `RaisedEvent`: Whether a handler cancelled it, and the event as the handlers left it.
@@ -139,4 +139,24 @@ The movement keys a player holds now, as their client says when they change: rai
 ```lua
 local alex = nf.test.player("Alex")
 nf.test.input(alex, { forward = true, jump = true })
+```
+
+## `nf.test.shown(player, slot, options?)`
+
+A stack as a player's game was last sent it, after the `view` handlers: what their tooltip says, where the server keeps the real stack (read that from `player:inventory()` or `menu:item`). The fake server sends what changed at the end of each tick, as a real one does, and what `player:refresh_items` finds looks different, so `nf.test.advance(1)` after a change. `nil` for an empty slot, or one their game hasn't been sent.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `player` | `Player` | Whose game: one online. |
+| `slot` | `integer\|"cursor"` | A slot of their inventory, numbered as `player:inventory()` numbers them; with `menu`, of the window they have open. `"cursor"` for the stack on their cursor. |
+| `options` (optional) | `TestShownOptions` | Leave it out for their own inventory. |
+
+**Returns** `Item?`
+
+```lua
+local alex = nf.test.player("Alex")
+alex:set_held_item(nf.items.create("ruby"))
+nf.test.advance(1)
+local shown = assert(nf.test.shown(alex, 0))
+assert(shown.lore ~= nil)
 ```

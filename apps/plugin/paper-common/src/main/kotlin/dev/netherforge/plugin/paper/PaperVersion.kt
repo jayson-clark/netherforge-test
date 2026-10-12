@@ -8,6 +8,7 @@ import org.bukkit.block.data.BlockData
 import org.bukkit.entity.Mob
 import org.bukkit.entity.Player
 import org.bukkit.inventory.EquipmentSlot
+import org.bukkit.inventory.ItemStack
 import java.util.ServiceLoader
 
 /**
@@ -81,6 +82,12 @@ interface PaperVersion {
      * when it saves players. The API's `saveData` is the player's data file only.
      */
     fun saveAdvancements(player: Player)
+
+    /**
+     * Hooks every stack sent to a player's game through [viewer] (see [ItemViewHooks]): the server's own
+     * container syncing, past the API, which is the one place every slot, window and cursor update goes by.
+     */
+    fun itemViews(viewer: StackViewer): ItemViewHooks
 
     /** Every registry the running server has, and their tags, by the game's own registry names. */
     val registries: ServerRegistries
@@ -202,4 +209,33 @@ interface ServerRegistries {
 
     /** Every registry's tags, by registry name then tag id, each tag's ids sorted. Registries without tags are left out. */
     fun allTags(): Map<String, Map<String, List<String>>>
+}
+
+/** How a stack sent to [Player]'s game looks to them: the stack to send in its place, or null to send it as it is. */
+fun interface StackViewer {
+    /** Called on the main thread, with the very stack the server holds (a mirror: never change it). */
+    fun view(player: Player, stack: ItemStack): ItemStack?
+}
+
+/**
+ * A player's game sent stacks as [StackViewer] says they look to them, apart from what the server holds.
+ *
+ * Every stack the server sends a player's game to keep a window in step (their own inventory, the window they
+ * have open, the cursor; a whole window or one slot) goes by the viewer, once [install]ed for them. What the
+ * server keeps of what their game holds stays the real stacks, so nothing is sent again only because it looks
+ * different; and when the game says what it holds after a click (as hashes of the stacks it was shown), a hash
+ * of the stack shown for a real one counts as that real one, so nothing is sent again for that either.
+ */
+interface ItemViewHooks {
+    /** Starts sending [player]'s game stacks through the viewer, sending it what it shows now as they look. */
+    fun install(player: Player)
+
+    /** Sends [player]'s game the real stacks again, from now on. */
+    fun uninstall(player: Player)
+
+    /** Works out every stack [player]'s game shows (the window they have open, the cursor) again, and sends those that look different. */
+    fun refresh(player: Player)
+
+    /** The stack the server holds that [player]'s game was shown as [stack] (with [stack]'s count), or null when it was shown none like it. */
+    fun realOf(player: Player, stack: ItemStack): ItemStack?
 }

@@ -135,6 +135,8 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
         }
     }
 
+    override val itemViews = PaperItemViews(version)
+
     override val recipes = PaperRecipes(version)
     override val loot = PaperLoot()
 
@@ -152,6 +154,9 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
         PaperItems.blockStates = blocks
         PaperItems.namespace = namespace
         plugin.server.pluginManager.registerEvents(recipes, plugin)
+        itemViews.events = events
+        plugin.server.pluginManager.registerEvents(itemViews, plugin)
+        itemViews.start()
         dialogs.events = events
         menus.events = events
         this.blocks.gameBlocks.events = events
@@ -170,6 +175,7 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
 
     /** The plugin is being disabled: what it changed in the server's own settings is put back, and its searches stop. */
     fun close() {
+        itemViews.stop()
         carriers.release()
         blocks.gameBlocks.release()
         locate.close()

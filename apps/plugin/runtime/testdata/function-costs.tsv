@@ -470,6 +470,7 @@ Player:open_menu	19
 Player:permissions	15
 Player:ping	15
 Player:play_sound	22
+Player:refresh_items	15
 Player:remove_buff	17
 Player:reset_block	41
 Player:reset_border	15

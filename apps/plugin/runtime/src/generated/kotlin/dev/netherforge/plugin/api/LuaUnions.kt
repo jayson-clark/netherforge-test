@@ -21,6 +21,19 @@ sealed interface CommandDefinitionOrFunction {
     )
 }
 
+/** A `Integer|Choice`: whichever it was. */
+sealed interface IntegerOrChoice {
+    data class Integer(val value: kotlin.Long) : IntegerOrChoice
+    data class Choice(val value: kotlin.String) : IntegerOrChoice
+
+    object Codec : LuaCodec<IntegerOrChoice> by LuaUnion(
+        listOf(
+            LuaUnion.Member<IntegerOrChoice, kotlin.Long>(LuaCodecs.INTEGER, ::Integer) { (it as? Integer)?.value },
+            LuaUnion.Member<IntegerOrChoice, kotlin.String>(LuaChoice(listOf("cursor")), ::Choice) { (it as? Choice)?.value }
+        )
+    )
+}
+
 /** A `Location|Vec3`: whichever it was. */
 sealed interface LocationOrVec3 {
     data class Location(val value: dev.netherforge.plugin.api.LuaLocation) : LocationOrVec3

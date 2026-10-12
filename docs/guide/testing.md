@@ -127,6 +127,24 @@ about it; what only the real game computes (damage, pathfinding in real
 terrain, redstone) isn't simulated, and the integration tests that run real
 Paper cover it.
 
+What a player's game is shown can differ from what the server holds, when an
+item has a `view` handler. `nf.test.shown(player, slot)` is a stack as their
+game was last sent it (`{ menu = true }` for a slot of the window they have
+open, `"cursor"` for their cursor). The fake server sends what changed at the
+end of each tick, as a real one does, so advance a tick first:
+
+```lua
+nf.test.case("the ruby shows its price in the shop", function()
+  local alex = nf.test.player("Alex")
+  alex:inventory():set_item(0, nf.items.create("ruby"))
+  alex:open_menu("shop")
+  nf.test.advance(1)
+  local shown = assert(nf.test.shown(alex, 0))
+  assert(shown.lore[#shown.lore] == "<gold>Sells for 5 coins")
+  assert(#alex:inventory():item(0).lore == 1, "the real stack keeps its own lore")
+end)
+```
+
 ### Worldgen modules
 
 A terrain script's modules can be tested without a world: `nf.test.terrain`

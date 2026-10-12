@@ -1,8 +1,10 @@
 package dev.netherforge.plugin.paper.version
 
 import com.destroystokyo.paper.entity.ai.Goal
+import dev.netherforge.plugin.paper.ItemViewHooks
 import dev.netherforge.plugin.paper.PaperVersion
 import dev.netherforge.plugin.paper.ServerRegistries
+import dev.netherforge.plugin.paper.StackViewer
 import dev.netherforge.plugin.platform.ChunkGrid
 import io.netty.buffer.Unpooled
 import io.papermc.paper.configuration.GlobalConfiguration
@@ -50,6 +52,8 @@ import net.minecraft.resources.ResourceKey as MojangKey
 /** This adapter's [PaperVersion], listed in `META-INF/services`. */
 
 class Version : PaperVersion {
+    override fun itemViews(viewer: StackViewer): ItemViewHooks = ItemViews(viewer)
+
     override fun fingerprintStates(world: World, chunkX: Int, chunkZ: Int, wanted: Collection<BlockData>): Long? {
         val chunk = (world as CraftWorld).handle.chunkSource.getChunkNow(chunkX, chunkZ) ?: return null
         val states = serverStates(wanted)

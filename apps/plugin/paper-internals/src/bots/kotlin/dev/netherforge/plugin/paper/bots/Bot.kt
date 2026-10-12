@@ -428,10 +428,12 @@ internal class Bot(
                 it.stateId = packet.stateId()
                 it.items = packet.items().map { stack -> stack.copy() }
                 screen.cursor = packet.carriedItem().copy()
+                if (it === screen.menu) screen.shareInventory()
             }
             is ClientboundContainerSetSlotPacket -> screen.container(packet.containerId)?.let {
                 it.stateId = packet.stateId
                 if (packet.slot in it.items.indices) it.items = it.items.toMutableList().apply { set(packet.slot, packet.item.copy()) }
+                if (it === screen.menu) screen.shareInventory()
             }
             is ClientboundSetCursorItemPacket -> screen.cursor = packet.contents().copy()
             // One slot of the player's own inventory, by its index there: the hotbar and the main inventory are where
@@ -1245,7 +1247,7 @@ internal class Bot(
             sneaking = player.isShiftKeyDown,
             sprinting = player.isSprinting,
             selectedSlot = inventory.selectedSlot,
-            inventory = (0 until inventory.containerSize).mapNotNull { BotScreen.item(it, inventory.getItem(it)) },
+            inventory = (0 until inventory.containerSize).mapNotNull { BotScreen.item(it, screen.shown(it) ?: inventory.getItem(it)) },
             menu = screen.menu(),
             dialog = screen.dialog?.let(BotDialogs::summary),
             bossBars = screen.bossBars.values.toList(),

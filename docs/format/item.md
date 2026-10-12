@@ -113,6 +113,26 @@ every stack `nf.items.create` and a loot roll make, and again whenever a stack
 takes the definition's new fields, so it survives the file changing. A name
 a script sets on a stack any other way goes back to the definition's then.
 
+### Looking different to one player
+
+A name and lore that depend on who's looking (a price while they have a shop
+open, a hint for their class) are the item script's `view` event's to give.
+It's heard each time a stack of the item is sent to one player's game (their
+inventory, a window they have open, the stack on their cursor), and what its
+handlers assign to `event.display_name` and `event.lore` is what that player is
+shown. Nothing the server keeps changes: the stack itself, how it stacks, what's
+saved, what anyone else sees, and what scripts read, which is always the real
+stack. Both fields start as the stack's own, after `render`, so `view` adds to
+what `render` worked out.
+
+The game is sent a stack again only when the stack changes, so when what a
+handler looks at changes (a menu opening or closing), call
+`player:refresh_items()`: at the end of the tick, every stack they can see is
+worked out again, and those that look different are sent. `nf.on("item_view")`
+hears every stack, the project's or not, after its item's own handlers. See
+[Prices on a player's own items](../guide/menus.md#prices-on-a-player-s-own-items)
+for an example.
+
 ## `properties`
 
 ```json partial
@@ -142,7 +162,9 @@ with any stack of it: `this:on("use", ...)`, `"interact"`,
 `"interact_entity"`, `"consume"`, `"hit"`, `"break_block"`, `"drop"` and
 `"pickup"`. Each is the player event of the same name heard first by the
 item, with the same event object, so `event:cancel()` here cancels it for
-everyone.
+everyone. Two more are about how its stacks look: `"render"`, as a stack is
+made ([The stack remembers](#the-stack-remembers)), and `"view"`, as a stack
+is sent to one player ([Looking different to one player](#looking-different-to-one-player)).
 
 ### Files beside the script
 

@@ -682,8 +682,10 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
             sneaking = sneaking,
             sprinting = sprinting,
             selectedSlot = heldSlot(this),
-            inventory = inventorySlots.withIndex().mapNotNull { (slot, item) -> item?.let { botItem(slot, it) } },
-            menu = platform.menus.viewing(ref.uuid)?.let { window -> menu(platform.menus.windows.getValue(window)) },
+            inventory = inventorySlots.withIndex().mapNotNull { (slot, item) ->
+                platform.itemViews.display(ref.uuid, FakeItemViews.Place.Inventory(slot), item)?.let { botItem(slot, it) }
+            },
+            menu = platform.menus.viewing(ref.uuid)?.let { window -> menu(ref.uuid, window, platform.menus.windows.getValue(window)) },
             dialog = platform.dialogs.showing[ref.uuid]?.let(::dialog),
             bossBars = platform.bossBars.of(this).map { BotBossBar(platform.text.strip(it.text), it.progress, it.color, it.style) },
             sidebar = platform.sidebars.showing[ref.uuid]?.let { (title, lines) ->
@@ -746,7 +748,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
     )
 
     /** A project menu as the client shows it: the vanilla screen its type opens. */
-    private fun menu(window: FakeWindow): BotMenu {
+    private fun menu(player: UUID, id: UUID, window: FakeWindow): BotMenu {
         val type = when (window.spec.type) {
             MenuType.CHEST, MenuType.BARREL -> "minecraft:generic_9x${window.spec.size / 9}"
             MenuType.SHULKER_BOX -> "minecraft:shulker_box"
@@ -754,8 +756,11 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
             MenuType.DISPENSER, MenuType.DROPPER -> "minecraft:generic_3x3"
             MenuType.CRAFTER -> "minecraft:crafter_3x3"
         }
-        val items = window.slots.withIndex().mapNotNull { (slot, item) -> item?.let { botItem(slot, it) } }
-        return BotMenu(type, platform.text.strip(window.title), window.spec.size, items)
+        val items = window.slots.withIndex().mapNotNull { (slot, item) ->
+            platform.itemViews.display(player, FakeItemViews.Place.Menu(id, slot), item)?.let { botItem(slot, it) }
+        }
+        val cursor = platform.itemViews.display(player, FakeItemViews.Place.Cursor, window.cursors[player])?.let { botItem(-1, it) }
+        return BotMenu(type, platform.text.strip(window.title), window.spec.size, items, cursor)
     }
 
     /** A dialog as the client shows it: plain text, its inputs with where they start. */

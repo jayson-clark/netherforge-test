@@ -97,6 +97,7 @@ local events = {
     ["server_list_ping"] = { owner = "nf", cancellable = true, options = {}, writable = { description = true, online = true, max_players = true, hide_players = true } },
     ["centity_click"] = { owner = "nf", cancellable = false, options = {}, writable = {} },
     ["recipe_craft"] = { owner = "nf", cancellable = false, options = {}, writable = { result = true } },
+    ["item_view"] = { owner = "nf", cancellable = false, options = {}, writable = { display_name = true, lore = true } },
     ["centity_natural_spawn"] = { owner = "nf", cancellable = true, options = {}, writable = { location = true } },
     ["menu_open"] = { owner = "nf", cancellable = false, options = {}, writable = {} },
     ["menu_close"] = { owner = "nf", cancellable = false, options = {}, writable = {} },
@@ -299,6 +300,7 @@ local events = {
     ["break_block"] = { owner = "ProjectItem", cancellable = true, options = {}, writable = { drops = true, experience = true } },
     ["drop"] = { owner = "ProjectItem", cancellable = true, options = {}, writable = {} },
     ["render"] = { owner = "ProjectItem", cancellable = false, options = {}, writable = { display_name = true, lore = true } },
+    ["view"] = { owner = "ProjectItem", cancellable = false, options = {}, writable = { display_name = true, lore = true } },
     ["pickup"] = { owner = "ProjectItem", cancellable = true, options = {}, writable = {} },
   },
   ["Effect"] = {

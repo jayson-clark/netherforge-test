@@ -138,6 +138,10 @@ class FakeProjectItemOpsTest : ProjectItemOpsContract() {
     override fun connect() = FakeContractServer()
 }
 
+class FakeItemViewOpsTest : ItemViewOpsContract() {
+    override fun connect() = FakeContractServer()
+}
+
 class FakeRecipeOpsTest : RecipeOpsContract() {
     override fun connect() = FakeContractServer()
 }

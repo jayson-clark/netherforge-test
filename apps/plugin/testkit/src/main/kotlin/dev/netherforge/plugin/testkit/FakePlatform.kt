@@ -57,6 +57,7 @@ class FakePlatform(
     override val playerList = FakePlayerList(this)
     override val bots = FakeBots(this)
     override val projectItems = FakeProjectItems(this)
+    override val itemViews = FakeItemViews(this)
     override val recipes = FakeRecipes(this)
     override val loot = FakeLoot(this)
     override val worldManager = FakeWorldManager(this)
@@ -161,6 +162,8 @@ class FakePlatform(
         mobGoals.think()
         worldEntities.pickUp()
         players.useItems()
+        // Then players' games are sent what changed, as the server keeps their screens in step.
+        itemViews.broadcast()
     }
 
     companion object {
