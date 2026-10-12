@@ -231,6 +231,7 @@ object PaperContracts {
         PaperNoteBlocksTest::class.java,
         PaperAdventureItemsTest::class.java,
         PaperStorageTest::class.java,
+        PaperSkiesTest::class.java,
         PaperCarriersTest::class.java,
         // Last: it checks that between them the suites saw every event.
         PaperGameEventsTest::class.java

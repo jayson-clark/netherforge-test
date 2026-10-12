@@ -23,8 +23,15 @@
   {
     "severity": "error",
     "file": "skies/empty.json",
-    "message": "A sky gives at least one colour: sky, fog, clouds, water or waterFog",
+    "message": "A sky gives at least one colour: sky, fog, clouds, water, waterFog or light",
     "path": "$",
     "code": "sky.empty"
+  },
+  {
+    "severity": "warning",
+    "file": "skies/nothing_held.json",
+    "message": "darkens is false, but the sky gives no sky or fog colour to hold at night",
+    "path": "$.darkens",
+    "code": "sky.night"
   }
 ]

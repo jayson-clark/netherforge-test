@@ -23,6 +23,11 @@
   opacity: 0.9;
 }
 
+.land {
+  flex: 1;
+  background-blend-mode: multiply;
+}
+
 .water {
   flex: 2;
 }

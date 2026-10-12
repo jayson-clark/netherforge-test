@@ -48,6 +48,15 @@ interface PaperVersion {
      */
     fun sendBiomes(player: org.bukkit.entity.Player, chunks: Collection<Pair<Int, Int>>, twinOf: (String) -> String?) {}
 
+    /**
+     * Stops each of the world clocks [clocks] (keys) the server has at tick 0, where they'd otherwise run and be saved
+     * with the world (format's `SkyNight`). Nothing before 26.1, which has no world clocks.
+     */
+    fun stopClocks(clocks: Collection<String>) {}
+
+    /** Tells [player] alone the world clock [clock] is at [ticks], not running. Nothing for a clock the server hasn't. */
+    fun sendClock(player: org.bukkit.entity.Player, clock: String, ticks: Long) {}
+
     fun readBox(
         world: World,
         x0: Int,

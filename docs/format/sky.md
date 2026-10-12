@@ -13,6 +13,8 @@ file, `skies/<id>.json`, with nothing beside it.
   "fog": "#3a0606",
   "water": "#8a1010",
   "waterFog": "#4a0808",
+  "light": "#ff8080",
+  "darkens": false,
   "fade": 3
 }
 ```
@@ -24,13 +26,30 @@ file, `skies/<id>.json`, with nothing beside it.
 | `clouds`   | The clouds': `#rrggbb` (opaque), or `#aarrggbb` with how opaque they are first, like `#805a0a0a`.       | the biome's |
 | `water`    | Water's own colour.                                                                                     | the biome's |
 | `waterFog` | The fog under water.                                                                                    | the biome's |
+| `light`    | The light the sky casts on the land, `#rrggbb`: a tint over everything daylight reaches.                | the biome's |
+| `darkens`  | Whether night darkens `sky` and `fog`, as it does the game's. `false` holds them all night (26.1+).     | `true`      |
 | `fade`     | How many steps a fade to it takes, 1 to 8: more is smoother, and more for players to load as they join. | 3           |
 
 At least one colour is needed (`sky.empty`); each is written `#rrggbb`, and
 the clouds' may be `#aarrggbb` (`sky.color`); `fade` is 1 to 8 (`sky.fade`).
 A fade moves the clouds' opacity as it moves their colour: the game's own
 clouds are a little see-through (`#ccffffff`), so `"clouds": "#ff0000"` fades
-them to opaque red.
+them to opaque red. `darkens: false` needs Minecraft 26.1 or later
+(`project.feature`), and a `sky` or `fog` to hold (`sky.night`, a warning).
+
+## Night
+
+The game darkens the sky and the fog at night, after every biome's colours, so
+a red sky goes nearly black as the sun sets. `"darkens": false` holds them:
+the sky's `sky` and `fog` stay its colours all night, and fade in and out with
+it as the rest do. The clouds and the water still darken as they always do
+(a cloud colour's alpha is how see-through they are, which leaves nothing to
+blend it over the game's with).
+
+`light` tints the light on the land, whatever `darkens` says: by day it's the
+colour daylight is, and at night the game dims and blues it as it does its
+own, so a red light is a dark red night. With both, a blood moon's sky stays
+red and the world under it looks red too.
 
 ## Setting one
 
@@ -69,8 +88,14 @@ different.
   game's always do.
 - **The sun, the moon and the stars** aren't colours a biome has: a sky can't
   turn the moon red. Draw that with a resource pack's textures if you need it.
-- **Night still darkens it**: the game's own day and night move a sky's colours
-  as they move a biome's.
+- **Night darkens it** unless `darkens` is `false`: the game's own day and
+  night move a sky's colours as they move a biome's. A sky held at night is a
+  timeline of the game's on a world clock of its own (`<namespace>:sky/…`),
+  listed after the day's in the overworld's, nether's and end's timelines:
+  the server keeps the clock stopped and tells each player under the sky it's
+  at the step of the fade they see. A dimension type with a fixed time
+  (`fixedTime`) lists none of those, so a sky there is never held: it has no
+  night to hold it through.
 - **If the server refuses a sky's twins** as it starts (the game reads each
   biome only then), it says why as a `runtime.datapack` problem at the sky's
   file, and starts the next time without that sky alone, the others as they

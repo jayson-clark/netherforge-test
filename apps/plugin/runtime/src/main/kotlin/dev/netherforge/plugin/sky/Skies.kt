@@ -4,6 +4,7 @@ import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.SkyKind
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.format.sky.SkyFile
+import dev.netherforge.format.sky.SkyNight
 import dev.netherforge.format.sky.SkyTwins
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.Platform
@@ -94,6 +95,14 @@ class Skies(
     }
 
     private val started = HashMap<String, Int>()
+
+    /** [name]'s clock, when the server started with one (it holds its colours at night, on 26.1 or later); else null. */
+    private fun clockOf(name: String): String? = clocks.getOrPut(name) {
+        val key = SkyNight.keyOf(namespace(), keyOf(name))
+        key.toString().takeIf { "data/${key.namespace}/${SkyNight.CLOCK_FOLDER}/${key.path}.json" in platform.datapacks.started }
+    }
+
+    private val clocks = HashMap<String, String?>()
 
     private fun keyOf(name: String) = requireNotNull(ResourceRef(name).resolve(namespace())) { "\"$name\" isn't a sky's name" }
 
@@ -190,7 +199,7 @@ class Skies(
 
     private fun show(player: UUID, viewer: Viewer) {
         val sky = viewer.sky
-        val view = if (sky == null || viewer.step <= 0) null else SkyView(namespace(), keyOf(sky).toString(), viewer.step)
+        val view = if (sky == null || viewer.step <= 0) null else SkyView(namespace(), keyOf(sky).toString(), viewer.step, clockOf(sky))
         if (view == viewer.shown) return
         viewer.shown = view
         platform.skies.show(player, view)

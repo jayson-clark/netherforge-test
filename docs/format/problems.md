@@ -1170,6 +1170,10 @@ Error. A sky gives no colour at all. See [format/sky.md](sky.md).
 
 Error. A sky's fade is outside 1 to 8 steps. See [format/sky.md](sky.md).
 
+### `sky.night` {#sky-night}
+
+Warning. A sky that doesn't darken at night gives no sky or fog colour to hold. See [format/sky.md](sky.md).
+
 ## datapack
 
 ### `datapack.format` {#datapack-format}

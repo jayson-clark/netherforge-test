@@ -11,6 +11,7 @@ import net.minecraft.resources.Identifier
 import net.minecraft.resources.ResourceKey
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.dedicated.DedicatedServerProperties
+import net.minecraft.server.level.ServerPlayer
 import net.minecraft.util.GsonHelper
 import net.minecraft.world.Difficulty
 import net.minecraft.world.entity.Mob
@@ -89,4 +90,10 @@ internal object Mojang : ServerInternals {
         World.Environment.THE_END -> LevelStem.END
         else -> LevelStem.OVERWORLD
     }
+
+    /** No world clocks before 26.1: nothing to stop. */
+    override fun stopClocks(clocks: Collection<String>) {}
+
+    /** No world clocks before 26.1: nothing to send. */
+    override fun sendClock(player: ServerPlayer, clock: String, ticks: Long) {}
 }

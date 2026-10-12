@@ -1,6 +1,7 @@
 package dev.netherforge.plugin.paper.version
 
 import dev.netherforge.plugin.paper.WorldStorage
+import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.Mob
 import net.minecraft.world.entity.ai.goal.GoalSelector
 import org.bukkit.WorldCreator
@@ -27,4 +28,14 @@ internal interface ServerInternals {
      * world's own `world_gen_settings` saved data from 26.1, its `level.dat` before.
      */
     fun prepareDimension(creator: WorldCreator, type: String)
+
+    /**
+     * Stops each of the world clocks [clocks] (keys: `basic:sky/basic/blood_moon`) the server has at tick 0, as they'd
+     * otherwise run from the start and be saved with the world: a sky held at night ([dev.netherforge.format.sky.SkyNight])
+     * shows nothing at 0. Nothing on a version without world clocks (before 26.1).
+     */
+    fun stopClocks(clocks: Collection<String>)
+
+    /** Tells [player] alone the world clock [clock] is at [ticks], not running. Nothing for a clock the server hasn't. */
+    fun sendClock(player: ServerPlayer, clock: String, ticks: Long)
 }

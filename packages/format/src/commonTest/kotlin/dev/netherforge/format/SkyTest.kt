@@ -10,6 +10,7 @@ import dev.netherforge.format.project.ProjectSnapshot
 import dev.netherforge.format.project.Projects
 import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.sky.SkyFile
+import dev.netherforge.format.sky.SkyNight
 import dev.netherforge.format.sky.SkyTwins
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -160,5 +161,75 @@ class SkyTest {
         // Without the server's biomes (the editor's check), only the project's have twins; without a sky, none.
         assertTrue(StartupDatapack.build(snapshot, listOf(121, 0), text).keys.none { "minecraft/plains" in it })
         assertTrue(StartupDatapack.build(load("biomes/grove.json" to "{}"), listOf(121, 0), text, game = game).keys.none { "/sky/" in it })
+    }
+
+    @Test
+    fun aSkyThatDoesntDarkenNeedsClocksAndSomethingToHold() {
+        val snapshot = load(
+            "skies/held.json" to """{ "sky": "#5a0a0a", "darkens": false }""",
+            "skies/nothing.json" to """{ "water": "#8a1010", "darkens": false }""",
+            "skies/lit.json" to """{ "light": "#ff8080" }""",
+            "skies/badlight.json" to """{ "light": "#ccff8080" }"""
+        )
+        assertEquals(
+            listOf("skies/badlight.json sky.color $.light", "skies/nothing.json sky.night $.darkens"),
+            snapshot.problems.map { "${it.file} ${it.code} ${it.path}" }.sorted()
+        )
+        // Before 26.1 there are no world clocks to hold it with.
+        val old = Projects.load(
+            MapProjectSource(
+                mapOf(
+                    "netherforge.json" to testManifest().replace("\"26.3\"", "\"1.21.11\""),
+                    "skies/held.json" to """{ "sky": "#5a0a0a", "darkens": false }"""
+                )
+            ),
+            null
+        )
+        assertEquals(listOf("project.feature $.darkens"), old.problems.map { "${it.code} ${it.path}" })
+    }
+
+    @Test
+    fun aTwinTintsTheLightOnTheLandFromTheGamesWhite() {
+        val sky = SkyFile(light = "#ff0000", fade = 2)
+        val half = SkyTwins.twin(plains, sky, 1, SkyTwins.defaultsOf(overworld))
+        // Neither plains nor the overworld gives one: the game's white.
+        assertEquals("#ff8080", half.getValue("attributes").jsonObject.getValue("minecraft:visual/sky_light_color").jsonPrimitive.content)
+    }
+
+    @Test
+    fun aSkyHeldAtNightIsAClockAndATimelineAfterTheDays() {
+        val snapshot = load(
+            "skies/blood_moon.json" to """{ "sky": "#5A0A0A", "fog": "#3a0606", "clouds": "#ff0000", "darkens": false, "fade": 2 }""",
+            "skies/eclipse.json" to """{ "sky": "#000000" }"""
+        )
+        val pack = StartupDatapack.build(snapshot, listOf(121, 0), text, game = game)
+        fun json(path: String) = CanonicalJson.json.parseToJsonElement((pack.getValue(path) as DatapackEntry.Text).text).jsonObject
+        assertEquals(JsonObject(emptyMap()), json("data/test/world_clock/sky/test/blood_moon.json"))
+        assertTrue(pack.keys.none { "/eclipse" in it && ("world_clock" in it || "/timeline/" in it) }, "a sky that darkens has neither")
+        val timeline = json("data/test/timeline/sky/test/blood_moon.json")
+        assertEquals("test:sky/test/blood_moon", timeline.getValue("clock").jsonPrimitive.content)
+        val tracks = timeline.getValue("tracks").jsonObject
+        // The sky and the fog, not the clouds: unseen at tick 0, all there at the last step.
+        assertEquals(listOf("minecraft:visual/fog_color", "minecraft:visual/sky_color"), tracks.keys.sorted())
+        val sky = tracks.getValue("minecraft:visual/sky_color").jsonObject
+        assertEquals("alpha_blend", sky.getValue("modifier").jsonPrimitive.content)
+        assertEquals(
+            listOf("0 #005a0a0a", "2 #ff5a0a0a"),
+            sky.getValue("keyframes").jsonArray.map {
+                "${it.jsonObject.getValue("ticks").jsonPrimitive.content} ${it.jsonObject.getValue("value").jsonPrimitive.content}"
+            }
+        )
+        for (tag in listOf("in_overworld", "in_nether", "in_end")) {
+            assertEquals(
+                listOf("test:sky/test/blood_moon"),
+                json("data/minecraft/tags/timeline/$tag.json").getValue("values").jsonArray.map { it.jsonPrimitive.content }
+            )
+        }
+        assertEquals("test:sky/test/blood_moon", SkyNight.clockIn("data/test/world_clock/sky/test/blood_moon.json"))
+        assertEquals(null, SkyNight.clockIn("data/test/timeline/sky/test/blood_moon.json"))
+        // A server before 26.1 (no world clocks) gets the twins alone.
+        val old = StartupDatapack.build(snapshot, listOf(94, 0), text, game = game)
+        assertTrue(old.keys.none { "world_clock" in it || "/timeline" in it }, "${old.keys}")
+        assertTrue(old.keys.any { "/worldgen/biome/sky/test/blood_moon/" in it })
     }
 }

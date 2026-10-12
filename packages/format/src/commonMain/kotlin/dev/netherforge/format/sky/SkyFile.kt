@@ -38,6 +38,17 @@ data class SkyFile(
     /** The fog under water. */
     val waterFog: String? = null,
     /**
+     * The light the sky casts on the land, `#rrggbb`: a tint over everything the sky lights (the game's is white by
+     * day, bluer by night, and night still darkens it).
+     */
+    val light: String? = null,
+    /**
+     * Whether night darkens its [sky] and [fog], as it does the game's (default true). False holds them through the
+     * night: a red sky stays red. 26.1 and later ([NIGHT_FEATURE]), where each such sky is also a timeline of the
+     * game's ([SkyNight]).
+     */
+    val darkens: Boolean? = null,
+    /**
      * How many steps a fade to it takes (1 to [MAX_FADE]): each step is a set of twin biomes part of the way from
      * each biome's colours to the sky's, which the server moves a player through over a fade's ticks. Default
      * [DEFAULT_FADE]: more is smoother, and more biomes for players to load as they join.
@@ -52,13 +63,22 @@ data class SkyFile(
         fog?.let { SkyColor.FOG to it },
         clouds?.let { SkyColor.CLOUDS to it },
         water?.let { SkyColor.WATER to it },
-        waterFog?.let { SkyColor.WATER_FOG to it }
+        waterFog?.let { SkyColor.WATER_FOG to it },
+        light?.let { SkyColor.LIGHT to it }
     ).toMap()
+
+    val darkensOrDefault: Boolean get() = darkens ?: true
+
+    /** The colours night would darken that it holds instead, by what they colour; none when it [darkens]. */
+    val heldAtNight: Map<SkyColor, String> get() = if (darkensOrDefault) emptyMap() else colors.filterKeys { it.heldAtNight }
 
     companion object {
         const val SCHEMA = "../.netherforge/schema/sky.schema.json"
         const val DEFAULT_FADE = 3
         const val MAX_FADE = 8
+
+        /** The feature (the game's world clocks, 26.1) a sky that doesn't [darkens] needs. */
+        const val NIGHT_FEATURE = "sky-night"
     }
 }
 
@@ -68,12 +88,25 @@ data class SkyFile(
  * clouds' has an [alpha]: the game reads it only as `#aarrggbb`, and refuses a biome (so the whole start-up
  * datapack, so the server's start) that gives it `#rrggbb`.
  */
-enum class SkyColor(val field: String, val attribute: String?, val effect: String?, val alpha: Boolean = false) {
-    SKY("sky", "minecraft:visual/sky_color", null),
-    FOG("fog", "minecraft:visual/fog_color", null),
+enum class SkyColor(
+    val field: String,
+    val attribute: String?,
+    val effect: String?,
+    val alpha: Boolean = false,
+    /** What a biome and its dimension that give none of it have: the game's default, where it isn't the dimension's to say. */
+    val fallback: String? = null,
+    /**
+     * Whether a sky that doesn't darken holds it through the night ([SkyNight]). The clouds aren't: a timeline can
+     * only blend a colour over the game's by its alpha, which for the clouds is how see-through they are.
+     */
+    val heldAtNight: Boolean = false
+) {
+    SKY("sky", "minecraft:visual/sky_color", null, heldAtNight = true),
+    FOG("fog", "minecraft:visual/fog_color", null, heldAtNight = true),
     CLOUDS("clouds", "minecraft:visual/cloud_color", null, alpha = true),
     WATER("water", null, "water_color"),
-    WATER_FOG("waterFog", "minecraft:visual/water_fog_color", null);
+    WATER_FOG("waterFog", "minecraft:visual/water_fog_color", null),
+    LIGHT("light", "minecraft:visual/sky_light_color", null, fallback = "#ffffff");
 
     /** How a sky file may write it. */
     val pattern: Regex get() = if (alpha) DimensionTypeColors.CLOUD_COLOR else BiomeColors.COLOR
@@ -87,7 +120,7 @@ enum class SkyColor(val field: String, val attribute: String?, val effect: Strin
 }
 
 object SkyValidator {
-    fun validate(file: SkyFile, sink: ProblemSink) {
+    fun validate(file: SkyFile, sink: ProblemSink, requireFeature: (id: String, path: String) -> Unit = { _, _ -> }) {
         for (color in SkyColor.entries) {
             val value = file.colors[color] ?: continue
             if (!color.pattern.matches(value)) {
@@ -96,11 +129,21 @@ object SkyValidator {
             }
         }
         if (file.colors.isEmpty()) {
-            sink.report(ProblemCodes.SKY_EMPTY, "A sky gives at least one colour: sky, fog, clouds, water or waterFog", "$")
+            sink.report(ProblemCodes.SKY_EMPTY, "A sky gives at least one colour: sky, fog, clouds, water, waterFog or light", "$")
         }
         val fade = file.fade
         if (fade != null && fade !in 1..SkyFile.MAX_FADE) {
             sink.report(ProblemCodes.SKY_FADE, "fade is 1 to ${SkyFile.MAX_FADE} steps, not $fade", "$.fade")
+        }
+        if (file.darkens == false) {
+            requireFeature(SkyFile.NIGHT_FEATURE, "$.darkens")
+            if (file.heldAtNight.isEmpty()) {
+                sink.report(
+                    ProblemCodes.SKY_NIGHT,
+                    "darkens is false, but the sky gives no sky or fog colour to hold at night",
+                    "$.darkens"
+                )
+            }
         }
     }
 }
@@ -145,7 +188,7 @@ object SkyTwins {
             // Checked already (a sky with a bad colour doesn't run); one that slipped through is left the biome's.
             val target = color.normalize(given) ?: continue
             val own = color.attribute?.let { attributes[it] } ?: color.effect?.let { effects[it] }
-            val from = (own as? JsonPrimitive)?.contentOrNull?.let(color::normalize) ?: defaults[color] ?: target
+            val from = (own as? JsonPrimitive)?.contentOrNull?.let(color::normalize) ?: defaults[color] ?: color.fallback ?: target
             val value = JsonPrimitive(mix(from, target, fraction))
             color.attribute?.let { attributes[it] = value }
             color.effect?.let { effects[it] = value }
@@ -199,4 +242,64 @@ object SkyTwins {
     private const val SPAWNS = "minecraft:gameplay/natural_mob_spawns"
 
     private fun JsonObject?.orEmpty(): Map<String, JsonElement> = this ?: emptyMap()
+}
+
+/**
+ * A sky that doesn't darken at night ([SkyFile.darkens] false), on 26.1 and later: the game darkens the sky and the fog
+ * with its day's timeline (`minecraft:day`, which multiplies them nearly to black), after every biome's own colour,
+ * so no twin biome can hold them. Each such sky is also a world clock and a timeline on it, listed after the day in
+ * the timelines of the overworld, the nether and the end: at tick 0 of its clock it changes nothing, and at the last
+ * step of its fade it lays the sky's colours over the game's, the day's darkening included. The server keeps each
+ * clock stopped at 0, and tells a player under the sky its clock is at the step of the fade they see.
+ */
+object SkyNight {
+    /** The timeline tags the game's dimensions list theirs in: a sky's is added to each, after the day's. */
+    val TAGS = listOf("in_overworld", "in_nether", "in_end")
+
+    const val CLOCK_FOLDER = "world_clock"
+    const val TIMELINE_FOLDER = "timeline"
+
+    /** The key of [sky]'s clock, and of its timeline, in the project's namespace [home] (`basic:sky/basic/blood_moon`). */
+    fun keyOf(home: String, sky: ResourceKey): ResourceKey = ResourceKey(home, "${SkyTwins.FOLDER}/${sky.namespace}/${sky.path}")
+
+    /** The key of the clock the start-up datapack's file [path] is, when it's a sky's; else null. */
+    fun clockIn(path: String): String? {
+        val match = CLOCK_PATH.matchEntire(path) ?: return null
+        return "${match.groupValues[1]}:${match.groupValues[2]}"
+    }
+
+    private val CLOCK_PATH = Regex("""^data/([^/]+)/$CLOCK_FOLDER/(${SkyTwins.FOLDER}/.+)\.json$""")
+
+    /** The game's JSON of [file]'s timeline, on the clock [clock]: each colour it holds from unseen (tick 0) to all there (its last step). */
+    fun timeline(clock: ResourceKey, file: SkyFile): JsonObject = buildJsonObject {
+        put("clock", JsonPrimitive(clock.toString()))
+        put(
+            "tracks",
+            buildJsonObject {
+                for ((color, given) in file.heldAtNight.entries.sortedBy { it.key.attribute }) {
+                    val rgb = color.normalize(given)?.drop(1) ?: continue
+                    put(
+                        checkNotNull(color.attribute),
+                        buildJsonObject {
+                            put(
+                                "keyframes",
+                                JsonArray(
+                                    listOf(
+                                        keyframe(0, "#00$rgb"),
+                                        keyframe(file.fadeOrDefault, "#ff$rgb")
+                                    )
+                                )
+                            )
+                            put("modifier", JsonPrimitive("alpha_blend"))
+                        }
+                    )
+                }
+            }
+        )
+    }
+
+    private fun keyframe(ticks: Int, value: String) = buildJsonObject {
+        put("ticks", JsonPrimitive(ticks))
+        put("value", JsonPrimitive(value))
+    }
 }

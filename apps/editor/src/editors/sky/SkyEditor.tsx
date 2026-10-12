@@ -9,11 +9,11 @@ import { EditorBar, EditorScreen, Stage } from '@/editors/shared/EditorLayout'
 import { EditAsJson, useModelDoc } from '@/editors/shared/modelDoc'
 import { RawDocView } from '@/editors/shared/RawDocView'
 import { useFocusRequests } from '@/editors/shared/useFocusRequests'
-import { ColorField, NumberField, Section, TextField } from '@/ui/fields'
+import { CheckField, ColorField, NumberField, Section, TextField } from '@/ui/fields'
 import { Hint } from '@/ui/text'
 import styles from './SkyEditor.module.css'
 
-type ColorKey = 'sky' | 'fog' | 'clouds' | 'water' | 'waterFog'
+type ColorKey = 'sky' | 'fog' | 'clouds' | 'water' | 'waterFog' | 'light'
 
 /** `alpha`: written `#rrggbb` or `#aarrggbb` (the game's clouds), so a text field rather than a colour picker. */
 const COLORS: { key: ColorKey; label: string; overworld: string; alpha?: boolean }[] = [
@@ -22,7 +22,11 @@ const COLORS: { key: ColorKey; label: string; overworld: string; alpha?: boolean
   { key: 'clouds', label: 'Clouds', overworld: '#ccffffff', alpha: true },
   { key: 'water', label: 'Water', overworld: '#3f76e4' },
   { key: 'waterFog', label: 'Fog under water', overworld: '#050533' },
+  { key: 'light', label: 'Light on the land', overworld: '#ffffff' },
 ]
+
+/** The land the preview's light falls on: the plains' grass, which the light multiplies as the game's does. */
+const GRASS = '#79c05a'
 
 /** `#aarrggbb` as CSS's `#rrggbbaa`; anything else as it is. */
 function css(color: string): string {
@@ -58,6 +62,12 @@ export function SkyEditor({ path }: { path: string }) {
           >
             <div className={styles.cloud} style={{ background: shown('clouds') }} />
           </div>
+          <div
+            className={styles.land}
+            style={{
+              background: `linear-gradient(${shown('light')}, ${shown('light')}), ${GRASS}`,
+            }}
+          />
           <div
             className={styles.water}
             style={{ background: `linear-gradient(${shown('water')}, ${shown('waterFog')})` }}
@@ -101,6 +111,24 @@ export function SkyEditor({ path }: { path: string }) {
           <Hint>
             A colour left empty stays each biome's own. Scripts set it with world:set_sky("{id}") or
             player:set_sky("{id}").
+          </Hint>
+        </Section>
+        <Section title="Night">
+          <CheckField
+            label="Holds its sky and fog at night"
+            dataPath="darkens"
+            value={model.darkens === false}
+            onChange={(held) =>
+              edit((d) => {
+                if (held) d.darkens = false
+                else delete d.darkens
+              })
+            }
+          />
+          <Hint>
+            Night darkens the sky and the fog to near black, as it does the game's. Held, they stay
+            the sky's colours all night (Minecraft 26.1 and later). The light on the land is tinted
+            either way, and night still dims it.
           </Hint>
         </Section>
         <Section title="Fading">

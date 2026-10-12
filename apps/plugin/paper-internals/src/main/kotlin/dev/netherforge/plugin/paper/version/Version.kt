@@ -209,6 +209,10 @@ class Version : PaperVersion {
 
     override fun prepareDimension(creator: org.bukkit.WorldCreator, type: String) = Mojang.prepareDimension(creator, type)
 
+    override fun stopClocks(clocks: Collection<String>) = Mojang.stopClocks(clocks)
+
+    override fun sendClock(player: Player, clock: String, ticks: Long) = Mojang.sendClock((player as CraftPlayer).handle, clock, ticks)
+
     // The same on every supported server: a static `tick()` that sets its last tick to now.
     override fun holdWatchdog() = WatchdogThread.tick()
 

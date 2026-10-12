@@ -132,4 +132,24 @@ class SkyTest {
             assertTrue(server.logs.last().startsWith("mine"), server.logs.last())
         }
     }
+
+    @Test
+    fun `a sky held at night is shown with its clock, at the step of the fade`() {
+        val project = mapOf(
+            "skies/blood_moon.json" to """{ "sky": "#5a0a0a", "light": "#ff8080", "darkens": false, "fade": 2 }""",
+            "modules/t/init.lua" to
+                """nf.commands.register("set", function() nf.worlds.default():set_sky("blood_moon", { fade_ticks = 2 }) end)"""
+        )
+        // 26.3's data pack format, which has world clocks; and 1.21.11's, which hasn't: the twins alone.
+        for ((format, clock) in listOf(listOf(121, 0) to "test:sky/test/blood_moon", listOf(94, 1) to null)) {
+            val platform = FakePlatform().also { it.datapacks.format = format }
+            TestServer(project, platform = platform, start = false).use { server ->
+                val alex = server.player("Alex")
+                server.start()
+                server.platform.commands.runConsole("set")
+                server.tick(10)
+                assertEquals(SkyView("test", "test:blood_moon", 2, clock), server.platform.skies.shown[alex.ref.uuid], "$format")
+            }
+        }
+    }
 }
