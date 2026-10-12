@@ -220,7 +220,7 @@ export const menuClass: LuaClass = {
       ],
       returns: [{ type: 'boolean', doc: '`false` once the window is gone.' }],
       example:
-        'nf.on("menu_open", function(event)\n  local trinkets = event.player:storage("trinkets", 4)\n  this:slot(10):bind(trinkets, 0)\n  this:shift_into(trinkets)\nend)',
+        'nf.on("menu_open", function(event)\n  -- nil while they\'re offline, which a player opening a menu never is.\n  local trinkets = assert(event.player:storage("trinkets", 4))\n  this:slot(10):bind(trinkets, 0)\n  this:shift_into(trinkets)\nend)',
     },
     {
       name: 'slot',
