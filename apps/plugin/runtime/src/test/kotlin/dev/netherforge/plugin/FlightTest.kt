@@ -58,9 +58,13 @@ class FlightTest {
         world:set_block(vec3(5, 70, 0), "minecraft:stone")
         shot:launch({ velocity = vec3(20, 0, 0), aim = "aim" })
         nf.after(1, function() log("aim", f(shot:node("aim"):rotation().y), tostring(shot:is_launched())) end)
+        shot:on("flight_end", function(event) log("normal", where(event.normal)) end)
         """
     ) { server ->
-        assertEquals(listOf("aim\t90.00\ttrue", "end\tblock\t5.00,70.50,0.50\tnil", "removed"), server.logs)
+        assertEquals(
+            listOf("aim\t90.00\ttrue", "end\tblock\t5.00,70.50,0.50\tnil", "normal\t-1.00,0.00,0.00", "removed"),
+            server.logs
+        )
     }
 
     @Test

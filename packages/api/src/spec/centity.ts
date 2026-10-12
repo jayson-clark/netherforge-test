@@ -1663,6 +1663,11 @@ export const centityShapes: LuaClass[] = [
         doc: 'For `"hit"`, the player or entity it ended on, or `nil`.',
       },
       { name: 'block', type: 'Block?', doc: 'For `"block"`, the block it ended on, or `nil`.' },
+      {
+        name: 'normal',
+        type: 'Vec3?',
+        doc: 'For `"block"`, the direction straight out of the face it met, or `nil`.',
+      },
       { name: 'owner', type: '(Entity|Centity)?', doc: 'Who launched it, or `nil`.' },
     ],
   },

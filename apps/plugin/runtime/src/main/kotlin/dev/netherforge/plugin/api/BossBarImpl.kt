@@ -63,8 +63,9 @@ internal class BossBarImpl(private val session: ProjectSession) : BossBarApi {
         return bars.hide(bar, player.uuidOrNull() ?: return false)
     }
 
-    override fun viewers(self: LuaHandle.BossBar): List<LuaHandle.Player> =
-        bar(self)?.viewers.orEmpty().mapNotNull { session.platform.players.known(it.toString()) }.map(::playerHandle)
+    override fun viewers(self: LuaHandle.BossBar): List<LuaHandle.Player> = bar(self)?.let {
+        it.viewers + it.attachment?.near.orEmpty()
+    }.orEmpty().distinct().mapNotNull { session.platform.players.known(it.toString()) }.map(::playerHandle)
 
     override fun text(self: LuaHandle.BossBar): String? = bar(self)?.look?.text
 

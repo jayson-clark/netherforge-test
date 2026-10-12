@@ -111,6 +111,7 @@ object RaisableEvents {
         "furnace_smelt" to Raisable(Events.NF_FURNACE_SMELT, Events.WORLD_FURNACE_SMELT) { LuaHandle.World(it.block.world) },
         "server_list_ping" to Raisable(Events.NF_SERVER_LIST_PING),
         "centity_click" to Raisable(Events.NF_CENTITY_CLICK),
+        "recipe_craft" to Raisable(Events.NF_RECIPE_CRAFT),
         "centity_natural_spawn" to Raisable(Events.NF_CENTITY_NATURAL_SPAWN),
         "menu_open" to Raisable(Events.NF_MENU_OPEN),
         "menu_close" to Raisable(Events.NF_MENU_CLOSE),

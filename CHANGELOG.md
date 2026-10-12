@@ -100,6 +100,11 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **What TerraMC's migration asked for.** `flight_end` gives the face's
+  `normal` for a `"block"` end; `bossbar:viewers()` includes the players who see
+  an attached bar for being near; a station recipe's `stations` entry can name
+  choices, `"furnace|hellforge"` (any of them); and `nf.on("recipe_craft")`
+  hears each making of `nf.recipes.craft`, with a writable `result`.
 - **Terrain scripts place the blocks they name.** A game block state or a
   project block's id that a terrain script or its modules write whole as a
   string joins the generator by itself, on the server and in the preview:

@@ -70,23 +70,17 @@ internal class StationCrafting(
     /** Whether every station [recipe] needs is near. */
     fun stationsNear(recipe: RecipeFile, near: Near): Boolean {
         val range = recipe.stationRange ?: Material.DEFAULT_STATION_RANGE
-        return recipe.stations.orEmpty().all { station ->
-            if (station.startsWith("#")) {
-                val tag = station.removePrefix("#")
-                val members = if (GameIds.isValid(
-                        tag
-                    )
-                ) {
-                    platform.game.tag(RegistryKey.BLOCK, GameIds.normalize(tag)).orEmpty()
-                } else {
-                    emptySet()
-                }
-                members.any { near.within(it, range) } || near.within(station, range)
-            } else {
-                val name = blockName(station)
-                near.within(name, range) || (GameIds.isValid(station) && near.within(GameIds.normalize(station), range))
-            }
-        }
+        // An entry with `|` is near when any of its choices is.
+        return recipe.stations.orEmpty().all { entry -> entry.split('|').any { stationNear(it.trim(), near, range) } }
+    }
+
+    /** Whether one station (an id, a `#tag` or a project block) is within [range] of [near]. */
+    private fun stationNear(station: String, near: Near, range: Int): Boolean = if (station.startsWith("#")) {
+        val tag = station.removePrefix("#")
+        val members = if (GameIds.isValid(tag)) platform.game.tag(RegistryKey.BLOCK, GameIds.normalize(tag)).orEmpty() else emptySet()
+        members.any { near.within(it, range) } || near.within(station, range)
+    } else {
+        near.within(blockName(station), range) || (GameIds.isValid(station) && near.within(GameIds.normalize(station), range))
     }
 
     /** The largest station range any of [recipes] asks for: how far round a place [near] must look. */
@@ -114,7 +108,8 @@ internal class StationCrafting(
     }
 
     /** Makes [recipe] [times] over for [player]: takes its materials, gives its result (what doesn't fit drops at their feet). */
-    fun make(recipe: RecipeFile, player: UUID, times: Int) {
+    /** Makes [recipe] [times] over for [player]; [each], when given, is what each making gives, from the result. */
+    fun make(recipe: RecipeFile, player: UUID, times: Int, each: ((ItemData) -> ItemData)? = null) {
         val ref = InventoryRef.Player(player)
         val slots = platform.inventories.contents(ref)?.toMutableList() ?: return
         for (material in recipe.materials.orEmpty()) {
@@ -131,18 +126,27 @@ internal class StationCrafting(
             }
         }
         val one = result(recipe)
+        if (each != null) {
+            repeat(times) { give(ref, player, each(one)) }
+            return
+        }
         val perStack = one.def.count ?: 1
         var left = perStack * times
         val most = 64
         while (left > 0) {
             val n = minOf(left, most)
             left -= n
-            val stack = one.copy(def = one.def.copy(count = n))
-            val over = platform.inventories.add(ref, stack) ?: n
-            if (over > 0) {
-                val at = platform.players.location(player) ?: continue
-                platform.worldEntities.spawnItem(at.world, Vec3(at.x, at.y, at.z), stack.copy(def = stack.def.copy(count = over)))
-            }
+            give(ref, player, one.copy(def = one.def.copy(count = n)))
+        }
+    }
+
+    /** Puts [stack] in [player]'s inventory, dropping what doesn't fit at their feet. */
+    private fun give(ref: InventoryRef, player: UUID, stack: ItemData) {
+        val count = stack.def.count ?: 1
+        val over = platform.inventories.add(ref, stack) ?: count
+        if (over > 0) {
+            val at = platform.players.location(player) ?: return
+            platform.worldEntities.spawnItem(at.world, Vec3(at.x, at.y, at.z), stack.copy(def = stack.def.copy(count = over)))
         }
     }
 

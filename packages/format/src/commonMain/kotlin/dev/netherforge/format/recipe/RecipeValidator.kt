@@ -108,10 +108,10 @@ object RecipeValidator {
             }
         }
         file.stations?.forEachIndexed { index, station ->
-            if (station.isBlank()) {
+            if (station.split('|').any { it.isBlank() }) {
                 sink.report(
                     ProblemCodes.RECIPE_STATION,
-                    "A station is a block id, a #tag or a project block",
+                    "A station is a block id, a #tag or a project block, or several of them between | (any of them)",
                     "$.stations[$index]"
                 )
             }

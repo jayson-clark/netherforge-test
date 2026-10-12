@@ -167,7 +167,7 @@ export const bossBarClass: LuaClass = {
     },
     {
       name: 'viewers',
-      doc: "Everyone it's shown to, online or not. Empty once it's gone.",
+      doc: "Everyone it's shown to, online or not: by `show_to`, and for an attached bar, whoever is near its centity now. Empty once it's gone.",
       params: [],
       returns: [{ type: 'Player[]' }],
     },

@@ -605,6 +605,14 @@ export const nfEvents: EventSpec[] = [
     payload: 'ClickEvent',
   },
   {
+    name: 'recipe_craft',
+    doc: '`nf.recipes.craft` is making a `station` recipe once: its materials are taken, and `event.result` is about to be given. Assign `event.result` to give something else (the same item with a rolled prefix, a stack of a different size). Heard once for each making, so each gets its own; while nobody listens, the makings are given in stacks.',
+    payload: 'RecipeCraftEvent',
+    writable: ['result'],
+    example:
+      'nf.on("recipe_craft", function(event)\n  if event.result.item == "copper_sword" then\n    local sword = event.result\n    sword.data = { prefix = "Sharp" }\n    event.result = nf.items.create("copper_sword", sword)\n  end\nend)',
+  },
+  {
     name: 'centity_natural_spawn',
     doc: "A centity is about to appear by itself, from the `spawning` block of its `centity.json`: once for each one of a group, before it exists. `event:cancel()` refuses it (it doesn't count against anything, and the spawner tries again later); assign `event.location` to move it. It is asked after the spawner has checked the place against the centity's rules, and before the centity's own `spawn`.",
     payload: 'CentityNaturalSpawnEvent',

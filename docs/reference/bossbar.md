@@ -37,7 +37,7 @@ Stops showing it to a player.
 
 ## `bossbar:viewers()`
 
-Everyone it's shown to, online or not. Empty once it's gone.
+Everyone it's shown to, online or not: by `show_to`, and for an attached bar, whoever is near its centity now. Empty once it's gone.
 
 **Returns** `Player[]`
 

@@ -201,7 +201,7 @@
   {
     "severity": "error",
     "file": "recipes/station.json",
-    "message": "A station is a block id, a #tag or a project block",
+    "message": "A station is a block id, a #tag or a project block, or several of them between | (any of them)",
     "path": "$.stations[0]",
     "code": "recipe.station"
   },

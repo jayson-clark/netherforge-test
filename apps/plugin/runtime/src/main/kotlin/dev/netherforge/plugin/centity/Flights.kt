@@ -161,7 +161,7 @@ internal class Flights(
         val max = flight.maxBounces
         if (bounce == null || (max != null && flight.bounces >= max)) {
             if (!move(instance, flight, block.position)) return
-            return end(instance, flight, "block", block.position, block = blockHandle)
+            return end(instance, flight, "block", block.position, block = blockHandle, normal = n)
         }
         // Off the face: what went into it comes back by `bounce`, what went along it keeps `friction`.
         val normalPart = n * into
@@ -232,14 +232,15 @@ internal class Flights(
         position: Vec3,
         target: LuaHandle.Centity? = null,
         entity: LuaHandle.Entity? = null,
-        block: LuaHandle.Block? = null
+        block: LuaHandle.Block? = null,
+        normal: Vec3? = null
     ) {
         if (instance.flight !== flight) return
         instance.flight = null
         scripts.emit(
             Events.CENTITY_FLIGHT_END,
             handle(instance),
-            FlightEndEvent(handle(instance), reason, position, target, entity, block, flight.owner)
+            FlightEndEvent(handle(instance), reason, position, target, entity, block, normal, flight.owner)
         )
         if (flight.removeOnEnd && !instance.removed && instance.flight == null) remove(instance)
     }

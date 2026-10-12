@@ -3101,7 +3101,7 @@ data class FlightBlockEvent(val centity: LuaHandle.Centity, val block: LuaHandle
 }
 
 /** A projectile's flight ended: `flight_end`. */
-data class FlightEndEvent(val centity: LuaHandle.Centity, val reason: String, val position: Vec3, val target: LuaHandle.Centity? = null, val entity: LuaHandle.Entity? = null, val block: LuaHandle.Block? = null, val owner: LuaHandle? = null) : LuaEvent {
+data class FlightEndEvent(val centity: LuaHandle.Centity, val reason: String, val position: Vec3, val target: LuaHandle.Centity? = null, val entity: LuaHandle.Entity? = null, val block: LuaHandle.Block? = null, val normal: Vec3? = null, val owner: LuaHandle? = null) : LuaEvent {
     override fun push(call: LuaCall) = Codec.push(call, this)
 
     object Codec : ShapeCodec<FlightEndEvent>("FlightEndEvent") {
@@ -3111,6 +3111,7 @@ data class FlightEndEvent(val centity: LuaHandle.Centity, val reason: String, va
         val targetCodec = LuaOptional(LuaHandle.Centity.Codec)
         val entityCodec = LuaOptional(LuaHandle.Entity.Codec)
         val blockCodec = LuaOptional(LuaHandle.Block.Codec)
+        val normalCodec = LuaOptional(LuaCodecs.VEC3)
         val ownerCodec = LuaOptional(LuaUnions.EntityOrCentity)
 
         override val pinned = false
@@ -3122,6 +3123,7 @@ data class FlightEndEvent(val centity: LuaHandle.Centity, val reason: String, va
             "target" to targetCodec,
             "entity" to entityCodec,
             "block" to blockCodec,
+            "normal" to normalCodec,
             "owner" to ownerCodec
         )
 
@@ -3132,6 +3134,7 @@ data class FlightEndEvent(val centity: LuaHandle.Centity, val reason: String, va
             target = fields.field("target", targetCodec),
             entity = fields.field("entity", entityCodec),
             block = fields.field("block", blockCodec),
+            normal = fields.field("normal", normalCodec),
             owner = fields.field("owner", ownerCodec)
         )
 
@@ -3142,6 +3145,7 @@ data class FlightEndEvent(val centity: LuaHandle.Centity, val reason: String, va
             fields.field("target", value.target, targetCodec)
             fields.field("entity", value.entity, entityCodec)
             fields.field("block", value.block, blockCodec)
+            fields.field("normal", value.normal, normalCodec)
             fields.field("owner", value.owner, ownerCodec)
         }
     }
@@ -3688,6 +3692,43 @@ data class BuffEndEvent(val buff: String, val reason: String, val player: LuaHan
             fields.field("reason", value.reason, reasonCodec)
             fields.field("player", value.player, playerCodec)
             fields.field("centity", value.centity, centityCodec)
+        }
+    }
+}
+
+/** One making of a `station` recipe by `nf.recipes.craft`: `recipe_craft`. */
+data class RecipeCraftEvent(val player: LuaHandle.Player, val recipe: String, var result: ItemData) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    override fun write(field: String, call: LuaCall, index: Int) {
+        when (field) {
+            "result" -> result = Codec.resultCodec.read(call, index, "event.result")
+        }
+    }
+
+    object Codec : ShapeCodec<RecipeCraftEvent>("RecipeCraftEvent") {
+        val playerCodec = LuaHandle.Player.Codec
+        val recipeCodec = LuaCodecs.STRING
+        val resultCodec = LuaCodecs.ITEM
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "player" to playerCodec,
+            "recipe" to recipeCodec,
+            "result" to resultCodec
+        )
+
+        override fun read(fields: ShapeReader) = RecipeCraftEvent(
+            player = fields.field("player", playerCodec),
+            recipe = fields.field("recipe", recipeCodec),
+            result = fields.field("result", resultCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: RecipeCraftEvent) {
+            fields.field("player", value.player, playerCodec)
+            fields.field("recipe", value.recipe, recipeCodec)
+            fields.field("result", value.result, resultCodec)
         }
     }
 }

@@ -14,6 +14,7 @@ class BossBarAttachTest {
               local boss = nf.centities.spawn("boss", vec3(0, 64, 0))
               local bar = nf.bossbars.create({ text = "Boss" })
               log("attached", tostring(bar:attach(boss, { range = 10 })), tostring(bar:attached() == boss))
+              nf.after(1, function() log("viewers", bar:viewers()[1]:name(), #bar:viewers()) end)
               nf.after(2, function() boss:damage(25) end)
               nf.after(4, function() log("progress", bar:progress()) end)
               nf.after(6, function() boss:damage(100) end)
@@ -38,7 +39,7 @@ class BossBarAttachTest {
             server.tick(1)
             assertEquals(setOf(far.ref.uuid), bars.shown.getValue(id), "it follows who's near")
             server.tick(8)
-            assertEquals(listOf("attached\ttrue\ttrue", "progress\t0.75", "after\tfalse"), server.logs)
+            assertEquals(listOf("attached\ttrue\ttrue", "viewers\tNear\t1", "progress\t0.75", "after\tfalse"), server.logs)
             assertTrue(id !in bars.bars, "removed with its centity")
         }
     }

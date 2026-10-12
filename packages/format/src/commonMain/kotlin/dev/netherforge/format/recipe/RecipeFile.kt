@@ -61,7 +61,8 @@ data class RecipeFile(
     val materials: List<Material>? = null,
     /**
      * `station`: the blocks one of which must be near the crafter, each an id (`"minecraft:crafting_table"`), a
-     * `#tag` or a project block (`"work_bench"`); all of the list, when it names several. Absent: none needed.
+     * `#tag` or a project block (`"work_bench"`), or several between `|` of which any will do (`"furnace|hellforge"`);
+     * all of the list, when it names several. Absent: none needed.
      */
     val stations: List<String>? = null,
     /** `station`: how near a station must be, in blocks. Default [Material.DEFAULT_STATION_RANGE]. */

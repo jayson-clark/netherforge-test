@@ -96,6 +96,7 @@ local events = {
     ["furnace_smelt"] = { owner = "nf", cancellable = true, options = {}, writable = { result = true } },
     ["server_list_ping"] = { owner = "nf", cancellable = true, options = {}, writable = { description = true, online = true, max_players = true, hide_players = true } },
     ["centity_click"] = { owner = "nf", cancellable = false, options = {}, writable = {} },
+    ["recipe_craft"] = { owner = "nf", cancellable = false, options = {}, writable = { result = true } },
     ["centity_natural_spawn"] = { owner = "nf", cancellable = true, options = {}, writable = { location = true } },
     ["menu_open"] = { owner = "nf", cancellable = false, options = {}, writable = {} },
     ["menu_close"] = { owner = "nf", cancellable = false, options = {}, writable = {} },

@@ -1330,6 +1330,15 @@
           "payload": "ClickEvent"
         },
         {
+          "name": "recipe_craft",
+          "doc": "`nf.recipes.craft` is making a `station` recipe once: its materials are taken, and `event.result` is about to be given. Assign `event.result` to give something else (the same item with a rolled prefix, a stack of a different size). Heard once for each making, so each gets its own; while nobody listens, the makings are given in stacks.",
+          "payload": "RecipeCraftEvent",
+          "writable": [
+            "result"
+          ],
+          "example": "nf.on(\"recipe_craft\", function(event)\n  if event.result.item == \"copper_sword\" then\n    local sword = event.result\n    sword.data = { prefix = \"Sharp\" }\n    event.result = nf.items.create(\"copper_sword\", sword)\n  end\nend)"
+        },
+        {
           "name": "centity_natural_spawn",
           "doc": "A centity is about to appear by itself, from the `spawning` block of its `centity.json`: once for each one of a group, before it exists. `event:cancel()` refuses it (it doesn't count against anything, and the spawner tries again later); assign `event.location` to move it. It is asked after the spawner has checked the place against the centity's rules, and before the centity's own `spawn`.",
           "payload": "CentityNaturalSpawnEvent",
@@ -3557,7 +3566,7 @@
           "params": [
             {
               "name": "event",
-              "type": "\"tick\"|\"player_join\"|\"player_quit\"|\"player_chat\"|\"player_interact\"|\"player_interact_entity\"|\"player_move\"|\"player_teleport\"|\"player_change_world\"|\"player_death\"|\"player_respawn\"|\"player_drop_item\"|\"player_pickup_item\"|\"player_use_item\"|\"player_consume_item\"|\"player_swap_hands\"|\"player_sneak\"|\"player_command\"|\"block_break\"|\"block_place\"|\"entity_damage\"|\"entity_death\"|\"entity_spawn\"|\"world_dusk\"|\"world_dawn\"|\"player_input\"|\"player_change_slot\"|\"player_swing\"|\"player_sprint\"|\"player_fly\"|\"player_jump\"|\"player_change_game_mode\"|\"player_change_food\"|\"player_gain_experience\"|\"player_change_level\"|\"player_kick\"|\"player_complete_advancement\"|\"player_stop_using_item\"|\"player_break_item\"|\"entity_heal\"|\"projectile_launch\"|\"projectile_hit\"|\"entity_shoot_bow\"|\"entity_target\"|\"entity_explode\"|\"block_explode\"|\"entity_combust\"|\"entity_change_effect\"|\"block_ignite\"|\"block_burn\"|\"block_spread\"|\"block_flow\"|\"block_grow\"|\"block_fade\"|\"block_form\"|\"leaves_decay\"|\"piston_extend\"|\"piston_retract\"|\"block_redstone\"|\"sign_change\"|\"block_start_break\"|\"block_drop_item\"|\"weather_change\"|\"thunder_change\"|\"lightning_strike\"|\"chunk_load\"|\"chunk_generated\"|\"chunk_unload\"|\"world_load\"|\"world_unload\"|\"entity_mount\"|\"entity_dismount\"|\"vehicle_move\"|\"vehicle_damage\"|\"vehicle_destroy\"|\"player_open_inventory\"|\"player_close_inventory\"|\"player_craft\"|\"player_prepare_craft\"|\"player_prepare_anvil\"|\"player_prepare_smithing\"|\"player_prepare_grindstone\"|\"player_enchant_item\"|\"furnace_smelt\"|\"server_list_ping\"|\"centity_click\"|\"centity_natural_spawn\"|\"menu_open\"|\"menu_close\"|\"menu_click\"|\"dialog_press\"|\"setting_changed\"",
+              "type": "\"tick\"|\"player_join\"|\"player_quit\"|\"player_chat\"|\"player_interact\"|\"player_interact_entity\"|\"player_move\"|\"player_teleport\"|\"player_change_world\"|\"player_death\"|\"player_respawn\"|\"player_drop_item\"|\"player_pickup_item\"|\"player_use_item\"|\"player_consume_item\"|\"player_swap_hands\"|\"player_sneak\"|\"player_command\"|\"block_break\"|\"block_place\"|\"entity_damage\"|\"entity_death\"|\"entity_spawn\"|\"world_dusk\"|\"world_dawn\"|\"player_input\"|\"player_change_slot\"|\"player_swing\"|\"player_sprint\"|\"player_fly\"|\"player_jump\"|\"player_change_game_mode\"|\"player_change_food\"|\"player_gain_experience\"|\"player_change_level\"|\"player_kick\"|\"player_complete_advancement\"|\"player_stop_using_item\"|\"player_break_item\"|\"entity_heal\"|\"projectile_launch\"|\"projectile_hit\"|\"entity_shoot_bow\"|\"entity_target\"|\"entity_explode\"|\"block_explode\"|\"entity_combust\"|\"entity_change_effect\"|\"block_ignite\"|\"block_burn\"|\"block_spread\"|\"block_flow\"|\"block_grow\"|\"block_fade\"|\"block_form\"|\"leaves_decay\"|\"piston_extend\"|\"piston_retract\"|\"block_redstone\"|\"sign_change\"|\"block_start_break\"|\"block_drop_item\"|\"weather_change\"|\"thunder_change\"|\"lightning_strike\"|\"chunk_load\"|\"chunk_generated\"|\"chunk_unload\"|\"world_load\"|\"world_unload\"|\"entity_mount\"|\"entity_dismount\"|\"vehicle_move\"|\"vehicle_damage\"|\"vehicle_destroy\"|\"player_open_inventory\"|\"player_close_inventory\"|\"player_craft\"|\"player_prepare_craft\"|\"player_prepare_anvil\"|\"player_prepare_smithing\"|\"player_prepare_grindstone\"|\"player_enchant_item\"|\"furnace_smelt\"|\"server_list_ping\"|\"centity_click\"|\"recipe_craft\"|\"centity_natural_spawn\"|\"menu_open\"|\"menu_close\"|\"menu_click\"|\"dialog_press\"|\"setting_changed\"",
               "doc": "The event's name, as `nf.on` takes it."
             },
             {
@@ -12150,7 +12159,7 @@
         },
         {
           "name": "viewers",
-          "doc": "Everyone it's shown to, online or not. Empty once it's gone.",
+          "doc": "Everyone it's shown to, online or not: by `show_to`, and for an attached bar, whoever is near its centity now. Empty once it's gone.",
           "params": [],
           "returns": [
             {
@@ -18426,6 +18435,11 @@
           "doc": "For `\"block\"`, the block it ended on, or `nil`."
         },
         {
+          "name": "normal",
+          "type": "Vec3?",
+          "doc": "For `\"block\"`, the direction straight out of the face it met, or `nil`."
+        },
+        {
           "name": "owner",
           "type": "(Entity|Centity)?",
           "doc": "Who launched it, or `nil`."
@@ -18839,6 +18853,30 @@
           "name": "centity",
           "type": "Centity?",
           "doc": "The centity that had it, or `nil`."
+        }
+      ]
+    },
+    {
+      "name": "RecipeCraftEvent",
+      "doc": "One making of a `station` recipe by `nf.recipes.craft`: `recipe_craft`.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "player",
+          "type": "Player",
+          "doc": "Who it was made for."
+        },
+        {
+          "name": "recipe",
+          "type": "string",
+          "doc": "The recipe's id."
+        },
+        {
+          "name": "result",
+          "type": "Item",
+          "doc": "What this making gives them: the recipe's result, until a handler assigns another."
         }
       ]
     },

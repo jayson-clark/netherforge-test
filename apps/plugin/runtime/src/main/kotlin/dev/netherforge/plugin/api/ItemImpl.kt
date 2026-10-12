@@ -118,7 +118,15 @@ internal class NfRecipesImpl(private val session: ProjectSession, private val ap
         )
         if (!crafting.stationsNear(file, near)) return 0
         val made = minOf(times.toInt(), crafting.times(file, uuid))
-        if (made > 0) crafting.make(file, uuid, made)
+        val scripts = session.scripts
+        val each = if (scripts.listening(null, Events.NF_RECIPE_CRAFT)) {
+            { result: ItemData ->
+                RecipeCraftEvent(player, session.names.spell(name), result).also { scripts.emit(Events.NF_RECIPE_CRAFT, null, it) }.result
+            }
+        } else {
+            null
+        }
+        if (made > 0) crafting.make(file, uuid, made, each)
         return made.toLong()
     }
 

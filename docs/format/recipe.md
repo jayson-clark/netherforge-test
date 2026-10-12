@@ -72,11 +72,11 @@ project's [blocks](block.md) (`"work_bench"`). `group` sorts them, as a
 menu may by station. They're never in a player's recipe book, and
 `pattern`, `key`, `ingredients`, `experience` and the rest are an error on one.
 
-| Key            | Meaning                                                            | Default |
-| -------------- | ------------------------------------------------------------------ | ------- |
-| `materials`    | What it takes: `{ "ingredient": ..., "count": n }` each. Required. | —       |
-| `stations`     | Blocks that must all be near: ids, `#tags` or project blocks.      | none    |
-| `stationRange` | How near, in blocks, 1 to 16.                                      | 4       |
+| Key            | Meaning                                                            | Default        |
+| -------------- | ------------------------------------------------------------------ | -------------- |
+| `materials`    | What it takes: `{ "ingredient": ..., "count": n }` each. Required. | —              |
+| `stations`     | Blocks that must all be near: ids, `#tags` or project blocks; `"a  | b"` is either. | none |
+| `stationRange` | How near, in blocks, 1 to 16.                                      | 4              |
 
 ## Ingredients
 

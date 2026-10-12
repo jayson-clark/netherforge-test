@@ -25,7 +25,7 @@ class StationRecipeTest {
             {
               "type": "station",
               "materials": [ { "ingredient": "minecraft:oak_planks", "count": 10 } ],
-              "stations": [ "work_bench" ],
+              "stations": [ "minecraft:anvil|work_bench" ],
               "stationRange": 3,
               "group": "furniture",
               "result": { "item": "bench" }
@@ -78,7 +78,7 @@ class StationRecipeTest {
             check("nothing left to make it from", nf.recipes.craft(alex, "torch"), 0)
             check("the bench, from the ten planks left", nf.recipes.craft(alex, "bench"), 1)
 
-            check("get", nf.recipes.get("bench").stations[1], "work_bench")
+            check("get", nf.recipes.get("bench").stations[1], "minecraft:anvil|work_bench")
             check("get's range", nf.recipes.get("bench").station_range, 3)
             check("no times from get", nf.recipes.get("bench").times, nil)
             check("a game recipe isn't one", nf.recipes.get("sticks"), nil)
@@ -109,6 +109,35 @@ class StationRecipeTest {
         ) { server ->
             assertEquals(listOf("sticks"), server.platform.recipes.added.keys.sorted(), "only the game's recipe went to the server")
         }
+        assertEquals(listOf("done"), result)
+    }
+
+    @Test
+    fun `recipe_craft hears each making and can change what it gives`() {
+        val result = LuaChecks.run(
+            """
+            local alex = nf.players.get("Alex")
+            alex:give_item(nf.items.create("gel", { count = 2 }))
+            alex:give_item({ kind = "minecraft:oak_planks", count = 2 })
+            local n = 0
+            nf.on("recipe_craft", function(event)
+              n = n + 1
+              check("whose", event.player:name() .. " " .. event.recipe, "Alex torch")
+              local torch = event.result
+              torch.data = { batch = n }
+              torch.count = n
+              event.result = torch
+            end)
+            check("made", nf.recipes.craft(alex, "torch", { times = 2 }), 2)
+            local counts = {}
+            for _, stack in pairs(alex:inventory():items()) do
+              if stack.item == "torch" then counts[stack.data.batch] = stack.count end
+            end
+            check("each its own", tostring(counts[1]) .. " " .. tostring(counts[2]), "1 2")
+            """,
+            files,
+            setup = { it.platform.players.add("Alex", Location("world", 0.5, 64.0, 0.5)) }
+        )
         assertEquals(listOf("done"), result)
     }
 }

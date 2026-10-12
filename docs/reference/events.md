@@ -127,6 +127,7 @@ What `nf.on` listens for.
 | `furnace_smelt` | [FurnaceSmeltEvent](events.md#furnacesmeltevent) | yes | A furnace, smoker or blast furnace finished smelting one item. `event:cancel()` stops it: the item stays unsmelted. Assign `event.result` to make something else. After the world's own `furnace_smelt` handlers. Writable: `result`. |
 | `server_list_ping` | [ServerListPingEvent](events.md#serverlistpingevent) | yes | Someone's server list is asking about the server: what it says, how many are on and how many fit. `event:cancel()` doesn't answer, so the server shows as offline to them. The ping waits on the main thread for the handlers (at most two seconds, then it's answered as it was), so keep them quick. The server only waits while something listens. Writable: `description`, `online`, `max_players`, `hide_players`. |
 | `centity_click` | [ClickEvent](events.md#clickevent) |  | A player clicked any centity: the end of a click's path, after the clicked node, the nodes above it and the centity itself, unless one of them called `event:stop()`. |
+| `recipe_craft` | [RecipeCraftEvent](events.md#recipecraftevent) |  | `nf.recipes.craft` is making a `station` recipe once: its materials are taken, and `event.result` is about to be given. Assign `event.result` to give something else (the same item with a rolled prefix, a stack of a different size). Heard once for each making, so each gets its own; while nobody listens, the makings are given in stacks. Writable: `result`. |
 | `centity_natural_spawn` | [CentityNaturalSpawnEvent](events.md#centitynaturalspawnevent) | yes | A centity is about to appear by itself, from the `spawning` block of its `centity.json`: once for each one of a group, before it exists. `event:cancel()` refuses it (it doesn't count against anything, and the spawner tries again later); assign `event.location` to move it. It is asked after the spawner has checked the place against the centity's rules, and before the centity's own `spawn`. Writable: `location`. |
 | `menu_open` | [MenuEvent](events.md#menuevent) |  | Someone opened any menu window: after that window's own `open` handlers. |
 | `menu_close` | [MenuEvent](events.md#menuevent) |  | Someone closed any menu window: after that window's own `close` handlers. |
@@ -232,6 +233,18 @@ end)
 nf.on("server_list_ping", function(event)
   event.description = "<gold>Arena night</gold>\n<gray>" .. event.online .. " playing"
   event.max_players = event.online + 1
+end)
+```
+
+### nf recipe_craft
+
+```lua
+nf.on("recipe_craft", function(event)
+  if event.result.item == "copper_sword" then
+    local sword = event.result
+    sword.data = { prefix = "Sharp" }
+    event.result = nf.items.create("copper_sword", sword)
+  end
 end)
 ```
 
@@ -1987,6 +2000,7 @@ Has the fields and methods of [Event](#event) too.
 | `target` | `Centity?` | For `"hit"`, the centity it ended on, or `nil`. |
 | `entity` | `Entity?` | For `"hit"`, the player or entity it ended on, or `nil`. |
 | `block` | `Block?` | For `"block"`, the block it ended on, or `nil`. |
+| `normal` | `Vec3?` | For `"block"`, the direction straight out of the face it met, or `nil`. |
 | `owner` | `(Entity\|Centity)?` | Who launched it, or `nil`. |
 
 ## CentityDamageOptions
@@ -2169,6 +2183,18 @@ Has the fields and methods of [Event](#event) too.
 | `reason` | `"expired"\|"removed"\|"cured"` | Why: see `buff_end`. |
 | `player` | `Player?` | Who had it, or `nil`. |
 | `centity` | `Centity?` | The centity that had it, or `nil`. |
+
+## RecipeCraftEvent
+
+One making of a `station` recipe by `nf.recipes.craft`: `recipe_craft`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `player` | `Player` | Who it was made for. |
+| `recipe` | `string` | The recipe's id. |
+| `result` | `Item` | What this making gives them: the recipe's result, until a handler assigns another. |
 
 ## StationRecipe
 

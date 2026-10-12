@@ -119,6 +119,22 @@ export const playerRecipeFunctions: Fn[] = [
 /** The tables `nf.recipes`' station functions take and give. */
 export const recipeShapes: LuaClass[] = [
   {
+    name: 'RecipeCraftEvent',
+    doc: 'One making of a `station` recipe by `nf.recipes.craft`: `recipe_craft`.',
+    methods: false,
+    functions: [],
+    extends: 'Event',
+    fields: [
+      { name: 'player', type: 'Player', doc: 'Who it was made for.' },
+      { name: 'recipe', type: 'string', doc: "The recipe's id." },
+      {
+        name: 'result',
+        type: 'Item',
+        doc: "What this making gives them: the recipe's result, until a handler assigns another.",
+      },
+    ],
+  },
+  {
     name: 'StationRecipe',
     doc: 'A `station` recipe, as `nf.recipes.available` and `nf.recipes.get` give it.',
     methods: false,
