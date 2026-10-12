@@ -38,6 +38,7 @@ Button:key	15
 Button:label	15
 Button:on	141
 Button:once	148
+Centity:add_buff	19
 Centity:add_node	19
 Centity:add_velocity	48
 Centity:animation_speed	17
@@ -45,6 +46,8 @@ Centity:animation_tick	17
 Centity:animations	15
 Centity:body	15
 Centity:bounds	15
+Centity:buff_ticks	17
+Centity:buffs	15
 Centity:damage	22
 Centity:data	15
 Centity:emit	54
@@ -52,6 +55,7 @@ Centity:exists	15
 Centity:follow	17
 Centity:glow_color	15
 Centity:has_body	15
+Centity:has_buff	17
 Centity:has_path	15
 Centity:heal	17
 Centity:health	15
@@ -74,6 +78,7 @@ Centity:lifetime	15
 Centity:location	15
 Centity:look_at	48
 Centity:max_health	15
+Centity:modifiers	17
 Centity:move_to	27
 Centity:node	17
 Centity:nodes	15
@@ -86,6 +91,7 @@ Centity:playing_animations	15
 Centity:position	24
 Centity:properties	15
 Centity:remove	16
+Centity:remove_buff	17
 Centity:resume_animation	17
 Centity:roots	15
 Centity:seek_animation	19
@@ -96,11 +102,14 @@ Centity:set_glowing	17
 Centity:set_health	17
 Centity:set_lifetime	17
 Centity:set_max_health	17
+Centity:set_modifiers	20
 Centity:set_velocity	48
 Centity:set_view_range	17
 Centity:set_walk_velocity	55
 Centity:set_yaw	18
 Centity:show_to	17
+Centity:stat	17
+Centity:stats	15
 Centity:stop_animation	18
 Centity:stop_flight	15
 Centity:stop_following	15
@@ -389,11 +398,14 @@ Node:wake	16
 Node:world_direction	51
 Node:world_position	18
 Node:world_rotation	18
+Player:add_buff	19
 Player:advancement_progress	17
 Player:ban	20
 Player:below_name	15
 Player:border	15
 Player:bossbars	15
+Player:buff_ticks	17
+Player:buffs	15
 Player:camera	15
 Player:can_fly	15
 Player:clear_sky	19
@@ -415,6 +427,7 @@ Player:give_experience	17
 Player:give_item	18
 Player:grant_advancement	19
 Player:has_advancement	17
+Player:has_buff	17
 Player:has_discovered_recipe	17
 Player:has_own_border	15
 Player:has_permission	17
@@ -434,6 +447,7 @@ Player:last_seen	15
 Player:level	15
 Player:locale	15
 Player:menu	15
+Player:modifiers	17
 Player:name	15
 Player:off_hand_item	15
 Player:on	141
@@ -445,6 +459,7 @@ Player:open_menu	19
 Player:permissions	15
 Player:ping	15
 Player:play_sound	22
+Player:remove_buff	17
 Player:reset_block	41
 Player:reset_border	15
 Player:resource_pack_status	15
@@ -472,6 +487,7 @@ Player:set_held_slot	17
 Player:set_item_cooldown	19
 Player:set_level	17
 Player:set_listed_for	19
+Player:set_modifiers	20
 Player:set_off_hand_item	18
 Player:set_permission	20
 Player:set_saturation	17
@@ -486,6 +502,8 @@ Player:set_whitelisted	18
 Player:sidebar	15
 Player:sky	15
 Player:spawn_particle	92
+Player:stat	17
+Player:stats	15
 Player:stop_sound	17
 Player:storage	19
 Player:tab_footer	15

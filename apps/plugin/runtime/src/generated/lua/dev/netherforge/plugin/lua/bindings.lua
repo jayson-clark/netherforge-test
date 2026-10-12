@@ -302,6 +302,78 @@ function Centity.stop_following(self)
   return prim["Centity.stop_following"](self_key)
 end
 
+function Centity.stat(self, name)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.stat"](self_key, name)
+end
+
+function Centity.stats(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.stats"](self_key)
+end
+
+function Centity.modifiers(self, source)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.modifiers"](self_key, source)
+end
+
+function Centity.set_modifiers(self, source, modifiers)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.set_modifiers"](self_key, source, modifiers)
+end
+
+function Centity.add_buff(self, buff, ticks)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.add_buff"](self_key, buff, ticks)
+end
+
+function Centity.remove_buff(self, buff)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.remove_buff"](self_key, buff)
+end
+
+function Centity.has_buff(self, buff)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.has_buff"](self_key, buff)
+end
+
+function Centity.buff_ticks(self, buff)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.buff_ticks"](self_key, buff)
+end
+
+function Centity.buffs(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.buffs"](self_key)
+end
+
 function Centity.health(self)
   local self_key = ids[self]
   if self_key == nil or not Centity_is[class_of(self)] then
@@ -2223,6 +2295,78 @@ end
 -- Player --------------------------------------------------------------------
 
 local Player = class("Player", "Living")
+
+function Player.stat(self, name)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.stat"](self_key, name)
+end
+
+function Player.stats(self)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.stats"](self_key)
+end
+
+function Player.modifiers(self, source)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.modifiers"](self_key, source)
+end
+
+function Player.set_modifiers(self, source, modifiers)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.set_modifiers"](self_key, source, modifiers)
+end
+
+function Player.add_buff(self, buff, ticks)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.add_buff"](self_key, buff, ticks)
+end
+
+function Player.remove_buff(self, buff)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.remove_buff"](self_key, buff)
+end
+
+function Player.has_buff(self, buff)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.has_buff"](self_key, buff)
+end
+
+function Player.buff_ticks(self, buff)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.buff_ticks"](self_key, buff)
+end
+
+function Player.buffs(self)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.buffs"](self_key)
+end
 
 function Player.name(self)
   local self_key = ids[self]

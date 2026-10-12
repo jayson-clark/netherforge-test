@@ -304,6 +304,15 @@ export const KIND_CONTRIBUTIONS = {
       'Scripts set it by this id, e.g. world:set_sky("blood_moon"). Saving one restarts the dev server.',
     view: lazy(() => import('@/editors/sky/SkyEditor').then((m) => ({ default: m.SkyEditor }))),
   },
+  buff: {
+    title: 'Buffs',
+    one: 'buff',
+    group: 'world',
+    icon: 'sparkles',
+    tone: 'orange',
+    message: 'Scripts give it by this id, e.g. player:add_buff("ironskin", 20 * 60).',
+    view: lazy(() => import('@/editors/buff/BuffEditor').then((m) => ({ default: m.BuffEditor }))),
+  },
   dimension_type: {
     title: 'Dimension types',
     one: 'dimension type',

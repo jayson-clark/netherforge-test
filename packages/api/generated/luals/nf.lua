@@ -7,12 +7,12 @@
 -- The sandbox removes io, os, package, load, loadstring, dofile, loadfile, debug, collectgarbage, warn, java.
 
 ---@alias nf.Event "tick"|"unload"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"world_dusk"|"world_dawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed"|string
----@alias Centity.Event "spawn"|"remove"|"tick"|"click"|"animation_start"|"animation_end"|"chunk_load"|"chunk_unload"|"hit"|"bounce"|"stick"|"flight_end"|"damage"|"death"|"land"|"bump"|"touch"|"path_end"|string
+---@alias Centity.Event "spawn"|"remove"|"tick"|"click"|"animation_start"|"animation_end"|"chunk_load"|"chunk_unload"|"hit"|"bounce"|"stick"|"flight_end"|"damage"|"death"|"land"|"bump"|"touch"|"path_end"|"buff_add"|"buff_end"|string
 ---@alias Node.Event "click"|"collide"|"wake"|"sleep"
 ---@alias Entity.Event "damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
 ---@alias Living.Event "death"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
 ---@alias Mob.Event "path_end"|"target"|"death"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
----@alias Player.Event "join"|"quit"|"chat"|"interact"|"interact_entity"|"move"|"teleport"|"change_world"|"death"|"respawn"|"drop_item"|"pickup_item"|"use_item"|"consume_item"|"swap_hands"|"sneak"|"command"|"input"|"change_slot"|"swing"|"sprint"|"fly"|"jump"|"change_game_mode"|"change_food"|"gain_experience"|"change_level"|"kick"|"complete_advancement"|"stop_using_item"|"break_item"|"open_inventory"|"close_inventory"|"craft"|"prepare_craft"|"prepare_anvil"|"prepare_smithing"|"prepare_grindstone"|"enchant_item"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"hit"|"explode"|"combust"|"mount"|"dismount"
+---@alias Player.Event "join"|"quit"|"chat"|"interact"|"interact_entity"|"move"|"teleport"|"change_world"|"death"|"respawn"|"drop_item"|"pickup_item"|"use_item"|"consume_item"|"swap_hands"|"sneak"|"command"|"input"|"change_slot"|"swing"|"sprint"|"fly"|"jump"|"change_game_mode"|"change_food"|"gain_experience"|"change_level"|"kick"|"complete_advancement"|"stop_using_item"|"break_item"|"open_inventory"|"close_inventory"|"craft"|"prepare_craft"|"prepare_anvil"|"prepare_smithing"|"prepare_grindstone"|"enchant_item"|"buff_add"|"buff_end"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"hit"|"explode"|"combust"|"mount"|"dismount"
 ---@alias World.Event "block_break"|"block_place"|"entity_spawn"|"dusk"|"dawn"|"block_explode"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"furnace_smelt"
 ---@alias ProjectBlock.Event "place"|"break"|"click"|"tick"
 ---@alias Menu.Event "open"|"close"|"click"|"drag"
@@ -33,6 +33,7 @@
 ---@alias BlockId string # A project block's name.
 ---@alias RecipeId string # A project recipe's name.
 ---@alias LootTableId string # A project loot table's name.
+---@alias BuffId string # A project buff's name.
 ---@alias AdvancementId string # A project advancement's name.
 ---@alias AnimationName string # A project animation's name.
 ---@alias NodeName string # A project node's name.
@@ -433,6 +434,8 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: Centity, event: "bump", filter?: fun(event: CentityBumpEvent): boolean): CentityBumpEvent
 ---@overload fun(handle: Centity, event: "touch", filter?: fun(event: TouchEvent): boolean): TouchEvent
 ---@overload fun(handle: Centity, event: "path_end", filter?: fun(event: CentityPathEndEvent): boolean): CentityPathEndEvent
+---@overload fun(handle: Centity, event: "buff_add", filter?: fun(event: BuffEvent): boolean): BuffEvent
+---@overload fun(handle: Centity, event: "buff_end", filter?: fun(event: BuffEndEvent): boolean): BuffEndEvent
 ---@overload fun(handle: Node, event: "click", filter?: fun(event: ClickEvent): boolean): ClickEvent
 ---@overload fun(handle: Node, event: "collide", filter?: fun(event: CollideEvent): boolean): CollideEvent
 ---@overload fun(handle: Node, event: "wake", filter?: fun(event: NodeEvent): boolean): NodeEvent
@@ -490,6 +493,8 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: Player, event: "prepare_smithing", filter?: fun(event: PlayerPrepareSmithingEvent): boolean): PlayerPrepareSmithingEvent
 ---@overload fun(handle: Player, event: "prepare_grindstone", filter?: fun(event: PlayerPrepareGrindstoneEvent): boolean): PlayerPrepareGrindstoneEvent
 ---@overload fun(handle: Player, event: "enchant_item", filter?: fun(event: PlayerEnchantItemEvent): boolean): PlayerEnchantItemEvent
+---@overload fun(handle: Player, event: "buff_add", filter?: fun(event: BuffEvent): boolean): BuffEvent
+---@overload fun(handle: Player, event: "buff_end", filter?: fun(event: BuffEndEvent): boolean): BuffEndEvent
 ---@overload fun(handle: World, event: "block_break", filter?: fun(event: BlockBreakEvent): boolean): BlockBreakEvent
 ---@overload fun(handle: World, event: "block_place", filter?: fun(event: BlockPlaceEvent): boolean): BlockPlaceEvent
 ---@overload fun(handle: World, event: "entity_spawn", filter?: fun(event: EntitySpawnEvent): boolean): EntitySpawnEvent
@@ -1300,6 +1305,51 @@ function Centity:follow(player) end
 ---@return boolean # `false` once it's removed.
 function Centity:stop_following() end
 
+--- One of it's stats. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.
+---@param name string The stat: lowercase letters, digits and `_`.
+---@return number
+function Centity:stat(name) end
+
+--- Every stat it has that isn't 0, by name. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.
+---@return table<string, number>
+function Centity:stats() end
+
+--- What a script's `source` adds to it's stats (`set_modifiers`), or `nil` when it adds nothing.
+---@param source string Whose: `"armour"`, `"accessories"`.
+---@return table<string, number>?
+function Centity:modifiers(source) end
+
+--- Sets what `source` adds to it's stats, replacing what it added before: one call per source, each time it changes (a piece of armour put on), and `nil` takes it all away. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online.
+---@param source string Whose: any name of your own.
+---@param modifiers? table<string, number> A number per stat name. Leave it out (or `nil`) to take the source away.
+---@return boolean # `false` once it has gone.
+function Centity:set_modifiers(source, modifiers) end
+
+--- Gives it a buff (`buffs/<id>.json`) for a number of ticks: it takes away the buffs it `cures`, and doesn't take hold while one it's `blockedBy` lasts. Given again while it lasts, its file's `stacking` says what happens to the time. Its `buff_add` handlers may change the ticks or cancel it. While it lasts its `stats` are added to it's; when it runs out, `buff_end` hears it. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online. A buff the project doesn't have is an error.
+---@param buff BuffId Its id: `buffs/<id>.json`.
+---@param ticks integer How long, at least 1.
+---@return boolean # Whether it took hold: `false` when one it's `blockedBy` is on it, a handler cancelled it, or it has gone.
+function Centity:add_buff(buff, ticks) end
+
+--- Takes a buff away from it (`buff_end` hears `"removed"`).
+---@param buff BuffId Its id.
+---@return boolean # Whether they had it.
+function Centity:remove_buff(buff) end
+
+--- Whether it has a buff now.
+---@param buff BuffId Its id.
+---@return boolean
+function Centity:has_buff(buff) end
+
+--- How many ticks a buff it has has left, or `nil` when they don't have it.
+---@param buff BuffId Its id.
+---@return integer?
+function Centity:buff_ticks(buff) end
+
+--- Every buff it has now, with what a HUD shows them by, the first given first.
+---@return ActiveBuff[]
+function Centity:buffs() end
+
 --- How much health it has left: from its `centity.json`'s `health` (its `max` when it spawns), or what `set_max_health` gave it. `nil` for one without health, or once it's removed. Not saved: after a restart it's whole again.
 ---@return number?
 function Centity:health() end
@@ -1544,6 +1594,8 @@ function Centity:set_view_range(blocks) end
 ---@overload fun(self: Centity, event: "bump", handler: fun(event: CentityBumpEvent)): Subscription
 ---@overload fun(self: Centity, event: "touch", handler: fun(event: TouchEvent)): Subscription
 ---@overload fun(self: Centity, event: "path_end", handler: fun(event: CentityPathEndEvent)): Subscription
+---@overload fun(self: Centity, event: "buff_add", handler: fun(event: BuffEvent)): Subscription
+---@overload fun(self: Centity, event: "buff_end", handler: fun(event: BuffEndEvent)): Subscription
 function Centity:on(event, handler, options) end
 
 --- Like `centity:on`, but the handler runs only the next time the event happens, then stops listening.
@@ -1568,6 +1620,8 @@ function Centity:on(event, handler, options) end
 ---@overload fun(self: Centity, event: "bump", handler: fun(event: CentityBumpEvent)): Subscription
 ---@overload fun(self: Centity, event: "touch", handler: fun(event: TouchEvent)): Subscription
 ---@overload fun(self: Centity, event: "path_end", handler: fun(event: CentityPathEndEvent)): Subscription
+---@overload fun(self: Centity, event: "buff_add", handler: fun(event: BuffEvent)): Subscription
+---@overload fun(self: Centity, event: "buff_end", handler: fun(event: BuffEndEvent)): Subscription
 function Centity:once(event, handler) end
 
 --- Raises a custom event on this centity: every `centity:on(event)` handler hears it now, in the order they were registered, before this returns. The payload is handed to them as it is, not copied, so a field a handler assigns is there for the caller to read afterwards. A name without a `:` is an error: built-in events are the server's to raise.
@@ -2408,6 +2462,51 @@ function DroppedItem:set_pickup_delay(ticks) end
 ---@class Player: Living
 local Player = {}
 
+--- One of they's stats. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.
+---@param name string The stat: lowercase letters, digits and `_`.
+---@return number
+function Player:stat(name) end
+
+--- Every stat they has that isn't 0, by name. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.
+---@return table<string, number>
+function Player:stats() end
+
+--- What a script's `source` adds to they's stats (`set_modifiers`), or `nil` when it adds nothing.
+---@param source string Whose: `"armour"`, `"accessories"`.
+---@return table<string, number>?
+function Player:modifiers(source) end
+
+--- Sets what `source` adds to they's stats, replacing what it added before: one call per source, each time it changes (a piece of armour put on), and `nil` takes it all away. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online.
+---@param source string Whose: any name of your own.
+---@param modifiers? table<string, number> A number per stat name. Leave it out (or `nil`) to take the source away.
+---@return boolean # `false` once they has gone.
+function Player:set_modifiers(source, modifiers) end
+
+--- Gives they a buff (`buffs/<id>.json`) for a number of ticks: it takes away the buffs it `cures`, and doesn't take hold while one it's `blockedBy` lasts. Given again while it lasts, its file's `stacking` says what happens to the time. Its `buff_add` handlers may change the ticks or cancel it. While it lasts its `stats` are added to they's; when it runs out, `buff_end` hears it. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online. A buff the project doesn't have is an error.
+---@param buff BuffId Its id: `buffs/<id>.json`.
+---@param ticks integer How long, at least 1.
+---@return boolean # Whether it took hold: `false` when one it's `blockedBy` is on they, a handler cancelled it, or they has gone.
+function Player:add_buff(buff, ticks) end
+
+--- Takes a buff away from they (`buff_end` hears `"removed"`).
+---@param buff BuffId Its id.
+---@return boolean # Whether they had it.
+function Player:remove_buff(buff) end
+
+--- Whether they has a buff now.
+---@param buff BuffId Its id.
+---@return boolean
+function Player:has_buff(buff) end
+
+--- How many ticks a buff they has has left, or `nil` when they don't have it.
+---@param buff BuffId Its id.
+---@return integer?
+function Player:buff_ticks(buff) end
+
+--- Every buff they has now, with what a HUD shows them by, the first given first.
+---@return ActiveBuff[]
+function Player:buffs() end
+
 --- Their name, as they have it now (a player can change theirs between visits).
 ---@return string
 function Player:name() end
@@ -2948,6 +3047,8 @@ function Player:session() end
 ---@overload fun(self: Player, event: "prepare_smithing", handler: fun(event: PlayerPrepareSmithingEvent)): Subscription
 ---@overload fun(self: Player, event: "prepare_grindstone", handler: fun(event: PlayerPrepareGrindstoneEvent)): Subscription
 ---@overload fun(self: Player, event: "enchant_item", handler: fun(event: PlayerEnchantItemEvent)): Subscription
+---@overload fun(self: Player, event: "buff_add", handler: fun(event: BuffEvent)): Subscription
+---@overload fun(self: Player, event: "buff_end", handler: fun(event: BuffEndEvent)): Subscription
 ---@overload fun(self: Player, event: "heal", handler: fun(event: EntityHealEvent)): Subscription
 ---@overload fun(self: Player, event: "launch_projectile", handler: fun(event: ProjectileLaunchEvent)): Subscription
 ---@overload fun(self: Player, event: "shoot_bow", handler: fun(event: EntityShootBowEvent)): Subscription
@@ -3003,6 +3104,8 @@ function Player:on(event, handler, options) end
 ---@overload fun(self: Player, event: "prepare_smithing", handler: fun(event: PlayerPrepareSmithingEvent)): Subscription
 ---@overload fun(self: Player, event: "prepare_grindstone", handler: fun(event: PlayerPrepareGrindstoneEvent)): Subscription
 ---@overload fun(self: Player, event: "enchant_item", handler: fun(event: PlayerEnchantItemEvent)): Subscription
+---@overload fun(self: Player, event: "buff_add", handler: fun(event: BuffEvent)): Subscription
+---@overload fun(self: Player, event: "buff_end", handler: fun(event: BuffEndEvent)): Subscription
 ---@overload fun(self: Player, event: "heal", handler: fun(event: EntityHealEvent)): Subscription
 ---@overload fun(self: Player, event: "launch_projectile", handler: fun(event: ProjectileLaunchEvent)): Subscription
 ---@overload fun(self: Player, event: "shoot_bow", handler: fun(event: EntityShootBowEvent)): Subscription
@@ -5449,6 +5552,29 @@ function Event:uncancel() end
 ---@class Brightness
 ---@field block_light integer? Light from blocks (torches, lamps), 0 to 15. Required.
 ---@field sky_light integer? Light from the sky, 0 to 15. Required.
+
+--- A buff someone has now: `buffs()`.
+---@class ActiveBuff
+---@field id string Its id.
+---@field ticks integer Ticks it has left.
+---@field name Text? Its file's `name`, or `nil`.
+---@field icon string? Its file's `icon`, a glyph (`<pack>/<key>`), or `nil`.
+---@field color string? Its file's `color`, or `nil`.
+---@field debuff boolean Whether it is one.
+
+--- A buff is about to take hold: `buff_add`. Exactly one of `player` and `centity` is set.
+---@class BuffEvent: Event
+---@field buff string Its id.
+---@field ticks integer How long it will last: assign to change it (at least 1).
+---@field player Player? Who gets it, or `nil`.
+---@field centity Centity? The centity that gets it, or `nil`.
+
+--- A buff ended: `buff_end`. Exactly one of `player` and `centity` is set.
+---@class BuffEndEvent: Event
+---@field buff string Its id.
+---@field reason "expired"|"removed"|"cured" Why: see `buff_end`.
+---@field player Player? Who had it, or `nil`.
+---@field centity Centity? The centity that had it, or `nil`.
 
 --- A `station` recipe, as `nf.recipes.available` and `nf.recipes.get` give it.
 ---@class StationRecipe

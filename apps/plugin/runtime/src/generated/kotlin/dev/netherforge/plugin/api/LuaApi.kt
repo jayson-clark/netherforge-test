@@ -1082,6 +1082,54 @@ interface CentityApi {
     fun stopFollowing(self: LuaHandle.Centity): Boolean
 
     /**
+     * One of it's stats. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum of
+     * what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`),
+     * 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.
+     */
+    fun stat(self: LuaHandle.Centity, name: String): Double
+
+    /**
+     * Every stat it has that isn't 0, by name. A stat is a number by name (`"defense"`, `"move"`,
+     * `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a
+     * script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the
+     * engine only adds them up.
+     */
+    fun stats(self: LuaHandle.Centity): Map<String, Double>
+
+    /** What a script's `source` adds to it's stats (`set_modifiers`), or `nil` when it adds nothing. */
+    fun modifiers(self: LuaHandle.Centity, source: String): Map<String, Double>?
+
+    /**
+     * Sets what `source` adds to it's stats, replacing what it added before: one call per source, each
+     * time it changes (a piece of armour put on), and `nil` takes it all away. Buffs and modifiers are
+     * runtime state: a restart clears them; a player's last while the server runs, offline too, and count
+     * down only while they're online.
+     */
+    fun setModifiers(self: LuaHandle.Centity, source: String, modifiers: Map<String, Double>?): Boolean
+
+    /**
+     * Gives it a buff (`buffs/<id>.json`) for a number of ticks: it takes away the buffs it `cures`, and
+     * doesn't take hold while one it's `blockedBy` lasts. Given again while it lasts, its file's
+     * `stacking` says what happens to the time. Its `buff_add` handlers may change the ticks or cancel it.
+     * While it lasts its `stats` are added to it's; when it runs out, `buff_end` hears it. Buffs and
+     * modifiers are runtime state: a restart clears them; a player's last while the server runs, offline
+     * too, and count down only while they're online. A buff the project doesn't have is an error.
+     */
+    fun addBuff(self: LuaHandle.Centity, buff: String, ticks: Long): Boolean
+
+    /** Takes a buff away from it (`buff_end` hears `"removed"`). */
+    fun removeBuff(self: LuaHandle.Centity, buff: String): Boolean
+
+    /** Whether it has a buff now. */
+    fun hasBuff(self: LuaHandle.Centity, buff: String): Boolean
+
+    /** How many ticks a buff it has has left, or `nil` when they don't have it. */
+    fun buffTicks(self: LuaHandle.Centity, buff: String): Long?
+
+    /** Every buff it has now, with what a HUD shows them by, the first given first. */
+    fun buffs(self: LuaHandle.Centity): List<ActiveBuff>
+
+    /**
      * How much health it has left: from its `centity.json`'s `health` (its `max` when it spawns), or what
      * `set_max_health` gave it. `nil` for one without health, or once it's removed. Not saved: after a
      * restart it's whole again.
@@ -2200,6 +2248,55 @@ interface DroppedItemApi {
  * and a saddle 42 (what the game keeps there for any entity).
  */
 interface PlayerApi {
+    /**
+     * One of they's stats. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum
+     * of what every buff it has adds (its file's `stats`) and every modifier a script set
+     * (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only
+     * adds them up.
+     */
+    fun stat(self: LuaHandle.Player, name: String): Double
+
+    /**
+     * Every stat they has that isn't 0, by name. A stat is a number by name (`"defense"`, `"move"`,
+     * `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a
+     * script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the
+     * engine only adds them up.
+     */
+    fun stats(self: LuaHandle.Player): Map<String, Double>
+
+    /** What a script's `source` adds to they's stats (`set_modifiers`), or `nil` when it adds nothing. */
+    fun modifiers(self: LuaHandle.Player, source: String): Map<String, Double>?
+
+    /**
+     * Sets what `source` adds to they's stats, replacing what it added before: one call per source, each
+     * time it changes (a piece of armour put on), and `nil` takes it all away. Buffs and modifiers are
+     * runtime state: a restart clears them; a player's last while the server runs, offline too, and count
+     * down only while they're online.
+     */
+    fun setModifiers(self: LuaHandle.Player, source: String, modifiers: Map<String, Double>?): Boolean
+
+    /**
+     * Gives they a buff (`buffs/<id>.json`) for a number of ticks: it takes away the buffs it `cures`, and
+     * doesn't take hold while one it's `blockedBy` lasts. Given again while it lasts, its file's
+     * `stacking` says what happens to the time. Its `buff_add` handlers may change the ticks or cancel it.
+     * While it lasts its `stats` are added to they's; when it runs out, `buff_end` hears it. Buffs and
+     * modifiers are runtime state: a restart clears them; a player's last while the server runs, offline
+     * too, and count down only while they're online. A buff the project doesn't have is an error.
+     */
+    fun addBuff(self: LuaHandle.Player, buff: String, ticks: Long): Boolean
+
+    /** Takes a buff away from they (`buff_end` hears `"removed"`). */
+    fun removeBuff(self: LuaHandle.Player, buff: String): Boolean
+
+    /** Whether they has a buff now. */
+    fun hasBuff(self: LuaHandle.Player, buff: String): Boolean
+
+    /** How many ticks a buff they has has left, or `nil` when they don't have it. */
+    fun buffTicks(self: LuaHandle.Player, buff: String): Long?
+
+    /** Every buff they has now, with what a HUD shows them by, the first given first. */
+    fun buffs(self: LuaHandle.Player): List<ActiveBuff>
+
     /** Their name, as they have it now (a player can change theirs between visits). */
     fun name(self: LuaHandle.Player): String
 

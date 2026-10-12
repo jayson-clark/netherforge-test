@@ -3481,6 +3481,125 @@ data class Brightness(val blockLight: Long? = null, val skyLight: Long? = null) 
     }
 }
 
+/** A buff someone has now: `buffs()`. */
+data class ActiveBuff(val id: String, val ticks: Long, val name: String? = null, val icon: String? = null, val color: String? = null, val debuff: Boolean) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<ActiveBuff>("ActiveBuff") {
+        val idCodec = LuaCodecs.STRING
+        val ticksCodec = LuaCodecs.INTEGER
+        val nameCodec = LuaOptional(LuaCodecs.TEXT)
+        val iconCodec = LuaOptional(LuaCodecs.STRING)
+        val colorCodec = LuaOptional(LuaCodecs.STRING)
+        val debuffCodec = LuaCodecs.BOOLEAN
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "id" to idCodec,
+            "ticks" to ticksCodec,
+            "name" to nameCodec,
+            "icon" to iconCodec,
+            "color" to colorCodec,
+            "debuff" to debuffCodec
+        )
+
+        override fun read(fields: ShapeReader) = ActiveBuff(
+            id = fields.field("id", idCodec),
+            ticks = fields.field("ticks", ticksCodec),
+            name = fields.field("name", nameCodec),
+            icon = fields.field("icon", iconCodec),
+            color = fields.field("color", colorCodec),
+            debuff = fields.field("debuff", debuffCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: ActiveBuff) {
+            fields.field("id", value.id, idCodec)
+            fields.field("ticks", value.ticks, ticksCodec)
+            fields.field("name", value.name, nameCodec)
+            fields.field("icon", value.icon, iconCodec)
+            fields.field("color", value.color, colorCodec)
+            fields.field("debuff", value.debuff, debuffCodec)
+        }
+    }
+}
+
+/** A buff is about to take hold: `buff_add`. Exactly one of `player` and `centity` is set. */
+data class BuffEvent(val buff: String, var ticks: Long, val player: LuaHandle.Player? = null, val centity: LuaHandle.Centity? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    override fun write(field: String, call: LuaCall, index: Int) {
+        when (field) {
+            "ticks" -> ticks = Codec.ticksCodec.read(call, index, "event.ticks")
+        }
+    }
+
+    object Codec : ShapeCodec<BuffEvent>("BuffEvent") {
+        val buffCodec = LuaCodecs.STRING
+        val ticksCodec = LuaCodecs.INTEGER
+        val playerCodec = LuaOptional(LuaHandle.Player.Codec)
+        val centityCodec = LuaOptional(LuaHandle.Centity.Codec)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "buff" to buffCodec,
+            "ticks" to ticksCodec,
+            "player" to playerCodec,
+            "centity" to centityCodec
+        )
+
+        override fun read(fields: ShapeReader) = BuffEvent(
+            buff = fields.field("buff", buffCodec),
+            ticks = fields.field("ticks", ticksCodec),
+            player = fields.field("player", playerCodec),
+            centity = fields.field("centity", centityCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: BuffEvent) {
+            fields.field("buff", value.buff, buffCodec)
+            fields.field("ticks", value.ticks, ticksCodec)
+            fields.field("player", value.player, playerCodec)
+            fields.field("centity", value.centity, centityCodec)
+        }
+    }
+}
+
+/** A buff ended: `buff_end`. Exactly one of `player` and `centity` is set. */
+data class BuffEndEvent(val buff: String, val reason: String, val player: LuaHandle.Player? = null, val centity: LuaHandle.Centity? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<BuffEndEvent>("BuffEndEvent") {
+        val buffCodec = LuaCodecs.STRING
+        val reasonCodec = LuaChoice(listOf("expired", "removed", "cured"))
+        val playerCodec = LuaOptional(LuaHandle.Player.Codec)
+        val centityCodec = LuaOptional(LuaHandle.Centity.Codec)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "buff" to buffCodec,
+            "reason" to reasonCodec,
+            "player" to playerCodec,
+            "centity" to centityCodec
+        )
+
+        override fun read(fields: ShapeReader) = BuffEndEvent(
+            buff = fields.field("buff", buffCodec),
+            reason = fields.field("reason", reasonCodec),
+            player = fields.field("player", playerCodec),
+            centity = fields.field("centity", centityCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: BuffEndEvent) {
+            fields.field("buff", value.buff, buffCodec)
+            fields.field("reason", value.reason, reasonCodec)
+            fields.field("player", value.player, playerCodec)
+            fields.field("centity", value.centity, centityCodec)
+        }
+    }
+}
+
 /** A `station` recipe, as `nf.recipes.available` and `nf.recipes.get` give it. */
 data class StationRecipe(val id: String, val result: ItemData, val materials: List<RecipeMaterial>, val stations: List<String>, val stationRange: Long, val group: String? = null, val times: Long? = null) : LuaShape {
     override fun push(call: LuaCall) = Codec.push(call, this)

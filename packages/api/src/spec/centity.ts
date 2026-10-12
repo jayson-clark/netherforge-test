@@ -1,3 +1,4 @@
+import { buffEvents, statFunctions } from './stats.ts'
 import type { EventSpec, Fn, LuaClass } from '../types.ts'
 import { DATA_SAVING, DATA_VALUES } from './data.ts'
 import { eventFunctions } from './events.ts'
@@ -246,7 +247,7 @@ export const centityClass: LuaClass = {
   handle: { key: [{ name: 'id', type: 'string' }] },
   saveable: true,
   fields: [],
-  events: centityEvents,
+  events: [...centityEvents, ...buffEvents],
   customEvents: true,
   functions: [
     {
@@ -443,6 +444,7 @@ export const centityClass: LuaClass = {
       params: [],
       returns: [{ type: 'boolean', doc: "`false` once it's removed." }],
     },
+    ...statFunctions('it', 'this'),
     {
       name: 'health',
       doc: "How much health it has left: from its `centity.json`'s `health` (its `max` when it spawns), or what `set_max_health` gave it. `nil` for one without health, or once it's removed. Not saved: after a restart it's whole again.",

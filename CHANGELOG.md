@@ -100,6 +100,16 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **Stats, modifiers and buffs.** `buffs/<id>.json` (a kind of its own, with
+  an editor) declares a buff or debuff: its name, icon glyph and colour, the
+  `stats` it adds while it lasts, what it `cures` and what it's `blockedBy`,
+  how it stacks and its most ticks. Players and centities get `add_buff`,
+  `remove_buff`, `has_buff`, `buff_ticks` and `buffs()` (what a HUD shows), with
+  `buff_add` (writable ticks, cancellable) and `buff_end` events; the server
+  counts buffs down. `set_modifiers(source, { defense = 5 })` adds a script's
+  own numbers by source, and `stat(name)` / `stats()` sum every buff and
+  source, so equipment, buffs and bonuses stop being re-added at every call
+  site.
 - **Station recipes.** A recipe of `type: "station"` is one the game never
   sees: `materials` (ingredients with counts) taken from a player's
   inventory, `stations` (block ids, `#tags` or project blocks) that must all

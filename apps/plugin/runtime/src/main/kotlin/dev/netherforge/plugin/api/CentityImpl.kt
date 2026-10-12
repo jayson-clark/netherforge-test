@@ -35,6 +35,7 @@ import dev.netherforge.plugin.physics.Quat
 import dev.netherforge.plugin.platform.DisplayBrightness
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.session.ProjectSession
+import dev.netherforge.plugin.world.StatSheets
 import kotlinx.serialization.json.JsonObject
 import java.util.UUID
 import kotlin.math.atan2
@@ -91,6 +92,66 @@ internal class CentityImpl(private val session: ProjectSession) : CentityApi {
         instance(self)?.indexOf(name)?.let { LuaHandle.Node(self.id, name) }
 
     private fun mover(self: LuaHandle.Centity): Mover? = instance(self)?.mover
+
+    private val statCalls by lazy { StatCalls(session) }
+
+    override fun stat(self: LuaHandle.Centity, name: String): Double = statCalls.stat(
+        instance(self)?.let {
+            StatSheets.Holder.Centity(it.id)
+        },
+        name
+    )
+
+    override fun stats(self: LuaHandle.Centity): Map<String, Double> = statCalls.stats(
+        instance(self)?.let {
+            StatSheets.Holder.Centity(it.id)
+        }
+    )
+
+    override fun modifiers(self: LuaHandle.Centity, source: String): Map<String, Double>? = statCalls.modifiers(
+        instance(self)?.let {
+            StatSheets.Holder.Centity(it.id)
+        },
+        source
+    )
+
+    override fun setModifiers(self: LuaHandle.Centity, source: String, modifiers: Map<String, Double>?): Boolean =
+        statCalls.setModifiers(instance(self)?.let { StatSheets.Holder.Centity(it.id) }, source, modifiers)
+
+    override fun addBuff(self: LuaHandle.Centity, buff: String, ticks: Long): Boolean = statCalls.addBuff(
+        instance(self)?.let {
+            StatSheets.Holder.Centity(it.id)
+        },
+        buff,
+        ticks
+    )
+
+    override fun removeBuff(self: LuaHandle.Centity, buff: String): Boolean = statCalls.removeBuff(
+        instance(self)?.let {
+            StatSheets.Holder.Centity(it.id)
+        },
+        buff
+    )
+
+    override fun hasBuff(self: LuaHandle.Centity, buff: String): Boolean = statCalls.hasBuff(
+        instance(self)?.let {
+            StatSheets.Holder.Centity(it.id)
+        },
+        buff
+    )
+
+    override fun buffTicks(self: LuaHandle.Centity, buff: String): Long? = statCalls.buffTicks(
+        instance(self)?.let {
+            StatSheets.Holder.Centity(it.id)
+        },
+        buff
+    )
+
+    override fun buffs(self: LuaHandle.Centity): List<ActiveBuff> = statCalls.buffs(
+        instance(self)?.let {
+            StatSheets.Holder.Centity(it.id)
+        }
+    )
 
     override fun health(self: LuaHandle.Centity): Double? = instance(self)?.health?.current
 

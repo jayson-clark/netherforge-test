@@ -102,6 +102,8 @@ export type {
   BlockCarrier,
   BlockRotation,
   SkyFile,
+  BuffFile,
+  BuffStacking,
   EquipmentDef,
   Curves,
   DialogBody,

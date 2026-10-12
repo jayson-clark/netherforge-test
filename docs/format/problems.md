@@ -156,6 +156,10 @@ Error. A reference names a dialog that doesn't exist. See [references](reference
 
 Error. A reference names a loot table that doesn't exist. See [references](references.md).
 
+### `reference.buff` {#reference-buff}
+
+Error. A reference names a buff that doesn't exist. See [references](references.md).
+
 ### `reference.advancement` {#reference-advancement}
 
 Error. A reference names an advancement that doesn't exist. See [references](references.md).
@@ -469,6 +473,20 @@ Error. `spawning.when` isn't a condition's name: an id, or `ns:id` for a package
 ### `centity.spawning-despawn` {#centity-spawning-despawn}
 
 Warning. `spawning.despawnDistance` is within the spawner's reach, so a natural centity may go as it appears. See [centities](centity.md).
+
+## buff
+
+### `buff.color` {#buff-color}
+
+Error. A buff's `color` isn't `#rrggbb`. See [format/buff.md](buff.md).
+
+### `buff.stat` {#buff-stat}
+
+Error. A buff's `stats` has a name that isn't one, or a value that isn't a number. See [format/buff.md](buff.md).
+
+### `buff.ticks` {#buff-ticks}
+
+Error. A buff's `maxTicks` is below 1. See [format/buff.md](buff.md).
 
 ## Menus
 

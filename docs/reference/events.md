@@ -280,6 +280,8 @@ What [Centity](centity.md) listens for.
 | `bump` | [CentityBumpEvent](events.md#centitybumpevent) |  | Its `body` ran into something it didn't land on: a wall, or a ceiling. Once each tick it does, with the face's `normal` (pointing back at it) and how fast it was going into it. |
 | `touch` | [TouchEvent](events.md#touchevent) |  | Its hitboxes started touching something's: another centity's, a player's or another entity's (each shown node's boxes, as `world:overlap_box` sees them). Once when they start touching, and again only after they've come apart. Worked out each tick only for centities something listens to this on, so a crowd nobody listens to costs nothing. Both centities hear it when two touch, each with the other in `event.other`. |
 | `path_end` | [CentityPathEndEvent](events.md#centitypathendevent) |  | It stopped walking where `move_to` sent it: it got there (to the end of its path, or within 2 blocks of what it went after), or gave up (no way further, its way blocked with no other way round, or what it went after has gone or left its world). Not after `stop_pathing`, a new `move_to`, `teleport` or a reload of its centity. |
+| `buff_add` | [BuffEvent](events.md#buffevent) | yes | A buff is about to take hold (`add_buff`): assign `event.ticks` to change how long, or `event:cancel()` it (one it can't take). Not heard when it's `blockedBy` another. Writable: `ticks`. |
+| `buff_end` | [BuffEndEvent](events.md#buffendevent) |  | A buff ended: it ran out (`"expired"`), a script took it away (`"removed"`), or another buff cured it (`"cured"`). |
 
 ### centity spawn
 
@@ -378,6 +380,16 @@ end)
 this:on("path_end", function(event)
   if not event.reached then
     this:move_to(vec3(0, 64, 0))
+  end
+end)
+```
+
+### centity buff_end
+
+```lua
+player:on("buff_end", function(event)
+  if event.buff == "ironskin" then
+    event.player:send_message("<gray>Your skin softens.")
   end
 end)
 ```
@@ -532,6 +544,18 @@ What [Player](player.md) listens for.
 | `prepare_smithing` | [PlayerPrepareSmithingEvent](events.md#playerpreparesmithingevent) |  | What is in a smithing table changed, and the game is working out the result. Assign `event.result` to make something else, or `nil` for nothing. Only this player's: heard before `nf.on("player_prepare_smithing")`, with the same event, so `event:stop()` keeps it from there. Bubbles. Writable: `result`. |
 | `prepare_grindstone` | [PlayerPrepareGrindstoneEvent](events.md#playerpreparegrindstoneevent) |  | What is in a grindstone changed, and the game is working out the result. Assign `event.result` to make something else, or `nil` for nothing. Only this player's: heard before `nf.on("player_prepare_grindstone")`, with the same event, so `event:stop()` keeps it from there. Bubbles. Writable: `result`. |
 | `enchant_item` | [PlayerEnchantItemEvent](events.md#playerenchantitemevent) | yes | A player is enchanting an item at an enchanting table. `event:cancel()` stops it: nothing is enchanted or spent. Assign `event.cost` to change how many levels it takes. Only this player's: heard before `nf.on("player_enchant_item")`, with the same event, so `event:stop()` keeps it from there. Bubbles. Writable: `cost`. |
+| `buff_add` | [BuffEvent](events.md#buffevent) | yes | A buff is about to take hold (`add_buff`): assign `event.ticks` to change how long, or `event:cancel()` it (one it can't take). Not heard when it's `blockedBy` another. Writable: `ticks`. |
+| `buff_end` | [BuffEndEvent](events.md#buffendevent) |  | A buff ended: it ran out (`"expired"`), a script took it away (`"removed"`), or another buff cured it (`"cured"`). |
+
+### player buff_end
+
+```lua
+player:on("buff_end", function(event)
+  if event.buff == "ironskin" then
+    event.player:send_message("<gray>Your skin softens.")
+  end
+end)
+```
 
 ## Events on World
 
@@ -2077,6 +2101,45 @@ Fixed light levels a display is drawn with: `node:set_brightness`.
 | --- | --- | --- |
 | `block_light` | `integer?` | Light from blocks (torches, lamps), 0 to 15. Required. |
 | `sky_light` | `integer?` | Light from the sky, 0 to 15. Required. |
+
+## ActiveBuff
+
+A buff someone has now: `buffs()`.
+
+| Field | Type | |
+| --- | --- | --- |
+| `id` | `string` | Its id. |
+| `ticks` | `integer` | Ticks it has left. |
+| `name` | `Text?` | Its file's `name`, or `nil`. |
+| `icon` | `string?` | Its file's `icon`, a glyph (`<pack>/<key>`), or `nil`. |
+| `color` | `string?` | Its file's `color`, or `nil`. |
+| `debuff` | `boolean` | Whether it is one. |
+
+## BuffEvent
+
+A buff is about to take hold: `buff_add`. Exactly one of `player` and `centity` is set.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `buff` | `string` | Its id. |
+| `ticks` | `integer` | How long it will last: assign to change it (at least 1). |
+| `player` | `Player?` | Who gets it, or `nil`. |
+| `centity` | `Centity?` | The centity that gets it, or `nil`. |
+
+## BuffEndEvent
+
+A buff ended: `buff_end`. Exactly one of `player` and `centity` is set.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `buff` | `string` | Its id. |
+| `reason` | `"expired"\|"removed"\|"cured"` | Why: see `buff_end`. |
+| `player` | `Player?` | Who had it, or `nil`. |
+| `centity` | `Centity?` | The centity that had it, or `nil`. |
 
 ## StationRecipe
 

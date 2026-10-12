@@ -34,6 +34,7 @@ object Kinds {
         ItemKind,
         RecipeKind,
         LootTableKind,
+        BuffKind,
         BlockKind,
         GameBlockKind,
         DatapackKind,

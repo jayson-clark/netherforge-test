@@ -122,6 +122,8 @@ local events = {
     ["bump"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },
     ["touch"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },
     ["path_end"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },
+    ["buff_add"] = { owner = "Centity", cancellable = true, options = {}, writable = { ticks = true } },
+    ["buff_end"] = { owner = "Centity", cancellable = false, options = {}, writable = {} },
   },
   ["Node"] = {
     ["click"] = { owner = "Node", cancellable = false, options = {}, writable = {} },
@@ -217,6 +219,8 @@ local events = {
     ["prepare_smithing"] = { owner = "Player", cancellable = false, options = {}, writable = { result = true } },
     ["prepare_grindstone"] = { owner = "Player", cancellable = false, options = {}, writable = { result = true } },
     ["enchant_item"] = { owner = "Player", cancellable = true, options = {}, writable = { cost = true } },
+    ["buff_add"] = { owner = "Player", cancellable = true, options = {}, writable = { ticks = true } },
+    ["buff_end"] = { owner = "Player", cancellable = false, options = {}, writable = {} },
     ["heal"] = { owner = "Living", cancellable = true, options = {}, writable = { amount = true } },
     ["launch_projectile"] = { owner = "Living", cancellable = true, options = {}, writable = {} },
     ["shoot_bow"] = { owner = "Living", cancellable = true, options = {}, writable = {} },

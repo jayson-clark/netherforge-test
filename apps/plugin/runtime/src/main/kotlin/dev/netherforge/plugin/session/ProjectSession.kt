@@ -349,6 +349,33 @@ class ProjectSession internal constructor(
     /** The project's skies over worlds and players: what each player is shown of them, a step of a fade at a time. */
     val skies = service(dev.netherforge.plugin.sky.Skies(platform) { namespace })
 
+    /** Players' and centities' stats: the modifiers scripts set and the buffs they give, counted down. */
+    val stats = service(
+        dev.netherforge.plugin.world.StatSheets(
+            scripts,
+            { holder ->
+                when (holder) {
+                    is dev.netherforge.plugin.world.StatSheets.Holder.Player ->
+                        if (platform.players.get(holder.id) !=
+                            null
+                        ) {
+                            dev.netherforge.plugin.world.StatSheets.Presence.ACTIVE
+                        } else {
+                            dev.netherforge.plugin.world.StatSheets.Presence.WAITING
+                        }
+                    is dev.netherforge.plugin.world.StatSheets.Holder.Centity ->
+                        if (centities.find(holder.id)?.removed ==
+                            false
+                        ) {
+                            dev.netherforge.plugin.world.StatSheets.Presence.ACTIVE
+                        } else {
+                            dev.netherforge.plugin.world.StatSheets.Presence.GONE
+                        }
+                }
+            }
+        ) { names.spell(it) }
+    )
+
     /** Menu windows and their scripts: shared ones exist before any module's body runs. */
     val menus = service(Menus(platform.menus, platform.inventories, scripts, source::read, ::placeOf, packs::skinTitle, ::measureText))
 

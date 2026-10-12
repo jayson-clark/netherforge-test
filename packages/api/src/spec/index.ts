@@ -34,6 +34,7 @@ import { hudClass, hudShapes } from './hud.ts'
 import { spawningShapes } from './spawning.ts'
 import { itemShapes, projectItemClass } from './items.ts'
 import { recipeShapes } from './recipes.ts'
+import { statShapes } from './stats.ts'
 import { playerShapes } from './players.ts'
 import { blockClass, worldBorderClass, worldClass, worldShapes } from './worlds.ts'
 import { teamClass, teamShapes } from './teams.ts'
@@ -148,6 +149,7 @@ export const api: ApiSpec = {
     ...shapes,
     ...gameShapes,
     ...centityShapes,
+    ...statShapes,
     ...recipeShapes,
     ...itemShapes,
     ...entityShapes,

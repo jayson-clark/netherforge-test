@@ -83,6 +83,7 @@ object ProblemCodes {
     private const val TERRAIN = "format/terrain.md"
     private const val BIOME = "format/biome.md"
     private const val SKY = "format/sky.md"
+    private const val BUFF = "format/buff.md"
     private const val DATAPACK = "format/datapack.md"
     private const val DIMENSION_TYPE = "format/dimension-type.md"
     private const val RESOURCE_PACK = "format/resource-pack.md"
@@ -166,6 +167,7 @@ object ProblemCodes {
     val REFERENCE_ITEM = error("reference.item", REFERENCES, "A reference names a project item that doesn't exist.")
     val REFERENCE_DIALOG = error("reference.dialog", REFERENCES, "A reference names a dialog that doesn't exist.")
     val REFERENCE_LOOT_TABLE = error("reference.loot-table", REFERENCES, "A reference names a loot table that doesn't exist.")
+    val REFERENCE_BUFF = error("reference.buff", REFERENCES, "A reference names a buff that doesn't exist.")
     val REFERENCE_ADVANCEMENT = error("reference.advancement", REFERENCES, "A reference names an advancement that doesn't exist.")
     val REFERENCE_BLOCK = error("reference.block", REFERENCES, "A reference names a project block that doesn't exist.")
     val REFERENCE_CENTITY = error("reference.centity", REFERENCES, "A reference names a centity that doesn't exist.")
@@ -298,6 +300,9 @@ object ProblemCodes {
     val CENTITY_PHYSICS_RANGE = warning("centity.physics-range", CENTITY, "A physics value outside 0 to 1 is clamped.")
     val CENTITY_PHYSICS_STUCK = warning("centity.physics-stuck", CENTITY, "A body's `maxSpeed` is 0, so it never moves.")
     val CENTITY_PHYSICS_FALLS = warning("centity.physics-falls", CENTITY, "A body collides with nothing, so nothing stops it falling.")
+    val BUFF_COLOR = error("buff.color", BUFF, "A buff's `color` isn't `#rrggbb`.")
+    val BUFF_STAT = error("buff.stat", BUFF, "A buff's `stats` has a name that isn't one, or a value that isn't a number.")
+    val BUFF_TICKS = error("buff.ticks", BUFF, "A buff's `maxTicks` is below 1.")
     val CENTITY_HEALTH = error("centity.health", CENTITY, "A centity's `health` has a value it can't have.")
     val CENTITY_BODY_SIZE = error("centity.body-size", CENTITY, "A `body`'s `width` or `height` isn't positive, or is too big.")
     val CENTITY_BODY_RANGE = warning("centity.body-range", CENTITY, "A `body` value out of its range is clamped.")

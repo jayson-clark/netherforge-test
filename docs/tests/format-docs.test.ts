@@ -184,6 +184,7 @@ const PAGES: Record<(typeof DOCUMENT_KINDS)[number], string[]> = {
   centity: ['centity.md'],
   bundle: ['packages.md'],
   datapack: ['datapack.md'],
+  buff: ['buff.md'],
 }
 
 /** Every name a schema gives a property: its `properties`, and the names a map's keys may be (`propertyNames`). */

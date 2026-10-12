@@ -31,6 +31,7 @@ export type NameKind =
   | 'block'
   | 'recipe'
   | 'loot_table'
+  | 'buff'
   | 'advancement'
   | 'animation'
   | 'node'

@@ -33,6 +33,8 @@ What `centity:on(event, handler)` listens for. See [Events](events.md) for how e
 | `bump` | [CentityBumpEvent](events.md#centitybumpevent) |  | Its `body` ran into something it didn't land on: a wall, or a ceiling. Once each tick it does, with the face's `normal` (pointing back at it) and how fast it was going into it. |
 | `touch` | [TouchEvent](events.md#touchevent) |  | Its hitboxes started touching something's: another centity's, a player's or another entity's (each shown node's boxes, as `world:overlap_box` sees them). Once when they start touching, and again only after they've come apart. Worked out each tick only for centities something listens to this on, so a crowd nobody listens to costs nothing. Both centities hear it when two touch, each with the other in `event.other`. |
 | `path_end` | [CentityPathEndEvent](events.md#centitypathendevent) |  | It stopped walking where `move_to` sent it: it got there (to the end of its path, or within 2 blocks of what it went after), or gave up (no way further, its way blocked with no other way round, or what it went after has gone or left its world). Not after `stop_pathing`, a new `move_to`, `teleport` or a reload of its centity. |
+| `buff_add` | [BuffEvent](events.md#buffevent) | yes | A buff is about to take hold (`add_buff`): assign `event.ticks` to change how long, or `event:cancel()` it (one it can't take). Not heard when it's `blockedBy` another. Writable: `ticks`. |
+| `buff_end` | [BuffEndEvent](events.md#buffendevent) |  | A buff ended: it ran out (`"expired"`), a script took it away (`"removed"`), or another buff cured it (`"cured"`). |
 
 ## `centity:id()`
 
@@ -273,6 +275,109 @@ this:follow(player)
 Stops it following its player, where it is now. `false` when it wasn't following, or once it's removed.
 
 **Returns** `boolean`: `false` once it's removed.
+
+## `centity:stat(name)`
+
+One of it's stats. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `name` | `string` | The stat: lowercase letters, digits and `_`. |
+
+**Returns** `number`
+
+```lua
+local damage = 20
+local taken = math.max(1, damage - this:stat("defense") / 2)
+```
+
+## `centity:stats()`
+
+Every stat it has that isn't 0, by name. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.
+
+**Returns** `table<string, number>`
+
+## `centity:modifiers(source)`
+
+What a script's `source` adds to it's stats (`set_modifiers`), or `nil` when it adds nothing.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `source` | `string` | Whose: `"armour"`, `"accessories"`. |
+
+**Returns** `table<string, number>?`
+
+## `centity:set_modifiers(source, modifiers?)`
+
+Sets what `source` adds to it's stats, replacing what it added before: one call per source, each time it changes (a piece of armour put on), and `nil` takes it all away. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `source` | `string` | Whose: any name of your own. |
+| `modifiers` (optional) | `table<string, number>` | A number per stat name. Leave it out (or `nil`) to take the source away. |
+
+**Returns** `boolean`: `false` once it has gone.
+
+```lua
+this:set_modifiers("armour", { defense = 12, move = 0.05 })
+```
+
+## `centity:add_buff(buff, ticks)`
+
+Gives it a buff (`buffs/<id>.json`) for a number of ticks: it takes away the buffs it `cures`, and doesn't take hold while one it's `blockedBy` lasts. Given again while it lasts, its file's `stacking` says what happens to the time. Its `buff_add` handlers may change the ticks or cancel it. While it lasts its `stats` are added to it's; when it runs out, `buff_end` hears it. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online. A buff the project doesn't have is an error.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `buff` | `string` | Its id: `buffs/<id>.json`. |
+| `ticks` | `integer` | How long, at least 1. |
+
+**Returns** `boolean`: Whether it took hold: `false` when one it's `blockedBy` is on it, a handler cancelled it, or it has gone.
+
+```lua
+this:add_buff("ironskin", 20 * 60 * 4)
+```
+
+## `centity:remove_buff(buff)`
+
+Takes a buff away from it (`buff_end` hears `"removed"`).
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `buff` | `string` | Its id. |
+
+**Returns** `boolean`: Whether they had it.
+
+## `centity:has_buff(buff)`
+
+Whether it has a buff now.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `buff` | `string` | Its id. |
+
+**Returns** `boolean`
+
+## `centity:buff_ticks(buff)`
+
+How many ticks a buff it has has left, or `nil` when they don't have it.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `buff` | `string` | Its id. |
+
+**Returns** `integer?`
+
+## `centity:buffs()`
+
+Every buff it has now, with what a HUD shows them by, the first given first.
+
+**Returns** `ActiveBuff[]`
+
+```lua
+for _, buff in ipairs(this:buffs()) do
+  log(buff.id, buff.ticks)
+end
+```
 
 ## `centity:health()`
 

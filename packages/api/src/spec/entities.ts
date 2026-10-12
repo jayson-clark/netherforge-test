@@ -1,3 +1,4 @@
+import { buffEvents, statFunctions } from './stats.ts'
 import type { EventSpec, Field, Fn, LuaClass } from '../types.ts'
 import { DATA_SAVING, DATA_VALUES } from './data.ts'
 import { eventFunctions, nfEvents } from './events.ts'
@@ -855,8 +856,9 @@ export const playerClass: LuaClass = {
   methods: true,
   extends: 'Living',
   fields: [],
-  events: playerEvents,
+  events: [...playerEvents, ...buffEvents],
   functions: [
+    ...statFunctions('they', 'player'),
     {
       name: 'name',
       doc: 'Their name, as they have it now (a player can change theirs between visits).',
