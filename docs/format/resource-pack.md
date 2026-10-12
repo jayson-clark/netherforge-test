@@ -326,6 +326,41 @@ Each file listed in `files` is still a sound event of its own. In the built
 resource pack the files go to `assets/<namespace>/sounds/<id>/` and the
 events, every resource pack's, into `assets/<namespace>/sounds.json`.
 
+### Replacing the game's sounds
+
+A key in the game's namespace replaces one of the game's own sound events
+with the pack's files, for every player, wherever the game plays it:
+
+```json partial
+"sounds": {
+  "minecraft:block.stone.break": { "files": ["blocks/stone_break_1.ogg", "blocks/stone_break_2.ogg"] },
+  "minecraft:block.gravel.step": { "files": ["blocks/silt_step.ogg"], "volume": 0.8 }
+}
+```
+
+The built pack writes it into the game's own `assets/minecraft/sounds.json`
+with `"replace": true`, so the game's files for the event are dropped and only
+the pack's play, one picked at random each time. `volume`, `pitch` and
+`stream` apply to the pack's files as for any sound. `files` is required
+(`resource_pack.sound-replace`). The game's subtitle goes with its files, so
+give `subtitle` to keep one (`subtitles.block.generic.break` is the game's for
+breaking a block).
+
+**It changes everything that plays the event.** Blocks play the sounds of
+their sound type: every block of the stone type breaks with
+`block.stone.break`, and every gravel-sounding block steps with
+`block.gravel.step`. Footsteps, hits and falls are chosen by each player's own
+game from the block's sound type, so replacing the event is the only way to
+change them, for the [game's blocks](game-block.md) and for a project block's
+[carrier](block.md#carriers) (a note block steps as wood).
+
+The names are the game's sound events (`block.stone.break`, `entity.zombie.ambient`,
+`music.overworld.forest`), which the server's game data lists: with it, one
+the target version doesn't have is an error (`resource_pack.sound-event`).
+Two resource packs can't replace the same event (also `resource_pack.sound-event`).
+Only the game's own namespace is replaced this way; a key in another namespace
+is `resource_pack.sound-key`.
+
 ## HUD
 
 `hud` changes what players see around the hotbar: it hides any of the game's
@@ -511,6 +546,36 @@ menus of the project's or not. Unlike [item models](#item-models) and
 [block models](#block-models), which give the project's own items and blocks
 a look of their own, it changes every one of the game's blocks or items that
 draws the texture.
+
+## Redrawing the game's models
+
+`models` does for the game's models what `textures` does for its pictures: a
+model file of the pack (a path under its [`models/`](#models) folder) is
+written over the game's model of that name, for every player. A plant, a
+lantern or a pot changes shape without becoming a project block:
+
+```json partial
+"models": {
+  "block/red_mushroom": "mushroom.json",
+  "item/lantern": "lantern_item.json"
+}
+```
+
+The name is the model's path under the client's `models/`, without `.json`.
+Every block state and item the game draws with the model takes the new
+shape; which model a state draws is the game's blockstate file, which stays
+the game's. The model's textures are the pack's (by their path under
+`textures/`, as in any model of the pack) or the game's (`block/stone`), and a
+block model's own textures are stitched into the blocks atlas. The shape is
+only drawn: what collides with the block and what a player selects stay the
+game's.
+
+As for textures, [`client/vanilla.json`](project.md#clientvanillajson) lists
+the models the project's packs name, which the editor looks up in your
+imported Minecraft. A name it hasn't looked up yet replaces nothing yet
+(`resource_pack.vanilla-missing`), one the game doesn't have is an error
+(`resource_pack.replace-name`), and two resource packs can't redraw the same
+model.
 
 ## How it reaches players
 

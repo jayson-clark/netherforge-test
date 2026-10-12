@@ -28,12 +28,16 @@ describe('the game’s own looks', () => {
       sprites: ['hud/heart/full'],
       textures: { 'gui/container/inventory': [256, 256] },
       unknownTextures: [],
+      models: [],
+      unknownModels: [],
     })
-    expect(await vanillaLooks({ json: async () => null })).toEqual({
+    expect(await vanillaLooks({ json: async () => null }, [], ['block/red_mushroom'])).toEqual({
       blockstates: {},
       sprites: [],
       textures: {},
       unknownTextures: [],
+      models: [],
+      unknownModels: [],
     })
   })
 
@@ -55,6 +59,20 @@ describe('the game’s own looks', () => {
     expect((await vanillaLooks(oldAssets, ['block/stone'])).unknownTextures).toEqual([])
   })
 
+  it('says which of the models the project redraws the client has', async () => {
+    const files: Record<string, unknown> = {
+      'index.json': index,
+      'assets/minecraft/models/block/red_mushroom.json': { parent: 'block/cross' },
+    }
+    const assets = { json: async <T>(path: string) => (files[path] ?? null) as T | null }
+    const looks = await vanillaLooks(assets, [], ['block/red_mushrom', 'block/red_mushroom'])
+    expect(looks.models).toEqual(['block/red_mushroom'])
+    expect(looks.unknownModels).toEqual(['block/red_mushrom'])
+    const text = vanillaToWrite('26.3', looks, undefined)
+    expect(text).toContain('"models": ["block/red_mushroom"]')
+    expect(text).toContain('"unknownModels": ["block/red_mushrom"]')
+  })
+
   it('writes the file only when it would change, and never without something to write from', () => {
     expect(VANILLA_FILE).toBe('client/vanilla.json')
     const looks = {
@@ -62,6 +80,8 @@ describe('the game’s own looks', () => {
       sprites: ['hud/heart/full'],
       textures: { 'gui/container/inventory': [256, 256] },
       unknownTextures: ['item/nothing'],
+      models: [],
+      unknownModels: [],
     }
     const text = vanillaToWrite('26.3', looks, undefined)
     expect(text).toContain('"minecraft": "26.3"')
@@ -73,7 +93,14 @@ describe('the game’s own looks', () => {
     expect(
       vanillaToWrite(
         '26.3',
-        { blockstates: {}, sprites: [], textures: {}, unknownTextures: [] },
+        {
+          blockstates: {},
+          sprites: [],
+          textures: {},
+          unknownTextures: [],
+          models: [],
+          unknownModels: [],
+        },
         undefined,
       ),
     ).toBeNull()

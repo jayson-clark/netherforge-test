@@ -22,6 +22,8 @@ import kotlinx.serialization.json.JsonObject
  *   (`gui/container/`), and every other one the project's resource packs name (`block/stone`, `entity/zombie/zombie`).
  *   The game has thousands, so the file holds only those asked about, and [unknownTextures] the names asked about that
  *   the game doesn't have: a name in neither is one the editor hasn't looked up yet.
+ * - [models]: the game's models a resource pack's `models` redraws, as [textures] are listed: only those asked about,
+ *   and [unknownModels] the names the game doesn't have.
  */
 @Serializable
 data class VanillaFile(
@@ -38,7 +40,11 @@ data class VanillaFile(
      */
     val textures: Map<String, List<Int>> = emptyMap(),
     /** Names the project's resource packs redraw that the game has no texture by, sorted. */
-    val unknownTextures: List<String> = emptyList()
+    val unknownTextures: List<String> = emptyList(),
+    /** The game's models the project's resource packs redraw (`block/red_mushroom`), by their path under `models/` without `.json`, sorted. */
+    val models: List<String> = emptyList(),
+    /** Names the project's resource packs redraw that the game has no model by, sorted. */
+    val unknownModels: List<String> = emptyList()
 ) {
     companion object {
         const val FILE = "client/vanilla.json"

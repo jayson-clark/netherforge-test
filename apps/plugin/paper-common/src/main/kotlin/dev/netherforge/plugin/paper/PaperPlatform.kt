@@ -147,6 +147,7 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
         plugin.server.pluginManager.registerEvents(recipes, plugin)
         dialogs.events = events
         menus.events = events
+        this.blocks.gameBlocks.events = events
         this.events = PaperEvents(plugin, this, events, version).also { plugin.server.pluginManager.registerEvents(it, plugin) }
         plugin.server.pluginManager.registerEvents(borders, plugin)
         plugin.server.pluginManager.registerEvents(noteBlocks, plugin)
@@ -160,6 +161,7 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
     /** The plugin is being disabled: what it changed in the server's own settings is put back, and its searches stop. */
     fun close() {
         carriers.release()
+        blocks.gameBlocks.release()
         locate.close()
     }
 

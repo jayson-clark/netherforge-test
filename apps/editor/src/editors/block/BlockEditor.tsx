@@ -1,8 +1,8 @@
 /**
  * A project block (`blocks/<id>/block.json`, docs/format/block.md): its cube
  * as its pack draws it, and in the inspector its look, how long it takes to
- * mine and with what, what it drops, its sounds, the centity drawn over it,
- * how often it ticks, and its one script.
+ * mine and with what, what it drops, whether it falls, its sounds, the centity
+ * drawn over it, how often it ticks, and its one script.
  */
 import { setKey } from '@/core/draft'
 import {
@@ -203,6 +203,12 @@ export function BlockEditor({ path }: { path: string }) {
             value={model.drops ?? ''}
             options={options(lootTables, model.drops, '(nothing)')}
             onChange={(value) => set('drops', value || undefined)}
+          />
+          <CheckField
+            label="Falls like sand"
+            dataPath="falls"
+            value={model.falls ?? false}
+            onChange={(value) => set('falls', value || undefined)}
           />
           <NumberField
             label="Ticks between ticks"

@@ -19,7 +19,7 @@ object Kinds {
      * scripts may play at once), modules (which find what required them), the data kinds,
      * items (the looks menus' slots take), recipes (built from those looks),
      * loot tables (data scripts roll), blocks (their drops are loot tables; the
-     * world's blocks are drawn as the pack says), biomes and dimension types (the server learns them only at start), terrains (the ores' blocks are blocks), advancements (which the server
+     * world's blocks are drawn as the pack says), the game's blocks' rules (which refuse the blocks' carriers), biomes and dimension types (the server learns them only at start), terrains (the ores' blocks are blocks), advancements (which the server
      * learns only at start: a reload says it needs a restart),
      * then the windows, dialogs and centities whose scripts restart.
      */
@@ -35,6 +35,7 @@ object Kinds {
         RecipeKind,
         LootTableKind,
         BlockKind,
+        GameBlockKind,
         DatapackKind,
         BiomeKind,
         DimensionTypeKind,

@@ -14,6 +14,7 @@ describe('schemas', () => {
       'default_font.schema.json',
       'dialog.schema.json',
       'dimension_type.schema.json',
+      'game_block.schema.json',
       'item.schema.json',
       'lock.schema.json',
       'loot_table.schema.json',

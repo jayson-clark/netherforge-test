@@ -31,6 +31,7 @@ import dev.netherforge.plugin.platform.SoundPlay
 import dev.netherforge.plugin.platform.WorldOps
 import org.bukkit.Bukkit
 import org.bukkit.Color
+import org.bukkit.Effect
 import org.bukkit.FluidCollisionMode
 import org.bukkit.GameMode
 import org.bukkit.GameRule
@@ -507,6 +508,41 @@ class PaperBlocks(private val plugin: JavaPlugin, private val carriers: PaperCar
     }
 
     override fun freeze(carrier: BlockCarrier): Boolean = carriers.freeze(carrier)
+
+    /** What the runtime hears of the world breaking the game's blocks, and of its falling blocks ([watch]). */
+    val gameBlocks = PaperGameBlocks(plugin)
+
+    override fun harvests(tool: ItemData?, state: String): Boolean? = data(state)?.isPreferredTool(stack(tool))
+
+    override fun showBroken(player: UUID?, world: String, x: Int, y: Int, z: Int, state: String) {
+        val block = block(world, x, y, z) ?: return
+        val data = data(state) ?: return
+        // The game's own effect of a block broken (2001): its sound and particles, to one player or everyone near.
+        if (player == null) {
+            block.world.playEffect(block.location, Effect.STEP_SOUND, data)
+        } else {
+            Bukkit.getPlayer(player)?.takeIf { it.world == block.world }?.playEffect(block.location, Effect.STEP_SOUND, data)
+        }
+    }
+
+    override fun watch(drops: Set<String>, falling: Set<String>) = gameBlocks.watch(drops, falling)
+
+    override fun fall(world: String, x: Int, y: Int, z: Int): UUID? {
+        val block = block(world, x, y, z) ?: return null
+        if (block.type.isAir) return null
+        val below = block.getRelative(org.bukkit.block.BlockFace.DOWN)
+        // What sand falls into: air, a fluid, or something a block can be put into (grass, fire, snow layers).
+        if (!(below.isEmpty || below.isLiquid || below.isReplaceable)) return null
+        if (y <= block.world.minHeight) return null
+        val data = block.blockData
+        // Neighbours are told, so a falling block above this one falls in its turn, as a column of sand does.
+        block.setType(Material.AIR, true)
+        val falling = block.world.spawnFallingBlock(block.location.add(0.5, 0.0, 0.5), data)
+        // One that can't land drops what the runtime says, not the note block or leaves it's held in.
+        falling.dropItem = false
+        falling.setHurtEntities(false)
+        return falling.uniqueId
+    }
 }
 
 /**

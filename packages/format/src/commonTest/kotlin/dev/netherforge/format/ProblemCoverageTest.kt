@@ -48,6 +48,8 @@ class ProblemCoverageTest {
         "loot.unknown-tool" to unit("LootTest", gameData),
         "loot.unknown-enchantment" to unit("LootTest", gameData),
         "block.carriers" to unit("BlockTest", "it needs the game's note block states to run out of"),
+        "game_block.unknown" to unit("GameBlockTest", gameData),
+        "game_block.carrier" to unit("GameBlockTest", "it needs the game's note block states, which the carriers are"),
         "migration.name" to unit("MigrationTest", "MigrationTest loads a project per rule and variant (the first number, gaps, names)"),
         "migration.duplicate" to unit("MigrationTest", "MigrationTest loads a project per rule and variant"),
         "migration.gap" to unit("MigrationTest", "MigrationTest loads a project per rule and variant"),

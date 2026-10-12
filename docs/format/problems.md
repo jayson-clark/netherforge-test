@@ -782,6 +782,10 @@ Error. A block's `hardness` is below -1 or isn't a number. See [blocks](block.md
 
 Error. A block's `tick` isn't a whole number of ticks from 1 to an hour. See [blocks](block.md).
 
+### `block.falls` {#block-falls}
+
+Error. A block `falls`, but it's held as tripwire or drawn by a centity, which can't fall. See [blocks](block.md).
+
 ### `block.sound` {#block-sound}
 
 Error. A block's `sound` isn't a kind of block the game has place and break sounds for. See [blocks](block.md).
@@ -801,6 +805,32 @@ Warning. Something about a block its carrier doesn't do: a hardness tripwire ign
 ### `block.vanilla-looks` {#block-vanilla-looks}
 
 Warning. `client/vanilla.json` lacks the game's look of a block custom blocks are held in, or is another version's. See [blocks](block.md).
+
+## game_block
+
+### `game_block.blocks` {#game_block-blocks}
+
+Error. A game block file's `blocks` is empty, or an entry isn't a block id or a `#tag`. See [format/game-block.md](game-block.md).
+
+### `game_block.unknown` {#game_block-unknown}
+
+Error. A game block file names a block or block tag the target version doesn't have. See [format/game-block.md](game-block.md).
+
+### `game_block.twice` {#game_block-twice}
+
+Error. One of the game's blocks is named twice: by two files, or twice in one (a tag names every block in it). See [format/game-block.md](game-block.md).
+
+### `game_block.hardness` {#game_block-hardness}
+
+Error. A game block file's `hardness` is below -1 or isn't a number. See [format/game-block.md](game-block.md).
+
+### `game_block.carrier` {#game_block-carrier}
+
+Error. A game block file names a block the project's own blocks are held in. See [format/game-block.md](game-block.md).
+
+### `game_block.requires-tool` {#game_block-requires-tool}
+
+Warning. `requiresTool: false` without `drops`: the game's own drops keep the game's rule, so the wrong tool still gets nothing. See [format/game-block.md](game-block.md).
 
 ## migration
 
@@ -1300,11 +1330,11 @@ Warning. `hud.hide` needs the game's HUD sprites, which `client/vanilla.json` la
 
 ### `resource_pack.vanilla-missing` {#resource_pack-vanilla-missing}
 
-Warning. `hud.replace` or `textures` needs the game's sprite and texture names and sizes, which `client/vanilla.json` lacks (for a texture the editor hasn't looked up yet) or has from another version. See [resource packs](resource-pack.md).
+Warning. `hud.replace`, `textures` or `models` needs the game's sprite, texture and model names and sizes, which `client/vanilla.json` lacks (for a texture or model the editor hasn't looked up yet) or has from another version. See [resource packs](resource-pack.md).
 
 ### `resource_pack.replace-name` {#resource_pack-replace-name}
 
-Error. `hud.replace` or `textures` names a sprite or texture the game doesn't have, or one another resource pack replaces too. See [resource packs](resource-pack.md).
+Error. `hud.replace`, `textures` or `models` names a sprite, texture or model the game doesn't have, or one another resource pack replaces too. See [resource packs](resource-pack.md).
 
 ### `resource_pack.replace-size` {#resource_pack-replace-size}
 
@@ -1340,7 +1370,15 @@ Error. A block look has no texture for some face (give it a texture, or one for 
 
 ### `resource_pack.sound-key` {#resource_pack-sound-key}
 
-Error. A key in `sounds` isn't a sound key. See [resource packs](resource-pack.md).
+Error. A key in `sounds` isn't a sound key, or one of the game's sound events (`minecraft:…`). See [resource packs](resource-pack.md).
+
+### `resource_pack.sound-event` {#resource_pack-sound-event}
+
+Error. A `sounds` key replaces a sound event the target version doesn't have, or one another resource pack replaces too. See [resource packs](resource-pack.md).
+
+### `resource_pack.sound-replace` {#resource_pack-sound-replace}
+
+Error. A replacement of one of the game's sound events lists no `files` to play instead. See [resource packs](resource-pack.md).
 
 ### `resource_pack.sound-name` {#resource_pack-sound-name}
 

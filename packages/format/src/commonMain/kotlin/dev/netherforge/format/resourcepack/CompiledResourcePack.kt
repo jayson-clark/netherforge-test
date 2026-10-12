@@ -54,7 +54,11 @@ class CompiledResourcePack(
     /** The game's GUI sprites it redraws (`hud.replace`), by name. */
     val spriteReplacements: Map<String, Replacement> = emptyMap(),
     /** The game's other textures it redraws (`textures`), by name. */
-    val textureReplacements: Map<String, Replacement> = emptyMap()
+    val textureReplacements: Map<String, Replacement> = emptyMap(),
+    /** The game's sound events it replaces (`sounds` keyed `minecraft:…`), by the event in full ([PackSounds.replacements]). */
+    val soundReplacements: Map<String, PackSounds.Sound> = emptyMap(),
+    /** The game's models it redraws (`models`), by name (`block/red_mushroom`), each a model file of the pack. */
+    val modelReplacements: Map<String, String> = emptyMap()
 ) {
     /** A game sprite or texture drawn with the pack's [texture] (a path under `textures/`), and its `.mcmeta` when it has [meta]. */
     class Replacement(val texture: String, val meta: Boolean)
@@ -118,13 +122,14 @@ class CompiledResourcePack(
             block.model?.let { models[it] }?.let { addAll(it.packTextures) }
         }
         hud?.pieces?.forEach { add(it.texture) }
+        modelReplacements.values.forEach { file -> models[file]?.let { addAll(it.packTextures) } }
     }
 
     /** The texture breaking block look [block] throws up: a model's particle, or the faces' ([BlockModelDef.particle]). */
     fun particleOf(block: BlockModelDef): String? = block.model?.let { models[it]?.particle } ?: block.particle()
 
-    /** Every sound file (under `sounds/`) this pack's events play. */
-    fun soundFiles(): Set<String> = sounds.values.flatMap { it.files }.sorted().toSet()
+    /** Every sound file (under `sounds/`) this pack's events play, and the game's events it replaces. */
+    fun soundFiles(): Set<String> = (sounds.values + soundReplacements.values).flatMap { it.files }.sorted().toSet()
 
     companion object {
         /**
@@ -222,7 +227,9 @@ class CompiledResourcePack(
                     }
                 },
                 replacements(file.hud?.replace.orEmpty()),
-                replacements(file.textures)
+                replacements(file.textures),
+                PackSounds.replacements(file),
+                file.models.entries.sortedBy { it.key }.associate { it.key to it.value }
             )
         }
     }
@@ -285,6 +292,8 @@ object PackLayout {
         textureSize: (projectPath: String) -> Pair<Int, Int>?
     ): Map<String, Entry> {
         val out = LinkedHashMap<String, Entry>()
+        // The game's models the packs may redraw: only those the client says it has.
+        val knownModels = vanilla?.models.orEmpty().toSet()
         out["pack.mcmeta"] = json(
             buildJsonObject {
                 putJsonObject("pack") {
@@ -432,12 +441,29 @@ object PackLayout {
                 out["assets/$ns/items/$id/$key.json"] = json(definition)
             }
 
-            if (pack.sounds.isNotEmpty()) {
+            if (pack.sounds.isNotEmpty() || pack.soundReplacements.isNotEmpty()) {
                 for (file in pack.soundFiles()) {
                     out["assets/$ns/sounds/$id/$file"] = Entry.Copy(PackSounds.soundPath(pack.key, file))
                 }
-                val events = soundEvents.getOrPut(ns) { LinkedHashMap() }
-                for (sound in pack.sounds.values) events["$id/${sound.key}"] = soundEvent("$ns:$id", sound)
+                if (pack.sounds.isNotEmpty()) {
+                    val events = soundEvents.getOrPut(ns) { LinkedHashMap() }
+                    for (sound in pack.sounds.values) events["$id/${sound.key}"] = soundEvent("$ns:$id", sound)
+                }
+                // The game's own events, in its sounds.json: `replace` drops the game's files for each, so only the pack's play.
+                for ((event, sound) in pack.soundReplacements) {
+                    val (namespace, path) = event.split(':', limit = 2)
+                    soundEvents.getOrPut(namespace) { LinkedHashMap() }[path] =
+                        JsonObject(mapOf("replace" to JsonPrimitive(true)) + soundEvent("$ns:$id", sound))
+                }
+            }
+
+            // The game's models the pack redraws, written over the game's, their textures the pack's or the game's.
+            for ((name, file) in pack.modelReplacements) {
+                if (name !in knownModels) continue
+                val model = pack.models[file] ?: continue
+                out["assets/minecraft/models/$name.json"] = json(PackModels.write(model, ::resource))
+                val sprites = model.packTextures.map(::resource)
+                if (name.startsWith(BLOCK_MODELS)) blockSprites += sprites else itemSprites += sprites
             }
 
             for ((key, block) in pack.blocks) {
@@ -541,6 +567,9 @@ object PackLayout {
         }
         return out.entries.sortedBy { it.key }.associate { it.key to it.value }
     }
+
+    /** The game's block models (under `models/`), whose textures the game draws from the blocks atlas. */
+    private const val BLOCK_MODELS = "block/"
 
     /** The border vanilla's own tooltip sprites use. */
     const val TOOLTIP_BORDER = 9

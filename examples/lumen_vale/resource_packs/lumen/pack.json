@@ -81,6 +81,11 @@
     "lumen_place": {
       "subtitle": "Crystal settles"
     },
+    "minecraft:block.deepslate_bricks.break": {
+      "files": ["lumen_break.ogg"],
+      "pitch": 0.7,
+      "subtitle": "subtitles.block.generic.break"
+    },
     "wisp_chime": {
       "volume": 0.8,
       "pitch": 1.1,

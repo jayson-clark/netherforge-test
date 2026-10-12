@@ -173,6 +173,7 @@ const PAGES: Record<(typeof DOCUMENT_KINDS)[number], string[]> = {
   recipe: ['recipe.md', ...STACK],
   loot_table: ['loot.md', ...STACK],
   block: ['block.md'],
+  game_block: ['game-block.md'],
   biome: ['biome.md'],
   dimension_type: ['dimension-type.md'],
   terrain: ['terrain.md'],

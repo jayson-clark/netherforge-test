@@ -2,6 +2,7 @@ package dev.netherforge.format.resourcepack
 
 import dev.netherforge.format.Problem
 import dev.netherforge.format.ProblemCodes
+import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.project.PackagePaths
 
@@ -10,7 +11,8 @@ import dev.netherforge.format.project.PackagePaths
  * event `<pack>/<path without .ogg>` in the project's namespace
  * (`resource_packs/ui/sounds/menu/open.ogg` → `ui/menu/open`, `shop:ui/menu/open` to
  * the game), and `pack.json`'s `sounds` refines events or adds ones that pick
- * among several files.
+ * among several files. A key in the game's namespace (`minecraft:block.stone.break`) replaces one of the game's own
+ * events instead ([replacements]).
  *
  * Shared so the validator, the pack build and anything that checks a sound
  * id against the project agree on which events exist.
@@ -26,6 +28,18 @@ object PackSounds {
     val FILE = Regex("^${Names.ID_BODY}(/${Names.ID_BODY})*\\.ogg$")
 
     fun isKey(key: String): Boolean = KEY.matches(key)
+
+    /** The namespace of the game's own sound events, which a `sounds` key replaces one of (`minecraft:block.stone.break`). */
+    const val GAME_PREFIX = "${GameIds.NAMESPACE}:"
+
+    /** The path of one of the game's sound events: `block.stone.break`, `ambient.cave`. */
+    private val GAME_EVENT = Regex("^[a-z0-9_.-]+(/[a-z0-9_.-]+)*$")
+
+    /** Whether a `sounds` key names one of the game's sound events, to replace it, rather than one of the pack's. */
+    fun isGameKey(key: String): Boolean = key.startsWith(GAME_PREFIX)
+
+    /** Whether [key] is one of the game's sound events, written in full: `minecraft:block.stone.break`. */
+    fun isGameEvent(key: String): Boolean = isGameKey(key) && GAME_EVENT.matches(key.removePrefix(GAME_PREFIX))
 
     fun isFile(path: String): Boolean = FILE.matches(path)
 
@@ -74,10 +88,20 @@ object PackSounds {
         val out = HashMap<String, Sound>()
         for (path in files) out[keyOf(path)] = Sound(keyOf(path), listOf(path), null, null, null, false)
         for ((key, def) in file.sounds) {
+            if (isGameKey(key)) continue
             out[key] = Sound(key, def.files ?: listOf(key + EXTENSION), def.volume, def.pitch, def.subtitle, def.stream == true)
         }
         return out.entries.sortedBy { it.key }.associate { it.key to it.value }
     }
+
+    /**
+     * The game's sound events a pack's `pack.json` replaces (`minecraft:block.stone.break`), by the event in full, each
+     * playing its `files` instead of the game's: for every block or thing that plays the event.
+     */
+    fun replacements(file: ResourcePackFile): Map<String, Sound> = file.sounds.entries
+        .filter { isGameEvent(it.key) && !it.value.files.isNullOrEmpty() }
+        .sortedBy { it.key }
+        .associate { (key, def) -> key to Sound(key, def.files!!, def.volume, def.pitch, def.subtitle, def.stream == true) }
 
     /** One sound event as it's built: the [files] (under `sounds/`) it picks among, and how it plays them. */
     data class Sound(

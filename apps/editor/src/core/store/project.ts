@@ -360,6 +360,7 @@ export function projectSlice({ backend, get, set }: SliceArgs): ProjectState & P
         const looks = await vanillaLooks(
           clientJson(backend, minecraft),
           get().outline?.replacedTextures ?? [],
+          get().outline?.replacedModels ?? [],
         )
         const text = vanillaToWrite(minecraft, looks, diskTexts[VANILLA_FILE])
         if (text === null) return

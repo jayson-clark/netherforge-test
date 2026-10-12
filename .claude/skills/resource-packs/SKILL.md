@@ -84,6 +84,15 @@ file's duration, so the build needs only paths, not bytes). The reference index 
 (`Effects.soundId`). The editor gets each resource pack's keys in
 `ResourcePackOutline.sounds`.
 
+**The game's sound events.** A `sounds` key in the game's namespace (`minecraft:block.stone.break`,
+`PackSounds.isGameEvent`) replaces that event of the game's: `PackSounds.replacements` (never among a pack's own
+`events`, so references and the outline never see it), `CompiledResourcePack.soundReplacements`, and `PackLayout`
+writes it into `assets/minecraft/sounds.json` with `"replace": true` and the pack's files (copied as any of its
+sounds). `files` is required (`resource_pack.sound-replace`); with game data the event must be in
+`RegistryKey.SOUND_EVENT` (the server's registry, so no `client/vanilla.json` entry), and two packs can't replace one
+(`resource_pack.sound-event`). Footsteps, hits and falls are chosen by the client from a block's sound type, so this
+is the only way to change them.
+
 ## Naming rules
 
 `PackSounds.KEY`/`FILE` (a sound's key, and its file under `sounds/`) and
@@ -214,6 +223,16 @@ screens' and the ones the project names (`ProjectOutline.replacedTextures`, whic
 texture's replacement is one square frame unless it brings its own `.mcmeta`, since the game reads an
 animation's `.mcmeta` from the same pack as the picture). The editor's **Game textures** section copies the
 game's PNG and `.mcmeta` to `textures/vanilla/<name>.png` to start from (`useGameTextures`).
+
+## Game models
+
+`pack.json`'s `models` redraws the game's models (`block/red_mushroom` → a model file of the pack): `PackLayout.build`
+writes `PackModels.write` of it over `assets/minecraft/models/<name>.json`, its pack textures stitched into the blocks
+atlas for a `block/` model (the items atlas otherwise), only for names `client/vanilla.json`'s `models` lists. The
+import extracts every model, so the editor asks for each name the outline's `replacedModels` holds
+(`vanillaLooks`) and writes `models` and `unknownModels`; checks as for `textures` (`resource_pack.vanilla-missing`,
+`resource_pack.replace-name`). Only drawing changes: collision, selection and which model a state draws (the
+blockstate file) stay the game's.
 
 ## Reload
 

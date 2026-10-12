@@ -74,6 +74,7 @@ object ProblemCodes {
     private const val RECIPE = "format/recipe.md"
     private const val LOOT = "format/loot.md"
     private const val BLOCK = "format/block.md"
+    private const val GAME_BLOCK = "format/game-block.md"
     private const val ADVANCEMENT = "format/advancement.md"
     private const val WORLDS = "format/worlds.md"
     private const val MIGRATION = "format/migrations.md"
@@ -428,6 +429,8 @@ object ProblemCodes {
 
     val BLOCK_HARDNESS = error("block.hardness", BLOCK, "A block's `hardness` is below -1 or isn't a number.")
     val BLOCK_TICK = error("block.tick", BLOCK, "A block's `tick` isn't a whole number of ticks from 1 to an hour.")
+    val BLOCK_FALLS =
+        error("block.falls", BLOCK, "A block `falls`, but it's held as tripwire or drawn by a centity, which can't fall.")
     val BLOCK_SOUND =
         error("block.sound", BLOCK, "A block's `sound` isn't a kind of block the game has place and break sounds for.")
     val BLOCK_REQUIRES_TOOL =
@@ -445,6 +448,28 @@ object ProblemCodes {
             "block.vanilla-looks",
             BLOCK,
             "`client/vanilla.json` lacks the game's look of a block custom blocks are held in, or is another version's."
+        )
+
+    // ---- the game's blocks ------------------------------------------------------
+
+    val GAME_BLOCK_BLOCKS =
+        error("game_block.blocks", GAME_BLOCK, "A game block file's `blocks` is empty, or an entry isn't a block id or a `#tag`.")
+    val GAME_BLOCK_UNKNOWN =
+        error("game_block.unknown", GAME_BLOCK, "A game block file names a block or block tag the target version doesn't have.")
+    val GAME_BLOCK_TWICE =
+        error(
+            "game_block.twice",
+            GAME_BLOCK,
+            "One of the game's blocks is named twice: by two files, or twice in one (a tag names every block in it)."
+        )
+    val GAME_BLOCK_HARDNESS = error("game_block.hardness", GAME_BLOCK, "A game block file's `hardness` is below -1 or isn't a number.")
+    val GAME_BLOCK_CARRIER =
+        error("game_block.carrier", GAME_BLOCK, "A game block file names a block the project's own blocks are held in.")
+    val GAME_BLOCK_REQUIRES_TOOL =
+        warning(
+            "game_block.requires-tool",
+            GAME_BLOCK,
+            "`requiresTool: false` without `drops`: the game's own drops keep the game's rule, so the wrong tool still gets nothing."
         )
 
     // ---- migrations -------------------------------------------------------------
@@ -787,13 +812,13 @@ object ProblemCodes {
         warning(
             "resource_pack.vanilla-missing",
             RESOURCE_PACK,
-            "`hud.replace` or `textures` needs the game's sprite and texture names and sizes, which `client/vanilla.json` lacks (for a texture the editor hasn't looked up yet) or has from another version."
+            "`hud.replace`, `textures` or `models` needs the game's sprite, texture and model names and sizes, which `client/vanilla.json` lacks (for a texture or model the editor hasn't looked up yet) or has from another version."
         )
     val RESOURCE_PACK_REPLACE_NAME =
         error(
             "resource_pack.replace-name",
             RESOURCE_PACK,
-            "`hud.replace` or `textures` names a sprite or texture the game doesn't have, or one another resource pack replaces too."
+            "`hud.replace`, `textures` or `models` names a sprite, texture or model the game doesn't have, or one another resource pack replaces too."
         )
     val RESOURCE_PACK_REPLACE_SIZE =
         error(
@@ -831,7 +856,24 @@ object ProblemCodes {
             RESOURCE_PACK,
             "A block look has no texture for some face (give it a texture, or one for each face), or has a model and textures both."
         )
-    val RESOURCE_PACK_SOUND_KEY = error("resource_pack.sound-key", RESOURCE_PACK, "A key in `sounds` isn't a sound key.")
+    val RESOURCE_PACK_SOUND_KEY =
+        error(
+            "resource_pack.sound-key",
+            RESOURCE_PACK,
+            "A key in `sounds` isn't a sound key, or one of the game's sound events (`minecraft:…`)."
+        )
+    val RESOURCE_PACK_SOUND_EVENT =
+        error(
+            "resource_pack.sound-event",
+            RESOURCE_PACK,
+            "A `sounds` key replaces a sound event the target version doesn't have, or one another resource pack replaces too."
+        )
+    val RESOURCE_PACK_SOUND_REPLACE =
+        error(
+            "resource_pack.sound-replace",
+            RESOURCE_PACK,
+            "A replacement of one of the game's sound events lists no `files` to play instead."
+        )
     val RESOURCE_PACK_SOUND_NAME =
         error("resource_pack.sound-name", RESOURCE_PACK, "An `.ogg` file under `sounds/` is named so it can't be a sound event.")
     val RESOURCE_PACK_SOUND_FILE =

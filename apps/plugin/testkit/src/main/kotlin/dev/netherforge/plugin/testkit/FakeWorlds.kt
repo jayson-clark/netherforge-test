@@ -19,6 +19,7 @@ import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.GameRuleType
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.Location
+import dev.netherforge.plugin.platform.SpawnSetup
 import dev.netherforge.plugin.platform.WorldOps
 import java.util.UUID
 import kotlin.math.abs
@@ -421,10 +422,18 @@ class FakeBlocks(private val platform: FakePlatform) : BlockOps {
         val state = platform.worlds.state(world, x, y, z)
         if (state == "minecraft:air") return false
         // As the server's own break: the runtime hears it, and its null cancels the server's (the runtime broke it itself).
-        platform.events!!.blockBreak(who, BlockRef(world, x, y, z, state.substringBefore('['), state), { emptyList() }, 0) ?: return false
+        val tool = platform.worldEntities.equipment(player, "main_hand")
+        val own = { if (harvests(tool, state) == false) emptyList() else gameDrops[state.substringBefore('[')].orEmpty() }
+        val answer = platform.events!!.blockBreak(who, BlockRef(world, x, y, z, state.substringBefore('['), state), own, 0) ?: return false
         platform.worlds.blocks[BlockAt(world, x, y, z)] = "minecraft:air"
+        // What the runtime said drops, else the game's own, where the block was.
+        val centre = Vec3(x + 0.5, y + 0.5, z + 0.5)
+        for (item in answer.drops ?: own()) platform.worldEntities.spawnItem(world, centre, item)
         return true
     }
+
+    /** What the fake game drops for a block by id, when it's broken with a tool that gets its drops; nothing where a test says nothing. */
+    val gameDrops = mutableMapOf<String, List<ItemData>>()
 
     /** The block each player is looking at, where a test says. */
     val targets = mutableMapOf<UUID, BlockAt>()
@@ -481,6 +490,48 @@ class FakeBlocks(private val platform: FakePlatform) : BlockOps {
         changes += "$world $x $y $z $state (no update)"
         placed += "${who.name} $world $x $y $z $state against ${against.x} ${against.y} ${against.z} $hand"
         return true
+    }
+
+    /** Which block ids need a particular tool for their drops in the fake game, and the tools that get them. */
+    val harvestTools = mutableMapOf("minecraft:stone" to setOf("minecraft:iron_pickaxe"))
+
+    override fun harvests(tool: ItemData?, state: String): Boolean? {
+        val id = state.substringBefore('[')
+        if (FakePlatform.GAME.block(id) == null) return null
+        val tools = harvestTools[id] ?: return true
+        return tool?.def?.kind in tools
+    }
+
+    /** Every break shown, as `"<player name or everyone> <world> x y z <state>"`. */
+    val shownBroken = mutableListOf<String>()
+
+    override fun showBroken(player: UUID?, world: String, x: Int, y: Int, z: Int, state: String) {
+        val who = player?.let { platform.players.byId[it]?.ref?.name ?: return } ?: "everyone"
+        shownBroken += "$who $world $x $y $z $state"
+    }
+
+    /** What the runtime last asked to hear of: the block ids the world's breaks of are its, and the states that fall. */
+    var watchedDrops: Set<String> = emptySet()
+    var watchedFalling: Set<String> = emptySet()
+
+    override fun watch(drops: Set<String>, falling: Set<String>) {
+        watchedDrops = drops
+        watchedFalling = falling
+    }
+
+    /** The falling blocks [fall] made: each entity, the state it carries and where it fell from. */
+    val fallen = mutableListOf<Triple<UUID, String, BlockAt>>()
+
+    override fun fall(world: String, x: Int, y: Int, z: Int): UUID? {
+        if (!loaded(world, x, z)) return null
+        val state = platform.worlds.state(world, x, y, z)
+        val below = platform.worlds.state(world, x, y - 1, z)
+        if (state == "minecraft:air" || below != "minecraft:air") return null
+        val id = platform.worldEntities.spawn("minecraft:falling_block", Location(world, x + 0.5, y.toDouble(), z + 0.5), SpawnSetup())
+            ?: return null
+        platform.worlds.blocks[BlockAt(world, x, y, z)] = "minecraft:air"
+        fallen += Triple(id, state, BlockAt(world, x, y, z))
+        return id
     }
 
     /** The carriers the runtime asked the server to hold still, and whether the server agrees to. */

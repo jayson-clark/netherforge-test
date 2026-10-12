@@ -307,12 +307,13 @@ private fun outlineOf(snapshot: ProjectSnapshot) = ProjectOutline(
     lock = snapshot.lock()?.takeIf { it.packages.isNotEmpty() }?.let(LockKind::write),
     requirements = Requirement.combined(snapshot),
     registryNames = RefKind.entries.mapNotNull { kind -> kind.registry?.let { it to snapshot.references.names(kind) } }.toMap(),
-    replacedTextures = (
-        snapshot.models(ResourcePackKind).values +
-            snapshot.packages.values.flatMap { it.snapshot.models(ResourcePackKind).values }
-        )
-        .flatMap { it.textures.keys }.distinct().sorted()
+    replacedTextures = allResourcePacks(snapshot).flatMap { it.textures.keys }.distinct().sorted(),
+    replacedModels = allResourcePacks(snapshot).flatMap { it.models.keys }.distinct().sorted()
 )
+
+/** Every resource pack of the project and its packages, as written. */
+private fun allResourcePacks(snapshot: ProjectSnapshot) =
+    snapshot.models(ResourcePackKind).values + snapshot.packages.values.flatMap { it.snapshot.models(ResourcePackKind).values }
 
 /**
  * The text a package's content hash is the SHA-256 of, from every file's hex

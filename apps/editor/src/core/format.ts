@@ -95,6 +95,7 @@ export type {
   SpawnCost,
   TemperatureModifier,
   BlockFile,
+  GameBlockFile,
   BlockModelDef,
   BlockSounds,
   BlockTool,

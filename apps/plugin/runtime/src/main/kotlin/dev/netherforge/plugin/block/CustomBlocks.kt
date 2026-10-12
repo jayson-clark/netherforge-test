@@ -7,11 +7,14 @@ import dev.netherforge.format.block.BlockCarrier
 import dev.netherforge.format.block.BlockCarriers
 import dev.netherforge.format.block.BlockFile
 import dev.netherforge.format.block.BlockTool
+import dev.netherforge.format.block.GameBlockFile
+import dev.netherforge.format.block.GameBlocks
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.item.AttributeOperation
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.project.BlockKind
+import dev.netherforge.format.project.GameBlockKind
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Loaded
 import dev.netherforge.format.project.ResourcePlace
@@ -92,6 +95,17 @@ import kotlin.random.Random
  * a world the project generates itself, adopts leaves states nobody recorded:
  * elsewhere they stay the player's leaves (and a paste of leaves blocks there
  * isn't taken up).
+ *
+ * **The game's own blocks** (`game_blocks/`) the project gives rules to are mined
+ * the same way when a rule changes how ([GameBlockFile.minedByServer]), and drop
+ * the rule's loot table whoever breaks them: a player ([gameDrops]), an
+ * explosion ([exploded]), the world ([worldBroke]) or a script ([breakNaturally]).
+ * They're the game's blocks to the server in every other way, so nothing is
+ * recorded of them.
+ *
+ * **Falling blocks** (`falls`) drop as the game's falling block entity when
+ * what's under them goes ([blockUpdated]), and are taken up again as the same
+ * block where it lands ([fallingLanded]).
  *
  * **For code that isn't a script** (world generation, W5.2): [stateOf] is the
  * note block state a block is held as (to put in chunk data), [place] sets a
@@ -225,7 +239,7 @@ internal class CustomBlocks(
      * A player mining one of the project's blocks, which the server counts ([mine]) and breaks for them: [factor]
      * is how much faster than its carrier the block is to mine with what they hold, [stage] the cracks shown.
      */
-    private class Mining(val world: String, val at: BlockVector, val name: String, val factor: Double) {
+    private class Mining(val world: String, val at: BlockVector, val target: String, val factor: Double) {
         var progress = 0.0
         var stage = -1
     }
@@ -240,15 +254,48 @@ internal class CustomBlocks(
 
     private var problems: List<Problem> = emptyList()
 
+    /** One of the project's rules for some of the game's blocks: [id] is its file's. */
+    private class GameRule(val id: String, val file: GameBlockFile)
+
+    /** The game's blocks the project has rules for, by block id. */
+    private var gameRules: Map<String, GameRule> = emptyMap()
+
+    /** A falling block of the project's on its way down: what it is, and where it was last seen. */
+    private class Falling(val name: String, var world: String, var at: Vec3)
+
+    /** The project's blocks falling now, by their falling block entity. */
+    private val falling = HashMap<UUID, Falling>()
+
+    /** Blocks to see about falling at the next tick, as the game looks a tick after a neighbour changes. */
+    private val pendingFalls = LinkedHashSet<Pair<String, BlockVector>>()
+
     // ---- lifecycle ----------------------------------------------------------------
 
     override fun define(project: SessionProject) {
         defs = project.running(BlockKind).mapValues { (id, file) -> Def(id, file) }
         generatedWorlds = project.snapshot.manifest?.worlds.orEmpty().filterValues { it.terrain != null }.keys
         replan(project.everywhere(BlockKind), project.snapshot.namespace)
+        defineGameRules(project.running(GameBlockKind))
         // Before any script runs: a module's body may place blocks.
         holdCarriers()
+        watchWorld()
     }
+
+    /** The game's blocks [files] give rules to, by block id, each tag resolved by the game the server runs. */
+    private fun defineGameRules(files: Map<String, GameBlockFile>) {
+        val owner = GameBlocks.resolve(files) { platform.game.tag(RegistryKey.BLOCK, it) }
+        gameRules = owner.mapValues { (_, id) -> GameRule(id, files.getValue(id)) }
+    }
+
+    /** Tells the server which of the world's own breaks and changes this service wants to hear of. */
+    private fun watchWorld() {
+        val drops = gameRules.filterValues { it.file.drops != null }.keys
+        val falls = if (usable) defs.values.filter { it.file.fallsOrDefault }.mapNotNull { stateOf(it.id) }.toSet() else emptySet()
+        platform.blocks.watch(drops, falls)
+    }
+
+    /** The project's rule for the game's block [state] is a state of, or null. */
+    private fun gameRule(state: String): GameRule? = if (gameRules.isEmpty()) null else gameRules[state.substringBefore('[')]
 
     /** Asks the server to hold still every carrier the plan uses: a carrier it won't is a problem, and [held] says whether all are. */
     private fun holdCarriers() {
@@ -267,7 +314,7 @@ internal class CustomBlocks(
 
     override fun start() {
         for (def in defs.values) startScript(def)
-        if (plan != null) for (player in platform.players.online()) clearSlowed(player.uuid)
+        if (plan != null || gameRules.isNotEmpty()) for (player in platform.players.online()) clearSlowed(player.uuid)
         if (usable) {
             for (world in platform.worlds.names()) {
                 for ((x, z) in platform.worlds.loadedChunks(world)) reconcile(ChunkKey(world, x, z))
@@ -281,6 +328,9 @@ internal class CustomBlocks(
         for (def in defs.values) stopScript(def)
         for (player in mining.keys.toList()) stopMining(player)
         for (player in slowed.toList()) unslow(player)
+        platform.blocks.watch(emptySet(), emptySet())
+        falling.clear()
+        pendingFalls.clear()
         // Before the tables are saved and let go (block data stops after this service).
         for ((key, blocks) in chunks) pinData(key, blocks)
         chunks.clear()
@@ -378,10 +428,21 @@ internal class CustomBlocks(
         def.scope = null
     }
 
-    override val reloads: Set<KindSpec<*, *>> get() = setOf(BlockKind)
+    override val reloads: Set<KindSpec<*, *>> get() = setOf(BlockKind, GameBlockKind)
 
-    /** `reattached` is how many placed blocks of it there are in loaded chunks: they run the new script at once. */
+    /**
+     * `reattached` is how many placed blocks of it there are in loaded chunks: they run the new script at once. A game
+     * block file's rules hold from the next block mined or broken.
+     */
     override fun reload(kind: KindSpec<*, *>, ids: Set<String>, batch: ReloadBatch) {
+        if (kind == GameBlockKind) {
+            for (id in ids) batch.resource(Resource(GameBlockKind, id), batch.snapshot.running(GameBlockKind)[id]) { 0 }
+            defineGameRules(batch.snapshot.running(GameBlockKind))
+            // Whoever mines one of them mines it by the rules it has now.
+            for (player in mining.keys.toList()) if (mining[player]?.target?.startsWith(GAME_TARGET) == true) stopMining(player)
+            watchWorld()
+            return
+        }
         for (id in ids) {
             batch.resource(Resource(BlockKind, id), batch.snapshot.running(BlockKind)[id]) { next ->
                 reload(id, next)
@@ -393,6 +454,7 @@ internal class CustomBlocks(
         holdCarriers()
         problemsChanged()
         if (usable) for (key in chunks.keys.toList()) reconcile(key)
+        watchWorld()
         // Stacks whose canBreak or canPlaceOn names a block whose state moved break the wrong blocks until rewritten.
         if (byState != before) items().refreshOnline()
     }
@@ -515,6 +577,8 @@ internal class CustomBlocks(
             } else {
                 tracked.names[x, y, z] = number(name)
             }
+            // Taken up just now (a generator's, a paste): one that falls looks at what's under it.
+            if (legend[states[i - 1]] == null && defs.getValue(name).file.fallsOrDefault) pendingFalls += key.world to at
         }
         // A block known by its state alone that something else replaced while its chunk was loaded: its table goes.
         previous?.names?.forEach { x, y, z, _ ->
@@ -649,6 +713,7 @@ internal class CustomBlocks(
             if (state != null && legend[state] != name) writeLegend(key, before, legend + (state to name))
         }
         if (def.file.tick != null) ticking += key
+        if (def.file.fallsOrDefault) pendingFalls += world to at
     }
 
     /** Forgets what's recorded at a position (its block was removed, or replaced by something else). */
@@ -676,9 +741,22 @@ internal class CustomBlocks(
         forget(world, BlockVector(x, y, z))
     }
 
-    /** Breaks the block at a position as `break_naturally` does: its drops rolled for [tool], and gone. False when there's no block there. */
+    /**
+     * Breaks the block at a position as `break_naturally` does: its drops rolled for [tool], and gone. False when it
+     * isn't one of the project's blocks, or one of the game's with drops of the project's (the game breaks the rest).
+     */
     fun breakNaturally(world: String, x: Int, y: Int, z: Int, tool: ItemData?): Boolean {
-        val placed = placedAt(world, x, y, z) ?: return false
+        val placed = placedAt(world, x, y, z)
+        if (placed == null) {
+            val state = platform.blocks.get(world, x, y, z)?.state ?: return false
+            val rule = gameRule(state)?.takeIf { it.file.drops != null } ?: return false
+            val drops = if (gameHarvests(rule.file, state, tool) == false) emptyList() else rollGame(rule, world, x, y, z, null, tool)
+            platform.blocks.set(world, x, y, z, AIR, true)
+            platform.blocks.showBroken(null, world, x, y, z, state)
+            val centre = Vec3(x + 0.5, y + 0.5, z + 0.5)
+            for (item in drops) platform.worldEntities.spawnItem(world, centre, item)
+            return true
+        }
         val def = defs[placed.name] ?: return false
         val drops = rollDrops(def, world, x, y, z, null, tool)
         remove(world, BlockVector(x, y, z), def, drops, true)
@@ -725,15 +803,71 @@ internal class CustomBlocks(
 
     /** What breaking the block at a position drops: its loot table rolled for the player and the tool, nothing for a tool it needs and isn't. */
     private fun rollDrops(def: Def, world: String, x: Int, y: Int, z: Int, player: UUID?, tool: ItemData?): List<ItemData> {
-        val table = def.file.drops?.nameIn(namespace()) ?: return emptyList()
-        if (def.file.requiresToolOrDefault && !rightTool(def, tool)) return emptyList()
+        if (def.file.requiresToolOrDefault && !rightTool(def.file.tool, tool)) return emptyList()
+        return roll(def.file.drops, "Block ${def.id}", world, x, y, z, player, tool)
+    }
+
+    /** A game block's rule's loot table rolled where it broke, for [player] and [tool] when someone broke it. */
+    private fun rollGame(rule: GameRule, world: String, x: Int, y: Int, z: Int, player: UUID?, tool: ItemData?): List<ItemData> =
+        roll(rule.file.drops, "Game block ${rule.id}", world, x, y, z, player, tool)
+
+    private fun roll(
+        drops: ResourceRef?,
+        who: String,
+        world: String,
+        x: Int,
+        y: Int,
+        z: Int,
+        player: UUID?,
+        tool: ItemData?
+    ): List<ItemData> {
+        val table = drops?.nameIn(namespace()) ?: return emptyList()
         val at = Location(world, x + 0.5, y + 0.5, z + 0.5)
         return try {
             loot().roll(table, LootRoll(player = player, tool = tool, location = at), Random.nextLong())
         } catch (e: LuaApiException) {
-            log.warn("Block ${def.id}'s drops: ${e.message}")
+            log.warn("$who's drops: ${e.message}")
             emptyList()
         }
+    }
+
+    /**
+     * What a player breaking the game's block [block] drops, when the project has a rule for it: the rule's loot
+     * table for their tool, nothing for a tool the rule needs and it isn't, or null for the game's own drops (no
+     * rule, no table of the rule's, or creative, where nothing drops anyway). A tool the game's rule refuses gets
+     * nothing either way.
+     */
+    fun gameDrops(player: PlayerRef, block: BlockRef): List<ItemData>? {
+        val rule = gameRule(block.state) ?: return null
+        if (platform.players.gameMode(player.uuid) == CREATIVE) return null
+        val tool = platform.worldEntities.equipment(player.uuid, MAIN_HAND)
+        val harvests = gameHarvests(rule.file, block.state, tool)
+        return when {
+            harvests == false && (rule.file.drops != null || rule.file.requiresTool == true) -> emptyList()
+            rule.file.drops == null -> null
+            else -> rollGame(rule, block.world, block.x, block.y, block.z, player.uuid, tool)
+        }
+    }
+
+    /**
+     * The world broke the game's block [block] itself (what held it up went, a fluid, a piston, leaves decaying):
+     * the rule's loot table, rolled with no player or tool, as the game drops a block nobody broke whatever it
+     * needs; null for the game's own.
+     */
+    fun worldBroke(block: BlockRef): List<ItemData>? {
+        val rule = gameRule(block.state)?.takeIf { it.file.drops != null } ?: return null
+        return rollGame(rule, block.world, block.x, block.y, block.z, null, null)
+    }
+
+    /**
+     * Whether [tool] gets the drops of [state], a game block with [file]'s rules: any tool without `requiresTool`
+     * true or false to say otherwise, the game's own rule; with it, the rule's `tool`, or one the game mines the
+     * block faster with. Null when the server can't say.
+     */
+    private fun gameHarvests(file: GameBlockFile, state: String, tool: ItemData?): Boolean? = when (file.requiresTool) {
+        false -> true
+        true -> if (file.tool != null) rightTool(file.tool, tool) else platform.blocks.breakSpeed(tool, state)?.let { it > 1.0 }
+        null -> platform.blocks.harvests(tool, state)
     }
 
     // ---- what players do ---------------------------------------------------------
@@ -795,10 +929,7 @@ internal class CustomBlocks(
         val def = placed?.let { defs[it.name] }
         // A start, even on the same block, begins again from nothing (as the game's does when the tool changes).
         stopMining(player)
-        if (def == null) {
-            unslow(player)
-            return false
-        }
+        if (def == null) return startedBreakingGame(start)
         val creative = platform.players.gameMode(player) == CREATIVE
         val hardness = def.file.hardnessOrDefault
         if (hardness == BlockFile.UNBREAKABLE && !creative) return true
@@ -813,6 +944,34 @@ internal class CustomBlocks(
         }
         slow(player)
         mining[player] = Mining(start.block.world, BlockVector(start.block.x, start.block.y, start.block.z), def.id, factor)
+        return false
+    }
+
+    /**
+     * [startedBreaking] for one of the game's blocks: one whose rule changes how it's mined is mined by the server, as
+     * the project's are, with the game's own numbers for whatever the rule leaves out. A block the game breaks at once
+     * (a flower) can't be made slower: the player's game breaks it on the hit.
+     */
+    private fun startedBreakingGame(start: GameEvent.BlockStartBreak): Boolean {
+        val player = start.player.uuid
+        val rule = gameRule(start.block.state)?.takeIf { it.file.minedByServer }
+        if (rule == null) {
+            unslow(player)
+            return false
+        }
+        val creative = platform.players.gameMode(player) == CREATIVE
+        val hardness = rule.file.hardness
+        if (hardness == BlockFile.UNBREAKABLE && !creative) return true
+        if (hardness == 0.0) start.instant = true
+        if (creative || hardness == 0.0) return false
+        val factor = gameFactor(rule.file, start.block.state, start.item)
+        if (factor == null) {
+            unslow(player)
+            return false
+        }
+        slow(player)
+        val at = BlockVector(start.block.x, start.block.y, start.block.z)
+        mining[player] = Mining(start.block.world, at, GAME_TARGET + start.block.state.substringBefore('['), factor)
         return false
     }
 
@@ -856,10 +1015,18 @@ internal class CustomBlocks(
      */
     private fun mine() {
         for ((player, mined) in mining.entries.toList()) {
-            val placed = placedAt(mined.world, mined.at.x, mined.at.y, mined.at.z)
+            val state = if (mined.target.startsWith(
+                    GAME_TARGET
+                )
+            ) {
+                platform.blocks.get(mined.world, mined.at.x, mined.at.y, mined.at.z)?.state
+            } else {
+                null
+            }
+            val now = targetAt(mined.world, mined.at.x, mined.at.y, mined.at.z, state)
             val mode = platform.players.gameMode(player)
             val step = platform.blocks.breakProgress(player, mined.world, mined.at.x, mined.at.y, mined.at.z)
-            if (placed?.name != mined.name || mode == null || mode == CREATIVE || mode == SPECTATOR || step == null) {
+            if (now != mined.target || mode == null || mode == CREATIVE || mode == SPECTATOR || step == null) {
                 stopMining(player)
                 continue
             }
@@ -873,11 +1040,24 @@ internal class CustomBlocks(
                 continue
             }
             stopMining(player)
-            platform.blocks.breakAs(player, mined.world, mined.at.x, mined.at.y, mined.at.z)
+            val broke = platform.blocks.breakAs(player, mined.world, mined.at.x, mined.at.y, mined.at.z)
+            // The server's break of one of the game's blocks shows everyone but the player, whose game never broke it.
+            if (broke && state != null) platform.blocks.showBroken(player, mined.world, mined.at.x, mined.at.y, mined.at.z, state)
             // Refused (a protection plugin): they're still holding the button on it, and start over, as the game does.
-            val still = placedAt(mined.world, mined.at.x, mined.at.y, mined.at.z)?.name == mined.name
-            if (still) mining[player] = Mining(mined.world, mined.at, mined.name, mined.factor)
+            val after = if (state != null) platform.blocks.get(mined.world, mined.at.x, mined.at.y, mined.at.z)?.state else null
+            val still = targetAt(mined.world, mined.at.x, mined.at.y, mined.at.z, after) == mined.target
+            if (still) mining[player] = Mining(mined.world, mined.at, mined.target, mined.factor)
         }
+    }
+
+    /**
+     * What's mined at a position, as [Mining.target] names it: the project's block's name, or for one of the game's
+     * blocks with rules ([state] what's there now) [GAME_TARGET] and its id. Null for anything else.
+     */
+    private fun targetAt(world: String, x: Int, y: Int, z: Int, state: String?): String? {
+        placedAt(world, x, y, z)?.let { return it.name }
+        if (state == null) return null
+        return gameRule(state)?.takeIf { it.file.minedByServer }?.let { GAME_TARGET + state.substringBefore('[') }
     }
 
     /**
@@ -898,7 +1078,10 @@ internal class CustomBlocks(
             val target = platform.blocks.targeted(id)
             val mined =
                 target != null &&
-                    placedAt(target.world, target.x, target.y, target.z) != null &&
+                    (
+                        (usable && placedAt(target.world, target.x, target.y, target.z) != null) ||
+                            gameRule(target.state)?.file?.minedByServer == true
+                        ) &&
                     (platform.blocks.hardness(target.state) ?: 0.0) > 0
             if (mined) slow(id) else unslow(id)
         }
@@ -918,18 +1101,37 @@ internal class CustomBlocks(
         val representative = def.file.tool?.let(::toolState)
         val speed = if (representative != null) blocks.breakSpeed(tool, representative) ?: 1.0 else 1.0
         val hardness = def.file.hardnessOrDefault.takeIf { it > 0 } ?: return null
-        val harvests = !def.file.requiresToolOrDefault || rightTool(def, tool)
+        val harvests = !def.file.requiresToolOrDefault || rightTool(def.file.tool, tool)
         val vanilla = carrierSpeed / carrierHardness / HARVEST
         val custom = speed / hardness / (if (harvests) HARVEST else NO_HARVEST)
         return (custom / vanilla).coerceIn(MIN_FACTOR, MAX_FACTOR)
     }
 
     /**
-     * Whether [tool] is the kind [def] needs for its drops: one the game speeds up on the blocks of its `tool`
+     * How much faster than the game's own numbers the game's block [state] is to mine with [tool] under [file]'s
+     * rules, as [miningFactor] works it out for a carrier: the game's progress a tick is its tool speed over its
+     * hardness (and 30, or 100 without a tool that gets its drops), and the rule's is the same with its own numbers
+     * where it has them. Null when it can't be told, or the game breaks the block at once or never.
+     */
+    private fun gameFactor(file: GameBlockFile, state: String, tool: ItemData?): Double? {
+        val blocks = platform.blocks
+        val gameHardness = blocks.hardness(state)?.takeIf { it > 0 } ?: return null
+        val gameSpeed = blocks.breakSpeed(tool, state) ?: return null
+        val gameHarvests = blocks.harvests(tool, state) ?: true
+        val speed = if (file.tool != null) file.tool?.let(::toolState)?.let { blocks.breakSpeed(tool, it) } ?: 1.0 else gameSpeed
+        val hardness = (file.hardness ?: gameHardness).takeIf { it > 0 } ?: return null
+        val harvests = gameHarvests(file, state, tool) ?: gameHarvests
+        val vanilla = gameSpeed / gameHardness / (if (gameHarvests) HARVEST else NO_HARVEST)
+        val custom = speed / hardness / (if (harvests) HARVEST else NO_HARVEST)
+        return (custom / vanilla).coerceIn(MIN_FACTOR, MAX_FACTOR)
+    }
+
+    /**
+     * Whether [tool] is of the [kind] a block needs for its drops: one the game speeds up on the blocks of that tool
      * (a pickaxe on stone), which is how the game itself says what a tool is for.
      */
-    private fun rightTool(def: Def, tool: ItemData?): Boolean {
-        val representative = def.file.tool?.let(::toolState) ?: return false
+    private fun rightTool(kind: BlockTool?, tool: ItemData?): Boolean {
+        val representative = kind?.let(::toolState) ?: return false
         return (platform.blocks.breakSpeed(tool, representative) ?: 1.0) > 1.0
     }
 
@@ -1034,11 +1236,31 @@ internal class CustomBlocks(
     /** Pistons don't move a block that's held by its record. True cancels. */
     fun pushes(blocks: List<BlockRef>): Boolean = usable && blocks.any { placedAt(it.world, it.x, it.y, it.z) != null }
 
-    /** An explosion breaks [blocks]; the ones that are the project's are its own to break, with their drops (each with the chance [yield]). */
+    /** Whether an explosion's blocks are worth looking at: any of the project's are placed, or it has drops for the game's. */
+    fun explodable(): Boolean = anyPlaced() || gameRules.values.any { it.file.drops != null }
+
+    /**
+     * An explosion breaks [blocks]; the ones that are the project's, and the game's with drops of the project's, are
+     * its own to break, with their drops (each with the chance [yield], as the game's are).
+     */
     fun exploded(blocks: List<BlockRef>, yield: Double) {
-        if (!usable) return
         for (block in blocks) {
-            val placed = placedAt(block.world, block.x, block.y, block.z) ?: continue
+            val placed = if (usable) placedAt(block.world, block.x, block.y, block.z) else null
+            if (placed == null) {
+                val rule = gameRule(block.state)?.takeIf { it.file.drops != null } ?: continue
+                val drops = if (Random.nextDouble() <
+                    yield
+                ) {
+                    rollGame(rule, block.world, block.x, block.y, block.z, null, null)
+                } else {
+                    emptyList()
+                }
+                // Gone before the explosion gets to it, so the game drops nothing of its own.
+                platform.blocks.set(block.world, block.x, block.y, block.z, AIR, true)
+                val centre = Vec3(block.x + 0.5, block.y + 0.5, block.z + 0.5)
+                for (item in drops) platform.worldEntities.spawnItem(block.world, centre, item)
+                continue
+            }
             val def = defs[placed.name] ?: continue
             val drops = if (Random.nextDouble() < yield) rollDrops(def, block.world, block.x, block.y, block.z, null, null) else emptyList()
             remove(block.world, BlockVector(block.x, block.y, block.z), def, drops, false)
@@ -1047,7 +1269,7 @@ internal class CustomBlocks(
 
     override fun playerJoined(player: PlayerRef) {
         // A modifier the server saved with the player from a session that ended mid-mine.
-        if (plan != null) clearSlowed(player.uuid)
+        if (plan != null || gameRules.isNotEmpty()) clearSlowed(player.uuid)
     }
 
     override fun playerQuit(player: PlayerRef) {
@@ -1055,11 +1277,65 @@ internal class CustomBlocks(
         slowed -= player.uuid
     }
 
+    // ---- falling -------------------------------------------------------------------
+
+    /** Something beside [block] changed: one of the project's blocks that falls looks at what's under it next tick. */
+    fun blockUpdated(block: BlockRef) {
+        val placed = if (usable) placedAt(block.world, block.x, block.y, block.z) else null
+        if (placed != null &&
+            defs[placed.name]?.file?.fallsOrDefault == true
+        ) {
+            pendingFalls += block.world to BlockVector(block.x, block.y, block.z)
+        }
+    }
+
+    /** A falling block of the project's lands as [block]: the block it was, placed there. */
+    fun fallingLanded(entity: UUID, block: BlockRef) {
+        val was = falling.remove(entity) ?: return
+        if (was.name !in defs || stateOf(was.name) != block.state) return
+        register(was.name, block.world, BlockVector(block.x, block.y, block.z))
+    }
+
+    /**
+     * The blocks waiting to fall go down if nothing's under them, and a falling block that's gone without landing (on a
+     * torch, a slab) drops its loot table where it was last seen, as sand drops itself.
+     */
+    private fun fall() {
+        if (pendingFalls.isNotEmpty()) {
+            val due = pendingFalls.toList()
+            pendingFalls.clear()
+            for ((world, at) in due) {
+                val placed = placedAt(world, at.x, at.y, at.z) ?: continue
+                val def = defs[placed.name]?.takeIf { it.file.fallsOrDefault } ?: continue
+                val entity = platform.blocks.fall(world, at.x, at.y, at.z) ?: continue
+                forget(world, at)
+                falling[entity] = Falling(def.id, world, Vec3(at.x + 0.5, at.y.toDouble(), at.z + 0.5))
+            }
+        }
+        for ((entity, was) in falling.entries.toList()) {
+            val info = platform.worldEntities.info(entity)
+            if (info != null) {
+                was.world = info.location.world
+                was.at = Vec3(info.location.x, info.location.y, info.location.z)
+                continue
+            }
+            falling.remove(entity)
+            val def = defs[was.name] ?: continue
+            val x = kotlin.math.floor(was.at.x).toInt()
+            val y = kotlin.math.floor(was.at.y).toInt()
+            val z = kotlin.math.floor(was.at.z).toInt()
+            // Whatever the tool rule says: nobody mined it, as the game drops sand that can't land.
+            for (item in roll(def.file.drops, "Block ${def.id}", was.world, x, y, z, null, null)) {
+                platform.worldEntities.spawnItem(was.world, was.at, item)
+            }
+        }
+    }
+
     // ---- the tick ---------------------------------------------------------------
 
     override fun tick(phase: TickPhase) {
         if (phase != TickPhase.WORLD) return
-        if (!usable) {
+        if (!usable && gameRules.isEmpty()) {
             // The project's blocks went (a reload): nobody mines one, or needs slowing.
             for (player in mining.keys.toList()) stopMining(player)
             for (player in slowed.toList()) unslow(player)
@@ -1067,6 +1343,8 @@ internal class CustomBlocks(
         }
         mine()
         watchLooks()
+        if (!usable) return
+        fall()
         val now = ticks()
         for (key in ticking.toList()) {
             val blocks = chunks[key] ?: continue
@@ -1098,6 +1376,9 @@ internal class CustomBlocks(
 
     private companion object {
         const val AIR = "minecraft:air"
+
+        /** What a [Mining.target] of one of the game's blocks starts with: no name of the project's block can. */
+        const val GAME_TARGET = "#"
         const val CREATIVE = "creative"
         const val SPECTATOR = "spectator"
         const val MAIN_HAND = "main_hand"

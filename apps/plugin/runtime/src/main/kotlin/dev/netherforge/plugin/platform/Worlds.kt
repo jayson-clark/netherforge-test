@@ -124,6 +124,35 @@ interface BlockOps {
     fun place(player: UUID, world: String, x: Int, y: Int, z: Int, state: String, against: BlockVector, hand: String): Boolean
 
     /**
+     * Whether [tool] (null: a bare hand) gets [state]'s drops as the game counts it: true for a block that needs no
+     * particular tool, or for the tool it needs (a pickaxe on stone). Null for a state the server doesn't have.
+     */
+    fun harvests(tool: ItemData?, state: String): Boolean?
+
+    /**
+     * Shows the block at the position breaking as [state] (its sound and particles, as the game shows a block broken):
+     * to [player] (online) alone, or with null to everyone near it. The server's break for a player leaves that player
+     * out, since their own game shows its own, which a block the server mined never did.
+     */
+    fun showBroken(player: UUID?, world: String, x: Int, y: Int, z: Int, state: String)
+
+    /**
+     * What the runtime wants to hear of blocks besides players breaking them: the world breaking one of [drops] (block
+     * ids) itself, whose drops are then [PlatformEvents.worldBroke]'s to say (support lost, a fluid, a piston, leaves
+     * decaying), and a neighbour of one of [falling] (canonical states) changing ([PlatformEvents.blockUpdated]), with
+     * a falling block of any of them landing ([PlatformEvents.fallingLanded]). Each call replaces the last; nothing is
+     * heard while both are empty.
+     */
+    fun watch(drops: Set<String>, falling: Set<String>)
+
+    /**
+     * Drops the block at the position as a falling block, as sand falls, when what's under it is something a block
+     * falls into (air, a fluid, a replaceable block): the block is gone and the falling block entity's id is returned.
+     * The entity lands as the same state, or drops nothing where it can't. Null when it doesn't fall.
+     */
+    fun fall(world: String, x: Int, y: Int, z: Int): UUID?
+
+    /**
      * Stops the server working out the states of [carrier]'s blocks for itself, so custom blocks held in them stay
      * in the state they were set to. Note blocks (Paper's `disable-noteblock-updates`): no instrument from what's
      * above and below, `powered` from redstone, tuning or sounding; the adapter does the vanilla note blocks' part

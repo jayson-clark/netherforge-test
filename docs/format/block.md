@@ -30,11 +30,17 @@ with its script beside it.
 | `sound`        | The game's kind of block it sounds like when it's placed and broken: `stone`, `wood`, `gravel`, `grass`, `sand`, `metal`, `glass`, `wool`, … (the game's `block.<sound>.place` and `.break`). | from `tool`  |
 | `sounds`       | `place` and `break`: sounds of its own, each a sound of a [resource pack](resource-pack.md#sounds), `<pack>/<key>`, played instead of `sound`'s.                                              |              |
 | `centity`      | `<id>`: a [centity](centity.md) drawn over the block, for a shape that isn't a cube. See [other shapes](#other-shapes).                                                                       |              |
+| `falls`        | It falls like sand when nothing is under it. See [falling](#falling).                                                                                                                         | false        |
 | `tick`         | Ticks between its `tick` events, for each placed block (1 to 72000). Without it nothing ticks.                                                                                                | none         |
 | `script`       | The block's one Lua script. See [`script`](#script).                                                                                                                                          |              |
 
 The id is the folder's name, and it's how scripts name it
 (`nf.blocks.get("ruby_ore")`) and how an item places it.
+
+A block of the game's own, redrawn by a resource pack, can often stand in for
+a project block: it keeps the game's sounds, physics, stairs and slabs, and
+takes no carrier state. [Game blocks](game-block.md) give it a hardness, a
+tool and drops of the project's.
 
 ## Placing one
 
@@ -194,6 +200,23 @@ put them back. A player far away from the server sees a block go a moment
 after the cracks finish. A block with `hardness` 0 breaks on the first hit, and
 creative players break blocks at once, as always.
 
+## Falling
+
+A block with `"falls": true` falls like sand. When there's nothing under it
+(air, water, lava, or something a block can be put into, like grass), it
+drops as a falling block and lands as the same block where it stops, its
+script hearing nothing of either. One that lands where a block can't be (on a
+torch, a slab's top half) breaks and drops its `drops`, as sand drops itself.
+A block is checked when it's placed (by a player, a script or a
+[terrain](terrain.md)'s chunk as it loads) and when a block beside it changes,
+so taking the block under it away makes it fall.
+
+The falling block is drawn as the block's own look. Only a `note_block` or
+`leaves` block can fall: tripwire breaks when what's under it goes, and the
+game draws a falling block alone, so a block a `centity` is drawn over can't
+fall either (`block.falls`). A falling block keeps no `data()` table: it lands
+as a new block of its kind.
+
 ## Picking
 
 Picking one of these blocks (the middle click) brings the item that places it
@@ -243,6 +266,6 @@ by a `centity` can't be an ore.
 ## Checks
 
 A block is checked on its own (`block.hardness`, `block.tick`,
-`block.requires-tool`), against the project (`block.carriers`, `block.carrier`,
+`block.requires-tool`, `block.falls`), against the project (`block.carriers`, `block.carrier`,
 `block.vanilla-looks`, and every reference: its `model`, `drops`, `centity` and
 `sounds` must exist), and its script like any resource's. [Problems](problems.md) lists them.

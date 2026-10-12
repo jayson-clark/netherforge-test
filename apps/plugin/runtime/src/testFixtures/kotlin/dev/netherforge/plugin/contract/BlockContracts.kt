@@ -162,6 +162,37 @@ abstract class BlockOpsContract : PlatformContract() {
     }
 
     @Test
+    fun `whether a tool gets a block's drops, as the game counts it`() {
+        main {
+            val pickaxe = item("minecraft:iron_pickaxe")
+            // Stone needs a pickaxe; planks need nothing in particular.
+            assertEquals(false, blocks.harvests(null, "minecraft:stone"))
+            assertEquals(true, blocks.harvests(pickaxe, "minecraft:stone"))
+            assertEquals(true, blocks.harvests(null, "minecraft:oak_planks"))
+            assertNull(blocks.harvests(null, "minecraft:no_such_block"))
+        }
+    }
+
+    @Test
+    fun `a block over air falls as a falling block, and one on the ground doesn't`() {
+        main {
+            val spot = at(6, 6, -6)
+            val (x, y, z) = block(spot)
+            place(at(6, 5, -6), "minecraft:air")
+            place(spot, "minecraft:oak_planks")
+            val falling = assertNotNull(blocks.fall(world, x, y, z))
+            afterwards { platform.worldEntities.remove(falling) }
+            assertEquals("minecraft:air", blocks.get(world, x, y, z)?.state)
+            val grounded = at(7, 6, -6)
+            val (gx, gy, gz) = block(grounded)
+            place(at(7, 5, -6), "minecraft:stone")
+            place(grounded, "minecraft:oak_planks")
+            assertNull(blocks.fall(world, gx, gy, gz))
+            assertEquals("minecraft:oak_planks", blocks.get(world, gx, gy, gz)?.state)
+        }
+    }
+
+    @Test
     fun `a block can't be put where a player stands, and is placed for a player as they would place it`() {
         val player = join()
         main {

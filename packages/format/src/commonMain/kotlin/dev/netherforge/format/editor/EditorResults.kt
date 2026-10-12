@@ -69,7 +69,9 @@ class ProjectOutline(
      * The game's textures the project's resource packs and its packages' redraw (`textures`), sorted: what the editor
      * looks up in the client for `client/vanilla.json`.
      */
-    val replacedTextures: List<String> = emptyList()
+    val replacedTextures: List<String> = emptyList(),
+    /** The game's models the project's resource packs and its packages' redraw (`models`), sorted, as [replacedTextures]. */
+    val replacedModels: List<String> = emptyList()
 )
 
 /**

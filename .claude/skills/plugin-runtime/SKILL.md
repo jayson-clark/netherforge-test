@@ -1687,13 +1687,35 @@ code (a terrain, W5.2): `stateOf(name)` is the note block state to put in chunk 
   lists the same way, with the yield's chance, and a piston doesn't move one.
   `Block:break_naturally` and a script's `set_state` (or `world:set_block`, `fill_blocks`) go through
   `breakNaturally`/`replaced` too.
+- **The game's blocks** (`game_blocks/`, `GameBlockKind`): `CustomBlocks` also holds the project's rules for
+  some of the game's own blocks (`gameRules`, by block id, tags resolved by `format`'s `GameBlocks.resolve` against
+  the live game). A rule with `hardness`, `tool` or `requiresTool` (`GameBlockFile.minedByServer`) is mined by the
+  same machinery as a project block: `startedBreakingGame` slows the player and counts with `gameFactor` (the rule's
+  numbers over the game's own for the state: `BlockOps.hardness`, `breakSpeed`, `harvests`), and a `Mining.target`
+  of `#<block id>` (`targetAt`) where a project block's is its name. The server's break (`breakAs`) is **not**
+  cancelled for a game block: it's the game's own, so the tool wears, experience and a container's contents drop,
+  and a door's other half goes; the game leaves the breaker out of the break's effect (their game never broke it),
+  so `BlockOps.showBroken` sends them the game's effect 2001. Drops: `gameDrops` (the player's break, through
+  `ServerEvents.blockBreak` as the `DropsAnswer`, scripts' `drops` seeing the rule's), `exploded` (set to air before
+  the explosion gets there), `worldBroke` (the adapter's `PaperGameBlocks`: Paper's `BlockDestroyEvent`,
+  `BlockBreakBlockEvent`, and leaves decay done there instead), and `breakNaturally` for a script. Game blocks
+  can't have their own sounds: the game plays them on each client from the block's sound type (a resource pack's
+  `minecraft:` sound events replace them for everything of the type). `BlockOps.watch(drops, falling)` says what the
+  adapter listens for; nothing while both are empty.
+- **Falling** (`falls`): a placed, adopted or updated (`blockUpdated`, the adapter's `BlockPhysicsEvent` for the
+  watched states) falling block queues in `pendingFalls`, and in the next `WORLD` tick `BlockOps.fall` drops it as
+  the game's falling block entity (neighbours told, so a column falls) and the block is forgotten. Paper's
+  `EntityChangeBlockEvent` for it is `fallingLanded`, which registers it again where it lands; one gone without
+  landing (`worldEntities.info` null) drops its loot table where it was last seen. Its `data()` table doesn't
+  travel.
 - **Shapes.** A block with a `centity` spawns it at its bottom centre (`Centities.spawn`) when
   placed and removes it with the block; it stays the solid cube for collision and selection.
   The centity's own hitboxes take clicks before the block.
 - **Ticking.** Blocks with a `tick` interval are tracked per chunk (`ticking`), each with its next
   due tick, and heard in `TickPhase.WORLD` by `ProjectBlock`'s `tick` handlers.
 - **Tests.** `BlockTest` runs it all on the fake (`FakeBlocks`: records, `find`, hardness, speeds,
-  `place`, the note block in the fake game's registry); the Paper contract suites
+  `place`, the note block in the fake game's registry), `GameBlockTest` the game's blocks' rules and falling blocks
+  (`FakeBlocks.gameDrops`, `harvestTools`, `fallen`, `shownBroken`); the Paper contract suites
   (`BlockOpsContract`, `WorldOpsContract.loadedChunks`) and `PaperNoteBlocksTest` (Paper only: the
   vanilla note block's part) cover the adapter, `BlockScenario` a real server with a bot placing,
   mining and tuning.

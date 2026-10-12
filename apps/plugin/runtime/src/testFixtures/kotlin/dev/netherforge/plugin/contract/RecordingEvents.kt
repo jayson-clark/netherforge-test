@@ -86,6 +86,19 @@ class RecordingEvents : PlatformEvents {
         hear("blockStopBreak", player, block)
     }
 
+    override fun worldBroke(block: BlockRef): List<ItemData>? {
+        hear("worldBroke", block)
+        return null
+    }
+
+    override fun blockUpdated(block: BlockRef) {
+        hear("blockUpdated", block)
+    }
+
+    override fun fallingLanded(entity: UUID, block: BlockRef) {
+        hear("fallingLanded", entity, block)
+    }
+
     /** What a suite answers a pick with; null (the default) leaves it to the game. */
     @Volatile var pick: PickAnswer? = null
 

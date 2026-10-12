@@ -4,7 +4,8 @@
  * of the blocks custom blocks are held in (tripwire: a model per shape), and
  * the names of the HUD's sprites (which `hud.hide` blanks and `hud.replace` redraws) and the sizes of the game's
  * textures a resource pack's `textures` redraws (every container screen's, and the others the project names: the
- * game has thousands, so only those). The editor writes
+ * game has thousands, so only those), and which of the models a resource pack's `models` redraws the game has. The
+ * editor writes
  * it from the import, as it writes `fonts/default.json`; it's committed and
  * deployed. Pure: the workspace decides when to ask, which is when validation
  * says something needs it (`block.vanilla-looks`, `resource_pack.hud-hide`, `resource_pack.vanilla-missing`).
@@ -43,6 +44,10 @@ export interface VanillaLooks {
   textures: Record<string, number[]>
   /** The names asked for that the game has no texture by; none from an import that listed only the screens'. */
   unknownTextures: string[]
+  /** The game's models asked for (`block/red_mushroom`) that the client has. */
+  models: string[]
+  /** The models asked for that the client has no file of. */
+  unknownModels: string[]
 }
 
 /** The container screens' textures, which the file always lists. */
@@ -50,11 +55,12 @@ const SCREENS = 'gui/container/'
 
 /**
  * What [assets] has of [VanillaLooks], with the sizes of the game's textures [replaced] names (the outline's
- * `replacedTextures`); empty without an import.
+ * `replacedTextures`) and which of the models [models] names it has (`replacedModels`); empty without an import.
  */
 export async function vanillaLooks(
   assets: ClientJson,
   replaced: readonly string[] = [],
+  models: readonly string[] = [],
 ): Promise<VanillaLooks> {
   const blockstates: Record<string, unknown> = {}
   for (const block of VANILLA_LOOK_BLOCKS) {
@@ -85,7 +91,18 @@ export async function vanillaLooks(
   // An import from before the editor listed every texture has only the screens': it can't say what the game lacks.
   const everything = Object.keys(all).some((it) => !it.startsWith(SCREENS))
   const unknownTextures = everything ? [...wanted].filter((it) => !(it in all)).sort() : []
-  return { blockstates, sprites, textures, unknownTextures }
+  // A model is a file of the import (every model is extracted), so it's there or the game has none: without an
+  // import at all nothing is known, and nothing is said.
+  const known: string[] = []
+  const unknownModels: string[] = []
+  if (index) {
+    for (const name of [...new Set(models)].sort()) {
+      const json = await assets.json<unknown>(`assets/minecraft/models/${name}.json`)
+      if (json && typeof json === 'object') known.push(name)
+      else unknownModels.push(name)
+    }
+  }
+  return { blockstates, sprites, textures, unknownTextures, models: known, unknownModels }
 }
 
 /**
@@ -103,7 +120,9 @@ export function vanillaToWrite(
     (Object.keys(looks.blockstates).length === 0 &&
       looks.sprites.length === 0 &&
       Object.keys(looks.textures).length === 0 &&
-      looks.unknownTextures.length === 0)
+      looks.unknownTextures.length === 0 &&
+      looks.models.length === 0 &&
+      looks.unknownModels.length === 0)
   )
     return null
   const text = canonicalizeModel('vanilla', VANILLA_FILE, {
@@ -112,6 +131,8 @@ export function vanillaToWrite(
     sprites: looks.sprites,
     textures: looks.textures,
     unknownTextures: looks.unknownTextures,
+    models: looks.models,
+    unknownModels: looks.unknownModels,
   }).text
   return text !== undefined && text !== null && text !== diskText ? text : null
 }

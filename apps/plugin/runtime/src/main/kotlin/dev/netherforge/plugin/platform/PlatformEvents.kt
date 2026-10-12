@@ -48,6 +48,19 @@ interface PlatformEvents {
     fun blockStopBreak(player: PlayerRef, block: BlockRef)
 
     /**
+     * The world breaks [block] itself, no player doing it: what held it up went, a fluid washed it away, a piston
+     * broke it, leaves decayed. Only for the block ids [BlockOps.watch] names. What it drops instead of the game's
+     * drops (spawned where it was), or null to leave the game's.
+     */
+    fun worldBroke(block: BlockRef): List<ItemData>?
+
+    /** Something beside [block] changed, for a state [BlockOps.watch] names as falling. */
+    fun blockUpdated(block: BlockRef)
+
+    /** A falling block entity [entity] ([BlockOps.fall]) lands as [block], about to be placed. */
+    fun fallingLanded(entity: UUID, block: BlockRef)
+
+    /**
      * A player picking [block] (the middle click), with [inventory] what they hold (36 slots, the hotbar's first).
      * Null leaves it to the game; an answer picks what it says instead.
      */

@@ -56,6 +56,12 @@ data class BlockFile(
     val sounds: BlockSounds? = null,
     /** `<id>`: a centity drawn over the block, for a shape that isn't a cube. It's spawned when the block is placed and goes with it. */
     @Ref(RefKind.CENTITY) val centity: ResourceRef? = null,
+    /**
+     * Whether it falls like sand when there's nothing under it: it drops as a falling block and lands as this block
+     * again, or drops its [drops] where it can't land (on a torch, a slab). Only a note block or leaves block that no
+     * [centity] is drawn over can fall. Default false.
+     */
+    val falls: Boolean? = null,
     /** Ticks between the block's `tick` events, one per placed block. It doesn't tick when this is left out. */
     val tick: Int? = null,
     /** The block's one script, with `this` the block: it hears what players do with every one of them. */
@@ -68,6 +74,9 @@ data class BlockFile(
     val requiresToolOrDefault: Boolean get() = requiresTool ?: false
 
     val carrierOrDefault: BlockCarrier get() = carrier ?: BlockCarrier.NOTE_BLOCK
+
+    /** Whether it falls when there's nothing under it. */
+    val fallsOrDefault: Boolean get() = falls ?: false
 
     /** The game's kind of block it sounds like: [sound], else what the blocks its [tool] mines mostly are. */
     val soundOrDefault: String get() = sound ?: when (tool) {

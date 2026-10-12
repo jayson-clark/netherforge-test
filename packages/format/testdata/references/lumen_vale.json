@@ -126,6 +126,13 @@
     "target": "resource_packs/lumen/textures/block/lumen_ore.png"
   },
   {
+    "file": "resource_packs/lumen/pack.json",
+    "path": "$.sounds[\"minecraft:block.deepslate_bricks.break\"].files[0]",
+    "kind": "sound_file",
+    "text": "lumen_break.ogg",
+    "target": "resource_packs/lumen/sounds/lumen_break.ogg"
+  },
+  {
     "file": "cutscenes/grove_awakening.json",
     "path": "$.cues[0].text",
     "kind": "glyph",
@@ -389,6 +396,13 @@
     "target": "lumen_vale:crystal_glass"
   },
   {
+    "file": "loot/deepslate_rubble.json",
+    "path": "$.pools.rubble.entries[1].item.item",
+    "kind": "item",
+    "text": "lumen_shard",
+    "target": "lumen_vale:lumen_shard"
+  },
+  {
     "file": "loot/lumen_lamp.json",
     "path": "$.pools.main.entries[0].item.item",
     "kind": "item",
@@ -569,6 +583,13 @@
     "kind": "script",
     "text": "script.lua",
     "target": "blocks/lumen_ore/script.lua"
+  },
+  {
+    "file": "game_blocks/deepslate_bricks.json",
+    "path": "$.drops",
+    "kind": "loot_table",
+    "text": "deepslate_rubble",
+    "target": "lumen_vale:deepslate_rubble"
   },
   {
     "file": "biomes/ashen_ridge.json",

@@ -44,6 +44,8 @@ data class ResourcePackFile(
     /**
      * Sound events that need more than their one file, keyed by the event's
      * key (`menu/open`). Every `.ogg` under `sounds/` is already an event.
+     * A key in the game's namespace (`minecraft:block.stone.break`) replaces
+     * that event of the game's, for everything that plays it, with its `files`.
      */
     val sounds: Map<String, SoundDef> = emptyMap(),
     /**
@@ -52,6 +54,12 @@ data class ResourcePackFile(
      * texture of the pack of the game's shape, or for a screen's sheet its exact size ([ReplacedTexture]).
      */
     @Ref(RefKind.TEXTURE) val textures: Map<String, String> = emptyMap(),
+    /**
+     * The game's own models to draw with the pack's model files instead, for every player: the model's name under
+     * `models/` (`block/red_mushroom`, `item/lantern`), without `.json`, to a model file of the pack (`mushroom.json`, a
+     * path under its `models/` folder). Every block or item drawn with the model takes its shape.
+     */
+    val models: Map<String, String> = emptyMap(),
     /** What it does to the HUD: the game's elements it hides, and elements of its own scripts fill in ([HudDef]). */
     val hud: HudDef? = null
 ) {

@@ -43,6 +43,8 @@ my-project/
     <id>.json                  a recipe the server learns: one file each
   loot/
     <id>.json                  a loot table: what a roll gives, rolled by scripts
+  game_blocks/
+    <id>.json                  mining rules and drops for some of the game's own blocks
   advancements/
     <id>.json                  an advancement: a quest, in trees the game shows; learnt at start
   resource_packs/
@@ -145,7 +147,7 @@ other is reported and ignored.
 
 See [centities](centity.md), [menus](menu.md),
 [dialogs](dialog.md), [particle effects](particle-effect.md), [cutscenes](cutscene.md), [terrains](terrain.md), [biomes](biome.md), [dimension types](dimension-type.md),
-[items](item.md), [recipes](recipe.md), [loot tables](loot.md), [blocks](block.md), [advancements](advancement.md),
+[items](item.md), [recipes](recipe.md), [loot tables](loot.md), [blocks](block.md), [game blocks](game-block.md), [advancements](advancement.md),
 [resource packs](resource-pack.md), [migrations](migrations.md) and [worlds and structures](worlds.md).
 
 ## Ids
@@ -308,9 +310,10 @@ ones and [`hud.replace`](resource-pack.md#redrawing-the-games-sprites)
 redraws. And the pixel sizes of the game's textures a resource pack's
 [`textures`](resource-pack.md#redrawing-the-games-textures) redraws: every
 container screen's, and every other one the project's packs name, with the
-names they name that the game doesn't have. Like `fonts/default.json`, the editor writes it from your
-imported Minecraft client whenever a tripwire block, `hud.hide`, `hud.replace`
-or `textures` needs it and it's missing or out of date: you never edit it, but
+names they name that the game doesn't have. And which of the models a resource pack's
+[`models`](resource-pack.md#redrawing-the-games-models) redraws the game has. Like `fonts/default.json`, the editor writes it from your
+imported Minecraft client whenever a tripwire block, `hud.hide`, `hud.replace`,
+`textures` or `models` needs it and it's missing or out of date: you never edit it, but
 you commit it.
 
 ```json
@@ -328,7 +331,9 @@ you commit it.
   },
   "sprites": ["hud/air", "hud/armor_full", "hud/food_full", "hud/heart/full"],
   "textures": { "block/stone": [16, 16], "gui/container/inventory": [256, 256] },
-  "unknownTextures": ["block/stoen"]
+  "unknownTextures": ["block/stoen"],
+  "models": ["block/red_mushroom"],
+  "unknownModels": ["block/red_mushrom"]
 }
 ```
 
@@ -339,8 +344,10 @@ you commit it.
 | `sprites`         | The HUD's GUI sprites (`textures/gui/sprites/hud/`), by name. An import from before the editor listed them has none: import again.                                                                                                                       |
 | `textures`        | The container screens' textures (`textures/gui/container/`) and the other textures the project's packs redraw, by name, each with its `[width, height]` in pixels. An import from before the editor listed them all has only the screens': import again. |
 | `unknownTextures` | The names the project's packs redraw that the game has no texture by. A name in neither list hasn't been looked up yet (`resource_pack.vanilla-missing`).                                                                                                |
+| `models`          | The game's models the project's packs redraw (`models/block/red_mushroom.json` is `block/red_mushroom`), by name.                                                                                                                                        |
+| `unknownModels`   | The names the project's packs redraw that the game has no model by. A name in neither list hasn't been looked up yet (`resource_pack.vanilla-missing`).                                                                                                  |
 
-Without it, tripwire blocks look like string (`block.vanilla-looks`, at each tripwire block), `hud.hide` hides nothing (`resource_pack.hud-hide`), and `hud.replace` and `textures` replace nothing (`resource_pack.vanilla-missing`).
+Without it, tripwire blocks look like string (`block.vanilla-looks`, at each tripwire block), `hud.hide` hides nothing (`resource_pack.hud-hide`), and `hud.replace`, `textures` and `models` replace nothing (`resource_pack.vanilla-missing`).
 
 ## How files are written
 

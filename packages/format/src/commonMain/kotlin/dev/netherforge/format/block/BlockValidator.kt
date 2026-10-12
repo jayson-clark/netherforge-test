@@ -45,6 +45,20 @@ object BlockValidator {
                 )
             }
         }
+        if (file.fallsOrDefault) {
+            when {
+                file.carrierOrDefault == BlockCarrier.TRIPWIRE -> sink.report(
+                    ProblemCodes.BLOCK_FALLS,
+                    "Tripwire breaks when what's under it goes, so a tripwire block can't fall",
+                    "$.falls"
+                )
+                file.centity != null -> sink.report(
+                    ProblemCodes.BLOCK_FALLS,
+                    "A falling block is drawn by the game alone, so a block a centity is drawn over can't fall",
+                    "$.falls"
+                )
+            }
+        }
         file.script?.let { Rules.script(it, "$.script", sink, files) }
     }
 }

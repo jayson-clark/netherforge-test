@@ -221,6 +221,7 @@ class FakePlatform(
             "minecraft:armor_stand" to Kind(0.5, 1.975, 20.0, mob = false),
             "minecraft:arrow" to Kind(0.5, 0.5, null, mob = false),
             "minecraft:chest_minecart" to Kind(0.98, 0.7, null, mob = false),
+            "minecraft:falling_block" to Kind(0.98, 0.98, null, mob = false),
             "minecraft:item" to Kind(0.25, 0.25, null, mob = false, droppedItem = true)
         )
 
@@ -411,6 +412,8 @@ class FakePlatform(
                     "minecraft:ambient.cave",
                     "minecraft:block.amethyst_block.chime",
                     "minecraft:block.amethyst_block.hit",
+                    // examples/lumen_vale's resource pack replaces it.
+                    "minecraft:block.deepslate_bricks.break",
                     "minecraft:entity.parrot.ambient",
                     "minecraft:music.overworld.deep_dark",
                     "minecraft:music.overworld.meadow",

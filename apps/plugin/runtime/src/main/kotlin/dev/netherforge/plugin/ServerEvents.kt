@@ -113,17 +113,29 @@ class ServerEvents internal constructor(private val runtime: NetherForgeRuntime)
         if (!running) return unchanged
         // One of the project's blocks is broken by the runtime (its drops, its sounds, its scripts' say): the server's own break is cancelled.
         if (session.customBlocks.breaking(player, block, experience)) return null
+        // One of the game's with rules of the project's drops what its rule says instead of the game's drops.
+        val ruled = session.customBlocks.gameDrops(player, block)
         val world = LuaHandle.World(block.world)
         val stages = items.heldStage(Events.PROJECTITEM_BREAK_BLOCK, player.uuid, MAIN_HAND) +
             listOf(Events.WORLD_BLOCK_BREAK to world, Events.NF_BLOCK_BREAK to null)
-        if (stages.none { (event, stage) -> scripts.listening(stage, event) }) return unchanged
-        val before = drops()
+        if (stages.none { (event, stage) -> scripts.listening(stage, event) }) return DropsAnswer(ruled, experience)
+        val before = ruled ?: drops()
         val event = BlockBreakEvent(handle(player), session.block(block), block.state, before, experience.toLong())
         if (scripts.emit(stages, event)) return null
         return DropsAnswer(
-            event.drops.takeIf { session.changed(it, before) },
+            event.drops.takeIf { ruled != null || session.changed(it, before) },
             event.experience.coerceIn(0, Int.MAX_VALUE.toLong()).toInt()
         )
+    }
+
+    override fun worldBroke(block: BlockRef): List<ItemData>? = if (running) session.customBlocks.worldBroke(block) else null
+
+    override fun blockUpdated(block: BlockRef) {
+        if (running) session.customBlocks.blockUpdated(block)
+    }
+
+    override fun fallingLanded(entity: UUID, block: BlockRef) {
+        if (running) session.customBlocks.fallingLanded(entity, block)
     }
 
     override fun blockStopBreak(player: PlayerRef, block: BlockRef) {

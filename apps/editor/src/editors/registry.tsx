@@ -107,6 +107,19 @@ export const KIND_CONTRIBUTIONS = {
     ),
     thumbnail: BlockThumbnail,
   },
+  game_block: {
+    title: 'Game blocks',
+    one: 'game block',
+    group: 'gameplay',
+    icon: 'cube',
+    message:
+      "Only its name: it gives the game's blocks it lists, by id or #tag, a hardness, tool and drops of the project's.",
+    view: lazy(() =>
+      import('@/editors/game_block/GameBlockEditor').then((m) => ({
+        default: m.GameBlockEditor,
+      })),
+    ),
+  },
   recipe: {
     title: 'Recipes',
     one: 'recipe',

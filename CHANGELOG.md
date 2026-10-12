@@ -90,6 +90,36 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Added
 
+- **Mining rules and drops for the game's own blocks.** A `game_blocks/<id>.json`
+  file gives some of the game's blocks (ids, and tags like `#minecraft:logs`)
+  a `hardness`, `tool`, `requiresTool` and `drops` of the project's, so a
+  redrawn game block can stand in for a project block and keep its physics,
+  sounds, stairs and slabs. A key left out stays the game's. Blocks with a
+  hardness or tool rule are mined by the server, as project blocks are;
+  `drops` replaces the game's loot whoever breaks the block: a player, an
+  explosion, a piston, a fluid, lost support, decaying leaves or a script. A
+  block named twice, an unknown id or tag, a block the project's own blocks
+  are held in and a missing loot table are problems (`game_block.*`). The
+  editor has a form for them. See `examples/lumen_vale/game_blocks/`.
+
+- **Replace the game's sound events.** A resource pack's `sounds` keyed in the
+  game's namespace (`"minecraft:block.stone.break": { "files": [...] }`)
+  replaces that event's files for everything that plays it. That's the only
+  way to change footsteps, which each player's game picks from a block's sound
+  type. Events are checked against the server's game data
+  (`resource_pack.sound-event`), and a replacement needs `files`
+  (`resource_pack.sound-replace`).
+
+- **Redraw the game's models.** A resource pack's `models` writes a model file
+  of the pack over one of the game's (`"block/red_mushroom": "mushroom.json"`),
+  so a plant or lantern changes shape without becoming a project block.
+  `client/vanilla.json` lists the models the project names (`models`,
+  `unknownModels`), as it does textures.
+
+- **Falling project blocks.** `"falls": true` on a note block or leaves block
+  makes it fall like sand when nothing is under it, landing as the same block
+  (`block.falls` for one that can't).
+
 - **Retexture anything of the game's.** A resource pack's `textures` now
   redraws any vanilla texture, not only the container screens: blocks, items,
   mobs, particles, the sky, paintings, GUI sprites. A replacement may be any

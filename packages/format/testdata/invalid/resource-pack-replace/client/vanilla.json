@@ -3,5 +3,7 @@
   "minecraft": "26.3",
   "sprites": ["hud/hotbar"],
   "textures": { "gui/container/inventory": [256, 256] },
-  "unknownTextures": ["gui/container/nothing"]
+  "unknownTextures": ["gui/container/nothing"],
+  "models": ["block/stone"],
+  "unknownModels": ["block/nothing"]
 }

@@ -78,13 +78,13 @@ internal class RuntimeGameEvents(private val runtime: NetherForgeRuntime) : Game
         return super.pistonRetract(event) || held
     }
 
-    /** What scripts left breaking, the project's blocks break with their drops. */
+    /** What scripts left breaking, the project's blocks (and the game's with drops of the project's) break with their drops. */
     override fun entityExplode(event: GameEvent.Explode): Boolean {
         val cancelled = super.entityExplode(event)
         if (!cancelled &&
             event.breaksBlocks &&
             session.running &&
-            session.customBlocks.anyPlaced()
+            session.customBlocks.explodable()
         ) {
             session.customBlocks.exploded(event.blocks(), event.yield)
         }
@@ -96,7 +96,7 @@ internal class RuntimeGameEvents(private val runtime: NetherForgeRuntime) : Game
         if (!cancelled &&
             event.breaksBlocks &&
             session.running &&
-            session.customBlocks.anyPlaced()
+            session.customBlocks.explodable()
         ) {
             session.customBlocks.exploded(event.blocks(), event.yield)
         }

@@ -3,6 +3,8 @@ package dev.netherforge.format.project
 import dev.netherforge.format.ProblemCodes
 import dev.netherforge.format.block.VanillaFile
 import dev.netherforge.format.game.GameData
+import dev.netherforge.format.game.RegistryKey
+import dev.netherforge.format.game.has
 import dev.netherforge.format.hasErrors
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.resourcepack.CompiledResourcePack
@@ -58,9 +60,11 @@ object ResourcePackKind : DocumentResourceKind<ResourcePackFile, ResourcePackRea
     }
 
     /** The model files [file]'s looks name, each once, by path under `models/`. */
-    fun modelsOf(file: ResourcePackFile): List<String> =
-        (file.items.values.flatMap { listOfNotNull(it.model) + it.drawn.orEmpty() } + file.blocks.values.mapNotNull { it.model })
-            .filter(PackModels::isModelPath).distinct()
+    fun modelsOf(file: ResourcePackFile): List<String> = (
+        file.items.values.flatMap { listOfNotNull(it.model) + it.drawn.orEmpty() } +
+            file.blocks.values.mapNotNull { it.model } +
+            file.models.values
+        ).filter(PackModels::isModelPath).distinct()
 
     override fun crossCheck(value: ResourcePackFile, ctx: KindContext) {
         val id = ctx.id
@@ -94,17 +98,18 @@ object ResourcePackKind : DocumentResourceKind<ResourcePackFile, ResourcePackRea
         }
         // Redrawing the game's sprites and textures takes their names, and for a texture its size, which only the client has.
         val sprites = value.hud?.replace.orEmpty()
-        if (sprites.isNotEmpty() || value.textures.isNotEmpty()) {
+        if (sprites.isNotEmpty() || value.textures.isNotEmpty() || value.models.isNotEmpty()) {
             val vanilla = ctx.vanilla
             val stale = ctx.minecraft != null && vanilla?.minecraft != ctx.minecraft
+
             // The file holds only the textures the project asked about, so a name in neither list is one the editor
             // hasn't looked up yet (a name that isn't a path is reported where it's written).
+            fun named(name: String) = ResourcePackFile.isTexturePath("$name${ResourcePackFile.TEXTURE_EXTENSION}")
             val unlooked = vanilla != null &&
-                value.textures.keys.any { name ->
-                    ResourcePackFile.isTexturePath("$name${ResourcePackFile.TEXTURE_EXTENSION}") &&
-                        name !in vanilla.textures &&
-                        name !in vanilla.unknownTextures
-                }
+                (
+                    value.textures.keys.any { named(it) && it !in vanilla.textures && it !in vanilla.unknownTextures } ||
+                        value.models.keys.any { named(it) && it !in vanilla.models && it !in vanilla.unknownModels }
+                    )
             if (vanilla == null ||
                 stale ||
                 (sprites.isNotEmpty() && vanilla.sprites.isEmpty()) ||
@@ -112,13 +117,17 @@ object ResourcePackKind : DocumentResourceKind<ResourcePackFile, ResourcePackRea
             ) {
                 ctx.sink.report(
                     ProblemCodes.RESOURCE_PACK_VANILLA_MISSING,
-                    "Replacing the game's sprites and textures takes their names and sizes, " +
+                    "Replacing the game's sprites, textures and models takes their names and sizes, " +
                         "which the editor writes into ${VanillaFile.FILE} from " +
                         "your Minecraft: open the project in the editor with ${ctx.minecraft?.let {
                             "Minecraft $it"
                         } ?: "the project's Minecraft"} imported (import it again if it was imported before the editor listed them). " +
                         "Until then nothing is replaced",
-                    if (sprites.isNotEmpty()) "$.hud.replace" else "$.textures"
+                    when {
+                        sprites.isNotEmpty() -> "$.hud.replace"
+                        value.textures.isNotEmpty() -> "$.textures"
+                        else -> "$.models"
+                    }
                 )
             } else {
                 val others = ctx.models(ResourcePackKind).filterKeys { it < id }.values
@@ -143,6 +152,7 @@ object ResourcePackKind : DocumentResourceKind<ResourcePackFile, ResourcePackRea
                 }
                 check("$.hud.replace", sprites, vanilla.sprites.toSet()) { it.hud?.replace.orEmpty().keys }
                 check("$.textures", value.textures, vanilla.textures.keys) { it.textures.keys }
+                check("$.models", value.models, vanilla.models.toSet()) { it.models.keys }
                 if (ctx.readsSizes) {
                     for ((name, picture) in value.textures.entries.sortedBy { it.key }) {
                         val size = vanilla.textures[name]?.takeIf { it.size == 2 } ?: continue
@@ -181,6 +191,27 @@ object ResourcePackKind : DocumentResourceKind<ResourcePackFile, ResourcePackRea
                             )
                         }
                     }
+                }
+            }
+        }
+        // The game's sound events a pack replaces: ones the game has, each by one pack.
+        val replaced = value.sounds.keys.filter(PackSounds::isGameEvent).sorted()
+        if (replaced.isNotEmpty()) {
+            val game = ctx.game
+            val others = ctx.models(ResourcePackKind).filterKeys { it < id }.values
+            for (event in replaced) {
+                val at = CanonicalJson.childPath("$.sounds", event)
+                when {
+                    game?.has(RegistryKey.SOUND_EVENT, event) == false -> ctx.sink.report(
+                        ProblemCodes.RESOURCE_PACK_SOUND_EVENT,
+                        "Minecraft ${game.minecraftVersion} has no sound event $event",
+                        at
+                    )
+                    others.any { event in it.sounds } -> ctx.sink.report(
+                        ProblemCodes.RESOURCE_PACK_SOUND_EVENT,
+                        "Another resource pack replaces $event too; only one can",
+                        at
+                    )
                 }
             }
         }

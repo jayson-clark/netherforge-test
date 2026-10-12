@@ -44,6 +44,13 @@
   {
     "severity": "error",
     "file": "blocks/lost/block.json",
+    "message": "A falling block is drawn by the game alone, so a block a centity is drawn over can't fall",
+    "path": "$.falls",
+    "code": "block.falls"
+  },
+  {
+    "severity": "error",
+    "file": "blocks/lost/block.json",
     "message": "Resource pack \"ui\" has no block model \"nowhere\" (it has: Bad Key, half, ore)",
     "path": "$.model",
     "code": "reference.resource-pack-key",

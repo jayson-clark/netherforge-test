@@ -182,6 +182,18 @@ object ResourcePackValidator {
         }
         replacements("$.textures", file.textures)
         file.hud?.let { replacements("$.hud.replace", it.replace) }
+        // A replaced model is written over the game's file of its name, so the name is a path's shape too.
+        for ((name, path) in file.models) {
+            val at = CanonicalJson.childPath("$.models", name)
+            if (!ResourcePackFile.isTexturePath("$name${ResourcePackFile.TEXTURE_EXTENSION}")) {
+                sink.report(
+                    ProblemCodes.RESOURCE_PACK_REPLACE_NAME,
+                    "\"$name\" isn't the name of a game model: a path like block/red_mushroom, without .json",
+                    at
+                )
+            }
+            model(path, at)
+        }
         file.hud?.let { hud ->
             val seen = HashSet<String>()
             fun element(map: String, key: String): String {
@@ -238,15 +250,27 @@ object ResourcePackValidator {
         }
         for ((key, sound) in file.sounds) {
             val at = CanonicalJson.childPath("$.sounds", key)
-            if (!PackSounds.isKey(
-                    key
+            val game = PackSounds.isGameKey(key)
+            if (game && !PackSounds.isGameEvent(key)) {
+                sink.report(
+                    ProblemCodes.RESOURCE_PACK_SOUND_KEY,
+                    "\"$key\" isn't one of the game's sound events: they're written like \"minecraft:block.stone.break\"",
+                    at
                 )
-            ) {
-                sink.report(ProblemCodes.RESOURCE_PACK_SOUND_KEY, "\"$key\" isn't a usable sound key (${PackSounds.KEY_RULE})", at)
+            } else if (!game && !PackSounds.isKey(key)) {
+                val hint = if (':' in key) "; the game's own sound events are replaced by their name in the minecraft namespace" else ""
+                sink.report(ProblemCodes.RESOURCE_PACK_SOUND_KEY, "\"$key\" isn't a usable sound key (${PackSounds.KEY_RULE})$hint", at)
+            }
+            if (game && sound.files == null) {
+                sink.report(
+                    ProblemCodes.RESOURCE_PACK_SOUND_REPLACE,
+                    "Replacing the game's $key takes files to play instead: \"files\": [\"block/break_1.ogg\"]",
+                    at
+                )
             }
             val files = sound.files
             if (files == null) {
-                if (sounds != null && PackSounds.isKey(key) && key + PackSounds.EXTENSION !in sounds) {
+                if (sounds != null && !game && PackSounds.isKey(key) && key + PackSounds.EXTENSION !in sounds) {
                     sink.report(
                         ProblemCodes.RESOURCE_PACK_SOUND_MISSING,
                         "sounds/$key${PackSounds.EXTENSION} doesn't exist, and this sound lists no files to play instead",

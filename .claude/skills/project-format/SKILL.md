@@ -303,6 +303,15 @@ faces from `ResourcePackPreview.blocks` (`BlockPreview`: faces by the fallback r
 never re-encodes the rule. The problem codes are `block.*`, `resource_pack.block-faces` and
 `runtime.blocks`; cases: `BlockTest`, `invalid/block-semantics`.
 
+**The game's blocks** (`game_blocks/<id>.json`, `GameBlockKind`, `block/GameBlockFile.kt`, `docs/format/game-block.md`):
+`blocks` (required: ids and `#tags`), and `hardness`, `tool`, `requiresTool`, `drops` (a `@Ref(LOOT_TABLE)`), each the
+game's own when left out. `GameBlocks.resolve(files, tag)` is the one reading of which file a block is in (first by
+id), shared by the checks and the runtime. `GameBlockValidator` (`game_block.blocks`, `.unknown` with game data,
+`.twice` within a file, `.hardness`, `.requires-tool`) and the kind's `crossCheck` (`.twice` across files, `.carrier`:
+the carriers of the project's blocks, from `BlockCarriers.pool`). Not exportable: a package's rules apply only when
+it's the project. The template names `minecraft:<id>` so a new file is for the block it's called after.
+`BlockFile.falls` (`block.falls`: not tripwire, not a centity's).
+
 ## Terrains
 
 `terrain/<id>.json` (`TerrainKind`, `terrain/`, `noise/`, `docs/format/terrain.md`), a single file whose
