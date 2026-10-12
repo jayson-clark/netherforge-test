@@ -5,7 +5,7 @@
  * serve most of the registry.
  */
 import type { Backend } from '@/core/backend/types'
-import { textureAssetPath, type AssetLoader } from './model'
+import { splitId, textureAssetPath, type AssetLoader } from './model'
 
 /** `index.json`, written by the import: ids for pickers, so nothing lists folders. */
 export interface ClientIndex {
@@ -24,6 +24,11 @@ export interface ClientIndex {
 
 export interface ClientAssets extends AssetLoader {
   version: string
+  /**
+   * Tells asset sets apart in caches: the version, and which of the game's textures the project's
+   * resource packs draw instead ([withReplacedTextures]).
+   */
+  key: string
   textureUrl(textureId: string): string
 }
 
@@ -35,6 +40,7 @@ export function clientAssets(backend: Backend, version: string): ClientAssets {
   const cache = new Map<string, Promise<unknown>>()
   const assets: ClientAssets = {
     version,
+    key: version,
     json<T>(path: string): Promise<T | null> {
       let pending = cache.get(path)
       if (!pending) {
@@ -56,4 +62,44 @@ export function clientAssets(backend: Backend, version: string): ClientAssets {
 /** Forgets cached assets, after an import replaced them. */
 export function forgetClientAssets(version: string) {
   loaders.delete(version)
+}
+
+const replaced = new WeakMap<ClientAssets, { key: string; assets: ClientAssets }>()
+
+/**
+ * [assets] with the game's textures that resource packs redraw (`textures` in `pack.json`: `block/stone` →
+ * the picture's URL) drawn with the packs' pictures, as the client draws them. The same object while
+ * [urls] are the same, so what's cached per asset set stays cached.
+ */
+export function withReplacedTextures(
+  assets: ClientAssets,
+  urls: Record<string, string>,
+): ClientAssets {
+  const names = Object.keys(urls)
+  if (names.length === 0) return assets
+  const key = `${assets.version}|${hash(JSON.stringify(names.sort().map((it) => [it, urls[it]])))}`
+  const known = replaced.get(assets)
+  if (known?.key === key) return known.assets
+  const result: ClientAssets = {
+    version: assets.version,
+    key,
+    json<T>(path: string) {
+      return assets.json<T>(path)
+    },
+    textureUrl(textureId) {
+      const { namespace, path } = splitId(textureId)
+      return (namespace === 'minecraft' ? urls[path] : undefined) ?? assets.textureUrl(textureId)
+    },
+  }
+  replaced.set(assets, { key, assets: result })
+  return result
+}
+
+function hash(text: string): string {
+  let value = 0x811c9dc5
+  for (let i = 0; i < text.length; i += 1) {
+    value ^= text.charCodeAt(i)
+    value = Math.imul(value, 0x01000193)
+  }
+  return (value >>> 0).toString(36)
 }

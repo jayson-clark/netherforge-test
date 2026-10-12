@@ -173,7 +173,15 @@ onChange }`, oldest first, the row acted on last being the primary:
   (`groupOf`, `mainFileIn`, `locationIn`, `groupsOf`, cached per list) or
   from a path (`resourceOf(..).group`), and a package's from the outline's
   `groups`. Resource packs never are in one (`KINDS[kind].groupable`). `Thumbnail` draws the kind's registered `thumbnail` over its
-  icon. A kind's (or group's) tiles stay hidden (`opacity: 0`, `data-loading`) until their
+  icon: an item's icon, a block's look, a recipe's result, a pack's first picture, a centity drawn, an
+  advancement's icon; a 2×2 `ui/Collage` of a loot table's items (`lootItems`, through the project's tables
+  it rolls), a game block file's blocks or a particle effect's emitter sprites (tinted with CSS masks); a
+  menu's `WindowFrame` and a dialog's `DialogPreview` in miniature (`inert`); a biome's `BiomeScene`; a
+  cutscene's path from above (`topDown`); a datapack's `pack.png` or a map's `icon.png` (`folderPicture`).
+  Terrains, structures, dimension types, modules and migrations have none. Vanilla pictures everywhere
+  come through `useClientAssets`, which draws the textures resource packs redraw (`textures` in `pack.json`)
+  with the packs' pictures (`withReplacedTextures`; its `key` tells asset sets apart in caches, never
+  `version`); `useGameClientAssets` is the game's own, for starting a replacement from. A kind's (or group's) tiles stay hidden (`opacity: 0`, `data-loading`) until their
   thumbnails are ready (`ui/Reveal`: a picture still being worked out calls `usePendingPicture(true)`; the
   page shows once none is and its `<img>`s have decoded, or after `MAX_WAIT_MS`), and `useLookPicture` keeps
   every look it worked out this session, so an icon shown again draws at once. Centity thumbnails are drawn one at a

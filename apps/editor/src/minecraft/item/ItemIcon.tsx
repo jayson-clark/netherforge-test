@@ -62,7 +62,7 @@ export function useLookPicture(look: IconSource | null, kind: string | undefined
   const projectUrl = useProjectFileUrl()
   const [, setVersion] = useState(0)
   const lookKey = useMemo(() => JSON.stringify(look), [look])
-  const key = `${kind}|${assets?.version ?? ''}|${lookKey}`
+  const key = `${kind}|${assets?.key ?? ''}|${lookKey}`
   const known = worked.get(key)
   // A picture drawn from project files that have changed since is drawn again, shown as it was meanwhile.
   const current = known !== undefined && known.files === filesOf(known.source, projectUrl)

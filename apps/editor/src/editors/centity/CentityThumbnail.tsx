@@ -47,7 +47,7 @@ function CentityPicture({ id, size }: { id: string; size: number }) {
   const root = useWorkspace((s) => s.project?.root ?? null)
   const text = useWorkspace((s) => currentText(s, mainFileIn(s.files, 'centity', id)))
   const assets = useClientAssets()
-  const key = text === undefined ? null : thumbnailKey(id, text, assets?.version ?? null)
+  const key = text === undefined ? null : thumbnailKey(id, text, assets?.key ?? null)
   const ready = useThumbnails((s) => s.saved !== null)
   const drawn = useThumbnails((s) => (key ? s.done[key] : undefined))
   const savedKey = useThumbnails((s) => s.saved?.[id])

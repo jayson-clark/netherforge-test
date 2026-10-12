@@ -25,6 +25,7 @@ import {
   type TemperatureModifier,
 } from '@/core/format'
 import { InspectorPanel } from '@/editors/shared/docks'
+import { BiomeScene } from './BiomeScene'
 import { EditorBar, EditorScreen, Stage } from '@/editors/shared/EditorLayout'
 import { fieldPath } from '@/editors/shared/focus'
 import { EditAsJson, useModelDoc } from '@/editors/shared/modelDoc'
@@ -121,7 +122,7 @@ export function BiomeEditor({ path }: { path: string }) {
         <EditAsJson path={path} />
       </EditorBar>
       <Stage>
-        <Scene colors={model.colors ?? {}} />
+        <BiomeScene colors={model.colors ?? {}} />
       </Stage>
       <InspectorPanel>
         <Datalist id={ENTITIES} values={entities} />
@@ -136,37 +137,6 @@ export function BiomeEditor({ path }: { path: string }) {
         <FeaturesSection model={model} edit={edit} />
       </InspectorPanel>
     </EditorScreen>
-  )
-}
-
-/**
- * The biome's colours as a little landscape: the sky fading into the fog, a
- * hill of grass under a tree of leaves, and a pool of water. A colour the file
- * leaves out is drawn hatched: the world's, or the climate's.
- */
-function Scene({ colors }: { colors: BiomeColors }) {
-  const paint = (color: string | undefined) => (color ? { background: color } : undefined)
-  const unset = (color: string | undefined) => (color ? undefined : styles.unset)
-  return (
-    <div className={styles.scene} role="img" aria-label="Biome colours">
-      <div
-        className={`${styles.sky} ${unset(colors.sky)}`}
-        style={
-          colors.sky
-            ? { background: `linear-gradient(${colors.sky}, ${colors.fog ?? colors.sky})` }
-            : undefined
-        }
-        data-color={colors.sky ?? ''}
-      />
-      <div className={`${styles.trunk}`} />
-      <div className={`${styles.leaves} ${unset(colors.foliage)}`} style={paint(colors.foliage)} />
-      <div className={`${styles.hill} ${unset(colors.grass)}`} style={paint(colors.grass)} />
-      <div
-        className={`${styles.water}`}
-        style={{ background: colors.water ?? BIOME_DEFAULTS.water }}
-        data-color={colors.water ?? BIOME_DEFAULTS.water}
-      />
-    </div>
   )
 }
 

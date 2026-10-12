@@ -27,38 +27,3 @@
 .cyan {
   color: #2fc4d4;
 }
-/* A group's collage of its resources' thumbnails. */
-.collage {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  gap: 2px;
-  padding: 2px;
-  box-sizing: border-box;
-}
-.collage.single {
-  grid-template-columns: 1fr;
-  grid-template-rows: 1fr;
-}
-.cell {
-  min-width: 0;
-  min-height: 0;
-  border-radius: var(--radius);
-  background: var(--bg-panel);
-  overflow: hidden;
-}
-.badge {
-  position: absolute;
-  right: 2px;
-  bottom: 2px;
-  display: grid;
-  place-items: center;
-  padding: 2px;
-  border-radius: var(--radius);
-  background: var(--bg-raised);
-  color: var(--muted);
-  box-shadow: 0 0 0 1px var(--border);
-}

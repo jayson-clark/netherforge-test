@@ -4,7 +4,14 @@
  * share of a pick. What a roll gives is format's (`rollLoot`); nothing here
  * rolls.
  */
-import type { LootCondition, LootEntry, LootPool, LootRange, LootTableFile } from '@/core/format'
+import type {
+  ItemDef,
+  LootCondition,
+  LootEntry,
+  LootPool,
+  LootRange,
+  LootTableFile,
+} from '@/core/format'
 
 /** What the editor has selected: a pool, or one of its entries. */
 export interface LootPick {
@@ -233,4 +240,37 @@ export function removeCondition(draft: LootTableFile, at: ConditionsAt, index: n
       at.entry === undefined ? pool : pool.entries![at.entry]!
     delete owner.conditions
   }
+}
+
+/**
+ * The items [table] can give, in the order its pools and entries list them, each item once (its count,
+ * name and the like aside): its own item entries', then those of the project's tables its table entries roll
+ * ([read] gives one by the name an entry writes, or undefined when it isn't the project's). The game's
+ * tables give nothing here: the editor doesn't know what's in them.
+ */
+export function lootItems(
+  table: LootTableFile,
+  read: (name: string) => LootTableFile | null | undefined,
+  limit = Infinity,
+): ItemDef[] {
+  const out = new Map<string, ItemDef>()
+  const seen = new Set<string>()
+  const walk = (file: LootTableFile) => {
+    for (const name of poolNames(file)) {
+      for (const entry of file.pools?.[name]?.entries ?? []) {
+        if (out.size >= limit) return
+        if (entry.type === 'item' && typeof entry.item === 'object' && entry.item !== null) {
+          const { kind, item, itemModel, glint, enchantments } = entry.item
+          const key = JSON.stringify([kind, item, itemModel])
+          if (!out.has(key)) out.set(key, { kind, item, itemModel, glint, enchantments })
+        } else if (entry.type === 'table' && !seen.has(entry.table)) {
+          seen.add(entry.table)
+          const nested = read(entry.table)
+          if (nested) walk(nested)
+        }
+      }
+    }
+  }
+  walk(table)
+  return [...out.values()]
 }

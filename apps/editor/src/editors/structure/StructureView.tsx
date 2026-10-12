@@ -88,7 +88,7 @@ function StructureScene({
 }) {
   const assets = useClientAssets()
   const gameData = useWorkspace((s) => s.gameData)
-  const result = useAsyncResult(`${assets?.version ?? 'none'}|${version}`, () =>
+  const result = useAsyncResult(`${assets?.key ?? 'none'}|${version}`, () =>
     assets
       ? bakeStates(assets, structure.palette, (id) => gameData?.blocks?.[id]?.defaults).then(
           (baked) => buildStructureMesh(structure, baked),

@@ -7,6 +7,7 @@ import {
   keysOf,
   lengthOf,
   lookDirection,
+  topDown,
   moveKey,
   setCue,
   setEasing,
@@ -166,5 +167,29 @@ describe('the preview is format’s own camera path', () => {
       expect(shot.problems.map((it) => it.code)).toContain('cutscene.track-empty')
     expect(director.trail(4).type).toBe('failed')
     expect(cutsceneDirector('x', 'not json').shot(0).type).toBe('failed')
+  })
+})
+
+describe('topDown', () => {
+  it('fits the path seen from above into the square, keeping its shape', () => {
+    expect(
+      topDown(
+        [
+          [0, 64, 0],
+          [10, 70, 0],
+          [10, 64, 5],
+        ],
+        100,
+        10,
+      ),
+    ).toEqual([
+      [10, 30],
+      [90, 30],
+      [90, 70],
+    ])
+  })
+
+  it('puts a camera that stays put in the middle', () => {
+    expect(topDown([[3, 64, 3]], 50, 5)).toEqual([[25, 25]])
   })
 })

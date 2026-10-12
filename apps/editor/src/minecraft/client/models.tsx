@@ -49,8 +49,8 @@ export function Placeholder({
   )
 }
 
-/** Distinguishes asset sets (versions) in async keys. */
-const assetsKey = (assets: ClientAssets | null) => assets?.version ?? 'none'
+/** Distinguishes asset sets (versions, redrawn textures) in async keys. */
+const assetsKey = (assets: ClientAssets | null) => assets?.key ?? 'none'
 
 function Groups({
   groups,

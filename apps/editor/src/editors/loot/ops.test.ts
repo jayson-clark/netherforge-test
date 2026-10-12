@@ -8,6 +8,7 @@ import {
   conditionLabel,
   duplicatePool,
   entryLabel,
+  lootItems,
   moveEntry,
   newCondition,
   newEntry,
@@ -158,5 +159,48 @@ describe('loot table ops', () => {
     expect(rolled.drops.map((it) => it.item?.item)).toEqual(['lib:gem', 'lib:coin'])
     expect(rolled.drops[0]!.item?.name).toBe('<glyph:lib:gems/gem>')
     expect(rollLoot(tables, 'lib:gems', 1)).toEqual(rolled)
+  })
+})
+
+describe('lootItems', () => {
+  const chest: LootTableFile = {
+    pools: {
+      b: {
+        entries: [
+          { type: 'item', item: { kind: 'minecraft:torch', count: 4 } },
+          { type: 'table', table: 'gems' },
+          { type: 'vanilla', table: 'minecraft:chests/simple_dungeon' },
+        ],
+      },
+      a: {
+        entries: [
+          { type: 'item', item: { kind: 'minecraft:bread' } },
+          { type: 'item', item: { kind: 'minecraft:torch', name: 'Torch' } },
+        ],
+      },
+    },
+  }
+  const gems: LootTableFile = {
+    pools: {
+      main: {
+        entries: [
+          { type: 'item', item: { item: 'ruby' } },
+          { type: 'table', table: 'gems' },
+        ],
+      },
+    },
+  }
+  const read = (name: string) => (name === 'gems' ? gems : undefined)
+
+  it("gives each item once, in roll order, through the project's tables", () => {
+    expect(lootItems(chest, read)).toEqual([
+      { kind: 'minecraft:bread' },
+      { kind: 'minecraft:torch' },
+      { item: 'ruby' },
+    ])
+  })
+
+  it('stops at the limit', () => {
+    expect(lootItems(chest, read, 2)).toHaveLength(2)
   })
 })

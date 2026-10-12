@@ -1,10 +1,12 @@
 /**
  * What a resource looks like in the explorer, the palette, the outline's
  * header and its tab: its kind's thumbnail (a project item's icon, a
- * recipe's result, a pack's first picture, a centity drawn), over or instead
- * of the kind's icon.
+ * recipe's result, a pack's first picture, a centity drawn, a loot table's
+ * items, a menu's window, a biome's colours…), over or instead of the kind's
+ * icon.
  */
 import { Suspense, type ReactNode } from 'react'
+import { Collage } from '@/ui/Collage'
 import { cx } from '@/ui/cx'
 import { Icon } from '@/ui/Icon'
 import { usePendingPicture } from '@/ui/Reveal'
@@ -49,19 +51,14 @@ export function GroupThumbnail({
   ids: string[]
   size: number
 }) {
-  const single = ids.length === 1
-  const cell = single ? size : Math.floor((size - 6) / 2)
   return (
-    <span className={cx(styles.collage, single && styles.single)} aria-hidden="true">
-      {ids.map((id) => (
-        <span key={id} className={styles.cell}>
-          <Thumbnail folder={folder} id={id} size={cell} />
-        </span>
-      ))}
-      <span className={styles.badge}>
-        <Icon name="folder" size={Math.max(12, Math.round(size * 0.22))} />
-      </span>
-    </span>
+    <Collage
+      items={ids}
+      keyOf={(id) => id}
+      render={(id, cell) => <Thumbnail folder={folder} id={id} size={cell} />}
+      size={size}
+      badge={<Icon name="folder" size={Math.max(12, Math.round(size * 0.22))} />}
+    />
   )
 }
 

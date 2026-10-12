@@ -135,3 +135,27 @@ export function lookDirection(yaw: number, pitch: number): [number, number, numb
   const p = (pitch * Math.PI) / 180
   return [-Math.sin(y) * Math.cos(p), -Math.sin(p), Math.cos(y) * Math.cos(p)]
 }
+
+/**
+ * [points] seen from above (north up: x across, z down), fitted into a [size] square with [pad] around it and
+ * the path's shape kept: each point's `[x, y]` in that square. A path that doesn't move sideways is a dot in the
+ * middle.
+ */
+export function topDown(points: Vec3[], size: number, pad: number): [number, number][] {
+  if (points.length === 0) return []
+  let minX = Infinity
+  let maxX = -Infinity
+  let minZ = Infinity
+  let maxZ = -Infinity
+  for (const [x, , z] of points) {
+    minX = Math.min(minX, x)
+    maxX = Math.max(maxX, x)
+    minZ = Math.min(minZ, z)
+    maxZ = Math.max(maxZ, z)
+  }
+  const span = Math.max(maxX - minX, maxZ - minZ)
+  const scale = span > 0 ? (size - 2 * pad) / span : 0
+  const offsetX = (size - (maxX - minX) * scale) / 2
+  const offsetY = (size - (maxZ - minZ) * scale) / 2
+  return points.map(([x, , z]) => [offsetX + (x - minX) * scale, offsetY + (z - minZ) * scale])
+}

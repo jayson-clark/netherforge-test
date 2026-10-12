@@ -6,7 +6,7 @@
  */
 import { useAsync } from '@/ui/useAsync'
 import type { ClientAssets, ClientIndex } from './assets'
-import { useClientAssets } from './useClientAssets'
+import { useGameClientAssets } from './useClientAssets'
 
 export interface GameTextures {
   /** Every texture's `[width, height]` by name (`block/stone`), sorted by name. */
@@ -43,7 +43,7 @@ function gameTextures(assets: ClientAssets, index: ClientIndex | null): GameText
 
 /** The game's textures for the project's Minecraft, or null before it's imported. */
 export function useGameTextures(): GameTextures | null {
-  const assets = useClientAssets()
+  const assets = useGameClientAssets()
   return useAsync(assets?.version ?? '', () =>
     assets
       ? assets.json<ClientIndex>('index.json').then((index) => gameTextures(assets, index))

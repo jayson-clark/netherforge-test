@@ -11,6 +11,15 @@ import { lazy } from 'react'
 import { KINDS, type BinaryKindId, type EditedKind, type KindId } from '@/core/format'
 import { basename, isFileKind, resourceOf } from '@/core/paths'
 import { ADVANCEMENT_VIEW } from '@/editors/advancement/view'
+import { AdvancementThumbnail } from '@/editors/advancement/AdvancementThumbnail'
+import { BiomeThumbnail } from '@/editors/biome/BiomeThumbnail'
+import { CutsceneThumbnail } from '@/editors/cutscene/CutsceneThumbnail'
+import { DialogThumbnail } from '@/editors/dialog/DialogThumbnail'
+import { GameBlockThumbnail } from '@/editors/game_block/GameBlockThumbnail'
+import { LootThumbnail } from '@/editors/loot/LootThumbnail'
+import { MenuThumbnail } from '@/editors/menu/MenuThumbnail'
+import { ParticleThumbnail } from '@/editors/particles/ParticleThumbnail'
+import { folderPicture } from '@/editors/shared/FolderPicture'
 import { CENTITY_VIEW } from '@/editors/centity/view'
 import { CUTSCENE_VIEW } from '@/editors/cutscene/view'
 import { useThumbnails } from '@/editors/centity/thumbnails'
@@ -119,6 +128,7 @@ export const KIND_CONTRIBUTIONS = {
         default: m.GameBlockEditor,
       })),
     ),
+    thumbnail: GameBlockThumbnail,
   },
   recipe: {
     title: 'Recipes',
@@ -145,6 +155,7 @@ export const KIND_CONTRIBUTIONS = {
       import('@/editors/loot/LootOutline').then((m) => ({ default: m.LootOutline })),
     ),
     viewState: LOOT_VIEW,
+    thumbnail: LootThumbnail,
   },
   advancement: {
     title: 'Advancements',
@@ -165,6 +176,7 @@ export const KIND_CONTRIBUTIONS = {
       })),
     ),
     viewState: ADVANCEMENT_VIEW,
+    thumbnail: AdvancementThumbnail,
   },
   menu: {
     title: 'Menus',
@@ -178,6 +190,7 @@ export const KIND_CONTRIBUTIONS = {
       import('@/editors/menu/MenuOutline').then((m) => ({ default: m.MenuOutline })),
     ),
     viewState: MENU_VIEW,
+    thumbnail: MenuThumbnail,
   },
   dialog: {
     title: 'Dialogs',
@@ -193,6 +206,7 @@ export const KIND_CONTRIBUTIONS = {
       import('@/editors/dialog/DialogOutline').then((m) => ({ default: m.DialogOutline })),
     ),
     viewState: DIALOG_VIEW,
+    thumbnail: DialogThumbnail,
   },
   cutscene: {
     title: 'Cutscenes',
@@ -205,6 +219,7 @@ export const KIND_CONTRIBUTIONS = {
       import('@/editors/cutscene/CutsceneEditor').then((m) => ({ default: m.CutsceneEditor })),
     ),
     viewState: CUTSCENE_VIEW,
+    thumbnail: CutsceneThumbnail,
   },
   resource_pack: {
     title: 'Resource packs',
@@ -251,6 +266,7 @@ export const KIND_CONTRIBUTIONS = {
         run: (c) => c.app.run.getState().stopParticleEffects(),
       },
     ],
+    thumbnail: ParticleThumbnail,
   },
   terrain: {
     title: 'Terrain',
@@ -276,6 +292,7 @@ export const KIND_CONTRIBUTIONS = {
     view: lazy(() =>
       import('@/editors/biome/BiomeEditor').then((m) => ({ default: m.BiomeEditor })),
     ),
+    thumbnail: BiomeThumbnail,
   },
   dimension_type: {
     title: 'Dimension types',
@@ -318,6 +335,7 @@ export const KIND_CONTRIBUTIONS = {
       })),
     ),
     viewState: MAP_VIEW,
+    thumbnail: folderPicture('map', 'icon.png'),
   },
   datapack: {
     title: 'Datapacks',
@@ -330,6 +348,7 @@ export const KIND_CONTRIBUTIONS = {
     view: lazy(() =>
       import('@/editors/datapack/DatapackEditor').then((m) => ({ default: m.DatapackEditor })),
     ),
+    thumbnail: folderPicture('datapack', 'pack.png'),
   },
   module: {
     title: 'Modules',

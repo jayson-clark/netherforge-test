@@ -21,7 +21,7 @@ import {
 } from '@/core/format'
 import { ItemEditor } from '@/minecraft/item/ItemForm'
 import { useGlyphMap } from '@/minecraft/text/glyphs'
-import { dirname, mainFileIn } from '@/core/paths'
+import { dirname } from '@/core/paths'
 import { useWorkspace } from '@/state/providers'
 import { usePrimary, useView } from '@/editors/views'
 import { ask } from '@/ui/dialogs'
@@ -46,6 +46,7 @@ import { EditAsJson, useModelDoc } from '@/editors/shared/modelDoc'
 import { RawDocView } from '@/editors/shared/RawDocView'
 import styles from './DialogEditor.module.css'
 import { DialogPreview, type DialogPick } from './DialogPreview'
+import { useListedDialogs } from './listed'
 import {
   addBody,
   addButton,
@@ -176,21 +177,6 @@ export function DialogEditor({ path }: { path: string }) {
       </InspectorPanel>
     </EditorScreen>
   )
-}
-
-/** The dialogs a dialog_list names, read from disk or open documents, for their labels. */
-function useListedDialogs(ids: string[]): Record<string, DialogFile | undefined> {
-  const texts = useWorkspace((s) => s.diskTexts)
-  const files = useWorkspace((s) => s.files)
-  const out: Record<string, DialogFile | undefined> = {}
-  for (const id of ids) {
-    try {
-      out[id] = JSON.parse(texts[mainFileIn(files, 'dialog', id)] ?? 'null') ?? undefined
-    } catch {
-      out[id] = undefined
-    }
-  }
-  return out
 }
 
 const askItemId = () =>

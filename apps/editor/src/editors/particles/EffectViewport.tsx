@@ -134,7 +134,7 @@ function useSprite(assets: ClientAssets | null, particle: string, data: SpawnDat
       ? s.gameData?.blocks?.[parseBlockState(data.state).id]?.defaults
       : undefined,
   )
-  const key = `${assets?.version ?? 'none'}|${particle}|${data?.type === 'block' ? data.state : data?.type === 'item' ? data.item.kind : ''}`
+  const key = `${assets?.key ?? 'none'}|${particle}|${data?.type === 'block' ? data.state : data?.type === 'item' ? data.item.kind : ''}`
   const [state, setState] = useState<{ key: string; texture: string | null } | null>(null)
   useEffect(() => {
     if (!assets) return
