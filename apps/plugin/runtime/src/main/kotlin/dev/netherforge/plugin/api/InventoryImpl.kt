@@ -89,8 +89,8 @@ internal class InventoryImpl(private val session: ProjectSession) : InventoryApi
 
     override fun item(self: LuaHandle.Inventory, index: Long): ItemData? {
         val ref = InventoryKeys.ref(self) ?: return null
-        val contents = inventories.contents(ref) ?: return null
-        return contents[slot(index, contents.size)]
+        val size = inventories.size(ref) ?: return null
+        return inventories.item(ref, slot(index, size))
     }
 
     override fun setItem(self: LuaHandle.Inventory, index: Long, item: ItemData?): Boolean {
@@ -118,7 +118,7 @@ internal class InventoryImpl(private val session: ProjectSession) : InventoryApi
         val matching = session.itemMatch(match)
         if (count != null && count < 0) throw LuaApiException("count can't be negative")
         val ref = InventoryKeys.ref(self) ?: return 0
-        val contents = inventories.contents(ref) ?: return 0
+        val contents = inventories.contents(ref, matching.filter) ?: return 0
         val limit = count?.coerceAtMost(Int.MAX_VALUE.toLong())?.toInt()
         return ItemSlots.remove(contents, matching, limit) { slot, item ->
             inventories.setItem(ref, slot, item)
@@ -127,7 +127,7 @@ internal class InventoryImpl(private val session: ProjectSession) : InventoryApi
 
     override fun countItem(self: LuaHandle.Inventory, match: StringOrItemMatch): Long {
         val matching = session.itemMatch(match)
-        val contents = InventoryKeys.ref(self)?.let(inventories::contents) ?: return 0
+        val contents = InventoryKeys.ref(self)?.let { inventories.contents(it, matching.filter) } ?: return 0
         return ItemSlots.count(contents, matching).toLong()
     }
 
@@ -136,7 +136,7 @@ internal class InventoryImpl(private val session: ProjectSession) : InventoryApi
 
     override fun firstSlot(self: LuaHandle.Inventory, match: StringOrItemMatch): Long? {
         val matching = session.itemMatch(match)
-        val contents = InventoryKeys.ref(self)?.let(inventories::contents) ?: return null
+        val contents = InventoryKeys.ref(self)?.let { inventories.contents(it, matching.filter) } ?: return null
         return ItemSlots.first(contents, matching)?.toLong()
     }
 

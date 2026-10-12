@@ -55,6 +55,39 @@ class InventoryTest {
     }
 
     @Test
+    fun `reading one slot or matching reads only what it must`() {
+        TestServer(
+            mapOf(
+                "items/coin/item.json" to """{ "kind": "minecraft:gold_nugget" }""",
+                "modules/t/init.lua" to """
+                    nf.commands.register("read", function()
+                      local inventory = nf.players.get("Alex"):inventory()
+                      inventory:set_item(0, { item = "coin", count = 4 })
+                      inventory:set_item(1, { kind = "minecraft:paper" })
+                      log(inventory:item(0).count, inventory:count_item({ item = "coin" }), inventory:count_item("paper"),
+                        inventory:has_item({ item = "coin" }, 4), inventory:first_slot({ item = "coin" }),
+                        inventory:remove_item({ item = "coin" }, 1), inventory:item(0).count)
+                    end)
+                    nf.commands.register("all", function()
+                      local items = nf.players.get("Alex"):inventory():items()
+                      log(items[0].count, items[1].kind)
+                    end)
+                """.trimIndent()
+            )
+        ).use { server ->
+            server.player("Alex")
+            val inventories = server.platform.inventories
+            server.platform.commands.runConsole("read")
+            assertEquals(listOf("4\t4\t1\ttrue\t0\t1\t3"), server.logs)
+            // A slot is read on its own, and a match reads only the stacks that could be one.
+            assertEquals(0, inventories.fullReads)
+            server.platform.commands.runConsole("all")
+            assertEquals("3\tminecraft:paper", server.logs.last())
+            assertEquals(1, inventories.fullReads)
+        }
+    }
+
+    @Test
     fun `a chest's inventory is the block's, while it's a chest`() {
         val result = LuaChecks.run(
             """

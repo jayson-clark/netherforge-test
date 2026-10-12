@@ -2,6 +2,7 @@ package dev.netherforge.plugin.item
 
 import dev.netherforge.format.game.GameIds
 import dev.netherforge.plugin.platform.ItemData
+import dev.netherforge.plugin.platform.StackFilter
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
@@ -15,6 +16,9 @@ import kotlinx.serialization.json.JsonObject
  * (`Vec3`s, handles) compare too.
  */
 class ItemMatch private constructor(private val kind: String?, private val fields: Map<String, Any?>, private val data: JsonObject?) {
+    /** What a stack must be to be worth reading in full: its kind and project item, when the match gives them. */
+    val filter: StackFilter = StackFilter(kind, fields["item"] as? String)
+
     fun matches(item: ItemData): Boolean {
         if (kind != null && GameIds.normalize(item.def.kind) != kind) return false
         if (fields.isEmpty() && data == null) return true

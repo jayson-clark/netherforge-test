@@ -119,6 +119,8 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
 
     override val projectItems = object : ProjectItemOps {
         override fun refresh(inventory: InventoryRef): Int {
+            // A player's storages are read again, restyled as their inventory is, when next asked for.
+            if (inventory is InventoryRef.Player) PaperStorage.forget(inventory.player)
             val found = inventories.inventory(inventory) ?: return 0
             var changed = 0
             for (slot in 0 until found.size) {
@@ -142,6 +144,7 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
     ) {
         PaperText.glyphs = glyphs
         PaperItems.looks = items
+        PaperItems.forgetReads()
         PaperItems.blockStates = blocks
         PaperItems.namespace = namespace
         plugin.server.pluginManager.registerEvents(recipes, plugin)
