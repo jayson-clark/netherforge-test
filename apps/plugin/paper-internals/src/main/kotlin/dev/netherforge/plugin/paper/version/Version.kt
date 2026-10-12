@@ -184,12 +184,14 @@ class Version : PaperVersion {
         for ((i, section) in chunk.sections.withIndex()) {
             if (section.hasOnlyAir() || !section.states.maybeHas(numbers::containsKey)) continue
             val y0 = (bottom + i) shl 4
-            // Every block in one pass over the section's storage, in its order: x fastest, then z, then y.
-            var index = 0
-            section.states.getAll { state ->
-                val number = numbers[state]
-                if (number != null) found[index and 15, y0 + (index shr 8), (index shr 4) and 15] = number
-                index++
+            // Block by block: PalettedContainer.getAll answers each value the section holds once, not each block.
+            for (y in 0..15) {
+                for (z in 0..15) {
+                    for (x in 0..15) {
+                        val number = numbers[section.getBlockState(x, y, z)] ?: continue
+                        found[x, y0 + y, z] = number
+                    }
+                }
             }
         }
         return true
