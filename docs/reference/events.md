@@ -2078,6 +2078,52 @@ Fixed light levels a display is drawn with: `node:set_brightness`.
 | `block_light` | `integer?` | Light from blocks (torches, lamps), 0 to 15. Required. |
 | `sky_light` | `integer?` | Light from the sky, 0 to 15. Required. |
 
+## StationRecipe
+
+A `station` recipe, as `nf.recipes.available` and `nf.recipes.get` give it.
+
+| Field | Type | |
+| --- | --- | --- |
+| `id` | `string` | Its id. |
+| `result` | `Item` | What one making of it gives. |
+| `materials` | `RecipeMaterial[]` | What one making of it takes. |
+| `stations` | `string[]` | The blocks that must be near, as its file names them. |
+| `station_range` | `integer` | How near, in blocks. |
+| `group` | `string?` | Its `group`, or `nil`. |
+| `times` | `integer?` | `nf.recipes.available`: how many times over the player can make it now. `nil` from `nf.recipes.get`. |
+
+## RecipeMaterial
+
+One material of a `station` recipe: exactly one of `item`, `kind` and `tag`, and how many.
+
+| Field | Type | |
+| --- | --- | --- |
+| `item` | `string?` | A project item, by id. |
+| `kind` | `string?` | An item id, `"minecraft:stick"`. |
+| `tag` | `string?` | An item tag, without its `#`. |
+| `count` | `integer` | How many one making takes. |
+
+## RecipeAvailableOptions
+
+What `nf.recipes.available` looks at. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `near` | `Vec3?` | Where its stations are looked for, in the player's world. Default: where they stand. |
+| `stations` | `string[]?` | Stations counted as near whatever the blocks are: a menu that is a crafting station, a station item held. Default none. |
+| `group` | `string?` | Only recipes of this `group`. Default: any. |
+| `all` | `boolean?` | Every station recipe, not only those they can make now: one they can't has `times` 0. Default `false`. |
+
+## RecipeCraftOptions
+
+How `nf.recipes.craft` makes a recipe. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `times` | `integer?` | How many times over, at least 1. Default 1. |
+| `near` | `Vec3?` | Where its stations are looked for. Default: where the player stands. |
+| `stations` | `string[]?` | Stations counted as near whatever the blocks are. |
+
 ## ItemRenderEvent
 
 A stack of a project item is being made, or rewritten to its item's changed file: `render`.

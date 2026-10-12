@@ -144,11 +144,11 @@ private fun fileSpelling(element: JsonElement, where: String, item: (JsonElement
 /** The keys a recipe definition takes, in Lua's spelling. */
 private val RECIPE_KEYS = listOf(
     "type", "pattern", "key", "ingredients", "ingredient", "template", "base", "addition", "result", "experience",
-    "cooking_time", "group", "category"
+    "cooking_time", "group", "category", "materials", "stations", "station_range"
 )
 
 /** A recipe's keys whose values are lists. */
-private val RECIPE_LISTS = setOf("pattern", "ingredients")
+private val RECIPE_LISTS = setOf("pattern", "ingredients", "materials", "stations")
 
 /**
  * The recipe [definition] describes, validated as `recipes/<id>.json` would

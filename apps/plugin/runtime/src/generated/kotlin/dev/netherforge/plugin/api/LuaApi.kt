@@ -439,13 +439,14 @@ interface NfRecipesApi {
     /**
      * Adds a recipe the server learns at once, sent to everyone online. `definition` says what
      * `recipes/<id>.json` would, in Lua spelling: `type` (`"shaped"`, `"shapeless"`, `"furnace"`,
-     * `"blasting"`, `"smoking"`, `"campfire_cooking"`, `"smithing_transform"` or `"stonecutting"`), then
-     * what that type takes: `pattern` and `key`, `ingredients`, `ingredient`, or `template`, `base` and
-     * `addition`; `result` (an `Item`), and `experience`, `cooking_time`, `group` and `category`. An
-     * ingredient is an item id (`"minecraft:stick"`), a tag (`"#minecraft:planks"`) or a project item (`{
-     * item = "ruby" }`). Registering an id again replaces the recipe. It lasts as long as the script that
-     * registered it (so a reloaded script registers it again in its body). An id a `recipes/` file has, or
-     * anything that file would have an error for, is an error.
+     * `"blasting"`, `"smoking"`, `"campfire_cooking"`, `"smithing_transform"`, `"stonecutting"` or
+     * `"station"`), then what that type takes: `pattern` and `key`, `ingredients`, `ingredient`,
+     * `template`, `base` and `addition`, or `materials` (each `{ ingredient = ..., count = n }`),
+     * `stations` and `station_range`; `result` (an `Item`), and `experience`, `cooking_time`, `group` and
+     * `category`. An ingredient is an item id (`"minecraft:stick"`), a tag (`"#minecraft:planks"`) or a
+     * project item (`{ item = "ruby" }`). Registering an id again replaces the recipe. It lasts as long as
+     * the script that registered it (so a reloaded script registers it again in its body). An id a
+     * `recipes/` file has, or anything that file would have an error for, is an error.
      */
     fun register(caller: Caller, id: String, definition: LuaValue)
 
@@ -455,6 +456,34 @@ interface NfRecipesApi {
      * the file instead).
      */
     fun remove(caller: Caller, id: String): Boolean
+
+    /**
+     * A `station` recipe, as `StationRecipe` (its `times` left out), or `nil` when there's no such recipe
+     * or it isn't a station recipe. A recipe the game makes (a crafting table's) isn't one: the game
+     * crafts those itself.
+     */
+    fun get(caller: Caller, id: String): StationRecipe?
+
+    /**
+     * The `station` recipes a player can make now: every station each needs is within its `station_range`
+     * of them (or of `options.near`), and their inventory holds its materials, with `times` how many times
+     * over. A material matches as a recipe's ingredient does: an item id or a `#tag` takes any stack of
+     * that kind but a project item's, and a project item only its own stacks. A station is a block id, a
+     * `#tag` of blocks or a project block, near when it's within the recipe's `station_range` (4 by
+     * default) on every axis.
+     */
+    fun available(caller: Caller, player: LuaHandle.Player, options: RecipeAvailableOptions?): List<StationRecipe>
+
+    /**
+     * Makes a `station` recipe for a player: takes its materials from their inventory and gives them its
+     * result (what doesn't fit drops at their feet), `times` over, or as many times as they can when
+     * that's fewer. A station it needs that isn't near makes nothing. A material matches as a recipe's
+     * ingredient does: an item id or a `#tag` takes any stack of that kind but a project item's, and a
+     * project item only its own stacks. A station is a block id, a `#tag` of blocks or a project block,
+     * near when it's within the recipe's `station_range` (4 by default) on every axis. A recipe that isn't
+     * a station one is an error.
+     */
+    fun craft(caller: Caller, player: LuaHandle.Player, id: String, options: RecipeCraftOptions?): Long
 
     /** Every recipe's id: the project's files', then those scripts registered. */
     fun all(caller: Caller): List<String>

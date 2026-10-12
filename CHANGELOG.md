@@ -100,6 +100,13 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **Station recipes.** A recipe of `type: "station"` is one the game never
+  sees: `materials` (ingredients with counts) taken from a player's
+  inventory, `stations` (block ids, `#tags` or project blocks) that must all
+  be within `stationRange`. `nf.recipes.available(player, options)` lists what
+  they can make where they stand (and how many times over),
+  `nf.recipes.craft(player, id, options)` makes it, and `nf.recipes.get(id)`
+  reads one: a Terraria-style crafting menu without a recipe table in Lua.
 - **Health on centities.** `centity.json`'s `health` (`max`, `removeOnDeath`,
   and a `bar` the server draws over it and shows for a while after each
   change) with `centity:damage(amount, { source, cause })` through `damage`

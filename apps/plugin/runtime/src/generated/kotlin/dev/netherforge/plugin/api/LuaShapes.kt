@@ -3481,6 +3481,154 @@ data class Brightness(val blockLight: Long? = null, val skyLight: Long? = null) 
     }
 }
 
+/** A `station` recipe, as `nf.recipes.available` and `nf.recipes.get` give it. */
+data class StationRecipe(val id: String, val result: ItemData, val materials: List<RecipeMaterial>, val stations: List<String>, val stationRange: Long, val group: String? = null, val times: Long? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<StationRecipe>("StationRecipe") {
+        val idCodec = LuaCodecs.STRING
+        val resultCodec = LuaCodecs.ITEM
+        val materialsCodec = LuaList(RecipeMaterial.Codec)
+        val stationsCodec = LuaList(LuaCodecs.STRING)
+        val stationRangeCodec = LuaCodecs.INTEGER
+        val groupCodec = LuaOptional(LuaCodecs.STRING)
+        val timesCodec = LuaOptional(LuaCodecs.INTEGER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "id" to idCodec,
+            "result" to resultCodec,
+            "materials" to materialsCodec,
+            "stations" to stationsCodec,
+            "station_range" to stationRangeCodec,
+            "group" to groupCodec,
+            "times" to timesCodec
+        )
+
+        override fun read(fields: ShapeReader) = StationRecipe(
+            id = fields.field("id", idCodec),
+            result = fields.field("result", resultCodec),
+            materials = fields.field("materials", materialsCodec),
+            stations = fields.field("stations", stationsCodec),
+            stationRange = fields.field("station_range", stationRangeCodec),
+            group = fields.field("group", groupCodec),
+            times = fields.field("times", timesCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: StationRecipe) {
+            fields.field("id", value.id, idCodec)
+            fields.field("result", value.result, resultCodec)
+            fields.field("materials", value.materials, materialsCodec)
+            fields.field("stations", value.stations, stationsCodec)
+            fields.field("station_range", value.stationRange, stationRangeCodec)
+            fields.field("group", value.group, groupCodec)
+            fields.field("times", value.times, timesCodec)
+        }
+    }
+}
+
+/** One material of a `station` recipe: exactly one of `item`, `kind` and `tag`, and how many. */
+data class RecipeMaterial(val item: String? = null, val kind: String? = null, val tag: String? = null, val count: Long) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<RecipeMaterial>("RecipeMaterial") {
+        val itemCodec = LuaOptional(LuaCodecs.STRING)
+        val kindCodec = LuaOptional(LuaCodecs.STRING)
+        val tagCodec = LuaOptional(LuaCodecs.STRING)
+        val countCodec = LuaCodecs.INTEGER
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "item" to itemCodec,
+            "kind" to kindCodec,
+            "tag" to tagCodec,
+            "count" to countCodec
+        )
+
+        override fun read(fields: ShapeReader) = RecipeMaterial(
+            item = fields.field("item", itemCodec),
+            kind = fields.field("kind", kindCodec),
+            tag = fields.field("tag", tagCodec),
+            count = fields.field("count", countCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: RecipeMaterial) {
+            fields.field("item", value.item, itemCodec)
+            fields.field("kind", value.kind, kindCodec)
+            fields.field("tag", value.tag, tagCodec)
+            fields.field("count", value.count, countCodec)
+        }
+    }
+}
+
+/** What `nf.recipes.available` looks at. A key that isn't one of these is an error. */
+data class RecipeAvailableOptions(val near: Vec3? = null, val stations: List<String>? = null, val group: String? = null, val all: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<RecipeAvailableOptions>("RecipeAvailableOptions") {
+        val nearCodec = LuaOptional(LuaCodecs.VEC3)
+        val stationsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val groupCodec = LuaOptional(LuaCodecs.STRING)
+        val allCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "near" to nearCodec,
+            "stations" to stationsCodec,
+            "group" to groupCodec,
+            "all" to allCodec
+        )
+
+        override fun read(fields: ShapeReader) = RecipeAvailableOptions(
+            near = fields.field("near", nearCodec),
+            stations = fields.field("stations", stationsCodec),
+            group = fields.field("group", groupCodec),
+            all = fields.field("all", allCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: RecipeAvailableOptions) {
+            fields.field("near", value.near, nearCodec)
+            fields.field("stations", value.stations, stationsCodec)
+            fields.field("group", value.group, groupCodec)
+            fields.field("all", value.all, allCodec)
+        }
+    }
+}
+
+/** How `nf.recipes.craft` makes a recipe. A key that isn't one of these is an error. */
+data class RecipeCraftOptions(val times: Long? = null, val near: Vec3? = null, val stations: List<String>? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<RecipeCraftOptions>("RecipeCraftOptions") {
+        val timesCodec = LuaOptional(LuaCodecs.INTEGER)
+        val nearCodec = LuaOptional(LuaCodecs.VEC3)
+        val stationsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "times" to timesCodec,
+            "near" to nearCodec,
+            "stations" to stationsCodec
+        )
+
+        override fun read(fields: ShapeReader) = RecipeCraftOptions(
+            times = fields.field("times", timesCodec),
+            near = fields.field("near", nearCodec),
+            stations = fields.field("stations", stationsCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: RecipeCraftOptions) {
+            fields.field("times", value.times, timesCodec)
+            fields.field("near", value.near, nearCodec)
+            fields.field("stations", value.stations, stationsCodec)
+        }
+    }
+}
+
 /** A stack of a project item is being made, or rewritten to its item's changed file: `render`. */
 data class ItemRenderEvent(val item: ItemData, var displayName: String? = null, var lore: List<String>? = null) : LuaEvent {
     override fun push(call: LuaCall) = Codec.push(call, this)

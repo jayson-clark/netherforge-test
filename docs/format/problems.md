@@ -702,6 +702,10 @@ Error. A shaped recipe's `pattern` isn't 1 to 3 equal rows of 1 to 3 characters,
 
 Error. A shaped recipe's `key` has a key that isn't one character, or one the pattern doesn't use. See [recipes](recipe.md).
 
+### `recipe.station` {#recipe-station}
+
+Error. A station recipe's `stations` or `stationRange` isn't usable. See [recipes](recipe.md).
+
 ### `recipe.ingredients` {#recipe-ingredients}
 
 Error. A shapeless recipe has no ingredients, or more than 9. See [recipes](recipe.md).

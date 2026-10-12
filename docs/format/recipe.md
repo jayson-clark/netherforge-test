@@ -22,21 +22,21 @@ The id is the file's name, and it's how scripts and players' recipe books
 name the recipe (`player:discover_recipe("ruby_sword")`). Scripts can add
 recipes too, in the same shape (`nf.recipes.register`).
 
-| Key           | Meaning                                                                                                                        | Types                         |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
-| `type`        | `shaped`, `shapeless`, `furnace`, `blasting`, `smoking`, `campfire_cooking`, `smithing_transform` or `stonecutting`. Required. | all                           |
-| `pattern`     | One to three rows of one to three characters, all as wide: each character a `key`, or a space for an empty square.             | `shaped`                      |
-| `key`         | What each character of the pattern stands for: an ingredient.                                                                  | `shaped`                      |
-| `ingredients` | One to nine ingredients, in any order and any squares.                                                                         | `shapeless`                   |
-| `ingredient`  | What goes in.                                                                                                                  | cooking types, `stonecutting` |
-| `template`    | The smithing template.                                                                                                         | `smithing_transform`          |
-| `base`        | The item being upgraded; its components carry over to the result.                                                              | `smithing_transform`          |
-| `addition`    | The material.                                                                                                                  | `smithing_transform`          |
-| `result`      | What it makes: an [item](menu.md#items), which can be a [project item](item.md) (`{ "item": "ruby" }`). Required.              | all                           |
-| `experience`  | Experience it gives. Default 0.                                                                                                | cooking types                 |
-| `cookingTime` | Ticks it takes. Defaults: 200 in a furnace, 100 in a blast furnace or smoker, 600 on a campfire.                               | cooking types                 |
-| `group`       | Recipes with the same group share one entry in the recipe book.                                                                | all but `smithing_transform`  |
-| `category`    | The recipe book tab: `building`, `redstone`, `equipment` or `misc` for crafting; `food`, `blocks` or `misc` for cooking.       | crafting and cooking types    |
+| Key           | Meaning                                                                                                                                                               | Types                         |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `type`        | `shaped`, `shapeless`, `furnace`, `blasting`, `smoking`, `campfire_cooking`, `smithing_transform`, `stonecutting` or `station` ([below](#station-recipes)). Required. | all                           |
+| `pattern`     | One to three rows of one to three characters, all as wide: each character a `key`, or a space for an empty square.                                                    | `shaped`                      |
+| `key`         | What each character of the pattern stands for: an ingredient.                                                                                                         | `shaped`                      |
+| `ingredients` | One to nine ingredients, in any order and any squares.                                                                                                                | `shapeless`                   |
+| `ingredient`  | What goes in.                                                                                                                                                         | cooking types, `stonecutting` |
+| `template`    | The smithing template.                                                                                                                                                | `smithing_transform`          |
+| `base`        | The item being upgraded; its components carry over to the result.                                                                                                     | `smithing_transform`          |
+| `addition`    | The material.                                                                                                                                                         | `smithing_transform`          |
+| `result`      | What it makes: an [item](menu.md#items), which can be a [project item](item.md) (`{ "item": "ruby" }`). Required.                                                     | all                           |
+| `experience`  | Experience it gives. Default 0.                                                                                                                                       | cooking types                 |
+| `cookingTime` | Ticks it takes. Defaults: 200 in a furnace, 100 in a blast furnace or smoker, 600 on a campfire.                                                                      | cooking types                 |
+| `group`       | Recipes with the same group share one entry in the recipe book.                                                                                                       | all but `smithing_transform`  |
+| `category`    | The recipe book tab: `building`, `redstone`, `equipment` or `misc` for crafting; `food`, `blocks` or `misc` for cooking.                                              | crafting and cooking types    |
 
 A field a type doesn't take is an error (`recipe.field`), and so is one it
 needs and doesn't have (`recipe.missing`). A pattern with too many rows or
@@ -44,6 +44,39 @@ columns, rows of different widths, or a character that isn't in `key` is
 `recipe.pattern`; a key that's more than one character, or isn't in the
 pattern, is `recipe.key`. A shapeless recipe takes one to nine ingredients
 (`recipe.ingredients`).
+
+## Station recipes
+
+```json partial
+{
+  "type": "station",
+  "materials": [
+    { "ingredient": { "item": "gel" }, "count": 1 },
+    { "ingredient": "#minecraft:planks", "count": 1 }
+  ],
+  "stations": ["work_bench"],
+  "stationRange": 4,
+  "group": "lighting",
+  "result": { "item": "torch", "count": 3 }
+}
+```
+
+A `station` recipe is one the game never sees: scripts make it, the way a
+crafting menu of your own lists what a player can make and makes it
+(`nf.recipes.available`, `nf.recipes.craft`, `nf.recipes.get`). It takes its
+`materials` from the player's inventory, each an [ingredient](#ingredients)
+and a `count` (default 1), and needs every block `stations` names within
+`stationRange` blocks of them (default 4, at most 16) on every axis: a block
+id (`"minecraft:crafting_table"`), a `#tag` of blocks, or one of the
+project's [blocks](block.md) (`"work_bench"`). `group` sorts them, as a
+menu may by station. They're never in a player's recipe book, and
+`pattern`, `key`, `ingredients`, `experience` and the rest are an error on one.
+
+| Key            | Meaning                                                            | Default |
+| -------------- | ------------------------------------------------------------------ | ------- |
+| `materials`    | What it takes: `{ "ingredient": ..., "count": n }` each. Required. | —       |
+| `stations`     | Blocks that must all be near: ids, `#tags` or project blocks.      | none    |
+| `stationRange` | How near, in blocks, 1 to 16.                                      | 4       |
 
 ## Ingredients
 

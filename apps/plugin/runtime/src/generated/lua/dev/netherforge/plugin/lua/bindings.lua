@@ -6591,6 +6591,18 @@ namespaces["nf.recipes"] = function(scope, ns)
     return prim["nf.recipes.remove"](scope, id)
   end
 
+  function ns.get(id)
+    return prim["nf.recipes.get"](scope, id)
+  end
+
+  function ns.available(player, options)
+    return prim["nf.recipes.available"](scope, player, options)
+  end
+
+  function ns.craft(player, id, options)
+    return prim["nf.recipes.craft"](scope, player, id, options)
+  end
+
   function ns.all()
     return prim["nf.recipes.all"](scope)
   end

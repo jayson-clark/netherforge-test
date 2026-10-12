@@ -1,9 +1,15 @@
 package dev.netherforge.plugin.api
 
+import dev.netherforge.format.Vec3
+import dev.netherforge.format.game.GameIds
+import dev.netherforge.format.project.BlockKind
 import dev.netherforge.format.project.ItemKind
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.project.RecipeKind
+import dev.netherforge.format.recipe.Material
+import dev.netherforge.format.recipe.RecipeFile
 import dev.netherforge.format.recipe.RecipeValidator
+import dev.netherforge.plugin.item.StationCrafting
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaValue
 import dev.netherforge.plugin.platform.ItemData
@@ -48,6 +54,73 @@ internal class NfRecipesImpl(private val session: ProjectSession, private val ap
     }
 
     override fun remove(caller: Caller, id: String): Boolean = session.recipes.remove(session.names.resource(RecipeKind, id))
+
+    private val crafting by lazy {
+        StationCrafting(session.platform, session.items, session.customBlocks) { name ->
+            runCatching { session.names.resource(BlockKind, name) }.getOrNull()?.takeIf(session.customBlocks::has) ?: name
+        }
+    }
+
+    /** A station recipe as scripts see it, with [times] when it's being offered. */
+    private fun shown(id: String, file: RecipeFile, times: Int?) = StationRecipe(
+        id = session.names.spell(id),
+        result = crafting.result(file),
+        materials = file.materials.orEmpty().map { m ->
+            val ingredient = m.ingredient
+            RecipeMaterial(
+                item = ingredient.item?.let { session.items.idOf(it.text) }?.let(session.names::spell),
+                kind = ingredient.kind?.let(GameIds::normalize),
+                tag = ingredient.tag?.let(GameIds::normalize),
+                count = m.countOrDefault.toLong()
+            )
+        },
+        stations = file.stations.orEmpty(),
+        stationRange = (file.stationRange ?: Material.DEFAULT_STATION_RANGE).toLong(),
+        group = file.group,
+        times = times?.toLong()
+    )
+
+    override fun get(caller: Caller, id: String): StationRecipe? {
+        val name = session.names.resource(RecipeKind, id)
+        val file = session.recipes.file(name)?.takeIf { !it.type.inGame } ?: return null
+        return shown(name, file, null)
+    }
+
+    override fun available(caller: Caller, player: LuaHandle.Player, options: RecipeAvailableOptions?): List<StationRecipe> {
+        val uuid = player.uuidOrNull()?.takeIf { session.platform.players.get(it) != null } ?: return emptyList()
+        val at = session.platform.players.location(uuid) ?: return emptyList()
+        val recipes = session.recipes.stations().filter { options?.group == null || it.value.group == options.group }
+        val near = crafting.near(
+            at.world,
+            options?.near ?: Vec3(at.x, at.y, at.z),
+            crafting.range(recipes.values),
+            options?.stations.orEmpty()
+        )
+        return recipes.entries.sortedBy { it.key }.mapNotNull { (id, file) ->
+            val times = if (crafting.stationsNear(file, near)) crafting.times(file, uuid) else 0
+            if (times > 0 || options?.all == true) shown(id, file, times) else null
+        }
+    }
+
+    override fun craft(caller: Caller, player: LuaHandle.Player, id: String, options: RecipeCraftOptions?): Long {
+        val times = options?.times ?: 1
+        if (times < 1) throw LuaApiException("bad argument 'options.times' (at least 1 expected, got $times)")
+        val name = session.names.resource(RecipeKind, id)
+        val file = session.recipes.file(name) ?: throw LuaApiException("there's no recipe \"$id\"")
+        if (file.type.inGame) throw LuaApiException("recipe \"$id\" isn't a station recipe: the game makes it")
+        val uuid = player.uuidOrNull()?.takeIf { session.platform.players.get(it) != null } ?: return 0
+        val at = session.platform.players.location(uuid) ?: return 0
+        val near = crafting.near(
+            at.world,
+            options?.near ?: Vec3(at.x, at.y, at.z),
+            crafting.range(listOf(file)),
+            options?.stations.orEmpty()
+        )
+        if (!crafting.stationsNear(file, near)) return 0
+        val made = minOf(times.toInt(), crafting.times(file, uuid))
+        if (made > 0) crafting.make(file, uuid, made)
+        return made.toLong()
+    }
 
     override fun all(caller: Caller): List<String> = session.recipes.ids().map(session.names::spell)
 }

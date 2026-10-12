@@ -137,6 +137,8 @@ class PaperRecipes(private val version: PaperVersion) :
             RecipeType.BLASTING -> BlastingRecipe(key, result, choice(file.ingredient) ?: return null, experience, time)
             RecipeType.SMOKING -> SmokingRecipe(key, result, choice(file.ingredient) ?: return null, experience, time)
             RecipeType.CAMPFIRE_COOKING -> CampfireRecipe(key, result, choice(file.ingredient) ?: return null, experience, time)
+            // Scripts make these (`nf.recipes.craft`); the runtime never hands the game one.
+            RecipeType.STATION -> return null
             RecipeType.SMITHING_TRANSFORM -> SmithingTransformRecipe(
                 key,
                 result,

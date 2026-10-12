@@ -56,6 +56,18 @@ class Recipes(
 
     fun isFile(id: String): Boolean = id in files
 
+    /** The recipe [id] (a file's or a script's), or null. */
+    fun file(id: String): RecipeFile? = files[id] ?: created[id]?.file
+
+    /** Every `station` recipe, by id: the files', then the scripts'. Scripts make these, never the game. */
+    fun stations(): Map<String, RecipeFile> = buildMap {
+        for ((id, file) in files) if (!file.type.inGame) put(id, file)
+        for ((id, recipe) in created) if (!recipe.file.type.inGame) put(id, recipe.file)
+    }
+
+    /** The ids the game was given, so a `station` recipe (never given) is never taken back from it. */
+    private val sent = HashSet<String>()
+
     /** Takes every file's recipe, after the items: a recipe's project items are built from their looks. */
     override fun define(project: SessionProject) {
         for (id in files.keys.toList()) take(id)
@@ -155,13 +167,15 @@ class Recipes(
     }
 
     private fun put(id: String, file: RecipeFile): Boolean {
+        if (!file.type.inGame) return true
         dirty = true
         val added = ops.add(RecipeSpec(id, file))
-        if (!added) log.warn("The server couldn't make recipe \"$id\"; it's left out")
+        if (added) sent += id else log.warn("The server couldn't make recipe \"$id\"; it's left out")
         return added
     }
 
     private fun take(id: String) {
+        if (!sent.remove(id)) return
         dirty = true
         ops.remove(id)
     }

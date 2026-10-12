@@ -401,6 +401,7 @@ object ProblemCodes {
         )
     val RECIPE_KEY =
         error("recipe.key", RECIPE, "A shaped recipe's `key` has a key that isn't one character, or one the pattern doesn't use.")
+    val RECIPE_STATION = error("recipe.station", RECIPE, "A station recipe's `stations` or `stationRange` isn't usable.")
     val RECIPE_INGREDIENTS = error("recipe.ingredients", RECIPE, "A shapeless recipe has no ingredients, or more than 9.")
     val RECIPE_INGREDIENT = error("recipe.ingredient", RECIPE, "An ingredient isn't an item id (other than air) or an item tag.")
     val RECIPE_UNKNOWN_ITEM = error("recipe.unknown-item", RECIPE, "An ingredient names an item the target version doesn't have.")

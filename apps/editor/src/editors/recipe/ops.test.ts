@@ -254,3 +254,23 @@ describe('switching type', () => {
       expect(canonical(recipe)).toBeDefined()
   })
 })
+
+describe('a station recipe', () => {
+  it('takes the ingredients over as materials, one of each, and drops what it has no use for', () => {
+    const recipe: RecipeFile = {
+      type: 'shapeless',
+      ingredients: ['minecraft:stick', { item: 'ruby' }],
+      result: { kind: 'minecraft:torch' },
+      category: 'misc',
+    }
+    setRecipeType(recipe, 'station')
+    expect(recipe).toEqual({
+      type: 'station',
+      materials: [{ ingredient: 'minecraft:stick' }, { ingredient: { item: 'ruby' } }],
+      result: { kind: 'minecraft:torch' },
+    })
+    setRecipeType(recipe, 'shapeless')
+    expect(recipe.ingredients).toEqual(['minecraft:stick', { item: 'ruby' }])
+    expect(recipe.materials).toBeUndefined()
+  })
+})

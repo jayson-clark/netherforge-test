@@ -684,6 +684,9 @@ nf.random.noise2	14
 nf.random.noise3	16
 nf.random.uuid	6
 nf.recipes.all	6
+nf.recipes.available	42
+nf.recipes.craft	43
+nf.recipes.get	8
 nf.recipes.register	10
 nf.recipes.remove	8
 nf.schedule.cron	14

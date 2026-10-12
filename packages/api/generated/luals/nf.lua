@@ -819,7 +819,7 @@ function nf.blocks.all() end
 ---@class nf.recipes
 nf.recipes = {}
 
---- Adds a recipe the server learns at once, sent to everyone online. `definition` says what `recipes/<id>.json` would, in Lua spelling: `type` (`"shaped"`, `"shapeless"`, `"furnace"`, `"blasting"`, `"smoking"`, `"campfire_cooking"`, `"smithing_transform"` or `"stonecutting"`), then what that type takes: `pattern` and `key`, `ingredients`, `ingredient`, or `template`, `base` and `addition`; `result` (an `Item`), and `experience`, `cooking_time`, `group` and `category`. An ingredient is an item id (`"minecraft:stick"`), a tag (`"#minecraft:planks"`) or a project item (`{ item = "ruby" }`). Registering an id again replaces the recipe. It lasts as long as the script that registered it (so a reloaded script registers it again in its body). An id a `recipes/` file has, or anything that file would have an error for, is an error.
+--- Adds a recipe the server learns at once, sent to everyone online. `definition` says what `recipes/<id>.json` would, in Lua spelling: `type` (`"shaped"`, `"shapeless"`, `"furnace"`, `"blasting"`, `"smoking"`, `"campfire_cooking"`, `"smithing_transform"`, `"stonecutting"` or `"station"`), then what that type takes: `pattern` and `key`, `ingredients`, `ingredient`, `template`, `base` and `addition`, or `materials` (each `{ ingredient = ..., count = n }`), `stations` and `station_range`; `result` (an `Item`), and `experience`, `cooking_time`, `group` and `category`. An ingredient is an item id (`"minecraft:stick"`), a tag (`"#minecraft:planks"`) or a project item (`{ item = "ruby" }`). Registering an id again replaces the recipe. It lasts as long as the script that registered it (so a reloaded script registers it again in its body). An id a `recipes/` file has, or anything that file would have an error for, is an error.
 ---@param id string Its id: lowercase letters, digits and `_`, like a file's name. Players discover it by this id.
 ---@param definition table What the recipe is, as `recipes/<id>.json` would say it, with its keys in snake_case.
 function nf.recipes.register(id, definition) end
@@ -828,6 +828,24 @@ function nf.recipes.register(id, definition) end
 ---@param id RecipeId Its id.
 ---@return boolean
 function nf.recipes.remove(id) end
+
+--- A `station` recipe, as `StationRecipe` (its `times` left out), or `nil` when there's no such recipe or it isn't a station recipe. A recipe the game makes (a crafting table's) isn't one: the game crafts those itself.
+---@param id RecipeId Its id.
+---@return StationRecipe?
+function nf.recipes.get(id) end
+
+--- The `station` recipes a player can make now: every station each needs is within its `station_range` of them (or of `options.near`), and their inventory holds its materials, with `times` how many times over. A material matches as a recipe's ingredient does: an item id or a `#tag` takes any stack of that kind but a project item's, and a project item only its own stacks. A station is a block id, a `#tag` of blocks or a project block, near when it's within the recipe's `station_range` (4 by default) on every axis.
+---@param player Player Who makes them: their inventory, and where they stand.
+---@param options? RecipeAvailableOptions
+---@return StationRecipe[] # In id order. Empty for a player who is offline.
+function nf.recipes.available(player, options) end
+
+--- Makes a `station` recipe for a player: takes its materials from their inventory and gives them its result (what doesn't fit drops at their feet), `times` over, or as many times as they can when that's fewer. A station it needs that isn't near makes nothing. A material matches as a recipe's ingredient does: an item id or a `#tag` takes any stack of that kind but a project item's, and a project item only its own stacks. A station is a block id, a `#tag` of blocks or a project block, near when it's within the recipe's `station_range` (4 by default) on every axis. A recipe that isn't a station one is an error.
+---@param player Player
+---@param id RecipeId The recipe's id.
+---@param options? RecipeCraftOptions
+---@return integer # How many times it was made: 0 when it couldn't be, or the player is offline.
+function nf.recipes.craft(player, id, options) end
 
 --- Every recipe's id: the project's files', then those scripts registered.
 ---@return string[]
@@ -5431,6 +5449,36 @@ function Event:uncancel() end
 ---@class Brightness
 ---@field block_light integer? Light from blocks (torches, lamps), 0 to 15. Required.
 ---@field sky_light integer? Light from the sky, 0 to 15. Required.
+
+--- A `station` recipe, as `nf.recipes.available` and `nf.recipes.get` give it.
+---@class StationRecipe
+---@field id string Its id.
+---@field result Item What one making of it gives.
+---@field materials RecipeMaterial[] What one making of it takes.
+---@field stations string[] The blocks that must be near, as its file names them.
+---@field station_range integer How near, in blocks.
+---@field group string? Its `group`, or `nil`.
+---@field times integer? `nf.recipes.available`: how many times over the player can make it now. `nil` from `nf.recipes.get`.
+
+--- One material of a `station` recipe: exactly one of `item`, `kind` and `tag`, and how many.
+---@class RecipeMaterial
+---@field item string? A project item, by id.
+---@field kind string? An item id, `"minecraft:stick"`.
+---@field tag string? An item tag, without its `#`.
+---@field count integer How many one making takes.
+
+--- What `nf.recipes.available` looks at. A key that isn't one of these is an error.
+---@class RecipeAvailableOptions
+---@field near Vec3? Where its stations are looked for, in the player's world. Default: where they stand.
+---@field stations string[]? Stations counted as near whatever the blocks are: a menu that is a crafting station, a station item held. Default none.
+---@field group string? Only recipes of this `group`. Default: any.
+---@field all boolean? Every station recipe, not only those they can make now: one they can't has `times` 0. Default `false`.
+
+--- How `nf.recipes.craft` makes a recipe. A key that isn't one of these is an error.
+---@class RecipeCraftOptions
+---@field times integer? How many times over, at least 1. Default 1.
+---@field near Vec3? Where its stations are looked for. Default: where the player stands.
+---@field stations string[]? Stations counted as near whatever the blocks are.
 
 --- A stack of a project item is being made, or rewritten to its item's changed file: `render`.
 ---@class ItemRenderEvent: Event
