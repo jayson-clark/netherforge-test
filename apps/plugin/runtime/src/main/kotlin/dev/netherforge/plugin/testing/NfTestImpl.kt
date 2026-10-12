@@ -33,7 +33,8 @@ internal class NfTestImpl(private val session: ProjectSession) : NfTestApi {
 
     override fun advance(caller: Caller, ticks: Long) {
         if (ticks < 1) throw LuaApiException("bad argument 'ticks' (at least 1 expected, got $ticks)")
-        harness.advance(Math.toIntExact(ticks))
+        // Each call in those ticks has its own budget, as on a server; the test's own is for its own code.
+        session.scripts.host!!.detached { harness.advance(Math.toIntExact(ticks)) }
     }
 
     override fun player(caller: Caller, name: String): LuaHandle.Player {

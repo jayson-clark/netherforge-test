@@ -3417,7 +3417,7 @@
         },
         {
           "name": "advance",
-          "doc": "Runs the server forward `ticks` ticks (20 are a second), whole ticks at a time: timers fall due, `tick` handlers run, centities tick and mobs think, exactly as on a server, and everything scripts started on other threads finishes first. When it returns, the last tick is done. Script errors during it are collected and fail the test when it ends.",
+          "doc": "Runs the server forward `ticks` ticks (20 are a second), whole ticks at a time: timers fall due, `tick` handlers run, centities tick and mobs think, exactly as on a server, and everything scripts started on other threads finishes first. When it returns, the last tick is done. Each call in those ticks (a handler, a timer, a centity's tick) has its own budget and time limit, as on a server: none of it counts against the test's own, which is for the test's code. One that runs out is reported as on a server, at its file and line. Script errors during it are collected and fail the test when it ends.",
           "params": [
             {
               "name": "ticks",

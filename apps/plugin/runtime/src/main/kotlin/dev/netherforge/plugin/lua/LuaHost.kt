@@ -1021,6 +1021,39 @@ class LuaHost(
         }
     }
 
+    /**
+     * Runs [block], a stretch of the server's own ticks run from inside a script's call (`nf.test.advance`),
+     * with that call's frame taken off (`host.detach`): what runs in it is charged to budgets of its own, as on a
+     * server. The frame is put back after, its time limit moved on by the time it was off.
+     */
+    fun <T> detached(block: () -> T): T {
+        owned("detached")
+        val lua = current
+        val top = lua.top
+        lua.refGet(hostRef)
+        lua.getField(-1, "detach")
+        lua.remove(-2)
+        lua.pCall(0, 2)
+        val from = lua.toInteger(-1)
+        lua.pop(1)
+        val frame = lua.ref()
+        lua.setTop(top)
+        try {
+            return block()
+        } finally {
+            if (!closed) {
+                val at = current
+                at.refGet(hostRef)
+                at.getField(-1, "reattach")
+                at.remove(-2)
+                at.refGet(frame)
+                at.push(from)
+                at.pCall(2, 0)
+                at.unref(frame)
+            }
+        }
+    }
+
     /** Keeps the value at [index] of [lua]'s stack alive in the registry; [unref] releases it. */
     fun ref(lua: Lua, index: Int): LuaRef {
         owned("ref")

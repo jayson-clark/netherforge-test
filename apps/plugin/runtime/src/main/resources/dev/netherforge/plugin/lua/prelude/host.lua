@@ -360,6 +360,28 @@ function host.json_decode(tree)
   return decode_data(tree)
 end
 
+-- Takes the running frame off while the host runs a stretch of the server's own
+-- ticks inside it (`nf.test.advance`): each handler, timer and centity tick in
+-- them is then a call in of its own, with its own budget and time limit, as on
+-- a server, rather than nested in (and charged to) the frame that asked. Returns
+-- the frame and the clock, for `host.reattach`.
+function host.detach()
+  local f = guard_module.current()
+  guard_module.set_current(nil)
+  return f, timing.clock()
+end
+
+-- Puts back what `host.detach` took off. Its time limit is moved on by the time
+-- it was off, and that time is its nested calls', not its own.
+function host.reattach(f, from)
+  if f ~= nil then
+    local elapsed = timing.clock() - from
+    f.deadline = f.deadline + elapsed
+    f.nested = f.nested + elapsed
+  end
+  guard_module.set_current(f)
+end
+
 -- The genuine metatables of a vector and a location: Kotlin builds those it
 -- hands over itself (`LuaHost.pushVec3`, `pushLocation`), as `new_vec3` and
 -- `new_location` would, so a returned position costs a script nothing.
