@@ -126,8 +126,8 @@ function enlarge(
 /**
  * The picture the editor's preview draws for the terrain [text] (`terrain/<id>.json`) and [options], with
  * [structures] as the project's `.nbt` files read and [sources] the Lua its script runs (by project path; Lua must
- * be loaded for a file with a script, [loadNodeLua]). Throws a [PreviewError] with the file's problems when it
- * doesn't compile, as it would on a server.
+ * be loaded for a file with a script, [loadNodeLua]), and [blocks] the project's block ids. Throws a [PreviewError]
+ * with the file's problems when it doesn't compile, as it would on a server.
  */
 export function renderPreview(
   id: string,
@@ -135,8 +135,9 @@ export function renderPreview(
   structures: Record<string, TerrainStructureInput>,
   options: PreviewOptions,
   sources: Record<string, string> = {},
+  blocks: readonly string[] = [],
 ): Rendered {
-  const previewer = terrainPreviewer(id, text, structures, sources)
+  const previewer = terrainPreviewer(id, text, structures, sources, blocks)
   try {
     return render(previewer, text, options)
   } finally {
@@ -264,6 +265,14 @@ function scriptSources(root: string, id: string): Record<string, string> {
   return sources
 }
 
+/** The project's block ids: the folders under `blocks/` (in group folders too) with a `block.json`. */
+function projectBlocks(root: string): string[] {
+  return filesUnder(root, 'blocks')
+    .filter((file) => file.endsWith('/block.json'))
+    .map((file) => path.posix.basename(path.posix.dirname(file)))
+    .sort()
+}
+
 /** A script's failure as `file:line: warning: ...`, the way `check` writes problems. */
 function scriptLine(error: TerrainScriptError): string {
   const where = error.line != null ? `${error.file}:${error.line}` : error.file
@@ -379,7 +388,14 @@ export async function preview(
   if (scripted) await loadNodeLua()
   let rendered: Rendered
   try {
-    rendered = renderPreview(id, text, structures, heights, scripted ? scriptSources(root, id) : {})
+    rendered = renderPreview(
+      id,
+      text,
+      structures,
+      heights,
+      scripted ? scriptSources(root, id) : {},
+      scripted ? projectBlocks(root) : [],
+    )
   } catch (error) {
     if (!(error instanceof PreviewError)) throw error
     if (error.problems.length === 0) return fail(error.message)

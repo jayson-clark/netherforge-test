@@ -209,7 +209,7 @@ function Chunk:min_x() end
 ---@return integer
 function Chunk:min_z() end
 
---- Fills a box with a block, both corners included: the part of it in the chunk and the world. The block is an id, `minecraft:cobblestone` (the game's, written in full) or a project block's as the file names it, and one the generator places: one the file names anywhere, or that its `script.blocks` or `script.customBlocks` lists. `minecraft:air` empties the box.
+--- Fills a box with a block, both corners included: the part of it in the chunk and the world. The block is an id, `minecraft:cobblestone` (the game's, written in full) or a project block's as the file names it, and one the generator places: one the file names anywhere, one the script or its modules write whole as a string, or one its `script.blocks` or `script.customBlocks` lists. `minecraft:air` empties the box.
 ---@param x1 integer One corner.
 ---@param y1 integer
 ---@param z1 integer

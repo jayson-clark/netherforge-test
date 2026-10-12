@@ -139,8 +139,9 @@ It returns up to four stages: `height` (a column's top, from the file's),
 `density` (with 3D ground: how solid a point is, from the file's),
 `terrain` (blocks filled into a chunk after the file's ground is made) and
 `decorate` (after the file's decorations). Add the noises it asks for under
-the Script section (`ridges` above), and list the blocks it places that the
-file doesn't already (`minecraft:cobblestone`, or one of your own blocks).
+the Script section (`ridges` above). A block it writes whole as a string
+(`"minecraft:cobblestone"`, or one of your own blocks' ids) it may place; list
+under the Script section only the ones it puts together from pieces.
 The preview runs the script as you save it, or as you type in it: the same
 Lua, with the same noise, as the server, so the picture is still the world.
 The [reference](../reference/terrain-scripts.md) has everything a script can

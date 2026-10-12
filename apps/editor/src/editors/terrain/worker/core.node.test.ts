@@ -21,6 +21,7 @@ const request = (change: Partial<PreviewFile> = {}) => {
     structuresKey: '',
     sources: {},
     sourcesKey: '',
+    blocks: [],
     ...change,
   }
   return {

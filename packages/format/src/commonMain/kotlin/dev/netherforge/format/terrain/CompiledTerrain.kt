@@ -2,6 +2,7 @@ package dev.netherforge.format.terrain
 
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.GameIds
+import dev.netherforge.format.lua.LuaStrings
 import dev.netherforge.format.noise.NoiseDef
 
 /**
@@ -309,6 +310,31 @@ data class CompiledTerrain(
         TerrainGenerator(this, seed, minY, maxY, scripts?.takeIf { script != null })
 
     /**
+     * This generator with the blocks its script's [sources] (the script and the modules it may `require`) name in
+     * full as string literals added to its palette, after every other: a game block state (`"minecraft:oak_stairs[facing=north]"`)
+     * whose block [isGameBlock] knows, or a project block's id that [isProjectBlock] knows. So a script places them
+     * without listing them in `script.blocks`; one whose id it puts together from pieces still has to be listed.
+     */
+    fun withScriptBlocks(
+        sources: Collection<String>,
+        isGameBlock: (String) -> Boolean,
+        isProjectBlock: (String) -> Boolean
+    ): CompiledTerrain {
+        if (script == null) return this
+        val entries = palette.toMutableList()
+        for (literal in sources.flatMap(LuaStrings::literals).distinct().sorted()) {
+            val block = when {
+                literal.startsWith("minecraft:") ->
+                    BlockState.parse(literal)?.takeIf { isGameBlock(it.id) }?.let { TerrainBlock.Vanilla(it.toString()) }
+                PROJECT_BLOCK.matches(literal) && isProjectBlock(literal) -> TerrainBlock.Custom(literal)
+                else -> null
+            } ?: continue
+            if (block !in entries) entries += block
+        }
+        return if (entries.size == palette.size) this else copy(palette = entries)
+    }
+
+    /**
      * This generator with the structures its decorations place: each of [structures] (by the name the file gives
      * it) that one names has its states added to the palette, once in each quarter turn. A structure left out
      * isn't placed. Air, cave air and structure voids in a template are never placed: what's there stays.
@@ -341,6 +367,9 @@ data class CompiledTerrain(
     private companion object {
         /** What a template holds that a decoration leaves as the world has it. */
         val NOT_PLACED = setOf("minecraft:air", "minecraft:cave_air", "minecraft:void_air", "minecraft:structure_void")
+
+        /** What a project block's id written in a script looks like: the project's own (a package's is listed). */
+        val PROJECT_BLOCK = Regex("[a-z0-9_]+")
     }
 }
 

@@ -131,4 +131,29 @@ class TerrainStructureTest {
         assertEquals("minecraft:gold_block", buffers.single().label(36, 100, 8))
         assertEquals("minecraft:air", buffers.single().label(37, 100, 8))
     }
+
+    @Test
+    fun theBlocksAScriptNamesInFullArePlacedWithoutBeingListed(): LuaTest = withLua { lua ->
+        val source = """
+            local SHAPES = { lamp = "minecraft:sea_lantern", stairs = "minecraft:oak_stairs[facing=east]" }
+            return {
+              decorate = function(chunk)
+                chunk:set(1, 100, 1, SHAPES.lamp)
+                chunk:set(2, 100, 1, SHAPES.stairs)
+                chunk:set(3, 100, 1, "ruby_ore")
+                assert(not pcall(function() chunk:set(4, 100, 1, "minecraft:" .. "glowstone") end))
+              end,
+            }
+        """
+        val scripted = compiled.withScriptBlocks(listOf(source), { it != "minecraft:diamond" }) { it == "ruby_ore" }
+        assertEquals(compiled.palette, scripted.palette.take(compiled.palette.size), "the file's own keep their places")
+        val failures = mutableListOf<TerrainScriptFailure>()
+        val generator = scripted.bind(7L, -64, 320, TerrainScripts(lua, mapOf(script to source)) { failures += it })
+        val chunk = generator.generate(0, 0)
+        generator.close()
+        assertEquals(emptyList(), failures.map { it.message })
+        assertEquals("minecraft:sea_lantern", scripted.palette[chunk[1, 100, 1]].label)
+        assertEquals("minecraft:oak_stairs[facing=east]", scripted.palette[chunk[2, 100, 1]].label)
+        assertEquals("ruby_ore", scripted.palette[chunk[3, 100, 1]].label)
+    }
 }

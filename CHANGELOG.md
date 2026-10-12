@@ -100,6 +100,10 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **Terrain scripts place the blocks they name.** A game block state or a
+  project block's id that a terrain script or its modules write whole as a
+  string joins the generator by itself, on the server and in the preview:
+  `script.blocks` and `customBlocks` are only for ids put together from pieces.
 - **Structures in terrain scripts.** `chunk:ellipsoid(cx, cy, cz, rx, ry, rz,
 block, { shell, only })`; `terrain.structure()` records `fill`, `set`,
   `ellipsoid`, `sprinkle` and `loot` once, and `chunk:place_structure(s, x, y,

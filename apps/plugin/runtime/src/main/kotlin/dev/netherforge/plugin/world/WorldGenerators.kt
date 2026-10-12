@@ -14,6 +14,7 @@ import dev.netherforge.format.project.ProjectSnapshot
 import dev.netherforge.format.project.StructureKind
 import dev.netherforge.format.project.TerrainKind
 import dev.netherforge.format.ref.RefKind
+import dev.netherforge.format.terrain.CompiledScript
 import dev.netherforge.format.terrain.CompiledTerrain
 import dev.netherforge.format.terrain.StructureTemplate
 import dev.netherforge.format.terrain.TerrainBlock
@@ -156,7 +157,13 @@ internal class WorldGenerators(
             runningBiomes(snapshot),
             blocks()::stateOf,
             { name -> structureFile(snapshot, name, files)?.let(platform.structures::template) },
-            { id, terrain ->
+            scriptBlocks = { id, terrain ->
+                // The blocks its script names in full join its palette, so it needn't list them.
+                val sources = terrain.script?.let { sourcesFor(id, it, listed, read) }.orEmpty()
+                val game = platform.game
+                terrain.withScriptBlocks(sources.values, { game.block(it) != null }) { blocks().stateOf(it) != null }
+            },
+            scriptsOf = { id, terrain ->
                 scriptsFor(id, terrain, listed, read, failures.reporter(id))?.also { scripts ->
                     scripts.check(terrain)?.let { failures.add(id, it, log::warn) }
                 }
@@ -189,10 +196,14 @@ internal class WorldGenerators(
             failed: (TerrainScriptFailure) -> Unit
         ): TerrainScripts? {
             val script = terrain.script ?: return null
+            return TerrainScripts(LuajavaPlatform, sourcesFor(id, script, files, read), failed)
+        }
+
+        /** The Lua generator [id]'s [script] may run: itself and the modules of its package, read from [files]. */
+        fun sourcesFor(id: String, script: CompiledScript, files: Collection<String>, read: (String) -> String?): Map<String, String> {
             val namespace = id.substringBefore(':', "").ifEmpty { null }
             val own = files.map(PackagePaths::split).filter { it.first == namespace }.map { it.second }
-            val sources = TerrainScripts.sourcesOf(script, own) { read(namespace?.let { ns -> PackagePaths.of(ns, it) } ?: it) }
-            return TerrainScripts(LuajavaPlatform, sources, failed)
+            return TerrainScripts.sourcesOf(script, own) { read(namespace?.let { ns -> PackagePaths.of(ns, it) } ?: it) }
         }
 
         /** The dimension type a `netherforge.json` reference names, as the server knows it (`basic:deep`); null when it names none. */
@@ -223,10 +234,12 @@ internal class WorldGenerators(
             biomes: Set<String>,
             stateOf: (String) -> String?,
             templateOf: (String) -> StructureTemplate?,
+            /** [terrain] with the blocks its script names added to its palette; as it is by default. */
+            scriptBlocks: (id: String, terrain: CompiledTerrain) -> CompiledTerrain = { _, terrain -> terrain },
             scriptsOf: (id: String, terrain: CompiledTerrain) -> TerrainScripts?,
             problem: (id: String, message: String) -> Unit
         ): Map<String, ProjectGenerator> = running.mapValues { (id, compiled) ->
-            val terrain = link(compiled, templateOf) { problem(id, it) }
+            val terrain = scriptBlocks(id, link(compiled, templateOf) { problem(id, it) })
             val stone = terrain.palette[terrain.stone]
             val fallback = (stone as? TerrainBlock.Vanilla)?.state ?: TerrainFile.DEFAULT_STONE
             val states = terrain.palette.map { block ->

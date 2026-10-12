@@ -32,11 +32,13 @@ export interface PreviewFile {
   sources: Record<string, string>
   /** Says when [sources] changed. */
   sourcesKey: string
+  /** The project's block ids: one the script names places without being listed. */
+  blocks: readonly string[]
 }
 
 /** Says when a [PreviewFile] changed: a worker that has it compiled already is sent only this. */
 export const fileKeyOf = (file: PreviewFile) =>
-  `${file.id}\n${file.structuresKey}\n${file.sourcesKey}\n${file.text}`
+  `${file.id}\n${file.structuresKey}\n${file.sourcesKey}\n${file.blocks.join(',')}\n${file.text}`
 
 /** The world a file is drawn for. */
 export interface PreviewWorld {
@@ -145,7 +147,7 @@ export function createPreviewCore(loadLua: () => Promise<void> = loadBrowserLua)
     cached?.previewer.close()
     cached = {
       key: request.fileKey,
-      previewer: terrainPreviewer(file.id, file.text, file.structures, file.sources),
+      previewer: terrainPreviewer(file.id, file.text, file.structures, file.sources, file.blocks),
     }
     return cached.previewer
   }

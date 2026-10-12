@@ -553,11 +553,12 @@ fun loadTerrainLua(wasmUri: String?): Promise<Unit> = terrainLua?.let { Promise.
  * [TerrainPreviewer]. [structuresJson] is the project structures its decorations name that the editor could
  * read, a map from the name the file gives each to a [TerrainStructureInput] (null for none): one left out
  * isn't placed, as on a server that can't read it. [sourcesJson] is the Lua its script may run, a map from
- * project path to text: `terrain/<id>.lua` and the project's module files (null for none). A generator with a
+ * project path to text: `terrain/<id>.lua` and the project's module files (null for none); [blocksJson] the project's
+ * block ids (null for none), so a script that names one in full places it without listing it. A generator with a
  * script needs [loadTerrainLua] to have finished; one whose script isn't among the sources draws the file's own
  * ground and says the script failed to load.
  */
-fun terrainPreviewer(id: String, text: String, structuresJson: String?, sourcesJson: String?): TerrainPreviewer {
+fun terrainPreviewer(id: String, text: String, structuresJson: String?, sourcesJson: String?, blocksJson: String?): TerrainPreviewer {
     val path = TerrainKind.pathOf(id)
     val parsed = TerrainKind.parse(text, path)
     val sources = sourcesJson?.let { CanonicalJson.json.decodeFromString<Map<String, String>>(it) }.orEmpty()
@@ -571,7 +572,11 @@ fun terrainPreviewer(id: String, text: String, structuresJson: String?, sourcesJ
     }.orEmpty().mapValues { (_, s) ->
         StructureTemplate(s.size[0], s.size[1], s.size[2], s.palette, s.blocks.toIntArray())
     }
-    return TerrainPreviewer(TerrainCompiler.compile(file, TerrainKind.scriptPathOf(id)).withStructures(structures), emptyList(), sources)
+    // Without the game's facts here, any game block state the script names in full is taken; a project block, when
+    // it's one of [blocksJson]'s.
+    val blocks = blocksJson?.let { CanonicalJson.json.decodeFromString<List<String>>(it) }.orEmpty().toSet()
+    val compiled = TerrainCompiler.compile(file, TerrainKind.scriptPathOf(id)).withStructures(structures)
+    return TerrainPreviewer(compiled.withScriptBlocks(sources.values, { true }, blocks::contains), emptyList(), sources)
 }
 
 /** What a new `terrain/<id>.lua` starts as. */
