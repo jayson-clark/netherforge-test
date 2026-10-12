@@ -27,6 +27,7 @@ local registry, listeners, NF = events.registry, events.listeners, events.NF
 local class_of, key_of, new_event, deliver =
   events.class_of, events.key_of, events.new_event, events.deliver
 local unsubscribe, subscriptions = events.unsubscribe, events.subscriptions
+local set_event = events.set_event
 local scope_subscriptions = events.scope_subscriptions
 local scope_tasks, tasks_by_id, end_task = tasks.scope_tasks, tasks.tasks, tasks.end_task
 local envs, loaded, load_path = scopes.envs, scopes.loaded, scopes.load_path
@@ -274,7 +275,7 @@ function host.emit(stages, fields, precancelled, writable, home, only)
   local ev, state = new_event(first.event, fields, spec.cancellable, spec.writable)
   -- What a handler assigns is checked as the first stage's payload field.
   state.owner, state.event = owner, first.event
-  state.cancelled = precancelled == true
+  set_event(state, "cancelled", precancelled == true)
   state.spelled = home
   state.only = only
   for i = 1, #stages do
@@ -282,9 +283,9 @@ function host.emit(stages, fields, precancelled, writable, home, only)
       break
     end
     local stage = stages[i]
-    state.name = stage.event
-    state.current = stage.target
-    deliver(key_of(stage.target), stage.event, ev, state)
+    set_event(state, "name", stage.event)
+    set_event(state, "current", stage.target)
+    guard.unbilled(deliver, key_of(stage.target), stage.event, ev, state)
   end
   local written = {}
   for i, name in ipairs(writable) do

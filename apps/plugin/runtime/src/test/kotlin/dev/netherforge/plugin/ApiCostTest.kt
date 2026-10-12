@@ -58,6 +58,8 @@ class ApiCostTest {
         "nf.emit, nobody listening" to "nf.emit('cost:none', { a = 1 })",
         "nf.emit, one listening" to "nf.emit('cost:one', { a = 1 })",
         "centity:emit, nobody listening" to "centity:emit('cost:none', { a = 1 })",
+        "nf.emit, ten listening" to "nf.emit('cost:ten', { a = 1 })",
+        "nf.emit, a handler reading three fields" to "nf.emit('cost:read', { a = 1, b = 2, c = 3 })",
         "nf.on + cancel" to "nf.on('tick', f):cancel()",
         "nf.on + cancel, among 100 others" to "nf.on('cost:many', f):cancel()",
         "mob:on + cancel" to "mob:on('damage', f):cancel()",
@@ -92,6 +94,12 @@ class ApiCostTest {
               nf.on("cost:many", f)
             end
             nf.on("cost:one", f)
+            for _ = 1, 10 do
+              nf.on("cost:ten", f)
+            end
+            nf.on("cost:read", function(event)
+              local _ = event.a + event.b + event.c
+            end)
 
             local scenarios = {
             ${scenarios.entries.joinToString("\n") { (name, lua) -> "  { ${luaString(name)}, function() $lua end }," }}

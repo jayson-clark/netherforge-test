@@ -154,6 +154,7 @@ local timing = {
 ---@field overran string|false Why it was stopped, once it has been.
 ---@field scope integer? Whose code it runs.
 ---@field nested number Nanoseconds the frames nested in it took.
+---@field charged number Instructions the frames nested in it ran.
 ---@field started integer
 ---@field deadline integer
 ---@field checks number Hooks until the next look at the clock.
@@ -181,6 +182,8 @@ function guard.frame(budget, scope, outer)
     overran = false,
     scope = scope,
     nested = 0,
+    -- Instructions the calls nested in it ran, charged to it (`guard.charge`): what `guard.unbilled` keeps.
+    charged = 0,
     started = now,
     deadline = deadline,
     -- Hooks until the next look at the clock.
@@ -260,6 +263,7 @@ end
 -- that put over a limit stops the outer frame at its next instruction.
 function guard.charge(outer, used, now)
   outer.left = outer.left - used
+  outer.charged = outer.charged + used
   if outer.spent then
     return
   end
@@ -269,6 +273,21 @@ function guard.charge(outer, used, now)
   if outer.left < 0 or outer.stop ~= nil then
     guard.count_every(true)
   end
+end
+
+-- Runs `fn(a, b, c, d, e)`, the prelude's own work around calls in that a
+-- script's call set off (delivering an event to each handler): the running
+-- frame, if any, is charged what those calls ran, not this work. A script whose
+-- `emit` reaches ten handlers pays for their code, not for ten deliveries.
+function guard.unbilled(fn, a, b, c, d, e)
+  local f = frame
+  if f == nil then
+    return fn(a, b, c, d, e)
+  end
+  local left, charged = f.left, f.charged
+  local result = fn(a, b, c, d, e)
+  f.left = left - (f.charged - charged)
+  return result
 end
 
 function guard.deadline(f)
