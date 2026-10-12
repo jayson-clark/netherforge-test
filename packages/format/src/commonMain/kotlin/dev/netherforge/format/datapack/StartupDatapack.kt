@@ -12,6 +12,7 @@ import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.ref.ResourceRef
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -53,9 +54,10 @@ object StartupDatapack {
         format: List<Int>,
         text: TextJson,
         mainWorld: String? = null,
-        passThrough: Boolean = true
+        passThrough: Boolean = true,
+        game: GameDatapack = GameDatapack.NONE
     ): Map<String, DatapackEntry> {
-        val context = DatapackContext(snapshot, format, text, mainWorld, passThrough)
+        val context = DatapackContext(snapshot, format, text, mainWorld, passThrough, game)
         val files = HashMap<String, DatapackEntry>()
         for (kind in kinds) add(kind, snapshot, context, files)
         if (files.isEmpty()) return emptyMap()
@@ -124,6 +126,17 @@ object StartupDatapack {
     private const val MCMETA = "pack.mcmeta"
 }
 
+/**
+ * What the game's own data pack (in the server's jar) has that a kind builds on: its [biomes] (each its JSON, by
+ * key), and the [overworld]'s dimension type. The server hands it over as it starts (the start-up datapack is built
+ * before anything else of the game is there); without one ([NONE]: the editor, a test) nothing is built on it.
+ */
+class GameDatapack(val biomes: Map<ResourceKey, JsonObject>, val overworld: JsonObject?) {
+    companion object {
+        val NONE = GameDatapack(emptyMap(), null)
+    }
+}
+
 /** One file of the start-up datapack. */
 sealed interface DatapackEntry {
     /** A file written out: JSON, as text. */
@@ -173,7 +186,9 @@ class DatapackContext internal constructor(
     /** The server's main world's name, when the pack is built for a server that says (null: none is known). */
     val mainWorld: String? = null,
     /** Whether the project's datapacks go in (see [StartupDatapack.build]). */
-    val passThrough: Boolean = true
+    val passThrough: Boolean = true,
+    /** What the server's own data pack says, for a kind that builds on it ([GameDatapack]). */
+    val game: GameDatapack = GameDatapack.NONE
 ) {
     /** [format] as a data pack format, to compare with a datapack's. */
     val packFormat: PackFormat get() = PackFormat.of(format)

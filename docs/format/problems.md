@@ -1156,6 +1156,20 @@ Error. A feature isn't a placed feature the target version has, or it's listed t
 
 Error. Two of the project's biomes list the same two features of a step in opposite orders, which the game refuses in one world. See [biomes](biome.md).
 
+## sky
+
+### `sky.color` {#sky-color}
+
+Error. A sky's colour isn't written `#rrggbb`. See [format/sky.md](sky.md).
+
+### `sky.empty` {#sky-empty}
+
+Error. A sky gives no colour at all. See [format/sky.md](sky.md).
+
+### `sky.fade` {#sky-fade}
+
+Error. A sky's fade is outside 1 to 8 steps. See [format/sky.md](sky.md).
+
 ## datapack
 
 ### `datapack.format` {#datapack-format}

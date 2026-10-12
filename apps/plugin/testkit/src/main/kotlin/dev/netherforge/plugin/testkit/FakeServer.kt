@@ -1,7 +1,9 @@
 package dev.netherforge.plugin.testkit
 
+import dev.netherforge.format.datapack.GameDatapack
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.project.AdvancementKind
+import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.datapack.DatapackRefusal
 import dev.netherforge.plugin.datapack.StartupDatapackFiles
@@ -11,6 +13,9 @@ import dev.netherforge.plugin.platform.PerformanceOps
 import dev.netherforge.plugin.platform.PlatformLog
 import dev.netherforge.plugin.platform.TextOps
 import dev.netherforge.plugin.project.ProjectFiles
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 import java.nio.file.Path
 import java.util.UUID
 
@@ -63,6 +68,20 @@ class FakeDatapacks : DatapackOps {
     /** The main world the start-up datapack was built for: [level] once [bootstrap] has built one, as on Paper; null before. */
     override var mainWorld: String? = null
 
+    /** The game's own data pack: one biome, the plains, as the game writes it, so a sky has a twin of it. */
+    override var game: GameDatapack = GameDatapack(
+        mapOf(
+            ResourceKey("minecraft", "plains") to buildJsonObject {
+                putJsonObject("attributes") { put("minecraft:visual/sky_color", "#78a7ff") }
+                putJsonObject("effects") { put("water_color", "#3f76e4") }
+                put("has_precipitation", true)
+                put("temperature", 0.8)
+                put("downfall", 0.4)
+            }
+        ),
+        null
+    )
+
     /** The project's advancements the fake server started with, by key: their criteria, and their requirement groups. */
     var advancements: Map<String, Pair<List<String>, List<List<String>>>> = emptyMap()
 
@@ -76,7 +95,7 @@ class FakeDatapacks : DatapackOps {
         val source = ProjectFiles(project, resolvesPackages)
         val snapshot = source.load(null).snapshot
         mainWorld = format?.let { level }
-        val start = format?.let { StartupDatapackFiles.forStart(snapshot, it, ::textJson, mainWorld, source::readBytes, refusal) }
+        val start = format?.let { StartupDatapackFiles.forStart(snapshot, it, ::textJson, mainWorld, source::readBytes, refusal, game) }
         started = start?.files.orEmpty()
         refused = start?.refused
         advancements = if (started.isEmpty()) {

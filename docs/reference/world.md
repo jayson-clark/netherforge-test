@@ -130,6 +130,39 @@ Changes the weather, for `options.ticks` or for as long as the game would have k
 world:set_weather("thunder", { ticks = 20 * 60 })
 ```
 
+## `world:sky()`
+
+The sky set over the world (`world:set_sky`), as the calling script names it, or `nil` for none (or once the world has gone). A player's own (`player:set_sky`) is theirs alone.
+
+**Returns** `string?`
+
+## `world:set_sky(sky, options?)`
+
+Sets a sky of the project's over the world (`skies/<id>.json`): everyone in it sees its colours in place of the biomes' own, the sky, fog, clouds and water, fading over `options.fade_ticks`, until it's cleared or another is set. Only what players are shown changes: the world, its biomes, its mobs and its weather are as they were, and a restart clears it. A player's own sky (`player:set_sky`) is shown them instead. A sky the project has no file for is an error, and so is one added since the server started (its colours are biomes, which the game learns as it starts: restart the server).
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `sky` | `string` | A sky of the project's (its file's name under `skies/`, or `namespace:id` for one a package it depends on exports). |
+| `options` (optional) | `SkyOptions` |  |
+
+**Returns** `boolean`: `false` when the world has gone.
+
+```lua
+world:set_sky("blood_moon", { fade_ticks = 100 })
+```
+
+## `world:clear_sky(options?)`
+
+Takes the world's sky away (`world:set_sky`): its biomes' own colours come back over `options.fade_ticks`. Nothing when it has none.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `options` (optional) | `SkyOptions` |  |
+
+```lua
+world:clear_sky({ fade_ticks = 100 })
+```
+
 ## `world:spawn_location()`
 
 Where players appear in this world when nothing else decides, or `nil` once the world has gone.

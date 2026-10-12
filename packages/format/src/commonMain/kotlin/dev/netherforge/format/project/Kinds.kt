@@ -38,6 +38,7 @@ object Kinds {
         GameBlockKind,
         DatapackKind,
         BiomeKind,
+        SkyKind,
         DimensionTypeKind,
         TerrainKind,
         AdvancementKind,

@@ -2158,6 +2158,25 @@ interface PlayerApi {
     fun enderChest(self: LuaHandle.Player): LuaHandle.Inventory?
 
     /**
+     * Their own sky (`player:set_sky`), as the calling script names it, or `nil` for none: then they see
+     * their world's (`world:sky()`).
+     */
+    fun sky(self: LuaHandle.Player): String?
+
+    /**
+     * Shows them a sky of the project's, whatever world they're in, over their world's own
+     * (`world:set_sky`), until it's cleared: as `world:set_sky` does for everyone in a world, and the same
+     * errors. Nothing for someone offline, and it ends when they leave.
+     */
+    fun setSky(self: LuaHandle.Player, sky: String, options: SkyOptions?)
+
+    /**
+     * Takes their own sky away (`player:set_sky`): they see their world's again, fading over
+     * `options.fade_ticks`.
+     */
+    fun clearSky(self: LuaHandle.Player, options: SkyOptions?)
+
+    /**
      * A set of item slots of the project's own that they keep: extra equipment, a backpack, a bank. It's
      * saved in the player's own save data, with their inventory, in the same file and the same write, so a
      * crash or a restart can't duplicate an item between the two or lose one. Shown in a menu by binding
@@ -2528,6 +2547,28 @@ interface WorldApi {
      * below 1 is an error, as is a key `options` doesn't take.
      */
     fun setWeather(self: LuaHandle.World, weather: String, options: WeatherOptions?): Boolean
+
+    /**
+     * The sky set over the world (`world:set_sky`), as the calling script names it, or `nil` for none (or
+     * once the world has gone). A player's own (`player:set_sky`) is theirs alone.
+     */
+    fun sky(self: LuaHandle.World): String?
+
+    /**
+     * Sets a sky of the project's over the world (`skies/<id>.json`): everyone in it sees its colours in
+     * place of the biomes' own, the sky, fog, clouds and water, fading over `options.fade_ticks`, until
+     * it's cleared or another is set. Only what players are shown changes: the world, its biomes, its mobs
+     * and its weather are as they were, and a restart clears it. A player's own sky (`player:set_sky`) is
+     * shown them instead. A sky the project has no file for is an error, and so is one added since the
+     * server started (its colours are biomes, which the game learns as it starts: restart the server).
+     */
+    fun setSky(self: LuaHandle.World, sky: String, options: SkyOptions?): Boolean
+
+    /**
+     * Takes the world's sky away (`world:set_sky`): its biomes' own colours come back over
+     * `options.fade_ticks`. Nothing when it has none.
+     */
+    fun clearSky(self: LuaHandle.World, options: SkyOptions?)
 
     /** Where players appear in this world when nothing else decides, or `nil` once the world has gone. */
     fun spawnLocation(self: LuaHandle.World): LuaLocation?

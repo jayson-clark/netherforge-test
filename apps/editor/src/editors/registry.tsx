@@ -294,6 +294,16 @@ export const KIND_CONTRIBUTIONS = {
     ),
     thumbnail: BiomeThumbnail,
   },
+  sky: {
+    title: 'Skies',
+    one: 'sky',
+    group: 'world',
+    icon: 'leaf',
+    tone: 'orange',
+    message:
+      'Scripts set it by this id, e.g. world:set_sky("blood_moon"). Saving one restarts the dev server.',
+    view: lazy(() => import('@/editors/sky/SkyEditor').then((m) => ({ default: m.SkyEditor }))),
+  },
   dimension_type: {
     title: 'Dimension types',
     one: 'dimension type',

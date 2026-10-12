@@ -2324,6 +2324,14 @@ What `world:blocks` read: each block of the box, in one list, and the box's size
 | `size_z` | `integer` | How many blocks the box is along z. |
 | `corner` | `Vec3` | The block the box starts from: the lowest x, y and z of its corners, floored. |
 
+## SkyOptions
+
+How a sky comes or goes. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `fade_ticks` | `integer?` | Ticks it takes to fade in or out, through the sky's steps (its file's `fade`). Default 0: at once. |
+
 ## BlockSetOptions
 
 How a block is changed. A key that isn't one of these is an error.

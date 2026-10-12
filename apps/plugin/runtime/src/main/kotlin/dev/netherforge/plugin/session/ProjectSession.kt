@@ -337,6 +337,9 @@ class ProjectSession internal constructor(
     /** The advancements the project's files have; the server learns them at start, from the start-up datapack. */
     val advancements = service(Advancements { namespace })
 
+    /** The project's skies over worlds and players: what each player is shown of them, a step of a fade at a time. */
+    val skies = service(dev.netherforge.plugin.sky.Skies(platform) { namespace })
+
     /** Menu windows and their scripts: shared ones exist before any module's body runs. */
     val menus = service(Menus(platform.menus, platform.inventories, scripts, source::read, ::placeOf, packs::skinTitle, ::measureText))
 

@@ -369,6 +369,7 @@ Player:border	15
 Player:bossbars	15
 Player:camera	15
 Player:can_fly	15
+Player:clear_sky	19
 Player:clear_title	15
 Player:close_dialog	15
 Player:close_inventory	15
@@ -446,6 +447,7 @@ Player:set_listed_for	19
 Player:set_off_hand_item	18
 Player:set_permission	20
 Player:set_saturation	17
+Player:set_sky	20
 Player:set_tab_footer	17
 Player:set_tab_header	17
 Player:set_tab_name	17
@@ -454,6 +456,7 @@ Player:set_view_distance	17
 Player:set_walk_speed	17
 Player:set_whitelisted	18
 Player:sidebar	15
+Player:sky	15
 Player:spawn_particle	92
 Player:stop_sound	17
 Player:storage	19
@@ -536,6 +539,7 @@ World:block	48
 World:blocks	85
 World:border	15
 World:centities	47
+World:clear_sky	19
 World:day_count	15
 World:entities	47
 World:environment	15
@@ -562,11 +566,13 @@ World:raycast	93
 World:save_structure	86
 World:set_block	53
 World:set_game_rule	20
+World:set_sky	20
 World:set_spawn_interval	19
 World:set_spawn_limit	19
 World:set_spawn_location	41
 World:set_time_of_day	17
 World:set_weather	20
+World:sky	15
 World:spawn_entity	76
 World:spawn_interval	17
 World:spawn_item	51

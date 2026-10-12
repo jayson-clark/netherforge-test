@@ -7,6 +7,7 @@ import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.game.has
 import dev.netherforge.format.json.CanonicalJson
+import dev.netherforge.format.project.SkyKind
 import dev.netherforge.format.project.SpawnCategory
 import dev.netherforge.plugin.async.WorkFailed
 import dev.netherforge.plugin.lua.LuaApiException
@@ -39,6 +40,13 @@ internal const val BIOME_SEARCH_LIMIT = 6400
  * on a lane of their own a script asking for many can't hold up other work (a database, HTTP).
  */
 private const val BIOME_SEARCH_LANE = "biome search"
+
+/** A sky option's fade, in ticks: none below 0. */
+internal fun fadeTicks(options: SkyOptions?): Int {
+    val ticks = options?.fadeTicks ?: return 0
+    if (ticks < 0) throw LuaApiException("options.fade_ticks can't be negative")
+    return ticks.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+}
 
 /** The most blocks `world:blocks` reads in one call: 32 × 32 × 32, so one call can't stall a tick. */
 private const val MAX_BOX = 32 * 32 * 32
@@ -122,6 +130,20 @@ internal class WorldImpl(private val session: ProjectSession) : WorldApi {
     override fun block(self: LuaHandle.World, position: Vec3): LuaHandle.Block? {
         val at = BlockPosition.of(position)
         return live(self)?.let { LuaHandle.Block(it, at.packed) }
+    }
+
+    override fun sky(self: LuaHandle.World): String? = live(self)?.let(session.skies::ofWorld)?.let(session.names::spell)
+
+    override fun setSky(self: LuaHandle.World, sky: String, options: SkyOptions?): Boolean {
+        val name = session.names.resource(SkyKind, sky)
+        val world = live(self) ?: return false
+        session.skies.setWorld(world, name, fadeTicks(options))
+        return true
+    }
+
+    override fun clearSky(self: LuaHandle.World, options: SkyOptions?) {
+        val world = live(self) ?: return
+        session.skies.clearWorld(world, fadeTicks(options))
     }
 
     override fun blocks(self: LuaHandle.World, from: Vec3, to: Vec3, options: BlockBoxOptions?): BlockBox? {

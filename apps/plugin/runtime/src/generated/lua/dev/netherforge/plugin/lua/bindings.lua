@@ -2370,6 +2370,30 @@ function Player.ender_chest(self)
   return prim["Player.ender_chest"](self_key)
 end
 
+function Player.sky(self)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.sky"](self_key)
+end
+
+function Player.set_sky(self, sky, options)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  prim["Player.set_sky"](self_key, sky, options)
+end
+
+function Player.clear_sky(self, options)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  prim["Player.clear_sky"](self_key, options)
+end
+
 function Player.storage(self, name, size)
   local self_key = ids[self]
   if self_key == nil or not Player_is[class_of(self)] then
@@ -2969,6 +2993,30 @@ function World.set_weather(self, weather, options)
     self_key = self_of(self, "World")
   end
   return prim["World.set_weather"](self_key, weather, options)
+end
+
+function World.sky(self)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  return prim["World.sky"](self_key)
+end
+
+function World.set_sky(self, sky, options)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  return prim["World.set_sky"](self_key, sky, options)
+end
+
+function World.clear_sky(self, options)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  prim["World.clear_sky"](self_key, options)
 end
 
 function World.spawn_location(self)

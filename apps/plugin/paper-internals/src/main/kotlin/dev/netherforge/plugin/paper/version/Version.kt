@@ -4,19 +4,27 @@ import com.destroystokyo.paper.entity.ai.Goal
 import dev.netherforge.plugin.paper.PaperVersion
 import dev.netherforge.plugin.paper.ServerRegistries
 import dev.netherforge.plugin.platform.ChunkGrid
+import io.netty.buffer.Unpooled
 import io.papermc.paper.configuration.GlobalConfiguration
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
+import net.minecraft.core.Holder
+import net.minecraft.core.registries.Registries
+import net.minecraft.network.FriendlyByteBuf
+import net.minecraft.network.protocol.game.ClientboundChunksBiomesPacket
+import net.minecraft.resources.Identifier
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.inventory.ContainerListener
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.context.UseOnContext
+import net.minecraft.world.level.biome.Biome
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument
 import net.minecraft.world.level.chunk.LevelChunk
 import net.minecraft.world.level.chunk.Palette
+import net.minecraft.world.level.chunk.PalettedContainer
 import net.minecraft.world.level.gameevent.GameEvent
 import net.minecraft.world.phys.BlockHitResult
 import net.minecraft.world.phys.Vec3
@@ -36,6 +44,8 @@ import org.spigotmc.WatchdogThread
 import java.util.Collections
 import java.util.IdentityHashMap
 import java.util.WeakHashMap
+import kotlin.jvm.optionals.getOrNull
+import net.minecraft.resources.ResourceKey as MojangKey
 
 /** This adapter's [PaperVersion], listed in `META-INF/services`. */
 
@@ -56,6 +66,32 @@ class Version : PaperVersion {
             for (id in 0 until palette.size) print = print * 31 + System.identityHashCode(palette.valueFor(id))
         }
         return print
+    }
+
+    override fun sendBiomes(player: Player, chunks: Collection<Pair<Int, Int>>, twinOf: (String) -> String?) {
+        val level = (player.world as CraftWorld).handle
+        val biomes = level.registryAccess().lookupOrThrow(Registries.BIOME)
+        val swapped = IdentityHashMap<Holder<Biome>, Holder<Biome>>()
+        fun swap(holder: Holder<Biome>): Holder<Biome> = swapped.getOrPut(holder) {
+            val key = holder.unwrapKey().getOrNull()?.identifier()?.toString() ?: return@getOrPut holder
+            val twin = twinOf(key)?.let(Identifier::tryParse) ?: return@getOrPut holder
+            biomes.get(MojangKey.create(Registries.BIOME, twin)).getOrNull() ?: holder
+        }
+        val data = chunks.mapNotNull { (chunkX, chunkZ) ->
+            val chunk = level.chunkSource.getChunkNow(chunkX, chunkZ) ?: return@mapNotNull null
+            val buffer = FriendlyByteBuf(Unpooled.buffer())
+            for (section in chunk.sections) {
+                @Suppress("UNCHECKED_CAST")
+                val cells = (section.biomes as PalettedContainer<Holder<Biome>>).copy()
+                for (y in 0..3) for (z in 0..3) for (x in 0..3) cells.getAndSetUnchecked(x, y, z, swap(cells.get(x, y, z)))
+                cells.write(buffer)
+            }
+            val bytes = ByteArray(buffer.readableBytes())
+            buffer.readBytes(bytes)
+            ClientboundChunksBiomesPacket.ChunkBiomeData(chunk.pos, bytes)
+        }
+        val connection = (player as CraftPlayer).handle.connection
+        for (batch in data.chunked(BIOME_BATCH)) connection.send(ClientboundChunksBiomesPacket(batch))
     }
 
     override fun readBox(
@@ -241,3 +277,6 @@ class Version : PaperVersion {
         level.gameEvent(null, GameEvent.NOTE_BLOCK_PLAY, pos)
     }
 }
+
+/** Chunks a chunk-biomes packet carries at most: the game's own sends one per chunk it changed. */
+private const val BIOME_BATCH = 64

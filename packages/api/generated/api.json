@@ -7804,6 +7804,48 @@
           ]
         },
         {
+          "name": "sky",
+          "doc": "Their own sky (`player:set_sky`), as the calling script names it, or `nil` for none: then they see their world's (`world:sky()`).",
+          "params": [],
+          "returns": [
+            {
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "set_sky",
+          "doc": "Shows them a sky of the project's, whatever world they're in, over their world's own (`world:set_sky`), until it's cleared: as `world:set_sky` does for everyone in a world, and the same errors. Nothing for someone offline, and it ends when they leave.",
+          "params": [
+            {
+              "name": "sky",
+              "type": "string",
+              "doc": "A sky of the project's (its file's name under `skies/`, or `namespace:id` for one a package it depends on exports)."
+            },
+            {
+              "name": "options",
+              "type": "SkyOptions",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [],
+          "example": "player:set_sky(\"eclipse\", { fade_ticks = 40 })"
+        },
+        {
+          "name": "clear_sky",
+          "doc": "Takes their own sky away (`player:set_sky`): they see their world's again, fading over `options.fade_ticks`.",
+          "params": [
+            {
+              "name": "options",
+              "type": "SkyOptions",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": []
+        },
+        {
           "name": "storage",
           "doc": "A set of item slots of the project's own that they keep: extra equipment, a backpack, a bank. It's saved in the player's own save data, with their inventory, in the same file and the same write, so a crash or a restart can't duplicate an item between the two or lose one. Shown in a menu by binding slots to it (`slot:bind`), where what players move in and out is saved at once. Dying doesn't drop it. An `Inventory` of kind `\"storage\"`: its item methods work as on any other, and it answers `nil` and `false` while they're offline (it can't be changed then). `nil` when they're offline. A name that isn't an id is an error, and so is a size outside 1 to 256.",
           "params": [
@@ -9127,6 +9169,54 @@
             }
           ],
           "example": "world:set_weather(\"thunder\", { ticks = 20 * 60 })"
+        },
+        {
+          "name": "sky",
+          "doc": "The sky set over the world (`world:set_sky`), as the calling script names it, or `nil` for none (or once the world has gone). A player's own (`player:set_sky`) is theirs alone.",
+          "params": [],
+          "returns": [
+            {
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "set_sky",
+          "doc": "Sets a sky of the project's over the world (`skies/<id>.json`): everyone in it sees its colours in place of the biomes' own, the sky, fog, clouds and water, fading over `options.fade_ticks`, until it's cleared or another is set. Only what players are shown changes: the world, its biomes, its mobs and its weather are as they were, and a restart clears it. A player's own sky (`player:set_sky`) is shown them instead. A sky the project has no file for is an error, and so is one added since the server started (its colours are biomes, which the game learns as it starts: restart the server).",
+          "params": [
+            {
+              "name": "sky",
+              "type": "string",
+              "doc": "A sky of the project's (its file's name under `skies/`, or `namespace:id` for one a package it depends on exports)."
+            },
+            {
+              "name": "options",
+              "type": "SkyOptions",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` when the world has gone."
+            }
+          ],
+          "example": "world:set_sky(\"blood_moon\", { fade_ticks = 100 })"
+        },
+        {
+          "name": "clear_sky",
+          "doc": "Takes the world's sky away (`world:set_sky`): its biomes' own colours come back over `options.fade_ticks`. Nothing when it has none.",
+          "params": [
+            {
+              "name": "options",
+              "type": "SkyOptions",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [],
+          "example": "world:clear_sky({ fade_ticks = 100 })"
         },
         {
           "name": "spawn_location",
@@ -18011,6 +18101,19 @@
           "name": "corner",
           "type": "Vec3",
           "doc": "The block the box starts from: the lowest x, y and z of its corners, floored."
+        }
+      ]
+    },
+    {
+      "name": "SkyOptions",
+      "doc": "How a sky comes or goes. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "fade_ticks",
+          "type": "integer?",
+          "doc": "Ticks it takes to fade in or out, through the sky's steps (its file's `fade`). Default 0: at once."
         }
       ]
     },

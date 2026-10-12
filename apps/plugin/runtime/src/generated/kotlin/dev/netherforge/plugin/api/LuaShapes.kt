@@ -4123,6 +4123,29 @@ data class BlockBox(val cells: List<StringOrIntegerOrBoolean>, val sizeX: Long, 
     }
 }
 
+/** How a sky comes or goes. A key that isn't one of these is an error. */
+data class SkyOptions(val fadeTicks: Long? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<SkyOptions>("SkyOptions") {
+        val fadeTicksCodec = LuaOptional(LuaCodecs.INTEGER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "fade_ticks" to fadeTicksCodec
+        )
+
+        override fun read(fields: ShapeReader) = SkyOptions(
+            fadeTicks = fields.field("fade_ticks", fadeTicksCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: SkyOptions) {
+            fields.field("fade_ticks", value.fadeTicks, fadeTicksCodec)
+        }
+    }
+}
+
 /** How a block is changed. A key that isn't one of these is an error. */
 data class BlockSetOptions(val update: Boolean? = null) : LuaShape {
     override fun push(call: LuaCall) = Codec.push(call, this)

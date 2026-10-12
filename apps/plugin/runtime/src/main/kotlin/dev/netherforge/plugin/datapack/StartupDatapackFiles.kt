@@ -1,6 +1,7 @@
 package dev.netherforge.plugin.datapack
 
 import dev.netherforge.format.datapack.DatapackEntry
+import dev.netherforge.format.datapack.GameDatapack
 import dev.netherforge.format.datapack.StartupDatapack
 import dev.netherforge.format.datapack.TextJson
 import dev.netherforge.format.project.ProjectSnapshot
@@ -29,10 +30,11 @@ object StartupDatapackFiles {
         text: (String, (String) -> String?) -> String,
         mainWorld: String?,
         readBytes: (String) -> ByteArray?,
-        passThrough: Boolean = true
+        passThrough: Boolean = true,
+        game: GameDatapack = GameDatapack.NONE
     ): Map<String, ByteArray> {
         val json = TextJson { mini, glyph -> Json.parseToJsonElement(text(mini, glyph)) }
-        return StartupDatapack.build(snapshot, format, json, mainWorld, passThrough).mapNotNull { (path, entry) ->
+        return StartupDatapack.build(snapshot, format, json, mainWorld, passThrough, game).mapNotNull { (path, entry) ->
             when (entry) {
                 is DatapackEntry.Text -> path to entry.text.encodeToByteArray()
                 is DatapackEntry.Copy -> readBytes(entry.projectPath)?.let { path to it }
@@ -51,12 +53,13 @@ object StartupDatapackFiles {
         text: (String, (String) -> String?) -> String,
         mainWorld: String?,
         readBytes: (String) -> ByteArray?,
-        refusal: DatapackRefusal?
+        refusal: DatapackRefusal?,
+        game: GameDatapack = GameDatapack.NONE
     ): Start {
-        val whole = build(snapshot, format, text, mainWorld, readBytes)
+        val whole = build(snapshot, format, text, mainWorld, readBytes, game = game)
         val hash = DatapackRefusal.hashOf(whole)
         val refused = refusal?.takeIf { it.hash == hash }
-        val without = { build(snapshot, format, text, mainWorld, readBytes, passThrough = false) }
+        val without = { build(snapshot, format, text, mainWorld, readBytes, passThrough = false, game = game) }
         return Start(if (refused == null) whole else without(), hash, refused) { !same(whole, without()) }
     }
 

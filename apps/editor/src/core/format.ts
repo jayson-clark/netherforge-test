@@ -101,6 +101,7 @@ export type {
   BlockTool,
   BlockCarrier,
   BlockRotation,
+  SkyFile,
   EquipmentDef,
   Curves,
   DialogBody,

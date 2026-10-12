@@ -162,6 +162,33 @@ export const worldClass: LuaClass = {
       example: 'world:set_weather("thunder", { ticks = 20 * 60 })',
     },
     {
+      name: 'sky',
+      doc: "The sky set over the world (`world:set_sky`), as the calling script names it, or `nil` for none (or once the world has gone). A player's own (`player:set_sky`) is theirs alone.",
+      params: [],
+      returns: [{ type: 'string?' }],
+    },
+    {
+      name: 'set_sky',
+      doc: "Sets a sky of the project's over the world (`skies/<id>.json`): everyone in it sees its colours in place of the biomes' own, the sky, fog, clouds and water, fading over `options.fade_ticks`, until it's cleared or another is set. Only what players are shown changes: the world, its biomes, its mobs and its weather are as they were, and a restart clears it. A player's own sky (`player:set_sky`) is shown them instead. A sky the project has no file for is an error, and so is one added since the server started (its colours are biomes, which the game learns as it starts: restart the server).",
+      params: [
+        {
+          name: 'sky',
+          type: 'string',
+          doc: "A sky of the project's (its file's name under `skies/`, or `namespace:id` for one a package it depends on exports).",
+        },
+        { name: 'options', type: 'SkyOptions', doc: '', optional: true },
+      ],
+      returns: [{ type: 'boolean', doc: '`false` when the world has gone.' }],
+      example: 'world:set_sky("blood_moon", { fade_ticks = 100 })',
+    },
+    {
+      name: 'clear_sky',
+      doc: "Takes the world's sky away (`world:set_sky`): its biomes' own colours come back over `options.fade_ticks`. Nothing when it has none.",
+      params: [{ name: 'options', type: 'SkyOptions', doc: '', optional: true }],
+      returns: [],
+      example: 'world:clear_sky({ fade_ticks = 100 })',
+    },
+    {
       name: 'spawn_location',
       doc: 'Where players appear in this world when nothing else decides, or `nil` once the world has gone.',
       params: [],
@@ -997,6 +1024,13 @@ export const worldShapes: LuaClass[] = [
       },
     ],
   ),
+  shape('SkyOptions', "How a sky comes or goes. A key that isn't one of these is an error.", [
+    {
+      name: 'fade_ticks',
+      type: 'integer?',
+      doc: "Ticks it takes to fade in or out, through the sky's steps (its file's `fade`). Default 0: at once.",
+    },
+  ]),
   shape('BlockSetOptions', "How a block is changed. A key that isn't one of these is an error.", [
     {
       name: 'update',

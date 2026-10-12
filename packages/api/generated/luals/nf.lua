@@ -2433,6 +2433,19 @@ function Player:set_whitelisted(whitelisted) end
 ---@return Inventory?
 function Player:ender_chest() end
 
+--- Their own sky (`player:set_sky`), as the calling script names it, or `nil` for none: then they see their world's (`world:sky()`).
+---@return string?
+function Player:sky() end
+
+--- Shows them a sky of the project's, whatever world they're in, over their world's own (`world:set_sky`), until it's cleared: as `world:set_sky` does for everyone in a world, and the same errors. Nothing for someone offline, and it ends when they leave.
+---@param sky string A sky of the project's (its file's name under `skies/`, or `namespace:id` for one a package it depends on exports).
+---@param options? SkyOptions
+function Player:set_sky(sky, options) end
+
+--- Takes their own sky away (`player:set_sky`): they see their world's again, fading over `options.fade_ticks`.
+---@param options? SkyOptions
+function Player:clear_sky(options) end
+
 --- A set of item slots of the project's own that they keep: extra equipment, a backpack, a bank. It's saved in the player's own save data, with their inventory, in the same file and the same write, so a crash or a restart can't duplicate an item between the two or lose one. Shown in a menu by binding slots to it (`slot:bind`), where what players move in and out is saved at once. Dying doesn't drop it. An `Inventory` of kind `"storage"`: its item methods work as on any other, and it answers `nil` and `false` while they're offline (it can't be changed then). `nil` when they're offline. A name that isn't an id is an error, and so is a size outside 1 to 256.
 ---@param name string Lowercase letters, digits and `_`: the project's own (a package's scripts keep theirs apart, under their namespace). Scripts that use one name share one storage.
 ---@param size integer How many slots it has, numbered from 0. Changing it later keeps every item: a slot past the size isn't shown, but its item is kept, and comes back with a bigger size.
@@ -2877,6 +2890,20 @@ function World:weather() end
 ---@param options? WeatherOptions
 ---@return boolean # `false` when the world has gone.
 function World:set_weather(weather, options) end
+
+--- The sky set over the world (`world:set_sky`), as the calling script names it, or `nil` for none (or once the world has gone). A player's own (`player:set_sky`) is theirs alone.
+---@return string?
+function World:sky() end
+
+--- Sets a sky of the project's over the world (`skies/<id>.json`): everyone in it sees its colours in place of the biomes' own, the sky, fog, clouds and water, fading over `options.fade_ticks`, until it's cleared or another is set. Only what players are shown changes: the world, its biomes, its mobs and its weather are as they were, and a restart clears it. A player's own sky (`player:set_sky`) is shown them instead. A sky the project has no file for is an error, and so is one added since the server started (its colours are biomes, which the game learns as it starts: restart the server).
+---@param sky string A sky of the project's (its file's name under `skies/`, or `namespace:id` for one a package it depends on exports).
+---@param options? SkyOptions
+---@return boolean # `false` when the world has gone.
+function World:set_sky(sky, options) end
+
+--- Takes the world's sky away (`world:set_sky`): its biomes' own colours come back over `options.fade_ticks`. Nothing when it has none.
+---@param options? SkyOptions
+function World:clear_sky(options) end
 
 --- Where players appear in this world when nothing else decides, or `nil` once the world has gone.
 ---@return Location?
@@ -5367,6 +5394,10 @@ function Event:uncancel() end
 ---@field size_y integer How many blocks the box is along y.
 ---@field size_z integer How many blocks the box is along z.
 ---@field corner Vec3 The block the box starts from: the lowest x, y and z of its corners, floored.
+
+--- How a sky comes or goes. A key that isn't one of these is an error.
+---@class SkyOptions
+---@field fade_ticks integer? Ticks it takes to fade in or out, through the sky's steps (its file's `fade`). Default 0: at once.
 
 --- How a block is changed. A key that isn't one of these is an error.
 ---@class BlockSetOptions

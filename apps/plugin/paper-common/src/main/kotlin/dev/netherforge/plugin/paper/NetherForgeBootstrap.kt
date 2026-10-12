@@ -1,5 +1,6 @@
 package dev.netherforge.plugin.paper
 
+import dev.netherforge.format.datapack.GameDatapack
 import dev.netherforge.format.datapack.StartupDatapack
 import dev.netherforge.plugin.RuntimeConfig
 import dev.netherforge.plugin.ServerAddress
@@ -85,7 +86,8 @@ class NetherForgeBootstrap : PluginBootstrap {
             PaperText::json,
             main,
             source::readBytes,
-            DatapackRefusal.read(folder)
+            DatapackRefusal.read(folder),
+            PaperGameDatapack.read
         )
         val files = start.files
         if (files.isNotEmpty()) context.logger.info("NetherForge's start-up datapack: ${files.size - 1} file(s) from ${config.project}")
@@ -127,6 +129,8 @@ class PaperDatapacks : DatapackOps {
     override val format: List<Int>? get() = ServerVersionFile.dataPackFormat
 
     override val mainWorld: String? get() = Companion.mainWorld
+
+    override val game: GameDatapack get() = PaperGameDatapack.read
 
     override fun textJson(text: String, glyph: (reference: String) -> String?): String = PaperText.json(text, glyph)
 

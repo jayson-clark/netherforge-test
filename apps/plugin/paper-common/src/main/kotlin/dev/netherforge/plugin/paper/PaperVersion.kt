@@ -41,6 +41,13 @@ interface PaperVersion {
      * an index into [states], which this fills: x fastest, then z, then y, read straight from the server's
      * chunks. False when any of it is in a chunk that isn't loaded, or this server can't be read that way.
      */
+    /**
+     * Tells [player] the biomes of the loaded chunks [chunks] (each `x` to `z`) of their world are what [twinOf]
+     * answers for each (a biome's key to another's, or null to keep it), in the server's own chunk-biomes packet:
+     * what the client then draws them with. The world itself is left as it is.
+     */
+    fun sendBiomes(player: org.bukkit.entity.Player, chunks: Collection<Pair<Int, Int>>, twinOf: (String) -> String?) {}
+
     fun readBox(
         world: World,
         x0: Int,
