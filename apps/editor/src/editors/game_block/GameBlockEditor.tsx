@@ -2,8 +2,9 @@
  * A game block file (`game_blocks/<id>.json`, docs/format/game-block.md):
  * which of the game's blocks it gives rules to (ids and `#tags`, suggested
  * from the target version's game data once it's exported), how long they take
- * to mine and with what, and what they drop. Every field left empty is the
- * game's own, which the stage says in words.
+ * to mine and with what, and what they drop. The stage draws the blocks it
+ * gives rules to (a `#tag`'s from the game data), and says in words that every
+ * field left empty is the game's own.
  */
 import { useMemo } from 'react'
 import { setKey } from '@/core/draft'
@@ -14,16 +15,66 @@ import { fieldPath } from '@/editors/shared/focus'
 import { EditAsJson, useModelDoc } from '@/editors/shared/modelDoc'
 import { RawDocView } from '@/editors/shared/RawDocView'
 import { useFocusRequests } from '@/editors/shared/useFocusRequests'
+import { ItemIcon } from '@/minecraft/item/ItemIcon'
 import { useWorkspace } from '@/state/providers'
 import { IconButton } from '@/ui/Button'
 import { Datalist, NumberField, Section, SelectField, TextField, TriStateField } from '@/ui/fields'
 import { Hint, Muted } from '@/ui/text'
-import { addBlock, blockChoices, minedByServer, removeBlock, setBlock } from './ops'
+import {
+  addBlock,
+  blockChoices,
+  minedByServer,
+  previewEntries,
+  removeBlock,
+  setBlock,
+  type PreviewEntry,
+} from './ops'
 import styles from './GameBlockEditor.module.css'
 
 const BLOCKS = 'nf-game-blocks'
 const NONE: string[] = []
 const NO_TAGS: Record<string, string[]> = {}
+
+/** How many of a tag's blocks the stage draws before saying how many more. */
+const TAG_SHOWN = 48
+
+/** A block as the inventory draws its item, named under it. */
+function BlockTile({ block }: { block: string }) {
+  return (
+    <li className={styles.tile}>
+      <ItemIcon item={{ kind: block }} size={48} />
+      <span className={styles.name}>{block.replace(/^minecraft:/, '')}</span>
+    </li>
+  )
+}
+
+/** One entry of the file's `blocks`: an id's block, or a tag's blocks under its name. */
+function EntryPreview({ entry }: { entry: PreviewEntry }) {
+  if (!entry.entry.startsWith('#')) {
+    return <BlockTile block={entry.blocks![0]!} />
+  }
+  const shown = entry.blocks?.slice(0, TAG_SHOWN) ?? []
+  const more = (entry.blocks?.length ?? 0) - shown.length
+  return (
+    <li className={styles.tag} aria-label={entry.entry}>
+      <span className={styles.tagName}>{entry.entry}</span>
+      {entry.blocks === null ? (
+        <Muted>
+          Not a tag the game data knows (export it from the dev server to see its blocks).
+        </Muted>
+      ) : entry.blocks.length === 0 ? (
+        <Muted>No blocks in it.</Muted>
+      ) : (
+        <ul className={styles.tiles}>
+          {shown.map((block) => (
+            <BlockTile key={block} block={block} />
+          ))}
+          {more > 0 && <Muted>and {more} more</Muted>}
+        </ul>
+      )}
+    </li>
+  )
+}
 
 /** The choices of the drops field: the game's, each loot table, and the current one when it's missing. */
 function dropOptions(tables: string[], current: string | undefined) {
@@ -59,12 +110,20 @@ export function GameBlockEditor({ path }: { path: string }) {
   const set = <K extends keyof GameBlockFile>(key: K, value: GameBlockFile[K] | undefined) =>
     edit((draft) => setKey(draft, key, value))
   const blocks = model.blocks ?? []
+  const entries = previewEntries(blocks, gameTags)
   return (
     <EditorScreen>
       <EditorBar title={id}>
         <EditAsJson path={path} />
       </EditorBar>
       <Stage>
+        {entries.length > 0 && (
+          <ul className={styles.tiles} aria-label="Blocks preview">
+            {entries.map((entry) => (
+              <EntryPreview key={entry.entry} entry={entry} />
+            ))}
+          </ul>
+        )}
         <div className={styles.summary} aria-label="What these rules do">
           {blocks.length === 0 ? (
             <Muted>No blocks yet: add the game&apos;s blocks these rules are for.</Muted>

@@ -34,3 +34,49 @@ export function blockChoices(blocks: readonly string[], tags: readonly string[])
 export function minedByServer(file: GameBlockFile): boolean {
   return file.hardness !== undefined || file.tool !== undefined || file.requiresTool !== undefined
 }
+
+/** One entry of a file's `blocks` as the preview draws it: an id is itself, a `#tag` the blocks in it (null when unknown). */
+export interface PreviewEntry {
+  entry: string
+  blocks: string[] | null
+}
+
+/** A namespaced id (`minecraft:stone`), as the game data writes them. */
+function fullId(id: string): string {
+  return id.includes(':') ? id : `minecraft:${id}`
+}
+
+/**
+ * What a file's `blocks` draw: each written entry once, a `#tag` with the game data's blocks in it (exported
+ * flattened, so a tag's own tags are already in), null for a tag it doesn't know (none exported yet).
+ */
+export function previewEntries(
+  blocks: readonly unknown[],
+  tags: Readonly<Record<string, readonly string[]>>,
+): PreviewEntry[] {
+  const seen = new Set<string>()
+  const entries: PreviewEntry[] = []
+  for (const it of blocks) {
+    if (typeof it !== 'string' || it === '' || seen.has(it)) continue
+    seen.add(it)
+    if (it.startsWith('#')) {
+      const tag = tags[fullId(it.slice(1))]
+      entries.push({ entry: it, blocks: tag ? [...tag] : null })
+    } else {
+      entries.push({ entry: it, blocks: [fullId(it)] })
+    }
+  }
+  return entries
+}
+
+/** The first [count] blocks [entries] draw, each once: the thumbnail's. */
+export function firstBlocks(entries: readonly PreviewEntry[], count: number): string[] {
+  const out = new Set<string>()
+  for (const { blocks } of entries) {
+    for (const block of blocks ?? []) {
+      if (out.size >= count) return [...out]
+      out.add(block)
+    }
+  }
+  return [...out]
+}

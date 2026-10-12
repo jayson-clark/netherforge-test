@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { canonicalizeModel, type GameBlockFile } from '@/core/format'
-import { addBlock, blockChoices, minedByServer, removeBlock, setBlock } from './ops'
+import {
+  addBlock,
+  blockChoices,
+  firstBlocks,
+  minedByServer,
+  previewEntries,
+  removeBlock,
+  setBlock,
+} from './ops'
 
 describe('game block ops', () => {
   it('adds, sets and removes blocks, keeping the list', () => {
@@ -29,5 +37,25 @@ describe('game block ops', () => {
     expect(minedByServer({ blocks: [], drops: 'brick' })).toBe(false)
     expect(minedByServer({ blocks: [], requiresTool: false })).toBe(true)
     expect(minedByServer({ blocks: [], hardness: 0 })).toBe(true)
+  })
+
+  it('draws ids as themselves and tags as their blocks', () => {
+    const tags = { 'minecraft:logs': ['minecraft:oak_log', 'minecraft:birch_log'] }
+    const entries = previewEntries(
+      ['stone', '#logs', '#minecraft:nope', '', 'stone', 3, 'minecraft:oak_log'],
+      tags,
+    )
+    expect(entries).toEqual([
+      { entry: 'stone', blocks: ['minecraft:stone'] },
+      { entry: '#logs', blocks: ['minecraft:oak_log', 'minecraft:birch_log'] },
+      { entry: '#minecraft:nope', blocks: null },
+      { entry: 'minecraft:oak_log', blocks: ['minecraft:oak_log'] },
+    ])
+    expect(firstBlocks(entries, 4)).toEqual([
+      'minecraft:stone',
+      'minecraft:oak_log',
+      'minecraft:birch_log',
+    ])
+    expect(firstBlocks(entries, 2)).toEqual(['minecraft:stone', 'minecraft:oak_log'])
   })
 })
