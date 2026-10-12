@@ -2,6 +2,7 @@ package dev.netherforge.plugin.project
 
 import dev.netherforge.format.project.ImageInfo
 import dev.netherforge.format.project.ProjectSource
+import dev.netherforge.format.resourcepack.PackFonts
 import java.io.IOException
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
@@ -59,7 +60,9 @@ class DiskProjectSource(val root: Path) : ProjectSource {
 
     /**
      * A PNG's size and opaque width, decoded with ImageIO: what a skin's title
-     * prefix needs to move back by. Null when it's missing or won't decode.
+     * prefix needs to move back by; and for a picture too wide for a font sheet,
+     * which columns are opaque, which its pieces' advances are measured from.
+     * Null when it's missing or won't decode.
      */
     override fun image(path: String): ImageInfo? {
         val bytes = readBytes(path) ?: return null
@@ -83,7 +86,12 @@ class DiskProjectSource(val root: Path) : ProjectSource {
                 }
             }
         }
-        return ImageInfo(image.width, image.height, opaque)
+        val columns = if (image.width <= PackFonts.SHEET) {
+            null
+        } else {
+            List(image.width) { x -> !hasAlpha || (0 until image.height).any { y -> image.getRGB(x, y) ushr 24 != 0 } }
+        }
+        return ImageInfo(image.width, image.height, opaque, columns)
     }
 
     /** A file's bytes (a texture), or null if it doesn't exist. */

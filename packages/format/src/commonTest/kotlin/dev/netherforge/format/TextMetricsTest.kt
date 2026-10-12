@@ -32,9 +32,9 @@ class TextMetricsTest {
         val withGlyphs = TextMetrics(glyph = { if (it == "ui:coin") 9 else null }) { 6 }
         assertEquals(listOf(9 + 6 + 6), withGlyphs.lineWidths("<glyph:ui:coin> 2"))
         assertEquals(listOf(9), withGlyphs.lineWidths("<glyph:'ui:coin'>"))
-        // A glyph no pack has draws nothing; bold costs a pixel; the tag opens nothing to close.
+        // A glyph no pack has draws nothing; a glyph is never bold; the tag opens nothing to close.
         assertEquals(listOf(6), withGlyphs.lineWidths("<glyph:ui:nope>a"))
-        assertEquals(listOf(10 + 6), withGlyphs.lineWidths("<b><glyph:ui:coin></b>a"))
+        assertEquals(listOf(9 + 7), withGlyphs.lineWidths("<b><glyph:ui:coin>a</b>"))
         // Where it is in the source, so a preview draws it on the right line.
         val lines = withGlyphs.lines("aa <glyph:ui:coin>", 20)
         assertEquals(listOf(12, 9), lines.map { it.width })

@@ -43,6 +43,7 @@ import dev.netherforge.format.ref.Ref
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.resourcepack.GlyphDef
 import dev.netherforge.format.resourcepack.ItemModelParent
+import dev.netherforge.format.resourcepack.PackFonts
 import dev.netherforge.format.resourcepack.PackSounds
 import dev.netherforge.format.resourcepack.ResourcePackFile
 import dev.netherforge.format.resourcepack.SkinDef
@@ -96,6 +97,8 @@ internal object Constants {
         append("export const RESOURCE_PACK_TEXTURE_EXTENSION = ${str(ResourcePackFile.TEXTURE_EXTENSION)}\n")
         append("export const RESOURCE_PACK_TEXTURE_PATH_PATTERN = ${regex(ResourcePackFile.TEXTURE_PATH.pattern)}\n")
         append("export const RESOURCE_PACK_TEXTURE_PATH_RULE = ${str(ResourcePackFile.TEXTURE_PATH_RULE)}\n")
+        append("/** The most pixels a font picture has either way; a wider one is cut into pieces, measured by opaque columns. */\n")
+        append("export const FONT_SHEET = ${PackFonts.SHEET}\n")
         append("/** Each resource pack entry kind's fields that name a texture, in declaration order. */\n")
         append("export const RESOURCE_PACK_TEXTURE_FIELDS = {\n")
         for ((kind, fields) in resourcePackTextureFields()) append("  ${key(kind)}: [${fields.joinToString(", ") { str(it) }}],\n")

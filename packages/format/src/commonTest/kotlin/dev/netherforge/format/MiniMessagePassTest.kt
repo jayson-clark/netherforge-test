@@ -1,9 +1,11 @@
 package dev.netherforge.format
 
+import dev.netherforge.format.resourcepack.PackFonts
 import dev.netherforge.format.text.MiniMessagePass
 import dev.netherforge.format.text.MiniMessagePass.Break
 import dev.netherforge.format.text.MiniMessagePass.Char
 import dev.netherforge.format.text.MiniMessagePass.Glyph
+import dev.netherforge.format.text.SpaceTags
 import dev.netherforge.format.text.TextMetrics
 import dev.netherforge.format.text.TextStyle
 import kotlin.test.Test
@@ -70,5 +72,27 @@ class MiniMessagePassTest {
         assertEquals(listOf(14), metrics.lineWidths("<b>ab</b>"))
         assertEquals(listOf(12), metrics.lineWidths("<b><!b>ab</b>"))
         assertEquals(listOf(12), metrics.lineWidths("<bold:false>ab"))
+    }
+
+    @Test
+    fun readsSpacesAsMovesAndAtsAsOverlays() {
+        val pieces = MiniMessagePass.pieces("<red><at:-4:align=right>ab</red>c<space:-3>")
+        val overlay = pieces[0] as MiniMessagePass.Overlay
+        assertEquals(SpaceTags.At(-4, align = SpaceTags.Align.RIGHT), overlay.spec)
+        // What's inside keeps the colour around it, and the </red> that closes the at ends the overlay.
+        assertEquals(TextStyle(color = red), (pieces[1] as Char).style)
+        assertEquals(listOf("Overlay", "Char", "Char", "OverlayEnd", "Char", "Move"), pieces.map { it::class.simpleName })
+        assertEquals(-3, (pieces.last() as MiniMessagePass.Move).px)
+        // Never closed, it ends with the text; one that doesn't read only scopes.
+        assertEquals("OverlayEnd", MiniMessagePass.pieces("<at:1>a").last()::class.simpleName)
+        assertEquals(listOf("Char"), MiniMessagePass.pieces("<at:x>a</at>").map { it::class.simpleName })
+    }
+
+    @Test
+    fun theLayoutMeasuresMovesAndNotOverlays() {
+        val metrics = TextMetrics { 6 }
+        assertEquals(listOf(6 + 40 + 6), metrics.lineWidths("a<space:40>b"))
+        assertEquals(listOf(12), metrics.lineWidths("<at:-30>xyz</at>ab"))
+        assertEquals(listOf(6 + 9), metrics.lineWidths("a" + PackFonts.offset(9)))
     }
 }

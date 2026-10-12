@@ -8,6 +8,7 @@ import dev.netherforge.format.project.DialogKind
 import dev.netherforge.format.project.MenuKind
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.ref.RefKind
+import dev.netherforge.format.resourcepack.PackFonts
 import dev.netherforge.plugin.data.ScriptData
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaCodecs
@@ -245,6 +246,11 @@ internal class NfTextImpl(private val session: ProjectSession) : NfTextApi {
     override fun glyph(caller: Caller, glyph: String): String? = session.packs.glyph(session.names.entry(RefKind.GLYPH, glyph))
 
     override fun width(caller: Caller, text: String): Long? = session.measureText(text)?.toLong()
+
+    override fun space(caller: Caller, pixels: Long): String? {
+        if (session.packs.built == null) return null
+        return PackFonts.offset(pixels.coerceIn(-PackFonts.MAX_OFFSET.toLong(), PackFonts.MAX_OFFSET.toLong()).toInt())
+    }
 }
 
 /** `nf.json`. */

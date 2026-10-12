@@ -69,6 +69,7 @@ class ProblemCoverageTest {
         "resource_pack.image" to unit("ResourcePackTest", "it needs a picture's pixels, which goldens don't read"),
         "resource_pack.replace-size" to unit("HudTest", "it needs a picture's pixels, which goldens don't read"),
         "resource_pack.replace-shape" to unit("GameTexturesTest", "it needs a picture's pixels, which goldens don't read"),
+        "resource_pack.picture-size" to unit("ResourcePackTest", "it needs a picture's size, which goldens don't read"),
         "resource_pack.too-many" to unit("ResourcePackTest", "it takes thousands of skins, too many for a golden file"),
         "resource_pack.too-many-glyphs" to unit("ResourcePackTest", "it takes thousands of glyphs, too many for a golden file"),
         "terrain.script-failed" to plugin("TerrainTest"),

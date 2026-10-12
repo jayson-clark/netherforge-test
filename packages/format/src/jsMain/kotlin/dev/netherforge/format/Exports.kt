@@ -40,6 +40,7 @@ import dev.netherforge.format.editor.ResourcePacksPreview
 import dev.netherforge.format.editor.SettingValueResult
 import dev.netherforge.format.editor.SkinPreview
 import dev.netherforge.format.editor.StyledChar
+import dev.netherforge.format.editor.StyledOverlay
 import dev.netherforge.format.editor.StyledText
 import dev.netherforge.format.editor.TerrainFailed
 import dev.netherforge.format.editor.TerrainPreviewResult
@@ -111,6 +112,7 @@ import dev.netherforge.format.terrain.TerrainScripts
 import dev.netherforge.format.terrain.TerrainValidator
 import dev.netherforge.format.text.MiniMessagePass
 import dev.netherforge.format.text.TextMetrics
+import dev.netherforge.format.text.TextStyle
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
@@ -804,7 +806,8 @@ fun layoutText(text: String, lineWidth: Int, advancesJson: String?, glyphsJson: 
 /**
  * MiniMessage [text] as the characters a preview draws, each with its style
  * and where it is in [text] (so [layoutText]'s line ranges cut them), a glyph
- * tag as one picture: a [StyledText]. Line breaks and other tags draw nothing.
+ * tag as one picture, a `<space>` as a move and an `<at>` as where an overlay
+ * starts and ends: a [StyledText]. Line breaks and other tags draw nothing.
  */
 fun styleText(text: String): String {
     val chars = MiniMessagePass.pieces(text).mapNotNull { piece ->
@@ -812,6 +815,15 @@ fun styleText(text: String): String {
             is MiniMessagePass.Char -> StyledChar(piece.text, null, piece.at, piece.style)
             is MiniMessagePass.Glyph -> StyledChar("", piece.reference, piece.at, piece.style)
             is MiniMessagePass.Break -> null
+            is MiniMessagePass.Move -> StyledChar("", null, piece.at, TextStyle(), move = piece.px)
+            is MiniMessagePass.Overlay -> StyledChar(
+                "",
+                null,
+                piece.at,
+                TextStyle(),
+                overlay = piece.spec.let { StyledOverlay(it.x, it.from.name.lowercase(), it.align.name.lowercase()) }
+            )
+            is MiniMessagePass.OverlayEnd -> StyledChar("", null, piece.at, TextStyle(), overlayEnd = true)
         }
     }
     return encode(StyledText.serializer(), StyledText(chars))

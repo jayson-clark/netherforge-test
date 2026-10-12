@@ -198,6 +198,16 @@ interface Platform {
     )
 
     /**
+     * How text moves its cursor (`SpaceTags`): [space] is what `<space:N>`
+     * inserts (the pack's space characters, or null while no pack is built to
+     * draw them), and [layout] is MiniMessage with each `<at>` turned into
+     * the moves that place it, which the adapter applies to every text before
+     * it parses it. Until it's called, `<space>` inserts nothing and `<at>`
+     * draws what it holds in line.
+     */
+    fun bindText(space: (px: Int) -> String?, layout: (text: String) -> String)
+
+    /**
      * Whether a script listens for [event] now. The adapter watches these
      * only while one does, because watching them costs even when nobody
      * cares: the runtime calls this whenever the answer changes (never twice

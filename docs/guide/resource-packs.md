@@ -95,6 +95,67 @@ any other, unlike the tag. A glyph no resource pack has is an error, and `nf.tex
 returns `nil` while the project's resource packs have errors, since nothing is built
 then.
 
+A glyph sits on the line at its `ascent`: 7 puts its top level with the top of
+the letters, and lower values move it down (it can be negative). That's how a
+picture can hang below the text it's in, beside a boss bar for example.
+
+## Spacing: moving the cursor in text
+
+Any MiniMessage text can move its cursor sideways with two tags. Both are
+counted in GUI pixels (a line of text is 8 tall), and both need the resource
+pack, whose default font holds the space characters they're drawn with. In a
+project with no resource packs or blocks there's no resource pack, and the
+tags draw nothing.
+
+`<space:N>` moves the cursor N pixels. A negative N moves it left, so the next
+thing overlaps what came before:
+
+```lua
+player:send_message("<glyph:ui/coin><space:-3><glyph:ui/coin> 2")  -- two coins, stacked
+player:send_message("Sword<space:40><gold>12 gold")               -- a gap
+```
+
+`<at:N>…</at>` draws what it holds N pixels from the cursor and takes no width.
+The server measures what's inside and moves the cursor back after it, so the
+text that follows stays where it was:
+
+```lua
+bar:set_text("<at:-30><glyph:ui/boss_head></at>King Slime")
+```
+
+Two options, written as more arguments, say what N is counted from and which edge of the inside goes there:
+
+| Option                            | Meaning                                                                                                                                        |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `from=cursor\|start\|center\|end` | Count N from the cursor (the default), or from the start, middle or end of the line. The line's width doesn't count anything inside an `<at>`. |
+| `align=left\|center\|right`       | Which edge of what it holds goes at N. The default is `left`.                                                                                  |
+
+`from=center` matters for text the game centres: boss bars, and the titles of
+dialogs, dispensers, droppers and crafters. The game puts the middle of the
+line in the middle of the screen or window, so `<at:-100:from=center>` is
+always 100 pixels left of that middle, however long the words are. With
+`from=end:align=right`, a number sits flush against the end of the line.
+
+Columns in lore line up with `from=start`, since each lore line is its own line:
+
+```json
+"lore": ["Buy<at:60:from=start:align=right><gold>5g</at>", "Sell<at:60:from=start:align=right><gold>2g</at>"]
+```
+
+Measuring needs widths. A glyph's comes from its picture, and every other
+character's from `fonts/default.json`, which the editor writes when Minecraft
+is imported. An `<at>` whose inside or line can't be measured (a character
+that file doesn't cover, `<lang>` text only the client knows) draws what it
+holds in line, as if the tag weren't there, and the server warns once.
+`nf.text.width` counts both tags, and so do the centred-title fixes for menu
+skins.
+
+For text built by hand, `nf.text.space(n)` returns the characters `<space:n>`
+inserts. A boss bar can do this for you: `nf.bossbars.create({ icon = "ui/boss_head", ... })`
+draws the glyph just left of the bar's left end, whatever its text says. The
+bar's top is 2 pixels below the text's baseline, so give the glyph a low
+`ascent` to centre it on the bar.
+
 ## Item models: custom item looks
 
 An item model gives one item stack a custom picture through its `itemModel`,

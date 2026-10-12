@@ -54,4 +54,16 @@ describe('minimessage', () => {
       for (const run of runsIn(chars, line.start, line.end)) expect(run.style.color).toBe(GOLD)
     }
   })
+
+  it('reads a space as a move and nests what an at holds in its overlay', () => {
+    const chars = styledChars('<at:-30:align=right><glyph:ui/head> !</at>King<space:-3>')
+    const runs = runsIn(chars)
+    expect(runs[0]!.overlay!.at).toEqual({ x: -30, from: 'cursor', align: 'right' })
+    expect(runs[0]!.overlay!.runs.map((run) => run.glyph ?? run.text)).toEqual(['ui/head', ' !'])
+    expect(runs.slice(1).map((run) => run.move ?? run.text)).toEqual(['King', -3])
+    expect(plainText('<at:4>a</at>b<space:2>c')).toBe('abc')
+    // What the at holds takes no width; the move is its pixels.
+    const [line] = layoutText('<at:4>abc</at>b<space:2>', 0, fixtureGlyphAdvances)
+    expect(line!.width).toBe(layoutText('b', 0, fixtureGlyphAdvances)[0]!.width + 2)
+  })
 })

@@ -30,18 +30,22 @@ internal class BossBars(
         val near = LinkedHashSet<UUID>()
     }
 
-    class Bar(val id: Int, val scope: Scope, var look: BossBarLook) {
+    /** A bar: its [look] as the script set it, and the glyph at its left end ([icon], as the server names it). */
+    class Bar(val id: Int, val scope: Scope, var look: BossBarLook, var icon: String? = null) {
         val viewers = LinkedHashSet<UUID>()
         var attachment: Attachment? = null
+
+        /** What the game shows: the look, the icon placed in front of its text. */
+        val shown: BossBarLook get() = icon?.let { look.copy(text = iconText(it) + look.text) } ?: look
     }
 
     private var nextId = 1
     private val bars = LinkedHashMap<Int, Bar>()
 
-    fun create(scope: Scope, look: BossBarLook): Bar {
-        val bar = Bar(nextId++, scope, look)
+    fun create(scope: Scope, look: BossBarLook, icon: String? = null): Bar {
+        val bar = Bar(nextId++, scope, look, icon)
         bars[bar.id] = bar
-        platform.bossBars.create(bar.id, look)
+        platform.bossBars.create(bar.id, bar.shown)
         return bar
     }
 
@@ -49,7 +53,12 @@ internal class BossBars(
 
     fun update(bar: Bar, look: BossBarLook) {
         bar.look = look
-        platform.bossBars.update(bar.id, look)
+        platform.bossBars.update(bar.id, bar.shown)
+    }
+
+    fun setIcon(bar: Bar, icon: String?) {
+        bar.icon = icon
+        platform.bossBars.update(bar.id, bar.shown)
     }
 
     fun show(bar: Bar, player: UUID) {
@@ -131,6 +140,17 @@ internal class BossBars(
         for (bar in bars.values.toList()) remove(bar)
     }
 }
+
+/** Half a boss bar's width: its left end is this far left of the screen's middle, where the game centres its text. */
+private const val HALF_BAR = 91
+
+/**
+ * The text that draws glyph [icon] just left of a boss bar's left end:
+ * counted from the text's centre, which the game puts in the middle of the
+ * screen, its right edge (the glyph's one-pixel gap included) a pixel short
+ * of the bar.
+ */
+private fun iconText(icon: String): String = "<at:${-(HALF_BAR + 1)}:from=center:align=right><glyph:$icon></at>"
 
 /**
  * Each online player's sidebar as scripts set it: its title, lines and

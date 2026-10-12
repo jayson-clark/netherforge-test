@@ -1360,6 +1360,10 @@ Error. A skin's `offset` is further than one move can go. See [resource packs](r
 
 Warning. A skin's picture can't be read, so the title's words start after the art instead of over it. See [resource packs](resource-pack.md).
 
+### `resource_pack.picture-size` {#resource_pack-picture-size}
+
+Error. A skin's, glyph's or HUD element's picture is over 256 pixels tall, or over 256 wide and doesn't cut into equal pieces of 256 or less: Minecraft draws it blank. See [resource packs](resource-pack.md).
+
 ### `resource_pack.too-many` {#resource_pack-too-many}
 
 Error. A resource pack holds more skins than a font has characters for. See [resource packs](resource-pack.md).

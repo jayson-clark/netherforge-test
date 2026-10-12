@@ -704,6 +704,32 @@ class ProjectSession internal constructor(
         return TextWidth(font, packs::glyphAdvance).measure(text)
     }
 
+    /** `<at>` tags already reported as unplaceable, so text sent every tick warns once. */
+    private val unplacedAts: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /**
+     * MiniMessage with each `<at>` turned into the moves that place it
+     * ([TextWidth.layout]), measured like [measureText]. Without
+     * `fonts/default.json` only insides and lines that need no character
+     * widths (glyphs, spaces) can be placed. Any other `<at>` draws in line,
+     * and is warned about once.
+     */
+    internal fun layoutText(text: String): String {
+        if (!text.contains("<at", ignoreCase = true)) return text
+        val font = snapshot.defaultFont
+        val width = if (font != null) TextWidth(font, packs::glyphAdvance) else TextWidth({ null }, packs::glyphAdvance)
+        val layout = width.layout(text)
+        for (tag in layout.unplaced) {
+            if (unplacedAts.size < MAX_REPORTED_ATS && unplacedAts.add(tag)) {
+                log.warn(
+                    "$tag draws what it holds in line: it, or the line it's counted from, can't be measured " +
+                        "(fonts/default.json is missing or doesn't cover a character, or a glyph's width is unknown)"
+                )
+            }
+        }
+        return layout.text
+    }
+
     /** Lua shortens long chunk names to `...tail.lua`; this finds the project file it meant. */
     internal fun projectPath(file: String): String {
         if (!file.startsWith("...")) return file
@@ -758,3 +784,6 @@ class Handover(val instances: List<InstanceRecord>, val data: Map<ScriptData.Own
 
 /** A service's share of a step below this (a microsecond) isn't worth a part of its own in the profile. */
 private const val PART_FLOOR_NANOS = 1_000L
+
+/** How many unplaceable `<at>` tags a session warns about before it stops. */
+private const val MAX_REPORTED_ATS = 50

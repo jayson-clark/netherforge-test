@@ -23,6 +23,21 @@ export function opaqueWidth(alpha: ArrayLike<number>, width: number, height: num
   return 0
 }
 
+/**
+ * Of each column, left to right, whether it holds any pixel that isn't fully
+ * transparent: what format measures each piece of a picture too wide for a
+ * font sheet from (`ImageInfo.opaqueColumns`). [alpha] is row by row.
+ */
+export function opaqueColumns(alpha: ArrayLike<number>, width: number, height: number): boolean[] {
+  const out = new Array<boolean>(width).fill(false)
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (alpha[y * width + x]! !== 0) out[x] = true
+    }
+  }
+  return out
+}
+
 const cache = new Map<string, Promise<ImageInfo | null>>()
 
 /** Size and alpha of a picture (a pack texture), loaded once per URL. */

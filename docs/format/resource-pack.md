@@ -81,17 +81,31 @@ Put one in MiniMessage text with the tag `<glyph:<id>/<key>>`, the resource pack
 ```
 
 The glyph is drawn in its own colours (white, so the text's colour doesn't
-tint it) and takes up its picture's advance, like any character. In a
+tint it), never bold, and takes up its picture's advance, like any character. In a
 project file, a `<glyph:…>` naming a glyph no resource pack has is an error
 (`reference.resource-pack-key`, or `reference.resource-pack` when there's no such resource pack). In text a script builds, it shows nothing and is
 reported once. Scripts can also get the glyph's bare character with
 `nf.text.glyph("ui/coin")`; that character is tinted by the text around it.
 
-| Key       | Meaning                              | Default |
-| --------- | ------------------------------------ | ------- |
-| `texture` |                                      |         |
-| `height`  | GUI pixels. 8 is a line of text.     | 8       |
-| `ascent`  | Pixels from the top to the baseline. | 7       |
+| Key       | Meaning                                                                                        | Default |
+| --------- | ---------------------------------------------------------------------------------------------- | ------- |
+| `texture` |                                                                                                |         |
+| `height`  | GUI pixels. 8 is a line of text.                                                               | 8       |
+| `ascent`  | Pixels from the top to the baseline. Can't exceed `height`; may be negative, to hang it lower. | 7       |
+
+Minecraft draws a font picture over 256 pixels either way blank (its font
+sheets are 256×256), so a picture wider than that, a glyph's, a skin's or a HUD
+element's, is drawn in equal pieces of 256 or less, each its own character,
+placed side by side and taking up the whole picture's advance: a full-width
+plate or banner is one glyph. It must cut evenly: a width that doesn't
+(257) is an error that says what to pad it to, and so is a picture over 256
+tall, which can't be cut (`resource_pack.picture-size`). What's measured is
+the picture's pixels, not the `height` it's drawn at.
+
+The built resource pack's default font also holds the space characters that
+`<space:N>` and `<at:N>…</at>` move the cursor with (see the
+[resource packs guide](../guide/resource-packs.md#spacing-moving-the-cursor-in-text)), so
+those tags work in any text whenever there's a resource pack.
 
 ## Item models
 

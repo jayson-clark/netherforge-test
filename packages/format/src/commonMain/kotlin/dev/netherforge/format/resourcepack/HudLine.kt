@@ -1,5 +1,6 @@
 package dev.netherforge.format.resourcepack
 
+import dev.netherforge.format.project.ImageInfo
 import kotlin.math.round
 
 /**
@@ -14,8 +15,11 @@ class CompiledHud(
     val icons: Map<String, Icons>,
     val texts: Map<String, HudTextDef>
 ) {
-    /** One picture: its character, the texture it draws, how tall, its ascent and its advance. */
-    class Piece(val char: String, val texture: String, val height: Int, val ascent: Int, val advance: Int?)
+    /**
+     * One picture: what draws it (its character, or for a picture wider than a font sheet its pieces side by side,
+     * whose characters are [cells]: [PackFonts.picture]), the texture it draws, how tall, its ascent and its advance.
+     */
+    class Piece(val char: String, val texture: String, val height: Int, val ascent: Int, val advance: Int?, val cells: String = char)
 
     class Bar(val def: HudBarDef, val full: Piece, val empty: Piece, val half: Piece?) {
         /** The width each segment takes: the widest picture's, and the gap. Null when a picture's width isn't known. */
@@ -34,16 +38,19 @@ class CompiledHud(
 
         /**
          * [def] of pack [id] in [namespace], its pictures numbered from the start of the private-use block in the
-         * pack's own HUD font; [image] answers a texture's pixel facts (`textures/` path → its height and opaque
-         * width), or null.
+         * pack's own HUD font; [image] answers a texture's pixel facts by its `textures/` path, or null.
          */
-        fun compile(namespace: String, id: String, def: HudDef, image: (texture: String) -> Pair<Int, Int>?): CompiledHud {
+        fun compile(namespace: String, id: String, def: HudDef, image: (texture: String) -> ImageInfo?): CompiledHud {
             var next = 0
+            // A picture cut into pieces takes a character per further piece, after every picture's own.
+            var nextPiece = def.bars.values.sumOf { if (it.half != null) 3 else 2 } + def.icons.values.sumOf { it.icons.size }
+            val extra = { nextPiece.takeIf { it < PackFonts.PUA_COUNT }?.let { PackFonts.charAt(nextPiece++) } }
             fun piece(texture: String, y: Int): Piece {
-                val facts = image(texture)
-                val height = facts?.first?.takeIf { it > 0 } ?: DEFAULT_HEIGHT
-                val advance = facts?.let { (imageHeight, opaque) -> PackFonts.bitmapAdvance(opaque, imageHeight, height) }
-                return Piece(PackFonts.charAt(next++), texture, height, y + height - HudDef.BASELINE, advance)
+                val facts = image(texture)?.takeIf { it.height > 0 }
+                // Drawn at its own size: a HUD picture's pixels are the screen's.
+                val height = facts?.height ?: DEFAULT_HEIGHT
+                val drawn = PackFonts.picture(PackFonts.charAt(next++), facts, height, extra)
+                return Piece(drawn.text, texture, height, y + height - HudDef.BASELINE, drawn.advance, drawn.cells)
             }
             val bars = def.bars.entries.sortedBy { it.key }.associate { (key, bar) ->
                 key to Bar(bar, piece(bar.full, bar.y), piece(bar.empty, bar.y), bar.half?.let { piece(it, bar.y) })

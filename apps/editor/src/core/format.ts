@@ -230,6 +230,7 @@ export type {
   SpawnTime,
   SpawningDef,
   StyledChar,
+  StyledOverlay,
   TextAlignment,
   TextDisplay,
   TextInput,

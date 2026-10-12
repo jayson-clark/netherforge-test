@@ -70,7 +70,7 @@
 ---@field particles nf.particles The project's particle effects (`particles/<id>/effect.json`): timelines of particles authored in the editor, played at a place by scripts.
 ---@field cutscenes nf.cutscenes The project's cutscenes (`cutscenes/<id>.json`): camera paths keyed in the editor, played for one player at a time.
 ---@field files nf.files Files in the one directory scripts may keep things in: the only state a script has that survives a restart.
----@field text nf.text Helpers for the MiniMessage text players see: escaping what players typed, stripping tags, resource pack glyphs, and measuring.
+---@field text nf.text Helpers for the MiniMessage text players see: escaping what players typed, stripping tags, resource pack glyphs, moving the cursor, and measuring.
 ---@field json nf.json JSON text to and from Lua values.
 ---@field http nf.http Requests to web services (a Discord webhook, a status API). A package declares the hosts it talks to in `netherforge.json`'s `requires` (`"http": ["discord.com"]`, or `"*.discord.com"` for every name under it), and the server owner sees every host the project and its packages declare when it starts (`/nf requires`); a request to any other host is an error. Every request is held to the package whose code makes it. The server looks a name up once, checks the addresses it leads to and connects to exactly the address it checked: a loopback, private, link-local, shared (`100.64.0.0/10`), unique-local or IPv4-mapped address is refused even when its name is declared, unless the server owner turned on `http.allow-private-addresses` in `config.yml` (for a service on the same machine or network). Redirects (at most 5) are followed, and each one is held to the same rules, host declaration included. The server's proxy settings are never used. Only `http` and `https` URLs work. The server owner also limits requests in `config.yml`'s `http:` section: how large a request and a response may be, how long a request may take, and how many a package may make a minute.
 ---@field time nf.time Dates and durations as text, in the same unit as `nf.server.unix_time()`: milliseconds. For timers, use ticks (`nf.after`, `nf.wait`); this is for showing and reading clock times and lengths of time.
@@ -1016,7 +1016,7 @@ nf.files = {}
 ---@return File?
 function nf.files.get(path) end
 
---- Helpers for the MiniMessage text players see: escaping what players typed, stripping tags, resource pack glyphs, and measuring.
+--- Helpers for the MiniMessage text players see: escaping what players typed, stripping tags, resource pack glyphs, moving the cursor, and measuring.
 ---@class nf.text
 nf.text = {}
 
@@ -1030,12 +1030,17 @@ function nf.text.escape(text) end
 ---@return string
 function nf.text.strip(text) end
 
---- The character a resource pack glyph is drawn as, for building text by hand. In MiniMessage text the tag `<glyph:ui/coin>` is usually simpler: it works anywhere text does (names, lore, chat, titles, dialogs, text displays) and draws the picture in its own colours, while this character is tinted by the text colour around it like any other (wrap it in `<white>` to avoid that). `nil` while the project's resource packs have errors (nothing is built then); a glyph no resource pack has is an error.
+--- The character a resource pack glyph is drawn as, for building text by hand: a glyph wider than 256 pixels is drawn in pieces, so it's those pieces' characters and the moves between them. In MiniMessage text the tag `<glyph:ui/coin>` is usually simpler: it works anywhere text does (names, lore, chat, titles, dialogs, text displays) and draws the picture in its own colours, never bold, while this text is tinted by the text colour around it like any other (wrap it in `<white>` to avoid that, and keep it out of `<bold>`, which pulls a wide glyph's pieces apart). `nil` while the project's resource packs have errors (nothing is built then); a glyph no resource pack has is an error.
 ---@param glyph GlyphRef `<pack>/<key>`, like `"ui/coin"`.
 ---@return string?
 function nf.text.glyph(glyph) end
 
---- How wide a line of MiniMessage text draws in the game's default font, in pixels (GUI pixels: the font is 8 tall), for laying out menu titles and text displays. Tags draw nothing, except `<bold>` (a pixel more per character) and `<glyph:ui/coin>` (the glyph's own width); text with line breaks measures as its widest line. It reads the default font's widths from `fonts/default.json`, which the editor writes into the project from your Minecraft install. `nil` when it can't be measured exactly: that file is missing (open the project in the editor with Minecraft imported), or the text uses a character it doesn't cover.
+--- Characters that move the cursor `pixels` GUI pixels (negative is left) and draw nothing, for building text by hand: what the tag `<space:N>` inserts. In MiniMessage the tag is usually simpler, and `<at:N>…</at>` draws something N pixels away without moving what follows (`<at:-30><glyph:ui/head></at>King Slime`; add `from=center`, `from=start` or `from=end` to count N from the middle, start or end of the line, and `align=right` or `align=center` to put that edge of what it holds there). The characters are the resource pack's, so they need one: `nil` while there's none (the project has no resource packs or blocks). Inside `<bold>` each character is a pixel wider, which the tag isn't. Held to ±2047.
+---@param pixels integer How far, in GUI pixels.
+---@return string?
+function nf.text.space(pixels) end
+
+--- How wide a line of MiniMessage text draws in the game's default font, in pixels (GUI pixels: the font is 8 tall), for laying out menu titles and text displays. Tags draw nothing, except `<bold>` (a pixel more per character), `<glyph:ui/coin>` (the glyph's own width) and `<space:N>` (N, which may be negative); what an `<at:N>` holds takes no width. Text with line breaks measures as its widest line. It reads the default font's widths from `fonts/default.json`, which the editor writes into the project from your Minecraft install. `nil` when it can't be measured exactly: that file is missing (open the project in the editor with Minecraft imported), or the text uses a character it doesn't cover.
 ---@param text Text MiniMessage.
 ---@return integer?
 function nf.text.width(text) end
@@ -3878,6 +3883,15 @@ function BossBar:text() end
 ---@return boolean # `false` once it's gone.
 function BossBar:set_text(text) end
 
+--- The glyph drawn at its left end, or `nil` when it has none (or it's gone).
+---@return string?
+function BossBar:icon() end
+
+--- Draws a glyph at its left end, or none with `nil`. A glyph no resource pack has is an error.
+---@param icon string? `<pack>/<key>`, like `"ui/boss_king_slime"`.
+---@return boolean # `false` once it's gone.
+function BossBar:set_icon(icon) end
+
 --- How full it is, 0 to 1, or `nil` once it's gone.
 ---@return number?
 function BossBar:progress() end
@@ -6232,6 +6246,7 @@ function Event:uncancel() end
 ---@field color "pink"|"blue"|"red"|"green"|"yellow"|"purple"|"white"? Default `"pink"`, the way vanilla bars start.
 ---@field style "progress"|"notched_6"|"notched_10"|"notched_12"|"notched_20"? One bar, or split into notches. Default `"progress"`, one bar.
 ---@field progress number? How full, 0 to 1. Default 1.
+---@field icon string? A glyph (`<pack>/<key>`) drawn just left of the bar's left end, wherever the centred text puts its words: a boss's head, say. It's drawn on the text's line at the glyph's own `ascent`: the bar sits 2 pixels below the text's baseline, so a lower ascent (even a negative one) hangs it down beside the bar. Placing it needs the text's width, so text the server can't measure (no `fonts/default.json`) draws it in front of the words instead. Default none.
 
 --- What `nf.loot.roll` and `nf.loot.fill` roll with: who and what the roll is for, which the table's conditions ask about. Every key is optional; a key that isn't one of these is an error.
 ---@class LootContext

@@ -1,5 +1,6 @@
 package dev.netherforge.plugin.api
 
+import dev.netherforge.format.ref.RefKind
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.BossBarLook
 import dev.netherforge.plugin.session.ProjectSession
@@ -15,7 +16,8 @@ internal class NfBossbarsImpl(private val session: ProjectSession) : NfBossbarsA
     override fun create(caller: Caller, options: BossBarOptions?): LuaHandle.BossBar {
         options?.progress?.let { checkProgress(it, "options.progress") }
         val look = BossBarLook(options?.text.orEmpty(), options?.progress ?: 1.0, options?.color ?: "pink", options?.style ?: "progress")
-        return LuaHandle.BossBar(session.bossBars.create(caller.scope, look).id.toLong())
+        val icon = options?.icon?.let { session.names.entryName(RefKind.GLYPH, it) }
+        return LuaHandle.BossBar(session.bossBars.create(caller.scope, look, icon).id.toLong())
     }
 }
 
@@ -70,6 +72,15 @@ internal class BossBarImpl(private val session: ProjectSession) : BossBarApi {
     override fun text(self: LuaHandle.BossBar): String? = bar(self)?.look?.text
 
     override fun setText(self: LuaHandle.BossBar, text: String): Boolean = change(self) { it.copy(text = text) }
+
+    override fun icon(self: LuaHandle.BossBar): String? = bar(self)?.icon?.let(session.names::spell)
+
+    override fun setIcon(self: LuaHandle.BossBar, icon: String?): Boolean {
+        val name = icon?.let { session.names.entryName(RefKind.GLYPH, it) }
+        val bar = bar(self) ?: return false
+        bars.setIcon(bar, name)
+        return true
+    }
 
     override fun progress(self: LuaHandle.BossBar): Double? = bar(self)?.look?.progress
 

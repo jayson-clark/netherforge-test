@@ -82,6 +82,12 @@ class FakePlatform(
     /** What the runtime said `<glyph:…>` means; a real adapter's MiniMessage tag asks the same. */
     var glyphs: (String) -> String? = { null }
 
+    /** What the runtime said `<space:N>` inserts; a real adapter's MiniMessage tag asks the same. */
+    var spaces: (Int) -> String? = { null }
+
+    /** How the runtime places `<at>` tags; a real adapter runs every text through it before parsing. */
+    var layout: (String) -> String = { it }
+
     /** The runtime, for the events a real server would deliver (a window closing, a button pressed). */
     var events: PlatformEvents? = null
 
@@ -114,6 +120,11 @@ class FakePlatform(
         this.itemLooks = items
         this.blockStates = blocks
         this.namespace = namespace
+    }
+
+    override fun bindText(space: (px: Int) -> String?, layout: (text: String) -> String) {
+        this.spaces = space
+        this.layout = layout
     }
 
     /**

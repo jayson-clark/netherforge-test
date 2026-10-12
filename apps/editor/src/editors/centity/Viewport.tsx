@@ -43,7 +43,7 @@ import { BLOCK_GRID } from '@/editors/shared/viewport/scenes'
 import { Gizmo, type GizmoMode } from '@/editors/shared/viewport/Gizmo'
 import { ViewportNote, ViewportToolbar } from '@/editors/shared/viewport/parts'
 import { Viewport3D } from '@/editors/shared/viewport/Viewport3D'
-import { runsIn, styledChars } from '@/minecraft/text/minimessage'
+import { runsIn, styledChars, type TextRun } from '@/minecraft/text/minimessage'
 import { localChannels } from './gizmo'
 import { setChannel, setKeyframe } from './ops'
 import { usePrimary, useSelection, useView, useViewState } from '@/editors/views'
@@ -347,31 +347,51 @@ function drawText(
     lines.forEach((line, i) => {
       const runs = runsIn(chars, line.start, line.end)
       const measured = runs.reduce((sum, run) => sum + context.measureText(run.text).width, 0)
-      const glyphWidth = runs.reduce(
-        (sum, run) => sum + (run.glyph ? (glyphs[run.glyph] ?? 0) : 0),
+      // What the game's own widths say: glyphs and moves. What an <at> holds takes none.
+      const fixedWidth = runs.reduce(
+        (sum, run) => sum + (run.glyph ? (glyphs[run.glyph] ?? 0) : 0) + (run.move ?? 0),
         0,
       )
       // Stretch the browser's font to the game's width for this line.
-      const ratio = measured > 0 ? ((line.width - glyphWidth) * scale) / measured : 1
+      const ratio = measured > 0 ? ((line.width - fixedWidth) * scale) / measured : 1
       const free = width - 2 - line.width
       const offset =
         display.alignment === 'left' ? 0 : display.alignment === 'right' ? free : free / 2
-      let x = (1 + offset) * scale
       const y = (1 + i * LINE_HEIGHT) * scale
-      for (const run of runs) {
-        if (run.glyph) {
-          x += (glyphs[run.glyph] ?? 0) * scale
-          continue
+      // How far [list] moves the cursor, in canvas pixels.
+      const advance = (list: TextRun[]): number =>
+        list.reduce((sum, run) => {
+          if (run.glyph) return sum + (glyphs[run.glyph] ?? 0) * scale
+          if (run.move !== undefined) return sum + run.move * scale
+          if (run.overlay) return sum
+          return sum + context.measureText(run.text).width * ratio
+        }, 0)
+      // Draws [list] from [start].
+      const draw = (list: TextRun[], start: number) => {
+        let x = start
+        for (const run of list) {
+          if (run.overlay) {
+            // Counted from the cursor, its `align` edge there.
+            const held = advance(run.overlay.runs)
+            const shift = { left: 0, center: held / 2, right: held }[
+              run.overlay.at.align as 'left' | 'center' | 'right'
+            ]
+            draw(run.overlay.runs, x + run.overlay.at.x * scale - shift)
+            continue
+          }
+          if (run.glyph === undefined && run.move === undefined) {
+            const runWidth = context.measureText(run.text).width * ratio
+            if (display.shadow) {
+              context.fillStyle = '#3f3f3f'
+              context.fillText(run.text, x + scale, y + scale, runWidth)
+            }
+            context.fillStyle = run.style.color ?? '#ffffff'
+            context.fillText(run.text, x, y, runWidth)
+          }
+          x += advance([run])
         }
-        const runWidth = context.measureText(run.text).width * ratio
-        if (display.shadow) {
-          context.fillStyle = '#3f3f3f'
-          context.fillText(run.text, x + scale, y + scale, runWidth)
-        }
-        context.fillStyle = run.style.color ?? '#ffffff'
-        context.fillText(run.text, x, y, runWidth)
-        x += runWidth
       }
+      draw(runs, (1 + offset) * scale)
     })
   }
   const texture = new THREE.CanvasTexture(canvas)

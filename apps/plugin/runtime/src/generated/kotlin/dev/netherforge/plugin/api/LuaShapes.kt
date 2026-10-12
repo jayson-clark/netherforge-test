@@ -5897,7 +5897,7 @@ data class BossBarAttachOptions(val range: Double? = null, val health: Boolean? 
  * What `nf.bossbars.create` makes a bar with. Every key is optional; a key that isn't one of these is
  * an error.
  */
-data class BossBarOptions(val text: String? = null, val color: String? = null, val style: String? = null, val progress: Double? = null) : LuaShape {
+data class BossBarOptions(val text: String? = null, val color: String? = null, val style: String? = null, val progress: Double? = null, val icon: String? = null) : LuaShape {
     override fun push(call: LuaCall) = Codec.push(call, this)
 
     object Codec : ShapeCodec<BossBarOptions>("BossBarOptions") {
@@ -5905,6 +5905,7 @@ data class BossBarOptions(val text: String? = null, val color: String? = null, v
         val colorCodec = LuaOptional(LuaChoice(listOf("pink", "blue", "red", "green", "yellow", "purple", "white")))
         val styleCodec = LuaOptional(LuaChoice(listOf("progress", "notched_6", "notched_10", "notched_12", "notched_20")))
         val progressCodec = LuaOptional(LuaCodecs.NUMBER)
+        val iconCodec = LuaOptional(LuaCodecs.STRING)
 
         override val pinned = false
 
@@ -5912,14 +5913,16 @@ data class BossBarOptions(val text: String? = null, val color: String? = null, v
             "text" to textCodec,
             "color" to colorCodec,
             "style" to styleCodec,
-            "progress" to progressCodec
+            "progress" to progressCodec,
+            "icon" to iconCodec
         )
 
         override fun read(fields: ShapeReader) = BossBarOptions(
             text = fields.field("text", textCodec),
             color = fields.field("color", colorCodec),
             style = fields.field("style", styleCodec),
-            progress = fields.field("progress", progressCodec)
+            progress = fields.field("progress", progressCodec),
+            icon = fields.field("icon", iconCodec)
         )
 
         override fun write(fields: ShapeWriter, value: BossBarOptions) {
@@ -5927,6 +5930,7 @@ data class BossBarOptions(val text: String? = null, val color: String? = null, v
             fields.field("color", value.color, colorCodec)
             fields.field("style", value.style, styleCodec)
             fields.field("progress", value.progress, progressCodec)
+            fields.field("icon", value.icon, iconCodec)
         }
     }
 }

@@ -9,12 +9,13 @@ import { createStore, type StoreApi } from 'zustand/vanilla'
 import type { Backend } from '@/core/backend/types'
 import {
   compileResourcePacks,
+  FONT_SHEET,
   type ImageInfo,
   type ResourcePackFile,
   type ResourcePacksPreview,
 } from '@/core/format'
 import { resourcePackTexturePath } from '@/core/paths'
-import { loadImageInfo } from '@/core/image'
+import { loadImageInfo, opaqueColumns } from '@/core/image'
 import { isModel } from './documents'
 import { fileUrl } from './packages'
 import type { Workspace, WorkspaceStore } from './workspace'
@@ -213,7 +214,16 @@ export function createResourcePacks(
       const images: Record<string, ImageInfo> = {}
       for (const [path, info] of results) {
         if (info && info.opaqueWidth !== null) {
-          images[path] = { width: info.width, height: info.height, opaqueWidth: info.opaqueWidth }
+          const facts: ImageInfo = {
+            width: info.width,
+            height: info.height,
+            opaqueWidth: info.opaqueWidth,
+          }
+          // A picture too wide for a font sheet is cut into pieces, each measured on its own.
+          if (info.width > FONT_SHEET && info.alpha) {
+            facts.opaqueColumns = opaqueColumns(info.alpha, info.width, info.height)
+          }
+          images[path] = facts
         }
       }
       if (JSON.stringify(images) === JSON.stringify(store.getState().images)) return

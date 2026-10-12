@@ -703,7 +703,7 @@ interface NfFilesApi {
 
 /**
  * Helpers for the MiniMessage text players see: escaping what players typed, stripping tags, resource
- * pack glyphs, and measuring.
+ * pack glyphs, moving the cursor, and measuring.
  */
 interface NfTextApi {
     /**
@@ -717,23 +717,38 @@ interface NfTextApi {
     fun strip(caller: Caller, text: String): String
 
     /**
-     * The character a resource pack glyph is drawn as, for building text by hand. In MiniMessage text the
-     * tag `<glyph:ui/coin>` is usually simpler: it works anywhere text does (names, lore, chat, titles,
-     * dialogs, text displays) and draws the picture in its own colours, while this character is tinted by
-     * the text colour around it like any other (wrap it in `<white>` to avoid that). `nil` while the
+     * The character a resource pack glyph is drawn as, for building text by hand: a glyph wider than 256
+     * pixels is drawn in pieces, so it's those pieces' characters and the moves between them. In
+     * MiniMessage text the tag `<glyph:ui/coin>` is usually simpler: it works anywhere text does (names,
+     * lore, chat, titles, dialogs, text displays) and draws the picture in its own colours, never bold,
+     * while this text is tinted by the text colour around it like any other (wrap it in `<white>` to avoid
+     * that, and keep it out of `<bold>`, which pulls a wide glyph's pieces apart). `nil` while the
      * project's resource packs have errors (nothing is built then); a glyph no resource pack has is an
      * error.
      */
     fun glyph(caller: Caller, glyph: String): String?
 
     /**
+     * Characters that move the cursor `pixels` GUI pixels (negative is left) and draw nothing, for
+     * building text by hand: what the tag `<space:N>` inserts. In MiniMessage the tag is usually simpler,
+     * and `<at:N>…</at>` draws something N pixels away without moving what follows
+     * (`<at:-30><glyph:ui/head></at>King Slime`; add `from=center`, `from=start` or `from=end` to count N
+     * from the middle, start or end of the line, and `align=right` or `align=center` to put that edge of
+     * what it holds there). The characters are the resource pack's, so they need one: `nil` while there's
+     * none (the project has no resource packs or blocks). Inside `<bold>` each character is a pixel wider,
+     * which the tag isn't. Held to ±2047.
+     */
+    fun space(caller: Caller, pixels: Long): String?
+
+    /**
      * How wide a line of MiniMessage text draws in the game's default font, in pixels (GUI pixels: the
      * font is 8 tall), for laying out menu titles and text displays. Tags draw nothing, except `<bold>` (a
-     * pixel more per character) and `<glyph:ui/coin>` (the glyph's own width); text with line breaks
-     * measures as its widest line. It reads the default font's widths from `fonts/default.json`, which the
-     * editor writes into the project from your Minecraft install. `nil` when it can't be measured exactly:
-     * that file is missing (open the project in the editor with Minecraft imported), or the text uses a
-     * character it doesn't cover.
+     * pixel more per character), `<glyph:ui/coin>` (the glyph's own width) and `<space:N>` (N, which may
+     * be negative); what an `<at:N>` holds takes no width. Text with line breaks measures as its widest
+     * line. It reads the default font's widths from `fonts/default.json`, which the editor writes into the
+     * project from your Minecraft install. `nil` when it can't be measured exactly: that file is missing
+     * (open the project in the editor with Minecraft imported), or the text uses a character it doesn't
+     * cover.
      */
     fun width(caller: Caller, text: String): Long?
 }
@@ -3587,6 +3602,12 @@ interface BossBarApi {
 
     /** Changes what it says. */
     fun setText(self: LuaHandle.BossBar, text: String): Boolean
+
+    /** The glyph drawn at its left end, or `nil` when it has none (or it's gone). */
+    fun icon(self: LuaHandle.BossBar): String?
+
+    /** Draws a glyph at its left end, or none with `nil`. A glyph no resource pack has is an error. */
+    fun setIcon(self: LuaHandle.BossBar, icon: String?): Boolean
 
     /** How full it is, 0 to 1, or `nil` once it's gone. */
     fun progress(self: LuaHandle.BossBar): Double?

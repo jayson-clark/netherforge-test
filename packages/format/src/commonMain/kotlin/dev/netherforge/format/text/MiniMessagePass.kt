@@ -26,7 +26,8 @@ data class TextStyle(
  * wrapped.
  *
  * Every `<…>` is a tag and draws nothing, except `<glyph:ui/coin>`, which is
- * one picture and opens nothing; `\n`, `<newline>` and `<br>` break the line.
+ * one picture and opens nothing, `<space:N>`, a move, and `<at:N>`, which
+ * draws what it holds over the line ([Overlay]); `\n`, `<newline>` and `<br>` break the line.
  * Tags this knows style what follows (colours, decorations, `<reset>`); the
  * rest balance on the same stack and change nothing, so an unknown pair
  * can't leak a style. A gradient is drawn in its first colour, a rainbow
@@ -53,6 +54,15 @@ object MiniMessagePass {
 
     /** A line break; the next line starts at [end]. */
     class Break(override val at: Int, override val end: Int) : Piece
+
+    /** A `<space:N>` tag: the cursor moves [px] pixels. */
+    class Move(val px: Int, override val at: Int, override val end: Int) : Piece
+
+    /** An `<at>` tag that moves ([SpaceTags]): the pieces up to its [OverlayEnd] draw over the line and take no width. */
+    class Overlay(val spec: SpaceTags.At, override val at: Int, override val end: Int) : Piece
+
+    /** Where an [Overlay] closes (its closing tag, a tag closing it, `<reset>`, or the text's end). */
+    class OverlayEnd(override val at: Int, override val end: Int) : Piece
 
     /** Minecraft's sixteen named colours, and the `grey` spellings. */
     val NAMED_COLORS: Map<String, String> = mapOf(
@@ -118,6 +128,14 @@ object MiniMessagePass {
     fun pieces(text: String): List<Piece> {
         val out = mutableListOf<Piece>()
         val stack = mutableListOf(TextStyle())
+        // Parallel to the stack: whether each entry is an `<at>` that moves, which ends an overlay when it closes.
+        val overlays = mutableListOf(false)
+        fun pop(down: Int, at: Int, end: Int) {
+            while (stack.size > down) {
+                stack.removeAt(stack.lastIndex)
+                if (overlays.removeAt(overlays.lastIndex)) out += OverlayEnd(at, end)
+            }
+        }
         var cursor = 0
         while (cursor < text.length) {
             val c = text[cursor]
@@ -136,11 +154,21 @@ object MiniMessagePass {
                     when {
                         name == "newline" || name == "br" -> out += Break(cursor, close + 1)
                         glyph != null -> out += Glyph(glyph, cursor, close + 1, stack.last())
-                        // A stray </glyph> closes nothing.
-                        closing && name == GlyphTags.NAME -> Unit
-                        name == "reset" -> stack.subList(1, stack.size).clear()
-                        closing -> if (stack.size > 1) stack.removeAt(stack.size - 1)
-                        else -> stack += styled(stack.last(), tag)
+                        // A stray </glyph> or </space> closes nothing.
+                        closing && (name == GlyphTags.NAME || name == SpaceTags.SPACE) -> Unit
+                        name == SpaceTags.SPACE -> SpaceTags.space(SpaceTags.arguments(tag))?.let { out += Move(it, cursor, close + 1) }
+                        name == "reset" -> pop(1, cursor, close + 1)
+                        closing -> if (stack.size > 1) pop(stack.size - 1, cursor, close + 1)
+                        name == SpaceTags.AT -> {
+                            val spec = SpaceTags.at(SpaceTags.arguments(tag))
+                            if (spec != null) out += Overlay(spec, cursor, close + 1)
+                            stack += stack.last()
+                            overlays += spec != null
+                        }
+                        else -> {
+                            stack += styled(stack.last(), tag)
+                            overlays += false
+                        }
                     }
                     cursor = close + 1
                     continue
@@ -155,6 +183,7 @@ object MiniMessagePass {
             out += Char(code, text.substring(cursor, cursor + size), cursor, cursor + size, stack.last())
             cursor += size
         }
+        pop(1, text.length, text.length)
         return out
     }
 }

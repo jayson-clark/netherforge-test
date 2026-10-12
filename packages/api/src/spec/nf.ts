@@ -330,7 +330,7 @@ export const nfFiles = namespace(
 /** `nf.text`: MiniMessage helpers. */
 export const nfText = namespace(
   'text',
-  'Helpers for the MiniMessage text players see: escaping what players typed, stripping tags, resource pack glyphs, and measuring.',
+  'Helpers for the MiniMessage text players see: escaping what players typed, stripping tags, resource pack glyphs, moving the cursor, and measuring.',
   [
     {
       name: 'escape',
@@ -348,7 +348,7 @@ export const nfText = namespace(
     },
     {
       name: 'glyph',
-      doc: "The character a resource pack glyph is drawn as, for building text by hand. In MiniMessage text the tag `<glyph:ui/coin>` is usually simpler: it works anywhere text does (names, lore, chat, titles, dialogs, text displays) and draws the picture in its own colours, while this character is tinted by the text colour around it like any other (wrap it in `<white>` to avoid that). `nil` while the project's resource packs have errors (nothing is built then); a glyph no resource pack has is an error.",
+      doc: "The character a resource pack glyph is drawn as, for building text by hand: a glyph wider than 256 pixels is drawn in pieces, so it's those pieces' characters and the moves between them. In MiniMessage text the tag `<glyph:ui/coin>` is usually simpler: it works anywhere text does (names, lore, chat, titles, dialogs, text displays) and draws the picture in its own colours, never bold, while this text is tinted by the text colour around it like any other (wrap it in `<white>` to avoid that, and keep it out of `<bold>`, which pulls a wide glyph's pieces apart). `nil` while the project's resource packs have errors (nothing is built then); a glyph no resource pack has is an error.",
       params: [
         {
           name: 'glyph',
@@ -362,8 +362,16 @@ export const nfText = namespace(
         'local coin = nf.text.glyph("ui/coin")\nplayer:send_message("<white>" .. coin .. "</white> <gold>" .. balance)',
     },
     {
+      name: 'space',
+      doc: "Characters that move the cursor `pixels` GUI pixels (negative is left) and draw nothing, for building text by hand: what the tag `<space:N>` inserts. In MiniMessage the tag is usually simpler, and `<at:N>…</at>` draws something N pixels away without moving what follows (`<at:-30><glyph:ui/head></at>King Slime`; add `from=center`, `from=start` or `from=end` to count N from the middle, start or end of the line, and `align=right` or `align=center` to put that edge of what it holds there). The characters are the resource pack's, so they need one: `nil` while there's none (the project has no resource packs or blocks). Inside `<bold>` each character is a pixel wider, which the tag isn't. Held to ±2047.",
+      params: [{ name: 'pixels', type: 'integer', doc: 'How far, in GUI pixels.' }],
+      returns: [{ type: 'string?' }],
+      example:
+        'local column = nf.text.width("Sword") or 0\nplayer:send_message("Sword" .. (nf.text.space(60 - column) or " ") .. "<gold>12 gold")',
+    },
+    {
       name: 'width',
-      doc: "How wide a line of MiniMessage text draws in the game's default font, in pixels (GUI pixels: the font is 8 tall), for laying out menu titles and text displays. Tags draw nothing, except `<bold>` (a pixel more per character) and `<glyph:ui/coin>` (the glyph's own width); text with line breaks measures as its widest line. It reads the default font's widths from `fonts/default.json`, which the editor writes into the project from your Minecraft install. `nil` when it can't be measured exactly: that file is missing (open the project in the editor with Minecraft imported), or the text uses a character it doesn't cover.",
+      doc: "How wide a line of MiniMessage text draws in the game's default font, in pixels (GUI pixels: the font is 8 tall), for laying out menu titles and text displays. Tags draw nothing, except `<bold>` (a pixel more per character), `<glyph:ui/coin>` (the glyph's own width) and `<space:N>` (N, which may be negative); what an `<at:N>` holds takes no width. Text with line breaks measures as its widest line. It reads the default font's widths from `fonts/default.json`, which the editor writes into the project from your Minecraft install. `nil` when it can't be measured exactly: that file is missing (open the project in the editor with Minecraft imported), or the text uses a character it doesn't cover.",
       params: [{ name: 'text', type: 'Text', doc: 'MiniMessage.' }],
       returns: [{ type: 'integer?' }],
       example:

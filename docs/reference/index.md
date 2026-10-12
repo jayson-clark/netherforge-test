@@ -31,7 +31,7 @@ Everything a NetherForge script can call. Scripts run Lua 5.4 in a sandbox, on t
 - [nf.particles](nf.particles.md): The project's particle effects (`particles/<id>/effect.json`): timelines of particles authored in the editor, played at a place by scripts
 - [nf.cutscenes](nf.cutscenes.md): The project's cutscenes (`cutscenes/<id>.json`): camera paths keyed in the editor, played for one player at a time
 - [nf.files](nf.files.md): Files in the one directory scripts may keep things in: the only state a script has that survives a restart
-- [nf.text](nf.text.md): Helpers for the MiniMessage text players see: escaping what players typed, stripping tags, resource pack glyphs, and measuring
+- [nf.text](nf.text.md): Helpers for the MiniMessage text players see: escaping what players typed, stripping tags, resource pack glyphs, moving the cursor, and measuring
 - [nf.json](nf.json.md): JSON text to and from Lua values
 - [nf.http](nf.http.md): Requests to web services (a Discord webhook, a status API)
 - [nf.time](nf.time.md): Dates and durations as text, in the same unit as `nf.server.unix_time()`: milliseconds

@@ -3056,6 +3056,7 @@ What `nf.bossbars.create` makes a bar with. Every key is optional; a key that is
 | `color` | `"pink"\|"blue"\|"red"\|"green"\|"yellow"\|"purple"\|"white"?` | Default `"pink"`, the way vanilla bars start. |
 | `style` | `"progress"\|"notched_6"\|"notched_10"\|"notched_12"\|"notched_20"?` | One bar, or split into notches. Default `"progress"`, one bar. |
 | `progress` | `number?` | How full, 0 to 1. Default 1. |
+| `icon` | `string?` | A glyph (`<pack>/<key>`) drawn just left of the bar's left end, wherever the centred text puts its words: a boss's head, say. It's drawn on the text's line at the glyph's own `ascent`: the bar sits 2 pixels below the text's baseline, so a lower ascent (even a negative one) hangs it down beside the bar. Placing it needs the text's width, so text the server can't measure (no `fonts/default.json`) draws it in front of the words instead. Default none. |
 
 ## LootContext
 

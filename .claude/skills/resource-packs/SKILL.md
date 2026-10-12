@@ -125,6 +125,18 @@ gives `Skin.advance`/`Glyph.advance` (null when unknown).
 
 ## Skins and glyphs in text
 
+- **Pictures wider than a font sheet.** The client stitches font pictures into 256×256 sheets
+  (`FontTexture.SIZE`, checked in the 26.3 jar) and draws a bigger one blank. `PackFonts.picture` cuts a
+  wider one into `PackFonts.pieces` equal cells: one bitmap provider whose `chars` row is the pieces'
+  characters (`cells`; the game's grid cuts the image, so no PNG is rewritten), and `char` becomes the
+  pieces with `PackFonts.lay`'s moves between them, netting the whole picture's advance. So everything that
+  inserts `char` and measures `advance` (titles, `<glyph>`, the datapack, the HUD line) needs nothing new.
+  Each piece's own advance comes from `ImageInfo.opaqueColumns` (hosts send it for wide pictures). Extra
+  piece characters are numbered after every glyph's (skin's, HUD picture's) own, so a picture's own
+  character never depends on another's pixels. Too tall, or no even cut: `resource_pack.picture-size`
+  (`ResourcePackKind.crossCheck`, from sizes). Glyphs are never bold or obfuscated (both would pull the
+  pieces apart), and measuring doesn't add bold's pixel to them.
+
 - A skin is drawn by the window title: `Packs.skinTitle` →
   `<white><font:<ns>:<id>/gui>` + `Skin.titlePrefix` + `</font></white>`, then the
   menu's own title. The prefix is `offset(o) + char + offset(-(o +
@@ -163,6 +175,19 @@ advance))`: it nets to zero width, so the words start where a vanilla title
   reference the calling package can't name (its own resource packs', and what the
   packages it depends on export) is an error, the index's message; `nil`
   only while resource packs have errors and nothing is built.
+- **Moving the cursor** (`text/SpaceTags`): `PackLayout` always ends the default font with the
+  `space` provider (`PackFonts.advances`, `spaceAdvance` reads one back), so `<space:N>` (the
+  adapter's `space` resolver: `PackFonts.offset`, never bold or obfuscated, nothing while
+  `Packs.built` is null) works in any text. `<at:N:from=…:align=…>…</at>` takes no width: the
+  adapter's MiniMessage `preProcessor` hands every text to the runtime's `ProjectSession.layoutText`
+  (`Platform.bindText`), which is `TextWidth.layout`: it walks the text once, measuring each line
+  and each `<at>`'s inside with the style around it, and puts `<space>` moves before the tag and
+  where it closes (its `</at>`, a tag closing it, `<reset>`, the text's end). What it can't measure
+  stays as written (the `at` resolver only scopes, so the inside draws in line) and is warned about
+  once. Previews: `MiniMessagePass` has `Move`/`Overlay`/`OverlayEnd` pieces, `TextMetrics` gives
+  an overlay no width, and the editor counts `from` as the cursor (its font isn't the game's).
+  A boss bar's `icon` is `<at:-92:from=center:align=right><glyph:…></at>` before its text
+  (`BossBars.Bar.shown`).
 - `item_model`/`tooltip_style` are references (`ui/ruby`) the adapter
   resolves in the project's namespace when it writes them (`<ns>:ui/ruby` _is_
   the client's resource key) and reads back without it; unknown ones are an

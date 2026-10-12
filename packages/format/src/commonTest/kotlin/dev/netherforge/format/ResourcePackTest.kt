@@ -106,6 +106,11 @@ class ResourcePackTest {
         assertEquals("shop:ui/gui", pack.single().guiFont)
         val gui = (files.getValue("assets/shop/font/ui/gui.json") as PackLayout.Entry.Text).text
         assertTrue("\"file\": \"shop:ui/gui/shop.png\"" in gui && "\"height\": 166" in gui && "\"type\": \"space\"" in gui, gui)
+        // The default font holds the glyphs, then the space characters any text may move the cursor with (<space:N>).
+        val default = (files.getValue("assets/minecraft/font/default.json") as PackLayout.Entry.Text).text
+        assertTrue("\"file\": \"shop:ui/glyph/coin.png\"" in default, default)
+        assertTrue(default.trimEnd().indexOf("\"type\": \"space\"") > default.indexOf("coin.png"), default)
+        for ((char, px) in PackFonts.advances()) assertEquals(px, PackFonts.spaceAdvance(char.single().code))
         // The item model `ui/ruby` is the client's `shop:ui/ruby`: the definition at assets/shop/items/ui/ruby.json.
         val item = (files.getValue("assets/shop/items/ui/ruby.json") as PackLayout.Entry.Text).text
         assertTrue("minecraft:display_context" in item && "shop:item/ui/ruby_gui" in item, item)
@@ -197,8 +202,10 @@ class ResourcePackTest {
         val files = PackLayout.build(pack, listOf(75, 0), "Test") { null }
         // The asset `gear/ruby` is the client's `shop:gear/ruby`: assets/shop/equipment/gear/ruby.json, its layers'
         // textures under textures/entity/equipment/<layer>/gear/ruby.png. Nothing is copied twice into textures/gear/.
+        // The default font is always there, holding the space characters any text may move the cursor with.
         assertEquals(
             listOf(
+                "assets/minecraft/font/default.json",
                 "assets/shop/equipment/gear/ruby.json",
                 "assets/shop/equipment/gear/wings.json",
                 "assets/shop/textures/entity/equipment/horse_body/gear/wings.png",
@@ -276,6 +283,86 @@ class ResourcePackTest {
         }.getValue("ui").glyphs.getValue("coin")
         // 14 × 8 / 16 = 7, + 1.
         assertEquals(8, glyph.advance)
+    }
+
+    @Test
+    fun aPictureCutsIntoTheFewestEvenPiecesThatFitAFontSheet() {
+        assertEquals(1, PackFonts.pieces(256, 38, 19))
+        assertEquals(2, PackFonts.pieces(424, 38, 19))
+        // No even cut: the game's grid would drop what's left over.
+        assertNull(PackFonts.pieces(257, 38, 19))
+        assertEquals(258, PackFonts.evenWidth(257))
+        // Four pieces would be 160 wide, half a pixel drawn 1 of 64 tall; five meet without a seam.
+        assertEquals(5, PackFonts.pieces(640, 64, 1))
+        assertEquals(4, PackFonts.pieces(640, 64, 2))
+    }
+
+    @Test
+    fun aGlyphTooWideForAFontSheetIsDrawnInPiecesSideBySide() {
+        // The plate's left piece has 12 transparent columns at its right edge; the right piece 4.
+        val columns = List(424) { it !in 200 until 212 && it < 420 }
+        val packs = CompiledResourcePack.compileAll(
+            "shop",
+            mapOf(
+                "ui" to ResourcePackFile(
+                    glyphs = mapOf("coin" to GlyphDef("coin.png"), "plate" to GlyphDef("plate.png", height = 19, ascent = 9)),
+                    skins = mapOf("chest" to SkinDef("chest.png", height = 222))
+                )
+            )
+        ) { path ->
+            when (path) {
+                "resource_packs/ui/textures/plate.png" -> ImageInfo(424, 38, 420, columns)
+                "resource_packs/ui/textures/chest.png" -> ImageInfo(512, 222, 512)
+                else -> ImageInfo(16, 16, 14)
+            }
+        }
+        val ui = packs.getValue("ui")
+        // Every glyph keeps its own character; the plate's second piece comes after them all.
+        assertEquals(PackFonts.charAt(0), ui.glyphs.getValue("coin").char)
+        val plate = ui.glyphs.getValue("plate")
+        assertEquals(PackFonts.charAt(1) + PackFonts.charAt(2), plate.cells)
+        // As one picture: 420 × 19 / 38 = 210, + 1.
+        assertEquals(211, plate.advance)
+        // Pieces 212 wide, drawn 106: the left one advances 200 / 2 + 1 = 101, so 5 more puts the right one at 106;
+        // it advances 208 / 2 + 1 = 105, which ends where the whole picture would.
+        assertEquals(PackFonts.charAt(1) + PackFonts.offset(5) + PackFonts.charAt(2), plate.char)
+
+        val layout = PackLayout.build(packs.values.toList(), listOf(75, 0), "Test") { null }
+        val font = Json.parseToJsonElement((layout.getValue("assets/minecraft/font/default.json") as PackLayout.Entry.Text).text)
+        val provider = font.jsonObject.getValue("providers").jsonArray.map { it.jsonObject }.single {
+            it["file"]?.jsonPrimitive?.content == "shop:ui/plate.png"
+        }
+        assertEquals(plate.cells, provider.getValue("chars").jsonArray.single().jsonPrimitive.content)
+
+        // A skin is cut the same way, in its own font, and its title prefix still nets to nothing.
+        val chest = ui.skins.getValue("chest")
+        assertEquals(PackFonts.charAt(0) + PackFonts.charAt(1), chest.cells)
+        val (before, after) = chest.titlePrefix.split(chest.char)
+        assertEquals(0, advanceOf(before) + chest.advance!! + advanceOf(after))
+    }
+
+    @Test
+    fun aPictureTooTallOrThatWontCutEvenlyIsAnError() {
+        val files = mapOf(
+            "netherforge.json" to testManifest(),
+            "resource_packs/ui/pack.json" to
+                """{ "glyphs": { "odd": { "texture": "odd.png" }, "plate": { "texture": "plate.png" }, "tall": { "texture": "tall.png" } } }""",
+            "resource_packs/ui/textures/odd.png" to null,
+            "resource_packs/ui/textures/plate.png" to null,
+            "resource_packs/ui/textures/tall.png" to null
+        )
+        val sizes = mapOf(
+            "resource_packs/ui/textures/odd.png" to listOf(257, 38),
+            "resource_packs/ui/textures/plate.png" to listOf(424, 38),
+            "resource_packs/ui/textures/tall.png" to listOf(16, 300)
+        )
+        val problems = Projects.load(MapProjectSource(files, sizes = sizes)).problems
+        assertEquals(
+            listOf("resource_pack.picture-size" to "$.glyphs.odd.texture", "resource_pack.picture-size" to "$.glyphs.tall.texture"),
+            problems.map { it.code to it.path }
+        )
+        assertTrue("Pad it with transparent columns to 258 pixels wide" in problems[0].message, problems[0].message)
+        assertTrue(problems[1].message.startsWith("Glyph tall is 16×300 pixels"), problems[1].message)
     }
 
     @Test

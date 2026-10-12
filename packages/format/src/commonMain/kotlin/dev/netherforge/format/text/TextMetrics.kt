@@ -4,6 +4,7 @@ import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.Billboard
 import dev.netherforge.format.centity.TextDisplay
 import dev.netherforge.format.game.Box
+import dev.netherforge.format.resourcepack.PackFonts
 
 /**
  * How Minecraft lays out MiniMessage text, in font pixels (1/40 of a block for
@@ -41,8 +42,9 @@ class TextMetrics(
      * Width of every rendered line of [text], wrapped greedily at [lineWidth]
      * (at the last space that fits, mid-word if one word doesn't). Tags measure
      * as nothing except `<bold>`, which costs a pixel per glyph,
-     * `<newline>`/`<br>`, and `<glyph:pack:key>`, which is that glyph's
-     * advance. Always at least one line.
+     * `<newline>`/`<br>`, `<glyph:pack:key>`, which is that glyph's
+     * advance, and `<space:N>`, which is N; what an `<at>` holds is nothing.
+     * Always at least one line.
      */
     fun lineWidths(text: String, lineWidth: Int = TextDisplay.DEFAULT_LINE_WIDTH): List<Int> = lines(text, lineWidth).map { it.width }
 
@@ -81,26 +83,35 @@ class TextMetrics(
     private class SourceLine(val glyphs: MutableList<Glyph>, val start: Int, var end: Int)
 
     private fun width(code: Int, bold: Boolean): Int {
-        val base = advance(code) ?: if (isWide(code)) WIDE_ADVANCE else UNKNOWN_ADVANCE
+        val base = PackFonts.spaceAdvance(code) ?: advance(code) ?: if (isWide(code)) WIDE_ADVANCE else UNKNOWN_ADVANCE
         return if (bold) base + 1 else base
     }
 
-    /** MiniMessage flattened to glyph widths ([MiniMessagePass]'s pieces), split at line breaks. */
+    /**
+     * MiniMessage flattened to glyph widths ([MiniMessagePass]'s pieces), split
+     * at line breaks. What an `<at>` holds takes no width (it's drawn over the
+     * line), and a `<space:N>` is N.
+     */
     private fun measure(input: String): List<SourceLine> {
         val lines = mutableListOf(SourceLine(mutableListOf(), 0, input.length))
+        var overlays = 0
         for (piece in MiniMessagePass.pieces(input)) {
             when (piece) {
+                is MiniMessagePass.Overlay -> overlays++
+                is MiniMessagePass.OverlayEnd -> overlays--
+                is MiniMessagePass.Move ->
+                    lines.last().glyphs.add(Glyph(if (overlays > 0) 0 else piece.px, false, piece.at, piece.end))
                 is MiniMessagePass.Break -> {
                     lines.last().end = piece.at
                     lines.add(SourceLine(mutableListOf(), piece.end, input.length))
                 }
+                // A pack glyph is never drawn bold: it's a picture, maybe in pieces ([PackFonts.picture]).
                 is MiniMessagePass.Glyph -> glyph(piece.reference)?.let { width ->
-                    val bold = piece.style.bold == true
-                    lines.last().glyphs.add(Glyph(if (bold) width + 1 else width, false, piece.at, piece.end))
+                    lines.last().glyphs.add(Glyph(if (overlays > 0) 0 else width, false, piece.at, piece.end))
                 }
                 is MiniMessagePass.Char -> {
-                    val width = width(piece.code, piece.style.bold == true)
-                    lines.last().glyphs.add(Glyph(width, piece.code == ' '.code, piece.at, piece.end))
+                    val width = if (overlays > 0) 0 else width(piece.code, piece.style.bold == true)
+                    lines.last().glyphs.add(Glyph(width, piece.code == ' '.code && overlays == 0, piece.at, piece.end))
                 }
             }
         }

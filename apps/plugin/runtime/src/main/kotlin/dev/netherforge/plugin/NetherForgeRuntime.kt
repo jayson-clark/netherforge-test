@@ -13,6 +13,7 @@ import dev.netherforge.format.project.Kinds
 import dev.netherforge.format.project.LockKind
 import dev.netherforge.format.project.ManifestKind
 import dev.netherforge.format.project.VanillaKind
+import dev.netherforge.format.resourcepack.PackFonts
 import dev.netherforge.plugin.api.VersionGates
 import dev.netherforge.plugin.async.Completions
 import dev.netherforge.plugin.async.MainThread
@@ -236,6 +237,9 @@ class NetherForgeRuntime(val platform: Platform, val config: RuntimeConfig) {
             { current?.customBlocks?.stateOf(it) },
             { current?.namespace.orEmpty() }
         )
+        platform.bindText({ px -> if (packs.built != null) PackFonts.offset(px) else null }) { text ->
+            current?.layoutText(text) ?: text
+        }
         config.bridge?.let { settings ->
             val connection = BridgeService(this, settings)
             debugger = Debugger(this, connection::dap)

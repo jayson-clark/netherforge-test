@@ -57,6 +57,22 @@ Changes what it says.
 
 **Returns** `boolean`: `false` once it's gone.
 
+## `bossbar:icon()`
+
+The glyph drawn at its left end, or `nil` when it has none (or it's gone).
+
+**Returns** `string?`
+
+## `bossbar:set_icon(icon)`
+
+Draws a glyph at its left end, or none with `nil`. A glyph no resource pack has is an error.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `icon` | `string?` | `<pack>/<key>`, like `"ui/boss_king_slime"`. |
+
+**Returns** `boolean`: `false` once it's gone.
+
 ## `bossbar:progress()`
 
 How full it is, 0 to 1, or `nil` once it's gone.

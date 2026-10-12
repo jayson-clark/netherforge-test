@@ -267,17 +267,27 @@ class TextLine(
 @Serializable
 class StyledText(val chars: List<StyledChar>)
 
-/** One drawn character, or one `<glyph:…>` tag's picture. */
+/** One drawn character, one `<glyph:…>` tag's picture, or a tag that moves the cursor (`<space>`, `<at>`). */
 @Serializable
 class StyledChar(
-    /** One code point; empty for a glyph. */
+    /** One code point; empty for a glyph or a move. */
     val char: String,
     /** For a glyph tag: the reference it names (`ui/coin`). */
     val glyph: String? = null,
     /** Where it is in the source text. */
     val at: Int,
-    val style: TextStyle
+    val style: TextStyle,
+    /** For a `<space:N>`: how far the cursor moves, in pixels. */
+    val move: Int? = null,
+    /** For an `<at>` that moves: what follows, up to the one with [overlayEnd], is drawn over the line from here. */
+    val overlay: StyledOverlay? = null,
+    /** Where the latest [overlay] ends. */
+    val overlayEnd: Boolean? = null
 )
+
+/** An `<at:N>` as a preview draws it (`SpaceTags.At`): `from` is `cursor`, `start`, `center` or `end`, `align` `left`, `center` or `right`. */
+@Serializable
+class StyledOverlay(val x: Int, val from: String, val align: String)
 
 /**
  * One roll of a loot table as the editor previews it: what each pick gave,

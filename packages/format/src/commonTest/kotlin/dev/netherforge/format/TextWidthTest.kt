@@ -4,6 +4,7 @@ import dev.netherforge.format.menu.MenuType
 import dev.netherforge.format.project.DefaultFontKind
 import dev.netherforge.format.project.MapProjectSource
 import dev.netherforge.format.project.Projects
+import dev.netherforge.format.resourcepack.PackFonts
 import dev.netherforge.format.text.DefaultFontFile
 import dev.netherforge.format.text.DefaultFontValidator
 import dev.netherforge.format.text.TextMetrics
@@ -72,7 +73,8 @@ class TextWidthTest {
     @Test
     fun glyphTagsAreTheirGlyphsAdvance() {
         assertEquals(9 + 4 + 6, width.measure("<glyph:ui:coin> a"))
-        assertEquals(10, width.measure("<b><glyph:'ui:coin'>"))
+        // A glyph is never drawn bold.
+        assertEquals(9, width.measure("<b><glyph:'ui:coin'>"))
         // A glyph whose advance isn't known can't be measured.
         assertNull(width.measure("<glyph:ui:nope>"))
     }
@@ -163,5 +165,65 @@ class TextWidthTest {
         assertEquals(emptyList(), check(MenuType.DROPPER, null, "Shop", null))
         assertEquals(emptyList(), check(MenuType.DISPENSER, "ui:shop", "", null))
         assertEquals(emptyList(), check(MenuType.CHEST, "ui:shop", "Shop", null))
+    }
+
+    @Test
+    fun aSpaceMovesByItsPixelsBoldOrNot() {
+        assertEquals(6 + 40 + 6, width.measure("a<space:40>a"))
+        assertEquals(9 - 3 + 9, width.measure("<glyph:ui:coin><space:-3><glyph:ui:coin>"))
+        assertEquals(7 + 10, width.measure("<b>a<space:10></b>"))
+        // Held to the largest move; one that doesn't read moves nothing.
+        assertEquals(PackFonts.MAX_OFFSET, width.measure("<space:99999>"))
+        assertEquals(6, width.measure("a<space:x>"))
+        // The pack's space characters, written by hand (nf.text.space), are the moves they make.
+        assertEquals(6 + 37, width.measure("a" + PackFonts.offset(37)))
+    }
+
+    @Test
+    fun whatAnAtHoldsTakesNoWidth() {
+        assertEquals(6 * 4, width.measure("<at:-30><glyph:ui:coin></at>abcd"))
+        assertEquals(6, width.measure("<at:5>bbb</at>a"))
+        // Nested, or closed by what encloses it, or never closed.
+        assertEquals(6, width.measure("<at:1>b<at:2>b</at>b</at>a"))
+        assertEquals(6, width.measure("<red><at:1>bb</red>a"))
+        assertEquals(6, width.measure("a<at:1>bb"))
+        // One that doesn't read only scopes what's inside it, which then takes its width.
+        assertEquals(18, width.measure("<at:what>bb</at>a"))
+        // Unmeasurable inside is unmeasurable.
+        assertNull(width.measure("<at:1>\u00e9</at>a"))
+    }
+
+    @Test
+    fun anAtBecomesTheMovesAroundIt() {
+        // From the cursor: there, and back by the inside's width.
+        assertEquals("<space:-30><at:-30><glyph:ui:coin><space:21></at>King", width.layout("<at:-30><glyph:ui:coin></at>King").text)
+        // 3 left of the line's centre (half of 4 letters = 12), its right edge there.
+        assertEquals(
+            "ab<space:-12><at:-3:from=center:align=right><glyph:ui:coin><space:3></at>cd",
+            width.layout("ab<at:-3:from=center:align=right><glyph:ui:coin></at>cd").text
+        )
+        // From the end and the start, centred on N.
+        assertEquals("a<space:-6><at:0:from=end:align=center>bb<space:-6></at>", width.layout("a<at:0:from=end:align=center>bb</at>").text)
+        assertEquals("aa<space:-12><at:0:from=start>b<space:6></at>", width.layout("aa<at:0:from=start>b</at>").text)
+        // Bold inside counts; past the largest move takes more than one space.
+        assertEquals("<b><space:1><at:1>a<space:-8></at></b>", width.layout("<b><at:1>a</at></b>").text)
+        assertEquals("<space:2047><space:953><at:3000>a<space:-2047><space:-959></at>", width.layout("<at:3000>a</at>").text)
+        // Closed by what encloses it: the move back goes where that closes it.
+        assertEquals("<red><space:4><at:4>a<space:-10></red>z", width.layout("<red><at:4>a</red>z").text)
+        // Text without one is as it was.
+        val plain = "<red>abc"
+        assertTrue(width.layout(plain).text === plain)
+    }
+
+    @Test
+    fun anAtThatCantBePlacedIsLeftToDrawInLine() {
+        val unknownInside = width.layout("<at:4><glyph:ui:missing></at>a")
+        assertEquals("<at:4><glyph:ui:missing></at>a", unknownInside.text)
+        assertEquals(listOf("<at:4>"), unknownInside.unplaced)
+        // From the centre of a line that can't be measured; from the cursor it still works.
+        assertEquals(listOf("<at:0:from=center>"), width.layout("<at:0:from=center>a</at><lang:block.stone>").unplaced)
+        assertEquals("<space:3><at:3>a<space:-9></at><lang:x>", width.layout("<at:3>a</at><lang:x>").text)
+        // Spread over two lines.
+        assertEquals(listOf("<at:1>"), width.layout("<at:1>a<br>b</at>").unplaced)
     }
 }

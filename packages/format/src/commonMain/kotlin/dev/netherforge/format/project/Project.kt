@@ -74,9 +74,24 @@ interface ProjectSource {
  * What only an image's pixels say. [opaqueWidth] is the rightmost column
  * holding any pixel that isn't fully transparent, plus one (0 for an empty
  * picture): what Minecraft measures a bitmap glyph's advance from.
+ * [opaqueColumns] says of each column, left to right, whether it holds such a
+ * pixel: what a picture cut into pieces ([dev.netherforge.format.resourcepack.PackFonts.pieces])
+ * measures each piece's advance from. A host may leave it out for a picture
+ * no wider than [dev.netherforge.format.resourcepack.PackFonts.SHEET], which is never cut.
  */
 @Serializable
-data class ImageInfo(val width: Int, val height: Int, val opaqueWidth: Int)
+data class ImageInfo(val width: Int, val height: Int, val opaqueWidth: Int, val opaqueColumns: List<Boolean>? = null) {
+    /**
+     * [opaqueWidth] of the columns from [from] until [until] alone, counted from [from]. Without [opaqueColumns]
+     * every column left of [opaqueWidth] is taken to hold a pixel.
+     */
+    fun opaqueWidth(from: Int, until: Int): Int {
+        val columns = opaqueColumns
+        if (columns == null) return (opaqueWidth.coerceAtMost(until) - from).coerceAtLeast(0)
+        for (x in until - 1 downTo from) if (columns.getOrElse(x) { false }) return x - from + 1
+        return 0
+    }
+}
 
 /**
  * A project from memory. With [images], it [readsImages] and answers from them; with [sizes] alone (a host that

@@ -4516,6 +4516,22 @@ function BossBar.set_text(self, text)
   return prim["BossBar.set_text"](self_key, text)
 end
 
+function BossBar.icon(self)
+  local self_key = ids[self]
+  if self_key == nil or not BossBar_is[class_of(self)] then
+    self_key = self_of(self, "BossBar")
+  end
+  return prim["BossBar.icon"](self_key)
+end
+
+function BossBar.set_icon(self, icon)
+  local self_key = ids[self]
+  if self_key == nil or not BossBar_is[class_of(self)] then
+    self_key = self_of(self, "BossBar")
+  end
+  return prim["BossBar.set_icon"](self_key, icon)
+end
+
 function BossBar.progress(self)
   local self_key = ids[self]
   if self_key == nil or not BossBar_is[class_of(self)] then
@@ -6991,6 +7007,10 @@ namespaces["nf.text"] = function(scope, ns)
 
   function ns.glyph(glyph)
     return prim["nf.text.glyph"](scope, glyph)
+  end
+
+  function ns.space(pixels)
+    return prim["nf.text.space"](scope, pixels)
   end
 
   function ns.width(text)

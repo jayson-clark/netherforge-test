@@ -700,6 +700,15 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         1
     }
 
+    fn("nf.text.space") { call ->
+        val lua = call.lua
+        val caller = marshal.caller(lua, 1)
+        val pixels = call.arg(2, "pixels", LuaCodecs.INTEGER)
+        val result = api.nfText.space(caller, pixels)
+        call.push(result, CODEC_1)
+        1
+    }
+
     fn("nf.text.width") { call ->
         val lua = call.lua
         val caller = marshal.caller(lua, 1)
@@ -5021,6 +5030,23 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         val self = call.self(1) as LuaHandle.BossBar
         val text = call.arg(2, "text", LuaCodecs.TEXT)
         val result = api.bossBar.setText(self, text)
+        call.push(result, LuaCodecs.BOOLEAN)
+        1
+    }
+
+    fn("BossBar.icon") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.BossBar
+        val result = api.bossBar.icon(self)
+        call.push(result, CODEC_1)
+        1
+    }
+
+    fn("BossBar.set_icon") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.BossBar
+        val icon = call.arg(2, "icon", CODEC_1)
+        val result = api.bossBar.setIcon(self, icon)
         call.push(result, LuaCodecs.BOOLEAN)
         1
     }

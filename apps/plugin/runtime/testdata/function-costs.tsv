@@ -26,9 +26,11 @@ BossBar:color	15
 BossBar:detach	16
 BossBar:exists	15
 BossBar:hide_from	17
+BossBar:icon	15
 BossBar:progress	15
 BossBar:remove	15
 BossBar:set_color	17
+BossBar:set_icon	17
 BossBar:set_progress	17
 BossBar:set_style	17
 BossBar:set_text	17
@@ -667,7 +669,7 @@ WorldBorder:warning	15
 nf.after	58
 nf.blocks.all	6
 nf.blocks.get	8
-nf.bossbars.create	12
+nf.bossbars.create	13
 nf.centities.all	38
 nf.centities.get	8
 nf.centities.properties	8
@@ -748,6 +750,7 @@ nf.teams.create	18
 nf.teams.get	8
 nf.text.escape	8
 nf.text.glyph	8
+nf.text.space	8
 nf.text.strip	8
 nf.text.width	8
 nf.time.duration	8

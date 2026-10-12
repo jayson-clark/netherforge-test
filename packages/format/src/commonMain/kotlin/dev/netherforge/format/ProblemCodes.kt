@@ -804,6 +804,12 @@ object ProblemCodes {
             RESOURCE_PACK,
             "A skin's picture can't be read, so the title's words start after the art instead of over it."
         )
+    val RESOURCE_PACK_PICTURE_SIZE =
+        error(
+            "resource_pack.picture-size",
+            RESOURCE_PACK,
+            "A skin's, glyph's or HUD element's picture is over 256 pixels tall, or over 256 wide and doesn't cut into equal pieces of 256 or less: Minecraft draws it blank."
+        )
     val RESOURCE_PACK_TOO_MANY =
         error("resource_pack.too-many", RESOURCE_PACK, "A resource pack holds more skins than a font has characters for.")
     val RESOURCE_PACK_TOO_MANY_GLYPHS =

@@ -140,6 +140,11 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
     override val recipes = PaperRecipes(version)
     override val loot = PaperLoot()
 
+    override fun bindText(space: (px: Int) -> String?, layout: (text: String) -> String) {
+        PaperText.spaces = space
+        PaperText.layout = layout
+    }
+
     override fun bind(
         events: PlatformEvents,
         glyphs: (reference: String) -> String?,

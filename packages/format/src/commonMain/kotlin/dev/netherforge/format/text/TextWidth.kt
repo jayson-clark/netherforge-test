@@ -1,5 +1,7 @@
 package dev.netherforge.format.text
 
+import dev.netherforge.format.resourcepack.PackFonts
+
 /**
  * The pixel width MiniMessage text draws at in the default font, exactly or
  * not at all: for the server, which lays out menus and text displays with it
@@ -26,37 +28,157 @@ class TextWidth(
     /**
      * The width of [text] in pixels, or null when it can't be measured
      * exactly. Tags draw nothing, except `<bold>` (a pixel more per character,
-     * as the game draws bold) and `<glyph:pack:key>` (the glyph's advance).
-     * Text with line breaks (`\n`, `<newline>`, `<br>`) measures as its widest
-     * line. A tag MiniMessage doesn't know is drawn as written, so it's
-     * measured as text; `\<` is a literal `<`.
+     * as the game draws bold), `<glyph:pack:key>` (the glyph's advance),
+     * `<space:N>` (N, bold or not) and `<at:N>…</at>` (nothing: what it
+     * holds is drawn over the line, [SpaceTags]). The pack's space characters
+     * ([PackFonts.offset]) measure as the moves they are. Text with line
+     * breaks (`\n`, `<newline>`, `<br>`) measures as its widest line. A tag
+     * MiniMessage doesn't know is drawn as written, so it's measured as text;
+     * `\<` is a literal `<`.
      */
     fun measure(text: String): Int? {
-        // One entry per open tag: its name and whether it leaves text bold.
-        val open = mutableListOf<Pair<String, Boolean>>()
-        val bold = { open.lastOrNull()?.second ?: false }
-        var widest = 0
-        var line = 0
-        fun char(code: Int): Boolean {
-            val width = advance(code) ?: return false
-            line += if (bold()) width + 1 else width
-            return true
+        val lines = walk(text).lines
+        if (lines.any { !it.known }) return null
+        return maxOf(0, lines.maxOf { it.width })
+    }
+
+    /**
+     * [text] with every `<at>` turned into the moves that place it: a
+     * `<space>` before the tag (from the cursor to where the inside starts)
+     * and one where it closes (back to where the cursor was), which is what
+     * the server parses. An `<at>` that can't be placed exactly (its inside,
+     * or the line it's counted from, can't be measured) is left as it is,
+     * which draws its inside in line, and is listed in [Layout.unplaced].
+     */
+    fun layout(text: String): Layout {
+        if (!text.contains("<${SpaceTags.AT}", ignoreCase = true)) return Layout(text, emptyList())
+        val inserts = mutableListOf<Pair<Int, String>>()
+        val unplaced = mutableListOf<String>()
+        for (at in walk(text).ats) {
+            val lead = lead(at)
+            val inner = at.inner
+            if (lead == null || inner == null || !at.known) {
+                unplaced += at.tag
+                continue
+            }
+            inserts += at.openAt to moves(lead)
+            inserts += at.closeAt to moves(-(lead + inner))
         }
-        fun lineBreak() {
-            widest = maxOf(widest, line)
-            line = 0
+        if (inserts.isEmpty()) return Layout(text, unplaced)
+        val out = StringBuilder()
+        var cursor = 0
+        for ((at, moves) in inserts.sortedBy { it.first }) {
+            out.append(text, cursor, at).append(moves)
+            cursor = at
+        }
+        return Layout(out.append(text, cursor, text.length).toString(), unplaced)
+    }
+
+    /** What [layout] made of a text: the MiniMessage to parse, and the `<at>` tags it couldn't place. */
+    class Layout(val text: String, val unplaced: List<String>)
+
+    /** How far the cursor moves to where [at]'s inside starts; null when that can't be known. */
+    private fun lead(at: Frame): Int? {
+        val inner = at.inner ?: return null
+        val line = at.line
+        val anchor = when (at.spec.from) {
+            SpaceTags.From.CURSOR -> return at.spec.x - shift(at.spec.align, inner)
+            SpaceTags.From.START -> 0
+            // The game centres on the whole line's width, halved in integers.
+            SpaceTags.From.CENTER -> if (line.known) line.width / 2 else return null
+            SpaceTags.From.END -> if (line.known) line.width else return null
+        }
+        if (!at.cursorKnown) return null
+        return anchor + at.spec.x - shift(at.spec.align, inner) - at.cursor
+    }
+
+    private fun shift(align: SpaceTags.Align, inner: Int) = when (align) {
+        SpaceTags.Align.LEFT -> 0
+        SpaceTags.Align.CENTER -> inner / 2
+        SpaceTags.Align.RIGHT -> inner
+    }
+
+    /** `<space>` tags moving [px], as many as it takes past [PackFonts.MAX_OFFSET]; empty for zero. */
+    private fun moves(px: Int): String = buildString {
+        var left = px
+        while (left != 0) {
+            val step = left.coerceIn(-PackFonts.MAX_OFFSET, PackFonts.MAX_OFFSET)
+            append(SpaceTags.tag(step))
+            left -= step
+        }
+    }
+
+    /** One line as walked: its width so far (at the end, its width), and whether every part of it measured. */
+    private class Line {
+        var width = 0
+        var known = true
+    }
+
+    /**
+     * An `<at>` as walked: what it says, where its tag starts (`openAt`), the
+     * tag as written, the line it's on and the cursor there; once it closes,
+     * where (`closeAt`: the closing tag's `<`, or the text's end) and its
+     * inside's width. [known] is false once anything inside it couldn't be
+     * measured.
+     */
+    private class Frame(
+        val spec: SpaceTags.At,
+        val openAt: Int,
+        val tag: String,
+        val line: Line,
+        val cursor: Int,
+        val cursorKnown: Boolean
+    ) {
+        var closeAt = -1
+        var inner: Int? = null
+        var known = true
+    }
+
+    /** An open tag: its name, whether it leaves text bold, and the `<at>` it is, if it's one that moves. */
+    private class Open(val name: String, val bold: Boolean, val frame: Frame?)
+
+    private class Walk(val lines: List<Line>, val ats: List<Frame>)
+
+    /** Every line of [text] measured, and every `<at>` in it, with where it closes and how wide its inside is. */
+    private fun walk(text: String): Walk {
+        val open = mutableListOf<Open>()
+        val bold = { open.lastOrNull()?.bold ?: false }
+        var line = Line()
+        val lines = mutableListOf(line)
+        val ats = mutableListOf<Frame>()
+        fun unknown() {
+            line.known = false
+            for (it in open) it.frame?.known = false
+        }
+        fun char(code: Int) {
+            val width = PackFonts.spaceAdvance(code) ?: advance(code) ?: return unknown()
+            line.width += if (bold()) width + 1 else width
+        }
+
+        // Closes the tags open from [from] on, innermost first: an `<at>` gives its inside's width back.
+        fun close(from: Int, at: Int) {
+            for (index in open.lastIndex downTo from) {
+                val frame = open.removeAt(index).frame ?: continue
+                frame.closeAt = at
+                if (frame.line !== line) {
+                    frame.known = false
+                    continue
+                }
+                frame.inner = line.width - frame.cursor
+                line.width = frame.cursor
+            }
         }
 
         var cursor = 0
         while (cursor < text.length) {
             val c = text[cursor]
             if (c == '\\' && cursor + 1 < text.length && (text[cursor + 1] == '<' || text[cursor + 1] == '\\')) {
-                if (!char(text[cursor + 1].code)) return null
+                char(text[cursor + 1].code)
                 cursor += 2
                 continue
             }
             if (c == '\n') {
-                lineBreak()
+                line = Line().also { lines += it }
                 cursor++
                 continue
             }
@@ -67,19 +189,27 @@ class TextWidth(
                 val kind = if (inside != null && tag != null) tag.kind(inside) else Kind.LITERAL
                 if (inside != null && tag != null && kind != Kind.LITERAL) {
                     when (kind) {
-                        Kind.BREAK -> lineBreak()
+                        Kind.BREAK -> line = Line().also { lines += it }
+                        // A pack glyph is never drawn bold: it's a picture, maybe in pieces ([PackFonts.picture]).
                         Kind.GLYPH -> {
-                            val width = GlyphTags.reference(inside)?.let(glyph) ?: return null
-                            line += if (bold()) width + 1 else width
+                            val width = GlyphTags.reference(inside)?.let(glyph)
+                            if (width == null) unknown() else line.width += width
                         }
-                        Kind.UNMEASURABLE -> return null
-                        Kind.RESET -> open.clear()
+                        Kind.SPACE -> SpaceTags.space(SpaceTags.arguments(inside))?.let { line.width += it }
+                        Kind.AT -> {
+                            val frame = SpaceTags.at(SpaceTags.arguments(inside))?.let {
+                                Frame(it, cursor, "<$inside>", line, line.width, line.known).also(ats::add)
+                            }
+                            open += Open(tag.name, bold(), frame)
+                        }
+                        Kind.UNMEASURABLE -> unknown()
+                        Kind.RESET -> close(0, cursor)
                         Kind.STYLE -> if (tag.closing) {
                             // A closing tag closes the latest one of its name and everything opened inside it.
-                            val at = if (tag.name.isEmpty()) open.lastIndex else open.indexOfLast { it.first == tag.name }
-                            if (at >= 0) repeat(open.size - at) { open.removeAt(open.lastIndex) }
+                            val at = if (tag.name.isEmpty()) open.lastIndex else open.indexOfLast { it.name == tag.name }
+                            if (at >= 0) close(at, cursor)
                         } else {
-                            open += tag.name to (tag.bold ?: bold())
+                            open += Open(tag.name, tag.bold ?: bold(), null)
                         }
                         Kind.LITERAL -> Unit
                     }
@@ -92,21 +222,23 @@ class TextWidth(
             } else {
                 c.code
             }
-            if (!char(code)) return null
+            char(code)
             cursor += if (code >= 0x10000) 2 else 1
         }
-        lineBreak()
-        return widest
+        close(0, text.length)
+        return Walk(lines, ats)
     }
 
-    private enum class Kind { STYLE, BREAK, GLYPH, RESET, UNMEASURABLE, LITERAL }
+    private enum class Kind { STYLE, BREAK, GLYPH, SPACE, AT, RESET, UNMEASURABLE, LITERAL }
 
     /** A tag's name (lowercase, without `/` or `!`), whether it closes, and whether it turns bold on or off. */
     private class Tag(val name: String, val closing: Boolean, val bold: Boolean?) {
         fun kind(inside: String): Kind = when {
-            closing -> if (name.isEmpty() || name in STYLES || name.startsWith("#") || name == GlyphTags.NAME) Kind.STYLE else Kind.LITERAL
+            closing -> if (name.isEmpty() || name in STYLES || name.startsWith("#") || name in OWN) Kind.STYLE else Kind.LITERAL
             name == "newline" || name == "br" -> Kind.BREAK
             name == GlyphTags.NAME -> Kind.GLYPH
+            name == SpaceTags.SPACE -> Kind.SPACE
+            name == SpaceTags.AT -> Kind.AT
             name == "reset" -> Kind.RESET
             name == "font" -> if (GlyphTags.arguments(inside.substringAfter(':', "")).joinToString(":") in
                 DEFAULT_FONTS
@@ -160,5 +292,8 @@ class TextWidth(
         )
 
         private val DEFAULT_FONTS = setOf("default", "minecraft:default")
+
+        /** NetherForge's own tags, which a closing tag of the same name closes. */
+        private val OWN = setOf(GlyphTags.NAME, SpaceTags.SPACE, SpaceTags.AT)
     }
 }

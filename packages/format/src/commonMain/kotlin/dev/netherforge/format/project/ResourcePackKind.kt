@@ -8,6 +8,7 @@ import dev.netherforge.format.game.has
 import dev.netherforge.format.hasErrors
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.resourcepack.CompiledResourcePack
+import dev.netherforge.format.resourcepack.GlyphDef
 import dev.netherforge.format.resourcepack.PackFonts
 import dev.netherforge.format.resourcepack.PackModels
 import dev.netherforge.format.resourcepack.PackSounds
@@ -15,6 +16,7 @@ import dev.netherforge.format.resourcepack.ReplacedTexture
 import dev.netherforge.format.resourcepack.ResourcePackFile
 import dev.netherforge.format.resourcepack.ResourcePackRead
 import dev.netherforge.format.resourcepack.ResourcePackValidator
+import dev.netherforge.format.resourcepack.SkinDef
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -77,6 +79,54 @@ object ResourcePackKind : DocumentResourceKind<ResourcePackFile, ResourcePackRea
                         ProblemCodes.RESOURCE_PACK_IMAGE,
                         "textures/${skin.texture} can't be read as a PNG, so the title's words will start after this skin instead of over it",
                         CanonicalJson.childPath("$.skins", key) + ".texture"
+                    )
+                }
+            }
+        }
+        // A font draws a picture too big for its sheet blank; one too wide is cut into equal pieces, if it can be.
+        if (ctx.readsSizes) {
+            fun fits(what: String, texture: String, drawnHeight: Int?, at: String) {
+                val (width, height) = ctx.size(CompiledResourcePack.texturePath(id, texture))?.takeIf { it.size == 2 } ?: return
+                val size = "$what is $width×$height pixels"
+                val sheet = PackFonts.SHEET
+                when {
+                    height > sheet -> ctx.sink.report(
+                        ProblemCodes.RESOURCE_PACK_PICTURE_SIZE,
+                        "$size; Minecraft draws a font picture over $sheet pixels tall blank, so use one at most $sheet tall",
+                        at
+                    )
+                    height > 0 && PackFonts.pieces(width, height, drawnHeight ?: height) == null -> ctx.sink.report(
+                        ProblemCodes.RESOURCE_PACK_PICTURE_SIZE,
+                        "$size; a picture over $sheet pixels wide is drawn in equal pieces of $sheet or less, " +
+                            "and $width doesn't cut into any. Pad it with transparent columns to ${PackFonts.evenWidth(width)} pixels wide",
+                        at
+                    )
+                }
+            }
+            for ((key, skin) in value.skins) {
+                fits("Skin $key", skin.texture, skin.height ?: SkinDef.DEFAULT_HEIGHT, CanonicalJson.childPath("$.skins", key) + ".texture")
+            }
+            for ((key, glyph) in value.glyphs) {
+                fits(
+                    "Glyph $key",
+                    glyph.texture,
+                    glyph.height ?: GlyphDef.DEFAULT_HEIGHT,
+                    CanonicalJson.childPath("$.glyphs", key) + ".texture"
+                )
+            }
+            for ((key, bar) in value.hud?.bars.orEmpty()) {
+                val at = CanonicalJson.childPath("$.hud.bars", key)
+                fits("Bar $key's full picture", bar.full, null, "$at.full")
+                fits("Bar $key's empty picture", bar.empty, null, "$at.empty")
+                bar.half?.let { fits("Bar $key's half picture", it, null, "$at.half") }
+            }
+            for ((key, row) in value.hud?.icons.orEmpty()) {
+                for ((icon, texture) in row.icons) {
+                    fits(
+                        "Icon $key/$icon",
+                        texture,
+                        null,
+                        CanonicalJson.childPath(CanonicalJson.childPath("$.hud.icons", key) + ".icons", icon)
                     )
                 }
             }

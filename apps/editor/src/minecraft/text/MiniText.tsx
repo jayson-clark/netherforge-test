@@ -8,12 +8,17 @@
  * the glyph's own height and ascent, which is what the client does with the
  * default font's bitmap providers. A tag naming no glyph draws nothing, as
  * on the server.
+ *
+ * A `<space:N>` moves what follows N pixels; an `<at:N>` draws what it holds
+ * N pixels from where it is, taking no width, its `align` edge there. The
+ * preview counts N from the cursor whatever its `from` says: the line's
+ * width in this font isn't the game's.
  */
 import type { CSSProperties, ReactNode } from 'react'
 import type { TextLine } from '@/core/format'
 import { cx } from '@/ui/cx'
 import styles from './MiniText.module.css'
-import { runsIn, styledChars, type TextStyle } from './minimessage'
+import { runsIn, styledChars, type TextRun, type TextStyle } from './minimessage'
 
 /** A pack glyph as the text renderer needs it. */
 export interface GlyphImage {
@@ -62,19 +67,22 @@ const NOISE = '#%&@?$0123456789ABCDEF'
 const scramble = (text: string) =>
   [...text].map((c) => (c === ' ' ? ' ' : NOISE[c.charCodeAt(0) % NOISE.length])).join('')
 
-function Run({
-  text,
-  style,
-  glyph,
-  glyphs,
-  scale,
-}: {
-  text: string
-  style: TextStyle
-  glyph?: string
-  glyphs?: GlyphMap
-  scale: number
-}) {
+function Run({ run, glyphs, scale }: { run: TextRun; glyphs?: GlyphMap; scale: number }) {
+  const { text, style, glyph, move, overlay } = run
+  if (move !== undefined)
+    return <span className={styles.move} style={{ marginLeft: move * scale }} />
+  if (overlay) {
+    const shift = { left: undefined, center: 'translateX(-50%)', right: 'translateX(-100%)' }[
+      overlay.at.align as 'left' | 'center' | 'right'
+    ]
+    return (
+      <span className={styles.overlay} style={{ left: overlay.at.x * scale }}>
+        <span className={styles.held} style={{ transform: shift }}>
+          <Runs runs={overlay.runs} glyphs={glyphs} scale={scale} />
+        </span>
+      </span>
+    )
+  }
   if (glyph !== undefined) {
     const image = glyphs?.[glyph]
     return image ? <GlyphPicture glyph={image} scale={scale} /> : null
@@ -95,6 +103,16 @@ function Run({
         typeof part === 'string' ? part : <GlyphPicture key={index} glyph={part} scale={scale} />,
       )}
     </span>
+  )
+}
+
+function Runs({ runs, glyphs, scale }: { runs: TextRun[]; glyphs?: GlyphMap; scale: number }) {
+  return (
+    <>
+      {runs.map((run, index) => (
+        <Run key={index} run={run} glyphs={glyphs} scale={scale} />
+      ))}
+    </>
   )
 }
 
@@ -134,16 +152,7 @@ export function MiniText({
     >
       {shown.map((line, index) => (
         <span key={index} className={styles.line} style={{ minHeight: 9 * scale }}>
-          {runsIn(chars, line.start, line.end).map((run, j) => (
-            <Run
-              key={j}
-              text={run.text}
-              style={run.style}
-              glyph={run.glyph}
-              glyphs={glyphs}
-              scale={scale}
-            />
-          ))}
+          <Runs runs={runsIn(chars, line.start, line.end)} glyphs={glyphs} scale={scale} />
         </span>
       ))}
     </span>

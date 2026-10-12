@@ -184,6 +184,25 @@ export const bossBarClass: LuaClass = {
       returns: [{ type: 'boolean', doc: `${GONE}.` }],
     },
     {
+      name: 'icon',
+      doc: "The glyph drawn at its left end, or `nil` when it has none (or it's gone).",
+      params: [],
+      returns: [{ type: 'string?' }],
+    },
+    {
+      name: 'set_icon',
+      doc: 'Draws a glyph at its left end, or none with `nil`. A glyph no resource pack has is an error.',
+      params: [
+        {
+          name: 'icon',
+          type: 'string?',
+          doc: '`<pack>/<key>`, like `"ui/boss_king_slime"`.',
+          names: 'glyph',
+        },
+      ],
+      returns: [{ type: 'boolean', doc: `${GONE}.` }],
+    },
+    {
       name: 'progress',
       doc: "How full it is, 0 to 1, or `nil` once it's gone.",
       params: [],
@@ -370,6 +389,11 @@ export const inventoryShapes: LuaClass[] = [
         doc: 'One bar, or split into notches. Default `"progress"`, one bar.',
       },
       { name: 'progress', type: 'number?', doc: 'How full, 0 to 1. Default 1.' },
+      {
+        name: 'icon',
+        type: 'string?',
+        doc: "A glyph (`<pack>/<key>`) drawn just left of the bar's left end, wherever the centred text puts its words: a boss's head, say. It's drawn on the text's line at the glyph's own `ascent`: the bar sits 2 pixels below the text's baseline, so a lower ascent (even a negative one) hangs it down beside the bar. Placing it needs the text's width, so text the server can't measure (no `fonts/default.json`) draws it in front of the words instead. Default none.",
+      },
     ],
   ),
 ]

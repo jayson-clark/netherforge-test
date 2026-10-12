@@ -64,10 +64,11 @@ class CompiledResourcePack(
     class Replacement(val texture: String, val meta: Boolean)
 
     /**
-     * [advance] is the skin character's advance in pixels
+     * [char] draws the skin: its character, or for a picture wider than a font sheet its pieces side by side
+     * ([PackFonts.picture]), whose characters are [cells]. [advance] is how far it moves the cursor in pixels
      * ([PackFonts.bitmapAdvance]), or null when its picture couldn't be read.
      */
-    class Skin(val key: String, val def: SkinDef, val char: String, val advance: Int?) {
+    class Skin(val key: String, val def: SkinDef, val char: String, val advance: Int?, val cells: String = char) {
         val height: Int get() = def.height ?: SkinDef.DEFAULT_HEIGHT
         val ascent: Int get() = def.ascent ?: SkinDef.DEFAULT_ASCENT
         val offset: Int get() = def.offset ?: SkinDef.DEFAULT_OFFSET
@@ -91,8 +92,12 @@ class CompiledResourcePack(
             PackFonts.offset(offset + shift) + char + (advance?.let { PackFonts.offset(-(offset + shift + it)) } ?: "")
     }
 
-    /** [advance]: the glyph's advance in text ([PackFonts.bitmapAdvance]), or null when its picture couldn't be read. */
-    class Glyph(val key: String, val def: GlyphDef, val char: String, val advance: Int?) {
+    /**
+     * [char] is what draws the glyph in text: its character, or for a picture wider than a font sheet its pieces
+     * side by side and the moves between them ([PackFonts.picture]), whose characters are [cells]. [advance]: the
+     * glyph's advance in text ([PackFonts.bitmapAdvance]), or null when its picture couldn't be read.
+     */
+    class Glyph(val key: String, val def: GlyphDef, val char: String, val advance: Int?, val cells: String = char) {
         val height: Int get() = def.height ?: GlyphDef.DEFAULT_HEIGHT
         val ascent: Int get() = def.ascent ?: GlyphDef.DEFAULT_ASCENT
     }
@@ -153,6 +158,10 @@ class CompiledResourcePack(
             image: (projectPath: String) -> ImageInfo? = { null }
         ): Map<String, CompiledResourcePack> {
             var nextGlyph = 0
+            // A glyph cut into pieces takes a character per further piece, after every glyph's own, so no glyph's
+            // own character depends on another's pixels.
+            var nextPiece = files.values.sumOf { it.glyphs.size }
+            val piece = { nextPiece.takeIf { it < PackFonts.PUA_COUNT }?.let { PackFonts.charAt(nextPiece++) } }
             // A package's pack is keyed `ns:id` and built in its own namespace; the project's come first,
             // so its glyphs keep the characters the editor previews them with.
             return files.entries.sortedWith(compareBy({ ':' in it.key }, { it.key })).associate { (key, file) ->
@@ -164,6 +173,7 @@ class CompiledResourcePack(
                         key,
                         file,
                         nextGlyph,
+                        piece,
                         soundFiles[key].orEmpty(),
                         image,
                         models[key].orEmpty(),
@@ -187,6 +197,7 @@ class CompiledResourcePack(
             key: String,
             file: ResourcePackFile,
             glyphStart: Int,
+            glyphPiece: () -> String?,
             soundFiles: Set<String>,
             image: (String) -> ImageInfo?,
             models: Map<String, PackModels.Model>,
@@ -194,18 +205,22 @@ class CompiledResourcePack(
         ): CompiledResourcePack {
             fun replacements(replaced: Map<String, String>) = replaced.entries.sortedBy { it.key }
                 .associate { (name, texture) -> name to Replacement(texture, "$texture.mcmeta" in textureFiles) }
-            fun advance(texture: String, drawnHeight: Int): Int? = image(texturePath(key, texture))
-                ?.takeIf { it.height > 0 }
-                ?.let { PackFonts.bitmapAdvance(it.opaqueWidth, it.height, drawnHeight) }
+            fun picture(char: String, texture: String, drawnHeight: Int, piece: () -> String?) =
+                PackFonts.picture(char, image(texturePath(key, texture)), drawnHeight, piece)
             val skinKeys = file.skins.keys.sorted()
             val glyphKeys = file.glyphs.keys.sorted()
+            // Skins are in the pack's own font: a skin's further pieces are numbered after every skin.
+            var nextSkinPiece = skinKeys.size
+            val skinPiece = { nextSkinPiece.takeIf { it < PackFonts.PUA_COUNT }?.let { PackFonts.charAt(nextSkinPiece++) } }
             val skins = skinKeys.withIndex().associate { (i, key) ->
                 val def = file.skins.getValue(key)
-                key to Skin(key, def, PackFonts.charAt(i), advance(def.texture, def.height ?: SkinDef.DEFAULT_HEIGHT))
+                val drawn = picture(PackFonts.charAt(i), def.texture, def.height ?: SkinDef.DEFAULT_HEIGHT, skinPiece)
+                key to Skin(key, def, drawn.text, drawn.advance, drawn.cells)
             }
             val glyphs = glyphKeys.withIndex().associate { (i, key) ->
                 val def = file.glyphs.getValue(key)
-                key to Glyph(key, def, PackFonts.charAt(glyphStart + i), advance(def.texture, def.height ?: GlyphDef.DEFAULT_HEIGHT))
+                val drawn = picture(PackFonts.charAt(glyphStart + i), def.texture, def.height ?: GlyphDef.DEFAULT_HEIGHT, glyphPiece)
+                key to Glyph(key, def, drawn.text, drawn.advance, drawn.cells)
             }
             return CompiledResourcePack(
                 namespace,
@@ -222,9 +237,7 @@ class CompiledResourcePack(
                 key,
                 models,
                 file.hud?.let { hud ->
-                    CompiledHud.compile(namespace, id, hud) { texture ->
-                        image(texturePath(key, texture))?.takeIf { it.height > 0 }?.let { it.height to it.opaqueWidth }
-                    }
+                    CompiledHud.compile(namespace, id, hud) { texture -> image(texturePath(key, texture))?.takeIf { it.height > 0 } }
                 },
                 replacements(file.hud?.replace.orEmpty()),
                 replacements(file.textures),
@@ -322,7 +335,7 @@ object PackLayout {
             if (pack.skins.isNotEmpty()) {
                 val providers = buildJsonArray {
                     for (skin in pack.skins.values) {
-                        add(bitmap("$ns:$id/${skin.def.texture}", skin.height, skin.ascent, skin.char))
+                        add(bitmap("$ns:$id/${skin.def.texture}", skin.height, skin.ascent, skin.cells))
                     }
                     add(
                         buildJsonObject {
@@ -334,13 +347,13 @@ object PackLayout {
                 out["assets/$ns/font/$id/${PackFonts.GUI_FONT}.json"] = json(buildJsonObject { put("providers", providers) })
             }
             for (glyph in pack.glyphs.values) {
-                defaultFontProviders += bitmap("$ns:$id/${glyph.def.texture}", glyph.height, glyph.ascent, glyph.char)
+                defaultFontProviders += bitmap("$ns:$id/${glyph.def.texture}", glyph.height, glyph.ascent, glyph.cells)
             }
 
             // The HUD's pictures, each at its height on the screen, and the moves that put them across it.
             pack.hud?.takeIf { it.pieces.isNotEmpty() }?.let { hud ->
                 val providers = buildJsonArray {
-                    for (piece in hud.pieces) add(bitmap("$ns:$id/${piece.texture}", piece.height, piece.ascent, piece.char))
+                    for (piece in hud.pieces) add(bitmap("$ns:$id/${piece.texture}", piece.height, piece.ascent, piece.cells))
                     add(
                         buildJsonObject {
                             put("type", "space")
@@ -562,9 +575,12 @@ object PackLayout {
             out["assets/$ns/sounds.json"] =
                 json(JsonObject(events.entries.sortedBy { it.key }.associate { it.key to it.value }))
         }
-        if (defaultFontProviders.isNotEmpty()) {
-            out["assets/minecraft/font/default.json"] = json(buildJsonObject { put("providers", JsonArray(defaultFontProviders)) })
+        // The space characters too, so any text can move the cursor (`<space:N>`, `<at:N>`: SpaceTags).
+        defaultFontProviders += buildJsonObject {
+            put("type", "space")
+            putJsonObject("advances") { PackFonts.advances().forEach { (c, px) -> put(c, px) } }
         }
+        out["assets/minecraft/font/default.json"] = json(buildJsonObject { put("providers", JsonArray(defaultFontProviders)) })
         return out.entries.sortedBy { it.key }.associate { it.key to it.value }
     }
 
@@ -668,12 +684,13 @@ object PackLayout {
         putJsonObject("textures") { particle?.let { put("particle", resource(it)) } }
     }
 
-    private fun bitmap(file: String, height: Int, ascent: Int, char: String) = buildJsonObject {
+    /** A bitmap provider: [cells] are the characters of its one row, the picture cut into that many equal pieces. */
+    private fun bitmap(file: String, height: Int, ascent: Int, cells: String) = buildJsonObject {
         put("type", "bitmap")
         put("file", file)
         put("height", height)
         put("ascent", ascent)
-        putJsonArray("chars") { add(JsonPrimitive(char)) }
+        putJsonArray("chars") { add(JsonPrimitive(cells)) }
     }
 
     /**

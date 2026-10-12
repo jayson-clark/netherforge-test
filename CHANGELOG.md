@@ -90,6 +90,22 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Added
 
+- **Spacing in text.** `<space:N>` moves the cursor N pixels in any
+  MiniMessage text, and `<at:N>…</at>` draws what it holds N pixels away
+  without moving what follows (`from=start|center|end` counts N from the line's
+  start, middle or end; `align=right|center` puts that edge there). The server
+  measures the inside, so overlays need no width arithmetic in Lua.
+  `nf.text.space(n)` returns the raw characters, `nf.text.width` counts both
+  tags, and a boss bar's `icon` option draws a glyph at the bar's left end. The
+  resource pack's default font now always holds the space characters.
+
+- **Wide pictures just work.** Minecraft draws a font picture over 256 pixels
+  either way blank, with no message. A glyph, skin or HUD picture wider than
+  that is now cut into equal pieces placed side by side, so a full-width plate
+  is one glyph with the advance of the whole. One that can't be cut (over 256
+  tall, or a width with no even cut) is a `resource_pack.picture-size` error
+  saying what to change. Glyphs are never drawn bold or obfuscated.
+
 - **Items that look different to one player.** A project item's `view` event
   (and `nf.on("item_view")` for every stack) changes the name and lore a stack
   shows to the one player it's sent to: their inventory, a window they have
