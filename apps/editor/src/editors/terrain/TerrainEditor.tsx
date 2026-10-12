@@ -1,22 +1,23 @@
 /**
  * A terrain (`terrain/<id>.json`, docs/format/terrain.md): a live preview of the world it makes (a map from
  * above and a slice through the ground, drawn by format's own generator, the server's code, for a seed) and, in the
- * inspector, every part of the file. The preview is drawn again whenever the file changes, from the file as it is,
- * in a worker of its own (`worker/`), with the project structures its decorations place read from their files and,
- * for a file with a `script`, the Lua it runs (`terrain/<id>.lua` and the modules, as the editor holds them: an
- * open script's unsaved text included), so a change to the script redraws it too.
+ * inspector, every part of the file. The map fills the editor and pans and zooms freely: it's drawn in tiles by a few
+ * workers (`tiles.ts`, `worker/`), kept as the view moves, so only what comes into view is new work. The slice has a
+ * worker of its own and is drawn again only when its line changes. Both are drawn again whenever the file changes,
+ * from the file as it is, with the project structures its decorations place read from their files and, for a file
+ * with a `script`, the Lua it runs (`terrain/<id>.lua` and the modules, as the editor holds them: an open script's
+ * unsaved text included), so a change to the script redraws it too.
  */
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { Group, Panel } from 'react-resizable-panels'
 import {
   MANIFEST_FILE,
   TERRAIN_DEFAULTS,
   type DimensionTypeFile,
   type ProjectManifest,
   type TerrainFile,
-  type TerrainMap,
   type TerrainPreviewResult,
   type TerrainScriptError,
-  type TerrainSlice,
   type TerrainStructureInput,
 } from '@/core/format'
 import { readProjectBytes } from '@/core/backend/projectBytes'
@@ -29,44 +30,44 @@ import { parseStructure } from '@netherforge/terrain-preview/structure'
 import { useApp, useWorkspace } from '@/state/providers'
 import { useAsyncResult } from '@/ui/useAsync'
 import { InspectorPanel } from '@/editors/shared/docks'
-import { EditorBar, EditorScreen, Stage } from '@/editors/shared/EditorLayout'
+import { EditorBar, EditorScreen } from '@/editors/shared/EditorLayout'
 import { EditAsJson, useModelDoc } from '@/editors/shared/modelDoc'
 import { RawDocView } from '@/editors/shared/RawDocView'
 import { useFocusRequests } from '@/editors/shared/useFocusRequests'
 import { useView, useViewState } from '@/editors/views'
 import { Button } from '@/ui/Button'
-import { NumberInput, SelectField } from '@/ui/fields'
-import { Empty, Hint, Muted } from '@/ui/text'
-import { heightChoices, pickHeights, type HeightChoice } from './heights'
-import { TerrainInspector } from './Inspector'
+import { NumberInput } from '@/ui/fields'
+import { Splitter } from '@/ui/Splitter'
+import { Empty } from '@/ui/text'
 import {
-  areaColor,
-  blockAt,
-  decorationColor,
-  decorationsAt,
   hasScript,
-  mapPixels,
-  place,
-  slicePixels,
-  sliceTop,
-  sliceColors,
   scriptPaths,
   structureInput,
   structuresNamed,
 } from '@netherforge/terrain-preview'
-import { useTerrainPreview } from './worker/client'
-import type { PreviewRequest } from './worker/core'
+import { heightChoices, pickHeights, type HeightChoice } from './heights'
+import { TerrainInspector } from './Inspector'
+import { MapView, type SliceLine } from './MapView'
+import { SliceView } from './SliceView'
+import { TileScheduler, type MapCamera } from './tiles'
+import {
+  Lane,
+  terrainPreviewWorker,
+  tileLaneCount,
+  useSlicePreview,
+  type SliceAsk,
+} from './worker/client'
+import { fileKeyOf, type PreviewFile, type PreviewWorld } from './worker/core'
 import styles from './TerrainEditor.module.css'
 
-/**
- * What the preview draws: a world of the heights picked (`heights.ts`: the overworld's, or those of the dimension a
- * `netherforge.json` world naming this terrain has), a map of CELLS by CELLS cells, a slice WIDTH blocks wide.
- */
-const CELLS = 96
-const MAP_SCALE = 4
-const WIDTH = 128
-const SLICE_SCALE = 3
-const STEPS = [2, 4, 8, 16, 32]
+/** How fine the map is drawn: screen pixels a cell aims to be. */
+const DETAILS = [
+  { value: 2, label: 'Fine' },
+  { value: 4, label: 'Normal' },
+  { value: 8, label: 'Coarse' },
+]
+/** How wide the slice can be, in blocks. */
+const WIDTHS = [128, 256, 512, 1024]
 
 const idOf = (path: string) => path.replace(/^.*\//, '').replace(/\.json$/, '')
 
@@ -165,67 +166,116 @@ function useHeightChoices(terrain: string): HeightChoice[] {
   }, [home, files, docs, diskTexts, terrain])
 }
 
+/** A tile scheduler of the editor's own, its workers started while it's mounted. */
+function useTileScheduler(): TileScheduler {
+  const [scheduler] = useState(
+    () =>
+      new TileScheduler(() =>
+        Array.from({ length: tileLaneCount() }, () => new Lane(terrainPreviewWorker)),
+      ),
+  )
+  useEffect(() => {
+    scheduler.open()
+    return () => scheduler.close()
+  }, [scheduler])
+  return scheduler
+}
+
 export function TerrainEditor({ path }: { path: string }) {
-  const { doc, model, edit } = useModelDoc<TerrainFile>(path)
+  const { workspace } = useApp()
+  const { doc, model } = useModelDoc<TerrainFile>(path)
   const view = useView('terrain', path)
   const state = useViewState('terrain', path)
   useFocusRequests(path, (segments) => segments)
-  const choices = useHeightChoices(idOf(path))
+  const id = idOf(path)
+  const choices = useHeightChoices(id)
   const height = pickHeights(choices, state.heights)
 
-  // What the preview shows is the file as the editor holds it, drawn by the worker: the newest request wins.
+  // What the preview shows is the file as the editor holds it, drawn by the workers.
   const text = useMemo(() => (model ? JSON.stringify(model) : ''), [model])
   const named = useMemo(() => structuresNamed(model?.decorations), [model])
   const structures = useStructures(named)
-  const scripts = useScriptSources(idOf(path), hasScript(text))
-  const x0 = state.x - Math.floor((CELLS * state.step) / 2)
-  const z0 = state.z - Math.floor((CELLS * state.step) / 2)
-  const from = (state.alongX ? state.x : state.z) - WIDTH / 2
-  const request = useMemo<PreviewRequest | null>(
+  const scripts = useScriptSources(id, hasScript(text))
+  const file = useMemo<PreviewFile | null>(
     () =>
       text && structures && scripts
         ? {
-            id: idOf(path),
+            id,
             text,
             structures: structures.structures,
             structuresKey: structures.key,
             sources: scripts.sources,
             sourcesKey: scripts.key,
-            seed: String(state.seed),
-            minY: height.minY,
-            maxY: height.maxY,
-            map: { x0, z0, cells: CELLS, step: state.step },
-            slice: { alongX: state.alongX, at: state.at, from, width: WIDTH },
           }
         : null,
-    [
-      path,
-      text,
-      structures,
-      scripts,
-      state.seed,
-      height.minY,
-      height.maxY,
-      x0,
-      z0,
-      state.step,
-      state.alongX,
-      state.at,
-      from,
-    ],
+    [id, text, structures, scripts],
   )
-  const preview = useTerrainPreview(request)
-  const map = preview.answer?.map ?? null
-  const slice = preview.answer?.slice ?? null
+  const fileKey = useMemo(() => (file ? fileKeyOf(file) : ''), [file])
+  const world = useMemo<PreviewWorld>(
+    () => ({ seed: String(state.seed), minY: height.minY, maxY: height.maxY }),
+    [state.seed, height.minY, height.maxY],
+  )
+
+  const scheduler = useTileScheduler()
+  useEffect(() => {
+    scheduler.setSource(file ? { fileKey, file, world } : null)
+  }, [scheduler, file, fileKey, world])
+  const status = useSyncExternalStore(scheduler.subscribe, () => scheduler.status)
+
+  const sliceLine = useMemo<SliceLine>(
+    () => ({ alongX: state.alongX, at: state.at, along: state.along, width: state.width }),
+    [state.alongX, state.at, state.along, state.width],
+  )
+  const sliceAsk = useMemo<SliceAsk | null>(
+    () =>
+      file
+        ? {
+            file,
+            request: {
+              fileKey,
+              world,
+              alongX: sliceLine.alongX,
+              at: sliceLine.at,
+              from: sliceLine.along - Math.floor(sliceLine.width / 2),
+              width: sliceLine.width,
+            },
+          }
+        : null,
+    [file, fileKey, world, sliceLine],
+  )
+  const slicePreview = useSlicePreview(sliceAsk)
+  const slice = slicePreview.answer
+
+  const camera = useMemo<MapCamera>(
+    () => ({ x: state.x, z: state.z, zoom: state.zoom }),
+    [state.x, state.z, state.zoom],
+  )
+  const onCamera = useCallback((it: MapCamera) => view.update(it), [view])
+  const onCut = useCallback(
+    (alongX: boolean, at: number, along: number) => view.update({ alongX, at, along }),
+    [view],
+  )
+  const inspector = useMemo(
+    () =>
+      model && (
+        <TerrainInspector
+          path={path}
+          model={model}
+          edit={(recipe) => workspace.getState().edit<TerrainFile>(path, recipe)}
+        />
+      ),
+    [workspace, path, model],
+  )
 
   if (!doc) return null
   if (!model) return <RawDocView path={path} />
 
-  const failed = map?.type === 'failed' ? map : slice?.type === 'failed' ? slice : null
-  const scriptErrors = scriptErrorsOf(map, slice)
+  const failed = status.failed ?? (slice?.type === 'failed' ? slice.problems : null)
+  const scriptErrors = scriptErrorsOf(status.scriptErrors, slice)
+  const error = status.error ?? slicePreview.error
   return (
     <EditorScreen>
-      <EditorBar title={idOf(path)}>
+      <EditorBar title={id}>
         <label className={styles.seed}>
           Seed
           <NumberInput
@@ -257,89 +307,112 @@ export function TerrainEditor({ path }: { path: string }) {
             </select>
           </label>
         )}
+        <label className={styles.seed}>
+          Detail
+          <select
+            aria-label="Map detail"
+            value={state.detail}
+            onChange={(event) => view.update({ detail: Number(event.target.value) })}
+          >
+            {DETAILS.map((it) => (
+              <option key={it.value} value={it.value}>
+                {it.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <EditAsJson path={path} />
       </EditorBar>
-      <Stage className={styles.stage}>
+      <div className={styles.body} data-testid="terrain-previews">
         {failed && (
           <section className={styles.failed} role="alert" aria-label="The preview can't draw this">
             <strong>The terrain can't be drawn yet:</strong>
             <ul>
-              {failed.problems.slice(0, 5).map((problem, index) => (
+              {failed.slice(0, 5).map((problem, index) => (
                 <li key={index}>{problem.message}</li>
               ))}
             </ul>
           </section>
         )}
-        {!failed && scriptErrors.length > 0 && <ScriptErrors errors={scriptErrors} />}
-        <div
-          className={styles.previews}
-          data-testid="terrain-previews"
-          data-drawing={preview.drawing || undefined}
-          aria-busy={preview.drawing}
-        >
-          {!failed && map?.type === 'map' && (
-            <MapPreview
-              map={map}
-              alongX={state.alongX}
-              at={state.at}
-              centre={{ x: state.x, z: state.z }}
-              onMove={(x, z) => view.update({ x, z })}
-              onCut={(alongX, at) => view.update({ alongX, at })}
-            />
-          )}
-          {!failed && slice?.type === 'slice' && map?.type === 'map' && (
-            <SlicePreview
-              slice={slice}
-              map={map}
-              fluid={model.terrain?.fluid ?? TERRAIN_DEFAULTS.fluid}
-              stone={model.stone?.block ?? TERRAIN_DEFAULTS.stone}
-            />
+        {/* Over the map, so it never changes size under the pointer. */}
+        <div className={styles.alerts}>
+          {!failed && scriptErrors.length > 0 && <ScriptErrors errors={scriptErrors} />}
+          {!failed && error && (
+            <section className={styles.failed} role="alert" aria-label="The preview stopped">
+              <strong>The preview stopped:</strong> {error}
+            </section>
           )}
         </div>
-        {!map && (
-          <Empty>{preview.error ?? (preview.drawing ? 'Drawing…' : 'Nothing to draw.')}</Empty>
+        {failed ? (
+          <Empty>Nothing to draw until the file is fixed.</Empty>
+        ) : (
+          <Group orientation="vertical" className={styles.split}>
+            <Panel id="terrain-map-pane" defaultSize="68" minSize="20" className={styles.pane}>
+              <MapView
+                scheduler={scheduler}
+                camera={camera}
+                detail={state.detail}
+                onCamera={onCamera}
+                slice={sliceLine}
+                onCut={onCut}
+              />
+            </Panel>
+            <Splitter label="Resize the slice" />
+            <Panel id="terrain-slice-pane" defaultSize="32" minSize="12" className={styles.pane}>
+              <SliceView
+                slice={slice?.type === 'slice' ? slice : null}
+                fluid={model.terrain?.fluid ?? TERRAIN_DEFAULTS.fluid}
+                stone={model.stone?.block ?? TERRAIN_DEFAULTS.stone}
+                drawing={slicePreview.drawing}
+                tools={
+                  <>
+                    <label className={styles.seed}>
+                      Along
+                      <select
+                        aria-label="Slice along"
+                        value={state.alongX ? 'x' : 'z'}
+                        onChange={(event) => view.update({ alongX: event.target.value === 'x' })}
+                      >
+                        <option value="x">the x axis</option>
+                        <option value="z">the z axis</option>
+                      </select>
+                    </label>
+                    <label className={styles.seed}>
+                      Width
+                      <select
+                        aria-label="Slice width"
+                        value={state.width}
+                        onChange={(event) => view.update({ width: Number(event.target.value) })}
+                      >
+                        {WIDTHS.map((it) => (
+                          <option key={it} value={it}>
+                            {it} blocks
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </>
+                }
+              />
+            </Panel>
+          </Group>
         )}
-        <Hint>
-          Drawn by the same code the server runs, for the seed above. Drag the map to move it; click
-          it to cut the slice there.
-        </Hint>
-      </Stage>
-      <InspectorPanel>
-        <div className={styles.inspectorTools}>
-          <SelectField
-            label="Cell size"
-            value={String(state.step)}
-            options={STEPS.map((it) => ({ value: String(it), label: `${it} blocks` }))}
-            onChange={(value) => view.update({ step: Number(value) })}
-          />
-          <SelectField
-            label="Slice along"
-            value={state.alongX ? 'x' : 'z'}
-            options={[
-              { value: 'x', label: 'the x axis' },
-              { value: 'z', label: 'the z axis' },
-            ]}
-            onChange={(value) => view.update({ alongX: value === 'x' })}
-          />
-        </div>
-        <TerrainInspector path={path} model={model} edit={edit} />
-      </InspectorPanel>
+      </div>
+      <InspectorPanel>{inspector}</InspectorPanel>
     </EditorScreen>
   )
 }
 
 // ---- the script -----------------------------------------------------------------------------------
 
-/** What the script failed at in either picture, each once. */
+/** What the script failed at in the map's tiles or the slice, each once. */
 function scriptErrorsOf(
-  map: TerrainPreviewResult | null,
+  map: TerrainScriptError[],
   slice: TerrainPreviewResult | null,
 ): TerrainScriptError[] {
   const seen = new Map<string, TerrainScriptError>()
-  for (const result of [map, slice]) {
-    if (result?.type !== 'map' && result?.type !== 'slice') continue
-    for (const error of result.scriptErrors) seen.set(`${error.stage}\n${error.message}`, error)
-  }
+  const all = slice?.type === 'slice' ? [...map, ...slice.scriptErrors] : map
+  for (const error of all) seen.set(`${error.stage}\n${error.message}`, error)
   return [...seen.values()]
 }
 
@@ -365,249 +438,5 @@ function ScriptErrors({ errors }: { errors: TerrainScriptError[] }) {
         ))}
       </ul>
     </section>
-  )
-}
-
-// ---- the map --------------------------------------------------------------------------------------
-
-/** Puts RGBA pixels on a canvas. */
-function useCanvas(pixels: { width: number; height: number; data: Uint8ClampedArray } | null) {
-  const ref = useRef<HTMLCanvasElement>(null)
-  useEffect(() => {
-    const canvas = ref.current
-    const context = canvas?.getContext('2d')
-    if (!canvas || !context || !pixels) return
-    canvas.width = pixels.width
-    canvas.height = pixels.height
-    context.putImageData(
-      new ImageData(new Uint8ClampedArray(pixels.data), pixels.width, pixels.height),
-      0,
-      0,
-    )
-  }, [pixels])
-  return ref
-}
-
-function MapPreview({
-  map,
-  alongX,
-  at,
-  centre,
-  onMove,
-  onCut,
-}: {
-  map: TerrainMap
-  alongX: boolean
-  at: number
-  centre: { x: number; z: number }
-  onMove: (x: number, z: number) => void
-  onCut: (alongX: boolean, at: number) => void
-}) {
-  const pixels = useMemo(
-    () => ({ width: map.cells, height: map.cells, data: mapPixels(map) }),
-    [map],
-  )
-  const canvas = useCanvas(pixels)
-  const [hover, setHover] = useState<{ x: number; z: number } | null>(null)
-  const drag = useRef<{
-    px: number
-    py: number
-    moved: boolean
-    from: { x: number; z: number }
-  } | null>(null)
-  const size = map.cells * MAP_SCALE
-
-  /** The block a pointer is over. */
-  const blockOf = (event: ReactPointerEvent<HTMLElement>) => {
-    const box = event.currentTarget.getBoundingClientRect()
-    const cx = Math.min(
-      map.cells - 1,
-      Math.max(0, Math.floor(((event.clientX - box.left) / box.width) * map.cells)),
-    )
-    const cz = Math.min(
-      map.cells - 1,
-      Math.max(0, Math.floor(((event.clientY - box.top) / box.height) * map.cells)),
-    )
-    return { cx, cz, x: map.x0 + cx * map.step, z: map.z0 + cz * map.step }
-  }
-  const over = hover && {
-    ...hover,
-    cx: Math.floor((hover.x - map.x0) / map.step),
-    cz: Math.floor((hover.z - map.z0) / map.step),
-  }
-  const index = over ? over.cz * map.cells + over.cx : -1
-  const area = index >= 0 ? map.areas[index] : undefined
-  const decorationsHere = index >= 0 ? decorationsAt(map, index) : []
-  const marked = new Set(map.decorations.filter((_, i) => i % 2 === 1))
-  // The slice's line, as a fraction of the map.
-  const line = ((alongX ? at - map.z0 : at - map.x0) / (map.cells * map.step)) * 100
-
-  return (
-    <figure className={styles.figure}>
-      <figcaption>
-        <strong>From above</strong>{' '}
-        <Muted>
-          {map.cells * map.step} blocks across, centred on {place(centre.x, centre.z)}
-        </Muted>
-      </figcaption>
-      <div
-        className={styles.map}
-        style={{ width: size, height: size }}
-        role="img"
-        aria-label="Map of the terrain from above"
-        data-testid="terrain-map"
-        onPointerDown={(event) => {
-          event.currentTarget.setPointerCapture(event.pointerId)
-          drag.current = { px: event.clientX, py: event.clientY, moved: false, from: centre }
-        }}
-        onPointerMove={(event) => {
-          const here = blockOf(event)
-          setHover({ x: here.x, z: here.z })
-          const d = drag.current
-          if (!d) return
-          const dx = event.clientX - d.px
-          const dy = event.clientY - d.py
-          if (Math.abs(dx) + Math.abs(dy) > 3) d.moved = true
-          if (d.moved)
-            onMove(
-              d.from.x - Math.round((dx / MAP_SCALE) * map.step),
-              d.from.z - Math.round((dy / MAP_SCALE) * map.step),
-            )
-        }}
-        onPointerUp={(event) => {
-          const d = drag.current
-          drag.current = null
-          if (d && !d.moved) {
-            const here = blockOf(event)
-            onCut(alongX, alongX ? here.z : here.x)
-          }
-        }}
-        onPointerLeave={() => setHover(null)}
-      >
-        <canvas ref={canvas} className={styles.canvas} />
-        <span
-          className={alongX ? styles.lineX : styles.lineZ}
-          style={alongX ? { top: `${line}%` } : { left: `${line}%` }}
-          aria-hidden="true"
-        />
-      </div>
-      <p className={styles.readout} aria-live="polite" data-testid="terrain-map-readout">
-        {over && index >= 0
-          ? `${place(over.x, over.z)}: ground at ${map.heights[index]}${map.heights[index]! < map.seaLevel ? ' (under the sea)' : ''}, ${area !== undefined ? `${map.areaNames[area]} (${map.biomes[area]})` : ''}${decorationsHere.length ? `; ${decorationsHere.map((i) => map.decorationNames[i]).join(', ')}` : ''}`
-          : `Sea level ${map.seaLevel}.`}
-      </p>
-      <ul className={styles.legend} aria-label="Biome areas">
-        {map.areaNames.map((name, i) => {
-          const [r, g, b] = areaColor(i)
-          return (
-            <li key={name}>
-              <span className={styles.swatch} style={{ background: `rgb(${r} ${g} ${b})` }} />
-              {name} <Muted>{map.biomes[i]}</Muted>
-            </li>
-          )
-        })}
-        <li>
-          <span className={styles.swatch} style={{ background: 'rgb(48 96 184)' }} /> the sea
-        </li>
-      </ul>
-      {map.decorationNames.length > 0 && (
-        <ul className={styles.legend} aria-label="Decorations" data-testid="terrain-decorations">
-          {map.decorationNames.map((name, i) => {
-            if (!marked.has(i)) return null
-            const [r, g, b] = decorationColor(i)
-            return (
-              <li key={name}>
-                <span className={styles.swatch} style={{ background: `rgb(${r} ${g} ${b})` }} />
-                {name}
-              </li>
-            )
-          })}
-          {!map.decorationsShown && (
-            <li>
-              <Muted>Decorations are marked on a closer map (a smaller cell size).</Muted>
-            </li>
-          )}
-        </ul>
-      )}
-    </figure>
-  )
-}
-
-// ---- the slice ------------------------------------------------------------------------------------
-
-function SlicePreview({
-  slice,
-  map,
-  fluid,
-  stone,
-}: {
-  slice: TerrainSlice
-  map: TerrainMap
-  fluid: string
-  stone: string
-}) {
-  const colors = useMemo(() => sliceColors(slice, fluid, stone), [slice, fluid, stone])
-  const top = useMemo(() => sliceTop(slice), [slice])
-  const drawn = useMemo(() => {
-    const out = slicePixels(slice, colors, top, SLICE_SCALE)
-    return { width: out.width, height: out.height, data: out.pixels }
-  }, [slice, colors, top])
-  const canvas = useCanvas(drawn)
-  const [hover, setHover] = useState<{ column: number; y: number } | null>(null)
-  const used = useMemo(() => {
-    const seen = new Set<number>()
-    for (const runs of slice.columns) for (let i = 0; i < runs.length; i += 2) seen.add(runs[i]!)
-    return [...seen].filter((it) => it !== 0).sort((a, b) => a - b)
-  }, [slice])
-  const sea = ((top - map.seaLevel - 1) / (top - slice.minY)) * 100
-
-  return (
-    <figure className={styles.figure}>
-      <figcaption>
-        <strong>Through the ground</strong>{' '}
-        <Muted>
-          {slice.axis === 'x' ? `along x, at z ${slice.at}` : `along z, at x ${slice.at}`},{' '}
-          {slice.width} blocks from {slice.from}
-        </Muted>
-      </figcaption>
-      <div
-        className={styles.slice}
-        style={{ width: drawn.width, height: drawn.height }}
-        role="img"
-        aria-label="Slice through the ground"
-        data-testid="terrain-slice"
-        onPointerMove={(event) => {
-          const box = event.currentTarget.getBoundingClientRect()
-          const column = Math.floor(((event.clientX - box.left) / box.width) * slice.width)
-          const y =
-            top - 1 - Math.floor(((event.clientY - box.top) / box.height) * (top - slice.minY))
-          setHover({ column, y })
-        }}
-        onPointerLeave={() => setHover(null)}
-      >
-        <canvas ref={canvas} className={styles.canvas} />
-        <span className={styles.sea} style={{ top: `${sea}%` }} aria-hidden="true" />
-      </div>
-      <p className={styles.readout} aria-live="polite" data-testid="terrain-slice-readout">
-        {hover && hover.column >= 0 && hover.column < slice.width
-          ? `${slice.axis} ${slice.from + hover.column}, y ${hover.y}: ${slice.palette[blockAt(slice, hover.column, hover.y)]?.label ?? ''}`
-          : `Lowest block ${slice.minY}.`}
-      </p>
-      <ul className={styles.legend} aria-label="Blocks">
-        {used.map((index) => {
-          const color = colors[index]
-          const entry = slice.palette[index]!
-          return (
-            <li key={index}>
-              <span
-                className={styles.swatch}
-                style={{ background: color ? `rgb(${color[0]} ${color[1]} ${color[2]})` : 'none' }}
-              />
-              {entry.label} {entry.custom && <Muted>(the project's)</Muted>}
-            </li>
-          )
-        })}
-      </ul>
-    </figure>
   )
 }

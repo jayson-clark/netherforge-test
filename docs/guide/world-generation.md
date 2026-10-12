@@ -16,8 +16,10 @@ terrain/
 
 Open (or add) a terrain in the editor. The picture is the world a server
 makes with the **seed** at the top: a map from above, with a dashed line you can
-move by clicking it, and a slice through the ground along that line. Drag the map
-to look elsewhere; "Cell size" zooms it. A new seed is a new world, and the same
+move by clicking it, and a slice through the ground along that line (drag the line
+between them to give either more room). Drag the map to look elsewhere and scroll
+or pinch to zoom (the arrow keys, + and - work too); "Detail" trades sharpness for
+speed. A new seed is a new world, and the same
 seed is the same world every time, here and on the server. The preview is drawn
 beside the editor, not in its way: it catches up with your typing a moment
 later.

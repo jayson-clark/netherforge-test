@@ -83,9 +83,12 @@ describe('a terrain view', () => {
       seed: 1337,
       x: 0,
       z: 0,
-      step: 4,
+      zoom: 1,
+      detail: 4,
       alongX: true,
       at: 0,
+      along: 0,
+      width: 256,
       heights: null,
     })
     view.update({ seed: 99, x: 128 })

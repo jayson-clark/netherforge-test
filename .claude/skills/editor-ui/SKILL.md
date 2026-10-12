@@ -1003,21 +1003,29 @@ are the generic ones. What's specific:
 - **Terrains** (`editors/terrain/`): `terrain/<id>.json`, drawn by the server's own generator. The stage
   has two canvases made from format's `terrainPreviewer(id, text, structures)` (JS export of `TerrainPreviewer`:
   `map(...)` and `slice(...)`, each a `TerrainPreviewResult`, `failed` with the problems when the file doesn't
-  validate for its shapes; both take the world's `minY`/`maxY`: the heights the editor bar's **Preview heights** picker chose, `heights.ts`'s `heightChoices` (the overworld's, then each `netherforge.json` world naming this generator and a project dimension type, read from the manifest and `dimension_types/<id>.json` as they are now; references resolved by format's `resolveReference`), the view's `heights` (a world's name, `''` the overworld, null the first world, else the overworld)): a **map from above** (96 cells, 2 to 32 blocks each, heights lit from the north-west, the sea blue,
-  biome areas in `areaColor`s that avoid blue) and a **slice** through whole generated chunks along a line (128
-  blocks; run-length columns; air transparent, the sea translucent, the project's own blocks pink so ore of a custom
+  validate for its shapes; both take the world's `minY`/`maxY`: the heights the editor bar's **Preview heights** picker chose, `heights.ts`'s `heightChoices` (the overworld's, then each `netherforge.json` world naming this generator and a project dimension type, read from the manifest and `dimension_types/<id>.json` as they are now; references resolved by format's `resolveReference`), the view's `heights` (a world's name, `''` the overworld, null the first world, else the overworld)): a **map from above** (filling the editor over the slice, a `Group` split; heights lit from the north-west, the sea blue,
+  biome areas in `areaColor`s that avoid blue) and a **slice** through whole generated chunks along a line (128 to 1024
+  blocks, centred on `along`, fitted to its panel; run-length columns; air transparent, the sea translucent, the project's own blocks pink so ore of a custom
   block stands out, stone grey, other blocks a colour by palette place: the editor ships no pictures, so a legend
   names each). Where surface and sea-floor decorations start is marked on the map in `decorationColor`s with a
-  legend (`Decorations`; only on a close map, `decorationsShown`). Dragging the map pans it, a click cuts the slice
-  there (`alongX`/`at`), the pointer's cell says its ground, biome and decorations in a readout
-  (`terrain-map-readout`; the slice's likewise). **The preview runs in a worker** (`worker/`): `core.ts`
-  (`createPreviewCore`: the previewer compiled once per file text and structures, answering a `PreviewRequest` with
-  map and slice), `preview.worker.ts` (Comlink), `client.ts` (`terrainPreviewWorker()`, and `LatestPreview`, which
-  draws one request at a time and keeps only the newest waiting, so a drag never queues work; a failed worker is
-  started over; `useTerrainPreview(request)` owns one per editor). The structures a file's decorations name (the
+  legend (`Decorations`; only where a tile is close enough, `decorationsShown`). **The map is tiles** (`tiles.ts`):
+  64 by 64 cells of a power-of-two `step` on a grid fixed in the world, `stepFor(zoom, detail)` picking the level
+  (the view's `zoom` is screen pixels a block, `detail` the pixels a cell aims at). `MapView` draws every cached
+  level coarse to fine on one canvas, so a drag (pointer), wheel or pinch (`gesturechange` on WebKit) moves what's
+  drawn at once and writes `x`/`z`/`zoom` to the view when the gesture ends; `wantedTiles` (a coarse level first,
+  then the shown one, nearest the middle first, then a ring) goes to the `TileScheduler`, which keeps a few workers
+  (`tileLaneCount`) on the first tile wanted that it hasn't got for the current file and world (`gen`), keeps an
+  older generation's tile drawn until replaced, and stops on a `failed` answer or a worker error until the source
+  changes. A click cuts the slice there (`alongX`/`at`/`along`), the pointer's cell says its ground, biome and
+  decorations in a readout (`terrain-map-readout`; the slice's likewise). **The preview runs in workers** (`worker/`):
+  `core.ts` (`createPreviewCore`: the previewer compiled once per `fileKeyOf(file)`, answering `tile` (a map one cell
+  wider cut back by `cropMap`, its pixels made there, so tiles meet without a seam) and `slice`; a request carries
+  the file only when its worker may not have it, else `NEEDS_FILE`), `preview.worker.ts` (Comlink), `client.ts`
+  (`terrainPreviewWorker()`; `Lane`, one worker asked one thing at a time, started over when it fails;
+  `LatestPreview`, the slice's newest-only queue, behind `useSlicePreview`). The structures a file's decorations name (the
   project's own; a package's isn't drawn) are read from their `.nbt` (`readProjectBytes`, `readNbt`,
   `parseStructure`, keyed by their stamps) and sent with the request as `TerrainStructureInput`s. The seed (a number, "Random
-  seed"), the map's centre and cell size and the slice's line are the view (`view.ts`: not in the file, not undone;
+  seed"), the map's centre, zoom and detail and the slice's line and width are the view (`view.ts`: not in the file, not undone;
   there's no selection). The inspector (`Inspector.tsx`) has a section per part in the order a column is made
   (Terrain with its named noises and blend, and its 3D ground (`DensityFields`: the `densityNoises` collection,
   `NoiseEntries` with a squash field, the islands with their own `AreaFilter`; `setDensity` off takes the areas'
@@ -1036,7 +1044,7 @@ are the generic ones. What's specific:
   does. NBT reading (`nbt.ts`, `structure.ts`) lives there too, for the same reason: the editor imports
   `@netherforge/terrain-preview/nbt` and `/structure`. Tests: `ops.test.ts`,
   `packages/terrain-preview/src/draw.test.ts` (against the real JS build), `worker/core.test.ts` (a structure linked from its input, other
-  heights), `worker/client.test.ts` (newest request wins, a failed worker restarts), `e2e/terrain.spec.ts` (the
+  heights), `worker/client.test.ts` (newest slice wins, a lane sends its file once and restarts), `tiles.test.ts` (levels, what's wanted, the scheduler's generations and failures), `e2e/terrain.spec.ts` (the
   preview following a base height and a seed, the example's decorations marked (its tree read from the seed's
   `.nbt`), an ore of a project block added, a decoration added and kept to an area that's then renamed, a new
   generator, a mistake naming why nothing is drawn). The memory backend's seed bundles `.nbt` files as bytes.

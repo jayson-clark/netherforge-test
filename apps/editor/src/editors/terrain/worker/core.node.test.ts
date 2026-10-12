@@ -6,27 +6,33 @@
 import { describe, expect, it } from 'vitest'
 import type { TerrainMap } from '@/core/format'
 import { loadNodeLua } from '@netherforge/terrain-preview/lua.node'
-import { createPreviewCore, type PreviewRequest } from './core'
+import { createPreviewCore, fileKeyOf, type PreviewFile } from './core'
 
 const FILE = JSON.stringify({
   terrain: { base: 70, seaLevel: 50 },
   layers: [{ block: 'minecraft:grass_block' }, { block: 'minecraft:dirt', thickness: 3 }],
 })
 
-const request = (change: Partial<PreviewRequest> = {}): PreviewRequest => ({
-  id: 'poles',
-  text: FILE,
-  structures: {},
-  structuresKey: '',
-  sources: {},
-  sourcesKey: '',
-  seed: '7',
-  minY: -64,
-  maxY: 320,
-  map: { x0: -32, z0: -32, cells: 32, step: 2 },
-  slice: { alongX: true, at: 0, from: -32, width: 64 },
-  ...change,
-})
+const request = (change: Partial<PreviewFile> = {}) => {
+  const file: PreviewFile = {
+    id: 'poles',
+    text: FILE,
+    structures: {},
+    structuresKey: '',
+    sources: {},
+    sourcesKey: '',
+    ...change,
+  }
+  return {
+    fileKey: fileKeyOf(file),
+    file,
+    world: { seed: '7', minY: -64, maxY: 320 },
+    x0: -32,
+    z0: -32,
+    cells: 32,
+    step: 2,
+  }
+}
 
 const core = () => createPreviewCore(loadNodeLua)
 
@@ -47,22 +53,22 @@ describe("the preview's worker and a generator's script", () => {
         sourcesKey: `lift ${by}`,
       })
     const preview = core()
-    const plain = (await preview.draw(request())).map as TerrainMap
-    const five = (await preview.draw(lifted(5))).map as TerrainMap
+    const plain = (await preview.tile(request())).result as TerrainMap
+    const five = (await preview.tile(lifted(5))).result as TerrainMap
     expect(five.scriptErrors).toEqual([])
     expect(five.heights[0]).toBe(plain.heights[0]! + 5)
-    const nine = (await preview.draw(lifted(9))).map as TerrainMap
+    const nine = (await preview.tile(lifted(9))).result as TerrainMap
     expect(nine.heights[0]).toBe(plain.heights[0]! + 9)
     // A script that fails is said, and the file's own ground drawn.
     const broken = (
-      await preview.draw(
+      await preview.tile(
         request({
           text: scripted,
           sources: { 'terrain/poles.lua': 'return {\n  height = function() error("oops") end }' },
           sourcesKey: 'broken',
         }),
       )
-    ).map as TerrainMap
+    ).result as TerrainMap
     expect(broken.heights).toEqual(plain.heights)
     expect(broken.scriptErrors[0]).toMatchObject({
       stage: 'height',

@@ -1,64 +1,104 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { PreviewAnswer, PreviewRequest } from './core'
-import { LatestPreview, type PreviewClient, type PreviewState } from './client'
+import type { TerrainPreviewResult } from '@/core/format'
+import type { PreviewFile, SliceRequest } from './core'
+import { Lane, LatestPreview, type PreviewClient, type PreviewState } from './client'
 
-/** A worker whose answers the test gives, one request at a time. */
-function fakeWorkers() {
+/** A drawing whose answers the test gives, one request at a time. */
+function fakeDraws() {
   const asked: string[] = []
-  const pending: { resolve: (a: PreviewAnswer) => void; reject: (e: Error) => void }[] = []
-  let made = 0
-  let disposed = 0
-  const connect = (): PreviewClient => {
-    made += 1
-    return {
-      draw: (request) =>
-        new Promise<PreviewAnswer>((resolve, reject) => {
-          asked.push(request.seed)
-          pending.push({ resolve, reject })
-        }),
-      dispose: () => {
-        disposed += 1
-      },
-    }
-  }
-  return { asked, pending, connect, made: () => made, disposed: () => disposed }
+  const pending: { resolve: (a: string) => void; reject: (e: Error) => void }[] = []
+  const draw = (request: string) =>
+    new Promise<string>((resolve, reject) => {
+      asked.push(request)
+      pending.push({ resolve, reject })
+    })
+  return { asked, pending, draw }
 }
 
-const request = (seed: string) => ({ seed }) as PreviewRequest
-const answer = (seed: string) =>
-  ({ map: { type: 'failed', problems: [] }, slice: { seed } }) as unknown as PreviewAnswer
-
-describe('the preview asks its worker for the newest picture only', () => {
+describe('the slice asks for the newest picture only', () => {
   it('draws one at a time, dropping requests a newer one overtook', async () => {
-    const workers = fakeWorkers()
-    const states: PreviewState[] = []
-    const queue = new LatestPreview(workers.connect, (state) => states.push(state))
-    queue.request(request('1'))
-    queue.request(request('2'))
-    queue.request(request('3'))
-    expect(workers.asked).toEqual(['1'])
-    workers.pending[0]!.resolve(answer('1'))
+    const draws = fakeDraws()
+    const states: PreviewState<string, string>[] = []
+    const queue = new LatestPreview<string, string>(draws.draw, (state) => states.push(state))
+    queue.request('1')
+    queue.request('2')
+    queue.request('3')
+    expect(draws.asked).toEqual(['1'])
+    draws.pending[0]!.resolve('one')
     // 2 was overtaken by 3 while 1 was drawn.
-    await vi.waitFor(() => expect(workers.asked).toEqual(['1', '3']))
+    await vi.waitFor(() => expect(draws.asked).toEqual(['1', '3']))
     expect(states.at(-1)?.drawing).toBe(true)
-    workers.pending[1]!.resolve(answer('3'))
-    await vi.waitFor(() => expect(states.at(-1)?.drawn?.seed).toBe('3'))
+    draws.pending[1]!.resolve('three')
+    await vi.waitFor(() => expect(states.at(-1)?.drawn).toBe('3'))
+    expect(states.at(-1)?.answer).toBe('three')
     expect(states.at(-1)?.drawing).toBe(false)
   })
 
-  it('starts a worker that failed over, and says why', async () => {
-    const workers = fakeWorkers()
-    const states: PreviewState[] = []
-    const queue = new LatestPreview(workers.connect, (state) => states.push(state))
-    queue.request(request('1'))
-    workers.pending[0]!.reject(new Error('it stopped'))
+  it('says why a drawing failed, and draws the next', async () => {
+    const draws = fakeDraws()
+    const states: PreviewState<string, string>[] = []
+    const queue = new LatestPreview<string, string>(draws.draw, (state) => states.push(state))
+    queue.request('1')
+    draws.pending[0]!.reject(new Error('it stopped'))
     await vi.waitFor(() => expect(states.at(-1)?.error).toBe('it stopped'))
-    expect([workers.made(), workers.disposed()]).toEqual([2, 1])
-    queue.request(request('2'))
-    workers.pending[1]!.resolve(answer('2'))
-    await vi.waitFor(() => expect(states.at(-1)?.drawn?.seed).toBe('2'))
+    queue.request('2')
+    draws.pending[1]!.resolve('two')
+    await vi.waitFor(() => expect(states.at(-1)?.drawn).toBe('2'))
     expect(states.at(-1)?.error).toBeNull()
-    queue.close()
+  })
+})
+
+describe('a lane', () => {
+  const FILE = { id: 'a' } as PreviewFile
+  const SLICE = { type: 'slice' } as unknown as TerrainPreviewResult
+
+  /** Workers that record whether each request carried the file, and fail when told to. */
+  function fakeWorkers() {
+    const sent: (string | undefined)[] = []
+    let made = 0
+    let disposed = 0
+    let fail = false
+    const connect = (): PreviewClient => {
+      made += 1
+      return {
+        tile: () => Promise.reject(new Error('unused')),
+        slice: (request: SliceRequest) => {
+          sent.push(request.file?.id)
+          return fail ? Promise.reject(new Error('it stopped')) : Promise.resolve(SLICE)
+        },
+        dispose: () => {
+          disposed += 1
+        },
+      }
+    }
+    return {
+      sent,
+      connect,
+      made: () => made,
+      disposed: () => disposed,
+      failNext: (it: boolean) => {
+        fail = it
+      },
+    }
+  }
+
+  const ask = (lane: Lane, key: string) =>
+    lane.run(key, FILE, (client, file) => client.slice({ fileKey: key, file } as SliceRequest))
+
+  it('sends the file once per key, and again to a worker started over', async () => {
+    const workers = fakeWorkers()
+    const lane = new Lane(workers.connect)
+    await ask(lane, 'k1')
+    await ask(lane, 'k1')
+    await ask(lane, 'k2')
+    expect(workers.sent).toEqual(['a', undefined, 'a'])
+    workers.failNext(true)
+    await expect(ask(lane, 'k2')).rejects.toThrow('it stopped')
+    expect([workers.made(), workers.disposed()]).toEqual([2, 1])
+    workers.failNext(false)
+    await ask(lane, 'k2')
+    expect(workers.sent.at(-1)).toBe('a')
+    lane.dispose()
     expect(workers.disposed()).toBe(2)
   })
 })
