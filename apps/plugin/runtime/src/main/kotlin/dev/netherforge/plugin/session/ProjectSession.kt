@@ -39,6 +39,7 @@ import dev.netherforge.plugin.command.ProjectCommands
 import dev.netherforge.plugin.cutscene.Cutscenes
 import dev.netherforge.plugin.data.PlayerPermissions
 import dev.netherforge.plugin.data.ScriptData
+import dev.netherforge.plugin.data.SessionTables
 import dev.netherforge.plugin.dialog.Dialogs
 import dev.netherforge.plugin.http.HttpClient
 import dev.netherforge.plugin.hud.Huds
@@ -202,6 +203,9 @@ class ProjectSession internal constructor(
     val data = service(
         ScriptData(runtime.store.tables, { scripts.host }, { log.warn(it) }, handover.data, { ticks })
     )
+
+    /** `player:session()`: each online player's table, never saved, dropped when they leave. */
+    val sessionTables = service(SessionTables { scripts.host })
 
     /** Server-owner settings: what each package declares, what the owner set, and who read them (`nf.config`). */
     val settings = service(

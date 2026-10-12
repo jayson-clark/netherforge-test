@@ -2590,6 +2590,18 @@ interface PlayerApi {
      * and the log says so. It's also saved when they leave.
      */
     fun data(self: LuaHandle.Player): Any?
+
+    /**
+     * Their table for this time online: one per player, the same table every time, shared by every script,
+     * and never saved. It's made empty the first time a script asks after they join, kept while they stay
+     * (through a module's reload too: it's the player's, not the script's), and dropped once they've left,
+     * after their `player_quit` handlers, so the next time they join it's empty again. A whole-project
+     * reload (`netherforge.json` changing, or `/nf reload` with no files) empties it, as it does every
+     * script's state. Anything a script holds goes in it (handles, functions, a `Task`), so a module
+     * needn't keep a map keyed by player and clear it in `player_quit`. By convention each module keeps
+     * its own part of it under its name, as with `data()`. `nil` for a player who isn't online.
+     */
+    fun session(self: LuaHandle.Player): Any?
 }
 
 /**

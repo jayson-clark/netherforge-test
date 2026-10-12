@@ -8960,6 +8960,17 @@
           "example": "local shop = player:data().shop or {}\nplayer:data().shop = shop\nshop.coins = (shop.coins or 0) + 5"
         },
         {
+          "name": "session",
+          "doc": "Their table for this time online: one per player, the same table every time, shared by every script, and never saved. It's made empty the first time a script asks after they join, kept while they stay (through a module's reload too: it's the player's, not the script's), and dropped once they've left, after their `player_quit` handlers, so the next time they join it's empty again. A whole-project reload (`netherforge.json` changing, or `/nf reload` with no files) empties it, as it does every script's state. Anything a script holds goes in it (handles, functions, a `Task`), so a module needn't keep a map keyed by player and clear it in `player_quit`. By convention each module keeps its own part of it under its name, as with `data()`. `nil` for a player who isn't online.",
+          "params": [],
+          "returns": [
+            {
+              "type": "table?"
+            }
+          ],
+          "example": "local session = assert(player:session())\nsession.combo = (session.combo or 0) + 1\nif session.combo >= 3 then\n  player:send_message(\"Combo!\")\nend"
+        },
+        {
           "name": "on",
           "impl": "lua",
           "doc": "Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.",

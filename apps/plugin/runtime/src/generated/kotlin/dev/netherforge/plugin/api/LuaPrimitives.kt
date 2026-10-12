@@ -3593,6 +3593,14 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         1
     }
 
+    fn("Player.session") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.Player
+        val result = api.player.session(self)
+        call.push(result, LuaCodecs.DYNAMIC)
+        1
+    }
+
     fn("Sender.name") { call ->
         val lua = call.lua
         val self = call.self(1) as LuaHandle.Sender

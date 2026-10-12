@@ -2987,6 +2987,14 @@ function Player.data(self)
   return prim["Player.data"](self_key)
 end
 
+function Player.session(self)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.session"](self_key)
+end
+
 function Player.on(self, event, handler, options)
   if ids[self] == nil or not Player_is[class_of(self)] then
     self_of(self, "Player")

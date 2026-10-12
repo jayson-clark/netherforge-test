@@ -113,6 +113,11 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   into day, whether the clock ran there or `/time set` jumped there, with the
   world and its `time_of_day`. Clocks are only looked at while something
   listens. `world:is_night()` and `world:is_day()` say which it is now.
+- **`player:session()`.** A table per online player for the time they're
+  on, shared by every script and never saved: made empty when a script first
+  asks, kept through a module's reload, and dropped once they've left (after
+  their `player_quit` handlers), so a module needn't keep its own map keyed
+  by player and clear it on quit. `nil` for a player who isn't online.
 - **Temporary centities.** `nf.centities.spawn(kind, place, { temporary = true })`
   spawns one that's never saved (its entities aren't kept with their chunk)
   and is removed when the script that spawned it unloads, so a reload or a

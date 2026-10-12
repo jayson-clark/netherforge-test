@@ -446,6 +446,7 @@ Player:send_block_change	43
 Player:send_equipment_change	22
 Player:send_message	17
 Player:send_title	24
+Player:session	15
 Player:set_below_name	17
 Player:set_camera	17
 Player:set_can_fly	17
