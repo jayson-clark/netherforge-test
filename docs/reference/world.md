@@ -18,6 +18,8 @@ What `world:on(event, handler)` listens for. See [Events](events.md) for how eve
 | `block_break` | [BlockBreakEvent](events.md#blockbreakevent) | yes | A player is breaking a block in this world: before `nf.on("block_break")`, with the same event, so `event:cancel()` here stops it and `event:stop()` keeps it from `nf`. Assign `event.drops` and `event.experience` to change what it drops. Bubbles. Writable: `drops`, `experience`. |
 | `block_place` | [BlockPlaceEvent](events.md#blockplaceevent) | yes | A player is placing a block in this world: before `nf.on("block_place")`, with the same event. Bubbles. |
 | `entity_spawn` | [EntitySpawnEvent](events.md#entityspawnevent) | yes | An entity is coming into this world: before `nf.on("entity_spawn")`, with the same event, so `event:cancel()` here stops it and `event:stop()` keeps it from `nf`. Bubbles. |
+| `dusk` | [DaylightEvent](events.md#daylightevent) |  | Night fell here: the time of day went from day (23000 to 12999) into night (13000 to 22999), by the clock or by `/time set`. Heard before `nf.on("world_dusk")`, with the same event, so `event:stop()` keeps it from there. The runtime looks at the clock every tick, and only while something listens; a jump from one night to the next (a whole day skipped) is no change, so nothing is heard. Bubbles. |
+| `dawn` | [DaylightEvent](events.md#daylightevent) |  | Day broke here: the time of day went from night (13000 to 22999) into day (23000 to 12999), by the clock or by `/time set` (sleeping through the night too). Heard before `nf.on("world_dawn")`, with the same event, so `event:stop()` keeps it from there. Bubbles. |
 | `block_explode` | [ExplodeEvent](events.md#explodeevent) | yes | A block exploded: a bed in the nether or the end, a respawn anchor charged away from the overworld. `event:cancel()` stops the explosion breaking anything; assign `event.breaks_blocks = false` to keep every block standing but still hurt what is near, or `event.yield` to change how much of what breaks drops. In this world: heard before `nf.on("block_explode")`, with the same event, so `event:stop()` keeps it from there. Bubbles. Writable: `breaks_blocks`, `yield`. |
 | `block_ignite` | [BlockIgniteEvent](events.md#blockigniteevent) | yes | A block is catching fire: flint and steel, a fire charge, lava, lightning, fire spreading, an explosion. `event:cancel()` keeps it from burning. In this world: heard before `nf.on("block_ignite")`, with the same event, so `event:stop()` keeps it from there. Bubbles. |
 | `block_burn` | [BlockBurnEvent](events.md#blockburnevent) | yes | A block is burning away in a fire. `event:cancel()` keeps it there (it may still catch fire again). In this world: heard before `nf.on("block_burn")`, with the same event, so `event:stop()` keeps it from there. Bubbles. |
@@ -90,6 +92,18 @@ Sets the time of day, keeping the day count. Taken modulo 24000. Doesn't stop th
 | `ticks` | `integer` | 0 sunrise, 6000 noon, 12000 sunset, 18000 midnight. |
 
 **Returns** `boolean`: `false` when the world has gone.
+
+## `world:is_night()`
+
+Whether it is night here: the time of day is 13000 to 22999, from dusk to just before sunrise, as `/time set night` and a centity's `"night"` spawn time mean it. `false` once the world has gone.
+
+**Returns** `boolean`
+
+## `world:is_day()`
+
+Whether it is day here: the time of day is 23000 to 12999, the rest of `is_night`'s. `false` once the world has gone.
+
+**Returns** `boolean`
 
 ## `world:day_count()`
 

@@ -95,6 +95,20 @@ const worldEvents: EventSpec[] = [
     example:
       'nf.worlds.default():on("entity_spawn", function(event)\n  if event.entity:kind() == "minecraft:phantom" then\n    event:cancel()\n  end\nend)',
   },
+  {
+    name: 'dusk',
+    doc: 'Night fell here: the time of day went from day (23000 to 12999) into night (13000 to 22999), by the clock or by `/time set`. Heard before `nf.on("world_dusk")`, with the same event, so `event:stop()` keeps it from there. The runtime looks at the clock every tick, and only while something listens; a jump from one night to the next (a whole day skipped) is no change, so nothing is heard.',
+    payload: 'DaylightEvent',
+    bubbles: true,
+    example:
+      'nf.worlds.default():on("dusk", function(event)\n  for _, player in ipairs(event.world:players()) do\n    player:send_message("<gray>Night falls.")\n  end\nend)',
+  },
+  {
+    name: 'dawn',
+    doc: 'Day broke here: the time of day went from night (13000 to 22999) into day (23000 to 12999), by the clock or by `/time set` (sleeping through the night too). Heard before `nf.on("world_dawn")`, with the same event, so `event:stop()` keeps it from there.',
+    payload: 'DaylightEvent',
+    bubbles: true,
+  },
   ...gameWorldEvents,
 ]
 
@@ -165,6 +179,18 @@ export const worldClass: LuaClass = {
         },
       ],
       returns: [{ type: 'boolean', doc: '`false` when the world has gone.' }],
+    },
+    {
+      name: 'is_night',
+      doc: 'Whether it is night here: the time of day is 13000 to 22999, from dusk to just before sunrise, as `/time set night` and a centity\'s `"night"` spawn time mean it. `false` once the world has gone.',
+      params: [],
+      returns: [{ type: 'boolean' }],
+    },
+    {
+      name: 'is_day',
+      doc: "Whether it is day here: the time of day is 23000 to 12999, the rest of `is_night`'s. `false` once the world has gone.",
+      params: [],
+      returns: [{ type: 'boolean' }],
     },
     {
       name: 'day_count',

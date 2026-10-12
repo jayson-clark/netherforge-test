@@ -71,6 +71,32 @@ export const vec3Value: ValueType = {
       [{ type: 'Vec3' }],
     ),
     method(
+      'clamp_length',
+      'The same direction, scaled down to at most `max_length` long: a copy if it is no longer than that already. Keeps a velocity under a top speed.',
+      [number('max_length', 'The longest it may be, 0 or more.')],
+      [{ type: 'Vec3' }],
+      'local velocity = vec3(3, 0, 4):clamp_length(2.5)',
+    ),
+    method(
+      'reflect',
+      "Mirrored off a surface: `v - 2 * v:dot(n) * n` for the surface's unit normal `n`, so the part into the surface turns back out and the part along it carries on. How a shot bounces off a wall, with a sweep's `normal`.",
+      [
+        vector(
+          'normal',
+          'Which way the surface faces. Any length but zero: it is normalized first.',
+        ),
+      ],
+      [{ type: 'Vec3' }],
+      'local bounced = vec3(1, -2, 0):reflect(vec3.up)',
+    ),
+    method(
+      'closest_on_segment',
+      'The point on the line segment from `start` to `finish` nearest to this point: its foot on the segment, or the nearer end when that falls past one. `start` when the two are the same point. With `distance`, how far a point is from a beam or a path.',
+      [vector('start', 'One end.'), vector('finish', 'The other end.')],
+      [{ type: 'Vec3' }],
+      'local nearest = player:position():closest_on_segment(vec3(0, 64, 0), vec3(10, 64, 0))',
+    ),
+    method(
       'flat',
       'A copy with `y` set to 0: the horizontal part.',
       [],

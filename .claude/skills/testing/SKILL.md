@@ -50,7 +50,7 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
      picks one), reports text, JSON lines (`--json`, what the editor reads) or
      JUnit XML (`--junit`), and exits 1 on a failure or error, 2 when the
      project can't run. `ScriptTestRunnerTest` runs small temp projects (what
-     fails, what errors, isolation, `advance`, `raise`, `require`, the filter,
+     fails, what errors, isolation, `advance`, `raise`, `click`, `release` and `input`, `require`, the filter,
      the output formats); `ExampleTestsTest` runs `examples/basic/tests/` (so
      the example is exercised, and `nf.test` is checked on the real project).
      The **project templates** (`examples/template_minigame`, `template_shop`,

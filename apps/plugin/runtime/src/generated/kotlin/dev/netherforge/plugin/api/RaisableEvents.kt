@@ -48,6 +48,8 @@ object RaisableEvents {
         "entity_damage" to Raisable(Events.NF_ENTITY_DAMAGE),
         "entity_death" to Raisable(Events.NF_ENTITY_DEATH),
         "entity_spawn" to Raisable(Events.NF_ENTITY_SPAWN, Events.WORLD_ENTITY_SPAWN) { it.world },
+        "world_dusk" to Raisable(Events.NF_WORLD_DUSK),
+        "world_dawn" to Raisable(Events.NF_WORLD_DAWN),
         "player_input" to Raisable(Events.NF_PLAYER_INPUT, Events.PLAYER_INPUT) { it.player },
         "player_change_slot" to Raisable(Events.NF_PLAYER_CHANGE_SLOT, Events.PLAYER_CHANGE_SLOT) { it.player },
         "player_swing" to Raisable(Events.NF_PLAYER_SWING, Events.PLAYER_SWING) { it.player },

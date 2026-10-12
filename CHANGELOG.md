@@ -117,6 +117,31 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   `bounds`. It answers the blocks it filled and the blocks it stopped at (a
   room's walls), what each is with `kinds = true`, and why it stopped short
   (`limit`, `unloaded`, `bounds`): a felled tree or a house check in one call.
+- **Dusk and dawn.** A world's `dusk` and `dawn` events (then `nf`'s
+  `world_dusk` and `world_dawn`) are heard when its time of day crosses into
+  night (13000 to 22999, as a centity's `"night"` spawn time means it) or back
+  into day, whether the clock ran there or `/time set` jumped there, with the
+  world and its `time_of_day`. Clocks are only looked at while something
+  listens. `world:is_night()` and `world:is_day()` say which it is now.
+- **`player:session()`.** A table per online player for the time they're
+  on, shared by every script and never saved: made empty when a script first
+  asks, kept through a module's reload, and dropped once they've left (after
+  their `player_quit` handlers), so a module needn't keep its own map keyed
+  by player and clear it on quit. `nil` for a player who isn't online.
+- **More `Vec3` helpers.** `v:clamp_length(max_length)` scales a vector
+  down to at most that long (a top speed), `v:reflect(normal)` mirrors it off
+  a surface (a shot bouncing off a sweep's hit), and
+  `point:closest_on_segment(start, finish)` is the nearest point of a line
+  segment (how far something is from a beam, with `distance`).
+- **`nf.test.click`, `release` and `input`.** A script test clicks for a
+  player as their client would, with what they hold filled in:
+  `nf.test.click(player, "right")` raises `player_interact` and then
+  `player_use_item` (through the held project item's `interact` and `use`)
+  and answers whether a handler let it through, with `hand`, `block` and
+  `face` options; `nf.test.release(player, ticks)` raises
+  `player_stop_using_item` for what they hold; and
+  `nf.test.input(player, { forward = true })` raises `player_input` with the
+  keys held. No more hand-built payloads for the commonest inputs.
 - **Temporary centities.** `nf.centities.spawn(kind, place, { temporary = true })`
   spawns one that's never saved (its entities aren't kept with their chunk)
   and is removed when the script that spawned it unloads, so a reload or a

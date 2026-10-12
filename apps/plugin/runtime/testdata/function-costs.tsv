@@ -449,6 +449,7 @@ Player:send_block_change	43
 Player:send_equipment_change	22
 Player:send_message	17
 Player:send_title	24
+Player:session	15
 Player:set_below_name	17
 Player:set_camera	17
 Player:set_can_fly	17
@@ -572,7 +573,9 @@ World:flood	142
 World:game_rule	17
 World:highest_block	48
 World:is_chunk_loaded	48
+World:is_day	15
 World:is_managed	15
+World:is_night	15
 World:load_chunk	48
 World:locate_biome	70
 World:location	78

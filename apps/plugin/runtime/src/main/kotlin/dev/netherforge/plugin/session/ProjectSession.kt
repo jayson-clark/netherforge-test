@@ -39,6 +39,7 @@ import dev.netherforge.plugin.command.ProjectCommands
 import dev.netherforge.plugin.cutscene.Cutscenes
 import dev.netherforge.plugin.data.PlayerPermissions
 import dev.netherforge.plugin.data.ScriptData
+import dev.netherforge.plugin.data.SessionTables
 import dev.netherforge.plugin.dialog.Dialogs
 import dev.netherforge.plugin.http.HttpClient
 import dev.netherforge.plugin.hud.Huds
@@ -67,6 +68,7 @@ import dev.netherforge.plugin.store.PackageSchemas
 import dev.netherforge.plugin.testing.ScriptTests
 import dev.netherforge.plugin.world.BlockData
 import dev.netherforge.plugin.world.BossBars
+import dev.netherforge.plugin.world.Daylight
 import dev.netherforge.plugin.world.Effects
 import dev.netherforge.plugin.world.EntityData
 import dev.netherforge.plugin.world.HiddenEntities
@@ -202,6 +204,9 @@ class ProjectSession internal constructor(
         ScriptData(runtime.store.tables, { scripts.host }, { log.warn(it) }, handover.data, { ticks })
     )
 
+    /** `player:session()`: each online player's table, never saved, dropped when they leave. */
+    val sessionTables = service(SessionTables { scripts.host })
+
     /** Server-owner settings: what each package declares, what the owner set, and who read them (`nf.config`). */
     val settings = service(
         OwnerSettings(
@@ -267,6 +272,9 @@ class ProjectSession internal constructor(
     /** The worlds the project made and may unload. */
     internal val managedWorlds =
         service(ManagedWorlds(platform, async, log, runtime.store.worlds, namespace, { source.rootFolder }) { snapshot })
+
+    /** Worlds' `dusk` and `dawn`: their clocks, looked at while a script listens. */
+    internal val daylight = service(Daylight(platform, scripts))
 
     /** The spawn rates `netherforge.json` sets for the worlds it names. */
     internal val spawnRates = service(WorldSpawnRates(platform) { snapshot.manifest?.worlds })

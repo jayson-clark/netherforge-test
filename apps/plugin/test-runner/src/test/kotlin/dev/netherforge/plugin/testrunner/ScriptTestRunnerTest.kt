@@ -233,6 +233,81 @@ class ScriptTestRunnerTest {
     }
 
     @Test
+    fun `click, release and input raise what the server would, with the held item filled in`() {
+        val (events, _) = run(
+            mapOf(
+                "items/wand/item.json" to """{ "kind": "minecraft:stick", "script": { "file": "script.lua" } }""",
+                "items/wand/script.lua" to """
+                    -- What the wand heard, where the test (another script) can read it.
+                    local function heard(player, what)
+                      local session = assert(player:session())
+                      session.wand = (session.wand and session.wand .. ", " or "") .. what
+                    end
+                    this:on("interact", function(event) heard(event.player, "interact " .. event.click) end)
+                    this:on("use", function(event)
+                      heard(event.player, "use " .. event.hand)
+                      if event.player:name() == "Steve" then event:cancel() end
+                    end)
+                """,
+                "tests/input_test.lua" to """
+                    local function listen()
+                      _G.heard = {}
+                      nf.on("player_interact", function(event)
+                        _G.heard[#_G.heard + 1] = "interact " .. event.click .. " " .. tostring(event.item and event.item.kind) .. " " .. tostring(event.block and event.block:kind()) .. " " .. tostring(event.face)
+                      end)
+                      nf.on("player_use_item", function(event) _G.heard[#_G.heard + 1] = "use " .. event.item.kind .. " " .. event.hand end)
+                      nf.on("player_stop_using_item", function(event) _G.heard[#_G.heard + 1] = "stop " .. event.item.kind .. " " .. event.ticks end)
+                      nf.on("player_input", function(event)
+                        _G.heard[#_G.heard + 1] = "input " .. tostring(event.forward) .. " " .. tostring(event.jump) .. " " .. tostring(event.sneak)
+                      end)
+                    end
+                    local function said() return table.concat(_G.heard, ", ") end
+
+                    nf.test.case("a right click with a project item goes through its script, then use", function()
+                      listen()
+                      local alex = nf.test.player("Alex")
+                      alex:set_held_item(nf.items.create("wand"))
+                      assert(nf.test.click(alex, "right"))
+                      assert(alex:session().wand == "interact right, use main_hand", tostring(alex:session().wand))
+                      assert(said() == "interact right minecraft:stick nil nil, use minecraft:stick main_hand", said())
+                      local steve = nf.test.player("Steve")
+                      steve:set_held_item(nf.items.create("wand"))
+                      assert(not nf.test.click(steve, "right"), "the wand's script cancels Steve's use")
+                      -- Cancelled, not stopped: nf still hears it, cancelled.
+                      assert(said() == "interact right minecraft:stick nil nil, use minecraft:stick main_hand, interact right minecraft:stick nil nil, use minecraft:stick main_hand", said())
+                    end)
+
+                    nf.test.case("a left click on a block, the off hand, an empty hand", function()
+                      listen()
+                      local alex = nf.test.player("Alex")
+                      local world = nf.worlds.default()
+                      world:set_block(vec3(0, 64, 0), "minecraft:stone")
+                      assert(nf.test.click(alex, "left", { block = assert(world:block(vec3(0, 64, 0))), face = "north" }))
+                      assert(nf.test.click(alex, "right", { hand = "off_hand" }))
+                      assert(said() == "interact left nil minecraft:stone north, interact right nil nil nil", said())
+                      local ok, err = pcall(nf.test.click, alex, "right", { face = "up" })
+                      assert(not ok and err:find("only with options.block"), tostring(err))
+                    end)
+
+                    nf.test.case("release lets go of what they hold, and input says which keys", function()
+                      listen()
+                      local alex = nf.test.player("Alex")
+                      alex:set_off_hand_item({ kind = "minecraft:bow" })
+                      nf.test.release(alex, 12)
+                      nf.test.input(alex, { forward = true, jump = true })
+                      nf.test.input(alex, {})
+                      assert(said() == "stop minecraft:bow 12, input true true false, input false false false", said())
+                      alex:set_off_hand_item(nil)
+                      local ok, err = pcall(nf.test.release, alex, 5)
+                      assert(not ok and err:find("nothing in their hands"), tostring(err))
+                    end)
+                """
+            )
+        )
+        expectStatuses(events, Status.PASSED, Status.PASSED, Status.PASSED)
+    }
+
+    @Test
     fun `a script of the project that errors while a test runs errors the test, at the script's line`() {
         val (events, _) = run(
             mapOf(

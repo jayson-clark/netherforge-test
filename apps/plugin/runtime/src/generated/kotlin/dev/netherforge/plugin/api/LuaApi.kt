@@ -860,6 +860,33 @@ interface NfTestApi {
      * simulated: read the result.
      */
     fun raise(caller: Caller, event: String, payload: LuaValue?): RaisedEvent
+
+    /**
+     * Clicks for a player as their client would, with what they hold filled in, and raises what the server
+     * would for it: `player_interact` (the held project item's `interact` first, and a click on one of the
+     * project's blocks reaches it), then, for a right click with an item that nothing cancelled,
+     * `player_use_item` (the project item's `use` first). A left click is the attack button at a block or
+     * the air: it doesn't break the block (`world:break_block` does that). A click on an entity is
+     * `nf.test.raise("player_interact_entity", ...)`. Nothing the game would then do (an item thrown, a
+     * door opened) is simulated: read what the handlers did.
+     */
+    fun click(caller: Caller, player: LuaHandle.Player, button: String, options: TestClickOptions?): Boolean
+
+    /**
+     * Lets go of the right button for a player who was using an item (drawing a bow, raising a shield,
+     * eating) before it finished, as their client would: raises `player_stop_using_item` with the item in
+     * their main hand, or in their off hand when the main one is empty. Like the server, it is heard by
+     * the player before `nf.on`. An error when both hands are empty.
+     */
+    fun release(caller: Caller, player: LuaHandle.Player, ticks: Long)
+
+    /**
+     * The movement keys a player holds now, as their client says when they change: raises `player_input`
+     * (the player's `input` first, then `nf.on`). A key left out is not held, so `nf.test.input(player,
+     * {})` lets go of every key. It only raises the event: the player doesn't move, sneak or sprint for
+     * it.
+     */
+    fun input(caller: Caller, player: LuaHandle.Player, held: TestInputKeys)
 }
 
 /**
@@ -2612,6 +2639,18 @@ interface PlayerApi {
      * and the log says so. It's also saved when they leave.
      */
     fun data(self: LuaHandle.Player): Any?
+
+    /**
+     * Their table for this time online: one per player, the same table every time, shared by every script,
+     * and never saved. It's made empty the first time a script asks after they join, kept while they stay
+     * (through a module's reload too: it's the player's, not the script's), and dropped once they've left,
+     * after their `player_quit` handlers, so the next time they join it's empty again. A whole-project
+     * reload (`netherforge.json` changing, or `/nf reload` with no files) empties it, as it does every
+     * script's state. Anything a script holds goes in it (handles, functions, a `Task`), so a module
+     * needn't keep a map keyed by player and clear it in `player_quit`. By convention each module keeps
+     * its own part of it under its name, as with `data()`. `nil` for a player who isn't online.
+     */
+    fun session(self: LuaHandle.Player): Any?
 }
 
 /**
@@ -2664,6 +2703,18 @@ interface WorldApi {
      * daylight cycle game rule).
      */
     fun setTimeOfDay(self: LuaHandle.World, ticks: Long): Boolean
+
+    /**
+     * Whether it is night here: the time of day is 13000 to 22999, from dusk to just before sunrise, as
+     * `/time set night` and a centity's `"night"` spawn time mean it. `false` once the world has gone.
+     */
+    fun isNight(self: LuaHandle.World): Boolean
+
+    /**
+     * Whether it is day here: the time of day is 23000 to 12999, the rest of `is_night`'s. `false` once
+     * the world has gone.
+     */
+    fun isDay(self: LuaHandle.World): Boolean
 
     /** How many whole days have gone by in this world, or `nil` once it has gone. */
     fun dayCount(self: LuaHandle.World): Long?

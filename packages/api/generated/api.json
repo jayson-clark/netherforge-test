@@ -438,6 +438,17 @@
           }
         },
         {
+          "name": "world_dusk",
+          "doc": "Night fell in a world: its time of day went from day (23000 to 12999) into night (13000 to 22999), by the clock or by `/time set`. After the world's own `dusk` handlers.",
+          "payload": "DaylightEvent",
+          "example": "nf.on(\"world_dusk\", function(event)\n  log(\"night falls over\", event.world:name())\nend)"
+        },
+        {
+          "name": "world_dawn",
+          "doc": "Day broke in a world: its time of day went from night (13000 to 22999) into day (23000 to 12999), by the clock or by `/time set`. After the world's own `dawn` handlers.",
+          "payload": "DaylightEvent"
+        },
+        {
           "name": "player_input",
           "doc": "A player's movement keys changed: what they hold down now, as their game sends it (forward, back, left, right, jump, sneak, sprint), whether or not they can move. For steering something they ride or controlling a centity. The server only watches input while something listens, so it costs nothing otherwise.",
           "payload": "PlayerInputEvent",
@@ -3475,7 +3486,7 @@
           "params": [
             {
               "name": "event",
-              "type": "\"tick\"|\"player_join\"|\"player_quit\"|\"player_chat\"|\"player_interact\"|\"player_interact_entity\"|\"player_move\"|\"player_teleport\"|\"player_change_world\"|\"player_death\"|\"player_respawn\"|\"player_drop_item\"|\"player_pickup_item\"|\"player_use_item\"|\"player_consume_item\"|\"player_swap_hands\"|\"player_sneak\"|\"player_command\"|\"block_break\"|\"block_place\"|\"entity_damage\"|\"entity_death\"|\"entity_spawn\"|\"player_input\"|\"player_change_slot\"|\"player_swing\"|\"player_sprint\"|\"player_fly\"|\"player_jump\"|\"player_change_game_mode\"|\"player_change_food\"|\"player_gain_experience\"|\"player_change_level\"|\"player_kick\"|\"player_complete_advancement\"|\"player_stop_using_item\"|\"player_break_item\"|\"entity_heal\"|\"projectile_launch\"|\"projectile_hit\"|\"entity_shoot_bow\"|\"entity_target\"|\"entity_explode\"|\"block_explode\"|\"entity_combust\"|\"entity_change_effect\"|\"block_ignite\"|\"block_burn\"|\"block_spread\"|\"block_flow\"|\"block_grow\"|\"block_fade\"|\"block_form\"|\"leaves_decay\"|\"piston_extend\"|\"piston_retract\"|\"block_redstone\"|\"sign_change\"|\"block_start_break\"|\"block_drop_item\"|\"weather_change\"|\"thunder_change\"|\"lightning_strike\"|\"chunk_load\"|\"chunk_generated\"|\"chunk_unload\"|\"world_load\"|\"world_unload\"|\"entity_mount\"|\"entity_dismount\"|\"vehicle_move\"|\"vehicle_damage\"|\"vehicle_destroy\"|\"player_open_inventory\"|\"player_close_inventory\"|\"player_craft\"|\"player_prepare_craft\"|\"player_prepare_anvil\"|\"player_prepare_smithing\"|\"player_prepare_grindstone\"|\"player_enchant_item\"|\"furnace_smelt\"|\"server_list_ping\"|\"centity_click\"|\"centity_natural_spawn\"|\"menu_open\"|\"menu_close\"|\"menu_click\"|\"dialog_press\"|\"setting_changed\"",
+              "type": "\"tick\"|\"player_join\"|\"player_quit\"|\"player_chat\"|\"player_interact\"|\"player_interact_entity\"|\"player_move\"|\"player_teleport\"|\"player_change_world\"|\"player_death\"|\"player_respawn\"|\"player_drop_item\"|\"player_pickup_item\"|\"player_use_item\"|\"player_consume_item\"|\"player_swap_hands\"|\"player_sneak\"|\"player_command\"|\"block_break\"|\"block_place\"|\"entity_damage\"|\"entity_death\"|\"entity_spawn\"|\"world_dusk\"|\"world_dawn\"|\"player_input\"|\"player_change_slot\"|\"player_swing\"|\"player_sprint\"|\"player_fly\"|\"player_jump\"|\"player_change_game_mode\"|\"player_change_food\"|\"player_gain_experience\"|\"player_change_level\"|\"player_kick\"|\"player_complete_advancement\"|\"player_stop_using_item\"|\"player_break_item\"|\"entity_heal\"|\"projectile_launch\"|\"projectile_hit\"|\"entity_shoot_bow\"|\"entity_target\"|\"entity_explode\"|\"block_explode\"|\"entity_combust\"|\"entity_change_effect\"|\"block_ignite\"|\"block_burn\"|\"block_spread\"|\"block_flow\"|\"block_grow\"|\"block_fade\"|\"block_form\"|\"leaves_decay\"|\"piston_extend\"|\"piston_retract\"|\"block_redstone\"|\"sign_change\"|\"block_start_break\"|\"block_drop_item\"|\"weather_change\"|\"thunder_change\"|\"lightning_strike\"|\"chunk_load\"|\"chunk_generated\"|\"chunk_unload\"|\"world_load\"|\"world_unload\"|\"entity_mount\"|\"entity_dismount\"|\"vehicle_move\"|\"vehicle_damage\"|\"vehicle_destroy\"|\"player_open_inventory\"|\"player_close_inventory\"|\"player_craft\"|\"player_prepare_craft\"|\"player_prepare_anvil\"|\"player_prepare_smithing\"|\"player_prepare_grindstone\"|\"player_enchant_item\"|\"furnace_smelt\"|\"server_list_ping\"|\"centity_click\"|\"centity_natural_spawn\"|\"menu_open\"|\"menu_close\"|\"menu_click\"|\"dialog_press\"|\"setting_changed\"",
               "doc": "The event's name, as `nf.on` takes it."
             },
             {
@@ -3492,6 +3503,71 @@
             }
           ],
           "example": "local alex = nf.test.player(\"Alex\")\nlocal result = nf.test.raise(\"player_chat\", { player = alex, message = \"hello\", format = \"<message>\" })\nassert(not result.cancelled)\nassert(result.event.message == \"hello\")"
+        },
+        {
+          "name": "click",
+          "doc": "Clicks for a player as their client would, with what they hold filled in, and raises what the server would for it: `player_interact` (the held project item's `interact` first, and a click on one of the project's blocks reaches it), then, for a right click with an item that nothing cancelled, `player_use_item` (the project item's `use` first). A left click is the attack button at a block or the air: it doesn't break the block (`world:break_block` does that). A click on an entity is `nf.test.raise(\"player_interact_entity\", ...)`. Nothing the game would then do (an item thrown, a door opened) is simulated: read what the handlers did.",
+          "params": [
+            {
+              "name": "player",
+              "type": "Player",
+              "doc": "Who clicks: one online, from `nf.test.player`."
+            },
+            {
+              "name": "button",
+              "type": "\"left\"|\"right\"",
+              "doc": "Which button: `\"right\"` uses what they hold."
+            },
+            {
+              "name": "options",
+              "type": "TestClickOptions",
+              "doc": "Which hand, and the block clicked. Leave it out for the main hand at the air.",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`true` when it went through, `false` when a handler cancelled it."
+            }
+          ],
+          "example": "local alex = nf.test.player(\"Alex\")\nalex:set_held_item({ kind = \"minecraft:ender_pearl\" })\nassert(nf.test.click(alex, \"right\"))"
+        },
+        {
+          "name": "release",
+          "doc": "Lets go of the right button for a player who was using an item (drawing a bow, raising a shield, eating) before it finished, as their client would: raises `player_stop_using_item` with the item in their main hand, or in their off hand when the main one is empty. Like the server, it is heard by the player before `nf.on`. An error when both hands are empty.",
+          "params": [
+            {
+              "name": "player",
+              "type": "Player",
+              "doc": "Who lets go: one online."
+            },
+            {
+              "name": "ticks",
+              "type": "integer",
+              "doc": "How long they held it, in ticks: a bow drawn for 20 is fully drawn. 0 or more."
+            }
+          ],
+          "returns": [],
+          "example": "local alex = nf.test.player(\"Alex\")\nalex:set_held_item({ kind = \"minecraft:bow\" })\nnf.test.click(alex, \"right\")\nnf.test.release(alex, 20)"
+        },
+        {
+          "name": "input",
+          "doc": "The movement keys a player holds now, as their client says when they change: raises `player_input` (the player's `input` first, then `nf.on`). A key left out is not held, so `nf.test.input(player, {})` lets go of every key. It only raises the event: the player doesn't move, sneak or sprint for it.",
+          "params": [
+            {
+              "name": "player",
+              "type": "Player",
+              "doc": "Whose keys: one online."
+            },
+            {
+              "name": "held",
+              "type": "TestInputKeys",
+              "doc": "The keys held down, each `true`."
+            }
+          ],
+          "returns": [],
+          "example": "local alex = nf.test.player(\"Alex\")\nnf.test.input(alex, { forward = true, jump = true })"
         }
       ]
     },
@@ -9011,6 +9087,17 @@
           "example": "local shop = player:data().shop or {}\nplayer:data().shop = shop\nshop.coins = (shop.coins or 0) + 5"
         },
         {
+          "name": "session",
+          "doc": "Their table for this time online: one per player, the same table every time, shared by every script, and never saved. It's made empty the first time a script asks after they join, kept while they stay (through a module's reload too: it's the player's, not the script's), and dropped once they've left, after their `player_quit` handlers, so the next time they join it's empty again. A whole-project reload (`netherforge.json` changing, or `/nf reload` with no files) empties it, as it does every script's state. Anything a script holds goes in it (handles, functions, a `Task`), so a module needn't keep a map keyed by player and clear it in `player_quit`. By convention each module keeps its own part of it under its name, as with `data()`. `nil` for a player who isn't online.",
+          "params": [],
+          "returns": [
+            {
+              "type": "table?"
+            }
+          ],
+          "example": "local session = assert(player:session())\nsession.combo = (session.combo or 0) + 1\nif session.combo >= 3 then\n  player:send_message(\"Combo!\")\nend"
+        },
+        {
           "name": "on",
           "impl": "lua",
           "doc": "Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.",
@@ -9185,6 +9272,19 @@
           "cancellable": true,
           "bubbles": true,
           "example": "nf.worlds.default():on(\"entity_spawn\", function(event)\n  if event.entity:kind() == \"minecraft:phantom\" then\n    event:cancel()\n  end\nend)"
+        },
+        {
+          "name": "dusk",
+          "doc": "Night fell here: the time of day went from day (23000 to 12999) into night (13000 to 22999), by the clock or by `/time set`. Heard before `nf.on(\"world_dusk\")`, with the same event, so `event:stop()` keeps it from there. The runtime looks at the clock every tick, and only while something listens; a jump from one night to the next (a whole day skipped) is no change, so nothing is heard.",
+          "payload": "DaylightEvent",
+          "bubbles": true,
+          "example": "nf.worlds.default():on(\"dusk\", function(event)\n  for _, player in ipairs(event.world:players()) do\n    player:send_message(\"<gray>Night falls.\")\n  end\nend)"
+        },
+        {
+          "name": "dawn",
+          "doc": "Day broke here: the time of day went from night (13000 to 22999) into day (23000 to 12999), by the clock or by `/time set` (sleeping through the night too). Heard before `nf.on(\"world_dawn\")`, with the same event, so `event:stop()` keeps it from there.",
+          "payload": "DaylightEvent",
+          "bubbles": true
         },
         {
           "name": "block_explode",
@@ -9436,6 +9536,26 @@
             {
               "type": "boolean",
               "doc": "`false` when the world has gone."
+            }
+          ]
+        },
+        {
+          "name": "is_night",
+          "doc": "Whether it is night here: the time of day is 13000 to 22999, from dusk to just before sunrise, as `/time set night` and a centity's `\"night\"` spawn time mean it. `false` once the world has gone.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "is_day",
+          "doc": "Whether it is day here: the time of day is 23000 to 12999, the rest of `is_night`'s. `false` once the world has gone.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean"
             }
           ]
         },
@@ -14623,6 +14743,65 @@
           ]
         },
         {
+          "name": "clamp_length",
+          "impl": "lua",
+          "doc": "The same direction, scaled down to at most `max_length` long: a copy if it is no longer than that already. Keeps a velocity under a top speed.",
+          "params": [
+            {
+              "name": "max_length",
+              "type": "number",
+              "doc": "The longest it may be, 0 or more."
+            }
+          ],
+          "returns": [
+            {
+              "type": "Vec3"
+            }
+          ],
+          "example": "local velocity = vec3(3, 0, 4):clamp_length(2.5)"
+        },
+        {
+          "name": "reflect",
+          "impl": "lua",
+          "doc": "Mirrored off a surface: `v - 2 * v:dot(n) * n` for the surface's unit normal `n`, so the part into the surface turns back out and the part along it carries on. How a shot bounces off a wall, with a sweep's `normal`.",
+          "params": [
+            {
+              "name": "normal",
+              "type": "Vec3",
+              "doc": "Which way the surface faces. Any length but zero: it is normalized first."
+            }
+          ],
+          "returns": [
+            {
+              "type": "Vec3"
+            }
+          ],
+          "example": "local bounced = vec3(1, -2, 0):reflect(vec3.up)"
+        },
+        {
+          "name": "closest_on_segment",
+          "impl": "lua",
+          "doc": "The point on the line segment from `start` to `finish` nearest to this point: its foot on the segment, or the nearer end when that falls past one. `start` when the two are the same point. With `distance`, how far a point is from a beam or a path.",
+          "params": [
+            {
+              "name": "start",
+              "type": "Vec3",
+              "doc": "One end."
+            },
+            {
+              "name": "finish",
+              "type": "Vec3",
+              "doc": "The other end."
+            }
+          ],
+          "returns": [
+            {
+              "type": "Vec3"
+            }
+          ],
+          "example": "local nearest = player:position():closest_on_segment(vec3(0, 64, 0), vec3(10, 64, 0))"
+        },
+        {
           "name": "flat",
           "impl": "lua",
           "doc": "A copy with `y` set to 0: the horizontal part.",
@@ -15081,6 +15260,25 @@
           "name": "previous",
           "type": "any",
           "doc": "What it was."
+        }
+      ],
+      "extends": "Event"
+    },
+    {
+      "name": "DaylightEvent",
+      "doc": "Night is falling or day is breaking in a world.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "world",
+          "type": "World",
+          "doc": "The world."
+        },
+        {
+          "name": "time_of_day",
+          "type": "integer",
+          "doc": "The world's time of day when it was seen, in ticks, as `world:time_of_day()` says: 13000 or a little past at dusk, 23000 or a little past at dawn, or wherever `/time set` put it."
         }
       ],
       "extends": "Event"
@@ -20062,6 +20260,72 @@
           "name": "scale",
           "type": "number?",
           "doc": "What the coordinates are multiplied by first: smaller is smoother and wider (0.05 changes over about 20 blocks). Default 1."
+        }
+      ]
+    },
+    {
+      "name": "TestClickOptions",
+      "doc": "How `nf.test.click` clicks. Every key is optional; a key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "hand",
+          "type": "\"main_hand\"|\"off_hand\"?",
+          "doc": "Which hand clicks, and whose item is used. Default `\"main_hand\"`."
+        },
+        {
+          "name": "block",
+          "type": "Block?",
+          "doc": "The block clicked, which must be in a loaded chunk. Default: none, a click at the air."
+        },
+        {
+          "name": "face",
+          "type": "\"up\"|\"down\"|\"north\"|\"south\"|\"east\"|\"west\"?",
+          "doc": "Which face of `block` was clicked. Default `\"up\"`; only with `block`."
+        }
+      ]
+    },
+    {
+      "name": "TestInputKeys",
+      "doc": "The keys `nf.test.input` holds down: each `true` is held, and one left out (or `false`) isn't. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "forward",
+          "type": "boolean?",
+          "doc": "Forward (W)."
+        },
+        {
+          "name": "backward",
+          "type": "boolean?",
+          "doc": "Back (S)."
+        },
+        {
+          "name": "left",
+          "type": "boolean?",
+          "doc": "Left (A)."
+        },
+        {
+          "name": "right",
+          "type": "boolean?",
+          "doc": "Right (D)."
+        },
+        {
+          "name": "jump",
+          "type": "boolean?",
+          "doc": "Jump (space)."
+        },
+        {
+          "name": "sneak",
+          "type": "boolean?",
+          "doc": "Sneak (shift)."
+        },
+        {
+          "name": "sprint",
+          "type": "boolean?",
+          "doc": "Sprint (control)."
         }
       ]
     },

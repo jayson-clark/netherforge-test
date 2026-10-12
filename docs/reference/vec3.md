@@ -142,6 +142,49 @@ The point `fraction` of the way to `other`: 0 is this vector, 1 is `other`.
 
 **Returns** `Vec3`
 
+### `a:clamp_length(max_length)`
+
+The same direction, scaled down to at most `max_length` long: a copy if it is no longer than that already. Keeps a velocity under a top speed.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `max_length` | `number` | The longest it may be, 0 or more. |
+
+**Returns** `Vec3`
+
+```lua
+local velocity = vec3(3, 0, 4):clamp_length(2.5)
+```
+
+### `a:reflect(normal)`
+
+Mirrored off a surface: `v - 2 * v:dot(n) * n` for the surface's unit normal `n`, so the part into the surface turns back out and the part along it carries on. How a shot bounces off a wall, with a sweep's `normal`.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `normal` | `Vec3` | Which way the surface faces. Any length but zero: it is normalized first. |
+
+**Returns** `Vec3`
+
+```lua
+local bounced = vec3(1, -2, 0):reflect(vec3.up)
+```
+
+### `a:closest_on_segment(start, finish)`
+
+The point on the line segment from `start` to `finish` nearest to this point: its foot on the segment, or the nearer end when that falls past one. `start` when the two are the same point. With `distance`, how far a point is from a beam or a path.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `start` | `Vec3` | One end. |
+| `finish` | `Vec3` | The other end. |
+
+**Returns** `Vec3`
+
+```lua
+local nearest = player:position():closest_on_segment(vec3(0, 64, 0), vec3(10, 64, 0))
+```
+
 ### `a:flat()`
 
 A copy with `y` set to 0: the horizontal part.

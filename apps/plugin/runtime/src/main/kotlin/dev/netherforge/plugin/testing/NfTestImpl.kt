@@ -1,5 +1,7 @@
 package dev.netherforge.plugin.testing
 
+import dev.netherforge.format.game.BlockState
+import dev.netherforge.plugin.api.BlockPosition
 import dev.netherforge.plugin.api.Caller
 import dev.netherforge.plugin.api.LuaEvent
 import dev.netherforge.plugin.api.LuaHandle
@@ -8,9 +10,16 @@ import dev.netherforge.plugin.api.NoPayload
 import dev.netherforge.plugin.api.Raisable
 import dev.netherforge.plugin.api.RaisableEvents
 import dev.netherforge.plugin.api.RaisedEvent
+import dev.netherforge.plugin.api.TestClickOptions
+import dev.netherforge.plugin.api.TestInputKeys
+import dev.netherforge.plugin.api.uuidOrNull
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaFunction
 import dev.netherforge.plugin.lua.LuaValue
+import dev.netherforge.plugin.platform.BlockRef
+import dev.netherforge.plugin.platform.ClickButton
+import dev.netherforge.plugin.platform.GameEvent
+import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.session.ProjectSession
 import dev.netherforge.plugin.session.handle
 
@@ -59,6 +68,60 @@ internal class NfTestImpl(private val session: ProjectSession) : NfTestApi {
         }
         val cancelled = session.scripts.emit(raisable.path(value), value)
         return RaisedEvent(cancelled, value)
+    }
+
+    override fun click(caller: Caller, player: LuaHandle.Player, button: String, options: TestClickOptions?): Boolean {
+        val ref = online(player)
+        val hand = options?.hand ?: "main_hand"
+        val block = options?.block?.let(::blockRef)
+        if (options?.face != null && block == null) throw LuaApiException("bad argument 'options.face' (only with options.block)")
+        val face = block?.let { options?.face ?: "up" }
+        val item = session.platform.worldEntities.equipment(ref.uuid, hand)
+        val events = session.runtime.events
+        val clicked = if (button == "left") ClickButton.LEFT else ClickButton.RIGHT
+        // As the server does: the click, then (a right one with an item, let through) the item's use.
+        if (events.playerInteract(ref, clicked, block, face, item, hand)) return false
+        if (clicked == ClickButton.RIGHT && item != null && events.playerUseItem(ref, item, hand)) return false
+        return true
+    }
+
+    override fun release(caller: Caller, player: LuaHandle.Player, ticks: Long) {
+        if (ticks < 0) throw LuaApiException("bad argument 'ticks' (0 or more expected, got $ticks)")
+        val ref = online(player)
+        val entities = session.platform.worldEntities
+        val item = entities.equipment(ref.uuid, "main_hand") ?: entities.equipment(ref.uuid, "off_hand")
+            ?: throw LuaApiException("${ref.name} has nothing in their hands to stop using")
+        session.runtime.events.game.playerStopUsingItem(GameEvent.PlayerStopUsingItem(ref, item, Math.toIntExact(ticks)))
+    }
+
+    override fun input(caller: Caller, player: LuaHandle.Player, held: TestInputKeys) {
+        val ref = online(player)
+        session.runtime.events.game.playerInput(
+            GameEvent.PlayerInput(
+                ref,
+                held.forward == true,
+                held.backward == true,
+                held.left == true,
+                held.right == true,
+                held.jump == true,
+                held.sneak == true,
+                held.sprint == true
+            )
+        )
+    }
+
+    /** [player] as the server knows them: one online, or an error (a test clicks only for someone there). */
+    private fun online(player: LuaHandle.Player): PlayerRef {
+        val uuid = player.uuidOrNull() ?: throw LuaApiException("bad argument 'player' (${player.id} isn't a player's id)")
+        return session.platform.players.get(uuid) ?: throw LuaApiException("bad argument 'player' (they aren't online)")
+    }
+
+    /** The block a click is on, as the server says it: what's there now, in a loaded chunk. */
+    private fun blockRef(block: LuaHandle.Block): BlockRef {
+        val at = BlockPosition.unpack(block.position)
+        val state = session.platform.blocks.get(block.world, at.x, at.y, at.z)?.state
+            ?: throw LuaApiException("bad argument 'options.block' (its chunk isn't loaded)")
+        return BlockRef(block.world, at.x, at.y, at.z, BlockState.parse(state)?.id ?: state, state)
     }
 
     private fun fields(raisable: Raisable<*>) = raisable.event.payload?.fields?.keys?.sorted()?.joinToString(", ").orEmpty()

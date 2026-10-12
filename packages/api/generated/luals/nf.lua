@@ -6,14 +6,14 @@
 -- project's modules: "Lua.runtime.path": ["modules/?.lua", "modules/?/init.lua"].
 -- The sandbox removes io, os, package, load, loadstring, dofile, loadfile, debug, collectgarbage, warn, java.
 
----@alias nf.Event "tick"|"unload"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed"|string
+---@alias nf.Event "tick"|"unload"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"world_dusk"|"world_dawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed"|string
 ---@alias Centity.Event "spawn"|"remove"|"tick"|"click"|"animation_start"|"animation_end"|"chunk_load"|"chunk_unload"|"hit"|"bounce"|"stick"|"flight_end"|"land"|"bump"|"touch"|"path_end"|string
 ---@alias Node.Event "click"|"collide"|"wake"|"sleep"
 ---@alias Entity.Event "damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
 ---@alias Living.Event "death"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
 ---@alias Mob.Event "path_end"|"target"|"death"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
 ---@alias Player.Event "join"|"quit"|"chat"|"interact"|"interact_entity"|"move"|"teleport"|"change_world"|"death"|"respawn"|"drop_item"|"pickup_item"|"use_item"|"consume_item"|"swap_hands"|"sneak"|"command"|"input"|"change_slot"|"swing"|"sprint"|"fly"|"jump"|"change_game_mode"|"change_food"|"gain_experience"|"change_level"|"kick"|"complete_advancement"|"stop_using_item"|"break_item"|"open_inventory"|"close_inventory"|"craft"|"prepare_craft"|"prepare_anvil"|"prepare_smithing"|"prepare_grindstone"|"enchant_item"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"hit"|"explode"|"combust"|"mount"|"dismount"
----@alias World.Event "block_break"|"block_place"|"entity_spawn"|"block_explode"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"furnace_smelt"
+---@alias World.Event "block_break"|"block_place"|"entity_spawn"|"dusk"|"dawn"|"block_explode"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"furnace_smelt"
 ---@alias ProjectBlock.Event "place"|"break"|"click"|"tick"
 ---@alias Menu.Event "open"|"close"|"click"|"drag"
 ---@alias Slot.Event "click"
@@ -107,6 +107,8 @@ nf = {}
 ---@overload fun(event: "entity_damage", handler: fun(event: EntityDamageEvent)): Subscription
 ---@overload fun(event: "entity_death", handler: fun(event: EntityDeathEvent)): Subscription
 ---@overload fun(event: "entity_spawn", handler: fun(event: EntitySpawnEvent)): Subscription
+---@overload fun(event: "world_dusk", handler: fun(event: DaylightEvent)): Subscription
+---@overload fun(event: "world_dawn", handler: fun(event: DaylightEvent)): Subscription
 ---@overload fun(event: "player_input", handler: fun(event: PlayerInputEvent)): Subscription
 ---@overload fun(event: "player_change_slot", handler: fun(event: PlayerChangeSlotEvent)): Subscription
 ---@overload fun(event: "player_swing", handler: fun(event: PlayerSwingEvent)): Subscription
@@ -204,6 +206,8 @@ function nf.on(event, handler, options) end
 ---@overload fun(event: "entity_damage", handler: fun(event: EntityDamageEvent)): Subscription
 ---@overload fun(event: "entity_death", handler: fun(event: EntityDeathEvent)): Subscription
 ---@overload fun(event: "entity_spawn", handler: fun(event: EntitySpawnEvent)): Subscription
+---@overload fun(event: "world_dusk", handler: fun(event: DaylightEvent)): Subscription
+---@overload fun(event: "world_dawn", handler: fun(event: DaylightEvent)): Subscription
 ---@overload fun(event: "player_input", handler: fun(event: PlayerInputEvent)): Subscription
 ---@overload fun(event: "player_change_slot", handler: fun(event: PlayerChangeSlotEvent)): Subscription
 ---@overload fun(event: "player_swing", handler: fun(event: PlayerSwingEvent)): Subscription
@@ -342,6 +346,8 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: nf, event: "entity_damage", filter?: fun(event: EntityDamageEvent): boolean): EntityDamageEvent
 ---@overload fun(handle: nf, event: "entity_death", filter?: fun(event: EntityDeathEvent): boolean): EntityDeathEvent
 ---@overload fun(handle: nf, event: "entity_spawn", filter?: fun(event: EntitySpawnEvent): boolean): EntitySpawnEvent
+---@overload fun(handle: nf, event: "world_dusk", filter?: fun(event: DaylightEvent): boolean): DaylightEvent
+---@overload fun(handle: nf, event: "world_dawn", filter?: fun(event: DaylightEvent): boolean): DaylightEvent
 ---@overload fun(handle: nf, event: "player_input", filter?: fun(event: PlayerInputEvent): boolean): PlayerInputEvent
 ---@overload fun(handle: nf, event: "player_change_slot", filter?: fun(event: PlayerChangeSlotEvent): boolean): PlayerChangeSlotEvent
 ---@overload fun(handle: nf, event: "player_swing", filter?: fun(event: PlayerSwingEvent): boolean): PlayerSwingEvent
@@ -485,6 +491,8 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: World, event: "block_break", filter?: fun(event: BlockBreakEvent): boolean): BlockBreakEvent
 ---@overload fun(handle: World, event: "block_place", filter?: fun(event: BlockPlaceEvent): boolean): BlockPlaceEvent
 ---@overload fun(handle: World, event: "entity_spawn", filter?: fun(event: EntitySpawnEvent): boolean): EntitySpawnEvent
+---@overload fun(handle: World, event: "dusk", filter?: fun(event: DaylightEvent): boolean): DaylightEvent
+---@overload fun(handle: World, event: "dawn", filter?: fun(event: DaylightEvent): boolean): DaylightEvent
 ---@overload fun(handle: World, event: "block_explode", filter?: fun(event: ExplodeEvent): boolean): ExplodeEvent
 ---@overload fun(handle: World, event: "block_ignite", filter?: fun(event: BlockIgniteEvent): boolean): BlockIgniteEvent
 ---@overload fun(handle: World, event: "block_burn", filter?: fun(event: BlockBurnEvent): boolean): BlockBurnEvent
@@ -1136,10 +1144,27 @@ function nf.test.advance(ticks) end
 function nf.test.player(name) end
 
 --- Raises a server-wide event as the server would, to the scripts: whoever listens to `event` with `nf.on` hears it, and, for an event the server raises about a player, an entity or a world, the handlers on that handle (`player:on("chat")`) hear it first, in the order the server uses. Each can `stop()` or `cancel()` it or set its writable fields. The few events the runtime stages itself (a death, damage, a click on a centity) reach `nf.on` handlers only. `payload` is what the event carries, the same table its handlers read (`event.player`, `event.message`): a field the event does not have is an error naming the fields. What the server would then do with a cancelled event is not simulated: read the result.
----@param event "tick"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed" The event's name, as `nf.on` takes it.
+---@param event "tick"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"world_dusk"|"world_dawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed" The event's name, as `nf.on` takes it.
 ---@param payload? table The payload: its fields by name. Leave it out for an event that has none.
 ---@return RaisedEvent # Whether a handler cancelled it, and the event as the handlers left it.
 function nf.test.raise(event, payload) end
+
+--- Clicks for a player as their client would, with what they hold filled in, and raises what the server would for it: `player_interact` (the held project item's `interact` first, and a click on one of the project's blocks reaches it), then, for a right click with an item that nothing cancelled, `player_use_item` (the project item's `use` first). A left click is the attack button at a block or the air: it doesn't break the block (`world:break_block` does that). A click on an entity is `nf.test.raise("player_interact_entity", ...)`. Nothing the game would then do (an item thrown, a door opened) is simulated: read what the handlers did.
+---@param player Player Who clicks: one online, from `nf.test.player`.
+---@param button "left"|"right" Which button: `"right"` uses what they hold.
+---@param options? TestClickOptions Which hand, and the block clicked. Leave it out for the main hand at the air.
+---@return boolean # `true` when it went through, `false` when a handler cancelled it.
+function nf.test.click(player, button, options) end
+
+--- Lets go of the right button for a player who was using an item (drawing a bow, raising a shield, eating) before it finished, as their client would: raises `player_stop_using_item` with the item in their main hand, or in their off hand when the main one is empty. Like the server, it is heard by the player before `nf.on`. An error when both hands are empty.
+---@param player Player Who lets go: one online.
+---@param ticks integer How long they held it, in ticks: a bow drawn for 20 is fully drawn. 0 or more.
+function nf.test.release(player, ticks) end
+
+--- The movement keys a player holds now, as their client says when they change: raises `player_input` (the player's `input` first, then `nf.on`). A key left out is not held, so `nf.test.input(player, {})` lets go of every key. It only raises the event: the player doesn't move, sneak or sprint for it.
+---@param player Player Whose keys: one online.
+---@param held TestInputKeys The keys held down, each `true`.
+function nf.test.input(player, held) end
 
 --- One spawned centity: `this` in the centity's script, and what `nf.centities.spawn`, `nf.centities.get` and `nf.centities.all` return. A handle stays valid as long as the instance exists; after it's removed its methods return `nil` or `false` rather than erroring.
 --- A `data()` table, `Item.data` and `nf.json` can keep one: it is saved as what identifies it and comes back as a handle.
@@ -2818,6 +2843,10 @@ function Player:set_view_distance(distance) end
 ---@return table
 function Player:data() end
 
+--- Their table for this time online: one per player, the same table every time, shared by every script, and never saved. It's made empty the first time a script asks after they join, kept while they stay (through a module's reload too: it's the player's, not the script's), and dropped once they've left, after their `player_quit` handlers, so the next time they join it's empty again. A whole-project reload (`netherforge.json` changing, or `/nf reload` with no files) empties it, as it does every script's state. Anything a script holds goes in it (handles, functions, a `Task`), so a module needn't keep a map keyed by player and clear it in `player_quit`. By convention each module keeps its own part of it under its name, as with `data()`. `nil` for a player who isn't online.
+---@return table?
+function Player:session() end
+
 --- Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
 ---@param event Player.Event The event's name.
 ---@param handler fun(event: Event) Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`.
@@ -2987,6 +3016,14 @@ function World:time_of_day() end
 ---@param ticks integer 0 sunrise, 6000 noon, 12000 sunset, 18000 midnight.
 ---@return boolean # `false` when the world has gone.
 function World:set_time_of_day(ticks) end
+
+--- Whether it is night here: the time of day is 13000 to 22999, from dusk to just before sunrise, as `/time set night` and a centity's `"night"` spawn time mean it. `false` once the world has gone.
+---@return boolean
+function World:is_night() end
+
+--- Whether it is day here: the time of day is 23000 to 12999, the rest of `is_night`'s. `false` once the world has gone.
+---@return boolean
+function World:is_day() end
 
 --- How many whole days have gone by in this world, or `nil` once it has gone.
 ---@return integer?
@@ -3263,6 +3300,8 @@ function World:place_structure(id, position, options) end
 ---@overload fun(self: World, event: "block_break", handler: fun(event: BlockBreakEvent)): Subscription
 ---@overload fun(self: World, event: "block_place", handler: fun(event: BlockPlaceEvent)): Subscription
 ---@overload fun(self: World, event: "entity_spawn", handler: fun(event: EntitySpawnEvent)): Subscription
+---@overload fun(self: World, event: "dusk", handler: fun(event: DaylightEvent)): Subscription
+---@overload fun(self: World, event: "dawn", handler: fun(event: DaylightEvent)): Subscription
 ---@overload fun(self: World, event: "block_explode", handler: fun(event: ExplodeEvent)): Subscription
 ---@overload fun(self: World, event: "block_ignite", handler: fun(event: BlockIgniteEvent)): Subscription
 ---@overload fun(self: World, event: "block_burn", handler: fun(event: BlockBurnEvent)): Subscription
@@ -3294,6 +3333,8 @@ function World:on(event, handler, options) end
 ---@overload fun(self: World, event: "block_break", handler: fun(event: BlockBreakEvent)): Subscription
 ---@overload fun(self: World, event: "block_place", handler: fun(event: BlockPlaceEvent)): Subscription
 ---@overload fun(self: World, event: "entity_spawn", handler: fun(event: EntitySpawnEvent)): Subscription
+---@overload fun(self: World, event: "dusk", handler: fun(event: DaylightEvent)): Subscription
+---@overload fun(self: World, event: "dawn", handler: fun(event: DaylightEvent)): Subscription
 ---@overload fun(self: World, event: "block_explode", handler: fun(event: ExplodeEvent)): Subscription
 ---@overload fun(self: World, event: "block_ignite", handler: fun(event: BlockIgniteEvent)): Subscription
 ---@overload fun(self: World, event: "block_burn", handler: fun(event: BlockBurnEvent)): Subscription
@@ -4587,6 +4628,22 @@ function Vec3:distance_squared(other) end
 ---@return Vec3
 function Vec3:lerp(other, fraction) end
 
+--- The same direction, scaled down to at most `max_length` long: a copy if it is no longer than that already. Keeps a velocity under a top speed.
+---@param max_length number The longest it may be, 0 or more.
+---@return Vec3
+function Vec3:clamp_length(max_length) end
+
+--- Mirrored off a surface: `v - 2 * v:dot(n) * n` for the surface's unit normal `n`, so the part into the surface turns back out and the part along it carries on. How a shot bounces off a wall, with a sweep's `normal`.
+---@param normal Vec3 Which way the surface faces. Any length but zero: it is normalized first.
+---@return Vec3
+function Vec3:reflect(normal) end
+
+--- The point on the line segment from `start` to `finish` nearest to this point: its foot on the segment, or the nearer end when that falls past one. `start` when the two are the same point. With `distance`, how far a point is from a beam or a path.
+---@param start Vec3 One end.
+---@param finish Vec3 The other end.
+---@return Vec3
+function Vec3:closest_on_segment(start, finish) end
+
 --- A copy with `y` set to 0: the horizontal part.
 ---@return Vec3
 function Vec3:flat() end
@@ -4693,6 +4750,11 @@ function Event:uncancel() end
 ---@field setting string The setting's name, as `netherforge.json` declares it.
 ---@field value any What it is now, as `nf.config` gives it.
 ---@field previous any What it was.
+
+--- Night is falling or day is breaking in a world.
+---@class DaylightEvent: Event
+---@field world World The world.
+---@field time_of_day integer The world's time of day when it was seen, in ticks, as `world:time_of_day()` says: 13000 or a little past at dusk, 23000 or a little past at dawn, or wherever `/time set` put it.
 
 --- A server tick went by.
 ---@class TickEvent: Event
@@ -5913,6 +5975,22 @@ function Event:uncancel() end
 ---@class NoiseOptions
 ---@field seed integer? Which noise: each seed is a different pattern. Default 0.
 ---@field scale number? What the coordinates are multiplied by first: smaller is smoother and wider (0.05 changes over about 20 blocks). Default 1.
+
+--- How `nf.test.click` clicks. Every key is optional; a key that isn't one of these is an error.
+---@class TestClickOptions
+---@field hand "main_hand"|"off_hand"? Which hand clicks, and whose item is used. Default `"main_hand"`.
+---@field block Block? The block clicked, which must be in a loaded chunk. Default: none, a click at the air.
+---@field face "up"|"down"|"north"|"south"|"east"|"west"? Which face of `block` was clicked. Default `"up"`; only with `block`.
+
+--- The keys `nf.test.input` holds down: each `true` is held, and one left out (or `false`) isn't. A key that isn't one of these is an error.
+---@class TestInputKeys
+---@field forward boolean? Forward (W).
+---@field backward boolean? Back (S).
+---@field left boolean? Left (A).
+---@field right boolean? Right (D).
+---@field jump boolean? Jump (space).
+---@field sneak boolean? Sneak (shift).
+---@field sprint boolean? Sprint (control).
 
 --- What `nf.test.raise` gives back.
 ---@class RaisedEvent

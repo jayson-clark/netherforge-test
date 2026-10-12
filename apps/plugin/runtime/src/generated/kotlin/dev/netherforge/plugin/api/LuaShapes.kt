@@ -56,6 +56,33 @@ data class SettingChangedEvent(val setting: String, val value: Any? = null, val 
     }
 }
 
+/** Night is falling or day is breaking in a world. */
+data class DaylightEvent(val world: LuaHandle.World, val timeOfDay: Long) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<DaylightEvent>("DaylightEvent") {
+        val worldCodec = LuaHandle.World.Codec
+        val timeOfDayCodec = LuaCodecs.INTEGER
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "world" to worldCodec,
+            "time_of_day" to timeOfDayCodec
+        )
+
+        override fun read(fields: ShapeReader) = DaylightEvent(
+            world = fields.field("world", worldCodec),
+            timeOfDay = fields.field("time_of_day", timeOfDayCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: DaylightEvent) {
+            fields.field("world", value.world, worldCodec)
+            fields.field("time_of_day", value.timeOfDay, timeOfDayCodec)
+        }
+    }
+}
+
 /** A server tick went by. */
 data class TickEvent(val tick: Long) : LuaEvent {
     override fun push(call: LuaCall) = Codec.push(call, this)
@@ -5880,6 +5907,87 @@ data class NoiseOptions(val seed: Long? = null, val scale: Double? = null) : Lua
         override fun write(fields: ShapeWriter, value: NoiseOptions) {
             fields.field("seed", value.seed, seedCodec)
             fields.field("scale", value.scale, scaleCodec)
+        }
+    }
+}
+
+/** How `nf.test.click` clicks. Every key is optional; a key that isn't one of these is an error. */
+data class TestClickOptions(val hand: String? = null, val block: LuaHandle.Block? = null, val face: String? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<TestClickOptions>("TestClickOptions") {
+        val handCodec = LuaOptional(LuaChoice(listOf("main_hand", "off_hand")))
+        val blockCodec = LuaOptional(LuaHandle.Block.Codec)
+        val faceCodec = LuaOptional(LuaChoice(listOf("up", "down", "north", "south", "east", "west")))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "hand" to handCodec,
+            "block" to blockCodec,
+            "face" to faceCodec
+        )
+
+        override fun read(fields: ShapeReader) = TestClickOptions(
+            hand = fields.field("hand", handCodec),
+            block = fields.field("block", blockCodec),
+            face = fields.field("face", faceCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: TestClickOptions) {
+            fields.field("hand", value.hand, handCodec)
+            fields.field("block", value.block, blockCodec)
+            fields.field("face", value.face, faceCodec)
+        }
+    }
+}
+
+/**
+ * The keys `nf.test.input` holds down: each `true` is held, and one left out (or `false`) isn't. A key
+ * that isn't one of these is an error.
+ */
+data class TestInputKeys(val forward: Boolean? = null, val backward: Boolean? = null, val left: Boolean? = null, val right: Boolean? = null, val jump: Boolean? = null, val sneak: Boolean? = null, val sprint: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<TestInputKeys>("TestInputKeys") {
+        val forwardCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val backwardCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val leftCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val rightCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val jumpCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val sneakCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val sprintCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "forward" to forwardCodec,
+            "backward" to backwardCodec,
+            "left" to leftCodec,
+            "right" to rightCodec,
+            "jump" to jumpCodec,
+            "sneak" to sneakCodec,
+            "sprint" to sprintCodec
+        )
+
+        override fun read(fields: ShapeReader) = TestInputKeys(
+            forward = fields.field("forward", forwardCodec),
+            backward = fields.field("backward", backwardCodec),
+            left = fields.field("left", leftCodec),
+            right = fields.field("right", rightCodec),
+            jump = fields.field("jump", jumpCodec),
+            sneak = fields.field("sneak", sneakCodec),
+            sprint = fields.field("sprint", sprintCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: TestInputKeys) {
+            fields.field("forward", value.forward, forwardCodec)
+            fields.field("backward", value.backward, backwardCodec)
+            fields.field("left", value.left, leftCodec)
+            fields.field("right", value.right, rightCodec)
+            fields.field("jump", value.jump, jumpCodec)
+            fields.field("sneak", value.sneak, sneakCodec)
+            fields.field("sprint", value.sprint, sprintCodec)
         }
     }
 }

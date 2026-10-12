@@ -598,6 +598,12 @@ internal class PlayerImpl(private val session: ProjectSession) : PlayerApi {
 
     override fun data(self: LuaHandle.Player): Any? = session.data.table(ScriptData.Owner.Player(anyone(self)), "player ${name(self)}")
 
+    // A table made before they left is still theirs until their `player_quit` handlers are done.
+    override fun session(self: LuaHandle.Player): Any? {
+        val uuid = self.uuidOrNull() ?: return null
+        return session.sessionTables.existing(uuid) ?: online(self)?.let(session.sessionTables::table)
+    }
+
     private companion object {
         /** Who a ban says made it when the script doesn't. */
         const val BAN_SOURCE = "NetherForge"

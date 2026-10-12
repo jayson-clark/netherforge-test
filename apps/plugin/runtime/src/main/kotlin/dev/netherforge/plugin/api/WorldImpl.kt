@@ -25,6 +25,7 @@ import dev.netherforge.plugin.platform.InventoryRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.SpawnSetup
 import dev.netherforge.plugin.session.ProjectSession
+import dev.netherforge.plugin.world.Daylight
 import dev.netherforge.plugin.world.Flood
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -118,6 +119,12 @@ internal class WorldImpl(private val session: ProjectSession) : WorldApi {
         val full = worlds.fullTime(world) ?: return false
         return worlds.setFullTime(world, Math.floorDiv(full, DAY) * DAY + Math.floorMod(ticks, DAY))
     }
+
+    override fun isNight(self: LuaHandle.World): Boolean =
+        live(self)?.let(worlds::fullTime)?.let { Daylight.isNight(Daylight.timeOfDay(it)) } ?: false
+
+    override fun isDay(self: LuaHandle.World): Boolean =
+        live(self)?.let(worlds::fullTime)?.let { !Daylight.isNight(Daylight.timeOfDay(it)) } ?: false
 
     override fun dayCount(self: LuaHandle.World): Long? = live(self)?.let(worlds::fullTime)?.let { Math.floorDiv(it, DAY) }
 

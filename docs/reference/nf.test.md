@@ -63,7 +63,7 @@ Raises a server-wide event as the server would, to the scripts: whoever listens 
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `event` | `"tick"\|"player_join"\|"player_quit"\|"player_chat"\|"player_interact"\|"player_interact_entity"\|"player_move"\|"player_teleport"\|"player_change_world"\|"player_death"\|"player_respawn"\|"player_drop_item"\|"player_pickup_item"\|"player_use_item"\|"player_consume_item"\|"player_swap_hands"\|"player_sneak"\|"player_command"\|"block_break"\|"block_place"\|"entity_damage"\|"entity_death"\|"entity_spawn"\|"player_input"\|"player_change_slot"\|"player_swing"\|"player_sprint"\|"player_fly"\|"player_jump"\|"player_change_game_mode"\|"player_change_food"\|"player_gain_experience"\|"player_change_level"\|"player_kick"\|"player_complete_advancement"\|"player_stop_using_item"\|"player_break_item"\|"entity_heal"\|"projectile_launch"\|"projectile_hit"\|"entity_shoot_bow"\|"entity_target"\|"entity_explode"\|"block_explode"\|"entity_combust"\|"entity_change_effect"\|"block_ignite"\|"block_burn"\|"block_spread"\|"block_flow"\|"block_grow"\|"block_fade"\|"block_form"\|"leaves_decay"\|"piston_extend"\|"piston_retract"\|"block_redstone"\|"sign_change"\|"block_start_break"\|"block_drop_item"\|"weather_change"\|"thunder_change"\|"lightning_strike"\|"chunk_load"\|"chunk_generated"\|"chunk_unload"\|"world_load"\|"world_unload"\|"entity_mount"\|"entity_dismount"\|"vehicle_move"\|"vehicle_damage"\|"vehicle_destroy"\|"player_open_inventory"\|"player_close_inventory"\|"player_craft"\|"player_prepare_craft"\|"player_prepare_anvil"\|"player_prepare_smithing"\|"player_prepare_grindstone"\|"player_enchant_item"\|"furnace_smelt"\|"server_list_ping"\|"centity_click"\|"centity_natural_spawn"\|"menu_open"\|"menu_close"\|"menu_click"\|"dialog_press"\|"setting_changed"` | The event's name, as `nf.on` takes it. |
+| `event` | `"tick"\|"player_join"\|"player_quit"\|"player_chat"\|"player_interact"\|"player_interact_entity"\|"player_move"\|"player_teleport"\|"player_change_world"\|"player_death"\|"player_respawn"\|"player_drop_item"\|"player_pickup_item"\|"player_use_item"\|"player_consume_item"\|"player_swap_hands"\|"player_sneak"\|"player_command"\|"block_break"\|"block_place"\|"entity_damage"\|"entity_death"\|"entity_spawn"\|"world_dusk"\|"world_dawn"\|"player_input"\|"player_change_slot"\|"player_swing"\|"player_sprint"\|"player_fly"\|"player_jump"\|"player_change_game_mode"\|"player_change_food"\|"player_gain_experience"\|"player_change_level"\|"player_kick"\|"player_complete_advancement"\|"player_stop_using_item"\|"player_break_item"\|"entity_heal"\|"projectile_launch"\|"projectile_hit"\|"entity_shoot_bow"\|"entity_target"\|"entity_explode"\|"block_explode"\|"entity_combust"\|"entity_change_effect"\|"block_ignite"\|"block_burn"\|"block_spread"\|"block_flow"\|"block_grow"\|"block_fade"\|"block_form"\|"leaves_decay"\|"piston_extend"\|"piston_retract"\|"block_redstone"\|"sign_change"\|"block_start_break"\|"block_drop_item"\|"weather_change"\|"thunder_change"\|"lightning_strike"\|"chunk_load"\|"chunk_generated"\|"chunk_unload"\|"world_load"\|"world_unload"\|"entity_mount"\|"entity_dismount"\|"vehicle_move"\|"vehicle_damage"\|"vehicle_destroy"\|"player_open_inventory"\|"player_close_inventory"\|"player_craft"\|"player_prepare_craft"\|"player_prepare_anvil"\|"player_prepare_smithing"\|"player_prepare_grindstone"\|"player_enchant_item"\|"furnace_smelt"\|"server_list_ping"\|"centity_click"\|"centity_natural_spawn"\|"menu_open"\|"menu_close"\|"menu_click"\|"dialog_press"\|"setting_changed"` | The event's name, as `nf.on` takes it. |
 | `payload` (optional) | `table` | The payload: its fields by name. Leave it out for an event that has none. |
 
 **Returns** `RaisedEvent`: Whether a handler cancelled it, and the event as the handlers left it.
@@ -73,4 +73,52 @@ local alex = nf.test.player("Alex")
 local result = nf.test.raise("player_chat", { player = alex, message = "hello", format = "<message>" })
 assert(not result.cancelled)
 assert(result.event.message == "hello")
+```
+
+## `nf.test.click(player, button, options?)`
+
+Clicks for a player as their client would, with what they hold filled in, and raises what the server would for it: `player_interact` (the held project item's `interact` first, and a click on one of the project's blocks reaches it), then, for a right click with an item that nothing cancelled, `player_use_item` (the project item's `use` first). A left click is the attack button at a block or the air: it doesn't break the block (`world:break_block` does that). A click on an entity is `nf.test.raise("player_interact_entity", ...)`. Nothing the game would then do (an item thrown, a door opened) is simulated: read what the handlers did.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `player` | `Player` | Who clicks: one online, from `nf.test.player`. |
+| `button` | `"left"\|"right"` | Which button: `"right"` uses what they hold. |
+| `options` (optional) | `TestClickOptions` | Which hand, and the block clicked. Leave it out for the main hand at the air. |
+
+**Returns** `boolean`: `true` when it went through, `false` when a handler cancelled it.
+
+```lua
+local alex = nf.test.player("Alex")
+alex:set_held_item({ kind = "minecraft:ender_pearl" })
+assert(nf.test.click(alex, "right"))
+```
+
+## `nf.test.release(player, ticks)`
+
+Lets go of the right button for a player who was using an item (drawing a bow, raising a shield, eating) before it finished, as their client would: raises `player_stop_using_item` with the item in their main hand, or in their off hand when the main one is empty. Like the server, it is heard by the player before `nf.on`. An error when both hands are empty.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `player` | `Player` | Who lets go: one online. |
+| `ticks` | `integer` | How long they held it, in ticks: a bow drawn for 20 is fully drawn. 0 or more. |
+
+```lua
+local alex = nf.test.player("Alex")
+alex:set_held_item({ kind = "minecraft:bow" })
+nf.test.click(alex, "right")
+nf.test.release(alex, 20)
+```
+
+## `nf.test.input(player, held)`
+
+The movement keys a player holds now, as their client says when they change: raises `player_input` (the player's `input` first, then `nf.on`). A key left out is not held, so `nf.test.input(player, {})` lets go of every key. It only raises the event: the player doesn't move, sneak or sprint for it.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `player` | `Player` | Whose keys: one online. |
+| `held` | `TestInputKeys` | The keys held down, each `true`. |
+
+```lua
+local alex = nf.test.player("Alex")
+nf.test.input(alex, { forward = true, jump = true })
 ```

@@ -3011,6 +3011,14 @@ function Player.data(self)
   return prim["Player.data"](self_key)
 end
 
+function Player.session(self)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.session"](self_key)
+end
+
 function Player.on(self, event, handler, options)
   if ids[self] == nil or not Player_is[class_of(self)] then
     self_of(self, "Player")
@@ -3146,6 +3154,22 @@ function World.set_time_of_day(self, ticks)
     self_key = self_of(self, "World")
   end
   return prim["World.set_time_of_day"](self_key, ticks)
+end
+
+function World.is_night(self)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  return prim["World.is_night"](self_key)
+end
+
+function World.is_day(self)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  return prim["World.is_day"](self_key)
 end
 
 function World.day_count(self)
@@ -6043,6 +6067,39 @@ function values.Vec3.lerp(self, other, fraction)
   return value_body.Vec3.lerp(self, other, fraction)
 end
 
+function values.Vec3.clamp_length(self, max_length)
+  if genuine_mt(self) ~= Vec3_mt then
+    value_self(self, "Vec3")
+  end
+  if type_of(max_length) ~= "number" then
+    want(max_length, "number", "max_length")
+  end
+  return value_body.Vec3.clamp_length(self, max_length)
+end
+
+function values.Vec3.reflect(self, normal)
+  if genuine_mt(self) ~= Vec3_mt then
+    value_self(self, "Vec3")
+  end
+  if genuine_mt(normal) ~= Vec3_mt then
+    vector_arg(normal, "normal", 2)
+  end
+  return value_body.Vec3.reflect(self, normal)
+end
+
+function values.Vec3.closest_on_segment(self, start, finish)
+  if genuine_mt(self) ~= Vec3_mt then
+    value_self(self, "Vec3")
+  end
+  if genuine_mt(start) ~= Vec3_mt then
+    vector_arg(start, "start", 2)
+  end
+  if genuine_mt(finish) ~= Vec3_mt then
+    vector_arg(finish, "finish", 2)
+  end
+  return value_body.Vec3.closest_on_segment(self, start, finish)
+end
+
 function values.Vec3.flat(self)
   if genuine_mt(self) ~= Vec3_mt then
     value_self(self, "Vec3")
@@ -6727,6 +6784,18 @@ namespaces["nf.test"] = function(scope, ns)
 
   function ns.raise(event, payload)
     return prim["nf.test.raise"](scope, event, payload)
+  end
+
+  function ns.click(player, button, options)
+    return prim["nf.test.click"](scope, player, button, options)
+  end
+
+  function ns.release(player, ticks)
+    prim["nf.test.release"](scope, player, ticks)
+  end
+
+  function ns.input(player, held)
+    prim["nf.test.input"](scope, player, held)
   end
 end
 
