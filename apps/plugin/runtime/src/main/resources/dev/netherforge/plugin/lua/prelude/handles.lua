@@ -18,7 +18,8 @@
 local input = require("input")
 
 local prim = input.prim
-local error, tostring, setmetatable, getmetatable = error, tostring, setmetatable, getmetatable
+local error, tostring, setmetatable, getmetatable, pairs =
+  error, tostring, setmetatable, getmetatable, pairs
 local bad = require("args").bad
 
 -- Every handle's key in the runtime's handle table. Held weakly.
@@ -74,6 +75,20 @@ local new = {}
 ---@type table<string, fun(handle: table): ...>
 local keys = {}
 
+-- Each class's set of the metatable names its handles may have: the class and
+-- every class below it (`Entity`'s has `Mob`), so the bindings' inline `:`
+-- check is one lookup rather than a walk up the chain (`is_a`). A class's set
+-- is made when first asked for, so the bindings can hold it before the classes
+-- are all declared; `fill_accepts` fills them once they are.
+---@type table<string, table<string, true>>
+local accepts = setmetatable({}, {
+  __index = function(sets, class_name)
+    local set = {}
+    sets[class_name] = set
+    return set
+  end,
+})
+
 local cache = setmetatable({}, { __mode = "v" }) -- key -> handle
 local released = {} -- keys whose tables were collected
 local metatables = {} -- class -> its handles' metatable, for Kotlin
@@ -111,6 +126,19 @@ local function class(name, parent)
   return methods
 end
 
+-- Puts each class in its own set and in those of every class above it. From
+-- then on a name that isn't a class has no set (nil), rather than a new one.
+local function fill_accepts()
+  for class_name in pairs(classes) do
+    local name = class_name
+    while name ~= nil do
+      accepts[name][class_name] = true
+      name = parents[name]
+    end
+  end
+  setmetatable(accepts, nil)
+end
+
 -- A method's `self`: its key in the handle table, if it's one of class_name's.
 -- Called straight from the method, so the error lands on the method's caller.
 ---@param self any
@@ -135,15 +163,18 @@ end
 -- Whether `value` is a handle of `class_name`, asking the runtime what it is
 -- now when its class is one above `class_name` (an Entity that may be a Mob).
 local function is_kind(value, class_name)
-  if is_a(value, class_name) then
+  if ids[value] == nil then
+    return false
+  end
+  local accepted = accepts[class_name]
+  local name = getmetatable(value)
+  if accepted[name] then
     return true
   end
-  local name = parents[class_name]
-  while name ~= nil do
-    if getmetatable(value) == name then
-      return prim["handles.refine"](value) and is_a(value, class_name)
-    end
-    name = parents[name]
+  -- One above it: `class_name` is in its set.
+  local above = accepts[name]
+  if above ~= nil and above[class_name] then
+    return prim["handles.refine"](value) and accepted[getmetatable(value)] == true
   end
   return false
 end
@@ -175,6 +206,8 @@ return {
   metatables = metatables,
   classes = classes,
   class = class,
+  accepts = accepts,
+  fill_accepts = fill_accepts,
   self_of = self_of,
   want_handle = want_handle,
   is_kind = is_kind,

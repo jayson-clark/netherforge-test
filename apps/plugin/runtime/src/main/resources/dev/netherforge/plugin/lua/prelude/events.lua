@@ -68,24 +68,40 @@ local function event_names(class_name)
   return concat(names, ", ")
 end
 
+-- A target's handlers for one event are a list, oldest first, that also
+-- keeps what telling Kotlin needs, so neither subscribing nor cancelling walks
+-- it: `live`, the active ones; `unrated`, the active ones without a rate;
+-- `dead`, cancelled ones still in it (skipped, and dropped once they're half
+-- of it); `rates`, every active rated one's "rate:phase" (nil when that must
+-- be worked out again). A handler subscribing among a thousand others costs
+-- what the first did.
+
+---@class nf.HandlerList: table
+---@field live integer
+---@field unrated integer
+---@field dead integer
+---@field rates string?
+
 -- Tells Kotlin how many handlers `event` has on `key`, and, when every one of
 -- them has a rate, each one's "rate:phase", so it raises only the ticks one
 -- is due on (nil: one runs every time).
 local function notify(key, event)
   local list = listeners[key] and listeners[key][event]
   local rates = nil
-  if list ~= nil then
-    local parts = {}
-    for _, sub in ipairs(list) do
-      if sub.every == nil then
-        parts = nil
-        break
+  if list ~= nil and list.unrated == 0 then
+    rates = list.rates
+    if rates == nil then
+      local parts = {}
+      for _, sub in ipairs(list) do
+        if sub.active then
+          parts[#parts + 1] = sub.every .. ":" .. sub.phase
+        end
       end
-      parts[#parts + 1] = sub.every .. ":" .. sub.phase
+      rates = concat(parts, " ")
+      list.rates = rates
     end
-    rates = parts and concat(parts, " ")
   end
-  prim["events.listening"](key ~= NF and key or nil, event, list and #list or 0, rates)
+  prim["events.listening"](key ~= NF and key or nil, event, list and list.live or 0, rates)
 end
 
 local function unsubscribe(sub)
@@ -101,15 +117,28 @@ local function unsubscribe(sub)
   local by_event = listeners[sub.key]
   local list = by_event and by_event[sub.event]
   if list ~= nil then
-    local kept = {}
-    for _, other in ipairs(list) do
-      if other ~= sub then
-        kept[#kept + 1] = other
-      end
+    list.live = list.live - 1
+    if sub.every == nil then
+      list.unrated = list.unrated - 1
+    else
+      list.rates = nil
     end
-    by_event[sub.event] = #kept > 0 and kept or nil
-    if next(by_event) == nil then
-      listeners[sub.key] = nil
+    list.dead = list.dead + 1
+    if list.live == 0 then
+      by_event[sub.event] = nil
+      if next(by_event) == nil then
+        listeners[sub.key] = nil
+      end
+    elseif list.dead > list.live then
+      -- Half of it cancelled: a new list of the live ones. (Delivery walks a
+      -- snapshot, so one running now isn't disturbed.)
+      local kept = { live = list.live, unrated = list.unrated, dead = 0, rates = list.rates }
+      for _, other in ipairs(list) do
+        if other.active then
+          kept[#kept + 1] = other
+        end
+      end
+      by_event[sub.event] = kept
     end
   end
   notify(sub.key, sub.event)
@@ -189,10 +218,17 @@ local function subscribe(scope, target, event, handler, options, once, level)
   end
   local list = by_event[event]
   if list == nil then
-    list = {}
+    list = { live = 0, unrated = 0, dead = 0, rates = "" }
     by_event[event] = list
   end
   list[#list + 1] = sub
+  list.live = list.live + 1
+  if every == nil then
+    list.unrated = list.unrated + 1
+  elseif list.rates ~= nil then
+    local rate = every .. ":" .. sub.phase
+    list.rates = list.rates == "" and rate or list.rates .. " " .. rate
+  end
   local owned = scope_subscriptions[scope]
   if owned == nil then
     owned = {}
@@ -400,9 +436,14 @@ local function emit_custom(target, event, payload, level)
       level
     )
   end
+  local key = key_of(target)
+  -- Nobody listening: nothing to build an event for, and nothing can cancel it.
+  if listeners[key] == nil or listeners[key][event] == nil then
+    return false
+  end
   local ev, state = new_event(event, payload or {}, true, true)
   state.current = target
-  deliver(key_of(target), event, ev, state)
+  deliver(key, event, ev, state)
   return state.cancelled
 end
 -- ---- the hand-written functions

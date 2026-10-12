@@ -514,6 +514,10 @@ end
 
 local function invoke(budget, scope, fn, ...)
   local outer = frame
+  -- The caller is charged what the call ran, not the prelude's work around
+  -- it (making and closing this frame): a script whose `emit` reaches ten
+  -- handlers pays for their code, not ten frames'.
+  local outer_left = outer and outer.left
   local f = guard.frame(budget, scope, outer)
   f.kind, f.what = timing.next_kind, timing.next_what
   timing.next_kind, timing.next_what = nil, nil
@@ -525,6 +529,7 @@ local function invoke(budget, scope, fn, ...)
   frame = outer
   if outer ~= nil then
     -- Charged to the caller, whose next instruction stops if that was too much.
+    outer.left = outer_left
     guard.charge(outer, budget - math.max(f.left, 0), now)
   end
   return finish(f, ok, value)

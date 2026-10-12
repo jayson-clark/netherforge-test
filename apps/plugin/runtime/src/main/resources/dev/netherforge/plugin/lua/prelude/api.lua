@@ -18,12 +18,14 @@ local handwritten = require("handwritten")
 
 local prim = input.prim
 local raw = std.raw
-local pairs, ipairs, error, getmetatable = pairs, ipairs, error, getmetatable
+local pairs, ipairs, error, getmetatable, setmetatable, type =
+  pairs, ipairs, error, getmetatable, setmetatable, type
 local classes, parents, metatables = handles.classes, handles.parents, handles.metatables
 local gated, needs_version, gate_functions = gates.gated, gates.needs_version, gates.gate_functions
 
 ---@class nf.Bindings
----@field fill_nf fun(scope: integer, nf: table) Fills a scope's `nf` and the namespaces under it.
+---@field fill_nf fun(scope: integer, nf: table) Fills a scope's `nf` with its own functions.
+---@field namespaces table<string, fun(scope: integer, ns: table)> Fills a namespace's table (`nf.server`), by path.
 ---@field vec3 table<string, function> The functions on the `vec3` global (`vec3.from_yaw_pitch`).
 
 ---@type nf.Bindings
@@ -46,12 +48,23 @@ local generated = input.bindings({
   value_self = values.value_self,
   want_vec3 = values.want_vec3,
   want_vec3_opt = values.want_vec3_opt,
-  vec3_of = values.vec3_of,
+  -- What the inline checks read.
+  ids = handles.ids,
+  accepts = handles.accepts,
+  type_of = type,
+  class_of = getmetatable,
+  number_kind = std.math_type,
+  genuine_mt = std.raw_getmetatable,
+  with_mt = setmetatable,
+  Vec3_mt = values.Vec3_mt,
+  Location_mt = values.Location_mt,
   -- What the wrappers call: the hand-written bodies, and the tables a value's methods go in.
   hand = handwritten,
   value_body = values.body,
   values = { Vec3 = values.Vec3, Location = values.Location },
 })
+
+handles.fill_accepts()
 
 for class_name, methods in pairs(classes) do
   gate_functions(methods, class_name, ":")

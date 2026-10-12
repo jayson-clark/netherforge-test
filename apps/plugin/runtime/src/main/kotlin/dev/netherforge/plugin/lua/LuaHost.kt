@@ -227,6 +227,13 @@ class LuaHost(
     /** The prelude's `spelled`: table → the package (namespace) Kotlin spelled it for. */
     private val spelledRef: Int
 
+    /** The genuine metatables of a `Vec3` and a `Location`: Kotlin builds the values it hands over ([pushVec3]). */
+    private val vec3MtRef: Int
+    private val locationMtRef: Int
+
+    /** The handle classes a saved table may keep, each with its tag (`Entity` → `entity`): the JSON codec's `saved_handles`. */
+    private val savedHandles: Map<String, String>
+
     /** Each handle class's metatable, by name (`host.metatables`), each kept on first use. */
     private val metatablesRef: Int
     private val metatables = HashMap<String, Int>()
@@ -358,6 +365,19 @@ class LuaHost(
         metatablesRef = main.ref()
         main.getField(-1, "spelled")
         spelledRef = main.ref()
+        main.getField(-1, "vec3_mt")
+        vec3MtRef = main.ref()
+        main.getField(-1, "location_mt")
+        locationMtRef = main.ref()
+        main.getField(-1, "saved_handles")
+        savedHandles = buildMap {
+            main.pushNil()
+            while (main.next(-2) != 0) {
+                put(main.toString(-2)!!, main.toString(-1)!!)
+                main.pop(1)
+            }
+        }
+        main.pop(1)
         hostRef = main.ref()
     }
 
@@ -1050,7 +1070,15 @@ class LuaHost(
      */
     fun json(lua: Lua, index: Int, root: String, skip: Set<String> = emptySet()): JsonElement {
         owned("json")
-        val encoded = encodeData(lua, index, root, "written as JSON", skip)
+        // Plain data is read here, as the codec would write it, costing the script nothing ([plainJson]).
+        val at = if (index < 0) lua.top + index + 1 else index
+        val plain = if (lua.type(at) == Lua.LuaType.TABLE) {
+            plainTable(lua, at, 0, exact = true, skip = skip)
+        } else {
+            plainJson(lua, at, 0, exact = true)
+        }
+        if (plain != null) return plain
+        val encoded = encodeData(lua, at, root, "written as JSON", skip)
         encoded.problems.firstOrNull()?.let { throw LuaApiException(it) }
         return Json.parseToJsonElement(requireNotNull(encoded.text))
     }
@@ -1067,7 +1095,7 @@ class LuaHost(
     fun fieldsJson(lua: Lua, index: Int, root: String, kept: String): JsonElement {
         owned("fieldsJson")
         val at = if (index < 0) lua.top + index + 1 else index
-        val fields = plainObject(lua, at, 0, exact = false, skip = kept) ?: return saved(lua, at, root)
+        val fields = plainObject(lua, at, 0, exact = false, skip = setOf(kept)) ?: return saved(lua, at, root)
         lua.getField(at, kept)
         try {
             if (lua.isNil(-1)) return JsonObject(fields)
@@ -1092,36 +1120,40 @@ class LuaHost(
      * with "$", of plain data in turn. Null for anything else, which only the
      * codec writes (or reports) right.
      *
-     * [exact] is for JSON kept as text, which must be the codec's very text:
-     * its objects' keys in the codec's order (Lua's own `<`, which is the
-     * C library's collation, asked of Lua) and ASCII (so they're the same
-     * string back in Lua to be compared), and no floats (whose spelling is
-     * the codec's `%.14g`, left to it).
+     * [exact] is for JSON whose text is seen, which must be the codec's
+     * very text: its objects' keys in the codec's order (Lua's own `<`, which
+     * is the C library's collation, asked of Lua) and ASCII (so they're the
+     * same string back in Lua to be compared), its floats spelled as the
+     * codec spells them ([CodecNumbers]).
      */
     private fun plainJson(lua: Lua, index: Int, depth: Int, exact: Boolean): JsonElement? = when (lua.type(index)) {
         Lua.LuaType.STRING -> JsonPrimitive(lua.toString(index))
         Lua.LuaType.BOOLEAN -> JsonPrimitive(lua.toBoolean(index))
         Lua.LuaType.NUMBER -> when {
             lua.isInteger(index) -> JsonPrimitive(lua.toInteger(index))
-            exact -> null
+            // Parsed from the codec's text, so its content is that text.
+            exact -> CodecNumbers.json(lua.toNumber(index))?.let(Json::parseToJsonElement)
             else -> lua.toNumber(index).takeIf { it.isFinite() }?.let { JsonPrimitive(it) }
         }
         Lua.LuaType.TABLE -> plainTable(lua, if (index < 0) lua.top + index + 1 else index, depth, exact)
         else -> null
     }
 
-    private fun plainTable(lua: Lua, at: Int, depth: Int, exact: Boolean): JsonElement? {
+    /** A table of plain data ([plainJson]), its keys in [skip] left out when it's an object; null when it isn't one. */
+    private fun plainTable(lua: Lua, at: Int, depth: Int, exact: Boolean, skip: Set<String> = emptySet()): JsonElement? {
         if (depth >= MAX_PLAIN_DEPTH) return null
         if (lua.getMetatable(at) != 0) {
             lua.pop(1)
-            return null
+            return if (exact && skip.isEmpty()) typedJson(lua, at) else null
         }
         // A list has a first item; a table without one is an object (the empty table too, as the codec has it).
         lua.push(1L)
         lua.rawGet(at)
         val list = !lua.isNil(-1)
         lua.pop(1)
-        if (!list) return plainObject(lua, at, depth, exact, skip = null)?.let(::JsonObject)
+        if (!list) return plainObject(lua, at, depth, exact, skip)?.let(::JsonObject)
+        // The codec leaves [skip]'s keys out of whatever table it's given; a list with them is its to write.
+        if (skip.isNotEmpty()) return null
         val items = HashMap<Long, JsonElement>()
         lua.checkStack(3)
         lua.pushNil()
@@ -1139,8 +1171,69 @@ class LuaHost(
         return JsonArray(List(items.size) { items[it + 1L] ?: return null })
     }
 
-    /** The table at [at] as an object of plain data ([plainJson]), its key [skip] left out; null when it isn't one. */
-    private fun plainObject(lua: Lua, at: Int, depth: Int, exact: Boolean, skip: String?): Map<String, JsonElement>? {
+    /**
+     * A typed value as the JSON codec tags it: `{"$vec3":[x,y,z]}`,
+     * `{"$location":[world,x,y,z,yaw,pitch]}` (the world by its name, a facing
+     * left out as null), and a handle whose class (or one up its chain) a saved
+     * table may keep as `{"$<tag>":[key]}`. Null for anything else (a handle
+     * nothing may keep, a vector holding NaN): the codec says what's wrong.
+     */
+    private fun typedJson(lua: Lua, at: Int): JsonElement? {
+        fun numbers(table: Int, count: Int, from: Int = 1): List<JsonElement>? = (from until from + count).map { i ->
+            lua.rawGetI(table, i)
+            val number = when {
+                lua.isNil(-1) -> JsonNull
+                lua.isInteger(-1) -> JsonPrimitive(lua.toInteger(-1))
+                else -> CodecNumbers.json(lua.toNumber(-1))?.let(Json::parseToJsonElement)
+            }
+            lua.pop(1)
+            number ?: return null
+        }
+
+        fun tagged(tag: String, parts: List<JsonElement>) = JsonObject(mapOf(tag to JsonArray(parts)))
+
+        // A handle the runtime no longer knows is the codec's to report.
+        fun keyOf(index: Int): List<Any>? = try {
+            handleAt(lua, index).keyValues
+        } catch (_: LuaApiException) {
+            null
+        }
+        return when (val kind = kindAt(lua, at)) {
+            null -> null
+            "Vec3" -> numbers(at, 3)?.let { tagged("\$vec3", it) }
+            "Location" -> {
+                lua.checkStack(3)
+                lua.rawGetI(at, 1)
+                val world = keyOf(-1)?.first()?.toString()
+                lua.pop(1)
+                lua.rawGetI(at, 2)
+                val position = numbers(lua.top, 3)
+                lua.pop(1)
+                val facing = numbers(at, 2, from = 3)
+                if (world == null || position == null || facing == null) {
+                    null
+                } else {
+                    tagged("\$location", listOf(JsonPrimitive(world)) + position + facing)
+                }
+            }
+            else -> {
+                var name: String? = kind
+                while (name != null && name !in savedHandles) name = LuaHandle.PARENTS[name]
+                val tag = name?.let(savedHandles::get) ?: return null
+                val key = (keyOf(at) ?: return null).map { part ->
+                    when (part) {
+                        is String -> JsonPrimitive(part)
+                        is Long -> JsonPrimitive(part)
+                        else -> return null
+                    }
+                }
+                tagged("\$$tag", key)
+            }
+        }
+    }
+
+    /** The table at [at] as an object of plain data ([plainJson]), its keys in [skip] left out; null when it isn't one. */
+    private fun plainObject(lua: Lua, at: Int, depth: Int, exact: Boolean, skip: Set<String>): Map<String, JsonElement>? {
         if (lua.type(at) != Lua.LuaType.TABLE) return null
         if (depth == 0 && lua.getMetatable(at) != 0) {
             lua.pop(1)
@@ -1151,7 +1244,7 @@ class LuaHost(
         lua.pushNil()
         while (lua.next(at) != 0) {
             val key = if (lua.type(-2) == Lua.LuaType.STRING) lua.toString(-2) else null
-            if (key != null && key == skip) {
+            if (key != null && key in skip) {
                 lua.pop(1)
                 continue
             }
@@ -1350,6 +1443,11 @@ class LuaHost(
             if (!lua.isTable(-1)) return emptyList()
             val keys = mutableListOf<String>()
             val table = lua.top
+            // `pairs` first, as a script would see it: a scope's `nf` fills its namespaces then.
+            lua.getGlobal("pairs")
+            lua.pushValue(table)
+            lua.pCall(1, 3)
+            lua.pop(3)
             lua.pushNil()
             while (lua.next(table) != 0) {
                 if (lua.isString(-2)) keys += lua.toString(-2)!!
@@ -1446,29 +1544,38 @@ class LuaHost(
         lua.remove(-2)
     }
 
-    /** `host.vec3(x, y, z)`: the prelude builds the vector. */
+    /** A `Vec3` as the prelude's `new_vec3` makes one: its numbers in the array part, its genuine metatable. */
     private fun pushVec3(lua: Lua, vector: Vec3) {
-        lua.refGet(hostRef)
-        lua.getField(-1, "vec3")
-        lua.remove(-2)
+        lua.checkStack(3)
+        lua.createTable(3, 0)
         lua.push(vector.x as Number)
+        lua.rawSetI(-2, 1)
         lua.push(vector.y as Number)
+        lua.rawSetI(-2, 2)
         lua.push(vector.z as Number)
-        lua.pCall(3, 1)
+        lua.rawSetI(-2, 3)
+        lua.refGet(vec3MtRef)
+        lua.setMetatable(-2)
     }
 
-    /** `host.location(world, x, y, z, yaw, pitch)`: the prelude builds the location around the world's handle. */
+    /** A `Location` as the prelude's `new_location` makes one: the world's handle, the position, a facing that may be nil. */
     private fun pushLocation(lua: Lua, location: LuaLocation) {
-        lua.refGet(hostRef)
-        lua.getField(-1, "location")
-        lua.remove(-2)
+        lua.checkStack(3)
+        lua.createTable(4, 0)
         pushHandle(lua, location.world)
-        lua.push(location.position.x as Number)
-        lua.push(location.position.y as Number)
-        lua.push(location.position.z as Number)
-        location.yaw?.let { lua.push(it as Number) } ?: lua.pushNil()
-        location.pitch?.let { lua.push(it as Number) } ?: lua.pushNil()
-        lua.pCall(6, 1)
+        lua.rawSetI(-2, 1)
+        pushVec3(lua, location.position)
+        lua.rawSetI(-2, 2)
+        location.yaw?.let {
+            lua.push(it as Number)
+            lua.rawSetI(-2, 3)
+        }
+        location.pitch?.let {
+            lua.push(it as Number)
+            lua.rawSetI(-2, 4)
+        }
+        lua.refGet(locationMtRef)
+        lua.setMetatable(-2)
     }
 
     /**

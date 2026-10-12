@@ -360,16 +360,15 @@ function host.json_decode(tree)
   return decode_data(tree)
 end
 
--- A vector, for payloads built on the Kotlin side.
-function host.vec3(x, y, z)
-  return values.new_vec3(x, y, z)
-end
+-- The genuine metatables of a vector and a location: Kotlin builds those it
+-- hands over itself (`LuaHost.pushVec3`, `pushLocation`), as `new_vec3` and
+-- `new_location` would, so a returned position costs a script nothing.
+host.vec3_mt, host.location_mt = values.Vec3_mt, values.Location_mt
 
--- A location Kotlin hands over: the world's handle, the position, a facing
--- that may be nil.
-function host.location(world, x, y, z, yaw, pitch)
-  return values.new_location(world, values.new_vec3(x, y, z), yaw, pitch)
-end
+-- The handle classes a saved table may keep, each with its tag (`entity` for
+-- `{"$entity":[id]}`): Kotlin writes plain data that holds them itself, as the
+-- JSON codec would (`LuaHost.plainJson`).
+host.saved_handles = require("schema").saved_handles
 
 -- Forgets every required file under a path prefix, in every scope, for a module reload.
 function host.forget(prefix)

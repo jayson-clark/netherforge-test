@@ -44,12 +44,14 @@ something undeclared.
   per node of each type, `lua.ts` and `kotlin.ts` write the two halves). For
   every function not marked `impl: "lua"`:
   - `bindings.lua`: the method on its class (or the function on `nf` or a
-    namespace under it), the `:` check (`self_of`, which hands over the
-    handle's key in the handle table, `self_key`), and the call
+    namespace under it), the `:` check (inline: the handle's key in the
+    handle table, `ids[self]`, and its metatable's name in the class's
+    `<Class>_is` set, the class and every class below it; `self_of` is
+    called only to raise the error), and the call
     `prim["Class.name"](...)` with each argument as the one Lua value it is. Kotlin reads and checks them. The one
     exception is the `Vec3` fast path: a `Vec3` (or `Vec3?`) parameter is
     checked by `want_vec3` and crosses as its three numbers, and a `Vec3`
-    return comes back as three numbers that `vec3_of` rebuilds, since
+    return comes back as three numbers the binding rebuilds itself, since
     transforms are set and read every tick (`BindingBenchmark` measures it);
   - `LuaApi.kt`: one interface per class (`CentityApi`, `MobApi`, `NfApi`,
     `NfServerApi`, ...), each with only the class's own functions. A handle
@@ -140,7 +142,7 @@ something undeclared.
   modules"), each a chunk that `require`s what it uses and returns what it
   exports. It keeps the core: `guard` (the hook: budget, time, memory; error
   locations; `invoke`), `sandbox`, `handles` (`class`, `self_of`, the cache),
-  `values` (`Vec3`, `Location`, the per-scope `vec3` global, `want_vec3`/`vec3_of`
+  `values` (`Vec3`, `Location`, the per-scope `vec3` global, `want_vec3`
   for the `Vec3` fast path), `json` (the one Lua↔JSON codec), `events` (the
   **event core**), `tasks`, `scopes` (`require`, a scope's globals), `census`,
   `host` (what Kotlin calls), and `api`, which runs the generated bindings.
@@ -525,7 +527,7 @@ lua-language-server knows what `this` is there.
 
 **A namespace under `nf`**: a class named `nf.<name>` with `methods: false` in
 `spec/nf.ts`, added to `namespaces` there (which makes it a field of `nf`),
-`pnpm generate` (its table in `fill_nf`, an `Nf<Name>Api` interface), an
+`pnpm generate` (its filler in `namespaces`, an `Nf<Name>Api` interface), an
 implementation in `api/NfImpl.kt` and its property on `RuntimeApi`.
 
 **A value type** (like `Vec3`): `values` in the spec (`spec/values.ts`:
@@ -630,6 +632,13 @@ restarts it by; a script that listens for `setting_changed` (events.ts: `setting
   while its entity was unloaded becomes its class, and a player's name is
   looked up. A test that needs a handle Lua no longer holds collects first:
   one still held keeps what its entry knew.
+- **What calls cost a script is golden** (`function-costs.tsv`, `scenario-costs.tsv`; testing
+  skill, "Goldens"). Every check a binding makes is inline, its checker called only to raise
+  the error (`type_of(x) ~= "number"`, a handle's set, a choice set's `has`, `genuine_mt(v) ~=
+  Vec3_mt`), and a namespace under `nf` is filled when a script first reaches it
+  (`namespaces[path]`, the prelude's `scopes.lazy`): a scope is made for every centity spawned.
+  JSON a script hands over is read in Kotlin (`LuaHost.plainJson`, exactly as the codec would
+  write it, floats through `CodecNumbers`), the codec only for what Kotlin can't say the same.
 - `BindingBenchmark` times the hot bindings (a node's transform, a handle back,
   a handle and a union as arguments, an option table); run it before and after
   changing the codecs or the prelude's handles (it's skipped unless

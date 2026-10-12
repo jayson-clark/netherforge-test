@@ -412,6 +412,13 @@ git diff                         # review every change before committing it
 
 A golden diff is a behaviour change. If you didn't expect it, it's a bug.
 
+`apps/plugin/runtime/testdata/function-costs.tsv` (`ConformanceTest`: every API function, called
+with sample arguments) and `scenario-costs.tsv` (`ApiCostTest`: vector maths, item tables, JSON,
+events, spawning a scripted centity) hold what calls cost a script, in instructions of its budget
+(`CostGolden`, counting every instruction). A cost that moves past `CostGolden.allowance` either
+way fails: dearer is a regression; cheaper means rewriting the golden, so the next regression back
+can't hide. Same `UPDATE_GOLDEN=1`.
+
 ```sh
 pnpm test:screenshots --update   # rewrites the preview pictures that changed (Docker)
 ```
