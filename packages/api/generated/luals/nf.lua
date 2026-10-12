@@ -4586,6 +4586,22 @@ function Vec3:distance_squared(other) end
 ---@return Vec3
 function Vec3:lerp(other, fraction) end
 
+--- The same direction, scaled down to at most `max_length` long: a copy if it is no longer than that already. Keeps a velocity under a top speed.
+---@param max_length number The longest it may be, 0 or more.
+---@return Vec3
+function Vec3:clamp_length(max_length) end
+
+--- Mirrored off a surface: `v - 2 * v:dot(n) * n` for the surface's unit normal `n`, so the part into the surface turns back out and the part along it carries on. How a shot bounces off a wall, with a sweep's `normal`.
+---@param normal Vec3 Which way the surface faces. Any length but zero: it is normalized first.
+---@return Vec3
+function Vec3:reflect(normal) end
+
+--- The point on the line segment from `start` to `finish` nearest to this point: its foot on the segment, or the nearer end when that falls past one. `start` when the two are the same point. With `distance`, how far a point is from a beam or a path.
+---@param start Vec3 One end.
+---@param finish Vec3 The other end.
+---@return Vec3
+function Vec3:closest_on_segment(start, finish) end
+
 --- A copy with `y` set to 0: the horizontal part.
 ---@return Vec3
 function Vec3:flat() end

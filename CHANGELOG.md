@@ -118,6 +118,11 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   asks, kept through a module's reload, and dropped once they've left (after
   their `player_quit` handlers), so a module needn't keep its own map keyed
   by player and clear it on quit. `nil` for a player who isn't online.
+- **More `Vec3` helpers.** `v:clamp_length(max_length)` scales a vector
+  down to at most that long (a top speed), `v:reflect(normal)` mirrors it off
+  a surface (a shot bouncing off a sweep's hit), and
+  `point:closest_on_segment(start, finish)` is the nearest point of a line
+  segment (how far something is from a beam, with `distance`).
 - **Temporary centities.** `nf.centities.spawn(kind, place, { temporary = true })`
   spawns one that's never saved (its entities aren't kept with their chunk)
   and is removed when the script that spawned it unloads, so a reload or a

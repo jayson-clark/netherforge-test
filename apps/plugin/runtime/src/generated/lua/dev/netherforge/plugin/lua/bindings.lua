@@ -6043,6 +6043,39 @@ function values.Vec3.lerp(self, other, fraction)
   return value_body.Vec3.lerp(self, other, fraction)
 end
 
+function values.Vec3.clamp_length(self, max_length)
+  if genuine_mt(self) ~= Vec3_mt then
+    value_self(self, "Vec3")
+  end
+  if type_of(max_length) ~= "number" then
+    want(max_length, "number", "max_length")
+  end
+  return value_body.Vec3.clamp_length(self, max_length)
+end
+
+function values.Vec3.reflect(self, normal)
+  if genuine_mt(self) ~= Vec3_mt then
+    value_self(self, "Vec3")
+  end
+  if genuine_mt(normal) ~= Vec3_mt then
+    vector_arg(normal, "normal", 2)
+  end
+  return value_body.Vec3.reflect(self, normal)
+end
+
+function values.Vec3.closest_on_segment(self, start, finish)
+  if genuine_mt(self) ~= Vec3_mt then
+    value_self(self, "Vec3")
+  end
+  if genuine_mt(start) ~= Vec3_mt then
+    vector_arg(start, "start", 2)
+  end
+  if genuine_mt(finish) ~= Vec3_mt then
+    vector_arg(finish, "finish", 2)
+  end
+  return value_body.Vec3.closest_on_segment(self, start, finish)
+end
+
 function values.Vec3.flat(self)
   if genuine_mt(self) ~= Vec3_mt then
     value_self(self, "Vec3")
