@@ -6,6 +6,7 @@ import dev.netherforge.plugin.platform.Platform
 import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.script.Scope
 import dev.netherforge.plugin.session.RuntimeService
+import dev.netherforge.plugin.session.TickPhase
 import java.util.UUID
 
 /**
@@ -14,11 +15,24 @@ import java.util.UUID
  * (the server forgets a bar's viewers on quit). Each belongs to the scope
  * that made it and goes when that scope is released (unloaded or disabled).
  */
-internal class BossBars(private val platform: Platform) : RuntimeService {
+internal class BossBars(
+    private val platform: Platform,
+    /** Where a centity is and how much of its health it has (0 to 1, null without any), or null once it's gone. */
+    private val locate: (UUID) -> Located? = { null }
+) : RuntimeService {
     override val name get() = "boss bars"
+
+    /** A centity a bar is attached to, as [locate] finds it. */
+    data class Located(val world: String, val x: Double, val y: Double, val z: Double, val health: Double?)
+
+    /** A bar's tie to a centity (`attach`), and who it shows to for being near it. */
+    class Attachment(val centity: UUID, val range: Double, val health: Boolean, val removeWith: Boolean) {
+        val near = LinkedHashSet<UUID>()
+    }
 
     class Bar(val id: Int, val scope: Scope, var look: BossBarLook) {
         val viewers = LinkedHashSet<UUID>()
+        var attachment: Attachment? = null
     }
 
     private var nextId = 1
@@ -52,6 +66,51 @@ internal class BossBars(private val platform: Platform) : RuntimeService {
     fun remove(bar: Bar) {
         if (bars.remove(bar.id) == null) return
         platform.bossBars.remove(bar.id)
+    }
+
+    fun attach(bar: Bar, attachment: Attachment) {
+        detach(bar)
+        bar.attachment = attachment
+        follow(bar, attachment)
+    }
+
+    fun detach(bar: Bar): Boolean {
+        val attachment = bar.attachment ?: return false
+        bar.attachment = null
+        for (player in attachment.near) if (player !in bar.viewers) platform.bossBars.hide(bar.id, player)
+        return true
+    }
+
+    /** Every tick: attached bars show to who's near their centity, and follow its health; one whose centity went goes. */
+    override fun tick(phase: TickPhase) {
+        if (phase != TickPhase.EFFECTS) return
+        for (bar in bars.values.toList()) follow(bar, bar.attachment ?: continue)
+    }
+
+    private fun follow(bar: Bar, attachment: Attachment) {
+        val at = locate(attachment.centity)
+        if (at == null) {
+            if (attachment.removeWith) remove(bar) else detach(bar)
+            return
+        }
+        if (attachment.health &&
+            at.health != null &&
+            at.health != bar.look.progress
+        ) {
+            update(bar, bar.look.copy(progress = at.health.coerceIn(0.0, 1.0)))
+        }
+        val range = attachment.range * attachment.range
+        val now = platform.players.online().mapNotNullTo(HashSet()) { player ->
+            val p = platform.players.location(player.uuid) ?: return@mapNotNullTo null
+            val d = (p.x - at.x) * (p.x - at.x) + (p.y - at.y) * (p.y - at.y) + (p.z - at.z) * (p.z - at.z)
+            player.uuid.takeIf { p.world == at.world && d <= range }
+        }
+        for (player in now) if (attachment.near.add(player) && player !in bar.viewers) platform.bossBars.show(bar.id, player)
+        for (player in attachment.near.toList()) {
+            if (player in now) continue
+            attachment.near -= player
+            if (player !in bar.viewers) platform.bossBars.hide(bar.id, player)
+        }
     }
 
     /** The bars [player] is among the viewers of. */

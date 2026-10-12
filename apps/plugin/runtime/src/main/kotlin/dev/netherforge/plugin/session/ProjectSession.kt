@@ -280,7 +280,14 @@ class ProjectSession internal constructor(
     internal val spawnRates = service(WorldSpawnRates(platform) { snapshot.manifest?.worlds })
 
     /** The boss bars scripts made, each its script's. */
-    internal val bossBars = service(BossBars(platform))
+    internal val bossBars = service(
+        BossBars(platform) { id ->
+            centities.find(id)?.takeIf { !it.removed }?.let { instance ->
+                val a = instance.anchor
+                BossBars.Located(a.world, a.x, a.y, a.z, instance.health?.let { it.current / it.max })
+            }
+        }
+    )
 
     /** Each online player's sidebar. */
     internal val sidebars = service(Sidebars(platform))

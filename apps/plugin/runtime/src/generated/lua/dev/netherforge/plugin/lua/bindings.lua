@@ -4494,6 +4494,30 @@ function BossBar.set_style(self, style)
   return prim["BossBar.set_style"](self_key, style)
 end
 
+function BossBar.attach(self, centity, options)
+  local self_key = ids[self]
+  if self_key == nil or not BossBar_is[class_of(self)] then
+    self_key = self_of(self, "BossBar")
+  end
+  return prim["BossBar.attach"](self_key, centity, options)
+end
+
+function BossBar.detach(self)
+  local self_key = ids[self]
+  if self_key == nil or not BossBar_is[class_of(self)] then
+    self_key = self_of(self, "BossBar")
+  end
+  prim["BossBar.detach"](self_key)
+end
+
+function BossBar.attached(self)
+  local self_key = ids[self]
+  if self_key == nil or not BossBar_is[class_of(self)] then
+    self_key = self_of(self, "BossBar")
+  end
+  return prim["BossBar.attached"](self_key)
+end
+
 function BossBar.remove(self)
   local self_key = ids[self]
   if self_key == nil or not BossBar_is[class_of(self)] then

@@ -2928,6 +2928,16 @@ What `world:raycast` hit: where, and what. Exactly one of `block`, `entity` and 
 | `centity` | `Centity?` | The centity whose hitbox it hit, or `nil`. |
 | `node` | `Node?` | Which node of `centity` it hit (its hitbox), or `nil` for anything else. |
 
+## BossBarAttachOptions
+
+How `bossbar:attach` ties a bar to a centity. Every key is optional; a key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `range` | `number?` | How near a player must be to see it, in blocks. Default 48. |
+| `health` | `boolean?` | Its progress follows the centity's `health` (when it has any). Default `true`. |
+| `remove_with` | `boolean?` | Removed when the centity is. Default `true`. |
+
 ## BossBarOptions
 
 What `nf.bossbars.create` makes a bar with. Every key is optional; a key that isn't one of these is an error.

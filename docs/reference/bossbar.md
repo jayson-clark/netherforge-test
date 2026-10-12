@@ -109,6 +109,32 @@ Makes it one bar, or splits it into 6, 10, 12 or 20 notches.
 
 **Returns** `boolean`: `false` once it's gone.
 
+## `bossbar:attach(centity, options?)`
+
+Ties it to a centity: it shows to every player within `range` of it (in its world) and hides from them as they go, and with `health` its progress follows the centity's health: what a boss's bar does. Players it was shown to with `show_to` keep it. A bar attached again moves to the new centity.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `centity` | `Centity` |  |
+| `options` (optional) | `BossBarAttachOptions` |  |
+
+**Returns** `boolean`: `false` once it's gone, or the centity has.
+
+```lua
+local bar = nf.bossbars.create({ text = "<red>King Slime", color = "blue" })
+bar:attach(this, { range = 64 })
+```
+
+## `bossbar:detach()`
+
+Unties it from its centity: the players it showed to by being near it stop seeing it.
+
+## `bossbar:attached()`
+
+The centity it's attached to, or `nil`.
+
+**Returns** `Centity?`
+
 ## `bossbar:remove()`
 
 Takes it off every screen for good.

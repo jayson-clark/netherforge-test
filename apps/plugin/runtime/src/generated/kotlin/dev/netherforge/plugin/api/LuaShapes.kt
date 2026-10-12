@@ -5624,6 +5624,40 @@ data class RaycastHit(val position: Vec3, val normal: Vec3, val distance: Double
 }
 
 /**
+ * How `bossbar:attach` ties a bar to a centity. Every key is optional; a key that isn't one of these
+ * is an error.
+ */
+data class BossBarAttachOptions(val range: Double? = null, val health: Boolean? = null, val removeWith: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<BossBarAttachOptions>("BossBarAttachOptions") {
+        val rangeCodec = LuaOptional(LuaCodecs.NUMBER)
+        val healthCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val removeWithCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "range" to rangeCodec,
+            "health" to healthCodec,
+            "remove_with" to removeWithCodec
+        )
+
+        override fun read(fields: ShapeReader) = BossBarAttachOptions(
+            range = fields.field("range", rangeCodec),
+            health = fields.field("health", healthCodec),
+            removeWith = fields.field("remove_with", removeWithCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: BossBarAttachOptions) {
+            fields.field("range", value.range, rangeCodec)
+            fields.field("health", value.health, healthCodec)
+            fields.field("remove_with", value.removeWith, removeWithCodec)
+        }
+    }
+}
+
+/**
  * What `nf.bossbars.create` makes a bar with. Every key is optional; a key that isn't one of these is
  * an error.
  */

@@ -3848,6 +3848,19 @@ function BossBar:style() end
 ---@return boolean # `false` once it's gone.
 function BossBar:set_style(style) end
 
+--- Ties it to a centity: it shows to every player within `range` of it (in its world) and hides from them as they go, and with `health` its progress follows the centity's health: what a boss's bar does. Players it was shown to with `show_to` keep it. A bar attached again moves to the new centity.
+---@param centity Centity
+---@param options? BossBarAttachOptions
+---@return boolean # `false` once it's gone, or the centity has.
+function BossBar:attach(centity, options) end
+
+--- Unties it from its centity: the players it showed to by being near it stop seeing it.
+function BossBar:detach() end
+
+--- The centity it's attached to, or `nil`.
+---@return Centity?
+function BossBar:attached() end
+
 --- Takes it off every screen for good.
 ---@return boolean # `false` once it's gone already.
 function BossBar:remove() end
@@ -6076,6 +6089,12 @@ function Event:uncancel() end
 ---@field entity Entity? The entity it hit, or `nil`.
 ---@field centity Centity? The centity whose hitbox it hit, or `nil`.
 ---@field node Node? Which node of `centity` it hit (its hitbox), or `nil` for anything else.
+
+--- How `bossbar:attach` ties a bar to a centity. Every key is optional; a key that isn't one of these is an error.
+---@class BossBarAttachOptions
+---@field range number? How near a player must be to see it, in blocks. Default 48.
+---@field health boolean? Its progress follows the centity's `health` (when it has any). Default `true`.
+---@field remove_with boolean? Removed when the centity is. Default `true`.
 
 --- What `nf.bossbars.create` makes a bar with. Every key is optional; a key that isn't one of these is an error.
 ---@class BossBarOptions

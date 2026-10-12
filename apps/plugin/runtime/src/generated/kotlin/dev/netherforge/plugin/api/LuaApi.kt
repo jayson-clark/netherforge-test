@@ -3545,6 +3545,19 @@ interface BossBarApi {
     /** Makes it one bar, or splits it into 6, 10, 12 or 20 notches. */
     fun setStyle(self: LuaHandle.BossBar, style: String): Boolean
 
+    /**
+     * Ties it to a centity: it shows to every player within `range` of it (in its world) and hides from
+     * them as they go, and with `health` its progress follows the centity's health: what a boss's bar
+     * does. Players it was shown to with `show_to` keep it. A bar attached again moves to the new centity.
+     */
+    fun attach(self: LuaHandle.BossBar, centity: LuaHandle.Centity, options: BossBarAttachOptions?): Boolean
+
+    /** Unties it from its centity: the players it showed to by being near it stop seeing it. */
+    fun detach(self: LuaHandle.BossBar)
+
+    /** The centity it's attached to, or `nil`. */
+    fun attached(self: LuaHandle.BossBar): LuaHandle.Centity?
+
     /** Takes it off every screen for good. */
     fun remove(self: LuaHandle.BossBar): Boolean
 }

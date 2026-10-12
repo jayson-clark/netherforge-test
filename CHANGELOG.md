@@ -100,6 +100,10 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **A boss bar tied to a centity.** `bossbar:attach(centity, { range, health,
+remove_with })` shows the bar to every player near the centity and hides it
+  as they go, follows its health, and removes it with the centity; `detach`
+  and `attached`.
 - **Stats, modifiers and buffs.** `buffs/<id>.json` (a kind of its own, with
   an editor) declares a buff or debuff: its name, icon glyph and colour, the
   `stats` it adds while it lasts, what it `cures` and what it's `blockedBy`,

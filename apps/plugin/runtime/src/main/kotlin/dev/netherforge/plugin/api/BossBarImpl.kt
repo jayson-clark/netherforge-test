@@ -25,6 +25,24 @@ internal class BossBarImpl(private val session: ProjectSession) : BossBarApi {
 
     private fun bar(self: LuaHandle.BossBar): BossBars.Bar? = bars.get(self.id)
 
+    override fun attach(self: LuaHandle.BossBar, centity: LuaHandle.Centity, options: BossBarAttachOptions?): Boolean {
+        val range = options?.range ?: DEFAULT_ATTACH_RANGE
+        if (!(range > 0) || !range.isFinite()) throw LuaApiException("bad argument 'options.range' (more than 0 expected, got $range)")
+        val bar = bar(self) ?: return false
+        val id = runCatching { java.util.UUID.fromString(centity.id) }.getOrNull() ?: return false
+        if (session.centities.find(id)?.removed != false) return false
+        bars.attach(bar, BossBars.Attachment(id, range, options?.health != false, options?.removeWith != false))
+        return true
+    }
+
+    override fun detach(self: LuaHandle.BossBar) {
+        bar(self)?.let(bars::detach)
+    }
+
+    override fun attached(self: LuaHandle.BossBar): LuaHandle.Centity? = bar(self)?.attachment?.let {
+        LuaHandle.Centity(it.centity.toString())
+    }
+
     private fun change(self: LuaHandle.BossBar, change: (BossBarLook) -> BossBarLook): Boolean {
         val bar = bar(self) ?: return false
         bars.update(bar, change(bar.look))
@@ -126,3 +144,6 @@ internal class SidebarImpl(private val session: ProjectSession) : SidebarApi {
         return true
     }
 }
+
+/** How near a player must be to an attached bar's centity to see it, unless told. */
+private const val DEFAULT_ATTACH_RANGE = 48.0

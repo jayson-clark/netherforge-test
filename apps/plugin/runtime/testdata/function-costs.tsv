@@ -20,7 +20,10 @@ Block:set_state	24
 Block:sky_light_level	19
 Block:state	19
 Block:world	19
+BossBar:attach	22
+BossBar:attached	15
 BossBar:color	15
+BossBar:detach	16
 BossBar:exists	15
 BossBar:hide_from	17
 BossBar:progress	15
