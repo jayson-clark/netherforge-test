@@ -57,6 +57,105 @@ function Terrain.biome(x, y, z) end
 ---@return Plan
 function Terrain.plan(name, size, make) end
 
+--- A new, empty structure: something to build once (a tree, a ruin, a floating island) and draw chunk by chunk with `chunk:place_structure`, each chunk drawing the part of it inside it, so it can be any size and cross chunk borders. Build it where it's the same whichever chunk asks: in a plan's or scatter's `make`, or the script's body.
+---@return Structure
+function Terrain.structure() end
+
+--- Structures over a grid, at most one in each cell (a plan of structures): `make(cell_x, cell_z)` builds a cell's, or returns `nil`, with the cell's own `math.random` numbers. `scatter:place(chunk)` draws every one that reaches the chunk. Each must lie within `reach` cells of its own. Made in the script's body, once per name.
+---@param name string Its name, which its numbers are drawn from, as a plan's.
+---@param size integer How wide a cell is, in blocks, 1 to 65536.
+---@param make fun(cell_x: integer, cell_z: integer): Structure? Builds a cell's structure, in the world's coordinates, or `nil` for none.
+---@param reach? integer How many cells past its own a structure can reach, 0 to 8. Default 1.
+---@return Scatter
+function Terrain.scatter(name, size, make, reach) end
+
+--- Something built once and drawn chunk by chunk (`terrain.structure()`): its operations, drawn in the order they were added, each only where it reaches into the chunk. Every method returns the structure, so calls chain.
+---@class Structure
+local Structure = {}
+
+--- Fills a box with a block, both corners included, as `chunk:fill` does.
+---@param x1 integer One corner.
+---@param y1 integer
+---@param z1 integer
+---@param x2 integer The other.
+---@param y2 integer
+---@param z2 integer
+---@param block BlockId A block id.
+---@return Structure
+function Structure:fill(x1, y1, z1, x2, y2, z2, block) end
+
+--- Sets one block.
+---@param x integer
+---@param y integer
+---@param z integer
+---@param block BlockId A block id.
+---@return Structure
+function Structure:set(x, y, z, block) end
+
+--- An ellipsoid, as `chunk:ellipsoid` draws one.
+---@param cx integer Its centre.
+---@param cy integer
+---@param cz integer
+---@param rx integer Its radius along x, in whole blocks, 0 or more.
+---@param ry integer Along y.
+---@param rz integer Along z.
+---@param block BlockId A block id.
+---@param options? EllipsoidOptions
+---@return Structure
+function Structure:ellipsoid(cx, cy, cz, rx, ry, rz, block, options) end
+
+--- Fills the container at a place from a loot table, as `chunk:set_loot` does: put the container there first.
+---@param x integer
+---@param y integer
+---@param z integer
+---@param table LootTableId A loot table, by id.
+---@return Structure
+function Structure:loot(x, y, z, table) end
+
+--- Sets `count` blocks at places through a box: the same places whichever chunk draws them (drawn from `seed`, or a number of the structure's own). With `only`, a place is set only when its block is one of them, so a wall can weather without anything appearing in the air.
+---@param x1 integer One corner.
+---@param y1 integer
+---@param z1 integer
+---@param x2 integer The other.
+---@param y2 integer
+---@param z2 integer
+---@param block BlockId A block id.
+---@param count integer How many places, 0 or more.
+---@param options? SprinkleOptions
+---@return Structure
+function Structure:sprinkle(x1, y1, z1, x2, y2, z2, block, count, options) end
+
+--- The box everything in it lies in, both corners included, or `nil` when it has nothing.
+---@return integer?
+---@return integer?
+---@return integer?
+---@return integer?
+---@return integer?
+---@return integer?
+function Structure:bounds() end
+
+--- Structures over a grid, at most one per cell (`terrain.scatter`).
+---@class Scatter
+local Scatter = {}
+
+--- Draws the part inside the chunk of every structure that reaches it.
+---@param chunk Chunk
+function Scatter:place(chunk) end
+
+--- A cell's structure, or `nil`.
+---@param cell_x integer
+---@param cell_z integer
+---@return Structure?
+function Scatter:get(cell_x, cell_z) end
+
+--- The structure of the cell a column is in, then that cell's place in the grid.
+---@param x integer
+---@param z integer
+---@return Structure?
+---@return integer
+---@return integer
+function Scatter:at(x, z) end
+
 --- Something a script works out once per cell of a grid (`terrain.plan`), kept for the chunks that ask again.
 ---@class Plan
 local Plan = {}
@@ -134,12 +233,40 @@ function Chunk:set(x, y, z, block) end
 ---@param table LootTableId A loot table, by id.
 function Chunk:set_loot(x, y, z, table) end
 
+--- Fills an ellipsoid (a ball, an egg, a disc) with a block: the part of it in the chunk. Radii are whole blocks, each taken half a block out so a small ball is round; 0 is one block thick. With `shell`, only its outer `shell` blocks (hollow), and with `only`, only where the block now is one of them.
+---@param cx integer Its centre.
+---@param cy integer
+---@param cz integer
+---@param rx integer Its radius along x, in whole blocks, 0 or more.
+---@param ry integer Along y.
+---@param rz integer Along z.
+---@param block BlockId A block id.
+---@param options? EllipsoidOptions
+function Chunk:ellipsoid(cx, cy, cz, rx, ry, rz, block, options) end
+
+--- Draws the part of a structure inside the chunk, moved by `x`, `y`, `z` (default 0): one structure can be placed in many places.
+---@param structure Structure
+---@param x? integer Default 0.
+---@param y? integer Default 0.
+---@param z? integer Default 0.
+function Chunk:place_structure(structure, x, y, z) end
+
 --- The block at a place in the chunk, as `fill` takes it (`minecraft:air` for none); `nil` outside the chunk or the world.
 ---@param x integer
 ---@param y integer
 ---@param z integer
 ---@return string?
 function Chunk:block(x, y, z) end
+
+--- How an ellipsoid is drawn. A key that isn't one of these is an error.
+---@class EllipsoidOptions
+---@field shell? integer? Hollow: only its outer this many blocks, 1 or more.
+---@field only? string[]? Set only where the block now is one of these.
+
+--- How `structure:sprinkle` sets its blocks. A key that isn't one of these is an error.
+---@class SprinkleOptions
+---@field only? string[]? Set only where the block now is one of these.
+---@field seed? integer? The number its places are drawn from. Default one of the structure's own.
 
 --- What a terrain's script returns: the stages it runs, each optional. A key that isn't one of them is an error.
 ---@class TerrainStages

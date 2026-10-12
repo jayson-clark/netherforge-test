@@ -100,6 +100,12 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **Structures in terrain scripts.** `chunk:ellipsoid(cx, cy, cz, rx, ry, rz,
+block, { shell, only })`; `terrain.structure()` records `fill`, `set`,
+  `ellipsoid`, `sprinkle` and `loot` once, and `chunk:place_structure(s, x, y,
+z)` draws the part of it in each chunk, so trees and ruins cross chunk
+  borders; `terrain.scatter(name, size, make, reach)` keeps at most one
+  structure per grid cell and draws those that reach a chunk.
 - **Rope nodes and `stretch_between`.** A node with `"rope": { "links",
 "linkLength" }` draws its display as links (`chain[1]`...);
   `node:rope_between(from, to, { length })` strings it between points, nodes

@@ -608,6 +608,350 @@ function terrain.plan(name, size, make)
   return plan
 end
 
+-- ---- shapes and structures ----------------------------------------------------------------------------------
+
+local sqrt, min, max = math.sqrt, math.min, math.max
+
+-- Calls each(x, y, z1, z2) for the rows along z of an ellipsoid centred on cx, cy, cz with radii rx, ry, rz
+-- (whole blocks: 0 is one block thick) whose x is from x_lo to x_hi and z from z_lo to z_hi. Each radius is
+-- taken half a block out, so a ball of radius 2 is round rather than a diamond.
+local function ellipsoid_rows(cx, cy, cz, rx, ry, rz, x_lo, x_hi, z_lo, z_hi, each)
+  local ex, ey, ez = rx + 0.5, ry + 0.5, rz + 0.5
+  for dy = -ry, ry do
+    local fy = dy / ey
+    local ky = 1 - fy * fy
+    for dx = max(-rx, x_lo - cx), min(rx, x_hi - cx) do
+      local fx = dx / ex
+      local k = ky - fx * fx
+      if k >= 0 then
+        local half = floor(ez * sqrt(k))
+        each(cx + dx, cy + dy, max(cz - half, z_lo), min(cz + half, z_hi), dx, dy)
+      end
+    end
+  end
+end
+
+-- The z half-width of an ellipsoid's row at dx, dy, or nil when the row misses it.
+local function ellipsoid_half(rx, ry, rz, dx, dy)
+  if rx < 0 or ry < 0 or rz < 0 then
+    return nil
+  end
+  local fx, fy = dx / (rx + 0.5), dy / (ry + 0.5)
+  local k = 1 - fx * fx - fy * fy
+  if k < 0 then
+    return nil
+  end
+  return floor((rz + 0.5) * sqrt(k))
+end
+
+-- Fills z1..z2 of a row with block (a palette index), or only its blocks that `only` (a set of labels) has.
+local function fill_row(x, y, z1, z2, block, only)
+  if z1 > z2 then
+    return
+  end
+  if only == nil then
+    host_fill(x, y, z1, x, y, z2, block)
+    return
+  end
+  for z = z1, z2 do
+    local here = host_block(x, y, z)
+    if here >= 0 and only[labels[here]] then
+      host_fill(x, y, z, x, y, z, block)
+    end
+  end
+end
+
+-- Draws an ellipsoid in the chunk: solid, or a shell `shell` thick; only over `only`'s blocks when given.
+local function draw_ellipsoid(cx, cy, cz, rx, ry, rz, block, shell, only)
+  local x0, z0 = chunk_x * 16, chunk_z * 16
+  if cx + rx < x0 or cx - rx > x0 + 15 or cz + rz < z0 or cz - rz > z0 + 15 then
+    return
+  end
+  ellipsoid_rows(cx, cy, cz, rx, ry, rz, x0, x0 + 15, z0, z0 + 15, function(x, y, z1, z2, dx, dy)
+    local inner = shell and ellipsoid_half(rx - shell, ry - shell, rz - shell, dx, dy)
+    if inner == nil then
+      fill_row(x, y, z1, z2, block, only)
+    else
+      fill_row(x, y, z1, min(z2, cz - inner - 1), block, only)
+      fill_row(x, y, max(z1, cz + inner + 1), z2, block, only)
+    end
+  end)
+end
+
+-- A list of block ids as a set, checked; nil for nil.
+local function block_set(list, what, function_name)
+  if list == nil then
+    return nil
+  end
+  if type(list) ~= "table" then
+    error(format("bad argument to '%s' (%s: a list of block ids expected, got %s)", function_name, what, name_of(list)), 3)
+  end
+  local set = {}
+  for _, id in ipairs(list) do
+    if type(id) ~= "string" then
+      error(format("bad argument to '%s' (%s: block ids expected, got %s)", function_name, what, name_of(id)), 3)
+    end
+    set[id] = true
+  end
+  return set
+end
+
+-- Options a shape takes, checked: a table of these keys and nothing else.
+local function options_of(options, keys, function_name)
+  if options == nil then
+    return {}
+  end
+  if type(options) ~= "table" then
+    error(format("bad argument to '%s' (options: table expected, got %s)", function_name, name_of(options)), 3)
+  end
+  for key in pairs(options) do
+    if not keys[key] then
+      error(format("bad argument to '%s' (options: no key '%s')", function_name, tostring(key)), 3)
+    end
+  end
+  return options
+end
+
+local ELLIPSOID_KEYS = { shell = true, only = true }
+local SPRINKLE_KEYS = { only = true, seed = true }
+
+local function want_radius(value, position, function_name)
+  value = want_integer(value, position, function_name)
+  if value < 0 then
+    error(format("bad argument #%d to '%s' (a radius is 0 or more, got %d)", position, function_name, value), 3)
+  end
+  return value
+end
+
+local function ellipsoid_args(cx, cy, cz, rx, ry, rz, block, options, function_name)
+  cx, cy, cz = want_integer(cx, 1, function_name), want_integer(cy, 2, function_name), want_integer(cz, 3, function_name)
+  rx, ry, rz = want_radius(rx, 4, function_name), want_radius(ry, 5, function_name), want_radius(rz, 6, function_name)
+  local index = block_index(block, 7, function_name)
+  options = options_of(options, ELLIPSOID_KEYS, function_name)
+  local shell = options.shell
+  if shell ~= nil then
+    shell = want_integer(shell, 8, function_name)
+    if shell < 1 then
+      error(format("bad argument to '%s' (options.shell: 1 or more, got %d)", function_name, shell), 3)
+    end
+  end
+  return cx, cy, cz, rx, ry, rz, index, shell, block_set(options.only, "options.only", function_name)
+end
+
+function Chunk.ellipsoid(self, cx, cy, cz, rx, ry, rz, block, options)
+  want_chunk(self, "ellipsoid")
+  draw_ellipsoid(ellipsoid_args(cx, cy, cz, rx, ry, rz, block, options, "ellipsoid"))
+end
+
+-- A structure: what to draw, recorded once, drawn chunk by chunk (each draws the part inside it).
+
+local Structure = { __metatable = false }
+Structure.__index = Structure
+local structure_data = setmetatable({}, { __mode = "k" })
+
+local FILL, ELLIPSOID, LOOT, SPRINKLE = 1, 2, 3, 4
+
+local function structure_of(self, function_name)
+  local data = structure_data[self]
+  if data == nil then
+    error(format("call %s with ':' on a structure: structure:%s(...)", function_name, function_name), 3)
+  end
+  return data
+end
+
+-- Records an operation over the box x1..x2, y1..y2, z1..z2 and grows the structure's bounds to take it in.
+local function record(data, op, x1, y1, z1, x2, y2, z2)
+  op.x1, op.y1, op.z1 = min(x1, x2), min(y1, y2), min(z1, z2)
+  op.x2, op.y2, op.z2 = max(x1, x2), max(y1, y2), max(z1, z2)
+  local ops = data.ops
+  ops[#ops + 1] = op
+  if data.x1 == nil then
+    data.x1, data.y1, data.z1, data.x2, data.y2, data.z2 = op.x1, op.y1, op.z1, op.x2, op.y2, op.z2
+  else
+    data.x1, data.y1, data.z1 = min(data.x1, op.x1), min(data.y1, op.y1), min(data.z1, op.z1)
+    data.x2, data.y2, data.z2 = max(data.x2, op.x2), max(data.y2, op.y2), max(data.z2, op.z2)
+  end
+end
+
+function terrain.structure()
+  local structure = setmetatable({}, Structure)
+  structure_data[structure] = { ops = {} }
+  return structure
+end
+
+function Structure.fill(self, x1, y1, z1, x2, y2, z2, block)
+  local data = structure_of(self, "fill")
+  x1, y1, z1 = want_integer(x1, 1, "fill"), want_integer(y1, 2, "fill"), want_integer(z1, 3, "fill")
+  x2, y2, z2 = want_integer(x2, 4, "fill"), want_integer(y2, 5, "fill"), want_integer(z2, 6, "fill")
+  record(data, { FILL, block_index(block, 7, "fill") }, x1, y1, z1, x2, y2, z2)
+  return self
+end
+
+function Structure.set(self, x, y, z, block)
+  local data = structure_of(self, "set")
+  x, y, z = want_integer(x, 1, "set"), want_integer(y, 2, "set"), want_integer(z, 3, "set")
+  record(data, { FILL, block_index(block, 4, "set") }, x, y, z, x, y, z)
+  return self
+end
+
+function Structure.ellipsoid(self, cx, cy, cz, rx, ry, rz, block, options)
+  local data = structure_of(self, "ellipsoid")
+  local x, y, z, a, b, c, index, shell, only = ellipsoid_args(cx, cy, cz, rx, ry, rz, block, options, "ellipsoid")
+  record(data, { ELLIPSOID, x, y, z, a, b, c, index, shell, only }, x - a, y - b, z - c, x + a, y + b, z + c)
+  return self
+end
+
+function Structure.loot(self, x, y, z, table_name)
+  local data = structure_of(self, "loot")
+  x, y, z = want_integer(x, 1, "loot"), want_integer(y, 2, "loot"), want_integer(z, 3, "loot")
+  if type(table_name) ~= "string" then
+    error(format("bad argument #4 to 'loot' (loot table expected, got %s)", name_of(table_name)), 2)
+  end
+  local index = loot_index[table_name]
+  if index == nil then
+    error(format("\"%s\" isn't a loot table this generator fills: list it in the file's script.loot", table_name), 2)
+  end
+  record(data, { LOOT, index }, x, y, z, x, y, z)
+  return self
+end
+
+function Structure.sprinkle(self, x1, y1, z1, x2, y2, z2, block, count, options)
+  local data = structure_of(self, "sprinkle")
+  x1, y1, z1 = want_integer(x1, 1, "sprinkle"), want_integer(y1, 2, "sprinkle"), want_integer(z1, 3, "sprinkle")
+  x2, y2, z2 = want_integer(x2, 4, "sprinkle"), want_integer(y2, 5, "sprinkle"), want_integer(z2, 6, "sprinkle")
+  local index = block_index(block, 7, "sprinkle")
+  count = want_integer(count, 8, "sprinkle")
+  if count < 0 then
+    error(format("bad argument #8 to 'sprinkle' (a count is 0 or more, got %d)", count), 2)
+  end
+  options = options_of(options, SPRINKLE_KEYS, "sprinkle")
+  -- Its places are drawn from a number of its own, the same whichever chunk draws it.
+  local own = options.seed ~= nil and want_integer(options.seed, 9, "sprinkle") or env.math.random(0, 2147483647)
+  record(data, { SPRINKLE, index, count, own, block_set(options.only, "options.only", "sprinkle") }, x1, y1, z1, x2, y2, z2)
+  return self
+end
+
+function Structure.bounds(self)
+  local data = structure_of(self, "bounds")
+  if data.x1 == nil then
+    return nil
+  end
+  return data.x1, data.y1, data.z1, data.x2, data.y2, data.z2
+end
+
+-- Whether a box (offset by dx, dz) reaches into the chunk.
+local function touches(x1, z1, x2, z2, dx, dz)
+  local x0, z0 = chunk_x * 16, chunk_z * 16
+  return x2 + dx >= x0 and x1 + dx <= x0 + 15 and z2 + dz >= z0 and z1 + dz <= z0 + 15
+end
+
+local function place(data, dx, dy, dz)
+  if data.x1 == nil or not touches(data.x1, data.z1, data.x2, data.z2, dx, dz) then
+    return
+  end
+  local x0, z0 = chunk_x * 16, chunk_z * 16
+  for _, op in ipairs(data.ops) do
+    if touches(op.x1, op.z1, op.x2, op.z2, dx, dz) then
+      local kind = op[1]
+      if kind == FILL then
+        host_fill(op.x1 + dx, op.y1 + dy, op.z1 + dz, op.x2 + dx, op.y2 + dy, op.z2 + dz, op[2])
+      elseif kind == ELLIPSOID then
+        draw_ellipsoid(op[2] + dx, op[3] + dy, op[4] + dz, op[5], op[6], op[7], op[8], op[9], op[10])
+      elseif kind == LOOT then
+        host_set_loot(op.x1 + dx, op.y1 + dy, op.z1 + dz, op[2])
+      else
+        local n, only = op[4], op[5]
+        local w, h, d = op.x2 - op.x1 + 1, op.y2 - op.y1 + 1, op.z2 - op.z1 + 1
+        for _ = 1, op[3] do
+          n = (n * 1103515245 + 12345) % 2147483648
+          local x = op.x1 + n % w + dx
+          n = (n * 1103515245 + 12345) % 2147483648
+          local y = op.y1 + n % h + dy
+          n = (n * 1103515245 + 12345) % 2147483648
+          local z = op.z1 + n % d + dz
+          if x >= x0 and x <= x0 + 15 and z >= z0 and z <= z0 + 15 then
+            fill_row(x, y, z, z, op[2], only)
+          end
+        end
+      end
+    end
+  end
+end
+
+function Chunk.place_structure(self, structure, x, y, z)
+  want_chunk(self, "place_structure")
+  local data = structure_data[structure]
+  if data == nil then
+    error(format("bad argument #1 to 'place_structure' (structure expected, got %s)", name_of(structure)), 2)
+  end
+  place(
+    data,
+    x == nil and 0 or want_integer(x, 2, "place_structure"),
+    y == nil and 0 or want_integer(y, 3, "place_structure"),
+    z == nil and 0 or want_integer(z, 4, "place_structure")
+  )
+end
+
+-- At most one structure in each cell of a grid, each within `reach` cells of its own, drawn where they reach.
+
+local Scatter = { __metatable = false }
+Scatter.__index = Scatter
+local scatter_data = setmetatable({}, { __mode = "k" })
+
+local function scatter_of(self, function_name)
+  local data = scatter_data[self]
+  if data == nil then
+    error(format("call %s with ':' on a scatter: scatter:%s(...)", function_name, function_name), 3)
+  end
+  return data
+end
+
+function terrain.scatter(name, size, make, reach)
+  if running ~= "load" then
+    error("terrain.scatter is made in the script's body, once, not in a stage", 2)
+  end
+  if type(make) ~= "function" then
+    error(format("bad argument #3 to 'scatter' (function expected, got %s)", name_of(make)), 2)
+  end
+  reach = reach == nil and 1 or want_integer(reach, 4, "scatter")
+  if reach < 0 or reach > 8 then
+    error(format("bad argument #4 to 'scatter' (how many cells a structure reaches past its own, 0 to 8, not %d)", reach), 2)
+  end
+  local plan = terrain.plan(name, size, function(cell_x, cell_z)
+    local made = make(cell_x, cell_z)
+    if made ~= nil and structure_data[made] == nil then
+      error(format("a scatter's make returns a structure (terrain.structure()) or nil, not %s", name_of(made)), 0)
+    end
+    return made
+  end)
+  local scatter = setmetatable({}, Scatter)
+  scatter_data[scatter] = { plan = plan, size = want_integer(size, 2, "scatter"), reach = reach }
+  return scatter
+end
+
+function Scatter.place(self, target)
+  local data = scatter_of(self, "place")
+  want_chunk(target, "place")
+  local size, reach = data.size, data.reach
+  local x0, z0 = chunk_x * 16, chunk_z * 16
+  for cell_x = x0 // size - reach, (x0 + 15) // size + reach do
+    for cell_z = z0 // size - reach, (z0 + 15) // size + reach do
+      local structure = data.plan:get(cell_x, cell_z)
+      if structure ~= nil then
+        place(structure_data[structure], 0, 0, 0)
+      end
+    end
+  end
+end
+
+function Scatter.get(self, cell_x, cell_z)
+  return scatter_of(self, "get").plan:get(cell_x, cell_z)
+end
+
+function Scatter.at(self, x, z)
+  return scatter_of(self, "at").plan:at(x, z)
+end
+
 -- ---- what Kotlin calls --------------------------------------------------------------------------------------
 -- Kotlin passes whole numbers as plain numbers (a 64-bit integer is slow to make in JS), so each is made an
 -- integer here before a script sees it; a height goes back as a float for the same reason.

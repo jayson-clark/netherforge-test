@@ -23,6 +23,20 @@ Lua 5.4's basics are there (`string`, `table`, `math`, `utf8`, `coroutine`, `pai
 
 ## Stages
 
+How an ellipsoid is drawn. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `shell` | `integer?` | Hollow: only its outer this many blocks, 1 or more. |
+| `only` | `string[]?` | Set only where the block now is one of these. |
+
+How `structure:sprinkle` sets its blocks. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `only` | `string[]?` | Set only where the block now is one of these. |
+| `seed` | `integer?` | The number its places are drawn from. Default one of the structure's own. |
+
 What a terrain's script returns: the stages it runs, each optional. A key that isn't one of them is an error.
 
 | Field | Type | |
@@ -132,6 +146,173 @@ local dungeons = terrain.plan("dungeon", 512, function(cell_x, cell_z)
   return { x = cell_x * 512 + math.random(0, 511), z = cell_z * 512 + math.random(0, 511) }
 end)
 ```
+
+### `terrain.structure()`
+
+A new, empty structure: something to build once (a tree, a ruin, a floating island) and draw chunk by chunk with `chunk:place_structure`, each chunk drawing the part of it inside it, so it can be any size and cross chunk borders. Build it where it's the same whichever chunk asks: in a plan's or scatter's `make`, or the script's body.
+
+**Returns** `Structure`
+
+```lua
+local tree = terrain.structure()
+tree:fill(0, 0, 0, 0, 6, 0, "minecraft:oak_log")
+tree:ellipsoid(0, 7, 0, 3, 2, 3, "minecraft:oak_leaves")
+```
+
+### `terrain.scatter(name, size, make, reach?)`
+
+Structures over a grid, at most one in each cell (a plan of structures): `make(cell_x, cell_z)` builds a cell's, or returns `nil`, with the cell's own `math.random` numbers. `scatter:place(chunk)` draws every one that reaches the chunk. Each must lie within `reach` cells of its own. Made in the script's body, once per name.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `name` | `string` | Its name, which its numbers are drawn from, as a plan's. |
+| `size` | `integer` | How wide a cell is, in blocks, 1 to 65536. |
+| `make` | `fun(cell_x: integer, cell_z: integer): Structure?` | Builds a cell's structure, in the world's coordinates, or `nil` for none. |
+| `reach` (optional) | `integer` | How many cells past its own a structure can reach, 0 to 8. Default 1. |
+
+**Returns** `Scatter`
+
+```lua
+local ruins = terrain.scatter("ruins", 128, function(cell_x, cell_z)
+  if math.random() < 0.7 then return nil end
+  local x, z = cell_x * 128 + math.random(16, 111), cell_z * 128 + math.random(16, 111)
+  local y = terrain.height(x, z)
+  local ruin = terrain.structure()
+  ruin:ellipsoid(x, y, z, 6, 4, 6, "minecraft:mossy_cobblestone", { shell = 1 })
+  return ruin
+end)
+
+return {
+  decorate = function(chunk) ruins:place(chunk) end,
+}
+```
+
+## Structure
+
+Something built once and drawn chunk by chunk (`terrain.structure()`): its operations, drawn in the order they were added, each only where it reaches into the chunk. Every method returns the structure, so calls chain.
+
+### `structure:fill(x1, y1, z1, x2, y2, z2, block)`
+
+Fills a box with a block, both corners included, as `chunk:fill` does.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `x1` | `integer` | One corner. |
+| `y1` | `integer` |  |
+| `z1` | `integer` |  |
+| `x2` | `integer` | The other. |
+| `y2` | `integer` |  |
+| `z2` | `integer` |  |
+| `block` | `string` | A block id. |
+
+**Returns** `Structure`
+
+### `structure:set(x, y, z, block)`
+
+Sets one block.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `x` | `integer` |  |
+| `y` | `integer` |  |
+| `z` | `integer` |  |
+| `block` | `string` | A block id. |
+
+**Returns** `Structure`
+
+### `structure:ellipsoid(cx, cy, cz, rx, ry, rz, block, options?)`
+
+An ellipsoid, as `chunk:ellipsoid` draws one.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `cx` | `integer` | Its centre. |
+| `cy` | `integer` |  |
+| `cz` | `integer` |  |
+| `rx` | `integer` | Its radius along x, in whole blocks, 0 or more. |
+| `ry` | `integer` | Along y. |
+| `rz` | `integer` | Along z. |
+| `block` | `string` | A block id. |
+| `options` (optional) | `EllipsoidOptions` |  |
+
+**Returns** `Structure`
+
+### `structure:loot(x, y, z, table)`
+
+Fills the container at a place from a loot table, as `chunk:set_loot` does: put the container there first.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `x` | `integer` |  |
+| `y` | `integer` |  |
+| `z` | `integer` |  |
+| `table` | `string` | A loot table, by id. |
+
+**Returns** `Structure`
+
+### `structure:sprinkle(x1, y1, z1, x2, y2, z2, block, count, options?)`
+
+Sets `count` blocks at places through a box: the same places whichever chunk draws them (drawn from `seed`, or a number of the structure's own). With `only`, a place is set only when its block is one of them, so a wall can weather without anything appearing in the air.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `x1` | `integer` | One corner. |
+| `y1` | `integer` |  |
+| `z1` | `integer` |  |
+| `x2` | `integer` | The other. |
+| `y2` | `integer` |  |
+| `z2` | `integer` |  |
+| `block` | `string` | A block id. |
+| `count` | `integer` | How many places, 0 or more. |
+| `options` (optional) | `SprinkleOptions` |  |
+
+**Returns** `Structure`
+
+```lua
+local wall = terrain.structure()
+wall:fill(0, 60, 0, 9, 64, 0, "minecraft:stone_bricks")
+wall:sprinkle(0, 60, 0, 9, 64, 0, "minecraft:mossy_stone_bricks", 12, { only = { "minecraft:stone_bricks" } })
+```
+
+### `structure:bounds()`
+
+The box everything in it lies in, both corners included, or `nil` when it has nothing.
+
+**Returns** `integer?`, `integer?`, `integer?`, `integer?`, `integer?`, `integer?`
+
+## Scatter
+
+Structures over a grid, at most one per cell (`terrain.scatter`).
+
+### `scatter:place(chunk)`
+
+Draws the part inside the chunk of every structure that reaches it.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `chunk` | `Chunk` |  |
+
+### `scatter:get(cell_x, cell_z)`
+
+A cell's structure, or `nil`.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `cell_x` | `integer` |  |
+| `cell_z` | `integer` |  |
+
+**Returns** `Structure?`
+
+### `scatter:at(x, z)`
+
+The structure of the cell a column is in, then that cell's place in the grid.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `x` | `integer` |  |
+| `z` | `integer` |  |
+
+**Returns** `Structure?`, `integer`, `integer`
 
 ## Plan
 
@@ -263,6 +444,47 @@ Fills the container at a place in the chunk (a chest, a barrel) from one of the 
 
 ```lua
 chunk:set_loot(x, y, z, "dungeon_chest")
+```
+
+### `chunk:ellipsoid(cx, cy, cz, rx, ry, rz, block, options?)`
+
+Fills an ellipsoid (a ball, an egg, a disc) with a block: the part of it in the chunk. Radii are whole blocks, each taken half a block out so a small ball is round; 0 is one block thick. With `shell`, only its outer `shell` blocks (hollow), and with `only`, only where the block now is one of them.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `cx` | `integer` | Its centre. |
+| `cy` | `integer` |  |
+| `cz` | `integer` |  |
+| `rx` | `integer` | Its radius along x, in whole blocks, 0 or more. |
+| `ry` | `integer` | Along y. |
+| `rz` | `integer` | Along z. |
+| `block` | `string` | A block id. |
+| `options` (optional) | `EllipsoidOptions` |  |
+
+```lua
+chunk:ellipsoid(x, y, z, 4, 3, 4, "minecraft:oak_leaves", { only = { "minecraft:air" } })
+```
+
+### `chunk:place_structure(structure, x?, y?, z?)`
+
+Draws the part of a structure inside the chunk, moved by `x`, `y`, `z` (default 0): one structure can be placed in many places.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `structure` | `Structure` |  |
+| `x` (optional) | `integer` | Default 0. |
+| `y` (optional) | `integer` | Default 0. |
+| `z` (optional) | `integer` | Default 0. |
+
+```lua
+local stump = terrain.structure():fill(0, 0, 0, 0, 1, 0, "minecraft:oak_log")
+
+return {
+  decorate = function(chunk)
+    local x, z = chunk:min_x() + 8, chunk:min_z() + 8
+    chunk:place_structure(stump, x, terrain.height(x, z) + 1, z)
+  end,
+}
 ```
 
 ### `chunk:block(x, y, z)`

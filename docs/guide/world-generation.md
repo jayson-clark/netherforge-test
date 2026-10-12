@@ -159,6 +159,38 @@ own, and the problem (`terrain.script-failed`) is in the editor's Problems
 panel with the line. Saving the script swaps it for new chunks, like saving the
 file.
 
+### Structures that cross chunks
+
+A stage only fills its own chunk, so something bigger (a tree by the border,
+a ruin, a floating island) is built once as a **structure** and drawn chunk by
+chunk: each chunk draws the part of it inside it.
+
+```lua
+---@type Terrain
+local terrain = ...
+
+-- At most one ruin in each 128-block cell, built once with the cell's own numbers.
+local ruins = terrain.scatter("ruins", 128, function(cell_x, cell_z)
+  if math.random() < 0.6 then return nil end
+  local x, z = cell_x * 128 + math.random(16, 111), cell_z * 128 + math.random(16, 111)
+  local y = terrain.height(x, z)
+  return terrain.structure()
+    :ellipsoid(x, y + 4, z, 7, 5, 7, "minecraft:mossy_cobblestone", { shell = 1 })
+    :sprinkle(x - 7, y, z - 7, x + 7, y + 9, z + 7, "minecraft:cracked_stone_bricks", 40,
+      { only = { "minecraft:mossy_cobblestone" } })
+end)
+
+return {
+  decorate = function(chunk) ruins:place(chunk) end,
+}
+```
+
+A structure has `fill`, `set`, `ellipsoid`, `sprinkle` (blocks at places
+fixed by the structure, the same in every chunk) and `loot`, in the world's
+coordinates; `chunk:place_structure(s, x, y, z)` draws one moved, so a tree
+built once at 0, 0, 0 can stand anywhere. A chunk draws an ellipsoid of its
+own with `chunk:ellipsoid` (solid, a `shell`, or `only` over some blocks).
+
 ## Looking without the editor
 
 `netherforge preview` draws the same picture from a terminal, so a script, CI or

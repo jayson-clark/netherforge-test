@@ -33,6 +33,8 @@ class TerrainScriptApiTest {
         assertEquals(functions("Noise"), defined("Noise"))
         assertEquals(functions("Chunk"), defined("Chunk"))
         assertEquals(functions("Plan"), defined("Plan"))
+        assertEquals(functions("Structure"), defined("Structure"))
+        assertEquals(functions("Scatter"), defined("Scatter"))
     }
 
     @Test

@@ -22,6 +22,18 @@ export interface TerrainApiSpec {
 
 const integer = (name: string, doc: string) => ({ name, type: 'integer', doc })
 
+/** What an ellipsoid takes, in a chunk or a structure. */
+const ELLIPSOID_PARAMS = [
+  integer('cx', 'Its centre.'),
+  integer('cy', ''),
+  integer('cz', ''),
+  integer('rx', 'Its radius along x, in whole blocks, 0 or more.'),
+  integer('ry', 'Along y.'),
+  integer('rz', 'Along z.'),
+  { name: 'block', type: 'string', doc: 'A block id.', names: 'block' },
+  { name: 'options', type: 'EllipsoidOptions', doc: '', optional: true },
+]
+
 export const terrainApi: TerrainApiSpec = {
   classes: [
     {
@@ -107,6 +119,147 @@ export const terrainApi: TerrainApiSpec = {
           returns: [{ type: 'Plan' }],
           example:
             'local dungeons = terrain.plan("dungeon", 512, function(cell_x, cell_z)\n  return { x = cell_x * 512 + math.random(0, 511), z = cell_z * 512 + math.random(0, 511) }\nend)',
+        },
+        {
+          name: 'structure',
+          doc: "A new, empty structure: something to build once (a tree, a ruin, a floating island) and draw chunk by chunk with `chunk:place_structure`, each chunk drawing the part of it inside it, so it can be any size and cross chunk borders. Build it where it's the same whichever chunk asks: in a plan's or scatter's `make`, or the script's body.",
+          params: [],
+          returns: [{ type: 'Structure' }],
+          example:
+            'local tree = terrain.structure()\ntree:fill(0, 0, 0, 0, 6, 0, "minecraft:oak_log")\ntree:ellipsoid(0, 7, 0, 3, 2, 3, "minecraft:oak_leaves")',
+        },
+        {
+          name: 'scatter',
+          doc: "Structures over a grid, at most one in each cell (a plan of structures): `make(cell_x, cell_z)` builds a cell's, or returns `nil`, with the cell's own `math.random` numbers. `scatter:place(chunk)` draws every one that reaches the chunk. Each must lie within `reach` cells of its own. Made in the script's body, once per name.",
+          params: [
+            {
+              name: 'name',
+              type: 'string',
+              doc: "Its name, which its numbers are drawn from, as a plan's.",
+            },
+            { name: 'size', type: 'integer', doc: 'How wide a cell is, in blocks, 1 to 65536.' },
+            {
+              name: 'make',
+              type: 'fun(cell_x: integer, cell_z: integer): Structure?',
+              doc: "Builds a cell's structure, in the world's coordinates, or `nil` for none.",
+            },
+            {
+              name: 'reach',
+              type: 'integer',
+              doc: 'How many cells past its own a structure can reach, 0 to 8. Default 1.',
+              optional: true,
+            },
+          ],
+          returns: [{ type: 'Scatter' }],
+          example:
+            'local ruins = terrain.scatter("ruins", 128, function(cell_x, cell_z)\n  if math.random() < 0.7 then return nil end\n  local x, z = cell_x * 128 + math.random(16, 111), cell_z * 128 + math.random(16, 111)\n  local y = terrain.height(x, z)\n  local ruin = terrain.structure()\n  ruin:ellipsoid(x, y, z, 6, 4, 6, "minecraft:mossy_cobblestone", { shell = 1 })\n  return ruin\nend)\n\nreturn {\n  decorate = function(chunk) ruins:place(chunk) end,\n}',
+        },
+      ],
+    },
+    {
+      name: 'Structure',
+      doc: 'Something built once and drawn chunk by chunk (`terrain.structure()`): its operations, drawn in the order they were added, each only where it reaches into the chunk. Every method returns the structure, so calls chain.',
+      methods: true,
+      fields: [],
+      functions: [
+        {
+          name: 'fill',
+          doc: 'Fills a box with a block, both corners included, as `chunk:fill` does.',
+          params: [
+            integer('x1', 'One corner.'),
+            integer('y1', ''),
+            integer('z1', ''),
+            integer('x2', 'The other.'),
+            integer('y2', ''),
+            integer('z2', ''),
+            { name: 'block', type: 'string', doc: 'A block id.', names: 'block' },
+          ],
+          returns: [{ type: 'Structure' }],
+        },
+        {
+          name: 'set',
+          doc: 'Sets one block.',
+          params: [
+            integer('x', ''),
+            integer('y', ''),
+            integer('z', ''),
+            { name: 'block', type: 'string', doc: 'A block id.', names: 'block' },
+          ],
+          returns: [{ type: 'Structure' }],
+        },
+        {
+          name: 'ellipsoid',
+          doc: 'An ellipsoid, as `chunk:ellipsoid` draws one.',
+          params: ELLIPSOID_PARAMS,
+          returns: [{ type: 'Structure' }],
+        },
+        {
+          name: 'loot',
+          doc: 'Fills the container at a place from a loot table, as `chunk:set_loot` does: put the container there first.',
+          params: [
+            integer('x', ''),
+            integer('y', ''),
+            integer('z', ''),
+            { name: 'table', type: 'string', doc: 'A loot table, by id.', names: 'loot_table' },
+          ],
+          returns: [{ type: 'Structure' }],
+        },
+        {
+          name: 'sprinkle',
+          doc: "Sets `count` blocks at places through a box: the same places whichever chunk draws them (drawn from `seed`, or a number of the structure's own). With `only`, a place is set only when its block is one of them, so a wall can weather without anything appearing in the air.",
+          params: [
+            integer('x1', 'One corner.'),
+            integer('y1', ''),
+            integer('z1', ''),
+            integer('x2', 'The other.'),
+            integer('y2', ''),
+            integer('z2', ''),
+            { name: 'block', type: 'string', doc: 'A block id.', names: 'block' },
+            { name: 'count', type: 'integer', doc: 'How many places, 0 or more.' },
+            { name: 'options', type: 'SprinkleOptions', doc: '', optional: true },
+          ],
+          returns: [{ type: 'Structure' }],
+          example:
+            'local wall = terrain.structure()\nwall:fill(0, 60, 0, 9, 64, 0, "minecraft:stone_bricks")\nwall:sprinkle(0, 60, 0, 9, 64, 0, "minecraft:mossy_stone_bricks", 12, { only = { "minecraft:stone_bricks" } })',
+        },
+        {
+          name: 'bounds',
+          doc: 'The box everything in it lies in, both corners included, or `nil` when it has nothing.',
+          params: [],
+          returns: [
+            { type: 'integer?' },
+            { type: 'integer?' },
+            { type: 'integer?' },
+            { type: 'integer?' },
+            { type: 'integer?' },
+            { type: 'integer?' },
+          ],
+        },
+      ],
+    },
+    {
+      name: 'Scatter',
+      doc: 'Structures over a grid, at most one per cell (`terrain.scatter`).',
+      methods: true,
+      fields: [],
+      functions: [
+        {
+          name: 'place',
+          doc: 'Draws the part inside the chunk of every structure that reaches it.',
+          params: [{ name: 'chunk', type: 'Chunk', doc: '' }],
+          returns: [],
+        },
+        {
+          name: 'get',
+          doc: "A cell's structure, or `nil`.",
+          params: [integer('cell_x', ''), integer('cell_z', '')],
+          returns: [{ type: 'Structure?' }],
+        },
+        {
+          name: 'at',
+          doc: "The structure of the cell a column is in, then that cell's place in the grid.",
+          params: [integer('x', ''), integer('z', '')],
+          returns: [{ type: 'Structure?' }, { type: 'integer' }, { type: 'integer' }],
         },
       ],
     },
@@ -226,6 +379,27 @@ export const terrainApi: TerrainApiSpec = {
           example: 'chunk:set_loot(x, y, z, "dungeon_chest")',
         },
         {
+          name: 'ellipsoid',
+          doc: 'Fills an ellipsoid (a ball, an egg, a disc) with a block: the part of it in the chunk. Radii are whole blocks, each taken half a block out so a small ball is round; 0 is one block thick. With `shell`, only its outer `shell` blocks (hollow), and with `only`, only where the block now is one of them.',
+          params: ELLIPSOID_PARAMS,
+          returns: [],
+          example:
+            'chunk:ellipsoid(x, y, z, 4, 3, 4, "minecraft:oak_leaves", { only = { "minecraft:air" } })',
+        },
+        {
+          name: 'place_structure',
+          doc: 'Draws the part of a structure inside the chunk, moved by `x`, `y`, `z` (default 0): one structure can be placed in many places.',
+          params: [
+            { name: 'structure', type: 'Structure', doc: '' },
+            { name: 'x', type: 'integer', doc: 'Default 0.', optional: true },
+            { name: 'y', type: 'integer', doc: 'Default 0.', optional: true },
+            { name: 'z', type: 'integer', doc: 'Default 0.', optional: true },
+          ],
+          returns: [],
+          example:
+            'local stump = terrain.structure():fill(0, 0, 0, 0, 1, 0, "minecraft:oak_log")\n\nreturn {\n  decorate = function(chunk)\n    local x, z = chunk:min_x() + 8, chunk:min_z() + 8\n    chunk:place_structure(stump, x, terrain.height(x, z) + 1, z)\n  end,\n}',
+        },
+        {
           name: 'block',
           doc: 'The block at a place in the chunk, as `fill` takes it (`minecraft:air` for none); `nil` outside the chunk or the world.',
           params: [integer('x', ''), integer('y', ''), integer('z', '')],
@@ -235,6 +409,34 @@ export const terrainApi: TerrainApiSpec = {
     },
   ],
   shapes: [
+    {
+      name: 'EllipsoidOptions',
+      doc: "How an ellipsoid is drawn. A key that isn't one of these is an error.",
+      methods: false,
+      functions: [],
+      fields: [
+        {
+          name: 'shell',
+          type: 'integer?',
+          doc: 'Hollow: only its outer this many blocks, 1 or more.',
+        },
+        { name: 'only', type: 'string[]?', doc: 'Set only where the block now is one of these.' },
+      ],
+    },
+    {
+      name: 'SprinkleOptions',
+      doc: "How `structure:sprinkle` sets its blocks. A key that isn't one of these is an error.",
+      methods: false,
+      functions: [],
+      fields: [
+        { name: 'only', type: 'string[]?', doc: 'Set only where the block now is one of these.' },
+        {
+          name: 'seed',
+          type: 'integer?',
+          doc: "The number its places are drawn from. Default one of the structure's own.",
+        },
+      ],
+    },
     {
       name: 'TerrainStages',
       doc: "What a terrain's script returns: the stages it runs, each optional. A key that isn't one of them is an error.",
