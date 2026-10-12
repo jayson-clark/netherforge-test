@@ -196,7 +196,15 @@ object BlockCarriers {
      * model yet. [hidden] is a block drawn by a centity, which shows no cube
      * of its own.
      */
-    class Use(val name: String, val state: BlockState, val pack: String?, val entry: String?, val hidden: Boolean) {
+    class Use(
+        val name: String,
+        val state: BlockState,
+        val pack: String?,
+        val entry: String?,
+        val hidden: Boolean,
+        /** The way the block faces in this state, for a block that turns ([BlockFile.rotation]); null for one that doesn't. */
+        val facing: BlockFacing? = null
+    ) {
         val carrier: BlockCarrier get() = carrierOf(state)
     }
 
@@ -213,7 +221,7 @@ object BlockCarriers {
         val overflow: List<String>,
         val unheld: List<String> = emptyList()
     ) {
-        private val byName = uses.associateBy { it.name }
+        private val byName = uses.groupBy { it.name }
         private val byState = uses.associateBy { it.state.toString() }
 
         /** The note block's states, for what only it has. */
@@ -222,11 +230,21 @@ object BlockCarriers {
         /** The carriers some block is held in. */
         val carriers: Set<BlockCarrier> get() = uses.map { it.carrier }.toSet()
 
-        /** The state [name] is held as, or null for a block that has none. */
-        fun stateOf(name: String): BlockState? = byName[name]?.state
+        /** The state [name] is held as (facing north, for one that turns), or null for a block that has none. */
+        fun stateOf(name: String): BlockState? = byName[name]?.first()?.state
+
+        /** The state [name] is held as facing [facing]; its one state for a block that doesn't turn, null for a way it can't face. */
+        fun stateOf(name: String, facing: BlockFacing?): BlockState? {
+            val held = byName[name] ?: return null
+            if (held.first().facing == null) return held.first().state
+            return held.firstOrNull { it.facing == (facing ?: BlockFacing.NORTH) }?.state
+        }
 
         /** The block that [state] (canonical text) is the carrier of. */
         fun nameOf(state: String): String? = byState[state]?.name
+
+        /** The way the block [state] (canonical text) is the carrier of faces in it; null for a block that doesn't turn. */
+        fun facingOf(state: String): BlockFacing? = byState[state]?.facing
 
         /** Whether [state] is one a custom block could be in, of whichever carrier. */
         fun isCarrier(state: BlockState): Boolean = pools.values.any { it.isCarrier(state) }
@@ -250,7 +268,13 @@ object BlockCarriers {
      * block names `library:gems/gem`), so its model resolves in [home], the
      * project's namespace. Null without game data.
      */
-    fun plan(blocks: Map<String, BlockFile?>, home: String, game: GameData?, carriers: Map<String, BlockCarrier> = emptyMap()): Plan? {
+    fun plan(
+        blocks: Map<String, BlockFile?>,
+        home: String,
+        game: GameData?,
+        carriers: Map<String, BlockCarrier> = emptyMap(),
+        rotations: Map<String, BlockRotation> = emptyMap()
+    ): Plan? {
         game ?: return null
         val pools = HashMap<BlockCarrier, Pool?>()
         val next = HashMap<BlockCarrier, Int>()
@@ -267,14 +291,23 @@ object BlockCarriers {
             }
             val model = block?.model?.resolve(home)
             if (block?.model != null && model == null) continue
+            // A block that turns takes a state per way it faces, all or none of them.
+            val facings = (block?.rotationOrDefault ?: rotations[name] ?: BlockRotation.NONE).facings
             val at = next[carrier] ?: 0
-            if (at >= pool.carriers.size) {
+            val needed = maxOf(facings.size, 1)
+            if (at + needed > pool.carriers.size) {
                 overflow += name
                 continue
             }
-            next[carrier] = at + 1
+            next[carrier] = at + needed
             val pack = model?.let { if (it.namespace == home) it.pack else "${it.namespace}:${it.pack}" }
-            uses += Use(name, pool.carriers[at], pack, model?.key, block?.centity != null)
+            if (facings.isEmpty()) {
+                uses += Use(name, pool.carriers[at], pack, model?.key, block?.centity != null)
+            } else {
+                for ((i, facing) in facings.withIndex()) {
+                    uses += Use(name, pool.carriers[at + i], pack, model?.key, block?.centity != null, facing)
+                }
+            }
         }
         // Nothing to hold any of them in (a game without the carriers' blocks): as no plan.
         val known = pools.filterValues { it != null }.mapValues { it.value!! }

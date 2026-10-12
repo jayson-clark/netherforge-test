@@ -63,6 +63,8 @@ ktlint {
 
 val repoRoot: File by rootProject.extra
 
+val updateGolden = System.getenv("UPDATE_GOLDEN") ?: ""
+
 tasks.withType<Test>().configureEach {
     // A Lua budget bug shows up as a hang; fail instead of waiting forever.
     timeout.set(Duration.ofMinutes(5))
@@ -73,6 +75,11 @@ tasks.withType<Test>().configureEach {
     environment("NETHERFORGE_REPO", repoRoot.absolutePath)
     inputs.file(repoRoot.resolve("packages/api/generated/api.json")).withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.dir(repoRoot.resolve("examples")).withPathSensitivity(PathSensitivity.RELATIVE)
+    // The goldens (testdata/api-costs.tsv): UPDATE_GOLDEN=1 rewrites them, and always runs.
+    inputs.dir(layout.projectDirectory.dir("testdata")).withPathSensitivity(PathSensitivity.RELATIVE)
+    environment("UPDATE_GOLDEN", updateGolden)
+    inputs.property("updateGolden", updateGolden)
+    if (updateGolden == "1") outputs.upToDateWhen { false }
 }
 
 // A flaky test is quarantined (`@Quarantined(issue)`, JUnit's tag "quarantine") until it's fixed: out of `test`, run

@@ -6,6 +6,7 @@ import dev.netherforge.plugin.platform.InventoryOps
 import dev.netherforge.plugin.platform.InventoryRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.SidebarOps
+import dev.netherforge.plugin.platform.StackFilter
 import io.papermc.paper.scoreboard.numbers.NumberFormat
 import net.kyori.adventure.bossbar.BossBar
 import org.bukkit.Bukkit
@@ -44,8 +45,27 @@ class PaperInventories(private val entities: PaperWorldEntities) : InventoryOps 
 
     override fun size(ref: InventoryRef): Int? = if (ref is InventoryRef.Storage) PaperStorage.size(ref) else inventory(ref)?.size
 
-    override fun contents(ref: InventoryRef): List<ItemData?>? =
-        if (ref is InventoryRef.Storage) PaperStorage.contents(ref) else inventory(ref)?.contents?.map(PaperItems::toItem)
+    // Reading a stack in full (`PaperItems.toItem`) is what an inventory call costs, so each reads only what it
+    // must, and a slot whose stack hasn't changed since it was last read answers from that read.
+    override fun contents(ref: InventoryRef): List<ItemData?>? {
+        if (ref is InventoryRef.Storage) return PaperStorage.contents(ref)
+        return inventory(ref)?.contents?.mapIndexed { slot, stack -> PaperItems.toItem(stack, SlotOf(ref, slot)) }
+    }
+
+    override fun item(ref: InventoryRef, slot: Int): ItemData? {
+        if (ref is InventoryRef.Storage) return PaperStorage.item(ref, slot)
+        return inventory(ref)?.let { PaperItems.toItem(it.getItem(slot), SlotOf(ref, slot)) }
+    }
+
+    override fun contents(ref: InventoryRef, filter: StackFilter): List<ItemData?>? {
+        if (ref is InventoryRef.Storage) return PaperStorage.contents(ref, filter)
+        return inventory(ref)?.contents?.mapIndexed { slot, stack ->
+            stack?.takeIf { PaperItems.admits(it, filter) }?.let { PaperItems.toItem(it, SlotOf(ref, slot)) }
+        }
+    }
+
+    /** Where a stack read is remembered: a slot of an inventory. */
+    private data class SlotOf(val ref: InventoryRef, val slot: Int)
 
     override fun setItem(ref: InventoryRef, slot: Int, item: ItemData?): Boolean {
         if (ref is InventoryRef.Storage) return PaperStorage.setItem(ref, slot, item)

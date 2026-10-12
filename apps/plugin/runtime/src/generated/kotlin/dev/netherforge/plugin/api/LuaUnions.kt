@@ -79,6 +79,21 @@ sealed interface StringOrDialog {
     )
 }
 
+/** A `String|Integer|Boolean`: whichever it was. */
+sealed interface StringOrIntegerOrBoolean {
+    data class String(val value: kotlin.String) : StringOrIntegerOrBoolean
+    data class Integer(val value: kotlin.Long) : StringOrIntegerOrBoolean
+    data class Boolean(val value: kotlin.Boolean) : StringOrIntegerOrBoolean
+
+    object Codec : LuaCodec<StringOrIntegerOrBoolean> by LuaUnion(
+        listOf(
+            LuaUnion.Member<StringOrIntegerOrBoolean, kotlin.String>(LuaCodecs.STRING, ::String) { (it as? String)?.value },
+            LuaUnion.Member<StringOrIntegerOrBoolean, kotlin.Long>(LuaCodecs.INTEGER, ::Integer) { (it as? Integer)?.value },
+            LuaUnion.Member<StringOrIntegerOrBoolean, kotlin.Boolean>(LuaCodecs.BOOLEAN, ::Boolean) { (it as? Boolean)?.value }
+        )
+    )
+}
+
 /** A `String|ItemMatch`: whichever it was. */
 sealed interface StringOrItemMatch {
     data class String(val value: kotlin.String) : StringOrItemMatch

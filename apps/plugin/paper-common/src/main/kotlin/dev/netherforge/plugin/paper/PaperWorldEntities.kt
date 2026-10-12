@@ -288,7 +288,7 @@ class PaperWorldEntities(private val plugin: Plugin, private val tagged: PaperEn
     override fun equipment(id: UUID, slot: String): ItemData? {
         val equipment = living(id)?.equipment ?: return null
         val which = slot(slot) ?: return null
-        return runCatching { equipment.getItem(which) }.getOrNull()?.let(PaperItems::toItem)
+        return PaperItems.toItem(runCatching { equipment.getItem(which) }.getOrNull(), EquipmentOf(id, which))
     }
 
     override fun setEquipment(id: UUID, slot: String, item: ItemData?): Boolean {
@@ -394,3 +394,6 @@ internal fun effectData(effect: PotionEffect) = StatusEffectData(
     effect.hasParticles(),
     effect.hasIcon()
 )
+
+/** Where an equipment read is remembered ([PaperItems.toItem]): an entity's slot. */
+private data class EquipmentOf(val entity: UUID, val slot: EquipmentSlot)

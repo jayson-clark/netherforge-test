@@ -75,6 +75,7 @@ function formatSidebar(): DefaultTheme.SidebarItem[] {
     'cutscene.md',
     'terrain.md',
     'biome.md',
+    'sky.md',
     'datapack.md',
     'dimension-type.md',
     'resource-pack.md',

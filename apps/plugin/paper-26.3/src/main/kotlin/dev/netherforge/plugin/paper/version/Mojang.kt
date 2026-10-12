@@ -2,12 +2,17 @@ package dev.netherforge.plugin.paper.version
 
 import com.mojang.serialization.JsonOps
 import dev.netherforge.plugin.paper.DimensionStorage
+import net.minecraft.core.Holder
 import net.minecraft.core.registries.Registries
+import net.minecraft.network.protocol.game.ClientboundSetTimePacket
 import net.minecraft.resources.Identifier
 import net.minecraft.resources.ResourceKey
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.dedicated.DedicatedServerProperties
+import net.minecraft.server.level.ServerPlayer
 import net.minecraft.util.GsonHelper
+import net.minecraft.world.clock.ClockNetworkState
+import net.minecraft.world.clock.WorldClock
 import net.minecraft.world.entity.Mob
 import net.minecraft.world.entity.ai.goal.GoalSelector
 import net.minecraft.world.level.dimension.LevelStem
@@ -21,6 +26,7 @@ import org.bukkit.World
 import org.bukkit.WorldCreator
 import org.bukkit.craftbukkit.util.CraftNamespacedKey
 import java.util.Locale
+import kotlin.jvm.optionals.getOrNull
 
 /** [ServerInternals] on Minecraft 26.3. */
 internal object Mojang : ServerInternals {
@@ -71,5 +77,25 @@ internal object Mojang : ServerInternals {
         World.Environment.NETHER -> LevelStem.NETHER
         World.Environment.THE_END -> LevelStem.END
         else -> LevelStem.OVERWORLD
+    }
+
+    override fun stopClocks(clocks: Collection<String>) {
+        val server = MinecraftServer.getServer()
+        for (key in clocks) {
+            val clock = clockOf(server, key) ?: continue
+            server.clockManager().setPaused(clock, true)
+            server.clockManager().setTotalTicks(clock, 0)
+        }
+    }
+
+    override fun sendClock(player: ServerPlayer, clock: String, ticks: Long) {
+        val server = MinecraftServer.getServer()
+        val holder = clockOf(server, clock) ?: return
+        player.connection.send(ClientboundSetTimePacket(server.overworld().gameTime, mapOf(holder to ClockNetworkState(ticks, 0f, 0f))))
+    }
+
+    private fun clockOf(server: MinecraftServer, key: String): Holder<WorldClock>? {
+        val id = Identifier.tryParse(key) ?: return null
+        return server.registryAccess().lookupOrThrow(Registries.WORLD_CLOCK).get(ResourceKey.create(Registries.WORLD_CLOCK, id)).getOrNull()
     }
 }

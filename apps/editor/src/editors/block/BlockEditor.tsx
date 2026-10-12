@@ -8,6 +8,7 @@ import { setKey } from '@/core/draft'
 import {
   BlockToolValues,
   type BlockCarrier,
+  type BlockRotation,
   newScript,
   newSiblingFile,
   type BlockFile,
@@ -171,6 +172,20 @@ export function BlockEditor({ path }: { path: string }) {
               { value: 'leaves', label: 'leaves: a solid cube you see through' },
             ]}
             onChange={(value) => set('carrier', (value || undefined) as BlockCarrier | undefined)}
+          />
+          <SelectField
+            label="Turns"
+            dataPath="rotation"
+            value={model.rotation ?? ''}
+            options={[
+              { value: '', label: 'no (default): always as drawn' },
+              {
+                value: 'horizontal',
+                label: 'horizontal: north, east, south or west, toward who places it',
+              },
+              { value: 'all', label: 'all: up or down too' },
+            ]}
+            onChange={(value) => set('rotation', (value || undefined) as BlockRotation | undefined)}
           />
           <NumberField
             label="Hardness"

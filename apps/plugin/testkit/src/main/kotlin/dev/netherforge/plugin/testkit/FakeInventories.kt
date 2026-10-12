@@ -3,6 +3,7 @@ package dev.netherforge.plugin.testkit
 import dev.netherforge.plugin.platform.InventoryOps
 import dev.netherforge.plugin.platform.InventoryRef
 import dev.netherforge.plugin.platform.ItemData
+import dev.netherforge.plugin.platform.StackFilter
 import java.util.UUID
 
 // Real inventories on the fake server, by `InventoryRef`.
@@ -65,7 +66,16 @@ class FakeInventories(private val platform: FakePlatform) : InventoryOps {
 
     override fun size(ref: InventoryRef) = slots(ref)?.size
 
-    override fun contents(ref: InventoryRef) = slots(ref)?.toList()
+    override fun contents(ref: InventoryRef) = slots(ref)?.toList()?.also { fullReads++ }
+
+    // As a real server does: one slot, or the stacks a filter lets through, never every stack read in full.
+    override fun item(ref: InventoryRef, slot: Int): ItemData? = slots(ref)?.getOrNull(slot)
+
+    override fun contents(ref: InventoryRef, filter: StackFilter): List<ItemData?>? =
+        slots(ref)?.map { item -> item?.takeIf(filter::admits) }
+
+    /** How many times every stack of an inventory was read ([contents] without a filter), for a test. */
+    var fullReads = 0
 
     override fun setItem(ref: InventoryRef, slot: Int, item: ItemData?): Boolean {
         val slots = slots(ref) ?: return false

@@ -130,7 +130,7 @@ local function kind_of(t)
   if mt == nil then
     return nil
   end
-  if mt == events.Event_mt then
+  if events.event_state[t] ~= nil then
     return "Event"
   end
   local kind = handles.kinds[mt]

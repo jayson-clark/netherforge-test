@@ -13,12 +13,14 @@ import dev.netherforge.format.particle.DustTransitionData
 import dev.netherforge.format.particle.SpawnData
 import dev.netherforge.format.project.SpawnCategory
 import dev.netherforge.plugin.platform.BiomeSearch
+import dev.netherforge.plugin.platform.BlockBoxRead
 import dev.netherforge.plugin.platform.BlockHit
 import dev.netherforge.plugin.platform.BlockOps
 import dev.netherforge.plugin.platform.BlockRecord
 import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.BlockSnapshot
 import dev.netherforge.plugin.platform.BlockVector
+import dev.netherforge.plugin.platform.BoxState
 import dev.netherforge.plugin.platform.ChunkGrid
 import dev.netherforge.plugin.platform.GameRuleType
 import dev.netherforge.plugin.platform.ItemData
@@ -49,6 +51,7 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.util.Vector
+import java.util.Optional
 import java.util.UUID
 import kotlin.math.floor
 import dev.netherforge.format.particle.ItemData as ItemSpawnData
@@ -289,7 +292,12 @@ class PaperWorlds : WorldOps {
 }
 
 /** [BlockOps] with the Paper API. A block's script data is JSON in its chunk's persistent data. */
-class PaperBlocks(private val plugin: JavaPlugin, private val carriers: PaperCarriers) : BlockOps {
+class PaperBlocks(
+    private val plugin: JavaPlugin,
+    private val carriers: PaperCarriers,
+    /** The server's own chunks, for reading a chunk's blocks quickly ([find]); null where there's no version (a test's). */
+    private val version: PaperVersion? = null
+) : BlockOps {
     private companion object {
         /** The persistent data key a custom block's record is kept under in its chunk, then `x_y_z`. */
         const val RECORDS = "custom_block/"
@@ -415,6 +423,8 @@ class PaperBlocks(private val plugin: JavaPlugin, private val carriers: PaperCar
         val found = ChunkGrid()
         // The chunk's palettes say at once whether any of them is there.
         if (wanted.keys.none(chunk::contains)) return found
+        // Then only the sections that may hold one, read straight from the server's chunk.
+        if (version?.findStates(chunk.world, chunkX, chunkZ, wanted, found) == true) return found
         val materials = wanted.keys.mapTo(HashSet()) { it.material }
         val snapshot = chunk.getChunkSnapshot(false, false, false)
         val bottom = chunk.world.minHeight shr 4
@@ -432,6 +442,40 @@ class PaperBlocks(private val plugin: JavaPlugin, private val carriers: PaperCar
         }
         return found
     }
+
+    override fun box(world: String, x0: Int, y0: Int, z0: Int, x1: Int, y1: Int, z1: Int): BlockBoxRead? {
+        val bukkit = Bukkit.getWorld(world) ?: return null
+        val cells = IntArray((x1 - x0 + 1) * (y1 - y0 + 1) * (z1 - z0 + 1))
+        val read = ArrayList<org.bukkit.block.data.BlockData>()
+        if (version?.readBox(bukkit, x0, y0, z0, x1, y1, z1, cells, read) != true) {
+            // Not this way: block by block, which says null for an unloaded chunk.
+            for (x in (x0 shr 4)..(x1 shr 4)) for (z in (z0 shr 4)..(z1 shr 4)) if (!bukkit.isChunkLoaded(x, z)) return null
+            return super.box(world, x0, y0, z0, x1, y1, z1)
+        }
+        return BlockBoxRead(
+            read.map { data ->
+                val text = data.asString
+                BoxState(
+                    BlockState.parse(text)?.toString() ?: text,
+                    solid = data.material.isSolid,
+                    liquid = data.material == Material.WATER || data.material == Material.LAVA
+                )
+            },
+            cells
+        )
+    }
+
+    override fun fingerprint(world: String, chunkX: Int, chunkZ: Int, states: List<String>): Long? {
+        val bukkit = Bukkit.getWorld(world) ?: return null
+        if (!bukkit.isChunkLoaded(chunkX, chunkZ)) return null
+        // The runtime asks with the same list for as long as its states are the same: worked out once for it.
+        val wanted =
+            fingerprinted?.takeIf { it.first === states }?.second ?: states.mapNotNull(::data).also { fingerprinted = states to it }
+        return version?.fingerprintStates(bukkit, chunkX, chunkZ, wanted)
+    }
+
+    /** The states [fingerprint] was last asked for, and their block data. */
+    private var fingerprinted: Pair<List<String>, List<org.bukkit.block.data.BlockData>>? = null
 
     override fun hardness(state: String): Double? = data(state)?.material?.hardness?.toDouble()
 
@@ -466,7 +510,16 @@ class PaperBlocks(private val plugin: JavaPlugin, private val carriers: PaperCar
 
     override fun targeted(player: UUID): BlockRef? = Bukkit.getPlayer(player)?.getTargetBlockExact(REACH)?.let(::blockRef)
 
-    private fun data(state: String): org.bukkit.block.data.BlockData? = runCatching { Bukkit.createBlockData(state) }.getOrNull()
+    /**
+     * The block data a state's text names, or null for one the server doesn't have: parsed once per text (every
+     * carrier state is asked for on every chunk swept, and hardness every tick a player looks at a block), each
+     * caller given its own copy, since block data can be changed.
+     */
+    private fun data(state: String): org.bukkit.block.data.BlockData? = parsed.getOrPut(state) {
+        Optional.ofNullable(runCatching { Bukkit.createBlockData(state) }.getOrNull())
+    }.orElse(null)?.clone()
+
+    private val parsed = HashMap<String, Optional<org.bukkit.block.data.BlockData>>()
 
     private fun stack(tool: ItemData?): ItemStack = tool?.let(PaperItems::toStack) ?: ItemStack(Material.AIR)
 

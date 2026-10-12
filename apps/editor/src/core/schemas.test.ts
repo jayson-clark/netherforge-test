@@ -23,6 +23,7 @@ describe('schemas', () => {
       'particle_effect.schema.json',
       'recipe.schema.json',
       'resource_pack.schema.json',
+      'sky.schema.json',
       'structure_generation.schema.json',
       'terrain.schema.json',
       'vanilla.schema.json',

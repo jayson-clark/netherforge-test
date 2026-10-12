@@ -3,32 +3,200 @@ package dev.netherforge.plugin.paper.version
 import com.destroystokyo.paper.entity.ai.Goal
 import dev.netherforge.plugin.paper.PaperVersion
 import dev.netherforge.plugin.paper.ServerRegistries
+import dev.netherforge.plugin.platform.ChunkGrid
+import io.netty.buffer.Unpooled
 import io.papermc.paper.configuration.GlobalConfiguration
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
+import net.minecraft.core.Holder
+import net.minecraft.core.registries.Registries
+import net.minecraft.network.FriendlyByteBuf
+import net.minecraft.network.protocol.game.ClientboundChunksBiomesPacket
+import net.minecraft.resources.Identifier
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.inventory.ContainerListener
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.context.UseOnContext
+import net.minecraft.world.level.biome.Biome
 import net.minecraft.world.level.block.Blocks
+import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument
+import net.minecraft.world.level.chunk.LevelChunk
+import net.minecraft.world.level.chunk.Palette
+import net.minecraft.world.level.chunk.PalettedContainer
 import net.minecraft.world.level.gameevent.GameEvent
 import net.minecraft.world.phys.BlockHitResult
 import net.minecraft.world.phys.Vec3
 import org.bukkit.Instrument
+import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
+import org.bukkit.block.data.BlockData
 import org.bukkit.craftbukkit.CraftWorld
+import org.bukkit.craftbukkit.block.data.CraftBlockData
 import org.bukkit.craftbukkit.entity.CraftPlayer
 import org.bukkit.entity.Mob
 import org.bukkit.entity.Player
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.util.Vector
 import org.spigotmc.WatchdogThread
+import java.util.Collections
+import java.util.IdentityHashMap
+import java.util.WeakHashMap
+import kotlin.jvm.optionals.getOrNull
+import net.minecraft.resources.ResourceKey as MojangKey
 
 /** This adapter's [PaperVersion], listed in `META-INF/services`. */
+
 class Version : PaperVersion {
+    override fun fingerprintStates(world: World, chunkX: Int, chunkZ: Int, wanted: Collection<BlockData>): Long? {
+        val chunk = (world as CraftWorld).handle.chunkSource.getChunkNow(chunkX, chunkZ) ?: return null
+        val states = serverStates(wanted)
+        var print = 1L
+        val memos = sectionMemos(chunk, states)
+        for ((i, section) in chunk.sections.withIndex()) {
+            if (section.hasOnlyAir()) continue
+            val raw = PaletteData.of(section.states) ?: return null
+            if (!memos.mayHold(i, raw.palette) { section.states.maybeHas(states::contains) }) continue
+            print = print * 31 + i
+            print = print * 31 + raw.storage.raw.contentHashCode()
+            // The palette's states too: the same numbers in the storage could stand for other states.
+            val palette = raw.palette
+            for (id in 0 until palette.size) print = print * 31 + System.identityHashCode(palette.valueFor(id))
+        }
+        return print
+    }
+
+    override fun sendBiomes(player: Player, chunks: Collection<Pair<Int, Int>>, twinOf: (String) -> String?) {
+        val level = (player.world as CraftWorld).handle
+        val biomes = level.registryAccess().lookupOrThrow(Registries.BIOME)
+        val swapped = IdentityHashMap<Holder<Biome>, Holder<Biome>>()
+        fun swap(holder: Holder<Biome>): Holder<Biome> = swapped.getOrPut(holder) {
+            val key = holder.unwrapKey().getOrNull()?.identifier()?.toString() ?: return@getOrPut holder
+            val twin = twinOf(key)?.let(Identifier::tryParse) ?: return@getOrPut holder
+            biomes.get(MojangKey.create(Registries.BIOME, twin)).getOrNull() ?: holder
+        }
+        val data = chunks.mapNotNull { (chunkX, chunkZ) ->
+            val chunk = level.chunkSource.getChunkNow(chunkX, chunkZ) ?: return@mapNotNull null
+            val buffer = FriendlyByteBuf(Unpooled.buffer())
+            for (section in chunk.sections) {
+                @Suppress("UNCHECKED_CAST")
+                val cells = (section.biomes as PalettedContainer<Holder<Biome>>).copy()
+                for (y in 0..3) for (z in 0..3) for (x in 0..3) cells.getAndSetUnchecked(x, y, z, swap(cells.get(x, y, z)))
+                cells.write(buffer)
+            }
+            val bytes = ByteArray(buffer.readableBytes())
+            buffer.readBytes(bytes)
+            ClientboundChunksBiomesPacket.ChunkBiomeData(chunk.pos, bytes)
+        }
+        val connection = (player as CraftPlayer).handle.connection
+        for (batch in data.chunked(BIOME_BATCH)) connection.send(ClientboundChunksBiomesPacket(batch))
+    }
+
+    override fun readBox(
+        world: World,
+        x0: Int,
+        y0: Int,
+        z0: Int,
+        x1: Int,
+        y1: Int,
+        z1: Int,
+        cells: IntArray,
+        states: MutableList<BlockData>
+    ): Boolean {
+        val level = (world as CraftWorld).handle
+        val sizeX = x1 - x0 + 1
+        val sizeZ = z1 - z0 + 1
+        val numbers = IdentityHashMap<BlockState, Int>()
+        val outside = Blocks.VOID_AIR.defaultBlockState()
+        for (chunkX in (x0 shr 4)..(x1 shr 4)) {
+            for (chunkZ in (z0 shr 4)..(z1 shr 4)) {
+                val chunk = level.chunkSource.getChunkNow(chunkX, chunkZ) ?: return false
+                val sections = chunk.sections
+                val fromX = maxOf(x0, chunkX shl 4)
+                val toX = minOf(x1, (chunkX shl 4) + 15)
+                val fromZ = maxOf(z0, chunkZ shl 4)
+                val toZ = minOf(z1, (chunkZ shl 4) + 15)
+                for (y in y0..y1) {
+                    val section = sections.getOrNull(chunk.getSectionIndex(y))
+                    for (z in fromZ..toZ) {
+                        var i = (fromX - x0) + sizeX * ((z - z0) + sizeZ * (y - y0))
+                        for (x in fromX..toX) {
+                            val state = section?.getBlockState(x and 15, y and 15, z and 15) ?: outside
+                            cells[i++] = numbers.getOrPut(state) {
+                                states += CraftBlockData.createData(state)
+                                states.size - 1
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return true
+    }
+
+    /** The server's own states of [wanted], by identity: worked out once for the same collection, as callers ask again and again. */
+    private fun serverStates(wanted: Collection<BlockData>): Set<BlockState> {
+        lastStates?.takeIf { it.first === wanted }?.let { return it.second }
+        val states = Collections.newSetFromMap(IdentityHashMap<BlockState, Boolean>())
+        for (data in wanted) states += (data as CraftBlockData).state
+        lastStates = wanted to states
+        return states
+    }
+
+    private var lastStates: Pair<Collection<BlockData>, Set<BlockState>>? = null
+
+    /**
+     * Whether each of a chunk's sections may hold any of the states asked about, as last worked out: by its
+     * palette's identity and size, since a palette only grows, and a new one is a new object. The same answer
+     * then holds without running the question over every entry of every section's palette.
+     */
+    private class SectionMemos(val states: Set<BlockState>, size: Int) {
+        private val palettes = arrayOfNulls<Any>(size)
+        private val sizes = IntArray(size)
+        private val answers = BooleanArray(size)
+
+        inline fun mayHold(section: Int, palette: Palette<*>, ask: () -> Boolean): Boolean {
+            if (palettes[section] === palette && sizes[section] == palette.size) return answers[section]
+            val answer = ask()
+            palettes[section] = palette
+            sizes[section] = palette.size
+            answers[section] = answer
+            return answer
+        }
+    }
+
+    private val memos = WeakHashMap<LevelChunk, SectionMemos>()
+
+    private fun sectionMemos(chunk: LevelChunk, states: Set<BlockState>): SectionMemos {
+        val known = memos[chunk]
+        if (known != null && known.states === states) return known
+        return SectionMemos(states, chunk.sections.size).also { memos[chunk] = it }
+    }
+
+    override fun findStates(world: World, chunkX: Int, chunkZ: Int, wanted: Map<BlockData, Int>, found: ChunkGrid): Boolean {
+        val chunk = (world as CraftWorld).handle.chunkSource.getChunkNow(chunkX, chunkZ) ?: return false
+        // The server's own states, by identity: a state is one object for as long as the server runs.
+        val numbers = IdentityHashMap<BlockState, Int>()
+        for ((data, number) in wanted) numbers[(data as CraftBlockData).state] = number
+        val bottom = chunk.minSectionY
+        for ((i, section) in chunk.sections.withIndex()) {
+            if (section.hasOnlyAir() || !section.states.maybeHas(numbers::containsKey)) continue
+            val y0 = (bottom + i) shl 4
+            // Block by block: PalettedContainer.getAll answers each value the section holds once, not each block.
+            for (y in 0..15) {
+                for (z in 0..15) {
+                    for (x in 0..15) {
+                        val number = numbers[section.getBlockState(x, y, z)] ?: continue
+                        found[x, y0 + y, z] = number
+                    }
+                }
+            }
+        }
+        return true
+    }
+
     override fun goalPriorities(mob: Mob): Map<Goal<Mob>, Int> = dev.netherforge.plugin.paper.version.goalPriorities(mob)
 
     override fun saveAdvancements(player: Player) = (player as CraftPlayer).handle.advancements.save()
@@ -40,6 +208,10 @@ class Version : PaperVersion {
     override fun watchRegistryErrors(refused: (String) -> Unit): AutoCloseable = RegistryErrorLog.watch(refused)
 
     override fun prepareDimension(creator: org.bukkit.WorldCreator, type: String) = Mojang.prepareDimension(creator, type)
+
+    override fun stopClocks(clocks: Collection<String>) = Mojang.stopClocks(clocks)
+
+    override fun sendClock(player: Player, clock: String, ticks: Long) = Mojang.sendClock((player as CraftPlayer).handle, clock, ticks)
 
     // The same on every supported server: a static `tick()` that sets its last tick to now.
     override fun holdWatchdog() = WatchdogThread.tick()
@@ -111,3 +283,6 @@ class Version : PaperVersion {
         level.gameEvent(null, GameEvent.NOTE_BLOCK_PLAY, pos)
     }
 }
+
+/** Chunks a chunk-biomes packet carries at most: the game's own sends one per chunk it changed. */
+private const val BIOME_BATCH = 64

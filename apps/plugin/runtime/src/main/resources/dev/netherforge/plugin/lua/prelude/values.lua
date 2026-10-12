@@ -5,7 +5,7 @@
 --
 -- They cross into Kotlin as themselves: Kotlin tells them by their metatables
 -- (`kinds`) and reads their array parts. Only a `Vec3` parameter or return
--- crosses as its three numbers, checked by want_vec3 and rebuilt by vec3_of,
+-- crosses as its three numbers, checked and rebuilt by the bindings themselves,
 -- since transforms are set and read every tick. A value is genuine when its
 -- real metatable is ours (raw_getmetatable), which a script can't fake by
 -- setting `__metatable`.
@@ -119,38 +119,41 @@ Vec3_mt = {
       2
     )
   end,
+  -- The operators are what vector maths is made of, so each makes its vector
+  -- itself rather than through calls (`ApiCostTest` holds them to a few
+  -- instructions).
   __add = function(a, b)
-    if not (is_vec3(a) and is_vec3(b)) then
+    if raw_getmetatable(a) ~= Vec3_mt or raw_getmetatable(b) ~= Vec3_mt then
       error("a Vec3 can only be added to another Vec3", 2)
     end
-    return new_vec3(a[1] + b[1], a[2] + b[2], a[3] + b[3])
+    return setmetatable({ a[1] + b[1], a[2] + b[2], a[3] + b[3] }, Vec3_mt)
   end,
   __sub = function(a, b)
-    if not (is_vec3(a) and is_vec3(b)) then
+    if raw_getmetatable(a) ~= Vec3_mt or raw_getmetatable(b) ~= Vec3_mt then
       error("a Vec3 can only be subtracted from another Vec3", 2)
     end
-    return new_vec3(a[1] - b[1], a[2] - b[2], a[3] - b[3])
+    return setmetatable({ a[1] - b[1], a[2] - b[2], a[3] - b[3] }, Vec3_mt)
   end,
   __unm = function(a)
-    return new_vec3(-a[1], -a[2], -a[3])
+    return setmetatable({ -a[1], -a[2], -a[3] }, Vec3_mt)
   end,
   __mul = function(a, b)
     if type(a) == "number" then
       a, b = b, a
     end
     if type(b) == "number" then
-      return new_vec3(a[1] * b, a[2] * b, a[3] * b)
+      return setmetatable({ a[1] * b, a[2] * b, a[3] * b }, Vec3_mt)
     end
-    if is_vec3(a) and is_vec3(b) then
-      return new_vec3(a[1] * b[1], a[2] * b[2], a[3] * b[3])
+    if raw_getmetatable(a) == Vec3_mt and raw_getmetatable(b) == Vec3_mt then
+      return setmetatable({ a[1] * b[1], a[2] * b[2], a[3] * b[3] }, Vec3_mt)
     end
     error("a Vec3 can only be multiplied by a number or another Vec3", 2)
   end,
   __div = function(a, b)
-    if not (is_vec3(a) and type(b) == "number") then
+    if raw_getmetatable(a) ~= Vec3_mt or type(b) ~= "number" then
       error("a Vec3 can only be divided by a number", 2)
     end
-    return new_vec3(a[1] / b, a[2] / b, a[3] / b)
+    return setmetatable({ a[1] / b, a[2] / b, a[3] / b }, Vec3_mt)
   end,
   __eq = function(a, b)
     return is_vec3(a) and is_vec3(b) and a[1] == b[1] and a[2] == b[2] and a[3] == b[3]
@@ -331,33 +334,51 @@ end
 -- from_yaw_pitch on it. Each scope gets its own, constants included, for the
 -- same reason each gets its own library proxies (`rawset` reaches only it).
 -- `functions` are the generated wrappers (`vec3.from_yaw_pitch`).
+-- The `vec3` global's metatable, by the functions table it was made with:
+-- one for every scope (a script can't reach it), so a new scope makes only an
+-- empty table for its `vec3`. `pairs(vec3)` walks the library without handing
+-- it out, so no script can change another's constants.
+local vec3_mts = setmetatable({}, { __mode = "k" })
+
 local function make_vec3_library(functions)
-  local library = {
-    zero = new_vec3(0, 0, 0),
-    one = new_vec3(1, 1, 1),
-    up = new_vec3(0, 1, 0),
-    down = new_vec3(0, -1, 0),
-    north = new_vec3(0, 0, -1),
-    south = new_vec3(0, 0, 1),
-    east = new_vec3(1, 0, 0),
-    west = new_vec3(-1, 0, 0),
-  }
-  for name, fn in pairs(functions) do
-    library[name] = fn
+  local mt = vec3_mts[functions]
+  if mt == nil then
+    local library = {
+      zero = new_vec3(0, 0, 0),
+      one = new_vec3(1, 1, 1),
+      up = new_vec3(0, 1, 0),
+      down = new_vec3(0, -1, 0),
+      north = new_vec3(0, 0, -1),
+      south = new_vec3(0, 0, 1),
+      east = new_vec3(1, 0, 0),
+      west = new_vec3(-1, 0, 0),
+    }
+    for name, fn in pairs(functions) do
+      library[name] = fn
+    end
+    mt = {
+      __index = library,
+      __call = function(_, x, y, z)
+        if type(x) ~= "number" or type(y) ~= "number" or type(z) ~= "number" then
+          want_number(x, "x", 2)
+          want_number(y, "y", 2)
+          want_number(z, "z", 2)
+        end
+        return setmetatable({ x, y, z }, Vec3_mt)
+      end,
+      __newindex = function()
+        error("vec3 is shared by every script and can't be changed", 2)
+      end,
+      __pairs = function()
+        return function(_, key)
+          return next(library, key)
+        end, nil, nil
+      end,
+      __metatable = false,
+    }
+    vec3_mts[functions] = mt
   end
-  return setmetatable({}, {
-    __index = library,
-    __call = function(_, x, y, z)
-      return new_vec3(want_number(x, "x", 2), want_number(y, "y", 2), want_number(z, "z", 2))
-    end,
-    __newindex = function()
-      error("vec3 is shared by every script and can't be changed", 2)
-    end,
-    __pairs = function()
-      return next, library, nil
-    end,
-    __metatable = false,
-  })
+  return setmetatable({}, mt)
 end
 
 -- The `Vec3` fast path: a parameter crosses as its three numbers, and a
@@ -380,16 +401,12 @@ local function want_vec3_opt(value, name)
   return value[1], value[2], value[3]
 end
 
-local function vec3_of(x, y, z)
-  if x == nil then
-    return nil
-  end
-  return new_vec3(x, y, z)
-end
-
 return {
   Vec3 = Vec3,
   Location = Location,
+  -- The genuine metatables, for the bindings' inline checks (`raw_getmetatable(v) == Vec3_mt`).
+  Vec3_mt = Vec3_mt,
+  Location_mt = Location_mt,
   body = { Vec3 = Vec3_body, Location = Location_body, vec3 = vec3_body },
   is_vec3 = is_vec3,
   is_location = is_location,
@@ -400,5 +417,4 @@ return {
   make_vec3_library = make_vec3_library,
   want_vec3 = want_vec3,
   want_vec3_opt = want_vec3_opt,
-  vec3_of = vec3_of,
 }

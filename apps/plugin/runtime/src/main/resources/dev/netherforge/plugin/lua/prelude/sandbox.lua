@@ -21,8 +21,11 @@ local unpack = std.unpack
 local pairs, ipairs, next, error, setmetatable, getmetatable =
   pairs, ipairs, next, error, setmetatable, getmetatable
 
-local function readonly(source, name)
-  return setmetatable({}, {
+-- A library proxy's metatable: one per library, shared by every scope's
+-- proxy of it (no script can reach a metatable that says `__metatable =
+-- false`), so a new scope makes only its proxies' empty tables.
+local function readonly_mt(source, name)
+  return {
     __index = source,
     __newindex = function()
       error(name .. " is shared by every script and can't be changed", 2)
@@ -34,7 +37,7 @@ local function readonly(source, name)
       return #source
     end,
     __metatable = false,
-  })
+  }
 end
 
 local sandboxed_coroutine = {
@@ -121,13 +124,22 @@ end
 -- A scope's own copy of `base`, with its own library proxies. The proxies
 -- stop plain assignment, but `rawset` still writes onto a proxy, so each
 -- scope must hold its own: then that write reaches only the scope that made it.
+---@type string[], table[]
+local library_names, library_mts = {}, {}
+for name, library in pairs(libraries) do
+  library_names[#library_names + 1] = name
+  library_mts[#library_mts + 1] = readonly_mt(library, name)
+end
+
+-- Where a scope's copy finds the rest of `base`: the library's own functions,
+-- which nothing can change, so they're shared (a table `__index` costs a
+-- script no instructions, where copying them cost every new scope).
+local base_mt = { __index = base, __metatable = false }
+
 local function scope_base()
-  local copy = {}
-  for name, value in pairs(base) do
-    copy[name] = value
-  end
-  for name, library in pairs(libraries) do
-    copy[name] = readonly(library, name)
+  local copy = setmetatable({}, base_mt)
+  for i = 1, #library_names do
+    copy[library_names[i]] = setmetatable({}, library_mts[i])
   end
   return copy
 end

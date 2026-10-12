@@ -167,7 +167,7 @@ internal class RuntimeApi(private val session: ProjectSession) :
      * The item table at [index] as JSON, as it would be saved: problem paths
      * from [root]. Read without running the codec (`LuaHost.fieldsJson`), so
      * a plain table costs the script nothing; only a `data` holding typed
-     * values or floats pays for the codec's instructions.
+     * values pays for the codec's instructions.
      */
     private fun itemTable(lua: Lua, index: Int, root: String): JsonElement {
         val table = host.fieldsJson(lua, index, root, kept = "data")

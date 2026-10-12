@@ -124,6 +124,40 @@ class ScriptTestRunnerTest {
     }
 
     @Test
+    fun `each call advance runs has its own budget, and one that runs out is reported as the server would`() {
+        val (events, _) = run(
+            mapOf(
+                "modules/busy/init.lua" to """
+                    -- About 5,000 instructions a tick: 300 ticks of it is far more than one call's budget.
+                    nf.on("tick", function()
+                      local n = 0
+                      for i = 1, 1500 do n = n + i end
+                    end)
+                """,
+                "tests/budget_test.lua" to """
+                    nf.test.case("a long advance", function()
+                      nf.test.advance(300)
+                    end)
+
+                    nf.test.case("a handler that runs out", function()
+                      nf.on("tick", function()
+                        while true do end
+                      end)
+                      nf.test.advance(1)
+                      log("still running")
+                    end)
+                """
+            )
+        )
+        // Ran past its own budget, not the test's: the test goes on, and errors for it, at the handler's line.
+        expectStatuses(events, Status.PASSED, Status.ERRORED)
+        val failed = events.results()[1]
+        assertTrue("tick handler failed: ran past its budget of 200000 instructions" in failed.message.orEmpty(), failed.message)
+        assertEquals(Place("tests/budget_test.lua", 7), failed.source)
+        assertTrue(failed.logs.any { "still running" in it }, failed.logs.toString())
+    }
+
+    @Test
     fun `a fake player joins, and raised events reach handlers as the server's do`() {
         val (events, _) = run(
             mapOf(

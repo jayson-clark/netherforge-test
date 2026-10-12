@@ -62,6 +62,12 @@ data class BlockFile(
      * [centity] is drawn over can fall. Default false.
      */
     val falls: Boolean? = null,
+    /**
+     * Which ways it can face ([BlockRotation]): its model is turned to each, and a player places it facing them,
+     * as a furnace or a chair is. Each way is a state of its own, so a block that turns takes 4 (or 6) of its
+     * carrier's states. Default [BlockRotation.NONE].
+     */
+    val rotation: BlockRotation? = null,
     /** Ticks between the block's `tick` events, one per placed block. It doesn't tick when this is left out. */
     val tick: Int? = null,
     /** The block's one script, with `this` the block: it hears what players do with every one of them. */
@@ -74,6 +80,8 @@ data class BlockFile(
     val requiresToolOrDefault: Boolean get() = requiresTool ?: false
 
     val carrierOrDefault: BlockCarrier get() = carrier ?: BlockCarrier.NOTE_BLOCK
+
+    val rotationOrDefault: BlockRotation get() = rotation ?: BlockRotation.NONE
 
     /** Whether it falls when there's nothing under it. */
     val fallsOrDefault: Boolean get() = falls ?: false
@@ -135,6 +143,55 @@ enum class BlockCarrier {
      */
     @SerialName("leaves")
     LEAVES
+}
+
+/**
+ * Which ways a block can face. Its model is drawn facing north (its front on the model's north side, as the game's
+ * furnace is), and turned for each other way.
+ */
+@Serializable
+enum class BlockRotation(val facings: List<BlockFacing>) {
+    /** One way only: the model as it's drawn. */
+    @SerialName("none")
+    NONE(emptyList()),
+
+    /** North, east, south or west: a chair, a furnace, a sign on the floor. */
+    @SerialName("horizontal")
+    HORIZONTAL(listOf(BlockFacing.NORTH, BlockFacing.EAST, BlockFacing.SOUTH, BlockFacing.WEST)),
+
+    /** Those, up or down too: an observer, a statue on a wall or a ceiling. */
+    @SerialName("all")
+    ALL(listOf(BlockFacing.NORTH, BlockFacing.EAST, BlockFacing.SOUTH, BlockFacing.WEST, BlockFacing.UP, BlockFacing.DOWN))
+}
+
+/**
+ * The way a block's front faces, and how its north-facing model is turned to face it: [x] and [y] are the
+ * resource pack's blockstate rotation in degrees, as the game's turns its own blocks.
+ */
+@Serializable
+enum class BlockFacing(val id: String, val x: Int, val y: Int) {
+    @SerialName("north")
+    NORTH("north", 0, 0),
+
+    @SerialName("east")
+    EAST("east", 0, 90),
+
+    @SerialName("south")
+    SOUTH("south", 0, 180),
+
+    @SerialName("west")
+    WEST("west", 0, 270),
+
+    @SerialName("up")
+    UP("up", 270, 0),
+
+    @SerialName("down")
+    DOWN("down", 90, 0);
+
+    companion object {
+        /** The facing called [id] (`"east"`), or null. */
+        fun of(id: String): BlockFacing? = entries.firstOrNull { it.id == id }
+    }
 }
 
 /** A block's own sounds. Each is a sound of one of the project's packs; the carrier's own sounds play for the rest (walking, hitting). */

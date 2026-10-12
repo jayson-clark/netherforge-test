@@ -54,10 +54,14 @@ class FeatureTable(features: List<Feature>) {
     companion object {
         /**
          * Every feature NetherForge uses that the oldest supported version
-         * lacks. Empty while everything it uses works the same from 1.21.11
-         * on: where a version differs only in how (the world's files, a
+         * lacks. Where a version differs only in how (the world's files, a
          * packet), its adapter does it its own way and nothing is gated.
          */
-        val CURRENT = FeatureTable(emptyList())
+        val CURRENT = FeatureTable(
+            listOf(
+                // A sky held through the night is a timeline on a world clock of its own: clocks are 26.1's.
+                Feature("sky-night", "26.1", "A sky that doesn't darken at night")
+            )
+        )
     }
 }

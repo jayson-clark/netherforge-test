@@ -2303,6 +2303,35 @@ How `world:place_structure` places one. A key that isn't one of these is an erro
 | `integrity` | `number?` | How much of it is placed, 0 to 1: each block is kept with this chance. Default 1: all of it. |
 | `entities` | `boolean?` | Whether the entities saved with it are placed too. Default `true`. |
 
+## BlockBoxOptions
+
+What `world:blocks` gives for each block. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `what` | `"kind"\|"solid"\|"class"?` | What a block is given as: `"kind"` its block id (`"minecraft:stone"`), `"solid"` whether it's solid, as `block:is_solid()` says, or `"class"` a number, `0` for a block nothing stands in the way of (air, grass, a torch), `1` for water or lava, `2` for a solid one. Default `"kind"`. |
+| `custom` | `boolean?` | Whether a block of the project's own gives its id (`"wooden_chair"`, as `block:custom():id()` says) in place of what `what` would make of the note block it's held as. Default `false`. |
+
+## BlockBox
+
+What `world:blocks` read: each block of the box, in one list, and the box's size and corner.
+
+| Field | Type | |
+| --- | --- | --- |
+| `cells` | `(string\|integer\|boolean)[]` | Each block, x fastest, then z, then y: the block `x`, `y`, `z` from the corner is at `1 + x + size_x * (z + size_z * y)`. What each is depends on `options.what` (and `options.custom`). |
+| `size_x` | `integer` | How many blocks the box is along x. |
+| `size_y` | `integer` | How many blocks the box is along y. |
+| `size_z` | `integer` | How many blocks the box is along z. |
+| `corner` | `Vec3` | The block the box starts from: the lowest x, y and z of its corners, floored. |
+
+## SkyOptions
+
+How a sky comes or goes. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `fade_ticks` | `integer?` | Ticks it takes to fade in or out, through the sky's steps (its file's `fade`). Default 0: at once. |
+
 ## BlockSetOptions
 
 How a block is changed. A key that isn't one of these is an error.
@@ -2452,6 +2481,15 @@ Has the fields and methods of [Event](#event) too.
 | `player` | `Player?` | Who is placing it, or `nil` for a script. |
 | `block` | `CustomBlock` | Where it goes: what is there now is replaced, so `block:custom()` is `nil` until it has been placed (`this:id()` says which block is being placed). |
 | `item` | `Item?` | The stack placing it, or `nil` for a script. |
+| `facing` | `"north"\|"east"\|"south"\|"west"\|"up"\|"down"?` | The way it will face, for a block that turns: toward the player placing it. `nil` for one that doesn't turn. |
+
+## BlockPlaceOptions
+
+How `project_block:place` places one. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `facing` | `"north"\|"east"\|"south"\|"west"\|"up"\|"down"?` | The way its front faces, for a block that turns (`rotation` in its `block.json`): a way it can't face is an error. Default north. |
 
 ## ProjectBlockClickEvent
 

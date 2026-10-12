@@ -162,6 +162,33 @@ export const worldClass: LuaClass = {
       example: 'world:set_weather("thunder", { ticks = 20 * 60 })',
     },
     {
+      name: 'sky',
+      doc: "The sky set over the world (`world:set_sky`), as the calling script names it, or `nil` for none (or once the world has gone). A player's own (`player:set_sky`) is theirs alone.",
+      params: [],
+      returns: [{ type: 'string?' }],
+    },
+    {
+      name: 'set_sky',
+      doc: "Sets a sky of the project's over the world (`skies/<id>.json`): everyone in it sees its colours in place of the biomes' own, the sky, fog, clouds and water, fading over `options.fade_ticks`, until it's cleared or another is set. Only what players are shown changes: the world, its biomes, its mobs and its weather are as they were, and a restart clears it. A player's own sky (`player:set_sky`) is shown them instead. A sky the project has no file for is an error, and so is one added since the server started (its colours are biomes, which the game learns as it starts: restart the server).",
+      params: [
+        {
+          name: 'sky',
+          type: 'string',
+          doc: "A sky of the project's (its file's name under `skies/`, or `namespace:id` for one a package it depends on exports).",
+        },
+        { name: 'options', type: 'SkyOptions', doc: '', optional: true },
+      ],
+      returns: [{ type: 'boolean', doc: '`false` when the world has gone.' }],
+      example: 'world:set_sky("blood_moon", { fade_ticks = 100 })',
+    },
+    {
+      name: 'clear_sky',
+      doc: "Takes the world's sky away (`world:set_sky`): its biomes' own colours come back over `options.fade_ticks`. Nothing when it has none.",
+      params: [{ name: 'options', type: 'SkyOptions', doc: '', optional: true }],
+      returns: [],
+      example: 'world:clear_sky({ fade_ticks = 100 })',
+    },
+    {
       name: 'spawn_location',
       doc: 'Where players appear in this world when nothing else decides, or `nil` once the world has gone.',
       params: [],
@@ -197,6 +224,18 @@ export const worldClass: LuaClass = {
       params: [{ name: 'position', type: 'Vec3', doc: 'Any point in the block.' }],
       returns: [{ type: 'Block?' }],
       example: 'local below = this:world():block(this:position() - vec3(0, 1, 0))',
+    },
+    {
+      name: 'blocks',
+      doc: "Every block in a box, read in one call: for code that needs many blocks at once (a mob's collision, a flood fill of a room), where a `world:block` and a `:kind()` per block would cost each one. The corners are floored to the blocks they're in and both are included, in any order. What each block is given as is `options.what`. At most 32,768 blocks (32 × 32 × 32): a bigger box is an error. `nil` when any of the box is in a chunk that isn't loaded, or the world has gone.",
+      params: [
+        { name: 'from', type: 'Vec3', doc: 'One corner: any point in its block.' },
+        { name: 'to', type: 'Vec3', doc: 'The opposite corner, included: any point in its block.' },
+        { name: 'options', type: 'BlockBoxOptions', doc: '', optional: true },
+      ],
+      returns: [{ type: 'BlockBox?' }],
+      example:
+        'local box = world:blocks(vec3(0, 60, 0), vec3(15, 70, 15), { what = "class" })\nif box then\n  -- A block within the box, counted from its corner.\n  local function at(x, y, z)\n    return box.cells[1 + x + box.size_x * (z + box.size_z * y)]\n  end\n  if at(0, 0, 0) == 2 then log("solid") end\nend',
     },
     {
       name: 'set_block',
@@ -950,6 +989,48 @@ export const worldShapes: LuaClass[] = [
       },
     ],
   ),
+  shape(
+    'BlockBoxOptions',
+    "What `world:blocks` gives for each block. A key that isn't one of these is an error.",
+    [
+      {
+        name: 'what',
+        type: '"kind"|"solid"|"class"?',
+        doc: 'What a block is given as: `"kind"` its block id (`"minecraft:stone"`), `"solid"` whether it\'s solid, as `block:is_solid()` says, or `"class"` a number, `0` for a block nothing stands in the way of (air, grass, a torch), `1` for water or lava, `2` for a solid one. Default `"kind"`.',
+      },
+      {
+        name: 'custom',
+        type: 'boolean?',
+        doc: 'Whether a block of the project\'s own gives its id (`"wooden_chair"`, as `block:custom():id()` says) in place of what `what` would make of the note block it\'s held as. Default `false`.',
+      },
+    ],
+  ),
+  shape(
+    'BlockBox',
+    "What `world:blocks` read: each block of the box, in one list, and the box's size and corner.",
+    [
+      {
+        name: 'cells',
+        type: '(string|integer|boolean)[]',
+        doc: 'Each block, x fastest, then z, then y: the block `x`, `y`, `z` from the corner is at `1 + x + size_x * (z + size_z * y)`. What each is depends on `options.what` (and `options.custom`).',
+      },
+      { name: 'size_x', type: 'integer', doc: 'How many blocks the box is along x.' },
+      { name: 'size_y', type: 'integer', doc: 'How many blocks the box is along y.' },
+      { name: 'size_z', type: 'integer', doc: 'How many blocks the box is along z.' },
+      {
+        name: 'corner',
+        type: 'Vec3',
+        doc: 'The block the box starts from: the lowest x, y and z of its corners, floored.',
+      },
+    ],
+  ),
+  shape('SkyOptions', "How a sky comes or goes. A key that isn't one of these is an error.", [
+    {
+      name: 'fade_ticks',
+      type: 'integer?',
+      doc: "Ticks it takes to fade in or out, through the sky's steps (its file's `fade`). Default 0: at once.",
+    },
+  ]),
   shape('BlockSetOptions', "How a block is changed. A key that isn't one of these is an error.", [
     {
       name: 'update',

@@ -19,6 +19,7 @@ import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.ItemLook
+import dev.netherforge.plugin.platform.StackFilter
 import io.papermc.paper.datacomponent.DataComponentType
 import io.papermc.paper.datacomponent.DataComponentTypes
 import io.papermc.paper.datacomponent.item.Consumable
@@ -488,12 +489,56 @@ object PaperItems {
     private fun decimal(value: Float): Double = value.toString().toDouble()
 
     /** What's in a slot, or null for an empty one. */
+    /**
+     * [toItem] of the stack in a place ([where]: an inventory's slot, an
+     * entity's equipment slot), remembered: reading a stack in full is the
+     * expensive part of every inventory call, and most stacks are what they
+     * were the last time. Answered from the last read while the stack is still
+     * the same (its components and count; a copy of it is kept to compare
+     * with); a read only depends on the stack and the project's namespace, so
+     * [bind][PaperPlatform.bind] forgets them all.
+     */
+    fun toItem(stack: ItemStack?, where: Any): ItemData? {
+        if (stack == null || stack.isEmpty) {
+            reads.remove(where)
+            return null
+        }
+        val last = reads[where]
+        if (last != null && last.stack.amount == stack.amount && last.stack.isSimilar(stack)) return last.item
+        val item = toItem(stack) ?: return null
+        reads[where] = Read(stack.clone(), item)
+        return item
+    }
+
+    private class Read(val stack: ItemStack, val item: ItemData)
+
+    /** The last read of each place, the most recently used last; at most [MAX_READS]. */
+    private val reads = object : LinkedHashMap<Any, Read>(MAX_READS, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Any, Read>) = size > MAX_READS
+    }
+
+    /** Forgets every remembered read: the project (its namespace) changed. */
+    fun forgetReads() = reads.clear()
+
+    private const val MAX_READS = 4096
+
     fun toItem(stack: ItemStack?): ItemData? {
         if (stack == null || stack.isEmpty) return null
         val def = describe(stack)
         val lossless = !stack.hasItemMeta() || runCatching { toStack(ItemData(def))?.isSimilar(stack) == true }.getOrDefault(false)
         val look = def.item?.let { stack.persistentDataContainer.get(LOOK_KEY, PersistentDataType.STRING) }
         return ItemData(def, if (lossless) null else Base64.getEncoder().encodeToString(stack.serializeAsBytes()), look)
+    }
+
+    /**
+     * Whether [stack] could be a stack of [filter]'s kind and project item, by
+     * its type and its stamp alone: what's cheap to read, before [toItem]
+     * reads it all.
+     */
+    fun admits(stack: ItemStack, filter: StackFilter): Boolean {
+        if (filter.kind != null && stack.type.key.toString() != filter.kind) return false
+        if (filter.item == null) return true
+        return projectItem(stack)?.let(::reference)?.text == filter.item
     }
 
     /** The project item [stack] is a stack of (the namespaced id it carries: `shop:ruby`), or null; reads only the stamp. */

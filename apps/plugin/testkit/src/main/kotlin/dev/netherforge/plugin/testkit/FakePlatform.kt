@@ -67,6 +67,8 @@ class FakePlatform(
     override val permissions = FakePermissions(this)
     override val advancements = FakeAdvancements(this)
     override val datapacks = FakeDatapacks()
+
+    override val skies = FakeSkies()
     override val plugins = FakePlugins(this)
     override val placeholders = FakePlaceholders()
 

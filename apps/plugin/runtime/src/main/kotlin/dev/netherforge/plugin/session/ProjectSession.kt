@@ -337,6 +337,9 @@ class ProjectSession internal constructor(
     /** The advancements the project's files have; the server learns them at start, from the start-up datapack. */
     val advancements = service(Advancements { namespace })
 
+    /** The project's skies over worlds and players: what each player is shown of them, a step of a fade at a time. */
+    val skies = service(dev.netherforge.plugin.sky.Skies(platform) { namespace })
+
     /** Menu windows and their scripts: shared ones exist before any module's body runs. */
     val menus = service(Menus(platform.menus, platform.inventories, scripts, source::read, ::placeOf, packs::skinTitle, ::measureText))
 
@@ -344,7 +347,17 @@ class ProjectSession internal constructor(
 
     /** Every centity instance: started after everything a script may use, stopped before it. */
     val centities = service(
-        Centities(platform, scripts, log, source::read, ::placeOf, runtime.store.instances, handover.instances, { namespace }) {
+        Centities(
+            platform,
+            scripts,
+            log,
+            source::read,
+            ::placeOf,
+            runtime.store.instances,
+            handover.instances,
+            { namespace },
+            runtime.profiler.parts
+        ) {
             data.remove(ScriptData.Owner.Centity(it))
         }
     )
@@ -362,7 +375,7 @@ class ProjectSession internal constructor(
     internal val customBlocks = service(
         CustomBlocks(
             platform, scripts, log, source::read, ::placeOf, { namespace }, { ticks },
-            { items }, { loot }, { centities }, { effects }, { blockData }, ::problemsChanged
+            { items }, { loot }, { centities }, { effects }, { blockData }, ::problemsChanged, runtime.profiler.parts
         )
     )
 
@@ -500,15 +513,23 @@ class ProjectSession internal constructor(
         val timed = profiler.active
         val started = if (timed) clock() else 0L
         val phases = if (timed) LinkedHashMap<String, Long>() else null
+        val parts = profiler.parts
+        parts.active = timed
         for (phase in TickPhase.entries) {
             val from = if (timed) clock() else 0L
             for (service in services) {
                 val step = "${service.name} (${phase.name.lowercase()})"
+                val serviceFrom = if (timed) clock() else 0L
                 try {
                     service.tick(phase)
                     failingSteps.remove(step)
                 } catch (e: Exception) {
                     if (failingSteps.add(step)) log.error("NetherForge's tick failed at $step", e)
+                }
+                // Each service's share of the step, when it took any time worth reading.
+                if (timed) {
+                    val took = clock() - serviceFrom
+                    if (took >= PART_FLOOR_NANOS) parts.add("${phase.label}/${service.name}", took)
                 }
             }
             phases?.put(phase.label, clock() - from)
@@ -678,3 +699,6 @@ class ProjectSession internal constructor(
 private val GENERATIONS = AtomicInteger()
 
 class Handover(val instances: List<InstanceRecord>, val data: Map<ScriptData.Owner, ScriptData.Kept>)
+
+/** A service's share of a step below this (a microsecond) isn't worth a part of its own in the profile. */
+private const val PART_FLOOR_NANOS = 1_000L

@@ -31,13 +31,14 @@ Whether the project still has it.
 
 **Returns** `boolean`
 
-## `projectblock:place(location)`
+## `projectblock:place(location, options?)`
 
 Places one at the block position a location is in, as `world:set_block` would: whatever is there is replaced, and nothing drops. Its `place` handlers are not asked (a script placing a block isn't a player placing one), and it isn't a `block_place` either. If the block has a centity, it's spawned over the block. `nil` when the chunk isn't loaded, or when the game has no state of its carrier left to hold the block in (the project has more blocks of that carrier than that).
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `location` | `Location` | Where. |
+| `options` (optional) | `BlockPlaceOptions` |  |
 
 **Returns** `CustomBlock?`
 

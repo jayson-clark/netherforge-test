@@ -7,6 +7,7 @@ import dev.netherforge.format.project.DialogKind
 import dev.netherforge.format.project.MenuKind
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.project.RecipeKind
+import dev.netherforge.format.project.SkyKind
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.data.ScriptData
 import dev.netherforge.plugin.lua.LuaApiException
@@ -191,6 +192,20 @@ internal class PlayerImpl(private val session: ProjectSession) : PlayerApi {
 
     override fun enderChest(self: LuaHandle.Player): LuaHandle.Inventory? = online(self)?.let {
         InventoryKeys.of(InventoryRef.EnderChest(it))
+    }
+
+    override fun sky(self: LuaHandle.Player): String? = online(self)?.let(session.skies::ofPlayer)?.let(session.names::spell)
+
+    override fun setSky(self: LuaHandle.Player, sky: String, options: SkyOptions?) {
+        val name = session.names.resource(SkyKind, sky)
+        val fade = fadeTicks(options)
+        session.skies.check(name)
+        session.skies.setPlayer(online(self) ?: return, name, fade)
+    }
+
+    override fun clearSky(self: LuaHandle.Player, options: SkyOptions?) {
+        val fade = fadeTicks(options)
+        session.skies.clearPlayer(online(self) ?: return, fade)
     }
 
     override fun storage(self: LuaHandle.Player, name: String, size: Long): LuaHandle.Inventory? {

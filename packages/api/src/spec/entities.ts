@@ -1064,6 +1064,32 @@ export const playerClass: LuaClass = {
       'Inventory?',
     ),
     {
+      name: 'sky',
+      doc: "Their own sky (`player:set_sky`), as the calling script names it, or `nil` for none: then they see their world's (`world:sky()`).",
+      params: [],
+      returns: [{ type: 'string?' }],
+    },
+    {
+      name: 'set_sky',
+      doc: "Shows them a sky of the project's, whatever world they're in, over their world's own (`world:set_sky`), until it's cleared: as `world:set_sky` does for everyone in a world, and the same errors. Nothing for someone offline, and it ends when they leave.",
+      params: [
+        {
+          name: 'sky',
+          type: 'string',
+          doc: "A sky of the project's (its file's name under `skies/`, or `namespace:id` for one a package it depends on exports).",
+        },
+        { name: 'options', type: 'SkyOptions', doc: '', optional: true },
+      ],
+      returns: [],
+      example: 'player:set_sky("eclipse", { fade_ticks = 40 })',
+    },
+    {
+      name: 'clear_sky',
+      doc: "Takes their own sky away (`player:set_sky`): they see their world's again, fading over `options.fade_ticks`.",
+      params: [{ name: 'options', type: 'SkyOptions', doc: '', optional: true }],
+      returns: [],
+    },
+    {
       name: 'storage',
       doc: "A set of item slots of the project's own that they keep: extra equipment, a backpack, a bank. It's saved in the player's own save data, with their inventory, in the same file and the same write, so a crash or a restart can't duplicate an item between the two or lose one. Shown in a menu by binding slots to it (`slot:bind`), where what players move in and out is saved at once. Dying doesn't drop it. An `Inventory` of kind `\"storage\"`: its item methods work as on any other, and it answers `nil` and `false` while they're offline (it can't be changed then). `nil` when they're offline. A name that isn't an id is an error, and so is a size outside 1 to 256.",
       params: [

@@ -1,5 +1,6 @@
 package dev.netherforge.plugin.platform
 
+import dev.netherforge.format.datapack.GameDatapack
 /**
  * The start-up datapack (format's `StartupDatapack`): what the server loaded
  * as the project's while it started, and what building one again needs. The
@@ -31,6 +32,9 @@ interface DatapackOps {
      * it. Null when the adapter can't say.
      */
     val mainWorld: String?
+
+    /** The game's own data pack, what the start-up datapack builds on (a sky's twins of its biomes); none by default. */
+    val game: GameDatapack get() = GameDatapack.NONE
 
     /**
      * MiniMessage [text] as the game's JSON text component, in the form this

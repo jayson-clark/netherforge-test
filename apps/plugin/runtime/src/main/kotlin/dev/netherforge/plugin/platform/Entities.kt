@@ -1,6 +1,7 @@
 package dev.netherforge.plugin.platform
 
 import dev.netherforge.format.Vec3
+import dev.netherforge.format.game.GameIds
 import java.util.UUID
 
 /*
@@ -255,6 +256,21 @@ sealed interface InventoryRef {
 }
 
 /**
+ * What a stack must be to be worth reading in full for an [ItemMatch][dev.netherforge.plugin.item.ItemMatch]:
+ * its kind (`minecraft:paper`, as [GameIds] normalizes it) and the project
+ * item it's a stack of (as the project's files name it: `ruby`, `acme:ruby`), each only when given. A stack that
+ * fails either can't match, whatever else the match says.
+ */
+data class StackFilter(val kind: String?, val item: String?) {
+    fun admits(stack: ItemData): Boolean = (kind == null || GameIds.normalize(stack.def.kind) == kind) &&
+        (item == null || stack.def.item?.text == item)
+
+    companion object {
+        val ANY = StackFilter(null, null)
+    }
+}
+
+/**
  * Real inventories. Everything answers null or false for one that isn't
  * there: a player offline, a block that isn't a container (or in an unloaded
  * chunk), an entity without one. A [InventoryRef.Storage] is never on anyone's
@@ -268,6 +284,19 @@ interface InventoryOps {
 
     /** Every slot, in order, null for an empty one. */
     fun contents(ref: InventoryRef): List<ItemData?>?
+
+    /**
+     * One slot (the runtime has checked it's in range), null for an empty
+     * one: only that stack is read, where [contents] reads them all.
+     */
+    fun item(ref: InventoryRef, slot: Int): ItemData? = contents(ref)?.getOrNull(slot)
+
+    /**
+     * Every slot, as [contents], but a stack [filter] turns away reads as
+     * empty and is never read in full: what counting and finding a match
+     * look through, so the stacks that can't match cost next to nothing.
+     */
+    fun contents(ref: InventoryRef, filter: StackFilter): List<ItemData?>? = contents(ref)?.map { item -> item?.takeIf(filter::admits) }
 
     /** Writes a slot (the runtime has checked it's in range); null empties it. False when the item can't be built. */
     fun setItem(ref: InventoryRef, slot: Int, item: ItemData?): Boolean

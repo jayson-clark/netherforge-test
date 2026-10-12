@@ -167,7 +167,9 @@ class NetherForgeRuntime(val platform: Platform, val config: RuntimeConfig) {
         // Reports are written on a lane of the workers, and said on the main thread.
         writer = { workers.lane("profiles") },
         onMain = mainThread,
-        server = { "Minecraft ${platform.info.minecraftVersion}, NetherForge ${platform.info.pluginVersion}" }
+        server = { "Minecraft ${platform.info.minecraftVersion}, NetherForge ${platform.info.pluginVersion}" },
+        // Parts are timed as the steps are, without the time the debugger held the server.
+        clock = { time() }
     )
 
     private val admin = AdminCommand(this)

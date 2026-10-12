@@ -27,6 +27,7 @@ local registry, listeners, NF = events.registry, events.listeners, events.NF
 local class_of, key_of, new_event, deliver =
   events.class_of, events.key_of, events.new_event, events.deliver
 local unsubscribe, subscriptions = events.unsubscribe, events.subscriptions
+local set_event = events.set_event
 local scope_subscriptions = events.scope_subscriptions
 local scope_tasks, tasks_by_id, end_task = tasks.scope_tasks, tasks.tasks, tasks.end_task
 local envs, loaded, load_path = scopes.envs, scopes.loaded, scopes.load_path
@@ -274,7 +275,7 @@ function host.emit(stages, fields, precancelled, writable, home, only)
   local ev, state = new_event(first.event, fields, spec.cancellable, spec.writable)
   -- What a handler assigns is checked as the first stage's payload field.
   state.owner, state.event = owner, first.event
-  state.cancelled = precancelled == true
+  set_event(state, "cancelled", precancelled == true)
   state.spelled = home
   state.only = only
   for i = 1, #stages do
@@ -282,9 +283,9 @@ function host.emit(stages, fields, precancelled, writable, home, only)
       break
     end
     local stage = stages[i]
-    state.name = stage.event
-    state.current = stage.target
-    deliver(key_of(stage.target), stage.event, ev, state)
+    set_event(state, "name", stage.event)
+    set_event(state, "current", stage.target)
+    guard.unbilled(deliver, key_of(stage.target), stage.event, ev, state)
   end
   local written = {}
   for i, name in ipairs(writable) do
@@ -360,16 +361,37 @@ function host.json_decode(tree)
   return decode_data(tree)
 end
 
--- A vector, for payloads built on the Kotlin side.
-function host.vec3(x, y, z)
-  return values.new_vec3(x, y, z)
+-- Takes the running frame off while the host runs a stretch of the server's own
+-- ticks inside it (`nf.test.advance`): each handler, timer and centity tick in
+-- them is then a call in of its own, with its own budget and time limit, as on
+-- a server, rather than nested in (and charged to) the frame that asked. Returns
+-- the frame and the clock, for `host.reattach`.
+function host.detach()
+  local f = guard_module.current()
+  guard_module.set_current(nil)
+  return f, timing.clock()
 end
 
--- A location Kotlin hands over: the world's handle, the position, a facing
--- that may be nil.
-function host.location(world, x, y, z, yaw, pitch)
-  return values.new_location(world, values.new_vec3(x, y, z), yaw, pitch)
+-- Puts back what `host.detach` took off. Its time limit is moved on by the time
+-- it was off, and that time is its nested calls', not its own.
+function host.reattach(f, from)
+  if f ~= nil then
+    local elapsed = timing.clock() - from
+    f.deadline = f.deadline + elapsed
+    f.nested = f.nested + elapsed
+  end
+  guard_module.set_current(f)
 end
+
+-- The genuine metatables of a vector and a location: Kotlin builds those it
+-- hands over itself (`LuaHost.pushVec3`, `pushLocation`), as `new_vec3` and
+-- `new_location` would, so a returned position costs a script nothing.
+host.vec3_mt, host.location_mt = values.Vec3_mt, values.Location_mt
+
+-- The handle classes a saved table may keep, each with its tag (`entity` for
+-- `{"$entity":[id]}`): Kotlin writes plain data that holds them itself, as the
+-- JSON codec would (`LuaHost.plainJson`).
+host.saved_handles = require("schema").saved_handles
 
 -- Forgets every required file under a path prefix, in every scope, for a module reload.
 function host.forget(prefix)

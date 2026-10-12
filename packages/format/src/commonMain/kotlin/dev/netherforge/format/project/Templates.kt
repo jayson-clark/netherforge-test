@@ -150,11 +150,10 @@ object Templates {
         return rewrittenAs(kind, path, text)
     }
 
-    private fun <T> rewrittenAs(kind: DocumentKind<T>, path: String, text: String): String =
-        when (val parsed = kind.parse(text, path)) {
-            is CanonicalJson.Parsed.Ok -> kind.write(parsed.value, path)
-            is CanonicalJson.Parsed.Failed -> text
-        }
+    private fun <T> rewrittenAs(kind: DocumentKind<T>, path: String, text: String): String = when (val parsed = kind.parse(text, path)) {
+        is CanonicalJson.Parsed.Ok -> kind.write(parsed.value, path)
+        is CanonicalJson.Parsed.Failed -> text
+    }
 
     /** `village_shop` → `Village shop`. */
     internal fun titleOf(id: String): String = id.replace('_', ' ').trim().replaceFirstChar { it.uppercaseChar() }.ifEmpty { id }

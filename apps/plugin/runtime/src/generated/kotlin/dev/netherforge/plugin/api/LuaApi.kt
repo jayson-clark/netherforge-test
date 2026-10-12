@@ -827,8 +827,11 @@ interface NfTestApi {
     /**
      * Runs the server forward `ticks` ticks (20 are a second), whole ticks at a time: timers fall due,
      * `tick` handlers run, centities tick and mobs think, exactly as on a server, and everything scripts
-     * started on other threads finishes first. When it returns, the last tick is done. Script errors
-     * during it are collected and fail the test when it ends.
+     * started on other threads finishes first. When it returns, the last tick is done. Each call in those
+     * ticks (a handler, a timer, a centity's tick) has its own budget and time limit, as on a server: none
+     * of it counts against the test's own, which is for the test's code. One that runs out is reported as
+     * on a server, at its file and line. Script errors during it are collected and fail the test when it
+     * ends.
      */
     fun advance(caller: Caller, ticks: Long)
 
@@ -2155,6 +2158,25 @@ interface PlayerApi {
     fun enderChest(self: LuaHandle.Player): LuaHandle.Inventory?
 
     /**
+     * Their own sky (`player:set_sky`), as the calling script names it, or `nil` for none: then they see
+     * their world's (`world:sky()`).
+     */
+    fun sky(self: LuaHandle.Player): String?
+
+    /**
+     * Shows them a sky of the project's, whatever world they're in, over their world's own
+     * (`world:set_sky`), until it's cleared: as `world:set_sky` does for everyone in a world, and the same
+     * errors. Nothing for someone offline, and it ends when they leave.
+     */
+    fun setSky(self: LuaHandle.Player, sky: String, options: SkyOptions?)
+
+    /**
+     * Takes their own sky away (`player:set_sky`): they see their world's again, fading over
+     * `options.fade_ticks`.
+     */
+    fun clearSky(self: LuaHandle.Player, options: SkyOptions?)
+
+    /**
      * A set of item slots of the project's own that they keep: extra equipment, a backpack, a bank. It's
      * saved in the player's own save data, with their inventory, in the same file and the same write, so a
      * crash or a restart can't duplicate an item between the two or lose one. Shown in a menu by binding
@@ -2526,6 +2548,28 @@ interface WorldApi {
      */
     fun setWeather(self: LuaHandle.World, weather: String, options: WeatherOptions?): Boolean
 
+    /**
+     * The sky set over the world (`world:set_sky`), as the calling script names it, or `nil` for none (or
+     * once the world has gone). A player's own (`player:set_sky`) is theirs alone.
+     */
+    fun sky(self: LuaHandle.World): String?
+
+    /**
+     * Sets a sky of the project's over the world (`skies/<id>.json`): everyone in it sees its colours in
+     * place of the biomes' own, the sky, fog, clouds and water, fading over `options.fade_ticks`, until
+     * it's cleared or another is set. Only what players are shown changes: the world, its biomes, its mobs
+     * and its weather are as they were, and a restart clears it. A player's own sky (`player:set_sky`) is
+     * shown them instead. A sky the project has no file for is an error, and so is one added since the
+     * server started (its colours are biomes, which the game learns as it starts: restart the server).
+     */
+    fun setSky(self: LuaHandle.World, sky: String, options: SkyOptions?): Boolean
+
+    /**
+     * Takes the world's sky away (`world:set_sky`): its biomes' own colours come back over
+     * `options.fade_ticks`. Nothing when it has none.
+     */
+    fun clearSky(self: LuaHandle.World, options: SkyOptions?)
+
     /** Where players appear in this world when nothing else decides, or `nil` once the world has gone. */
     fun spawnLocation(self: LuaHandle.World): LuaLocation?
 
@@ -2543,6 +2587,15 @@ interface WorldApi {
      * is floored to the block it's in. `nil` once the world has gone.
      */
     fun block(self: LuaHandle.World, position: Vec3): LuaHandle.Block?
+
+    /**
+     * Every block in a box, read in one call: for code that needs many blocks at once (a mob's collision,
+     * a flood fill of a room), where a `world:block` and a `:kind()` per block would cost each one. The
+     * corners are floored to the blocks they're in and both are included, in any order. What each block is
+     * given as is `options.what`. At most 32,768 blocks (32 × 32 × 32): a bigger box is an error. `nil`
+     * when any of the box is in a chunk that isn't loaded, or the world has gone.
+     */
+    fun blocks(self: LuaHandle.World, from: Vec3, to: Vec3, options: BlockBoxOptions?): BlockBox?
 
     /**
      * Changes the block at a position. A block state the server doesn't have (an unknown block, property
@@ -2912,6 +2965,19 @@ interface CustomBlockApi {
 
     /** The project block it's one of, or `nil` once what's here isn't one. */
     fun project(self: LuaHandle.CustomBlock): LuaHandle.ProjectBlock?
+
+    /**
+     * The way its front faces, for a block that turns (`rotation` in its `block.json`): what it was placed
+     * facing, or turned to since. `nil` for a block that doesn't turn, or once what's here isn't one.
+     */
+    fun facing(self: LuaHandle.CustomBlock): String?
+
+    /**
+     * Turns it to face another way, keeping everything else about it: its table, its centity (turned with
+     * it). `false` when it doesn't turn that way (it doesn't turn, or turns only `horizontal` and this is
+     * up or down), or once what's here isn't one of the project's blocks.
+     */
+    fun setFacing(self: LuaHandle.CustomBlock, facing: String): Boolean
 }
 
 /**
@@ -2934,7 +3000,7 @@ interface ProjectBlockApi {
      * over the block. `nil` when the chunk isn't loaded, or when the game has no state of its carrier left
      * to hold the block in (the project has more blocks of that carrier than that).
      */
-    fun place(self: LuaHandle.ProjectBlock, location: LuaLocation): LuaHandle.CustomBlock?
+    fun place(self: LuaHandle.ProjectBlock, location: LuaLocation, options: BlockPlaceOptions?): LuaHandle.CustomBlock?
 }
 
 /**

@@ -48,7 +48,8 @@ class StartupDatapackCheck(private val platform: Platform, private val source: P
             platform.datapacks::textJson,
             platform.datapacks.mainWorld,
             source::readBytes,
-            platform.datapacks.refused
+            platform.datapacks.refused,
+            platform.datapacks.game
         )
         val was = stale
         stale = !StartupDatapackFiles.same(now.files, platform.datapacks.started)

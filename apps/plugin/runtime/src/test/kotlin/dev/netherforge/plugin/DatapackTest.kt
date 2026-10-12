@@ -70,7 +70,7 @@ class DatapackTest {
                 source::readBytes,
                 null
             )
-            assertTrue(whole.passesThrough)
+            assertTrue(whole.canLeaveOut)
             platform.datapacks.refusal = DatapackRefusal(whole.hash, report)
             server.start()
 

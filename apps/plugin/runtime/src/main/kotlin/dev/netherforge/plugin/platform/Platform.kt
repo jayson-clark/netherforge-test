@@ -142,6 +142,9 @@ interface Platform {
     /** The datapack the server started with, and building one again (`platform/Datapacks.kt`). */
     val datapacks: DatapackOps
 
+    /** What players are shown the world's biomes as: a sky's twins ([SkyOps]). Nothing by default (a server without). */
+    val skies: SkyOps get() = SkyOps.NONE
+
     /** Keeping a server alive while the debugger holds its main thread at a breakpoint. */
     val pause: PauseOps
 

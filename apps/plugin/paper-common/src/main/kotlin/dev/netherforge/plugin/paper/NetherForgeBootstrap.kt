@@ -1,5 +1,6 @@
 package dev.netherforge.plugin.paper
 
+import dev.netherforge.format.datapack.GameDatapack
 import dev.netherforge.format.datapack.StartupDatapack
 import dev.netherforge.plugin.RuntimeConfig
 import dev.netherforge.plugin.ServerAddress
@@ -44,13 +45,17 @@ class NetherForgeBootstrap : PluginBootstrap {
             PaperDatapacks.built = files
             PaperDatapacks.refused = start?.refused
             start?.refused?.let { refused ->
+                // The game's report has an entry per file it refused (a sky's twins are hundreds): its first lines.
+                val lines = refused.report.lines()
+                val more = if (lines.size > REPORT_LINES) "\n... and ${lines.size - REPORT_LINES} more lines" else ""
                 context.logger.warn(
-                    "The server refused the project's datapacks (datapacks/) the last time it started, so it starts without them " +
-                        "until they change. What it said:\n${refused.report}"
+                    "The server refused the project's start-up datapack the last time it started, so it starts without what it " +
+                        "named (its datapacks or skies) until they change. What it said:\n" +
+                        lines.take(REPORT_LINES).joinToString("\n") + more
                 )
             }
-            // Only the server knows whether the game reads a datapack's worldgen: if it refuses the pack, it says why here.
-            if (start != null && start.refused == null && start.passesThrough) PaperDatapacks.watch(context.dataDirectory, start.hash)
+            // Only the server knows whether the game reads a datapack's worldgen or a twin biome: if it refuses the pack, it says why here.
+            if (start != null && start.refused == null && start.canLeaveOut) PaperDatapacks.watch(context.dataDirectory, start.hash)
             if (files.isEmpty()) return@registerEventHandler
             val folder = context.dataDirectory.resolve(FOLDER)
             StartupDatapackFiles.write(folder, files)
@@ -85,7 +90,8 @@ class NetherForgeBootstrap : PluginBootstrap {
             PaperText::json,
             main,
             source::readBytes,
-            DatapackRefusal.read(folder)
+            DatapackRefusal.read(folder),
+            PaperGameDatapack.read
         )
         val files = start.files
         if (files.isNotEmpty()) context.logger.info("NetherForge's start-up datapack: ${files.size - 1} file(s) from ${config.project}")
@@ -98,6 +104,9 @@ class NetherForgeBootstrap : PluginBootstrap {
 
         /** What the server calls its main world when `server.properties` doesn't say. */
         private const val DEFAULT_LEVEL = "world"
+
+        /** How much of a refusal's report the start logs: the game logged the whole of it as it refused. */
+        private const val REPORT_LINES = 20
 
         /**
          * The name of the world the server started in [folder] makes as its main world: `level-name` in its
@@ -127,6 +136,8 @@ class PaperDatapacks : DatapackOps {
     override val format: List<Int>? get() = ServerVersionFile.dataPackFormat
 
     override val mainWorld: String? get() = Companion.mainWorld
+
+    override val game: GameDatapack get() = PaperGameDatapack.read
 
     override fun textJson(text: String, glyph: (reference: String) -> String?): String = PaperText.json(text, glyph)
 

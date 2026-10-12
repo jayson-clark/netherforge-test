@@ -32,6 +32,7 @@ local math_type = std.math_type
 local new, keys = handles.new, handles.keys
 local gated, needs_version = gates.gated, gates.needs_version
 local timing, invoke, current = guard_module.timing, guard_module.invoke, guard_module.current
+local unbilled = guard_module.guard.unbilled
 local pairs, ipairs, next, error = pairs, ipairs, next, error
 local setmetatable, getmetatable = setmetatable, getmetatable
 
@@ -68,24 +69,40 @@ local function event_names(class_name)
   return concat(names, ", ")
 end
 
+-- A target's handlers for one event are a list, oldest first, that also
+-- keeps what telling Kotlin needs, so neither subscribing nor cancelling walks
+-- it: `live`, the active ones; `unrated`, the active ones without a rate;
+-- `dead`, cancelled ones still in it (skipped, and dropped once they're half
+-- of it); `rates`, every active rated one's "rate:phase" (nil when that must
+-- be worked out again). A handler subscribing among a thousand others costs
+-- what the first did.
+
+---@class nf.HandlerList: table
+---@field live integer
+---@field unrated integer
+---@field dead integer
+---@field rates string?
+
 -- Tells Kotlin how many handlers `event` has on `key`, and, when every one of
 -- them has a rate, each one's "rate:phase", so it raises only the ticks one
 -- is due on (nil: one runs every time).
 local function notify(key, event)
   local list = listeners[key] and listeners[key][event]
   local rates = nil
-  if list ~= nil then
-    local parts = {}
-    for _, sub in ipairs(list) do
-      if sub.every == nil then
-        parts = nil
-        break
+  if list ~= nil and list.unrated == 0 then
+    rates = list.rates
+    if rates == nil then
+      local parts = {}
+      for _, sub in ipairs(list) do
+        if sub.active then
+          parts[#parts + 1] = sub.every .. ":" .. sub.phase
+        end
       end
-      parts[#parts + 1] = sub.every .. ":" .. sub.phase
+      rates = concat(parts, " ")
+      list.rates = rates
     end
-    rates = parts and concat(parts, " ")
   end
-  prim["events.listening"](key ~= NF and key or nil, event, list and #list or 0, rates)
+  prim["events.listening"](key ~= NF and key or nil, event, list and list.live or 0, rates)
 end
 
 local function unsubscribe(sub)
@@ -101,15 +118,28 @@ local function unsubscribe(sub)
   local by_event = listeners[sub.key]
   local list = by_event and by_event[sub.event]
   if list ~= nil then
-    local kept = {}
-    for _, other in ipairs(list) do
-      if other ~= sub then
-        kept[#kept + 1] = other
-      end
+    list.live = list.live - 1
+    if sub.every == nil then
+      list.unrated = list.unrated - 1
+    else
+      list.rates = nil
     end
-    by_event[sub.event] = #kept > 0 and kept or nil
-    if next(by_event) == nil then
-      listeners[sub.key] = nil
+    list.dead = list.dead + 1
+    if list.live == 0 then
+      by_event[sub.event] = nil
+      if next(by_event) == nil then
+        listeners[sub.key] = nil
+      end
+    elseif list.dead > list.live then
+      -- Half of it cancelled: a new list of the live ones. (Delivery walks a
+      -- snapshot, so one running now isn't disturbed.)
+      local kept = { live = list.live, unrated = list.unrated, dead = 0, rates = list.rates }
+      for _, other in ipairs(list) do
+        if other.active then
+          kept[#kept + 1] = other
+        end
+      end
+      by_event[sub.event] = kept
     end
   end
   notify(sub.key, sub.event)
@@ -154,7 +184,7 @@ local function subscribe(scope, target, event, handler, options, once, level)
   if since ~= nil then
     error(needs_version(format('the event "%s"', event), since), level)
   end
-  local every = listen_options(options, spec, event, level + 1)
+  local every = options ~= nil and listen_options(options, spec, event, level + 1) or nil
   if scope == nil then
     error("no script is running to own this handler", level)
   end
@@ -189,10 +219,17 @@ local function subscribe(scope, target, event, handler, options, once, level)
   end
   local list = by_event[event]
   if list == nil then
-    list = {}
+    list = { live = 0, unrated = 0, dead = 0, rates = "" }
     by_event[event] = list
   end
   list[#list + 1] = sub
+  list.live = list.live + 1
+  if every == nil then
+    list.unrated = list.unrated + 1
+  elseif list.rates ~= nil then
+    local rate = every .. ":" .. sub.phase
+    list.rates = list.rates == "" and rate or list.rates .. " " .. rate
+  end
   local owned = scope_subscriptions[scope]
   if owned == nil then
     owned = {}
@@ -219,6 +256,14 @@ local event_state = setmetatable({}, { __mode = "k" })
 local Event = {}
 local RESERVED = { name = true, current = true, cancelled = true, stopped = true }
 
+-- An event's own members, which a script reads (`name`, `current`,
+-- `cancelled`, `stopped`, the methods): kept in its state under the same
+-- names, and in its view ([new_event]), which reads find first.
+local function set(state, key, value)
+  state[key] = value
+  state.view[key] = value
+end
+
 local function event_self(self)
   local state = event_state[self]
   if state == nil then
@@ -228,7 +273,7 @@ local function event_self(self)
 end
 
 function Event.stop(self)
-  event_self(self).stopped = true
+  set(event_self(self), "stopped", true)
 end
 
 function Event.cancel(self)
@@ -236,7 +281,7 @@ function Event.cancel(self)
   if not state.cancellable then
     error(format("the %s event can't be cancelled", state.name), 2)
   end
-  state.cancelled = true
+  set(state, "cancelled", true)
 end
 
 function Event.uncancel(self)
@@ -244,7 +289,7 @@ function Event.uncancel(self)
   if not state.cancellable then
     error(format("the %s event can't be cancelled", state.name), 2)
   end
-  state.cancelled = false
+  set(state, "cancelled", false)
 end
 
 local function writable_list(writable)
@@ -256,62 +301,64 @@ local function writable_list(writable)
   return #names > 0 and ("writable: " .. concat(names, ", ")) or "it has no writable fields"
 end
 
-local Event_mt = {
-  __index = function(ev, key)
-    local state = event_state[ev]
-    if key == "name" then
-      return state.name
-    elseif key == "current" then
-      return state.current
-    elseif key == "cancelled" then
-      return state.cancelled
-    elseif key == "stopped" then
-      return state.stopped
+local function event_newindex(ev, key, value)
+  local state = event_state[ev]
+  if RESERVED[key] or Event[key] ~= nil then
+    error(format("event.%s can't be assigned", tostring(key)), 2)
+  end
+  local writable = state.writable
+  if writable ~= true then
+    if writable[key] == nil then
+      error(
+        format(
+          "event.%s can't be assigned on a %s event (%s)",
+          tostring(key),
+          state.name,
+          writable_list(writable)
+        ),
+        2
+      )
     end
-    local method = Event[key]
-    if method ~= nil then
-      return method
-    end
-    return state.fields[key]
-  end,
-  __newindex = function(ev, key, value)
-    local state = event_state[ev]
-    if RESERVED[key] or Event[key] ~= nil then
-      error(format("event.%s can't be assigned", tostring(key)), 2)
-    end
-    local writable = state.writable
-    if writable ~= true then
-      if writable[key] == nil then
-        error(
-          format(
-            "event.%s can't be assigned on a %s event (%s)",
-            tostring(key),
-            state.name,
-            writable_list(writable)
-          ),
-          2
-        )
-      end
-      -- Read as the payload's field will be read back, so a mistake (an item
-      -- in a list included) is an error at this line rather than a dropped value later.
-      prim["events.check"](state.owner, state.event, key, value, state.spelled)
-    end
-    state.fields[key] = value
-  end,
-  __pairs = function(ev)
-    return next, event_state[ev].fields, nil
-  end,
-  __tostring = function(ev)
-    return "Event: " .. event_state[ev].name
-  end,
-  __metatable = "Event",
-  __name = "Event",
-}
+    -- Read as the payload's field will be read back, so a mistake (an item
+    -- in a list included) is an error at this line rather than a dropped value later.
+    prim["events.check"](state.owner, state.event, key, value, state.spelled)
+  end
+  state.fields[key] = value
+end
+
+local function event_pairs(ev)
+  return next, event_state[ev].fields, nil
+end
+
+local function event_tostring(ev)
+  return "Event: " .. event_state[ev].name
+end
 
 -- A new event over `fields`; `writable` is the registry's table, or true for
 -- a custom event (anything may be assigned).
+--
+-- Handlers read events' fields all the time, so a read runs no Lua at all:
+-- the event is an empty table whose `__index` is its view (its own members),
+-- whose `__index` is its fields, a chain the VM follows itself. Every write
+-- finds the event empty, so `__newindex` checks each.
 local function new_event(name, fields, cancellable, writable)
-  local ev = setmetatable({}, Event_mt)
+  local view_mt = { __index = fields }
+  local view = setmetatable({
+    name = name,
+    cancelled = false,
+    stopped = false,
+    stop = Event.stop,
+    cancel = Event.cancel,
+    uncancel = Event.uncancel,
+  }, view_mt)
+  local ev = setmetatable({}, {
+    __index = view,
+    __newindex = event_newindex,
+    __pairs = event_pairs,
+    __tostring = event_tostring,
+    __metatable = "Event",
+    __name = "Event",
+  })
   local state = {
     name = name,
     fields = fields,
@@ -319,9 +366,17 @@ local function new_event(name, fields, cancellable, writable)
     writable = writable,
     cancelled = false,
     stopped = false,
+    view = view,
+    view_mt = view_mt,
   }
   event_state[ev] = state
   return ev, state
+end
+
+-- Hands the event's handlers [fields] from now on (spelled for another package).
+local function set_fields(state, fields)
+  state.fields = fields
+  state.view_mt.__index = fields
 end
 
 -- ---- delivery
@@ -374,7 +429,7 @@ local function deliver(key, event, ev, state, only_scope)
         -- A server event's fields name things as the package whose handler runs next writes them.
         local namespace = namespaces[sub.scope]
         if state.spelled ~= nil and namespace ~= nil and namespace ~= state.spelled then
-          state.fields = prim["events.respell"](state.fields, state.spelled, namespace)
+          set_fields(state, prim["events.respell"](state.fields, state.spelled, namespace))
           state.spelled = namespace
         end
         timing.next_kind = sub.event
@@ -389,6 +444,14 @@ local function deliver(key, event, ev, state, only_scope)
   end
 end
 
+-- Makes a custom event and delivers it: what `emit_custom` has done unbilled.
+local function deliver_custom(target, key, event, payload)
+  local ev, state = new_event(event, payload or {}, true, true)
+  set(state, "current", target)
+  deliver(key, event, ev, state)
+  return state.cancelled
+end
+
 -- A custom event (a name with a ':') on `target`, or on nf for nil.
 local function emit_custom(target, event, payload, level)
   if not raw.find(event, ":", 1, true) then
@@ -400,10 +463,12 @@ local function emit_custom(target, event, payload, level)
       level
     )
   end
-  local ev, state = new_event(event, payload or {}, true, true)
-  state.current = target
-  deliver(key_of(target), event, ev, state)
-  return state.cancelled
+  local key = key_of(target)
+  -- Nobody listening: nothing to build an event for, and nothing can cancel it.
+  if listeners[key] == nil or listeners[key][event] == nil then
+    return false
+  end
+  return unbilled(deliver_custom, target, key, event, payload)
 end
 -- ---- the hand-written functions
 --
@@ -436,7 +501,8 @@ end
 ---@param options {every: integer?}?
 ---@return table subscription
 local function on(self, event, handler, options)
-  local subscription = subscribe(running_scope(), self, event, handler, options, false, 3)
+  local f = current()
+  local subscription = subscribe(f and f.scope, self, event, handler, options, false, 3)
   return subscription
 end
 
@@ -445,7 +511,8 @@ end
 ---@param handler function
 ---@return table subscription
 local function once(self, event, handler)
-  local subscription = subscribe(running_scope(), self, event, handler, nil, true, 3)
+  local f = current()
+  local subscription = subscribe(f and f.scope, self, event, handler, nil, true, 3)
   return subscription
 end
 
@@ -465,8 +532,8 @@ local nf_tables = setmetatable({}, { __mode = "k" })
 return {
   NF = NF,
   -- The debugger reads an event's name and fields without its metatable.
-  Event_mt = Event_mt,
   event_state = event_state,
+  set_event = set,
   registry = registry,
   custom_events = custom_events,
   budgets = budgets,

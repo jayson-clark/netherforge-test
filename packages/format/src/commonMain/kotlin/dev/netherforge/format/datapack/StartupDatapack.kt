@@ -7,11 +7,14 @@ import dev.netherforge.format.project.DatapackKind
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Kinds
 import dev.netherforge.format.project.ProjectSnapshot
+import dev.netherforge.format.project.SkyKind
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.ref.ResourceRef
+import dev.netherforge.format.sky.SkyTwins
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -46,16 +49,19 @@ object StartupDatapack {
      * pack replaces when `netherforge.json` names one for it; null for none.
      * Without [passThrough], the project's datapacks ([dev.netherforge.format.project.DatapackKind]) are left out,
      * and so is everything of NetherForge's that names what they define: how a server that refused them starts
-     * without them.
+     * without them. The skies [leaveOut] says yes to have no twin biomes in it: how a server that refused theirs
+     * starts with the others.
      */
     fun build(
         snapshot: ProjectSnapshot,
         format: List<Int>,
         text: TextJson,
         mainWorld: String? = null,
-        passThrough: Boolean = true
+        passThrough: Boolean = true,
+        game: GameDatapack = GameDatapack.NONE,
+        leaveOut: (sky: ResourceKey) -> Boolean = { false }
     ): Map<String, DatapackEntry> {
-        val context = DatapackContext(snapshot, format, text, mainWorld, passThrough)
+        val context = DatapackContext(snapshot, format, text, mainWorld, passThrough, game, leaveOut)
         val files = HashMap<String, DatapackEntry>()
         for (kind in kinds) add(kind, snapshot, context, files)
         if (files.isEmpty()) return emptyMap()
@@ -81,12 +87,23 @@ object StartupDatapack {
     fun sourceOf(snapshot: ProjectSnapshot, format: List<Int>, registry: String, element: String): String? {
         val folder = registry.substringAfter(':')
         val key = ResourceKey.parse(element) ?: return null
+        if (folder == BiomeJson.FOLDER) {
+            SkyTwins.skyOf(snapshot.namespace, key)?.let { sky -> return skyFile(snapshot, sky) }
+        }
         val target = DatapackLayout.entryFile(key, folder, tag = false)
         for ((name, datapack) in snapshot.running(DatapackKind)) {
             val path = datapack.filesFor(PackFormat.of(format))[target] ?: continue
             return snapshot.placeOf(DatapackKind, name).file(path.file)
         }
         for (kind in Kinds.all) sourceIn(kind, snapshot, folder, key)?.let { return it }
+        return null
+    }
+
+    /** The file of the sky [sky] names, the project's or a package's; null when there's none. */
+    private fun skyFile(snapshot: ProjectSnapshot, sky: ResourceKey): String? {
+        for ((name, loaded) in snapshot.everywhere(SkyKind)) {
+            if (ResourceRef(name).resolve(snapshot.namespace) == sky) return SkyKind.pathOf(name, loaded.group)
+        }
         return null
     }
 
@@ -122,6 +139,17 @@ object StartupDatapack {
     }
 
     private const val MCMETA = "pack.mcmeta"
+}
+
+/**
+ * What the game's own data pack (in the server's jar) has that a kind builds on: its [biomes] (each its JSON, by
+ * key), and the [overworld]'s dimension type. The server hands it over as it starts (the start-up datapack is built
+ * before anything else of the game is there); without one ([NONE]: the editor, a test) nothing is built on it.
+ */
+class GameDatapack(val biomes: Map<ResourceKey, JsonObject>, val overworld: JsonObject?) {
+    companion object {
+        val NONE = GameDatapack(emptyMap(), null)
+    }
 }
 
 /** One file of the start-up datapack. */
@@ -173,8 +201,14 @@ class DatapackContext internal constructor(
     /** The server's main world's name, when the pack is built for a server that says (null: none is known). */
     val mainWorld: String? = null,
     /** Whether the project's datapacks go in (see [StartupDatapack.build]). */
-    val passThrough: Boolean = true
+    val passThrough: Boolean = true,
+    /** What the server's own data pack says, for a kind that builds on it ([GameDatapack]). */
+    val game: GameDatapack = GameDatapack.NONE,
+    private val leaveOut: (sky: ResourceKey) -> Boolean = { false }
 ) {
+    /** Whether the sky [sky] names is left out of this pack (see [StartupDatapack.build]). */
+    fun leftOut(sky: ResourceKey): Boolean = leaveOut(sky)
+
     /** [format] as a data pack format, to compare with a datapack's. */
     val packFormat: PackFormat get() = PackFormat.of(format)
 

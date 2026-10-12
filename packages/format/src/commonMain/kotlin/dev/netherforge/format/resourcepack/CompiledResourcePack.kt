@@ -594,7 +594,7 @@ object PackLayout {
                 use.hidden -> "${plan.home}:block/$HIDDEN"
                 else -> return@mapNotNull null
             }
-            use.state.toString() to model
+            use.state.toString() to (model to use.facing)
         }.toMap()
         // Only the game's blocks some custom block is held in: a leaves block nobody uses keeps the game's own file.
         val used = plan.uses.map { it.state.id }.toSet()
@@ -610,7 +610,14 @@ object PackLayout {
                         val key = state.properties.entries.sortedBy { it.key }.joinToString(",") { "${it.key}=${it.value}" }
                         val own = models[state.toString()]
                         when {
-                            own != null -> putJsonObject(key) { put("model", own) }
+                            own != null -> putJsonObject(key) {
+                                put("model", own.first)
+                                // A block that turns: its north-facing model, turned as the game turns its own.
+                                own.second?.let { facing ->
+                                    if (facing.x != 0) put("x", facing.x)
+                                    if (facing.y != 0) put("y", facing.y)
+                                }
+                            }
                             single != null -> putJsonObject(key) { put("model", single) }
                             // As the client draws it; a state its file has nothing for is left to the game's missing model.
                             else -> client?.let { VanillaBlockStates.variant(it, state) }?.let { put(key, it) }

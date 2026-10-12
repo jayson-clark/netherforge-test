@@ -130,6 +130,39 @@ Changes the weather, for `options.ticks` or for as long as the game would have k
 world:set_weather("thunder", { ticks = 20 * 60 })
 ```
 
+## `world:sky()`
+
+The sky set over the world (`world:set_sky`), as the calling script names it, or `nil` for none (or once the world has gone). A player's own (`player:set_sky`) is theirs alone.
+
+**Returns** `string?`
+
+## `world:set_sky(sky, options?)`
+
+Sets a sky of the project's over the world (`skies/<id>.json`): everyone in it sees its colours in place of the biomes' own, the sky, fog, clouds and water, fading over `options.fade_ticks`, until it's cleared or another is set. Only what players are shown changes: the world, its biomes, its mobs and its weather are as they were, and a restart clears it. A player's own sky (`player:set_sky`) is shown them instead. A sky the project has no file for is an error, and so is one added since the server started (its colours are biomes, which the game learns as it starts: restart the server).
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `sky` | `string` | A sky of the project's (its file's name under `skies/`, or `namespace:id` for one a package it depends on exports). |
+| `options` (optional) | `SkyOptions` |  |
+
+**Returns** `boolean`: `false` when the world has gone.
+
+```lua
+world:set_sky("blood_moon", { fade_ticks = 100 })
+```
+
+## `world:clear_sky(options?)`
+
+Takes the world's sky away (`world:set_sky`): its biomes' own colours come back over `options.fade_ticks`. Nothing when it has none.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `options` (optional) | `SkyOptions` |  |
+
+```lua
+world:clear_sky({ fade_ticks = 100 })
+```
+
 ## `world:spawn_location()`
 
 Where players appear in this world when nothing else decides, or `nil` once the world has gone.
@@ -170,6 +203,29 @@ The block at a position: a handle that reads the world live, so it sees later ch
 
 ```lua
 local below = this:world():block(this:position() - vec3(0, 1, 0))
+```
+
+## `world:blocks(from, to, options?)`
+
+Every block in a box, read in one call: for code that needs many blocks at once (a mob's collision, a flood fill of a room), where a `world:block` and a `:kind()` per block would cost each one. The corners are floored to the blocks they're in and both are included, in any order. What each block is given as is `options.what`. At most 32,768 blocks (32 × 32 × 32): a bigger box is an error. `nil` when any of the box is in a chunk that isn't loaded, or the world has gone.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `from` | `Vec3` | One corner: any point in its block. |
+| `to` | `Vec3` | The opposite corner, included: any point in its block. |
+| `options` (optional) | `BlockBoxOptions` |  |
+
+**Returns** `BlockBox?`
+
+```lua
+local box = world:blocks(vec3(0, 60, 0), vec3(15, 70, 15), { what = "class" })
+if box then
+  -- A block within the box, counted from its corner.
+  local function at(x, y, z)
+    return box.cells[1 + x + box.size_x * (z + box.size_z * y)]
+  end
+  if at(0, 0, 0) == 2 then log("solid") end
+end
 ```
 
 ## `world:set_block(position, state, options?)`

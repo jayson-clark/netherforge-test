@@ -2,6 +2,9 @@ package dev.netherforge.plugin.paper
 
 import com.destroystokyo.paper.entity.ai.Goal
 import dev.netherforge.format.game.RegistryKey
+import dev.netherforge.plugin.platform.ChunkGrid
+import org.bukkit.World
+import org.bukkit.block.data.BlockData
 import org.bukkit.entity.Mob
 import org.bukkit.entity.Player
 import org.bukkit.inventory.EquipmentSlot
@@ -18,6 +21,54 @@ import java.util.ServiceLoader
  * ([load]). See the minecraft-versions skill.
  */
 interface PaperVersion {
+    /**
+     * Where in loaded chunk [chunkX], [chunkZ] of [world] any of [wanted] is: each one's number there, into
+     * [found] (x and z within the chunk). Reads only the sections whose palettes may hold one, straight from the
+     * server's own chunk, where the API would copy the whole chunk and read every block. False when this server
+     * can't be read that way, or the chunk isn't loaded: the caller then reads it through the API.
+     */
+    fun findStates(world: World, chunkX: Int, chunkZ: Int, wanted: Map<BlockData, Int>, found: ChunkGrid): Boolean = false
+
+    /**
+     * A number that changes whenever the sections of loaded chunk [chunkX], [chunkZ] that may hold any of [wanted]
+     * change (`BlockOps.fingerprint`): a hash of their palettes and raw storage, read straight from the server's
+     * chunk. Null when this server can't be read that way, or the chunk isn't loaded.
+     */
+    fun fingerprintStates(world: World, chunkX: Int, chunkZ: Int, wanted: Collection<BlockData>): Long? = null
+
+    /**
+     * Every block from [x0], [y0], [z0] to [x1], [y1], [z1] (both included, the first the lowest) into [cells], as
+     * an index into [states], which this fills: x fastest, then z, then y, read straight from the server's
+     * chunks. False when any of it is in a chunk that isn't loaded, or this server can't be read that way.
+     */
+    /**
+     * Tells [player] the biomes of the loaded chunks [chunks] (each `x` to `z`) of their world are what [twinOf]
+     * answers for each (a biome's key to another's, or null to keep it), in the server's own chunk-biomes packet:
+     * what the client then draws them with. The world itself is left as it is.
+     */
+    fun sendBiomes(player: org.bukkit.entity.Player, chunks: Collection<Pair<Int, Int>>, twinOf: (String) -> String?) {}
+
+    /**
+     * Stops each of the world clocks [clocks] (keys) the server has at tick 0, where they'd otherwise run and be saved
+     * with the world (format's `SkyNight`). Nothing before 26.1, which has no world clocks.
+     */
+    fun stopClocks(clocks: Collection<String>) {}
+
+    /** Tells [player] alone the world clock [clock] is at [ticks], not running. Nothing for a clock the server hasn't. */
+    fun sendClock(player: org.bukkit.entity.Player, clock: String, ticks: Long) {}
+
+    fun readBox(
+        world: World,
+        x0: Int,
+        y0: Int,
+        z0: Int,
+        x1: Int,
+        y1: Int,
+        z1: Int,
+        cells: IntArray,
+        states: MutableList<BlockData>
+    ): Boolean = false
+
     /**
      * Every goal's priority on [mob], keyed by the very [Goal] objects Paper's
      * `MobGoals` hands out for it. Paper's goal API has no priorities; they

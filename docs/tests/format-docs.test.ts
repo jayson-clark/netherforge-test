@@ -175,6 +175,7 @@ const PAGES: Record<(typeof DOCUMENT_KINDS)[number], string[]> = {
   block: ['block.md'],
   game_block: ['game-block.md'],
   biome: ['biome.md'],
+  sky: ['sky.md'],
   dimension_type: ['dimension-type.md'],
   terrain: ['terrain.md'],
   advancement: ['advancement.md'],

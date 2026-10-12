@@ -66,7 +66,10 @@ export const projectBlockClass: LuaClass = {
     {
       name: 'place',
       doc: "Places one at the block position a location is in, as `world:set_block` would: whatever is there is replaced, and nothing drops. Its `place` handlers are not asked (a script placing a block isn't a player placing one), and it isn't a `block_place` either. If the block has a centity, it's spawned over the block. `nil` when the chunk isn't loaded, or when the game has no state of its carrier left to hold the block in (the project has more blocks of that carrier than that).",
-      params: [{ name: 'location', type: 'Location', doc: 'Where.' }],
+      params: [
+        { name: 'location', type: 'Location', doc: 'Where.' },
+        { name: 'options', type: 'BlockPlaceOptions', doc: '', optional: true },
+      ],
       returns: [{ type: 'CustomBlock?' }],
       example:
         'local ore = nf.blocks.get("ruby_ore")\nif ore then\n  ore:place(player:location())\nend',
@@ -98,6 +101,26 @@ export const customBlockClass: LuaClass = {
       doc: "The project block it's one of, or `nil` once what's here isn't one.",
       params: [],
       returns: [{ type: 'ProjectBlock?' }],
+    },
+    {
+      name: 'facing',
+      doc: "The way its front faces, for a block that turns (`rotation` in its `block.json`): what it was placed facing, or turned to since. `nil` for a block that doesn't turn, or once what's here isn't one.",
+      params: [],
+      returns: [{ type: '"north"|"east"|"south"|"west"|"up"|"down"?' }],
+    },
+    {
+      name: 'set_facing',
+      doc: "Turns it to face another way, keeping everything else about it: its table, its centity (turned with it). `false` when it doesn't turn that way (it doesn't turn, or turns only `horizontal` and this is up or down), or once what's here isn't one of the project's blocks.",
+      params: [
+        {
+          name: 'facing',
+          type: '"north"|"east"|"south"|"west"|"up"|"down"',
+          doc: 'Which way its front faces.',
+        },
+      ],
+      returns: [{ type: 'boolean' }],
+      example:
+        'local chair = block:custom()\nif chair and chair:facing() ~= "north" then\n  chair:set_facing("north")\nend',
     },
   ],
 }
@@ -152,7 +175,25 @@ export const blockShapes: LuaClass[] = [
       'Where it goes: what is there now is replaced, so `block:custom()` is `nil` until it has been placed (`this:id()` says which block is being placed).',
     ),
     field('item', 'Item?', 'The stack placing it, or `nil` for a script.'),
+    field(
+      'facing',
+      '"north"|"east"|"south"|"west"|"up"|"down"?',
+      "The way it will face, for a block that turns: toward the player placing it. `nil` for one that doesn't turn.",
+    ),
   ]),
+  {
+    name: 'BlockPlaceOptions',
+    doc: "How `project_block:place` places one. A key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      {
+        name: 'facing',
+        type: '"north"|"east"|"south"|"west"|"up"|"down"?',
+        doc: "The way its front faces, for a block that turns (`rotation` in its `block.json`): a way it can't face is an error. Default north.",
+      },
+    ],
+  },
   payload('ProjectBlockClickEvent', 'A block was clicked.', [
     field('player', 'Player', 'Who clicked.'),
     field('block', 'CustomBlock', 'The block.'),

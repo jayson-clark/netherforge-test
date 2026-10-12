@@ -4,8 +4,8 @@
  * method was called with `:`, and the call into Kotlin by primitive name with
  * each argument as the one Lua value it is: Kotlin reads and checks them
  * (`LuaCodec`) and pushes back finished values. A `Vec3` is the exception,
- * crossing as its three numbers both ways (checked by `want_vec3`, rebuilt by
- * `vec3_of`), since transforms are set and read every tick.
+ * crossing as its three numbers both ways (checked inline, `want_vec3` raising the error, and
+ * rebuilt by the binding itself), since transforms are set and read every tick.
  *
  * A handle crosses as its key in the runtime's handle table (`self_of` hands it
  * over), and Kotlin finds the handle there.
@@ -34,21 +34,57 @@ import {
 
 const indent = (lines: string[], by = '  ') => lines.map((line) => (line ? by + line : line))
 
+/** The local holding the set of metatable names a handle of `cls` may have: it and every class below it. */
+const acceptsOf = (cls: string) => `${cls}_is`
+
+/**
+ * The `:` check, inline: a handle's key, when it's one of `cls`'s (or of a class below it). Only
+ * a mistake calls `self_of`, straight from the function, so its error is at the caller's line.
+ * A method is called every tick, so this is the few instructions it can be (`ApiCostTest`).
+ */
+const selfCheck = (cls: string, key: string | undefined): string[] =>
+  key
+    ? [
+        `local ${key} = ids[self]`,
+        `if ${key} == nil or not ${acceptsOf(cls)}[class_of(self)] then`,
+        `  ${key} = self_of(self, "${cls}")`,
+        'end',
+      ]
+    : [
+        `if ids[self] == nil or not ${acceptsOf(cls)}[class_of(self)] then`,
+        `  self_of(self, "${cls}")`,
+        'end',
+      ]
+
 function body(binding: FnBinding, self: string): string[] {
   const lines: string[] = []
-  if (binding.method) lines.push(`local ${self} = self_of(self, "${binding.cls.name}")`)
+  if (binding.method) lines.push(...selfCheck(binding.cls.name, self))
   const args = [self]
   for (const param of binding.params) {
     if (!param.spread) {
       args.push(param.name)
       continue
     }
-    const parts = ['x', 'y', 'z'].map((it) => `${param.name}_${it}`)
-    const opt = param.codec.kind === 'optional' ? '_opt' : ''
-    lines.push(
-      `local ${parts.join(', ')} = want_vec3${opt}(${param.name}, ${JSON.stringify(param.name)})`,
-    )
-    args.push(...parts)
+    // A Vec3 crosses as its three numbers; the check is inline, and only a mistake calls
+    // `want_vec3`, straight from the function, so its error is at the caller's line.
+    const name = param.name
+    const quoted = JSON.stringify(name)
+    if (param.codec.kind === 'optional') {
+      const parts = ['x', 'y', 'z'].map((it) => `${name}_${it}`)
+      lines.push(
+        `local ${parts.join(', ')}`,
+        `if ${name} ~= nil then`,
+        `  if genuine_mt(${name}) ~= Vec3_mt then`,
+        `    want_vec3_opt(${name}, ${quoted})`,
+        '  end',
+        `  ${parts.join(', ')} = ${name}[1], ${name}[2], ${name}[3]`,
+        'end',
+      )
+      args.push(...parts)
+    } else {
+      lines.push(`if genuine_mt(${name}) ~= Vec3_mt then`, `  want_vec3(${name}, ${quoted})`, 'end')
+      args.push(`${name}[1]`, `${name}[2]`, `${name}[3]`)
+    }
   }
   const returns = binding.returns
   if (returns.kind === 'async') {
@@ -70,8 +106,16 @@ function body(binding: FnBinding, self: string): string[] {
   }
   const call = `prim[${JSON.stringify(binding.primitive)}](${args.join(', ')})`
   if (returns.kind === 'none') lines.push(call)
-  // A nil x is a single nil, for an optional return.
-  else if (returns.kind === 'one' && returns.spread) lines.push(`return vec3_of(${call})`)
+  // A nil x is a single nil, for an optional return. The vector is made here rather than by a
+  // call, which would cost every transform read a few more instructions.
+  else if (returns.kind === 'one' && returns.spread)
+    lines.push(
+      `local ${SPREAD_RETURN.join(', ')} = ${call}`,
+      `if ${SPREAD_RETURN[0]} == nil then`,
+      '  return nil',
+      'end',
+      `return with_mt({ ${SPREAD_RETURN.join(', ')} }, Vec3_mt)`,
+    )
   else lines.push(`return ${call}`)
   return lines
 }
@@ -85,7 +129,11 @@ function fnLines(owner: string, binding: FnBinding): string[] {
     ...(binding.returns.kind === 'async' ? ['callback'] : []),
   ]
   // A parameter named after one of the body's own locals (or the chunk's) would be shadowed by it.
-  const locals = [self, ...(binding.returns.kind === 'async' ? ASYNC_LOCALS : [])]
+  const locals = [
+    self,
+    ...(binding.returns.kind === 'async' ? ASYNC_LOCALS : []),
+    ...(binding.returns.kind === 'one' && binding.returns.spread ? SPREAD_RETURN : []),
+  ]
   for (const name of params)
     if (locals.includes(name) || CORE_NAMES.has(name))
       throw new Error(`${owner}.${binding.fn.name}: a parameter can't be called ${name}`)
@@ -171,11 +219,25 @@ interface Target {
   scope: boolean
 }
 
+/** The locals a function returning a `Vec3` makes (`body`), so no parameter of one may take one. */
+const SPREAD_RETURN = ['result_x', 'result_y', 'result_z']
+
 /** The locals an async function's binding makes (`body`), so no parameter of one may take one. */
 const ASYNC_LOCALS = ['waker', 'task', 'token', 'scope', 'wait_id', 'value', 'err']
 
 /** Names the chunk's own locals have in a wrapper, so no parameter may take one. */
 const CORE_NAMES = new Set([
+  'ns',
+  'namespaces',
+  'ids',
+  'accepts',
+  'type_of',
+  'class_of',
+  'number_kind',
+  'genuine_mt',
+  'with_mt',
+  'Vec3_mt',
+  'Location_mt',
   'prim',
   'class',
   'self_of',
@@ -186,7 +248,6 @@ const CORE_NAMES = new Set([
   'want_handle',
   'want_vec3',
   'want_vec3_opt',
-  'vec3_of',
   'vector_arg',
   'check_shape',
   'value_self',
@@ -225,32 +286,69 @@ function wrapperLines(
       throw new Error(`${owner}.${fn.name}: a parameter can't be called ${name}`)
   const lines: string[] = []
   if (target.self && 'handle' in target.self)
-    lines.push(`self_of(self, ${JSON.stringify(target.self.handle)})`)
-  if (target.self && 'value' in target.self)
-    lines.push(`value_self(self, ${JSON.stringify(target.self.value)})`)
+    lines.push(...selfCheck(target.self.handle, undefined))
+  if (target.self && 'value' in target.self) {
+    const value = target.self.value
+    lines.push(
+      `if genuine_mt(self) ~= ${value}_mt then`,
+      `  value_self(self, ${JSON.stringify(value)})`,
+      'end',
+    )
+  }
+  // Each check is inline: what the value must be, and the checker (which raises the error, at
+  // the caller's line, since it's called straight from here) only when it isn't.
   for (const param of params) {
     const name = param.name
     const quoted = JSON.stringify(name)
     const opt = param.optional ? '_opt' : ''
     const check = param.check
+    // An optional parameter left out is fine; one given is checked as a required one is.
+    const guarded = (optional: boolean, wrong: string, call: string) => [
+      `if ${optional ? `${name} ~= nil and ` : ''}${wrong} then`,
+      `  ${call}`,
+      'end',
+    ]
     switch (check.kind) {
       case 'body':
         break
       case 'type':
-        lines.push(`want${opt}(${name}, ${JSON.stringify(check.lua)}, ${quoted})`)
+        lines.push(
+          ...guarded(
+            param.optional,
+            `type_of(${name}) ~= ${JSON.stringify(check.lua)}`,
+            `want${opt}(${name}, ${JSON.stringify(check.lua)}, ${quoted})`,
+          ),
+        )
         break
       case 'integer':
-        lines.push(`${name} = want_integer${opt}(${name}, ${quoted})`)
+        lines.push(
+          ...guarded(
+            param.optional,
+            `number_kind(${name}) ~= "integer"`,
+            `${name} = want_integer${opt}(${name}, ${quoted})`,
+          ),
+        )
         break
       case 'handle':
+        lines.push(
+          ...guarded(
+            param.optional,
+            `(ids[${name}] == nil or not ${acceptsOf(check.cls)}[class_of(${name})])`,
+            `want_handle(${name}, ${JSON.stringify(check.cls)}, ${quoted})`,
+          ),
+        )
+        break
       case 'vec3':
+        lines.push(
+          ...guarded(
+            param.optional,
+            `genuine_mt(${name}) ~= Vec3_mt`,
+            `vector_arg(${name}, ${quoted}, 2)`,
+          ),
+        )
+        break
       case 'shape': {
-        const call =
-          check.kind === 'handle'
-            ? `want_handle(${name}, ${JSON.stringify(check.cls)}, ${quoted})`
-            : check.kind === 'vec3'
-              ? `vector_arg(${name}, ${quoted}, 2)`
-              : `check_shape(${name}, ${quoted}, ${JSON.stringify(check.name)})`
+        const call = `check_shape(${name}, ${quoted}, ${JSON.stringify(check.name)})`
         if (param.optional) lines.push(`if ${name} ~= nil then`, `  ${call}`, 'end')
         else lines.push(call)
         break
@@ -258,7 +356,13 @@ function wrapperLines(
       case 'choice': {
         const set = choiceName(owner, fn.name, name)
         sets.set(set, check.choices)
-        lines.push(`choice.want${opt}(${name}, ${set}, ${quoted})`)
+        lines.push(
+          ...guarded(
+            param.optional,
+            `not ${set}.has[${name}]`,
+            `choice.want${opt}(${name}, ${set}, ${quoted})`,
+          ),
+        )
         break
       }
     }
@@ -309,7 +413,7 @@ export function bindingsLua(classes: ClassBinding[], spec: ApiSpec): string {
     '',
     'local core = ...',
     'local prim, class, self_of = core.prim, core.class, core.self_of',
-    'local want_vec3, want_vec3_opt, vec3_of = core.want_vec3, core.want_vec3_opt, core.vec3_of',
+    'local want_vec3, want_vec3_opt = core.want_vec3, core.want_vec3_opt',
     'local want, want_opt, want_integer, want_integer_opt =',
     '  core.want, core.want_opt, core.want_integer, core.want_integer_opt',
     'local want_handle, vector_arg, check_shape = core.want_handle, core.vector_arg, core.check_shape',
@@ -323,6 +427,18 @@ export function bindingsLua(classes: ClassBinding[], spec: ApiSpec): string {
     "-- finds or makes the handle's entry, so equal keys give the same table. And each such",
     "-- class's key values, as the runtime holds them (`keys.Task(task)` is its id).",
     'local new, keys = core.new, core.keys',
+    '',
+    "-- What the inline checks read: each handle's key (`ids`), each class's set of the metatable",
+    '-- names its handles may have (`<Class>_is`: it and every class below it), the genuine',
+    "-- metatables of the value types, and the library's own functions, so a check is a few",
+    '-- instructions and only a mistake calls a checker.',
+    'local ids, accepts = core.ids, core.accepts',
+    'local type_of, class_of, number_kind = core.type_of, core.class_of, core.number_kind',
+    'local genuine_mt, with_mt = core.genuine_mt, core.with_mt',
+    'local Vec3_mt, Location_mt = core.Vec3_mt, core.Location_mt',
+    ...classes
+      .filter((it) => it.handle)
+      .map((it) => `local ${acceptsOf(it.cls.name)} = accepts.${it.cls.name}`),
   ]
   const namespaces: ClassBinding[] = []
   const body: string[] = []
@@ -400,40 +516,55 @@ export function bindingsLua(classes: ClassBinding[], spec: ApiSpec): string {
     '',
     `-- nf ${'-'.repeat(72)}`,
     '',
-    "-- Fills a scope's `nf` table and the namespaces under it (`nf.server`). Every",
-    '-- function passes its implementation the calling scope.',
+    "-- Fills a scope's `nf` with its own functions. Every function passes its implementation",
+    '-- the calling scope.',
     'local function fill_nf(scope, nf)',
   )
-  const nfLines: string[] = []
-  // Parents before children, so `nf.a.b = {}` finds `nf.a`.
-  const ordered = [...namespaces].sort(
-    (a, b) => a.cls.name.split('.').length - b.cls.name.split('.').length,
-  )
-  for (const binding of ordered) {
-    if (binding.cls.name !== 'nf') nfLines.push(`${binding.cls.name} = {}`)
-  }
-  for (const binding of ordered) {
+  // A namespace's functions, on the table it's given (`ns`): its own or `nf`.
+  const functionLines = (binding: ClassBinding, table: string): string[] => {
+    const lines: string[] = []
     for (const fn of binding.functions) {
-      if (nfLines.length) nfLines.push('')
-      nfLines.push(...fnLines(binding.cls.name, fn))
+      if (lines.length) lines.push('')
+      lines.push(...fnLines(table, fn))
     }
     for (const fn of hand.get(binding.cls.name) ?? []) {
-      if (nfLines.length) nfLines.push('')
-      nfLines.push(
+      if (lines.length) lines.push('')
+      lines.push(
         ...wrapperLines(
           binding.cls.name,
           fn,
-          { table: binding.cls.name, body: handOf(binding.cls.name), scope: true },
+          { table, body: handOf(binding.cls.name), scope: true },
           sets,
         ),
       )
     }
+    return lines
   }
-  body.push(...indent(nfLines), 'end')
+  const nf = namespaces.find((it) => it.cls.name === 'nf')
+  if (!nf) throw new Error('no nf namespace')
+  body.push(...indent(functionLines(nf, 'nf')), 'end')
+  // Each namespace under nf by its path, filled the first time a script reaches it: a scope is
+  // made for every centity spawned, and most never touch most namespaces.
+  body.push(
+    '',
+    "-- Each namespace under `nf` by its path (`nf.server`): fills the scope's table for it with",
+    '-- its functions. The prelude calls it the first time a script reaches the namespace.',
+    'local namespaces = {}',
+  )
+  for (const binding of namespaces) {
+    if (binding === nf) continue
+    body.push(
+      '',
+      `namespaces[${JSON.stringify(binding.cls.name)}] = function(scope, ns)`,
+      ...indent(functionLines(binding, 'ns')),
+      'end',
+    )
+  }
   body.push(
     '',
     'return {',
     '  fill_nf = fill_nf,',
+    '  namespaces = namespaces,',
     ...libraries.map((it) => `  ${it} = ${it}_functions,`),
     '}',
   )

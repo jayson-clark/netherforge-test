@@ -2,12 +2,15 @@ package dev.netherforge.plugin.paper
 
 import dev.netherforge.plugin.platform.InventoryRef
 import dev.netherforge.plugin.platform.ItemData
+import dev.netherforge.plugin.platform.StackFilter
 import org.bukkit.Bukkit
 import org.bukkit.NamespacedKey
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataContainer
 import org.bukkit.persistence.PersistentDataType
+import java.lang.ref.WeakReference
+import java.util.UUID
 
 /**
  * Players' storages ([InventoryRef.Storage], `player:storage`), in their persistent data: `netherforge:storage` holds
@@ -27,9 +30,34 @@ internal object PaperStorage {
 
     private fun slotKey(slot: Int) = NamespacedKey("netherforge", slot.toString())
 
+    /**
+     * A storage as last read or written, with each slot's item as a script reads it, once something asked: the
+     * stacks are deserialized and read once, not on every call. Only NetherForge writes a storage, so it's current
+     * until it writes it ([write]); a player who left and came back is a new [player] (read again), and a project
+     * item's look changing refreshes the player's inventory, which forgets their storages ([forget]).
+     */
+    private class Loaded(val player: WeakReference<Player>, val slots: MutableMap<Int, ItemStack>) {
+        val items = HashMap<Int, ItemData>()
+    }
+
+    private val loaded = HashMap<Pair<UUID, String>, Loaded>()
+
+    /** Forgets what's loaded of [player]'s storages: they're read again, restyled, when next asked for. */
+    fun forget(player: UUID) {
+        loaded.keys.removeAll { it.first == player }
+    }
+
+    private fun load(ref: InventoryRef.Storage): Loaded? {
+        val key = ref.player to ref.name
+        val player = player(ref) ?: return null.also { loaded.remove(key) }
+        loaded[key]?.takeIf { it.player.get() === player }?.let { return it }
+        return Loaded(WeakReference(player), read(player, ref)).also { loaded[key] = it }
+    }
+
     /** Every filled slot of the storage, past its size too, stale project items restyled. Null when they're offline. */
-    private fun read(ref: InventoryRef.Storage): MutableMap<Int, ItemStack>? {
-        val player = player(ref) ?: return null
+    private fun read(ref: InventoryRef.Storage): MutableMap<Int, ItemStack>? = load(ref)?.slots
+
+    private fun read(player: Player, ref: InventoryRef.Storage): MutableMap<Int, ItemStack> {
         val storage = player.persistentDataContainer.get(KEY, PersistentDataType.TAG_CONTAINER)
             ?.get(name(ref), PersistentDataType.TAG_CONTAINER)
             ?: return HashMap()
@@ -43,9 +71,18 @@ internal object PaperStorage {
         return slots
     }
 
+    /** Slot [slot]'s item as a script reads it, read once while the storage is unchanged. */
+    private fun itemOf(storage: Loaded, slot: Int): ItemData? {
+        storage.items[slot]?.let { return it }
+        val stack = storage.slots[slot] ?: return null
+        return PaperItems.toItem(stack)?.also { storage.items[slot] = it }
+    }
+
     /** Writes the storage's slots ([slots] is every filled one). False when they're offline. */
-    private fun write(ref: InventoryRef.Storage, slots: Map<Int, ItemStack>): Boolean {
+    private fun write(ref: InventoryRef.Storage, slots: MutableMap<Int, ItemStack>): Boolean {
         val player = player(ref) ?: return false
+        // What's loaded is these slots now; their items are read again when asked for.
+        loaded[ref.player to ref.name] = Loaded(WeakReference(player), slots)
         val data = player.persistentDataContainer
         val all = data.get(KEY, PersistentDataType.TAG_CONTAINER) ?: data.adapterContext.newPersistentDataContainer()
         if (slots.isEmpty()) {
@@ -66,9 +103,19 @@ internal object PaperStorage {
     fun size(ref: InventoryRef.Storage): Int? = player(ref)?.let { ref.size }
 
     fun contents(ref: InventoryRef.Storage): List<ItemData?>? {
-        val slots = read(ref) ?: return null
-        return List(ref.size) { slots[it]?.let(PaperItems::toItem) }
+        val storage = load(ref) ?: return null
+        return List(ref.size) { itemOf(storage, it) }
     }
+
+    fun contents(ref: InventoryRef.Storage, filter: StackFilter): List<ItemData?>? {
+        val storage = load(ref) ?: return null
+        return List(ref.size) { slot ->
+            val stack = storage.slots[slot]
+            if (stack == null || !PaperItems.admits(stack, filter)) null else itemOf(storage, slot)
+        }
+    }
+
+    fun item(ref: InventoryRef.Storage, slot: Int): ItemData? = load(ref)?.let { itemOf(it, slot) }
 
     fun setItem(ref: InventoryRef.Storage, slot: Int, item: ItemData?): Boolean {
         if (slot !in 0 until ref.size) return false

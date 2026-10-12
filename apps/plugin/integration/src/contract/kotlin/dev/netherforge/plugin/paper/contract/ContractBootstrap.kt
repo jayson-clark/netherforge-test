@@ -1,5 +1,6 @@
 package dev.netherforge.plugin.paper.contract
 
+import dev.netherforge.format.dimensiontype.DimensionTypeJson
 import dev.netherforge.format.project.FormatVersion
 import dev.netherforge.format.project.MapProjectSource
 import dev.netherforge.format.project.Projects
@@ -20,7 +21,7 @@ class ContractBootstrap : PluginBootstrap {
     override fun bootstrap(context: BootstrapContext) {
         context.lifecycleManager.registerEventHandler(LifecycleEvents.DATAPACK_DISCOVERY) { event ->
             val format = requireNotNull(PaperDatapacks().format) { "the server says which data pack format it reads" }
-            val snapshot = Projects.load(MapProjectSource(ContractBiomes.project), null)
+            val snapshot = Projects.load(MapProjectSource(ContractBiomes.project(format)), null)
             check(snapshot.problems.isEmpty()) { "the contract biomes are valid: ${snapshot.problems}" }
             val files = StartupDatapackFiles.build(snapshot, format, { _, _ -> "\"\"" }, mainWorld = null, readBytes = { null })
             val folder = context.dataDirectory.resolve("datapack")
@@ -47,9 +48,28 @@ object ContractBiomes {
     /** A dimension type with every field set: the server has to read them all. */
     const val ODD = "odd"
 
-    val project: Map<String, String?> = mapOf(
-        "netherforge.json" to
-            """{ "formatVersion": ${FormatVersion.CURRENT}, "name": "Contract", "namespace": "${ContractServer.NAMESPACE}", "version": "1.0.0", "minecraft": "1.21.11" }""",
+    /** A sky held through the night, its light tinted: its twins, and from 26.1 its world clock and timeline. */
+    const val BLOOD_MOON = "blood_moon"
+
+    /** Its clock's key, on a server with world clocks. */
+    val BLOOD_MOON_CLOCK = "${ContractServer.NAMESPACE}:sky/${ContractServer.NAMESPACE}/$BLOOD_MOON"
+
+    /**
+     * The project for a server of data pack [format]: it targets 26.1.2 where the server has world clocks (a sky held
+     * at night needs them), 1.21.11 before, where its sky darkens at night as the game's.
+     */
+    fun project(format: List<Int>): Map<String, String?> {
+        val clocks = format.first() >= DimensionTypeJson.CLOCK_FORMAT
+        val minecraft = if (clocks) "26.1.2" else "1.21.11"
+        val darkens = if (clocks) """, "darkens": false""" else ""
+        return base + mapOf(
+            "netherforge.json" to
+                """{ "formatVersion": ${FormatVersion.CURRENT}, "name": "Contract", "namespace": "${ContractServer.NAMESPACE}", "version": "1.0.0", "minecraft": "$minecraft" }""",
+            "skies/$BLOOD_MOON.json" to """{ "sky": "#5a0a0a", "fog": "#3a0606", "clouds": "#cc802020", "light": "#ff8080"$darkens }"""
+        )
+    }
+
+    private val base: Map<String, String?> = mapOf(
         "biomes/$BARE.json" to "{}",
         // A terrain that fills containers: the start-up datapack then has the empty table generated containers are given.
         "loot/contract_loot.json" to

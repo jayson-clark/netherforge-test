@@ -7,6 +7,7 @@ import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.game.has
 import dev.netherforge.format.json.CanonicalJson
+import dev.netherforge.format.project.SkyKind
 import dev.netherforge.format.project.SpawnCategory
 import dev.netherforge.plugin.async.WorkFailed
 import dev.netherforge.plugin.lua.LuaApiException
@@ -39,6 +40,16 @@ internal const val BIOME_SEARCH_LIMIT = 6400
  * on a lane of their own a script asking for many can't hold up other work (a database, HTTP).
  */
 private const val BIOME_SEARCH_LANE = "biome search"
+
+/** A sky option's fade, in ticks: none below 0. */
+internal fun fadeTicks(options: SkyOptions?): Int {
+    val ticks = options?.fadeTicks ?: return 0
+    if (ticks < 0) throw LuaApiException("options.fade_ticks can't be negative")
+    return ticks.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+}
+
+/** The most blocks `world:blocks` reads in one call: 32 × 32 × 32, so one call can't stall a tick. */
+private const val MAX_BOX = 32 * 32 * 32
 
 /** `nf.worlds`. */
 internal class NfWorldsImpl(private val session: ProjectSession) : NfWorldsApi {
@@ -119,6 +130,69 @@ internal class WorldImpl(private val session: ProjectSession) : WorldApi {
     override fun block(self: LuaHandle.World, position: Vec3): LuaHandle.Block? {
         val at = BlockPosition.of(position)
         return live(self)?.let { LuaHandle.Block(it, at.packed) }
+    }
+
+    override fun sky(self: LuaHandle.World): String? = live(self)?.let(session.skies::ofWorld)?.let(session.names::spell)
+
+    override fun setSky(self: LuaHandle.World, sky: String, options: SkyOptions?): Boolean {
+        val name = session.names.resource(SkyKind, sky)
+        val world = live(self) ?: return false
+        session.skies.setWorld(world, name, fadeTicks(options))
+        return true
+    }
+
+    override fun clearSky(self: LuaHandle.World, options: SkyOptions?) {
+        val world = live(self) ?: return
+        session.skies.clearWorld(world, fadeTicks(options))
+    }
+
+    override fun blocks(self: LuaHandle.World, from: Vec3, to: Vec3, options: BlockBoxOptions?): BlockBox? {
+        val a = BlockPosition.of(from)
+        val b = BlockPosition.of(to)
+        val x0 = minOf(a.x, b.x)
+        val y0 = minOf(a.y, b.y)
+        val z0 = minOf(a.z, b.z)
+        val sizeX = maxOf(a.x, b.x) - x0 + 1
+        val sizeY = maxOf(a.y, b.y) - y0 + 1
+        val sizeZ = maxOf(a.z, b.z) - z0 + 1
+        val volume = sizeX.toLong() * sizeY * sizeZ
+        if (volume > MAX_BOX) {
+            throw LuaApiException("a box of $sizeX × $sizeY × $sizeZ is $volume blocks, more than the $MAX_BOX world:blocks reads at once")
+        }
+        val world = live(self) ?: return null
+        val read = session.platform.blocks.box(world, x0, y0, z0, x0 + sizeX - 1, y0 + sizeY - 1, z0 + sizeZ - 1) ?: return null
+        // Each state's value is made once and every block of it shares it.
+        val values = read.states.map { state ->
+            when (options?.what ?: "kind") {
+                "solid" -> StringOrIntegerOrBoolean.Boolean(state.solid)
+                "class" -> StringOrIntegerOrBoolean.Integer(
+                    if (state.liquid) {
+                        1
+                    } else if (state.solid) {
+                        2
+                    } else {
+                        0
+                    }
+                )
+                else -> StringOrIntegerOrBoolean.String(state.state.substringBefore('['))
+            }
+        }
+        val cells = ArrayList<StringOrIntegerOrBoolean>(read.cells.size)
+        for (index in read.cells) cells += values[index]
+        if (options?.custom == true) {
+            // Only the states the project's blocks are held in can be one: those blocks are asked which they are.
+            val custom = session.customBlocks
+            val carriers = BooleanArray(read.states.size) { custom.nameOfState(read.states[it].state) != null }
+            for ((i, index) in read.cells.withIndex()) {
+                if (!carriers[index]) continue
+                val x = x0 + i % sizeX
+                val z = z0 + (i / sizeX) % sizeZ
+                val y = y0 + i / (sizeX * sizeZ)
+                val name = custom.at(world, x, y, z) ?: continue
+                cells[i] = StringOrIntegerOrBoolean.String(session.names.spell(name))
+            }
+        }
+        return BlockBox(cells, sizeX.toLong(), sizeY.toLong(), sizeZ.toLong(), Vec3(x0.toDouble(), y0.toDouble(), z0.toDouble()))
     }
 
     override fun setBlock(self: LuaHandle.World, position: Vec3, state: String, options: BlockSetOptions?): Boolean {

@@ -22,8 +22,8 @@ local schema = require("schema")
 
 local prim = input.prim
 local load, concat = std.load, std.concat
-local xpcall, pairs, ipairs, error, select, tostring, setmetatable =
-  xpcall, pairs, ipairs, error, select, tostring, setmetatable
+local xpcall, pairs, ipairs, error, select, tostring, setmetatable, rawset, next =
+  xpcall, pairs, ipairs, error, select, tostring, setmetatable, rawset, next
 local want = args.want
 local gated, gate_functions = gates.gated, gates.gate_functions
 local locate, project_frame, current =
@@ -114,39 +114,77 @@ local function make_log(scope)
   end
 end
 
--- The table at a namespace's path in a scope's `nf`: "nf.worlds" is nf.worlds.
-local function namespace(nf, path)
-  local target = nf
-  for part in std.raw.gmatch(path, "[^.]+", 4) do
-    target = target[part]
-  end
-  return target
-end
-
 -- Whether a test run has the project (`nf.test` and what else the spec marks `testOnly`).
 local testing = prim.testing()
 
--- Fills a scope's `nf`: the generated functions (which call the hand-written
--- bodies), the namespaces only a test run has (taken out again on a server),
--- then the version gates.
-local function fill_nf(scope, nf)
-  api.fill_nf(scope, nf)
-  if not testing then
-    for _, path in ipairs(schema.test_only) do
-      local parent, name = std.raw.match(path, "^(.*)%.([^.]+)$")
-      namespace(nf, parent)[name] = nil
-    end
+-- The namespaces a scope's `nf` gets, by path, each with its filler (the
+-- generated bindings), and each path's children by name: `nf` -> `server`.
+-- The test-only ones aren't there on a server.
+local fillers = api.namespaces
+---@type table<string, table<string, true>>
+local children = {}
+do
+  local test_only = {}
+  for _, path in ipairs(schema.test_only) do
+    test_only[path] = true
   end
-  for path in pairs(gated.functions) do
-    if path == "nf" or path:sub(1, 3) == "nf." then
-      gate_functions(namespace(nf, path), path, ".")
+  for path in pairs(fillers) do
+    if testing or not test_only[path] then
+      local parent, name = std.raw.match(path, "^(.*)%.([^.]+)$")
+      children[parent] = children[parent] or {}
+      children[parent][name] = true
     end
   end
 end
 
+-- A namespace's table (`nf`, `nf.server`) whose namespaces are filled the
+-- first time a script reaches them: a scope is made for every centity
+-- spawned, and most never touch most namespaces. Once filled, a namespace is
+-- an ordinary field of its parent; `pairs` fills them all first, so it sees
+-- what an eager table would have had.
+local function lazy(scope, table, path)
+  local kids = children[path]
+  if kids == nil then
+    return table
+  end
+  local filled = {}
+  local function fill(name)
+    if filled[name] or not kids[name] then
+      return nil
+    end
+    filled[name] = true
+    local child_path = path .. "." .. name
+    local ns = lazy(scope, {}, child_path)
+    fillers[child_path](scope, ns)
+    if gated.functions[child_path] ~= nil then
+      gate_functions(ns, child_path, ".")
+    end
+    rawset(table, name, ns)
+    return ns
+  end
+  return setmetatable(table, {
+    __index = function(_, name)
+      return fill(name)
+    end,
+    __pairs = function(t)
+      for name in pairs(kids) do
+        fill(name)
+      end
+      return next, t, nil
+    end,
+    __metatable = false,
+  })
+end
+
+-- A scope's `nf`: its own functions now, its namespaces when reached, then
+-- the version gates.
 local function make_nf(scope)
   local nf = {}
-  fill_nf(scope, nf)
+  api.fill_nf(scope, nf)
+  if gated.functions.nf ~= nil then
+    gate_functions(nf, "nf", ".")
+  end
+  lazy(scope, nf, "nf")
   nf_tables[nf] = true
   return nf
 end

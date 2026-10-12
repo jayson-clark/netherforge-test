@@ -4057,6 +4057,95 @@ data class StructurePlaceOptions(val rotation: Long? = null, val mirror: String?
     }
 }
 
+/** What `world:blocks` gives for each block. A key that isn't one of these is an error. */
+data class BlockBoxOptions(val what: String? = null, val custom: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<BlockBoxOptions>("BlockBoxOptions") {
+        val whatCodec = LuaOptional(LuaChoice(listOf("kind", "solid", "class")))
+        val customCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "what" to whatCodec,
+            "custom" to customCodec
+        )
+
+        override fun read(fields: ShapeReader) = BlockBoxOptions(
+            what = fields.field("what", whatCodec),
+            custom = fields.field("custom", customCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: BlockBoxOptions) {
+            fields.field("what", value.what, whatCodec)
+            fields.field("custom", value.custom, customCodec)
+        }
+    }
+}
+
+/** What `world:blocks` read: each block of the box, in one list, and the box's size and corner. */
+data class BlockBox(val cells: List<StringOrIntegerOrBoolean>, val sizeX: Long, val sizeY: Long, val sizeZ: Long, val corner: Vec3) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<BlockBox>("BlockBox") {
+        val cellsCodec = LuaList(StringOrIntegerOrBoolean.Codec)
+        val sizeXCodec = LuaCodecs.INTEGER
+        val sizeYCodec = LuaCodecs.INTEGER
+        val sizeZCodec = LuaCodecs.INTEGER
+        val cornerCodec = LuaCodecs.VEC3
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "cells" to cellsCodec,
+            "size_x" to sizeXCodec,
+            "size_y" to sizeYCodec,
+            "size_z" to sizeZCodec,
+            "corner" to cornerCodec
+        )
+
+        override fun read(fields: ShapeReader) = BlockBox(
+            cells = fields.field("cells", cellsCodec),
+            sizeX = fields.field("size_x", sizeXCodec),
+            sizeY = fields.field("size_y", sizeYCodec),
+            sizeZ = fields.field("size_z", sizeZCodec),
+            corner = fields.field("corner", cornerCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: BlockBox) {
+            fields.field("cells", value.cells, cellsCodec)
+            fields.field("size_x", value.sizeX, sizeXCodec)
+            fields.field("size_y", value.sizeY, sizeYCodec)
+            fields.field("size_z", value.sizeZ, sizeZCodec)
+            fields.field("corner", value.corner, cornerCodec)
+        }
+    }
+}
+
+/** How a sky comes or goes. A key that isn't one of these is an error. */
+data class SkyOptions(val fadeTicks: Long? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<SkyOptions>("SkyOptions") {
+        val fadeTicksCodec = LuaOptional(LuaCodecs.INTEGER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "fade_ticks" to fadeTicksCodec
+        )
+
+        override fun read(fields: ShapeReader) = SkyOptions(
+            fadeTicks = fields.field("fade_ticks", fadeTicksCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: SkyOptions) {
+            fields.field("fade_ticks", value.fadeTicks, fadeTicksCodec)
+        }
+    }
+}
+
 /** How a block is changed. A key that isn't one of these is an error. */
 data class BlockSetOptions(val update: Boolean? = null) : LuaShape {
     override fun push(call: LuaCall) = Codec.push(call, this)
@@ -4471,32 +4560,59 @@ data class HudBar(val value: Double, val max: Double) : LuaShape {
 }
 
 /** A block is about to be placed. */
-data class ProjectBlockPlaceEvent(val player: LuaHandle.Player? = null, val block: LuaHandle.CustomBlock, val item: ItemData? = null) : LuaEvent {
+data class ProjectBlockPlaceEvent(val player: LuaHandle.Player? = null, val block: LuaHandle.CustomBlock, val item: ItemData? = null, val facing: String? = null) : LuaEvent {
     override fun push(call: LuaCall) = Codec.push(call, this)
 
     object Codec : ShapeCodec<ProjectBlockPlaceEvent>("ProjectBlockPlaceEvent") {
         val playerCodec = LuaOptional(LuaHandle.Player.Codec)
         val blockCodec = LuaHandle.CustomBlock.Codec
         val itemCodec = LuaOptional(LuaCodecs.ITEM)
+        val facingCodec = LuaOptional(LuaChoice(listOf("north", "east", "south", "west", "up", "down")))
 
         override val pinned = false
 
         override val fields: Map<String, LuaCodec<*>> = mapOf(
             "player" to playerCodec,
             "block" to blockCodec,
-            "item" to itemCodec
+            "item" to itemCodec,
+            "facing" to facingCodec
         )
 
         override fun read(fields: ShapeReader) = ProjectBlockPlaceEvent(
             player = fields.field("player", playerCodec),
             block = fields.field("block", blockCodec),
-            item = fields.field("item", itemCodec)
+            item = fields.field("item", itemCodec),
+            facing = fields.field("facing", facingCodec)
         )
 
         override fun write(fields: ShapeWriter, value: ProjectBlockPlaceEvent) {
             fields.field("player", value.player, playerCodec)
             fields.field("block", value.block, blockCodec)
             fields.field("item", value.item, itemCodec)
+            fields.field("facing", value.facing, facingCodec)
+        }
+    }
+}
+
+/** How `project_block:place` places one. A key that isn't one of these is an error. */
+data class BlockPlaceOptions(val facing: String? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<BlockPlaceOptions>("BlockPlaceOptions") {
+        val facingCodec = LuaOptional(LuaChoice(listOf("north", "east", "south", "west", "up", "down")))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "facing" to facingCodec
+        )
+
+        override fun read(fields: ShapeReader) = BlockPlaceOptions(
+            facing = fields.field("facing", facingCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: BlockPlaceOptions) {
+            fields.field("facing", value.facing, facingCodec)
         }
     }
 }

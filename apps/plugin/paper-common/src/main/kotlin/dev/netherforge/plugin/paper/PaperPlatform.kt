@@ -1,6 +1,7 @@
 package dev.netherforge.plugin.paper
 
 import dev.netherforge.format.game.GameDataBundle
+import dev.netherforge.format.sky.SkyNight
 import dev.netherforge.plugin.platform.BotOps
 import dev.netherforge.plugin.platform.InventoryRef
 import dev.netherforge.plugin.platform.ItemLook
@@ -60,7 +61,7 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
     /** The vanilla note blocks' part, taken over once the project has blocks that are held as note block states. */
     private val noteBlocks = PaperNoteBlocks(plugin, version)
     private val carriers = PaperCarriers(plugin, version, noteBlocks)
-    override val blocks = PaperBlocks(plugin, carriers)
+    override val blocks = PaperBlocks(plugin, carriers, version)
     override val particles = PaperParticles()
     override val sounds = PaperSounds()
 
@@ -84,6 +85,8 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
     override val permissions = PaperPermissions(plugin)
     override val advancements = PaperAdvancements()
     override val datapacks = PaperDatapacks()
+
+    override val skies = PaperSkies(plugin, version)
     override val plugins = PaperPlugins()
 
     // Made when first used, which the runtime does only once PlaceholderAPI is enabled: the class names its types.
@@ -119,6 +122,8 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
 
     override val projectItems = object : ProjectItemOps {
         override fun refresh(inventory: InventoryRef): Int {
+            // A player's storages are read again, restyled as their inventory is, when next asked for.
+            if (inventory is InventoryRef.Player) PaperStorage.forget(inventory.player)
             val found = inventories.inventory(inventory) ?: return 0
             var changed = 0
             for (slot in 0 until found.size) {
@@ -142,6 +147,7 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
     ) {
         PaperText.glyphs = glyphs
         PaperItems.looks = items
+        PaperItems.forgetReads()
         PaperItems.blockStates = blocks
         PaperItems.namespace = namespace
         plugin.server.pluginManager.registerEvents(recipes, plugin)
@@ -153,6 +159,9 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
         plugin.server.pluginManager.registerEvents(noteBlocks, plugin)
         plugin.server.pluginManager.registerEvents(PaperGeneratedLoot(worldManager.generators, events, plugin.logger), plugin)
         plugin.server.pluginManager.registerEvents(locate, plugin)
+        plugin.server.pluginManager.registerEvents(skies, plugin)
+        // The clocks of skies held at night run from the start unless stopped, and a player is told what time they are.
+        skies.stopClocks(PaperDatapacks.built.keys.mapNotNull(SkyNight::clockIn))
     }
 
     /** `/locate biome` in a project terrain's world, off the main thread. */

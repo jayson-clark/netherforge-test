@@ -1,6 +1,8 @@
 package dev.netherforge.plugin.api
 
+import dev.netherforge.format.block.BlockFacing
 import dev.netherforge.format.project.BlockKind
+import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.session.ProjectSession
 
 /** `nf.blocks`: the project's blocks. */
@@ -18,12 +20,20 @@ internal class ProjectBlockImpl(private val session: ProjectSession) : ProjectBl
 
     override fun exists(self: LuaHandle.ProjectBlock): Boolean = session.customBlocks.has(self.id)
 
-    override fun place(self: LuaHandle.ProjectBlock, location: LuaLocation): LuaHandle.CustomBlock? {
+    override fun place(self: LuaHandle.ProjectBlock, location: LuaLocation, options: BlockPlaceOptions?): LuaHandle.CustomBlock? {
         if (!session.customBlocks.has(self.id)) return null
+        val facing = options?.facing?.let { BlockFacing.of(it) }
+        if (facing != null && facing !in session.customBlocks.facingsOf(self.id)) {
+            val ways = session.customBlocks.facingsOf(self.id)
+            throw LuaApiException(
+                "options.facing: block ${session.names.spell(self.id)} can't face ${facing.id} " +
+                    if (ways.isEmpty()) "(it doesn't turn: its block.json has no rotation)" else "(it faces ${ways.joinToString { it.id }})"
+            )
+        }
         val world = location.world.name
         if (!session.platform.worlds.exists(world)) return null
         val at = BlockPosition.of(location.position)
-        if (!session.customBlocks.place(self.id, world, at.x, at.y, at.z)) return null
+        if (!session.customBlocks.place(self.id, world, at.x, at.y, at.z, facing)) return null
         return LuaHandle.CustomBlock(world, at.packed)
     }
 }
@@ -38,6 +48,16 @@ internal class CustomBlockImpl(private val session: ProjectSession) : CustomBloc
     override fun id(self: LuaHandle.CustomBlock): String? = name(self)?.let(session.names::spell)
 
     override fun project(self: LuaHandle.CustomBlock): LuaHandle.ProjectBlock? = name(self)?.let { LuaHandle.ProjectBlock(it) }
+
+    override fun facing(self: LuaHandle.CustomBlock): String? {
+        val at = BlockPosition.unpack(self.position)
+        return session.customBlocks.facingAt(self.world, at.x, at.y, at.z)?.id
+    }
+
+    override fun setFacing(self: LuaHandle.CustomBlock, facing: String): Boolean {
+        val at = BlockPosition.unpack(self.position)
+        return session.customBlocks.turn(self.world, at.x, at.y, at.z, BlockFacing.of(facing) ?: return false)
+    }
 }
 
 /** The block handle of a position as the class it is now: a `CustomBlock` when the project's block is there. */

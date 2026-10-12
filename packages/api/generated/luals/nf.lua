@@ -1112,7 +1112,7 @@ nf.test = {}
 ---@param callback fun() The test. It runs synchronously: `nf.test.advance` is how time passes in it.
 function nf.test.case(name, callback) end
 
---- Runs the server forward `ticks` ticks (20 are a second), whole ticks at a time: timers fall due, `tick` handlers run, centities tick and mobs think, exactly as on a server, and everything scripts started on other threads finishes first. When it returns, the last tick is done. Script errors during it are collected and fail the test when it ends.
+--- Runs the server forward `ticks` ticks (20 are a second), whole ticks at a time: timers fall due, `tick` handlers run, centities tick and mobs think, exactly as on a server, and everything scripts started on other threads finishes first. When it returns, the last tick is done. Each call in those ticks (a handler, a timer, a centity's tick) has its own budget and time limit, as on a server: none of it counts against the test's own, which is for the test's code. One that runs out is reported as on a server, at its file and line. Script errors during it are collected and fail the test when it ends.
 ---@param ticks integer At least 1.
 function nf.test.advance(ticks) end
 
@@ -2433,6 +2433,19 @@ function Player:set_whitelisted(whitelisted) end
 ---@return Inventory?
 function Player:ender_chest() end
 
+--- Their own sky (`player:set_sky`), as the calling script names it, or `nil` for none: then they see their world's (`world:sky()`).
+---@return string?
+function Player:sky() end
+
+--- Shows them a sky of the project's, whatever world they're in, over their world's own (`world:set_sky`), until it's cleared: as `world:set_sky` does for everyone in a world, and the same errors. Nothing for someone offline, and it ends when they leave.
+---@param sky string A sky of the project's (its file's name under `skies/`, or `namespace:id` for one a package it depends on exports).
+---@param options? SkyOptions
+function Player:set_sky(sky, options) end
+
+--- Takes their own sky away (`player:set_sky`): they see their world's again, fading over `options.fade_ticks`.
+---@param options? SkyOptions
+function Player:clear_sky(options) end
+
 --- A set of item slots of the project's own that they keep: extra equipment, a backpack, a bank. It's saved in the player's own save data, with their inventory, in the same file and the same write, so a crash or a restart can't duplicate an item between the two or lose one. Shown in a menu by binding slots to it (`slot:bind`), where what players move in and out is saved at once. Dying doesn't drop it. An `Inventory` of kind `"storage"`: its item methods work as on any other, and it answers `nil` and `false` while they're offline (it can't be changed then). `nil` when they're offline. A name that isn't an id is an error, and so is a size outside 1 to 256.
 ---@param name string Lowercase letters, digits and `_`: the project's own (a package's scripts keep theirs apart, under their namespace). Scripts that use one name share one storage.
 ---@param size integer How many slots it has, numbered from 0. Changing it later keeps every item: a slot past the size isn't shown, but its item is kept, and comes back with a bigger size.
@@ -2878,6 +2891,20 @@ function World:weather() end
 ---@return boolean # `false` when the world has gone.
 function World:set_weather(weather, options) end
 
+--- The sky set over the world (`world:set_sky`), as the calling script names it, or `nil` for none (or once the world has gone). A player's own (`player:set_sky`) is theirs alone.
+---@return string?
+function World:sky() end
+
+--- Sets a sky of the project's over the world (`skies/<id>.json`): everyone in it sees its colours in place of the biomes' own, the sky, fog, clouds and water, fading over `options.fade_ticks`, until it's cleared or another is set. Only what players are shown changes: the world, its biomes, its mobs and its weather are as they were, and a restart clears it. A player's own sky (`player:set_sky`) is shown them instead. A sky the project has no file for is an error, and so is one added since the server started (its colours are biomes, which the game learns as it starts: restart the server).
+---@param sky string A sky of the project's (its file's name under `skies/`, or `namespace:id` for one a package it depends on exports).
+---@param options? SkyOptions
+---@return boolean # `false` when the world has gone.
+function World:set_sky(sky, options) end
+
+--- Takes the world's sky away (`world:set_sky`): its biomes' own colours come back over `options.fade_ticks`. Nothing when it has none.
+---@param options? SkyOptions
+function World:clear_sky(options) end
+
 --- Where players appear in this world when nothing else decides, or `nil` once the world has gone.
 ---@return Location?
 function World:spawn_location() end
@@ -2899,6 +2926,13 @@ function World:max_height() end
 ---@param position Vec3 Any point in the block.
 ---@return Block?
 function World:block(position) end
+
+--- Every block in a box, read in one call: for code that needs many blocks at once (a mob's collision, a flood fill of a room), where a `world:block` and a `:kind()` per block would cost each one. The corners are floored to the blocks they're in and both are included, in any order. What each block is given as is `options.what`. At most 32,768 blocks (32 × 32 × 32): a bigger box is an error. `nil` when any of the box is in a chunk that isn't loaded, or the world has gone.
+---@param from Vec3 One corner: any point in its block.
+---@param to Vec3 The opposite corner, included: any point in its block.
+---@param options? BlockBoxOptions
+---@return BlockBox?
+function World:blocks(from, to, options) end
 
 --- Changes the block at a position. A block state the server doesn't have (an unknown block, property or value) is an error. Blocks in chunks that aren't loaded can't be read or changed: that answers `nil` or `false`, and never loads the chunk (`world:load_chunk` does).
 ---@param position Vec3 Any point in the block.
@@ -3275,6 +3309,15 @@ function CustomBlock:id() end
 ---@return ProjectBlock?
 function CustomBlock:project() end
 
+--- The way its front faces, for a block that turns (`rotation` in its `block.json`): what it was placed facing, or turned to since. `nil` for a block that doesn't turn, or once what's here isn't one.
+---@return "north"|"east"|"south"|"west"|"up"|"down"?
+function CustomBlock:facing() end
+
+--- Turns it to face another way, keeping everything else about it: its table, its centity (turned with it). `false` when it doesn't turn that way (it doesn't turn, or turns only `horizontal` and this is up or down), or once what's here isn't one of the project's blocks.
+---@param facing "north"|"east"|"south"|"west"|"up"|"down" Which way its front faces.
+---@return boolean
+function CustomBlock:set_facing(facing) end
+
 --- A project block from `blocks/<id>/block.json`: `this` in the block's script, and what `nf.blocks.get` hands out. It's the kind of block, not one placed in the world: its handlers hear what players do with any block of it (see `CustomBlock` for one placed). If the block is deleted, its methods answer `nil` or `false` and its handlers go.
 ---@class ProjectBlock
 local ProjectBlock = {}
@@ -3289,8 +3332,9 @@ function ProjectBlock:exists() end
 
 --- Places one at the block position a location is in, as `world:set_block` would: whatever is there is replaced, and nothing drops. Its `place` handlers are not asked (a script placing a block isn't a player placing one), and it isn't a `block_place` either. If the block has a centity, it's spawned over the block. `nil` when the chunk isn't loaded, or when the game has no state of its carrier left to hold the block in (the project has more blocks of that carrier than that).
 ---@param location Location Where.
+---@param options? BlockPlaceOptions
 ---@return CustomBlock?
-function ProjectBlock:place(location) end
+function ProjectBlock:place(location, options) end
 
 --- Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
 ---@param event ProjectBlock.Event The event's name.
@@ -5338,6 +5382,23 @@ function Event:uncancel() end
 ---@field integrity number? How much of it is placed, 0 to 1: each block is kept with this chance. Default 1: all of it.
 ---@field entities boolean? Whether the entities saved with it are placed too. Default `true`.
 
+--- What `world:blocks` gives for each block. A key that isn't one of these is an error.
+---@class BlockBoxOptions
+---@field what "kind"|"solid"|"class"? What a block is given as: `"kind"` its block id (`"minecraft:stone"`), `"solid"` whether it's solid, as `block:is_solid()` says, or `"class"` a number, `0` for a block nothing stands in the way of (air, grass, a torch), `1` for water or lava, `2` for a solid one. Default `"kind"`.
+---@field custom boolean? Whether a block of the project's own gives its id (`"wooden_chair"`, as `block:custom():id()` says) in place of what `what` would make of the note block it's held as. Default `false`.
+
+--- What `world:blocks` read: each block of the box, in one list, and the box's size and corner.
+---@class BlockBox
+---@field cells (string|integer|boolean)[] Each block, x fastest, then z, then y: the block `x`, `y`, `z` from the corner is at `1 + x + size_x * (z + size_z * y)`. What each is depends on `options.what` (and `options.custom`).
+---@field size_x integer How many blocks the box is along x.
+---@field size_y integer How many blocks the box is along y.
+---@field size_z integer How many blocks the box is along z.
+---@field corner Vec3 The block the box starts from: the lowest x, y and z of its corners, floored.
+
+--- How a sky comes or goes. A key that isn't one of these is an error.
+---@class SkyOptions
+---@field fade_ticks integer? Ticks it takes to fade in or out, through the sky's steps (its file's `fade`). Default 0: at once.
+
 --- How a block is changed. A key that isn't one of these is an error.
 ---@class BlockSetOptions
 ---@field update boolean? Whether its neighbours react (sand falls, redstone updates, water flows), as when a player places a block. Default `true`; `false` sets it quietly.
@@ -5429,6 +5490,11 @@ function Event:uncancel() end
 ---@field player Player? Who is placing it, or `nil` for a script.
 ---@field block CustomBlock Where it goes: what is there now is replaced, so `block:custom()` is `nil` until it has been placed (`this:id()` says which block is being placed).
 ---@field item Item? The stack placing it, or `nil` for a script.
+---@field facing "north"|"east"|"south"|"west"|"up"|"down"? The way it will face, for a block that turns: toward the player placing it. `nil` for one that doesn't turn.
+
+--- How `project_block:place` places one. A key that isn't one of these is an error.
+---@class BlockPlaceOptions
+---@field facing "north"|"east"|"south"|"west"|"up"|"down"? The way its front faces, for a block that turns (`rotation` in its `block.json`): a way it can't face is an error. Default north.
 
 --- A block was clicked.
 ---@class ProjectBlockClickEvent: Event

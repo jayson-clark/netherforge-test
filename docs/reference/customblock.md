@@ -21,3 +21,26 @@ Its id: its project block's folder name under `blocks/`, or `namespace:id` for o
 The project block it's one of, or `nil` once what's here isn't one.
 
 **Returns** `ProjectBlock?`
+
+## `customblock:facing()`
+
+The way its front faces, for a block that turns (`rotation` in its `block.json`): what it was placed facing, or turned to since. `nil` for a block that doesn't turn, or once what's here isn't one.
+
+**Returns** `"north"\|"east"\|"south"\|"west"\|"up"\|"down"?`
+
+## `customblock:set_facing(facing)`
+
+Turns it to face another way, keeping everything else about it: its table, its centity (turned with it). `false` when it doesn't turn that way (it doesn't turn, or turns only `horizontal` and this is up or down), or once what's here isn't one of the project's blocks.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `facing` | `"north"\|"east"\|"south"\|"west"\|"up"\|"down"` | Which way its front faces. |
+
+**Returns** `boolean`
+
+```lua
+local chair = block:custom()
+if chair and chair:facing() ~= "north" then
+  chair:set_facing("north")
+end
+```

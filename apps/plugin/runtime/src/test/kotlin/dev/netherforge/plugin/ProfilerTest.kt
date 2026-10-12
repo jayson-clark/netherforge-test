@@ -91,6 +91,9 @@ class ProfilerTest {
             assertEquals("module shop", tick.top.single().scope)
             assertEquals(tick.scripts, tick.top.single().nanos)
             assertTrue(tick.nanos >= tick.phases.values.sum(), "$tick")
+            // What the steps are made of: each service's share, within its step.
+            val events = assertNotNull(tick.parts["events/scripts"], "${tick.parts}")
+            assertTrue(events <= tick.phases.getValue("events"), "$tick")
         }
     }
 

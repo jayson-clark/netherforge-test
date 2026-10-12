@@ -2,6 +2,7 @@ package dev.netherforge.plugin
 
 import dev.netherforge.plugin.lua.LuaCodec
 import dev.netherforge.plugin.lua.LuaHost
+import dev.netherforge.plugin.lua.SandboxLimits
 import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.script.Scope
 import dev.netherforge.plugin.script.ScopeOwner
@@ -535,7 +536,7 @@ class ConformanceTest {
     """.trimIndent()
 
     /** A project with one of everything the calls need, every power allowed, and Alex online; [module] runs once he is. */
-    private fun everything(module: String, check: (TestServer) -> Unit) {
+    private fun everything(module: String, sandbox: SandboxLimits = SandboxLimits(), check: (TestServer) -> Unit) {
         val server = TestServer(
             mapOf(
                 // Every power, so moderation and grants reach Kotlin rather than stopping at the check.
@@ -554,7 +555,8 @@ class ConformanceTest {
                     """{ "camera": { "position": [{ "time": 0, "value": [0, 64, 0] }, { "time": 5, "value": [0, 64, 9] }], "rotation": [{ "time": 0, "yaw": 0, "pitch": 0 }] } }""",
                 "modules/smoke/init.lua" to "-- started by the test, once a player is online"
             ),
-            start = false
+            start = false,
+            sandbox = sandbox
         )
         server.use {
             // The plugins the project declares are on the server, with an economy, so those calls reach Kotlin too.
@@ -612,6 +614,60 @@ class ConformanceTest {
             assertEquals(emptyList(), server.logs.filter { it.startsWith("FAIL") })
             assertEquals(listOf("called ${calls.size}"), server.logs)
             assertTrue(calls.size > 300, "only ${calls.size} functions")
+        }
+    }
+
+    /**
+     * What every function costs a script, held to `testdata/function-costs.tsv`
+     * ([CostGolden]): each called as above (its sample arguments, made in the
+     * call, are part of what it costs), once to warm up and once counted, each
+     * in its own command, so its own budget. A function dearer than its golden
+     * is a regression; one much cheaper, a golden to rewrite.
+     */
+    @Test
+    fun `every function costs what its golden says`() {
+        val calls = functions.filter { (_, fn) -> !fn.waits() }
+            .sortedBy { (_, fn) -> fn.name in setOf("remove", "delete", "cancel", "close_for", "close_all", "kick", "ban", "unload") }
+        val lines = calls.map { (cls, fn) ->
+            val args = target(cls, fn) + fn.list("params").filter { it.name != "..." }.map(::sample)
+            "  { \"${label(cls, fn)}\", function() return ${args.first()}(${args.drop(1).joinToString(", ")}) end },"
+        }
+        everything(
+            """
+            ${harness()}
+            local calls = {
+            ${lines.joinToString("\n")}
+            }
+            local next_call = 1
+            local function cost(f)
+              local before = nf.instructions_left()
+              pcall(f)
+              return before - nf.instructions_left()
+            end
+            local base = cost(function() end)
+            nf.commands.register("cost", function(event)
+              h.Sender = event.sender
+              local call = calls[next_call]
+              next_call = next_call + 1
+              cost(call[2])
+              log("COST", call[1], cost(call[2]) - base)
+            end)
+            """.trimIndent(),
+            CostGolden.EXACT
+        ) { server ->
+            repeat(calls.size) { server.platform.commands.runConsole("cost") }
+            assertEquals(emptyList(), server.errors.map { it.message })
+            val costs = server.logs.filter { it.startsWith("COST\t") }.associate { line ->
+                val (_, name, cost) = line.split('\t')
+                name to cost.toInt()
+            }
+            assertEquals(calls.size, costs.size)
+            CostGolden.check(
+                "function-costs.tsv",
+                "Instructions each API function costs a script, called once with sample arguments of its\n" +
+                    "declared types (ConformanceTest). UPDATE_GOLDEN=1 rewrites it.",
+                costs
+            )
         }
     }
 
