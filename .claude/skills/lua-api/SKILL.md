@@ -635,7 +635,7 @@ restarts it by; a script that listens for `setting_changed` (events.ts: `setting
 - **What calls cost a script is golden** (`function-costs.tsv`, `scenario-costs.tsv`; testing
   skill, "Goldens"). Every check a binding makes is inline, its checker called only to raise
   the error (`type_of(x) ~= "number"`, a handle's set, a choice set's `has`, `genuine_mt(v) ~=
-  Vec3_mt`), and a namespace under `nf` is filled when a script first reaches it
+Vec3_mt`), and a namespace under `nf` is filled when a script first reaches it
   (`namespaces[path]`, the prelude's `scopes.lazy`): a scope is made for every centity spawned.
   JSON a script hands over is read in Kotlin (`LuaHost.plainJson`, exactly as the codec would
   write it, floats through `CodecNumbers`), the codec only for what Kotlin can't say the same.

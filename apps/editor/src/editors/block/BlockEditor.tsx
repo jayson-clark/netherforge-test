@@ -179,7 +179,10 @@ export function BlockEditor({ path }: { path: string }) {
             value={model.rotation ?? ''}
             options={[
               { value: '', label: 'no (default): always as drawn' },
-              { value: 'horizontal', label: 'horizontal: north, east, south or west, toward who places it' },
+              {
+                value: 'horizontal',
+                label: 'horizontal: north, east, south or west, toward who places it',
+              },
               { value: 'all', label: 'all: up or down too' },
             ]}
             onChange={(value) => set('rotation', (value || undefined) as BlockRotation | undefined)}

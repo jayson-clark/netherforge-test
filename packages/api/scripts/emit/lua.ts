@@ -285,7 +285,8 @@ function wrapperLines(
     if (CORE_NAMES.has(name))
       throw new Error(`${owner}.${fn.name}: a parameter can't be called ${name}`)
   const lines: string[] = []
-  if (target.self && 'handle' in target.self) lines.push(...selfCheck(target.self.handle, undefined))
+  if (target.self && 'handle' in target.self)
+    lines.push(...selfCheck(target.self.handle, undefined))
   if (target.self && 'value' in target.self) {
     const value = target.self.value
     lines.push(
