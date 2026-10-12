@@ -19,6 +19,7 @@ import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.ItemLook
+import dev.netherforge.plugin.platform.ItemView
 import dev.netherforge.plugin.platform.StackFilter
 import io.papermc.paper.datacomponent.DataComponentType
 import io.papermc.paper.datacomponent.DataComponentTypes
@@ -111,6 +112,9 @@ object PaperItems {
     /** Each project item's current look, by reference: the runtime's answer, set when it binds. Any thread may ask. */
     @Volatile
     var looks: (String) -> ItemLook? = { null }
+
+    /** A restyled stack as its item's `render` handlers finish it: the runtime's ([PlatformEvents.itemRendered]). */
+    var render: (ItemData) -> ItemData = { it }
 
     /** The state each project block is held as now, by the name the server knows it by: the runtime's answer, set when it binds. */
     @Volatile
@@ -541,6 +545,16 @@ object PaperItems {
         return projectItem(stack)?.let(::reference)?.text == filter.item
     }
 
+    /** A copy of [stack] with [view]'s name and lore in place of its own: how it looks to one player. */
+    fun viewed(stack: ItemStack, view: ItemView): ItemStack {
+        val shown = stack.clone()
+        shown.editMeta { meta ->
+            meta.displayName(view.name?.let(::text))
+            meta.lore(view.lore?.map(::text))
+        }
+        return shown
+    }
+
     /** The project item [stack] is a stack of (the namespaced id it carries: `shop:ruby`), or null; reads only the stamp. */
     fun projectItem(stack: ItemStack?): String? {
         if (stack == null || stack.isEmpty || !stack.hasItemMeta()) return null
@@ -561,7 +575,7 @@ object PaperItems {
         val id = stamps.get(ITEM_KEY, PersistentDataType.STRING)
         val look = id?.let(looks)
         if (look == null || stamps.get(LOOK_KEY, PersistentDataType.STRING) == look.hash) return readapted(stack)
-        val fresh = toStack(ItemData(ProjectItems.restyle(describe(stack), reference(id), look.def))) ?: return null
+        val fresh = toStack(render(ItemData(ProjectItems.restyle(describe(stack), reference(id), look.def)))) ?: return null
         fresh.editPersistentDataContainer { stamps.copyTo(it, false) }
         // The look's lists were just written; any it doesn't have, the stack kept, for the states of now.
         return readapted(fresh) ?: fresh

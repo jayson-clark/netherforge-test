@@ -180,7 +180,9 @@ class TerrainScriptTest {
     fun aScriptSeesNoServerAndNoWayOut(): LuaTest = withLua { lua ->
         val run = Run()
         val source = """
-            for _, name in ipairs({ "nf", "io", "os", "debug", "load", "loadfile", "dofile", "collectgarbage", "print", "package" }) do
+            -- Of nf, only nf.math: nothing of the server.
+            assert(next(nf) == "math" and next(nf, "math") == nil)
+            for _, name in ipairs({ "io", "os", "debug", "load", "loadfile", "dofile", "collectgarbage", "print", "package" }) do
               if _G[name] ~= nil then error(name .. " is there") end
             end
             assert(getmetatable("") == false, "the string metatable is hidden")

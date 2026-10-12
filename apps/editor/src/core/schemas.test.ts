@@ -7,6 +7,7 @@ describe('schemas', () => {
       'advancement.schema.json',
       'biome.schema.json',
       'block.schema.json',
+      'buff.schema.json',
       'bundle.schema.json',
       'centity.schema.json',
       'cutscene.schema.json',

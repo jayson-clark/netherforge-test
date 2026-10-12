@@ -24,6 +24,7 @@ import net.minecraft.world.level.storage.LevelResource
 import net.minecraft.world.level.storage.SavedDataStorage
 import org.bukkit.World
 import org.bukkit.WorldCreator
+import org.bukkit.craftbukkit.inventory.CraftItemStack
 import org.bukkit.craftbukkit.util.CraftNamespacedKey
 import java.util.Locale
 import kotlin.jvm.optionals.getOrNull
@@ -98,4 +99,6 @@ internal object Mojang : ServerInternals {
         val id = Identifier.tryParse(key) ?: return null
         return server.registryAccess().lookupOrThrow(Registries.WORLD_CLOCK).get(ResourceKey.create(Registries.WORLD_CLOCK, id)).getOrNull()
     }
+
+    override fun mirror(stack: net.minecraft.world.item.ItemStack): org.bukkit.inventory.ItemStack = CraftItemStack.asBukkitMirror(stack)
 }

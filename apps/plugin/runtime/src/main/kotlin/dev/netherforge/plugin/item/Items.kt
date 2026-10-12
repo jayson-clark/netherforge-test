@@ -9,12 +9,15 @@ import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.api.EventType
 import dev.netherforge.plugin.api.Events
+import dev.netherforge.plugin.api.ItemRenderEvent
+import dev.netherforge.plugin.api.ItemViewEvent
 import dev.netherforge.plugin.api.LuaEvent
 import dev.netherforge.plugin.api.LuaHandle
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.InventoryRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.ItemLook
+import dev.netherforge.plugin.platform.ItemView
 import dev.netherforge.plugin.platform.Platform
 import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.project.Resource
@@ -25,6 +28,7 @@ import dev.netherforge.plugin.session.ReloadBatch
 import dev.netherforge.plugin.session.RuntimeService
 import dev.netherforge.plugin.session.SessionProject
 import dev.netherforge.plugin.session.TickPhase
+import kotlinx.serialization.json.JsonElement
 import java.util.UUID
 
 /**
@@ -41,6 +45,12 @@ import java.util.UUID
  * rewritten when the server sees them: a player's inventory when they join
  * and when the item reloads, an inventory when someone opens it, and a
  * player's inventory the tick after they pick something up ([refreshSoon]).
+ *
+ * How a stack looks to one player ([view], the `view` and `item_view` handlers) is
+ * the platform's to ask about each stack it sends their game; a player's are
+ * sent again ([refreshView]) at the end of a tick, and everyone's once the
+ * handlers themselves change (a script reloaded, listening or not any more), so
+ * a look a reload took away doesn't stay on anyone's screen.
  */
 class Items(
     private val platform: Platform,
@@ -68,10 +78,21 @@ class Items(
     /** Whether any item listens for the events whose stack the runtime has to look up (the held one). */
     private val heldWatched = HashMap<EventType<*>, Boolean>()
 
+    /** Whether any project item has a `view` handler, so a stack of one has to be looked up at all. */
+    private var itemViewed = false
+
+    /** Players whose games to send their stacks' looks again at the next tick ([refreshView]). */
+    private val viewsPending = LinkedHashSet<UUID>()
+
+    /** Whether the `view` handlers changed since everyone's stacks were last sent again: then they all are. */
+    private var viewsChanged = false
+
     init {
         for (event in listOf(Events.PROJECTITEM_HIT, Events.PROJECTITEM_BREAK_BLOCK, Events.PROJECTITEM_INTERACT_ENTITY)) {
             scripts.watch(event) { heldWatched[event] = it }
         }
+        scripts.watch(Events.PROJECTITEM_VIEW) { itemViewed = it }
+        scripts.counting(Events.PROJECTITEM_VIEW, Events.NF_ITEM_VIEW) { viewsChanged = true }
     }
 
     /**
@@ -111,6 +132,62 @@ class Items(
 
     fun ids(): List<String> = synchronized(records) { records.keys.sorted() }
 
+    /** [id]'s `properties` from its file (empty when it has none), or null when the project has no such item. */
+    fun properties(id: String): Map<String, JsonElement>? = synchronized(records) {
+        records[id]?.file?.properties.orEmpty().takeIf {
+            id in
+                records
+        }
+    }
+
+    /**
+     * [stack], a stack of one of the project's items being made or given its item's new look, as the item's
+     * `render` handlers finish it: the name and lore they assign. [stack] itself when it's no project item's
+     * or nobody listens, so a stack nobody renders costs one lookup.
+     */
+    fun render(stack: ItemData): ItemData {
+        val id = stack.def.item?.let { idOf(it.text) } ?: return stack
+        val handle = LuaHandle.ProjectItem(id)
+        if (!scripts.listening(handle, Events.PROJECTITEM_RENDER)) return stack
+        val event = ItemRenderEvent(stack, stack.def.name, stack.def.lore)
+        scripts.emit(Events.PROJECTITEM_RENDER, handle, event)
+        if (event.displayName == stack.def.name && event.lore == stack.def.lore) return stack
+        return stack.copy(def = stack.def.copy(name = event.displayName, lore = event.lore))
+    }
+
+    /**
+     * Whether a stack of the project item [reference] names (null for a stack of none) may look different
+     * to some player: someone listens to `item_view`, or to its item's `view`. Asked for every stack sent to a
+     * player, so it's two lookups while nobody listens.
+     */
+    fun viewing(reference: String?): Boolean {
+        if (scripts.listening(null, Events.NF_ITEM_VIEW)) return true
+        if (!itemViewed || reference == null) return false
+        val id = idOf(reference) ?: return false
+        return scripts.listening(LuaHandle.ProjectItem(id), Events.PROJECTITEM_VIEW)
+    }
+
+    /**
+     * How [stack] looks to [player], as its item's `view` handlers and then `nf`'s `item_view` leave its name
+     * and lore; null when they're as they were, or when a handler failed (reported as any handler's failure is):
+     * the stack is then sent as it is.
+     */
+    fun view(player: UUID, stack: ItemData): ItemView? {
+        val id = stack.def.item?.let { idOf(it.text) }
+        val own = if (id != null) listOf(Events.PROJECTITEM_VIEW to LuaHandle.ProjectItem(id)) else emptyList()
+        val event = ItemViewEvent(LuaHandle.Player(player.toString()), stack, stack.def.name, stack.def.lore)
+        val failures = scripts.handlerFailures
+        scripts.emit(own + (Events.NF_ITEM_VIEW to null), event)
+        if (scripts.handlerFailures != failures) return null
+        if (event.displayName == stack.def.name && event.lore == stack.def.lore) return null
+        return ItemView(event.displayName, event.lore)
+    }
+
+    /** Sends [player]'s game the stacks it shows that now look different to them, at the end of this tick (`player:refresh_items`). */
+    fun refreshView(player: UUID) {
+        viewsPending += player
+    }
+
     /** Takes every item: its look, before any window or script builds a stack. Their scripts start in [start]. */
     override fun define(project: SessionProject) {
         synchronized(records) {
@@ -121,11 +198,18 @@ class Items(
 
     override fun start() {
         for (record in synchronized(records) { records.values.toList() }) start(record)
+        // A new session's handlers aren't the last one's: whatever those showed goes.
+        viewsChanged = true
     }
 
     override fun stop() {
         for (record in synchronized(records) { records.values.toList() }) stop(record)
         pending.clear()
+        viewsPending.clear()
+    }
+
+    override fun playerQuit(player: PlayerRef) {
+        viewsPending -= player.uuid
     }
 
     /** Stacks they carry from before the last change to an item take its new look. */
@@ -134,7 +218,9 @@ class Items(
     }
 
     override fun tick(phase: TickPhase) {
-        if (phase == TickPhase.UPKEEP) refreshPending()
+        if (phase != TickPhase.UPKEEP) return
+        refreshPending()
+        refreshViews()
     }
 
     override val reloads: Set<KindSpec<*, *>> get() = setOf(ItemKind)
@@ -172,7 +258,7 @@ class Items(
     fun create(id: String, overrides: ItemDef? = null): ItemData {
         val look = look(id) ?: throw LuaApiException("there's no item \"$id\" (${ItemKind.pathOf(id)})")
         val def = ProjectItems.resolve((overrides ?: ItemDef()).copy(item = ResourceRef(id)), look.def)
-        return ItemData(def.copy(count = def.count ?: 1))
+        return render(ItemData(def.copy(count = def.count ?: 1)))
     }
 
     /** Checks the stacks in [inventory] (an inventory someone opened, a player's own). */
@@ -192,6 +278,14 @@ class Items(
         val players = pending.toList()
         pending.clear()
         for (player in players) refresh(InventoryRef.Player(player))
+    }
+
+    /** Once a tick: the players [refreshView] asked for, or everyone when the `view` handlers changed. */
+    private fun refreshViews() {
+        val players = if (viewsChanged) platform.players.online().map { it.uuid } else viewsPending.toList()
+        viewsChanged = false
+        viewsPending.clear()
+        for (player in players) platform.itemViews.refresh(player)
     }
 
     /**

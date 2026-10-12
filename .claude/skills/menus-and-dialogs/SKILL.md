@@ -187,6 +187,29 @@ surface).
   (`Items.heldStage`, looked up only while some item listens, through
   `Scripts.watch`).
 
+- **Views** (`view` on the item, `item_view` on `nf`, `ItemViewEvent`): how a stack looks to the one player
+  it's sent to, never stored. The adapter asks for every stack it sends a player's game:
+  `PlatformEvents.itemViewing(reference)` first (two map lookups while nobody listens; `Items.viewing`), then
+  `itemViewed(player, stack)` → `ItemView(name, lore)` or null (unchanged, or a handler failed: `Items.view`
+  compares `Scripts.handlerFailures` around the emit). `player:refresh_items()` only queues
+  (`Items.refreshView`); `Items.tick(UPKEEP)` calls `ItemViewOps.refresh` once per player, and for everyone
+  when any view handler is added or goes (`Scripts.counting`, which hears a reload's drop-and-re-add that
+  `watch` can't) or a session starts. Deferred on purpose: a `close` handler runs while the server still
+  has the closing window as `containerMenu`, and slot packets for it would be dropped by the game.
+  **Paper** (`PaperItemViews`, paper-internals `ItemViews`): every window sends through the player's
+  `ContainerSynchronizer`, which each window takes at `initMenu`, so `install` (on join, LOWEST) swaps the
+  player's final `containerSynchronizer` field by reflection and re-sets the open windows' (which resends
+  them). Ours views each stack and hands it to the server's own one; its `RemoteSlot`s (`ViewSlot`, a
+  `RemoteSlot.Synchronized` so `transferState` still copies them) keep the real stack, so a look never
+  causes a resend, plus the look last sent (`shown`, which `refresh` diffs against, so a refresh sends only
+  what changed) and match a click's hash of the look sent for a stack as that stack (no resend per click).
+  Looks sent are remembered per player (512, both ways), which is also how `InventoryCreativeEvent` (LOWEST)
+  maps a stack the creative client echoes back to the real one. Survival clicks only carry hashes; anvil
+  renames are typed text. Stacks the server sends past the synchronizer (crafting result, pick-block,
+  Bukkit's direct `setItem` packet) go as they are until that slot next syncs. The fake (`FakeItemViews`)
+  sends at the end of a tick (`tickWorld`) what changed, keeps what each place was shown (`nf.test.shown`,
+  fake bots' screens) and maps creative stacks back the same way.
+
 ### Recipes (`recipes/<id>.json`)
 
 The spec users read is `docs/format/recipe.md`; the Lua side is

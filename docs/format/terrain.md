@@ -530,6 +530,11 @@ made:
 
 `"script": {}` is a script with nothing declared. Together `blocks` and `customBlocks` list at most 1024.
 
+A block the script or its modules write whole, as a string, needn't be listed:
+`"minecraft:oak_stairs[facing=north]"` (a game block state) and `"ruby_ore"` (a
+project block's id) join the generator by themselves. List only the ones the
+script puts together from pieces (`"minecraft:" .. color .. "_wool"`).
+
 The script's body runs once in each Lua state (see below) and returns its stages, any of six (`density`, `area` and
 `biome` are below):
 

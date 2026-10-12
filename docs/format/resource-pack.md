@@ -455,10 +455,17 @@ hotbar's top at 22, the experience bar 24 to 29, hearts and hunger 30 to 39
 | `x`, `y`   | Where its left and bottom edges are.                                                                              |         |
 | `gap`      | Pixels between segments. Each segment takes the width of the widest picture.                                      | 0       |
 | `reverse`  | Fill from the right, like the game's hunger bar.                                                                  | `false` |
+| `align`    | Which part of the segments drawn is at `x`: `left`, `center` or `right`.                                          | `left`  |
 
-A row of `icons` has its pictures by key, an `x`, a `y` and a `gap` (1): a
-script says which it shows, in what order, and they're drawn left to right
-from `x`. A line of `texts` has an `x` and an `align` (`left`, `center` or
+A script can draw fewer of a bar's segments than it has (`hud:fill_bar(name,
+value, max, { segments = 4 })`: a row of hearts as long as the player's max
+life), and `align` keeps such a bar where it belongs: `right` for one that
+ends at `x`, `center` for one centred on it. `hud:fill_bars` fills several
+bars as one, row after row.
+
+A row of `icons` has its pictures by key, an `x`, a `y`, a `gap` (1) and an
+`align` (`left`): a script says which it shows, in what order, and they're
+drawn left to right, with their left edge, middle or right edge at `x`. A line of `texts` has an `x` and an `align` (`left`, `center` or
 `right`: which part of the text is at `x`); it's drawn on the action bar's own
 line, in the game's font, in its own colours and shadow.
 

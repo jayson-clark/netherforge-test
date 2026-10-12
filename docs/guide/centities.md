@@ -188,6 +188,28 @@ this:on("tick", function()
 end)
 ```
 
+A node shaped like a beam (one block long along Z, centred on its origin) can
+be laid from one point to another with `node:stretch_between(from, to)`. For a
+chain or a string between two moving things, make the node a `rope` in
+`centity.json` and string it: the server lays its links every tick.
+
+```lua
+-- From the player's hands to the ball, with a little slack.
+this:node("chain"):rope_between(player, this:node("ball"), { length = 6 })
+```
+
+Or ease a node there over some ticks, and back again, with `node:tween`:
+
+```lua
+this:on("land", function()
+  this:node("root"):tween({ scale = vec3(1.4, 0.6, 1.4), ticks = 3, easing = "ease_out", back = true })
+end)
+```
+
+A tween sets the same rest pose `set_*` does, so animations play over it. An
+animation with `"blend": "additive"` plays on top of everything else instead:
+a squash or a recoil keyed as a change, whatever size or pose the rest has.
+
 Positions, offsets, rotations and scales are `Vec3` values: build one with
 `vec3(x, y, z)`, and add, subtract and scale them with `+`, `-` and `*`. A
 node's `translation`, `rotation` and `scale` are in its **parent's** space (a
@@ -308,7 +330,9 @@ nothing holds it up; a block put across its path makes it find another way.
 It turns to face its way as it goes (`face = false` keeps its facing). With
 `fly = true` it flies instead, through the air in any direction, and finding a
 way costs the server more. Its nodes, hitboxes and physics bodies all go with
-it.
+it. With `open_doors = true` it goes through the game's wooden doors and fence
+gates, opening each as it comes to it and shutting it behind it, as a
+villager does (give it a `width` that fits a doorway, 0.6 for a person).
 
 A walk isn't saved: a restart or a reload of its centity ends it (the
 script's body runs again and can set off again). A centity whose chunk

@@ -37,7 +37,8 @@ internal data class PathSettings(
     val height: Double? = null,
     val stepHeight: Double = CentityPaths.DEFAULT_STEP_HEIGHT,
     val maxDrop: Double = CentityPaths.DEFAULT_MAX_DROP,
-    val range: Double = CentityPaths.DEFAULT_RANGE
+    val range: Double = CentityPaths.DEFAULT_RANGE,
+    val openDoors: Boolean = false
 )
 
 /**
@@ -110,6 +111,8 @@ internal class Walk(
  * without `path_end`, as `stop_pathing` does.
  */
 class CentityPaths(private val platform: Platform, private val centities: Centities) {
+    private val doors = Doors(platform)
+
     /** Places searched this tick by walks finding a new path on their own. */
     private var spent = 0
 
@@ -168,6 +171,7 @@ class CentityPaths(private val platform: Platform, private val centities: Centit
     private fun move(instance: Instance, walk: Walk) {
         val settings = walk.settings
         val from = walk.feet
+        if (settings.openDoors) doors.pass(instance.anchor.world, walk, instance.openedDoors)
         // Where it passes this tick: each point of the path it reaches, then where it stops.
         val passed = ArrayList<Vec3>(4)
         passed += from
@@ -347,7 +351,23 @@ class CentityPaths(private val platform: Platform, private val centities: Centit
         return true
     }
 
+    /**
+     * Shuts the doors [instance]'s walks opened that it isn't standing in, now that it isn't walking: a walk stopped
+     * or replaced (`stop_pathing`, `move_to` again) on its way through one. One it stands in waits for it to leave.
+     */
+    fun shutBehind(instance: Instance) {
+        if (instance.walk != null || instance.openedDoors.isEmpty()) return
+        val feet = feetOf(instance)
+        doors.shut(instance.anchor.world, instance.openedDoors) { !it.holds(feet) }
+    }
+
+    /** Shuts every door [instance]'s walks opened, wherever it is: it has been teleported away, or removed. */
+    fun shutAll(instance: Instance) {
+        if (instance.openedDoors.isNotEmpty()) doors.shut(instance.anchor.world, instance.openedDoors) { true }
+    }
+
     private fun end(instance: Instance, walk: Walk, reached: Boolean) {
+        doors.shut(instance.anchor.world, instance.openedDoors) { true }
         if (instance.walk === walk) instance.walk = null
         centities.pathEnded(instance, reached)
     }
@@ -362,7 +382,8 @@ class CentityPaths(private val platform: Platform, private val centities: Centit
         settings: PathSettings,
         budgeted: Boolean = false
     ): PathResult {
-        val space = Space(BrickShapes(platform.worlds, world), walker)
+        val bricks = BrickShapes(platform.worlds, world)
+        val space = Space(if (settings.openDoors) doors.through(world, bricks) else bricks, walker)
         val limits = SearchLimits(settings.range)
         val path = if (settings.fly) {
             AirSearch.find(space, from, goal, limits)
@@ -397,6 +418,15 @@ class CentityPaths(private val platform: Platform, private val centities: Centit
      * and height, unless [settings] says otherwise.
      */
     private fun measure(instance: Instance, settings: PathSettings): Pair<Vec3, Walker> {
+        val bounds = boundsOf(instance)
+        val size = bounds?.let { it.max - it.min }
+        val width = settings.width ?: size?.let { max(it.x, it.z) }?.coerceAtLeast(MIN_SIZE) ?: 1.0
+        val height = settings.height ?: size?.y?.coerceAtLeast(MIN_SIZE) ?: 1.0
+        return feetOf(instance, bounds) to Walker(width, height)
+    }
+
+    /** The box round [instance]'s shown hitboxes, in its own space, or null when it has none. */
+    private fun boundsOf(instance: Instance): Box? {
         val composed = instance.compose()
         var bounds: Box? = null
         for ((index, node) in instance.definition.nodes.withIndex()) {
@@ -404,14 +434,15 @@ class CentityPaths(private val platform: Platform, private val centities: Centit
             val box = boundsOf(centities.boxesOf(instance, index), composed[index])
             bounds = bounds?.let { union(it, box) } ?: box
         }
+        return bounds
+    }
+
+    /** Where [instance]'s feet are in the world: the middle of the bottom of its hitboxes, or its anchor without any. */
+    private fun feetOf(instance: Instance, bounds: Box? = boundsOf(instance)): Vec3 {
         val anchor = instance.anchor
-        val size = bounds?.let { it.max - it.min }
-        val width = settings.width ?: size?.let { max(it.x, it.z) }?.coerceAtLeast(MIN_SIZE) ?: 1.0
-        val height = settings.height ?: size?.y?.coerceAtLeast(MIN_SIZE) ?: 1.0
         val middle =
             bounds?.let { instance.turn().transformDirection(Vec3((it.min.x + it.max.x) / 2, 0.0, (it.min.z + it.max.z) / 2)) } ?: Vec3.ZERO
-        val feet = Vec3(anchor.x + middle.x, anchor.y + (bounds?.min?.y ?: 0.0), anchor.z + middle.z)
-        return feet to Walker(width, height)
+        return Vec3(anchor.x + middle.x, anchor.y + (bounds?.min?.y ?: 0.0), anchor.z + middle.z)
     }
 
     companion object {

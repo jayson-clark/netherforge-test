@@ -1,6 +1,7 @@
 package dev.netherforge.plugin.contract
 
 import dev.netherforge.format.Vec3
+import dev.netherforge.format.game.Box
 import dev.netherforge.plugin.platform.EntityFlag
 import dev.netherforge.plugin.platform.EntityNumber
 import dev.netherforge.plugin.platform.GameEvent
@@ -393,6 +394,26 @@ abstract class WorldEntityOpsContract : PlatformContract() {
             assertEquals(far, entities.raycast(world, from, east, 20.0, setOf(near))?.id)
             assertNull(entities.raycast(world, from, east, 2.0, emptySet()), "out of reach")
             assertNull(entities.raycast(world, from, Vec3(-1.0, 0.0, 0.0), 20.0, emptySet()), "nothing that way")
+        }
+    }
+
+    @Test
+    fun `boxes are every entity's bounding box reaching into a region`() {
+        val lane = origin.z + 9
+        val pig = spawn("minecraft:pig", at(12, 0, 9), ai = false)
+        main {
+            assertTrue(entities.teleport(pig, Location(world, origin.x + 12, origin.y, lane)))
+            val around = Box(Vec3(origin.x + 11, origin.y, lane - 1), Vec3(origin.x + 13, origin.y + 2, lane + 1))
+            val found = entities.boxes(world, around).single { it.id == pig }
+            assertEquals("minecraft:pig", found.kind)
+            assertFalse(found.player)
+            assertNear(origin.x + 12 - 0.45, found.box.min.x, 1e-3, "a pig is 0.9 wide")
+            assertNear(origin.y, found.box.min.y, 1e-3, "standing where it was put")
+            val beside = Box(Vec3(origin.x + 12.3, origin.y, lane - 1), Vec3(origin.x + 14, origin.y + 2, lane + 1))
+            assertTrue(entities.boxes(world, beside).any { it.id == pig }, "its edge reaches past its middle")
+            val clear = Box(Vec3(origin.x + 13, origin.y, lane - 1), Vec3(origin.x + 14, origin.y + 2, lane + 1))
+            assertTrue(entities.boxes(world, clear).none { it.id == pig }, "a region it doesn't reach")
+            assertEquals(emptyList(), entities.boxes(MISSING_WORLD, around))
         }
     }
 }

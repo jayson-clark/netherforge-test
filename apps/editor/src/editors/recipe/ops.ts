@@ -321,6 +321,7 @@ export function ingredientsIn(recipe: RecipeFile): Ingredient[] {
     ...(['template', 'base', 'addition', 'ingredient'] as const)
       .map((field) => recipe[field])
       .filter((it) => it !== undefined),
+    ...(recipe.materials ?? []).map((it) => it.ingredient),
   ]
 }
 
@@ -334,6 +335,9 @@ const TYPE_FIELDS = [
   'addition',
   'experience',
   'cookingTime',
+  'materials',
+  'stations',
+  'stationRange',
 ] as const
 
 /**
@@ -365,6 +369,9 @@ export function setRecipeType(recipe: RecipeFile, type: RecipeType): void {
     const cells = emptyCells()
     ingredients.slice(0, cells.length).forEach((it, index) => (cells[index] = it))
     setCells(recipe, cells)
+  } else if (keep.has('materials')) {
+    // A station recipe takes one of each, to start from.
+    recipe.materials = ingredients.map((ingredient) => ({ ingredient }))
   } else if (keep.has('ingredients')) {
     if (ingredients.length > 0)
       recipe.ingredients = ingredients.slice(0, RECIPE_GRID.mostIngredients)

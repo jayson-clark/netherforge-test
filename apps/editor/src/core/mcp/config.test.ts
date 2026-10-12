@@ -7,6 +7,7 @@ import {
   syncMcpConfig,
   syncOpencodeConfig,
   withNetherforgeServer,
+  withTokenFilesIgnored,
   withOpencodeServer,
 } from './config'
 
@@ -129,5 +130,31 @@ describe('opencode.json', () => {
 
     // Now with netherforge added, a second call should be no-op
     expect(await syncOpencodeConfig(backend, [OPENCODE_CONFIG_FILE], true)).toBe(false)
+  })
+})
+
+describe('.gitignore', () => {
+  it('gains a line for each token file it misses, keeping what it has', () => {
+    expect(withTokenFilesIgnored('.netherforge/\n.mcp.json\n')).toBe(
+      ".netherforge/\n.mcp.json\n# Connects coding agents to this computer's editor, with its token: not for sharing.\nopencode.json\n",
+    )
+    expect(withTokenFilesIgnored('build')).toBe(
+      "build\n# Connects coding agents to this computer's editor, with its token: not for sharing.\n.mcp.json\nopencode.json\n",
+    )
+    expect(withTokenFilesIgnored(null)).toContain('.mcp.json\nopencode.json\n')
+  })
+
+  it('is left alone when it ignores both already, rooted or not', () => {
+    expect(withTokenFilesIgnored('/.mcp.json\nopencode.json\n')).toBeNull()
+  })
+
+  it('is brought up to date before opencode.json is first written', async () => {
+    const backend = new MemoryBackend({
+      projects: { '/p': { 'netherforge.json': '{}', '.gitignore': '.netherforge/\n.mcp.json\n' } },
+    })
+    await backend.openProject('/p')
+    expect(await syncOpencodeConfig(backend, ['.gitignore'], true)).toBe(true)
+    expect(backend.testFiles()['.gitignore']).toContain('\nopencode.json\n')
+    expect(backend.testFiles()[OPENCODE_CONFIG_FILE]).toContain(MEMORY_MCP_TOKEN)
   })
 })

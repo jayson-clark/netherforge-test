@@ -56,7 +56,17 @@ data class RecipeFile(
     /** Recipes with the same group share one entry in the recipe book. */
     val group: String? = null,
     /** The recipe book tab. Crafting: `building`, `redstone`, `equipment` or `misc`; cooking: `food`, `blocks` or `misc`. */
-    val category: RecipeCategory? = null
+    val category: RecipeCategory? = null,
+    /** `station`: what it takes from the crafter's inventory, each ingredient with how many. */
+    val materials: List<Material>? = null,
+    /**
+     * `station`: the blocks one of which must be near the crafter, each an id (`"minecraft:crafting_table"`), a
+     * `#tag` or a project block (`"work_bench"`), or several between `|` of which any will do (`"furnace|hellforge"`);
+     * all of the list, when it names several. Absent: none needed.
+     */
+    val stations: List<String>? = null,
+    /** `station`: how near a station must be, in blocks. Default [Material.DEFAULT_STATION_RANGE]. */
+    val stationRange: Int? = null
 ) {
     companion object {
         const val SCHEMA = "../.netherforge/schema/recipe.schema.json"
@@ -90,7 +100,11 @@ enum class RecipeType(
     SMITHING_TRANSFORM(emptySet()),
 
     @SerialName("stonecutting")
-    STONECUTTING(emptySet());
+    STONECUTTING(emptySet()),
+
+    /** Made by scripts (`nf.recipes.craft`), never by the game: materials from the inventory, stations nearby. */
+    @SerialName("station")
+    STATION(emptySet());
 
     val cooking: Boolean get() = this in COOKING
 
@@ -101,11 +115,19 @@ enum class RecipeType(
             SHAPELESS -> setOf("ingredients")
             FURNACE, BLASTING, SMOKING, CAMPFIRE_COOKING, STONECUTTING -> setOf("ingredient")
             SMITHING_TRANSFORM -> setOf("template", "base", "addition")
+            STATION -> setOf("materials")
         }
 
     /** The ingredient and number fields it may have besides those. */
     val optionalFields: Set<String>
-        get() = if (cooking) setOf("experience", "cookingTime") else emptySet()
+        get() = when {
+            cooking -> setOf("experience", "cookingTime")
+            this == STATION -> setOf("stations", "stationRange")
+            else -> emptySet()
+        }
+
+    /** Whether the game makes it (a crafting table, a furnace...): every type but [STATION], which only scripts do. */
+    val inGame: Boolean get() = this != STATION
 
     /** Whether it takes a recipe book `group`: everything but smithing. */
     val takesGroup: Boolean get() = this != SMITHING_TRANSFORM
@@ -148,6 +170,20 @@ enum class RecipeCategory {
     companion object {
         val CRAFTING = setOf(BUILDING, REDSTONE, EQUIPMENT, MISC)
         val COOKING = setOf(FOOD, BLOCKS, MISC)
+    }
+}
+
+/** A `station` recipe's material: an [ingredient] and how many of it ([count], default 1). */
+@Serializable
+data class Material(val ingredient: Ingredient, val count: Int? = null) {
+    val countOrDefault: Int get() = count ?: 1
+
+    companion object {
+        /** How near a station must be by default: Terraria's reach round a crafting station. */
+        const val DEFAULT_STATION_RANGE = 4
+
+        /** The furthest a station may be asked to be. */
+        const val MAX_STATION_RANGE = 16
     }
 }
 

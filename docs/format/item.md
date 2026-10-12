@@ -48,6 +48,7 @@ that describe its look and behaviour. What one stack holds (`count`, `damage`,
 | `drawWithoutAmmo`         | A bow (`minecraft:bow`) that draws and shoots with no arrows, and uses none up. See below.                                                |
 | `block`                   | `<id>`: a [block](block.md) of the project's that a right click with it places.                                                           |
 | `script`                  | The item's one Lua script. See [`script`](#script).                                                                                       |
+| `properties`              | The project's own data about the item, any JSON, for scripts. See [`properties`](#properties).                                            |
 
 Each means what it means on any [item](menu.md#items), and is checked the
 same way (the same problem codes, at the same paths), except `block`, which
@@ -106,6 +107,43 @@ its own: its count, its damage, its script `data`, whatever other plugins
 stored on it, and its enchantments when the definition sets none. A stack
 whose item no longer exists is left as it is.
 
+A name or lore worked out from one stack's own `data` (a prefix, a stat
+rolled for it) is the item script's `render` event's to give: it's heard for
+every stack `nf.items.create` and a loot roll make, and again whenever a stack
+takes the definition's new fields, so it survives the file changing. A name
+a script sets on a stack any other way goes back to the definition's then.
+
+### Looking different to one player
+
+A name and lore that depend on who's looking (a price while they have a shop
+open, a hint for their class) are the item script's `view` event's to give.
+It's heard each time a stack of the item is sent to one player's game (their
+inventory, a window they have open, the stack on their cursor), and what its
+handlers assign to `event.display_name` and `event.lore` is what that player is
+shown. Nothing the server keeps changes: the stack itself, how it stacks, what's
+saved, what anyone else sees, and what scripts read, which is always the real
+stack. Both fields start as the stack's own, after `render`, so `view` adds to
+what `render` worked out.
+
+The game is sent a stack again only when the stack changes, so when what a
+handler looks at changes (a menu opening or closing), call
+`player:refresh_items()`: at the end of the tick, every stack they can see is
+worked out again, and those that look different are sent. `nf.on("item_view")`
+hears every stack, the project's or not, after its item's own handlers. See
+[Prices on a player's own items](../guide/menus.md#prices-on-a-player-s-own-items)
+for an example.
+
+## `properties`
+
+```json partial
+"properties": { "damage": 12, "class": "melee", "tags": ["blade"] }
+```
+
+The project's own facts about this item, as any JSON: what scripts read with
+`nf.items.get(id):properties()` (or `this:properties()` in its script), so data that belongs to it lives in its file instead of
+a table a script keeps in step. Nothing but scripts reads it, and changing it
+doesn't change its stacks' look, so they're never rewritten for it.
+
 ## `script`
 
 ```json partial
@@ -124,7 +162,9 @@ with any stack of it: `this:on("use", ...)`, `"interact"`,
 `"interact_entity"`, `"consume"`, `"hit"`, `"break_block"`, `"drop"` and
 `"pickup"`. Each is the player event of the same name heard first by the
 item, with the same event object, so `event:cancel()` here cancels it for
-everyone.
+everyone. Two more are about how its stacks look: `"render"`, as a stack is
+made ([The stack remembers](#the-stack-remembers)), and `"view"`, as a stack
+is sent to one player ([Looking different to one player](#looking-different-to-one-player)).
 
 ### Files beside the script
 

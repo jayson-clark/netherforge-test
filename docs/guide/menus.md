@@ -341,6 +341,52 @@ A template lasts as long as the script that made it: when that script
 unloads, or you call `template:remove()`, its windows close and its handlers
 go. See the [MenuTemplate reference](../reference/menutemplate.md).
 
+## Prices on a player's own items
+
+A shop often wants to say what the player's own items would sell for, but only
+while the shop is open. Don't write that into their items' lore: give the
+item a `view` handler, which changes how a stack looks to one player without
+changing the stack. Their real items keep stacking with new ones, and nothing
+is left behind if the server stops with the shop open.
+
+```lua
+-- items/ruby/script.lua
+local this = this --[[@as ProjectItem]]
+
+this:on("view", function(event)
+  local menu = event.player:menu()
+  if menu and menu:kind() == "shop" then
+    local lore = event.lore or {}
+    lore[#lore + 1] = "<gold>Sells for 5 coins"
+    event.lore = lore
+  end
+end)
+```
+
+```lua
+-- menus/shop/script.lua
+local this = this --[[@as Menu]]
+
+this:on("open", function(event)
+  event.player:refresh_items()
+end)
+
+this:on("close", function(event)
+  event.player:refresh_items()
+end)
+```
+
+The game is only sent a stack again when the stack changes, so the menu's
+`open` and `close` handlers call `player:refresh_items()`: at the end of the
+tick, the handlers work out everything the player can see again (their
+inventory, the window, their cursor), and only the stacks that now look
+different are sent. Anything that reads the stacks, `player:inventory()`, a
+click's `event.item`, `event.item` in the handler itself, gets the real stack,
+and a stack a creative-mode player's game sends back comes back as the real one.
+To price items that aren't the project's, or every item at once, listen with
+`nf.on("item_view", ...)` instead; while it has a handler, every stack sent to
+every player goes through it, so keep it quick.
+
 ## Items a player keeps
 
 A menu's window holds its items only while it's open. For items a player keeps
@@ -371,8 +417,8 @@ reload or the server crashing.
   slots. A shift-click from the player's own inventory is locked too, unless
   the window says where it goes with `menu:shift_into(storage, first?, last?)`:
   then it fills the bound slots of that storage, first slot first, and nothing
-  else. To accept only some items, cancel the slot's `click` (`event.item` is
-  the stack going in).
+  else. To accept only some items, give the slot a rule (below), or cancel
+  its `click` (`event.item` is the stack going in).
 - Only a window of its own can be bound, not a `shared` one.
 - Scripts read and change a storage like any inventory: `item`, `set_item`,
   `add_item`, `remove_item`, `has_item`. A slot showing it updates at once.
@@ -386,6 +432,36 @@ reload or the server crashing.
 A window shown to two players (`menu:open_for`) can move one player's items
 into another's inventory, and two players' files are saved separately: keep
 bound windows for their own player.
+
+### What a slot takes, and what a player wears
+
+`slot:set_rule(rule)` says what a slot takes: project items by id (`items`),
+the game's by id or `#tag` (`kinds`), project items with a key in their
+`properties` (`property`), things worn in a place (`wearable`), and how many
+of them (`max`). Clicks, drags, number keys and `shift_into` are held to it:
+a stack it doesn't take stays put, and of one it does, only `max` goes in.
+`slot:accepts(item)` asks it.
+
+`slot:bind_equipment(player, "head")` makes a slot show what the player wears
+there (`head`, `chest`, `legs`, `feet` or `off_hand`): what goes in is put on
+at once, and what they put on some other way shows by the next tick.
+
+```lua
+this:on("open", function(event)
+  local rings = event.player:storage("rings", 5)
+  for i = 0, 4 do
+    local slot = this:slot(2 + i)
+    slot:bind(rings, i)
+    slot:set_rule({ property = "accessory", max = 1 })
+  end
+  for i, place in ipairs({ "head", "chest", "legs", "feet" }) do
+    local slot = this:slot(10 + i)
+    slot:bind_equipment(event.player, place)
+    slot:set_rule({ wearable = place, max = 1 })
+  end
+  this:shift_into(rings)
+end)
+```
 
 ## Measuring text
 

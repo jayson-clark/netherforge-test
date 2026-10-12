@@ -20,7 +20,13 @@ class CompiledCentity(
     /** The centity's one script, run once per instance. */
     val script: ScriptDef? = null,
     /** The rules for natural spawns, when the file has any. */
-    val spawning: SpawningDef? = null
+    val spawning: SpawningDef? = null,
+    /** Its `body`, resolved, when it has one. */
+    val body: ResolvedBody? = null,
+    /** Its `health`, resolved, when it has any. */
+    val health: ResolvedHealth? = null,
+    /** Its `properties`, as the file has them. */
+    val properties: Map<String, kotlinx.serialization.json.JsonElement>? = null
 ) {
     private val indexByName = nodes.withIndex().associate { (i, node) -> node.name to i }
     private val animationByName = animations.associateBy { it.name }
@@ -40,10 +46,14 @@ class CompiledCentity(
         val transform: Transform,
         val display: DisplayDef?,
         val hitbox: HitboxDef?,
-        val physics: ResolvedPhysics?
+        val physics: ResolvedPhysics?,
+        /** For a rope node: its links' indices into [nodes], in order from its start, and how long each is. */
+        val rope: Rope? = null
     ) {
         val isRoot: Boolean get() = parentIndex < 0
     }
+
+    class Rope(val links: List<Int>, val linkLength: Double)
 }
 
 class CompiledAnimation(
@@ -52,7 +62,8 @@ class CompiledAnimation(
     val length: Double,
     val loop: LoopMode,
     val autoplay: Boolean,
-    val tracks: List<Track>
+    val tracks: List<Track>,
+    val blend: AnimationBlend = AnimationBlend.REPLACE
 ) {
     /** Keys sorted by time, never empty. */
     class Track(val nodeIndex: Int, val channel: Channel, val keys: List<Keyframe>) {
@@ -127,20 +138,30 @@ object Composer {
 
     /**
      * The local transforms after sampling [animation] at [time] over the
-     * authored pose. A track owns its whole channel.
+     * authored pose. A track owns its whole channel, or for an additive clip,
+     * adds to it (scale multiplies).
      */
     fun pose(centity: CompiledCentity, animation: CompiledAnimation, time: Double): List<Transform> {
         val at = animation.resolve(time).time
         val locals = centity.nodes.map { it.transform }.toMutableList()
         for (track in animation.tracks) {
-            val value = track.sample(at)
-            val base = locals[track.nodeIndex]
-            locals[track.nodeIndex] = when (track.channel) {
-                Channel.TRANSLATION -> base.copy(translation = value)
-                Channel.ROTATION -> base.copy(rotation = value)
-                Channel.SCALE -> base.copy(scale = value)
-            }
+            locals[track.nodeIndex] = locals[track.nodeIndex].posed(track.channel, track.sample(at), animation.blend)
         }
         return locals
+    }
+}
+
+/**
+ * This transform with [channel] set to [value] ([AnimationBlend.REPLACE]) or changed by it
+ * ([AnimationBlend.ADDITIVE]: translation and rotation added, scale multiplied).
+ */
+fun Transform.posed(channel: Channel, value: Vec3, blend: AnimationBlend = AnimationBlend.REPLACE): Transform {
+    val additive = blend == AnimationBlend.ADDITIVE
+    return when (channel) {
+        Channel.TRANSLATION -> copy(translation = if (additive) translationOrDefault + value else value)
+        Channel.ROTATION -> copy(rotation = if (additive) rotationOrDefault + value else value)
+        Channel.SCALE -> copy(
+            scale = if (additive) Vec3(scaleOrDefault.x * value.x, scaleOrDefault.y * value.y, scaleOrDefault.z * value.z) else value
+        )
     }
 }

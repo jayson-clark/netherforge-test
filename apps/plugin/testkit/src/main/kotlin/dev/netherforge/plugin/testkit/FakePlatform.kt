@@ -57,6 +57,7 @@ class FakePlatform(
     override val playerList = FakePlayerList(this)
     override val bots = FakeBots(this)
     override val projectItems = FakeProjectItems(this)
+    override val itemViews = FakeItemViews(this)
     override val recipes = FakeRecipes(this)
     override val loot = FakeLoot(this)
     override val worldManager = FakeWorldManager(this)
@@ -161,6 +162,8 @@ class FakePlatform(
         mobGoals.think()
         worldEntities.pickUp()
         players.useItems()
+        // Then players' games are sent what changed, as the server keeps their screens in step.
+        itemViews.broadcast()
     }
 
     companion object {
@@ -330,6 +333,17 @@ class FakePlatform(
                         "waterlogged" to listOf("true", "false")
                     ),
                     defaults = mapOf("facing" to "north", "half" to "bottom", "shape" to "straight", "waterlogged" to "false")
+                ),
+                // A door a centity's walk opens and shuts (`move_to`'s `open_doors`).
+                "minecraft:oak_door" to BlockInfo(
+                    properties = mapOf(
+                        "facing" to listOf("north", "south", "west", "east"),
+                        "half" to listOf("upper", "lower"),
+                        "hinge" to listOf("left", "right"),
+                        "open" to listOf("true", "false"),
+                        "powered" to listOf("true", "false")
+                    ),
+                    defaults = mapOf("facing" to "north", "half" to "lower", "hinge" to "left", "open" to "false", "powered" to "false")
                 )
             ) + CONCRETE.associateWith { BlockInfo() } + LUMEN_VALE_BLOCKS,
             registries = mapOf(
@@ -370,6 +384,8 @@ class FakePlatform(
                     "minecraft:glass_bottle",
                     "minecraft:glowstone_dust",
                     "minecraft:golden_helmet",
+                    // What menu slots that show a player's head take, by the game's tag.
+                    "minecraft:iron_helmet",
                     "minecraft:iron_ingot",
                     "minecraft:iron_pickaxe",
                     "minecraft:sweet_berries"
@@ -454,12 +470,16 @@ class FakePlatform(
                 "minecraft:worldgen/feature" to listOf("minecraft:amethyst_geode", "minecraft:glow_lichen")
             ),
             tags = mapOf(
-                RegistryKey.ITEM.id to mapOf("minecraft:planks" to listOf("minecraft:dark_oak_planks", "minecraft:oak_planks")),
+                RegistryKey.ITEM.id to mapOf(
+                    "minecraft:planks" to listOf("minecraft:dark_oak_planks", "minecraft:oak_planks"),
+                    "minecraft:head_armor" to listOf("minecraft:golden_helmet", "minecraft:iron_helmet")
+                ),
                 RegistryKey.BLOCK.id to mapOf(
                     "minecraft:mineable/pickaxe" to listOf("minecraft:stone", "minecraft:stone_bricks"),
                     "minecraft:mineable/axe" to listOf("minecraft:oak_planks", "minecraft:note_block"),
                     "minecraft:planks" to listOf("minecraft:oak_planks"),
-                    "minecraft:leaves" to listOf("minecraft:birch_leaves", "minecraft:oak_leaves")
+                    "minecraft:leaves" to listOf("minecraft:birch_leaves", "minecraft:oak_leaves"),
+                    "minecraft:wooden_doors" to listOf("minecraft:oak_door")
                 ),
                 RegistryKey.BIOME.id to mapOf(
                     "minecraft:is_end" to listOf("minecraft:the_end"),
@@ -502,7 +522,12 @@ class FakePlatform(
                     Box(Vec3.ZERO, Vec3(1.0, 0.5, 1.0)),
                     Box(Vec3(0.5, 0.5, 0.0), Vec3(1.0, 1.0, 1.0))
                 )
-            ) + CONCRETE.associateWith { CUBE }
+            ) + CONCRETE.associateWith { CUBE } +
+                // A door opened against its south side, as a walk opens one to go through.
+                listOf("lower", "upper").associate {
+                    "minecraft:oak_door[facing=north,half=$it,hinge=left,open=true,powered=false]" to
+                        listOf(Box(Vec3(0.0, 0.0, 0.8125), Vec3(1.0, 1.0, 1.0)))
+                }
         )
     }
 }

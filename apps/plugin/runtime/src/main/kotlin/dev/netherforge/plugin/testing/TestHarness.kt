@@ -1,7 +1,9 @@
 package dev.netherforge.plugin.testing
 
 import dev.netherforge.plugin.lua.ScriptFailure
+import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.PlayerRef
+import java.util.UUID
 
 /**
  * What a test run gives the runtime: the fake server's clock and who is on
@@ -15,6 +17,12 @@ interface TestHarness {
 
     /** Joins a fake player named [name], the join events raised, and returns them: the one already online by that name, if there is one. */
     fun join(name: String): PlayerRef
+
+    /**
+     * The stack [player]'s game was last sent for [slot] of their inventory (of the window they have open, with
+     * [menu]; their cursor when [slot] is null), as they're shown it; null for none.
+     */
+    fun shown(player: UUID, slot: Int?, menu: Boolean): ItemData?
 }
 
 /** How one test ended. */

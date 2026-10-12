@@ -4,6 +4,7 @@ import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.Channel
 import dev.netherforge.format.centity.CompiledCentity
 import dev.netherforge.format.centity.DisplayDef
+import dev.netherforge.format.centity.Easing
 import dev.netherforge.format.centity.Transform
 import dev.netherforge.format.math.Matrix4
 import dev.netherforge.format.math.degreesToRadians
@@ -100,6 +101,22 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
     var natural = false
         internal set
 
+    /**
+     * A script spawned it temporary (`nf.centities.spawn`'s `temporary` or `lifetime`): not saved, its entities not
+     * persistent, removed when [owner] (the scope that spawned it) is released or at [expires]. `keep()` ends it.
+     */
+    var temporary = false
+        internal set
+
+    /** The scope a [temporary] instance goes with, by id: whoever spawned it, or set its lifetime. */
+    internal var owner: Int? = null
+
+    /** The server tick a [temporary] instance with a lifetime is removed at, or null. */
+    internal var expires: Long? = null
+
+    /** Never saved, its entities never persistent: [natural] or [temporary]. */
+    val transient: Boolean get() = natural || temporary
+
     /** Ticks it has been ticked since it was attached. */
     var age = 0L
 
@@ -128,6 +145,12 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
 
     /** Where `move_to` is walking it, if anywhere: see [CentityPaths]. Runtime state, dropped by [redefine]. */
     internal var walk: Walk? = null
+
+    /**
+     * The doors its walks opened (`open_doors`), each block of them, to shut once it's through: its own rather than
+     * a walk's, so a walk stopped or replaced on the way still shuts them behind it. Kept across reloads.
+     */
+    internal val openedDoors = ArrayList<Doorway>(0)
 
     /** The entities no longer match the definition (a reload happened while unloaded). */
     var needsReconcile = true
@@ -172,6 +195,18 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
 
     /** [placed], kept until the pose or facing changes. */
     private var placedCache: List<Matrix4>? = null
+
+    /** Its health (`centity.json`'s `health`, or `set_max_health`'s): see [Healths]. Runtime state, never saved. */
+    internal var health: Health? = null
+
+    /** Its flight as a projectile (`launch`), while it flies: see [Flights]. Runtime state, never saved. */
+    internal var flight: Flight? = null
+
+    /** Its `body` as it runs, when it has one: see [Movers]. Runtime state: a reload starts it again from the file's. */
+    var mover: Mover? = declared.body?.let(::Mover)
+
+    /** What its hitboxes touch now (other instances' and entities' ids), while something listens to its `touch`: see [SpatialQueries.contacts]. */
+    internal var touching: Set<UUID> = emptySet()
 
     /** Its hitboxes as [ObstacleGrid] measured them, kept until the pose, facing, visibility or a display changes. */
     internal var obstacles: ObstacleGrid.Obstacles? = null
@@ -309,6 +344,7 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
         animations.stopAll()
         // A walk was sized from the old hitboxes, and its `path_end` handlers went with the old script.
         walk = null
+        mover = next.body?.let(::Mover)
         needsReconcile = true
         forceSync = true
         posed()
@@ -331,12 +367,55 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
         Channel.SCALE -> pose[index].scaleOrDefault
     }
 
+    /** A channel of the rest pose: the authored transform, or what a script last set. */
+    fun rest(index: Int, channel: Channel): Vec3 = when (channel) {
+        Channel.TRANSLATION -> rest[index].translationOrDefault
+        Channel.ROTATION -> rest[index].rotationOrDefault
+        Channel.SCALE -> rest[index].scaleOrDefault
+    }
+
     /** Sets a channel of the rest pose. An animation driving the channel still overrides it while it plays. */
     fun set(index: Int, channel: Channel, value: Vec3) {
         rest[index] = rest[index].with(channel, value)
         pose[index] = pose[index].with(channel, value)
         edited[index] = true
         posed()
+    }
+
+    /** A channel of a node's rest pose easing from [from] to [to] over [ticks] (and back, with [back]). */
+    class Tween(val index: Int, val channel: Channel, val from: Vec3, val to: Vec3, val ticks: Int, val easing: Easing, val back: Boolean) {
+        var tick = 0
+        val done: Boolean get() = tick >= if (back) ticks * 2 else ticks
+
+        /** Where it is at [tick]: out, then (with [back]) home again. */
+        fun value(): Vec3 {
+            val out = if (tick <= ticks) tick.toDouble() / ticks else 2.0 - tick.toDouble() / ticks
+            val t = easing.apply(out.coerceIn(0.0, 1.0))
+            return Vec3(from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t, from.z + (to.z - from.z) * t)
+        }
+    }
+
+    /** Its rope nodes strung between two ends, by node name: laid again each tick. */
+    val ropes = HashMap<String, StrungRope>(0)
+
+    /** The tweens easing its nodes, at most one per node and channel. */
+    val tweens = ArrayList<Tween>(0)
+
+    /** Starts [tween], replacing any of the same node and channel. */
+    fun tween(tween: Tween) {
+        tweens.removeAll { it.index == tween.index && it.channel == tween.channel }
+        tweens += tween
+    }
+
+    /** Moves every tween on a tick, setting its channel's rest pose, and drops those that are done. */
+    fun stepTweens() {
+        val iterator = tweens.iterator()
+        while (iterator.hasNext()) {
+            val tween = iterator.next()
+            tween.tick++
+            set(tween.index, tween.channel, tween.value())
+            if (tween.done) iterator.remove()
+        }
     }
 
     /** The pose or facing changed: sync it, and measure it again. */

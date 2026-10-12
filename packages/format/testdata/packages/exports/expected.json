@@ -23,7 +23,7 @@
   {
     "severity": "error",
     "file": "lib:netherforge.json",
-    "message": "\"widgets\" isn't a kind of resource: export from resource_packs, particles, cutscenes, modules, structures, maps, items, recipes, loot, blocks, datapacks, biomes, skies, dimension_types, terrain, advancements, menus, dialogs, centities",
+    "message": "\"widgets\" isn't a kind of resource: export from resource_packs, particles, cutscenes, modules, structures, maps, items, recipes, loot, buffs, blocks, datapacks, biomes, skies, dimension_types, terrain, advancements, menus, dialogs, centities",
     "path": "$.exports.widgets",
     "code": "package.export-kind"
   },

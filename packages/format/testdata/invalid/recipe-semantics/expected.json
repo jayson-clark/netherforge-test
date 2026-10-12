@@ -7,6 +7,13 @@
   },
   {
     "severity": "error",
+    "file": "recipes/bare.json",
+    "message": "A station recipe takes at least one material",
+    "path": "$.materials",
+    "code": "recipe.ingredients"
+  },
+  {
+    "severity": "error",
     "file": "recipes/cut.json",
     "message": "An ingredient object has only \"item\", not \"count\"",
     "code": "parse"
@@ -176,5 +183,33 @@
     "message": "\"Bad Id!\" isn't an item id",
     "path": "$.base",
     "code": "recipe.ingredient"
+  },
+  {
+    "severity": "error",
+    "file": "recipes/station.json",
+    "message": "A station recipe has no experience",
+    "path": "$.experience",
+    "code": "recipe.field"
+  },
+  {
+    "severity": "error",
+    "file": "recipes/station.json",
+    "message": "count must be at least 1",
+    "path": "$.materials[0].count",
+    "code": "recipe.ingredients"
+  },
+  {
+    "severity": "error",
+    "file": "recipes/station.json",
+    "message": "A station is a block id, a #tag or a project block, or several of them between | (any of them)",
+    "path": "$.stations[0]",
+    "code": "recipe.station"
+  },
+  {
+    "severity": "error",
+    "file": "recipes/station.json",
+    "message": "stationRange must be 1 to 16",
+    "path": "$.stationRange",
+    "code": "recipe.station"
   }
 ]

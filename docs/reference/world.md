@@ -18,6 +18,8 @@ What `world:on(event, handler)` listens for. See [Events](events.md) for how eve
 | `block_break` | [BlockBreakEvent](events.md#blockbreakevent) | yes | A player is breaking a block in this world: before `nf.on("block_break")`, with the same event, so `event:cancel()` here stops it and `event:stop()` keeps it from `nf`. Assign `event.drops` and `event.experience` to change what it drops. Bubbles. Writable: `drops`, `experience`. |
 | `block_place` | [BlockPlaceEvent](events.md#blockplaceevent) | yes | A player is placing a block in this world: before `nf.on("block_place")`, with the same event. Bubbles. |
 | `entity_spawn` | [EntitySpawnEvent](events.md#entityspawnevent) | yes | An entity is coming into this world: before `nf.on("entity_spawn")`, with the same event, so `event:cancel()` here stops it and `event:stop()` keeps it from `nf`. Bubbles. |
+| `dusk` | [DaylightEvent](events.md#daylightevent) |  | Night fell here: the time of day went from day (23000 to 12999) into night (13000 to 22999), by the clock or by `/time set`. Heard before `nf.on("world_dusk")`, with the same event, so `event:stop()` keeps it from there. The runtime looks at the clock every tick, and only while something listens; a jump from one night to the next (a whole day skipped) is no change, so nothing is heard. Bubbles. |
+| `dawn` | [DaylightEvent](events.md#daylightevent) |  | Day broke here: the time of day went from night (13000 to 22999) into day (23000 to 12999), by the clock or by `/time set` (sleeping through the night too). Heard before `nf.on("world_dawn")`, with the same event, so `event:stop()` keeps it from there. Bubbles. |
 | `block_explode` | [ExplodeEvent](events.md#explodeevent) | yes | A block exploded: a bed in the nether or the end, a respawn anchor charged away from the overworld. `event:cancel()` stops the explosion breaking anything; assign `event.breaks_blocks = false` to keep every block standing but still hurt what is near, or `event.yield` to change how much of what breaks drops. In this world: heard before `nf.on("block_explode")`, with the same event, so `event:stop()` keeps it from there. Bubbles. Writable: `breaks_blocks`, `yield`. |
 | `block_ignite` | [BlockIgniteEvent](events.md#blockigniteevent) | yes | A block is catching fire: flint and steel, a fire charge, lava, lightning, fire spreading, an explosion. `event:cancel()` keeps it from burning. In this world: heard before `nf.on("block_ignite")`, with the same event, so `event:stop()` keeps it from there. Bubbles. |
 | `block_burn` | [BlockBurnEvent](events.md#blockburnevent) | yes | A block is burning away in a fire. `event:cancel()` keeps it there (it may still catch fire again). In this world: heard before `nf.on("block_burn")`, with the same event, so `event:stop()` keeps it from there. Bubbles. |
@@ -90,6 +92,18 @@ Sets the time of day, keeping the day count. Taken modulo 24000. Doesn't stop th
 | `ticks` | `integer` | 0 sunrise, 6000 noon, 12000 sunset, 18000 midnight. |
 
 **Returns** `boolean`: `false` when the world has gone.
+
+## `world:is_night()`
+
+Whether it is night here: the time of day is 13000 to 22999, from dusk to just before sunrise, as `/time set night` and a centity's `"night"` spawn time mean it. `false` once the world has gone.
+
+**Returns** `boolean`
+
+## `world:is_day()`
+
+Whether it is day here: the time of day is 23000 to 12999, the rest of `is_night`'s. `false` once the world has gone.
+
+**Returns** `boolean`
 
 ## `world:day_count()`
 
@@ -225,6 +239,24 @@ if box then
     return box.cells[1 + x + box.size_x * (z + box.size_z * y)]
   end
   if at(0, 0, 0) == 2 then log("solid") end
+end
+```
+
+## `world:flood(start, options)`
+
+Fills outward from a block through every block `options.through` names, one neighbour at a time, as far as it reaches: the blocks of a tree (`through = { "#minecraft:logs" }`), the air of a room (`through = { "passable" }`), a lake. It answers every block it filled (`positions`, nearest first by steps) and every block it stopped at (`edges`: a room's walls), with what each is when asked (`kinds`), and `stopped` says why it didn't finish when it didn't: it hit its `limit`, a chunk that isn't loaded or the world's top or bottom (`"unloaded"`: a room open to the sky or the unknown), or its `bounds`. It runs in the server, reading the blocks a box at a time, so a fill of thousands of blocks costs a script one call. A start block it can't fill through answers no positions, and the start as an edge. Blocks in chunks that aren't loaded can't be read or changed: that answers `nil` or `false`, and never loads the chunk (`world:load_chunk` does).
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `start` | `Vec3` | Any point in the block to start from. |
+| `options` | `FloodOptions` |  |
+
+**Returns** `FloodResult?`: `nil` once the world has gone.
+
+```lua
+local room = world:flood(assert(player:position()), { through = { "passable" }, except = { "#minecraft:doors" }, limit = 750, kinds = true })
+if room and not room.stopped then
+  log(#room.positions .. " blocks of air, walled in by " .. #room.edges)
 end
 ```
 
@@ -460,6 +492,111 @@ local world, eyes, facing = player:world(), player:eye_position(), player:direct
 local hit = world and eyes and facing and world:raycast(eyes, facing, 20)
 if hit and hit.centity then
   hit.centity:play_animation("wobble")
+end
+```
+
+## `world:overlap_box(min, max, options?)`
+
+Everything whose hitbox is inside or touches a box, nearest the box's middle first. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `min` | `Vec3` | One corner, in the world. |
+| `max` | `Vec3` | The opposite corner. The corners may come in either order. |
+| `options` (optional) | `QueryOptions` |  |
+
+**Returns** `QueryHit[]`
+
+```lua
+local corner = vec3(0, 64, 0)
+for _, hit in ipairs(world:overlap_box(corner, corner + vec3(4, 3, 4), { players = false })) do
+  if hit.centity then
+    hit.centity:remove()
+  end
+end
+```
+
+## `world:overlap_sphere(center, radius, options?)`
+
+Everything whose hitbox comes within `radius` of a point, nearest first: what an explosion or an aura reaches. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `center` | `Vec3` | The middle, in the world. |
+| `radius` | `number` | In blocks, at least 0. |
+| `options` (optional) | `QueryOptions` |  |
+
+**Returns** `QueryHit[]`
+
+```lua
+for _, hit in ipairs(world:overlap_sphere(vec3(0, 64, 0), 4, { entities = false })) do
+  log(hit.distance)
+end
+```
+
+## `world:overlap_cone(origin, direction, length, angle, options?)`
+
+Everything whose hitbox reaches into a cone from a point, nearest first: what a swing or a breath in front of someone reaches. A hitbox counts when its point nearest the cone's axis is within `length` of the tip and within `angle` of the axis, or the tip is inside it. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `origin` | `Vec3` | The cone's tip, in the world. |
+| `direction` | `Vec3` | Which way it opens: any length but zero. |
+| `length` | `number` | How far it reaches from the tip, in blocks, at least 0. |
+| `angle` | `number` | How wide it opens, in degrees from its axis to its side: 0 to 180 (90 is everything in front, 180 a sphere). |
+| `options` (optional) | `QueryOptions` |  |
+
+**Returns** `QueryHit[]`
+
+```lua
+local eyes, facing = assert(player:eye_position()), assert(player:direction())
+for _, hit in ipairs(world:overlap_cone(eyes, facing, 3, 45, { exclude = { player } })) do
+  if hit.centity then
+    hit.centity:emit("game:struck", { by = player })
+  end
+end
+```
+
+## `world:sweep(from, to, options?)`
+
+Moves a sphere of `options.radius` (0, a point, by default) from one point to another and answers everything it touches on the way, in the order it meets them: what a fast or piercing shot passes through in a tick, which a ray (stopping at the first thing) can't say. Blocks stop it unless `blocks = false`: the block it meets is then the last hit, with its `normal`, and nothing past it is found. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `from` | `Vec3` | Where it starts, in the world. |
+| `to` | `Vec3` | Where it would end. |
+| `options` (optional) | `SweepOptions` |  |
+
+**Returns** `QueryHit[]`
+
+```lua
+local position, velocity = vec3(0, 65, 0), vec3(2, 0, 0)
+local hits = world:sweep(position, position + velocity, { radius = 0.25, players = false })
+for _, hit in ipairs(hits) do
+  if hit.block then
+    break -- it struck a wall
+  elseif hit.centity then
+    hit.centity:emit("game:hit", { damage = 5 })
+  end
+end
+```
+
+## `world:nearest(position, radius, options?)`
+
+The nearest thing whose hitbox comes within `radius` of a point, or `nil` when there's nothing: what a homing shot or a mob looking for a target wants. With `line_of_sight = true`, only something a ray from the point reaches without a block in the way. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `position` | `Vec3` | Where to look from, in the world. |
+| `radius` | `number` | How far to look, in blocks, at least 0. |
+| `options` (optional) | `QueryOptions` |  |
+
+**Returns** `QueryHit?`
+
+```lua
+local target = world:nearest(assert(this:position()), 16, { centities = false, line_of_sight = true })
+if target and target.entity then
+  this:look_at(target.position)
 end
 ```
 

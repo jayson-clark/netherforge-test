@@ -24,6 +24,7 @@ import net.minecraft.world.level.storage.LevelResource
 import org.bukkit.Bukkit
 import org.bukkit.World
 import org.bukkit.WorldCreator
+import org.bukkit.craftbukkit.inventory.CraftItemStack
 import java.nio.file.Files
 import java.util.Locale
 
@@ -96,4 +97,6 @@ internal object Mojang : ServerInternals {
 
     /** No world clocks before 26.1: nothing to send. */
     override fun sendClock(player: ServerPlayer, clock: String, ticks: Long) {}
+
+    override fun mirror(stack: net.minecraft.world.item.ItemStack): org.bukkit.inventory.ItemStack = CraftItemStack.asCraftMirror(stack)
 }

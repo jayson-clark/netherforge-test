@@ -438,6 +438,17 @@
           }
         },
         {
+          "name": "world_dusk",
+          "doc": "Night fell in a world: its time of day went from day (23000 to 12999) into night (13000 to 22999), by the clock or by `/time set`. After the world's own `dusk` handlers.",
+          "payload": "DaylightEvent",
+          "example": "nf.on(\"world_dusk\", function(event)\n  log(\"night falls over\", event.world:name())\nend)"
+        },
+        {
+          "name": "world_dawn",
+          "doc": "Day broke in a world: its time of day went from night (13000 to 22999) into day (23000 to 12999), by the clock or by `/time set`. After the world's own `dawn` handlers.",
+          "payload": "DaylightEvent"
+        },
+        {
           "name": "player_input",
           "doc": "A player's movement keys changed: what they hold down now, as their game sends it (forward, back, left, right, jump, sneak, sprint), whether or not they can move. For steering something they ride or controlling a centity. The server only watches input while something listens, so it costs nothing otherwise.",
           "payload": "PlayerInputEvent",
@@ -1319,6 +1330,25 @@
           "payload": "ClickEvent"
         },
         {
+          "name": "recipe_craft",
+          "doc": "`nf.recipes.craft` is making a `station` recipe once: its materials are taken, and `event.result` is about to be given. Assign `event.result` to give something else (the same item with a rolled prefix, a stack of a different size). Heard once for each making, so each gets its own; while nobody listens, the makings are given in stacks.",
+          "payload": "RecipeCraftEvent",
+          "writable": [
+            "result"
+          ],
+          "example": "nf.on(\"recipe_craft\", function(event)\n  if event.result.item == \"copper_sword\" then\n    local sword = event.result\n    sword.data = { prefix = \"Sharp\" }\n    event.result = nf.items.create(\"copper_sword\", sword)\n  end\nend)"
+        },
+        {
+          "name": "item_view",
+          "doc": "Any stack is being sent to one player's game (their inventory, a window they have open, their cursor): after its project item's own `view` handlers, for a stack of one, and for every other stack too. Assign `event.display_name` and `event.lore` to change how it looks to `event.player` alone; nothing the server keeps changes. While nobody listens, stacks are sent as they are; while someone does, every stack sent is worked out here first, so prefer an item's own `view` when only some items change.",
+          "payload": "ItemViewEvent",
+          "writable": [
+            "display_name",
+            "lore"
+          ],
+          "example": "nf.on(\"item_view\", function(event)\n  if event.player:menu() and event.item.kind == \"minecraft:diamond\" then\n    event.display_name = \"<aqua>Diamond <gray>(sells for 50)\"\n  end\nend)"
+        },
+        {
           "name": "centity_natural_spawn",
           "doc": "A centity is about to appear by itself, from the `spawning` block of its `centity.json`: once for each one of a group, before it exists. `event:cancel()` refuses it (it doesn't count against anything, and the spawner tries again later); assign `event.location` to move it. It is asked after the spawner has checked the place against the centity's rules, and before the centity's own `spawn`.",
           "payload": "CentityNaturalSpawnEvent",
@@ -2078,6 +2108,24 @@
       "fields": [],
       "functions": [
         {
+          "name": "properties",
+          "doc": "A centity's `properties` from its `centity.json`, without one spawned: what `centity:properties()` answers for every instance of it. An empty table when the file has none; a centity the project doesn't have is an error. A new table each call.",
+          "params": [
+            {
+              "name": "kind",
+              "type": "string",
+              "doc": "Its folder name under `centities/`.",
+              "names": "centity"
+            }
+          ],
+          "returns": [
+            {
+              "type": "table"
+            }
+          ],
+          "example": "local stats = nf.centities.properties(\"green_slime\")\nlog(stats.hp)"
+        },
+        {
           "name": "spawn",
           "doc": "Puts a new instance of a centity into the world. Its entities exist, its script's body has run and its `spawn` handlers have heard it by the time this returns. A centity the project doesn't have is an error.",
           "params": [
@@ -2091,6 +2139,12 @@
               "name": "location_or_position",
               "type": "Location|Vec3",
               "doc": "Where its position (the anchor) goes: a `Location` (it faces the location's `yaw`, when it has one), or a position in the calling centity's world (the server's first world, in a module). Without a yaw it faces south (yaw 0)."
+            },
+            {
+              "name": "options",
+              "type": "CentitySpawnOptions",
+              "doc": "",
+              "optional": true
             }
           ],
           "returns": [
@@ -2368,7 +2422,7 @@
       "functions": [
         {
           "name": "register",
-          "doc": "Adds a recipe the server learns at once, sent to everyone online. `definition` says what `recipes/<id>.json` would, in Lua spelling: `type` (`\"shaped\"`, `\"shapeless\"`, `\"furnace\"`, `\"blasting\"`, `\"smoking\"`, `\"campfire_cooking\"`, `\"smithing_transform\"` or `\"stonecutting\"`), then what that type takes: `pattern` and `key`, `ingredients`, `ingredient`, or `template`, `base` and `addition`; `result` (an `Item`), and `experience`, `cooking_time`, `group` and `category`. An ingredient is an item id (`\"minecraft:stick\"`), a tag (`\"#minecraft:planks\"`) or a project item (`{ item = \"ruby\" }`). Registering an id again replaces the recipe. It lasts as long as the script that registered it (so a reloaded script registers it again in its body). An id a `recipes/` file has, or anything that file would have an error for, is an error.",
+          "doc": "Adds a recipe the server learns at once, sent to everyone online. `definition` says what `recipes/<id>.json` would, in Lua spelling: `type` (`\"shaped\"`, `\"shapeless\"`, `\"furnace\"`, `\"blasting\"`, `\"smoking\"`, `\"campfire_cooking\"`, `\"smithing_transform\"`, `\"stonecutting\"` or `\"station\"`), then what that type takes: `pattern` and `key`, `ingredients`, `ingredient`, `template`, `base` and `addition`, or `materials` (each `{ ingredient = ..., count = n }`), `stations` and `station_range`; `result` (an `Item`), and `experience`, `cooking_time`, `group` and `category`. An ingredient is an item id (`\"minecraft:stick\"`), a tag (`\"#minecraft:planks\"`) or a project item (`{ item = \"ruby\" }`). Registering an id again replaces the recipe. It lasts as long as the script that registered it (so a reloaded script registers it again in its body). An id a `recipes/` file has, or anything that file would have an error for, is an error.",
           "params": [
             {
               "name": "id",
@@ -2400,6 +2454,77 @@
               "type": "boolean"
             }
           ]
+        },
+        {
+          "name": "get",
+          "doc": "A `station` recipe, as `StationRecipe` (its `times` left out), or `nil` when there's no such recipe or it isn't a station recipe. A recipe the game makes (a crafting table's) isn't one: the game crafts those itself.",
+          "params": [
+            {
+              "name": "id",
+              "type": "string",
+              "doc": "Its id.",
+              "names": "recipe"
+            }
+          ],
+          "returns": [
+            {
+              "type": "StationRecipe?"
+            }
+          ]
+        },
+        {
+          "name": "available",
+          "doc": "The `station` recipes a player can make now: every station each needs is within its `station_range` of them (or of `options.near`), and their inventory holds its materials, with `times` how many times over. A material matches as a recipe's ingredient does: an item id or a `#tag` takes any stack of that kind but a project item's, and a project item only its own stacks. A station is a block id, a `#tag` of blocks or a project block, near when it's within the recipe's `station_range` (4 by default) on every axis.",
+          "params": [
+            {
+              "name": "player",
+              "type": "Player",
+              "doc": "Who makes them: their inventory, and where they stand."
+            },
+            {
+              "name": "options",
+              "type": "RecipeAvailableOptions",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "StationRecipe[]",
+              "doc": "In id order. Empty for a player who is offline."
+            }
+          ],
+          "example": "for _, recipe in ipairs(nf.recipes.available(player)) do\n  log(recipe.id .. \" x\" .. recipe.times)\nend"
+        },
+        {
+          "name": "craft",
+          "doc": "Makes a `station` recipe for a player: takes its materials from their inventory and gives them its result (what doesn't fit drops at their feet), `times` over, or as many times as they can when that's fewer. A station it needs that isn't near makes nothing. A material matches as a recipe's ingredient does: an item id or a `#tag` takes any stack of that kind but a project item's, and a project item only its own stacks. A station is a block id, a `#tag` of blocks or a project block, near when it's within the recipe's `station_range` (4 by default) on every axis. A recipe that isn't a station one is an error.",
+          "params": [
+            {
+              "name": "player",
+              "type": "Player",
+              "doc": ""
+            },
+            {
+              "name": "id",
+              "type": "string",
+              "doc": "The recipe's id.",
+              "names": "recipe"
+            },
+            {
+              "name": "options",
+              "type": "RecipeCraftOptions",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "integer",
+              "doc": "How many times it was made: 0 when it couldn't be, or the player is offline."
+            }
+          ],
+          "example": "local made = nf.recipes.craft(player, \"copper_pickaxe\")\nif made == 0 then\n  player:send_message(\"<red>You can't make that here.\")\nend"
         },
         {
           "name": "all",
@@ -3451,7 +3576,7 @@
           "params": [
             {
               "name": "event",
-              "type": "\"tick\"|\"player_join\"|\"player_quit\"|\"player_chat\"|\"player_interact\"|\"player_interact_entity\"|\"player_move\"|\"player_teleport\"|\"player_change_world\"|\"player_death\"|\"player_respawn\"|\"player_drop_item\"|\"player_pickup_item\"|\"player_use_item\"|\"player_consume_item\"|\"player_swap_hands\"|\"player_sneak\"|\"player_command\"|\"block_break\"|\"block_place\"|\"entity_damage\"|\"entity_death\"|\"entity_spawn\"|\"player_input\"|\"player_change_slot\"|\"player_swing\"|\"player_sprint\"|\"player_fly\"|\"player_jump\"|\"player_change_game_mode\"|\"player_change_food\"|\"player_gain_experience\"|\"player_change_level\"|\"player_kick\"|\"player_complete_advancement\"|\"player_stop_using_item\"|\"player_break_item\"|\"entity_heal\"|\"projectile_launch\"|\"projectile_hit\"|\"entity_shoot_bow\"|\"entity_target\"|\"entity_explode\"|\"block_explode\"|\"entity_combust\"|\"entity_change_effect\"|\"block_ignite\"|\"block_burn\"|\"block_spread\"|\"block_flow\"|\"block_grow\"|\"block_fade\"|\"block_form\"|\"leaves_decay\"|\"piston_extend\"|\"piston_retract\"|\"block_redstone\"|\"sign_change\"|\"block_start_break\"|\"block_drop_item\"|\"weather_change\"|\"thunder_change\"|\"lightning_strike\"|\"chunk_load\"|\"chunk_generated\"|\"chunk_unload\"|\"world_load\"|\"world_unload\"|\"entity_mount\"|\"entity_dismount\"|\"vehicle_move\"|\"vehicle_damage\"|\"vehicle_destroy\"|\"player_open_inventory\"|\"player_close_inventory\"|\"player_craft\"|\"player_prepare_craft\"|\"player_prepare_anvil\"|\"player_prepare_smithing\"|\"player_prepare_grindstone\"|\"player_enchant_item\"|\"furnace_smelt\"|\"server_list_ping\"|\"centity_click\"|\"centity_natural_spawn\"|\"menu_open\"|\"menu_close\"|\"menu_click\"|\"dialog_press\"|\"setting_changed\"",
+              "type": "\"tick\"|\"player_join\"|\"player_quit\"|\"player_chat\"|\"player_interact\"|\"player_interact_entity\"|\"player_move\"|\"player_teleport\"|\"player_change_world\"|\"player_death\"|\"player_respawn\"|\"player_drop_item\"|\"player_pickup_item\"|\"player_use_item\"|\"player_consume_item\"|\"player_swap_hands\"|\"player_sneak\"|\"player_command\"|\"block_break\"|\"block_place\"|\"entity_damage\"|\"entity_death\"|\"entity_spawn\"|\"world_dusk\"|\"world_dawn\"|\"player_input\"|\"player_change_slot\"|\"player_swing\"|\"player_sprint\"|\"player_fly\"|\"player_jump\"|\"player_change_game_mode\"|\"player_change_food\"|\"player_gain_experience\"|\"player_change_level\"|\"player_kick\"|\"player_complete_advancement\"|\"player_stop_using_item\"|\"player_break_item\"|\"entity_heal\"|\"projectile_launch\"|\"projectile_hit\"|\"entity_shoot_bow\"|\"entity_target\"|\"entity_explode\"|\"block_explode\"|\"entity_combust\"|\"entity_change_effect\"|\"block_ignite\"|\"block_burn\"|\"block_spread\"|\"block_flow\"|\"block_grow\"|\"block_fade\"|\"block_form\"|\"leaves_decay\"|\"piston_extend\"|\"piston_retract\"|\"block_redstone\"|\"sign_change\"|\"block_start_break\"|\"block_drop_item\"|\"weather_change\"|\"thunder_change\"|\"lightning_strike\"|\"chunk_load\"|\"chunk_generated\"|\"chunk_unload\"|\"world_load\"|\"world_unload\"|\"entity_mount\"|\"entity_dismount\"|\"vehicle_move\"|\"vehicle_damage\"|\"vehicle_destroy\"|\"player_open_inventory\"|\"player_close_inventory\"|\"player_craft\"|\"player_prepare_craft\"|\"player_prepare_anvil\"|\"player_prepare_smithing\"|\"player_prepare_grindstone\"|\"player_enchant_item\"|\"furnace_smelt\"|\"server_list_ping\"|\"centity_click\"|\"recipe_craft\"|\"item_view\"|\"centity_natural_spawn\"|\"menu_open\"|\"menu_close\"|\"menu_click\"|\"dialog_press\"|\"setting_changed\"",
               "doc": "The event's name, as `nf.on` takes it."
             },
             {
@@ -3468,6 +3593,118 @@
             }
           ],
           "example": "local alex = nf.test.player(\"Alex\")\nlocal result = nf.test.raise(\"player_chat\", { player = alex, message = \"hello\", format = \"<message>\" })\nassert(not result.cancelled)\nassert(result.event.message == \"hello\")"
+        },
+        {
+          "name": "terrain",
+          "impl": "lua",
+          "doc": "A stand-in for a terrain script's `terrain` (what its `...` is), to test worldgen modules on their own: `noise(name):at(...)`, `height`, `area`, `biome`, `seed`, `min_y`, `max_y`, `sea_level` and `plan` as a terrain script has them, each answering what `options` says. `noises` maps a noise's name to its value everywhere, or to a function of the place (`x, y, z`, or `x, z` for a column) giving it; a noise it doesn't name is 0. `height`, `area` and `biome` are a value or a function of the place, `seed`, `min_y`, `max_y` and `sea_level` numbers (defaults 64, `\"default\"`, `minecraft:plains`, 0, -64, 319 and 63). A plan makes each cell once, with `math.random` seeded for that cell. Chunks, structures and scatters aren't stood in for: `netherforge preview` draws the real thing.",
+          "params": [
+            {
+              "name": "options",
+              "type": "table",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "table"
+            }
+          ],
+          "example": "local landforms = require(\"worldgen.landforms\")\nnf.test.case(\"the spawn is a meadow\", function()\n  landforms.init(nf.test.terrain({ noises = { ranges = 0.9 }, height = 70 }))\n  assert(landforms.kind(0, 0) == \"plains\")\nend)"
+        },
+        {
+          "name": "click",
+          "doc": "Clicks for a player as their client would, with what they hold filled in, and raises what the server would for it: `player_interact` (the held project item's `interact` first, and a click on one of the project's blocks reaches it), then, for a right click with an item that nothing cancelled, `player_use_item` (the project item's `use` first). A left click is the attack button at a block or the air: it doesn't break the block (`world:break_block` does that). A click on an entity is `nf.test.raise(\"player_interact_entity\", ...)`. Nothing the game would then do (an item thrown, a door opened) is simulated: read what the handlers did.",
+          "params": [
+            {
+              "name": "player",
+              "type": "Player",
+              "doc": "Who clicks: one online, from `nf.test.player`."
+            },
+            {
+              "name": "button",
+              "type": "\"left\"|\"right\"",
+              "doc": "Which button: `\"right\"` uses what they hold."
+            },
+            {
+              "name": "options",
+              "type": "TestClickOptions",
+              "doc": "Which hand, and the block clicked. Leave it out for the main hand at the air.",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`true` when it went through, `false` when a handler cancelled it."
+            }
+          ],
+          "example": "local alex = nf.test.player(\"Alex\")\nalex:set_held_item({ kind = \"minecraft:ender_pearl\" })\nassert(nf.test.click(alex, \"right\"))"
+        },
+        {
+          "name": "release",
+          "doc": "Lets go of the right button for a player who was using an item (drawing a bow, raising a shield, eating) before it finished, as their client would: raises `player_stop_using_item` with the item in their main hand, or in their off hand when the main one is empty. Like the server, it is heard by the player before `nf.on`. An error when both hands are empty.",
+          "params": [
+            {
+              "name": "player",
+              "type": "Player",
+              "doc": "Who lets go: one online."
+            },
+            {
+              "name": "ticks",
+              "type": "integer",
+              "doc": "How long they held it, in ticks: a bow drawn for 20 is fully drawn. 0 or more."
+            }
+          ],
+          "returns": [],
+          "example": "local alex = nf.test.player(\"Alex\")\nalex:set_held_item({ kind = \"minecraft:bow\" })\nnf.test.click(alex, \"right\")\nnf.test.release(alex, 20)"
+        },
+        {
+          "name": "input",
+          "doc": "The movement keys a player holds now, as their client says when they change: raises `player_input` (the player's `input` first, then `nf.on`). A key left out is not held, so `nf.test.input(player, {})` lets go of every key. It only raises the event: the player doesn't move, sneak or sprint for it.",
+          "params": [
+            {
+              "name": "player",
+              "type": "Player",
+              "doc": "Whose keys: one online."
+            },
+            {
+              "name": "held",
+              "type": "TestInputKeys",
+              "doc": "The keys held down, each `true`."
+            }
+          ],
+          "returns": [],
+          "example": "local alex = nf.test.player(\"Alex\")\nnf.test.input(alex, { forward = true, jump = true })"
+        },
+        {
+          "name": "shown",
+          "doc": "A stack as a player's game was last sent it, after the `view` handlers: what their tooltip says, where the server keeps the real stack (read that from `player:inventory()` or `menu:item`). The fake server sends what changed at the end of each tick, as a real one does, and what `player:refresh_items` finds looks different, so `nf.test.advance(1)` after a change. `nil` for an empty slot, or one their game hasn't been sent.",
+          "params": [
+            {
+              "name": "player",
+              "type": "Player",
+              "doc": "Whose game: one online."
+            },
+            {
+              "name": "slot",
+              "type": "integer|\"cursor\"",
+              "doc": "A slot of their inventory, numbered as `player:inventory()` numbers them; with `menu`, of the window they have open. `\"cursor\"` for the stack on their cursor."
+            },
+            {
+              "name": "options",
+              "type": "TestShownOptions",
+              "doc": "Leave it out for their own inventory.",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "Item?"
+            }
+          ],
+          "example": "local alex = nf.test.player(\"Alex\")\nalex:set_held_item(nf.items.create(\"ruby\"))\nnf.test.advance(1)\nlocal shown = assert(nf.test.shown(alex, 0))\nassert(shown.lore ~= nil)"
         }
       ]
     },
@@ -3534,10 +3771,82 @@
           "payload": "CentityEvent"
         },
         {
+          "name": "hit",
+          "doc": "It's flying (`launch`) and its path touched something it can hit: a centity's hitbox, a player or another entity, in the order it meets them, each once (or again after `rehit` ticks). `event:cancel()` lets it pass through as if it weren't there, without using up a `pierce`. Otherwise it goes on through only while it has `pierce` left; past that, this is where it ends (`flight_end`, `\"hit\"`).",
+          "payload": "FlightHitEvent",
+          "cancellable": true,
+          "example": "this:on(\"hit\", function(event)\n  if event.target then\n    event.target:emit(\"game:struck\", { damage = 4 })\n  end\nend)"
+        },
+        {
+          "name": "bounce",
+          "doc": "It's flying with `bounce` and came off a block: `event.normal` is the face it hit, `event.speed` how fast it was going into it.",
+          "payload": "FlightBlockEvent"
+        },
+        {
+          "name": "stick",
+          "doc": "It's flying with `stick` and stuck in a block: it stays there, its flight over but not ended, until its `lifetime` is up.",
+          "payload": "FlightBlockEvent"
+        },
+        {
+          "name": "flight_end",
+          "doc": "Its flight ended: it hit something with no `pierce` left (`\"hit\"`), met a block it neither bounces off nor sticks in (`\"block\"`), ran out of `lifetime` (`\"lifetime\"`), reached a chunk that isn't loaded (`\"unloaded\"`), or a script stopped it (`\"stopped\"`). Then, unless `remove_on_end` is `false`, it's removed: its `remove` handlers hear it next.",
+          "payload": "FlightEndEvent",
+          "example": "this:on(\"flight_end\", function(event)\n  this:world():explode(event.position, 2)\nend)"
+        },
+        {
+          "name": "damage",
+          "doc": "It's about to lose health to `centity:damage`: assign `event.amount` to change how much (a defence, a weakness), or `event:cancel()` it (a moment it can't be hurt). Its health goes down by what's left, its bar shows, and at 0 it dies (`death`).",
+          "payload": "CentityDamageEvent",
+          "cancellable": true,
+          "writable": [
+            "amount"
+          ],
+          "example": "this:on(\"damage\", function(event)\n  event.amount = math.max(1, event.amount - 4) -- armour\nend)"
+        },
+        {
+          "name": "death",
+          "doc": "Its health reached 0. Then, unless its `health` says `removeOnDeath: false`, it's removed: its `remove` handlers hear it next. `event.source` and `event.cause` are what dealt the last blow.",
+          "payload": "CentityDeathEvent",
+          "example": "this:on(\"death\", function(event)\n  nf.loot.roll(\"slime\", { location = this:location() })\nend)"
+        },
+        {
+          "name": "land",
+          "doc": "Its `body` came down onto something after falling (or jumping): once, as it lands. `event.speed` is how fast it was falling, for fall damage or a thud.",
+          "payload": "CentityLandEvent",
+          "example": "this:on(\"land\", function(event)\n  if event.speed > 12 then\n    this:emit(\"game:hurt\", { amount = event.speed - 12 })\n  end\nend)"
+        },
+        {
+          "name": "bump",
+          "doc": "Its `body` ran into something it didn't land on: a wall, or a ceiling. Once each tick it does, with the face's `normal` (pointing back at it) and how fast it was going into it.",
+          "payload": "CentityBumpEvent",
+          "example": "this:on(\"bump\", function(event)\n  if event.normal.y == 0 and this:is_on_ground() then\n    this:jump(1.2)\n  end\nend)"
+        },
+        {
+          "name": "touch",
+          "doc": "Its hitboxes started touching something's: another centity's, a player's or another entity's (each shown node's boxes, as `world:overlap_box` sees them). Once when they start touching, and again only after they've come apart. Worked out each tick only for centities something listens to this on, so a crowd nobody listens to costs nothing. Both centities hear it when two touch, each with the other in `event.other`.",
+          "payload": "TouchEvent",
+          "example": "this:on(\"touch\", function(event)\n  if event.other then\n    event.other:emit(\"game:bumped\", { by = this })\n  end\nend)"
+        },
+        {
           "name": "path_end",
           "doc": "It stopped walking where `move_to` sent it: it got there (to the end of its path, or within 2 blocks of what it went after), or gave up (no way further, its way blocked with no other way round, or what it went after has gone or left its world). Not after `stop_pathing`, a new `move_to`, `teleport` or a reload of its centity.",
           "payload": "CentityPathEndEvent",
           "example": "this:on(\"path_end\", function(event)\n  if not event.reached then\n    this:move_to(vec3(0, 64, 0))\n  end\nend)"
+        },
+        {
+          "name": "buff_add",
+          "doc": "A buff is about to take hold (`add_buff`): assign `event.ticks` to change how long, or `event:cancel()` it (one it can't take). Not heard when it's `blockedBy` another.",
+          "payload": "BuffEvent",
+          "cancellable": true,
+          "writable": [
+            "ticks"
+          ]
+        },
+        {
+          "name": "buff_end",
+          "doc": "A buff ended: it ran out (`\"expired\"`), a script took it away (`\"removed\"`), or another buff cured it (`\"cured\"`).",
+          "payload": "BuffEndEvent",
+          "example": "player:on(\"buff_end\", function(event)\n  if event.buff == \"ironskin\" then\n    event.player:send_message(\"<gray>Your skin softens.\")\n  end\nend)"
         }
       ],
       "customEvents": true,
@@ -3583,13 +3892,51 @@
           ]
         },
         {
+          "name": "is_temporary",
+          "doc": "Whether a script spawned it temporary (`nf.centities.spawn`'s `temporary` or `lifetime`), and it still is: it isn't saved, and it goes when the script that spawned it unloads, or when its lifetime is up. `false` for one `keep` has kept, and once it's removed.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "lifetime",
+          "doc": "How many ticks a temporary centity with a `lifetime` has left before it's removed, or `nil` for one without (or once it's removed).",
+          "params": [],
+          "returns": [
+            {
+              "type": "integer?"
+            }
+          ]
+        },
+        {
+          "name": "set_lifetime",
+          "doc": "Gives it this many ticks more before it's removed, from now. A centity with a lifetime is temporary, so one that wasn't becomes so: it's no longer saved, and goes when its lifetime is up (one spawned temporary still goes with its script too). Leave it out (or `nil`) to take its lifetime away; it stays temporary until `keep`.",
+          "params": [
+            {
+              "name": "ticks",
+              "type": "integer",
+              "doc": "At least 1.",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` once it's removed."
+            }
+          ]
+        },
+        {
           "name": "keep",
-          "doc": "Makes a natural centity a normal one: it is saved from now on (it comes back after a restart), is never removed for being far from players, and no longer counts against its cap. Nothing happens to one that is already normal.",
+          "doc": "Makes a natural or temporary centity a normal one: it is saved from now on (it comes back after a restart), is never removed for being far from players or because a script unloaded or a lifetime ran out, and no longer counts against a cap. Nothing happens to one that is already normal.",
           "params": [],
           "returns": [
             {
               "type": "boolean",
-              "doc": "Whether it was natural: `false` for one that was already normal, and once it is removed."
+              "doc": "Whether it was natural or temporary: `false` for one that was already normal, and once it is removed."
             }
           ],
           "example": "this:on(\"click\", function(event)\n  if this:keep() then\n    event.player:send_message(\"<green>It follows you now\")\n  end\nend)"
@@ -3654,6 +4001,28 @@
             }
           ],
           "example": "local lamp = assert(this:add_node(\"lamp\", {\n  transform = { translation = vec3(0, 2, 0) },\n  display = { type = \"block\", block = \"minecraft:sea_lantern\" },\n  hitbox = {},\n}))\nlamp:on(\"click\", function(event)\n  lamp:remove()\nend)"
+        },
+        {
+          "name": "properties",
+          "doc": "Its `properties` from its `centity.json`: the project's own facts about it, any JSON (`{ damage = 12, class = \"melee\" }`), as a table. A new table each call, so keep it rather than ask in a loop. An empty table when the file has none, `nil` once it's gone.",
+          "params": [],
+          "returns": [
+            {
+              "type": "table?"
+            }
+          ],
+          "example": "local stats = assert(this:properties())\nlog(stats.damage)"
+        },
+        {
+          "name": "bounds",
+          "doc": "The box around all its hitboxes as they're shown now (each shown node's boxes, turned and placed), in the world: what `world:overlap_box` and the other spatial queries test against. `nil` for a centity with no hitboxes showing, or once it's removed.",
+          "params": [],
+          "returns": [
+            {
+              "type": "Bounds?"
+            }
+          ],
+          "example": "local box = this:bounds()\nif box then\n  local top = vec3((box.min.x + box.max.x) / 2, box.max.y, (box.min.z + box.max.z) / 2)\n  world:spawn_particle(\"minecraft:heart\", top)\nend"
         },
         {
           "name": "location",
@@ -3802,6 +4171,463 @@
             {
               "type": "boolean",
               "doc": "`false` once it's removed."
+            }
+          ]
+        },
+        {
+          "name": "stat",
+          "doc": "One of it's stats. A stat is a number by name (`\"defense\"`, `\"move\"`, `\"damage_melee\"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "doc": "The stat: lowercase letters, digits and `_`."
+            }
+          ],
+          "returns": [
+            {
+              "type": "number"
+            }
+          ],
+          "example": "local damage = 20\nlocal taken = math.max(1, damage - this:stat(\"defense\") / 2)"
+        },
+        {
+          "name": "stats",
+          "doc": "Every stat it has that isn't 0, by name. A stat is a number by name (`\"defense\"`, `\"move\"`, `\"damage_melee\"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.",
+          "params": [],
+          "returns": [
+            {
+              "type": "table<string, number>"
+            }
+          ]
+        },
+        {
+          "name": "modifiers",
+          "doc": "What a script's `source` adds to it's stats (`set_modifiers`), or `nil` when it adds nothing.",
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "doc": "Whose: `\"armour\"`, `\"accessories\"`."
+            }
+          ],
+          "returns": [
+            {
+              "type": "table<string, number>?"
+            }
+          ]
+        },
+        {
+          "name": "set_modifiers",
+          "doc": "Sets what `source` adds to it's stats, replacing what it added before: one call per source, each time it changes (a piece of armour put on), and `nil` takes it all away. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online.",
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "doc": "Whose: any name of your own."
+            },
+            {
+              "name": "modifiers",
+              "type": "table<string, number>",
+              "doc": "A number per stat name. Leave it out (or `nil`) to take the source away.",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` once it has gone."
+            }
+          ],
+          "example": "this:set_modifiers(\"armour\", { defense = 12, move = 0.05 })"
+        },
+        {
+          "name": "add_buff",
+          "doc": "Gives it a buff (`buffs/<id>.json`) for a number of ticks: it takes away the buffs it `cures`, and doesn't take hold while one it's `blockedBy` lasts. Given again while it lasts, its file's `stacking` says what happens to the time. Its `buff_add` handlers may change the ticks or cancel it. While it lasts its `stats` are added to it's; when it runs out, `buff_end` hears it. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online. A buff the project doesn't have is an error.",
+          "params": [
+            {
+              "name": "buff",
+              "type": "string",
+              "doc": "Its id: `buffs/<id>.json`.",
+              "names": "buff"
+            },
+            {
+              "name": "ticks",
+              "type": "integer",
+              "doc": "How long, at least 1."
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "Whether it took hold: `false` when one it's `blockedBy` is on it, a handler cancelled it, or it has gone."
+            }
+          ],
+          "example": "this:add_buff(\"ironskin\", 20 * 60 * 4)"
+        },
+        {
+          "name": "remove_buff",
+          "doc": "Takes a buff away from it (`buff_end` hears `\"removed\"`).",
+          "params": [
+            {
+              "name": "buff",
+              "type": "string",
+              "doc": "Its id.",
+              "names": "buff"
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "Whether they had it."
+            }
+          ]
+        },
+        {
+          "name": "has_buff",
+          "doc": "Whether it has a buff now.",
+          "params": [
+            {
+              "name": "buff",
+              "type": "string",
+              "doc": "Its id.",
+              "names": "buff"
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "buff_ticks",
+          "doc": "How many ticks a buff it has has left, or `nil` when they don't have it.",
+          "params": [
+            {
+              "name": "buff",
+              "type": "string",
+              "doc": "Its id.",
+              "names": "buff"
+            }
+          ],
+          "returns": [
+            {
+              "type": "integer?"
+            }
+          ]
+        },
+        {
+          "name": "buffs",
+          "doc": "Every buff it has now, with what a HUD shows them by, the first given first.",
+          "params": [],
+          "returns": [
+            {
+              "type": "ActiveBuff[]"
+            }
+          ],
+          "example": "for _, buff in ipairs(this:buffs()) do\n  log(buff.id, buff.ticks)\nend"
+        },
+        {
+          "name": "health",
+          "doc": "How much health it has left: from its `centity.json`'s `health` (its `max` when it spawns), or what `set_max_health` gave it. `nil` for one without health, or once it's removed. Not saved: after a restart it's whole again.",
+          "params": [],
+          "returns": [
+            {
+              "type": "number?"
+            }
+          ]
+        },
+        {
+          "name": "max_health",
+          "doc": "Its health when whole, or `nil` without health (or once it's removed).",
+          "params": [],
+          "returns": [
+            {
+              "type": "number?"
+            }
+          ]
+        },
+        {
+          "name": "set_health",
+          "doc": "Sets how much health it has, between 0 and its `max_health`: no `damage` or `death` event, and 0 doesn't kill it (`damage` does). Its bar shows the change. `false` without health, or once it's removed.",
+          "params": [
+            {
+              "name": "health",
+              "type": "number",
+              "doc": ""
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "set_max_health",
+          "doc": "Changes its health when whole (more than 0), keeping what it has but no more than the new most. One without `health` in its file gets health this way (full, and no bar). `false` once it's removed.",
+          "params": [
+            {
+              "name": "max_health",
+              "type": "number",
+              "doc": ""
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ],
+          "example": "-- A boss with more health for each player near it.\nthis:set_max_health(2000 * #this:world():players())\nthis:set_health(assert(this:max_health()))"
+        },
+        {
+          "name": "damage",
+          "doc": "Takes health from it: its `damage` handlers may change the amount or cancel it, its health goes down by what's left, its bar shows, and at 0 it dies (`death`, then it's removed unless its file says otherwise). Damage to one already dead does nothing.",
+          "params": [
+            {
+              "name": "amount",
+              "type": "number",
+              "doc": "How much, at least 0."
+            },
+            {
+              "name": "options",
+              "type": "CentityDamageOptions",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "number?",
+              "doc": "How much it took after its handlers (0 when cancelled), or `nil` for one without health, one already dead, or once it's removed."
+            }
+          ],
+          "example": "local dealt = target:damage(12, { source = player, cause = \"melee\" })"
+        },
+        {
+          "name": "heal",
+          "doc": "Gives it back health, up to its `max_health`. Its bar shows the change.",
+          "params": [
+            {
+              "name": "amount",
+              "type": "number",
+              "doc": "At least 0."
+            }
+          ],
+          "returns": [
+            {
+              "type": "number?",
+              "doc": "How much it gained, or `nil` without health (or once it's removed)."
+            }
+          ]
+        },
+        {
+          "name": "is_dead",
+          "doc": "Whether its health has reached 0 through `damage`. `false` for one without health. A dead one its file keeps (`removeOnDeath: false`) stays dead until `set_health` gives it health again.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "has_body",
+          "doc": "Whether it has a body: a `body` in its `centity.json`, or one `set_body` gave it. Without one the body functions do nothing (their getters answer `false`, `nil` or `vec3.zero`). `false` once it's removed.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "body",
+          "doc": "Its body's settings as they are now: what its `centity.json`'s `body` says, every field filled in, with what `set_body` changed. `nil` without a body, or once it's removed.",
+          "params": [],
+          "returns": [
+            {
+              "type": "BodySettings?"
+            }
+          ]
+        },
+        {
+          "name": "set_body",
+          "doc": "Changes its body's settings: only the fields given, the rest as they are. One without a body gets one, the fields left out as `centity.json`'s defaults. A body's settings are runtime state, like a node's pose: they last until its centity is reloaded or the server restarts, when it's back to its file's. A value out of range is clamped as in the file; a width or height that isn't more than 0 is an error.",
+          "params": [
+            {
+              "name": "settings",
+              "type": "BodySettings",
+              "doc": ""
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` once it's removed."
+            }
+          ],
+          "example": "-- Wings: it flies until they're clipped.\nthis:set_body({ fly = true, drag = 0.6 })"
+        },
+        {
+          "name": "velocity",
+          "doc": "How fast its body is moving, in blocks per second along the world's axes: `vec3.zero` without a body, `nil` once it's removed.",
+          "params": [],
+          "returns": [
+            {
+              "type": "Vec3?"
+            }
+          ]
+        },
+        {
+          "name": "set_velocity",
+          "doc": "Replaces its body's velocity: a knock back, a dash, a launch. The body carries on from it under gravity and drag, and walking eases it back to its walk.",
+          "params": [
+            {
+              "name": "velocity",
+              "type": "Vec3",
+              "doc": "Blocks per second, along the world's axes."
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` without a body."
+            }
+          ],
+          "example": "this:set_velocity((this:position() - player:position()):normalized() * 8 + vec3(0, 6, 0))"
+        },
+        {
+          "name": "add_velocity",
+          "doc": "Adds to its body's velocity.",
+          "params": [
+            {
+              "name": "velocity",
+              "type": "Vec3",
+              "doc": "Blocks per second, along the world's axes."
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` without a body."
+            }
+          ]
+        },
+        {
+          "name": "walk_velocity",
+          "doc": "The velocity its body is walking at (`set_walk_velocity`), or `nil` when it isn't walking, has no body, or is removed.",
+          "params": [],
+          "returns": [
+            {
+              "type": "Vec3?"
+            }
+          ]
+        },
+        {
+          "name": "set_walk_velocity",
+          "doc": "Walks its body: every tick it speeds up or slows down toward this velocity by its `acceleration` (`air_acceleration` while it's off the ground), so it reaches it smoothly and keeps to it, round whatever pushes it about, until it's changed. Only the sideways part counts, unless it flies, when it steers it in any direction. Leave it out (or `nil`) to stop walking: on the ground it then slows to a stop by its `friction`. Walking doesn't turn it: `set_yaw` or `look_at` does.",
+          "params": [
+            {
+              "name": "velocity",
+              "type": "Vec3",
+              "doc": "Blocks per second, along the world's axes: a direction times a speed.",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` without a body."
+            }
+          ],
+          "example": "local target = player:position()\nlocal here = this:position()\nif target and here then\n  this:set_walk_velocity((target - here):flat():normalized() * 3)\nend"
+        },
+        {
+          "name": "jump",
+          "doc": "Sends its body up fast enough to rise `height` blocks, worked out from its gravity and drag: what a jump over a block (1.2) needs. Whether it's on the ground is for the script to check (`is_on_ground`), so a double jump is one more call.",
+          "params": [
+            {
+              "name": "height",
+              "type": "number",
+              "doc": "Blocks, at least 0."
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` without a body."
+            }
+          ],
+          "example": "if this:is_on_ground() and this:wall() then\n  this:jump(1.2)\nend"
+        },
+        {
+          "name": "is_on_ground",
+          "doc": "Whether its body is standing on something: a block, as of its last move. `false` without a body.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "is_in_liquid",
+          "doc": "Whether its body is in water or lava (the block at its middle). `false` without a body.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "wall",
+          "doc": "The face of what stopped its body sideways on its last move, as the direction straight out of it (`vec3(-1, 0, 0)` for a wall to its east), or `nil` when nothing did, or without a body. What a walker turns round at, or jumps over.",
+          "params": [],
+          "returns": [
+            {
+              "type": "Vec3?"
+            }
+          ]
+        },
+        {
+          "name": "launch",
+          "doc": "Makes it a projectile: from now on the server flies the whole centity every tick at its velocity, under its gravity and drag, and sweeps its path (a sphere of `radius`) for what it hits: centities' hitboxes, players and entities (`hit`), and blocks (it ends, bounces or sticks: `flight_end`, `bounce`, `stick`). It flies until it ends, then is removed unless told not to. Nothing about a flight is saved. A launch over a flight replaces it. One with a `body` stops walking while it flies, and walks again after. Every value is in blocks and seconds, as everywhere.",
+          "params": [
+            {
+              "name": "options",
+              "type": "LaunchOptions",
+              "doc": ""
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` once it's removed."
+            }
+          ],
+          "example": "local eye, facing = assert(player:eye_position()), assert(player:direction())\nlocal arrow = assert(nf.centities.spawn(\"arrow\", eye, { temporary = true }))\narrow:launch({ velocity = facing * 40, gravity = 20, radius = 0.15, owner = player, aim = \"aim\", pierce = 1 })"
+        },
+        {
+          "name": "is_launched",
+          "doc": "Whether it's flying as a projectile (`launch`), stuck in a block or lying where it came to rest included: until its flight ends. `false` once it's removed.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "stop_flight",
+          "doc": "Ends its flight where it is, as if it had ended by itself: `flight_end` hears `\"stopped\"`, and it's removed unless `remove_on_end` was `false`.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "Whether it was flying: `false` when it wasn't, or once it's removed."
             }
           ]
         },
@@ -4466,6 +5292,119 @@
             }
           ],
           "returns": []
+        },
+        {
+          "name": "stretch_between",
+          "doc": "Lays it from one point of the world to another: its origin halfway, its Z pointing from `from` to `to`, and its Z scale the distance between them. For a node whose display is one block long along Z and centred on its origin (a beam, a string, a link), that's the whole way from one to the other. Its X and Y scale stay as they are, or are `thickness`.",
+          "params": [
+            {
+              "name": "from",
+              "type": "Vec3",
+              "doc": "A point in the world."
+            },
+            {
+              "name": "to",
+              "type": "Vec3",
+              "doc": "A point in the world."
+            },
+            {
+              "name": "options",
+              "type": "StretchOptions",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` once its centity is removed."
+            }
+          ],
+          "example": "local beam = assert(this:node(\"beam\"))\nlocal here = assert(this:position())\nbeam:stretch_between(here, vec3(10, 70, 4), { thickness = 0.2 })"
+        },
+        {
+          "name": "is_rope",
+          "doc": "Whether it's a rope node (`\"rope\"` in `centity.json`).",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "rope_between",
+          "doc": "Strings a rope node between two ends, and keeps it strung each tick as they move, until `release_rope` or another `rope_between`: its links laid along a line from one to the other, sagging with `length`'s slack, as many shown as the distance needs (up to its `links`; the rest hidden). An end is a point, a node (its origin, as shown), or an entity (half a block above its feet; a player's at their hands' height, 1.1 blocks up). An end that's gone (a removed centity, an entity that left) releases the rope. A node that isn't a rope is an error.",
+          "params": [
+            {
+              "name": "from",
+              "type": "Vec3|Node|Entity",
+              "doc": ""
+            },
+            {
+              "name": "to",
+              "type": "Vec3|Node|Entity",
+              "doc": ""
+            },
+            {
+              "name": "options",
+              "type": "RopeOptions",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` once its centity is removed."
+            }
+          ],
+          "example": "-- A chain from the player's hand to the ball.\nlocal player = assert(nf.players.online()[1])\nassert(this:node(\"chain\")):rope_between(player, assert(this:node(\"ball\")), { length = 6 })"
+        },
+        {
+          "name": "release_rope",
+          "doc": "Stops keeping a rope strung: its links stay where they were last laid.",
+          "params": [],
+          "returns": []
+        },
+        {
+          "name": "tween",
+          "doc": "Eases its translation, rotation or scale from where they are to new values over some ticks, as `set_translation`, `set_rotation` and `set_scale` would each tick: and with `back`, eases them back again. A tween of a channel this node is already tweening replaces it, from where it is; `set_*` on a channel doesn't stop its tween. Animations drive what they drive over it, as they do over `set_*`; an `additive` one changes it.",
+          "params": [
+            {
+              "name": "options",
+              "type": "TweenOptions",
+              "doc": ""
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` once its centity is removed."
+            }
+          ],
+          "example": "-- Squash flat as it lands, and spring back.\nthis:on(\"land\", function()\n  this:node(\"root\"):tween({ scale = vec3(1.4, 0.6, 1.4), ticks = 3, easing = \"ease_out\", back = true })\nend)"
+        },
+        {
+          "name": "is_tweening",
+          "doc": "Whether a tween is easing any of its channels.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "stop_tween",
+          "doc": "Stops its tweens where they are now.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` when it wasn't tweening."
+            }
+          ]
         },
         {
           "name": "world_position",
@@ -7121,9 +8060,178 @@
           "writable": [
             "cost"
           ]
+        },
+        {
+          "name": "buff_add",
+          "doc": "A buff is about to take hold (`add_buff`): assign `event.ticks` to change how long, or `event:cancel()` it (one it can't take). Not heard when it's `blockedBy` another.",
+          "payload": "BuffEvent",
+          "cancellable": true,
+          "writable": [
+            "ticks"
+          ]
+        },
+        {
+          "name": "buff_end",
+          "doc": "A buff ended: it ran out (`\"expired\"`), a script took it away (`\"removed\"`), or another buff cured it (`\"cured\"`).",
+          "payload": "BuffEndEvent",
+          "example": "player:on(\"buff_end\", function(event)\n  if event.buff == \"ironskin\" then\n    event.player:send_message(\"<gray>Your skin softens.\")\n  end\nend)"
         }
       ],
       "functions": [
+        {
+          "name": "stat",
+          "doc": "One of they's stats. A stat is a number by name (`\"defense\"`, `\"move\"`, `\"damage_melee\"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "doc": "The stat: lowercase letters, digits and `_`."
+            }
+          ],
+          "returns": [
+            {
+              "type": "number"
+            }
+          ],
+          "example": "local damage = 20\nlocal taken = math.max(1, damage - player:stat(\"defense\") / 2)"
+        },
+        {
+          "name": "stats",
+          "doc": "Every stat they has that isn't 0, by name. A stat is a number by name (`\"defense\"`, `\"move\"`, `\"damage_melee\"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.",
+          "params": [],
+          "returns": [
+            {
+              "type": "table<string, number>"
+            }
+          ]
+        },
+        {
+          "name": "modifiers",
+          "doc": "What a script's `source` adds to they's stats (`set_modifiers`), or `nil` when it adds nothing.",
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "doc": "Whose: `\"armour\"`, `\"accessories\"`."
+            }
+          ],
+          "returns": [
+            {
+              "type": "table<string, number>?"
+            }
+          ]
+        },
+        {
+          "name": "set_modifiers",
+          "doc": "Sets what `source` adds to they's stats, replacing what it added before: one call per source, each time it changes (a piece of armour put on), and `nil` takes it all away. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online.",
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "doc": "Whose: any name of your own."
+            },
+            {
+              "name": "modifiers",
+              "type": "table<string, number>",
+              "doc": "A number per stat name. Leave it out (or `nil`) to take the source away.",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` once they has gone."
+            }
+          ],
+          "example": "player:set_modifiers(\"armour\", { defense = 12, move = 0.05 })"
+        },
+        {
+          "name": "add_buff",
+          "doc": "Gives they a buff (`buffs/<id>.json`) for a number of ticks: it takes away the buffs it `cures`, and doesn't take hold while one it's `blockedBy` lasts. Given again while it lasts, its file's `stacking` says what happens to the time. Its `buff_add` handlers may change the ticks or cancel it. While it lasts its `stats` are added to they's; when it runs out, `buff_end` hears it. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online. A buff the project doesn't have is an error.",
+          "params": [
+            {
+              "name": "buff",
+              "type": "string",
+              "doc": "Its id: `buffs/<id>.json`.",
+              "names": "buff"
+            },
+            {
+              "name": "ticks",
+              "type": "integer",
+              "doc": "How long, at least 1."
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "Whether it took hold: `false` when one it's `blockedBy` is on they, a handler cancelled it, or they has gone."
+            }
+          ],
+          "example": "player:add_buff(\"ironskin\", 20 * 60 * 4)"
+        },
+        {
+          "name": "remove_buff",
+          "doc": "Takes a buff away from they (`buff_end` hears `\"removed\"`).",
+          "params": [
+            {
+              "name": "buff",
+              "type": "string",
+              "doc": "Its id.",
+              "names": "buff"
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "Whether they had it."
+            }
+          ]
+        },
+        {
+          "name": "has_buff",
+          "doc": "Whether they has a buff now.",
+          "params": [
+            {
+              "name": "buff",
+              "type": "string",
+              "doc": "Its id.",
+              "names": "buff"
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "buff_ticks",
+          "doc": "How many ticks a buff they has has left, or `nil` when they don't have it.",
+          "params": [
+            {
+              "name": "buff",
+              "type": "string",
+              "doc": "Its id.",
+              "names": "buff"
+            }
+          ],
+          "returns": [
+            {
+              "type": "integer?"
+            }
+          ]
+        },
+        {
+          "name": "buffs",
+          "doc": "Every buff they has now, with what a HUD shows them by, the first given first.",
+          "params": [],
+          "returns": [
+            {
+              "type": "ActiveBuff[]"
+            }
+          ],
+          "example": "for _, buff in ipairs(player:buffs()) do\n  log(buff.id, buff.ticks)\nend"
+        },
         {
           "name": "name",
           "doc": "Their name, as they have it now (a player can change theirs between visits).",
@@ -8189,6 +9297,18 @@
           ]
         },
         {
+          "name": "refresh_items",
+          "doc": "Sends their game every stack it shows again where it would now look different to them: their inventory, the window they have open and their cursor, each worked out again by the `view` handlers (and `nf.on(\"item_view\")`). Stacks are sent by themselves when they change, but not when only what a `view` handler works its look out from does, so call this then: when a shop menu opens or closes, say. It's done once at the end of the tick however often it's called, and only stacks that look different from what their game was last sent are sent.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` when they're offline."
+            }
+          ],
+          "example": "nf.on(\"menu_open\", function(event)\n  event.player:refresh_items()\nend)\nnf.on(\"menu_close\", function(event)\n  event.player:refresh_items()\nend)"
+        },
+        {
           "name": "close_menu",
           "doc": "Closes the project menu they have open. Anything else on their screen (a chest, their own inventory) stays open.",
           "params": [],
@@ -8687,6 +9807,17 @@
           "example": "local shop = player:data().shop or {}\nplayer:data().shop = shop\nshop.coins = (shop.coins or 0) + 5"
         },
         {
+          "name": "session",
+          "doc": "Their table for this time online: one per player, the same table every time, shared by every script, and never saved. It's made empty the first time a script asks after they join, kept while they stay (through a module's reload too: it's the player's, not the script's), and dropped once they've left, after their `player_quit` handlers, so the next time they join it's empty again. A whole-project reload (`netherforge.json` changing, or `/nf reload` with no files) empties it, as it does every script's state. Anything a script holds goes in it (handles, functions, a `Task`), so a module needn't keep a map keyed by player and clear it in `player_quit`. By convention each module keeps its own part of it under its name, as with `data()`. `nil` for a player who isn't online.",
+          "params": [],
+          "returns": [
+            {
+              "type": "table?"
+            }
+          ],
+          "example": "local session = assert(player:session())\nsession.combo = (session.combo or 0) + 1\nif session.combo >= 3 then\n  player:send_message(\"Combo!\")\nend"
+        },
+        {
           "name": "on",
           "impl": "lua",
           "doc": "Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.",
@@ -8861,6 +9992,19 @@
           "cancellable": true,
           "bubbles": true,
           "example": "nf.worlds.default():on(\"entity_spawn\", function(event)\n  if event.entity:kind() == \"minecraft:phantom\" then\n    event:cancel()\n  end\nend)"
+        },
+        {
+          "name": "dusk",
+          "doc": "Night fell here: the time of day went from day (23000 to 12999) into night (13000 to 22999), by the clock or by `/time set`. Heard before `nf.on(\"world_dusk\")`, with the same event, so `event:stop()` keeps it from there. The runtime looks at the clock every tick, and only while something listens; a jump from one night to the next (a whole day skipped) is no change, so nothing is heard.",
+          "payload": "DaylightEvent",
+          "bubbles": true,
+          "example": "nf.worlds.default():on(\"dusk\", function(event)\n  for _, player in ipairs(event.world:players()) do\n    player:send_message(\"<gray>Night falls.\")\n  end\nend)"
+        },
+        {
+          "name": "dawn",
+          "doc": "Day broke here: the time of day went from night (13000 to 22999) into day (23000 to 12999), by the clock or by `/time set` (sleeping through the night too). Heard before `nf.on(\"world_dawn\")`, with the same event, so `event:stop()` keeps it from there.",
+          "payload": "DaylightEvent",
+          "bubbles": true
         },
         {
           "name": "block_explode",
@@ -9116,6 +10260,26 @@
           ]
         },
         {
+          "name": "is_night",
+          "doc": "Whether it is night here: the time of day is 13000 to 22999, from dusk to just before sunrise, as `/time set night` and a centity's `\"night\"` spawn time mean it. `false` once the world has gone.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
+          "name": "is_day",
+          "doc": "Whether it is day here: the time of day is 23000 to 12999, the rest of `is_night`'s. `false` once the world has gone.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
           "name": "day_count",
           "doc": "How many whole days have gone by in this world, or `nil` once it has gone.",
           "params": [],
@@ -9309,6 +10473,29 @@
             }
           ],
           "example": "local box = world:blocks(vec3(0, 60, 0), vec3(15, 70, 15), { what = \"class\" })\nif box then\n  -- A block within the box, counted from its corner.\n  local function at(x, y, z)\n    return box.cells[1 + x + box.size_x * (z + box.size_z * y)]\n  end\n  if at(0, 0, 0) == 2 then log(\"solid\") end\nend"
+        },
+        {
+          "name": "flood",
+          "doc": "Fills outward from a block through every block `options.through` names, one neighbour at a time, as far as it reaches: the blocks of a tree (`through = { \"#minecraft:logs\" }`), the air of a room (`through = { \"passable\" }`), a lake. It answers every block it filled (`positions`, nearest first by steps) and every block it stopped at (`edges`: a room's walls), with what each is when asked (`kinds`), and `stopped` says why it didn't finish when it didn't: it hit its `limit`, a chunk that isn't loaded or the world's top or bottom (`\"unloaded\"`: a room open to the sky or the unknown), or its `bounds`. It runs in the server, reading the blocks a box at a time, so a fill of thousands of blocks costs a script one call. A start block it can't fill through answers no positions, and the start as an edge. Blocks in chunks that aren't loaded can't be read or changed: that answers `nil` or `false`, and never loads the chunk (`world:load_chunk` does).",
+          "params": [
+            {
+              "name": "start",
+              "type": "Vec3",
+              "doc": "Any point in the block to start from."
+            },
+            {
+              "name": "options",
+              "type": "FloodOptions",
+              "doc": ""
+            }
+          ],
+          "returns": [
+            {
+              "type": "FloodResult?",
+              "doc": "`nil` once the world has gone."
+            }
+          ],
+          "example": "local room = world:flood(assert(player:position()), { through = { \"passable\" }, except = { \"#minecraft:doors\" }, limit = 750, kinds = true })\nif room and not room.stopped then\n  log(#room.positions .. \" blocks of air, walled in by \" .. #room.edges)\nend"
         },
         {
           "name": "set_block",
@@ -9694,6 +10881,156 @@
             }
           ],
           "example": "local world, eyes, facing = player:world(), player:eye_position(), player:direction()\nlocal hit = world and eyes and facing and world:raycast(eyes, facing, 20)\nif hit and hit.centity then\n  hit.centity:play_animation(\"wobble\")\nend"
+        },
+        {
+          "name": "overlap_box",
+          "doc": "Everything whose hitbox is inside or touches a box, nearest the box's middle first. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.",
+          "params": [
+            {
+              "name": "min",
+              "type": "Vec3",
+              "doc": "One corner, in the world."
+            },
+            {
+              "name": "max",
+              "type": "Vec3",
+              "doc": "The opposite corner. The corners may come in either order."
+            },
+            {
+              "name": "options",
+              "type": "QueryOptions",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "QueryHit[]"
+            }
+          ],
+          "example": "local corner = vec3(0, 64, 0)\nfor _, hit in ipairs(world:overlap_box(corner, corner + vec3(4, 3, 4), { players = false })) do\n  if hit.centity then\n    hit.centity:remove()\n  end\nend"
+        },
+        {
+          "name": "overlap_sphere",
+          "doc": "Everything whose hitbox comes within `radius` of a point, nearest first: what an explosion or an aura reaches. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.",
+          "params": [
+            {
+              "name": "center",
+              "type": "Vec3",
+              "doc": "The middle, in the world."
+            },
+            {
+              "name": "radius",
+              "type": "number",
+              "doc": "In blocks, at least 0."
+            },
+            {
+              "name": "options",
+              "type": "QueryOptions",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "QueryHit[]"
+            }
+          ],
+          "example": "for _, hit in ipairs(world:overlap_sphere(vec3(0, 64, 0), 4, { entities = false })) do\n  log(hit.distance)\nend"
+        },
+        {
+          "name": "overlap_cone",
+          "doc": "Everything whose hitbox reaches into a cone from a point, nearest first: what a swing or a breath in front of someone reaches. A hitbox counts when its point nearest the cone's axis is within `length` of the tip and within `angle` of the axis, or the tip is inside it. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.",
+          "params": [
+            {
+              "name": "origin",
+              "type": "Vec3",
+              "doc": "The cone's tip, in the world."
+            },
+            {
+              "name": "direction",
+              "type": "Vec3",
+              "doc": "Which way it opens: any length but zero."
+            },
+            {
+              "name": "length",
+              "type": "number",
+              "doc": "How far it reaches from the tip, in blocks, at least 0."
+            },
+            {
+              "name": "angle",
+              "type": "number",
+              "doc": "How wide it opens, in degrees from its axis to its side: 0 to 180 (90 is everything in front, 180 a sphere)."
+            },
+            {
+              "name": "options",
+              "type": "QueryOptions",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "QueryHit[]"
+            }
+          ],
+          "example": "local eyes, facing = assert(player:eye_position()), assert(player:direction())\nfor _, hit in ipairs(world:overlap_cone(eyes, facing, 3, 45, { exclude = { player } })) do\n  if hit.centity then\n    hit.centity:emit(\"game:struck\", { by = player })\n  end\nend"
+        },
+        {
+          "name": "sweep",
+          "doc": "Moves a sphere of `options.radius` (0, a point, by default) from one point to another and answers everything it touches on the way, in the order it meets them: what a fast or piercing shot passes through in a tick, which a ray (stopping at the first thing) can't say. Blocks stop it unless `blocks = false`: the block it meets is then the last hit, with its `normal`, and nothing past it is found. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.",
+          "params": [
+            {
+              "name": "from",
+              "type": "Vec3",
+              "doc": "Where it starts, in the world."
+            },
+            {
+              "name": "to",
+              "type": "Vec3",
+              "doc": "Where it would end."
+            },
+            {
+              "name": "options",
+              "type": "SweepOptions",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "QueryHit[]"
+            }
+          ],
+          "example": "local position, velocity = vec3(0, 65, 0), vec3(2, 0, 0)\nlocal hits = world:sweep(position, position + velocity, { radius = 0.25, players = false })\nfor _, hit in ipairs(hits) do\n  if hit.block then\n    break -- it struck a wall\n  elseif hit.centity then\n    hit.centity:emit(\"game:hit\", { damage = 5 })\n  end\nend"
+        },
+        {
+          "name": "nearest",
+          "doc": "The nearest thing whose hitbox comes within `radius` of a point, or `nil` when there's nothing: what a homing shot or a mob looking for a target wants. With `line_of_sight = true`, only something a ray from the point reaches without a block in the way. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.",
+          "params": [
+            {
+              "name": "position",
+              "type": "Vec3",
+              "doc": "Where to look from, in the world."
+            },
+            {
+              "name": "radius",
+              "type": "number",
+              "doc": "How far to look, in blocks, at least 0."
+            },
+            {
+              "name": "options",
+              "type": "QueryOptions",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "QueryHit?"
+            }
+          ],
+          "example": "local target = world:nearest(assert(this:position()), 16, { centities = false, line_of_sight = true })\nif target and target.entity then\n  this:look_at(target.position)\nend"
         },
         {
           "name": "game_rule",
@@ -10511,6 +11848,17 @@
           ]
         },
         {
+          "name": "properties",
+          "doc": "Its `properties` from its `block.json`: the project's own facts about it, any JSON (`{ damage = 12, class = \"melee\" }`), as a table. A new table each call, so keep it rather than ask in a loop. An empty table when the file has none, `nil` once the block is gone.",
+          "params": [],
+          "returns": [
+            {
+              "type": "table?"
+            }
+          ],
+          "example": "local stats = assert(this:properties())\nlog(stats.damage)"
+        },
+        {
           "name": "exists",
           "doc": "Whether the project still has it.",
           "params": [],
@@ -10880,7 +12228,7 @@
         },
         {
           "name": "viewers",
-          "doc": "Everyone it's shown to, online or not. Empty once it's gone.",
+          "doc": "Everyone it's shown to, online or not: by `show_to`, and for an attached bar, whoever is near its centity now. Empty once it's gone.",
           "params": [],
           "returns": [
             {
@@ -10994,6 +12342,46 @@
             {
               "type": "boolean",
               "doc": "`false` once it's gone."
+            }
+          ]
+        },
+        {
+          "name": "attach",
+          "doc": "Ties it to a centity: it shows to every player within `range` of it (in its world) and hides from them as they go, and with `health` its progress follows the centity's health: what a boss's bar does. Players it was shown to with `show_to` keep it. A bar attached again moves to the new centity.",
+          "params": [
+            {
+              "name": "centity",
+              "type": "Centity",
+              "doc": ""
+            },
+            {
+              "name": "options",
+              "type": "BossBarAttachOptions",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` once it's gone, or the centity has."
+            }
+          ],
+          "example": "local bar = nf.bossbars.create({ text = \"<red>King Slime\", color = \"blue\" })\nbar:attach(this, { range = 64 })"
+        },
+        {
+          "name": "detach",
+          "doc": "Unties it from its centity: the players it showed to by being near it stop seeing it.",
+          "params": [],
+          "returns": []
+        },
+        {
+          "name": "attached",
+          "doc": "The centity it's attached to, or `nil`.",
+          "params": [],
+          "returns": [
+            {
+              "type": "Centity?"
             }
           ]
         },
@@ -12196,8 +13584,76 @@
           "example": "local trinkets = event.player:storage(\"trinkets\", 4)\nfor i = 0, 3 do\n  this:slot(10 + i):bind(trinkets, i)\nend"
         },
         {
+          "name": "bind_equipment",
+          "doc": "Makes this slot a view of what a player wears in one place, as `bind` does a storage's slot: what goes in or out of it is put on or taken off at once, and when what they wear changes some other way (a right-click with armour, a script's `set_equipment`) the slot shows it by the next tick. Locked windows let players use it by hand, as a bound slot. The game doesn't check what's put on: give the slot a rule (`set_rule({ wearable = \"head\", max = 1 })`). Only a window of a menu that isn't `shared` can be bound.",
+          "params": [
+            {
+              "name": "player",
+              "type": "Player",
+              "doc": ""
+            },
+            {
+              "name": "equipment",
+              "type": "string",
+              "doc": "`head`, `chest`, `legs`, `feet` or `off_hand`."
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` once the window is gone, or they're offline."
+            }
+          ],
+          "example": "local slot = this:slot(11)\nslot:bind_equipment(event.player, \"head\")\nslot:set_rule({ wearable = \"head\", max = 1 })"
+        },
+        {
+          "name": "set_rule",
+          "doc": "Says what this slot takes, or with `nil` lets it take anything again. Whatever a player puts in, by a click, a drag, a number key or a shift-click from their own inventory into `shift_into`'s slots, is held to it: a stack it doesn't take stays where it was, and of one it does, only `max` goes in (the rest stays on the cursor). Its `click` handlers still hear what's let through. Scripts' own `set_item` aren't held to it. A shift-click from below that the game moves itself (no `shift_into`) isn't either, in a window that isn't locked.",
+          "params": [
+            {
+              "name": "rule",
+              "type": "SlotRule",
+              "doc": "",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` once the window is gone."
+            }
+          ],
+          "example": "local trinkets = event.player:storage(\"trinkets\", 4)\nlocal slot = this:slot(10)\nslot:bind(trinkets, 0)\nslot:set_rule({ property = \"accessory\", max = 1 })"
+        },
+        {
+          "name": "rule",
+          "doc": "What this slot takes, or `nil` when it takes anything (or the window is gone).",
+          "params": [],
+          "returns": [
+            {
+              "type": "SlotRule?"
+            }
+          ]
+        },
+        {
+          "name": "accepts",
+          "doc": "Whether this slot's rule takes this item (any count of it). `true` for a slot without a rule; `false` once the window is gone.",
+          "params": [
+            {
+              "name": "item",
+              "type": "Item",
+              "doc": ""
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        {
           "name": "unbind",
-          "doc": "Stops showing a storage's slot here. The slot is emptied, since what it showed is still in the storage. Its player leaving unbinds every slot bound to their storage.",
+          "doc": "Stops showing a storage's slot (or a player's equipment) here. The slot is emptied, since what it showed is still where it was. Its player leaving unbinds every slot bound to their storage or equipment.",
           "params": [],
           "returns": [
             {
@@ -12858,6 +14314,27 @@
           "bubbles": true
         },
         {
+          "name": "render",
+          "doc": "The server is making a stack of this item, or rewriting one to the item's file after it changed: assign `event.display_name` and `event.lore` to give it a name and lore worked out from the stack (its `data`, its count), which the file's can't say: a prefix in the name, stats in the lore. It's heard for every stack `nf.items.create`, `ProjectItem:create` and a loot roll make, and for every stack that takes a changed file's look, so a name worked out here survives the file changing (one set any other way goes back to the file's then). A stack whose `data` a script changes keeps its name until it's made again: hand it to `nf.items.create` with its `data` to work it out anew.",
+          "payload": "ItemRenderEvent",
+          "writable": [
+            "display_name",
+            "lore"
+          ],
+          "example": "this:on(\"render\", function(event)\n  local prefix = event.item.data and event.item.data.prefix\n  if prefix then\n    event.display_name = \"<green>\" .. prefix .. \" Copper Sword\"\n  end\nend)"
+        },
+        {
+          "name": "view",
+          "doc": "A stack of this item is being sent to one player's game: their inventory (hotbar, armour and offhand too), a window they have open, the stack on their cursor. Assign `event.display_name` and `event.lore` to change how it looks to `event.player` alone, now: a price while they have a shop open, a hint for their class. Nothing the server keeps changes: not the stack, how it stacks, what's saved, what anyone else sees, nor what scripts read from inventories. Both start as the stack's own (after its `render`), so this adds to them. The game is sent a stack again only when it changes, so call `player:refresh_items()` when what this works out from changes (a menu opening or closing). If a handler fails, the stack is sent as it is. Then `nf.on(\"item_view\")`, with the same event; `event:stop()` keeps it from there.",
+          "payload": "ItemViewEvent",
+          "bubbles": true,
+          "writable": [
+            "display_name",
+            "lore"
+          ],
+          "example": "this:on(\"view\", function(event)\n  local menu = event.player:menu()\n  if menu and menu:kind() == \"shop\" then\n    local lore = event.lore or {}\n    lore[#lore + 1] = \"<gold>Sells for 5 coins\"\n    event.lore = lore\n  end\nend)"
+        },
+        {
           "name": "pickup",
           "doc": "A player is picking up a stack of this item (`event.item`) from the item entity `event.entity`. Then the player's own `pickup_item`, then `nf.on(\"player_pickup_item\")`, with the same event, so `event:cancel()` here cancels it for all of them and `event:stop()` keeps it from them.",
           "payload": "PlayerPickupItemEvent",
@@ -12902,6 +14379,17 @@
               "type": "Item?"
             }
           ]
+        },
+        {
+          "name": "properties",
+          "doc": "Its `properties` from its `item.json`: the project's own facts about it, any JSON (`{ damage = 12, class = \"melee\" }`), as a table. A new table each call, so keep it rather than ask in a loop. An empty table when the file has none, `nil` once the item is gone.",
+          "params": [],
+          "returns": [
+            {
+              "type": "table?"
+            }
+          ],
+          "example": "local stats = assert(this:properties())\nlog(stats.damage)"
         },
         {
           "name": "on",
@@ -13765,7 +15253,7 @@
         },
         {
           "name": "fill_bar",
-          "doc": "Fills a bar: `value` out of `max`, shown as that much of its segments (to the nearest half segment, for a bar with a half picture). A `value` past `max` or below 0 is shown full or empty; a `max` of 0 or less is an error.",
+          "doc": "Fills a bar: `value` out of `max`, shown as that much of its segments (to the nearest half segment, for a bar with a half picture). A `value` past `max` or below 0 is shown full or empty; a `max` of 0 or less is an error. With `segments`, only that many of the bar's segments are drawn (1 to the bar's own), placed by the bar's `align`.",
           "params": [
             {
               "name": "name",
@@ -13781,6 +15269,12 @@
               "name": "max",
               "type": "number",
               "doc": ""
+            },
+            {
+              "name": "options",
+              "type": "HudFillOptions",
+              "doc": "",
+              "optional": true
             }
           ],
           "returns": [
@@ -13790,6 +15284,39 @@
             }
           ],
           "example": "local hud = player:hud()\nhud:fill_bar(\"ui/health\", player:health() or 0, player:max_health() or 20)\nhud:fill_bar(\"ui/mana\", 40, 100)"
+        },
+        {
+          "name": "fill_bars",
+          "doc": "Fills several bars as one long bar, each `per_segment` of `max` a segment: as many segments are drawn as `max` needs, filling the first bar's, then the next's (rows of hearts, ten to a row). A bar no segment reaches is removed. Every name must be a bar; `per_segment` and `max` more than 0.",
+          "params": [
+            {
+              "name": "names",
+              "type": "string[]",
+              "doc": "Bars, `<pack>/<key>`, in the order they fill."
+            },
+            {
+              "name": "value",
+              "type": "number",
+              "doc": ""
+            },
+            {
+              "name": "max",
+              "type": "number",
+              "doc": ""
+            },
+            {
+              "name": "per_segment",
+              "type": "number",
+              "doc": "How much of `max` a segment stands for."
+            }
+          ],
+          "returns": [
+            {
+              "type": "integer",
+              "doc": "How many segments were drawn in all; 0 when they're offline."
+            }
+          ],
+          "example": "-- 20 life a heart, ten hearts a row, up to three rows.\nlocal hud = player:hud()\nhud:fill_bars({ \"ui/life1\", \"ui/life2\", \"ui/life3\" }, 230, 400, 20)"
         },
         {
           "name": "bar",
@@ -14092,6 +15619,65 @@
               "type": "Vec3"
             }
           ]
+        },
+        {
+          "name": "clamp_length",
+          "impl": "lua",
+          "doc": "The same direction, scaled down to at most `max_length` long: a copy if it is no longer than that already. Keeps a velocity under a top speed.",
+          "params": [
+            {
+              "name": "max_length",
+              "type": "number",
+              "doc": "The longest it may be, 0 or more."
+            }
+          ],
+          "returns": [
+            {
+              "type": "Vec3"
+            }
+          ],
+          "example": "local velocity = vec3(3, 0, 4):clamp_length(2.5)"
+        },
+        {
+          "name": "reflect",
+          "impl": "lua",
+          "doc": "Mirrored off a surface: `v - 2 * v:dot(n) * n` for the surface's unit normal `n`, so the part into the surface turns back out and the part along it carries on. How a shot bounces off a wall, with a sweep's `normal`.",
+          "params": [
+            {
+              "name": "normal",
+              "type": "Vec3",
+              "doc": "Which way the surface faces. Any length but zero: it is normalized first."
+            }
+          ],
+          "returns": [
+            {
+              "type": "Vec3"
+            }
+          ],
+          "example": "local bounced = vec3(1, -2, 0):reflect(vec3.up)"
+        },
+        {
+          "name": "closest_on_segment",
+          "impl": "lua",
+          "doc": "The point on the line segment from `start` to `finish` nearest to this point: its foot on the segment, or the nearer end when that falls past one. `start` when the two are the same point. With `distance`, how far a point is from a beam or a path.",
+          "params": [
+            {
+              "name": "start",
+              "type": "Vec3",
+              "doc": "One end."
+            },
+            {
+              "name": "finish",
+              "type": "Vec3",
+              "doc": "The other end."
+            }
+          ],
+          "returns": [
+            {
+              "type": "Vec3"
+            }
+          ],
+          "example": "local nearest = player:position():closest_on_segment(vec3(0, 64, 0), vec3(10, 64, 0))"
         },
         {
           "name": "flat",
@@ -14552,6 +16138,25 @@
           "name": "previous",
           "type": "any",
           "doc": "What it was."
+        }
+      ],
+      "extends": "Event"
+    },
+    {
+      "name": "DaylightEvent",
+      "doc": "Night is falling or day is breaking in a world.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "world",
+          "type": "World",
+          "doc": "The world."
+        },
+        {
+          "name": "time_of_day",
+          "type": "integer",
+          "doc": "The world's time of day when it was seen, in ticks, as `world:time_of_day()` says: 13000 or a little past at dusk, 23000 or a little past at dawn, or wherever `/time set` put it."
         }
       ],
       "extends": "Event"
@@ -16547,6 +18152,11 @@
           "doc": "Walking: how far down it will drop off an edge, in blocks: at least 0. Default 3."
         },
         {
+          "name": "open_doors",
+          "type": "boolean?",
+          "doc": "Walking: goes through the game's wooden doors and fence gates (`#minecraft:wooden_doors`, `#minecraft:fence_gates`), opening each as it comes to it and shutting it again once it's through (one it found open stays open). Iron doors stay in its way. Default `false`."
+        },
+        {
           "name": "range",
           "type": "number?",
           "doc": "How far from where it sets off it looks for a way, in blocks: more than 0, at most 128. A target further away than this is `false`. Default 48. One search looks at no more than 4096 places, so a long way round may only take it part of the way."
@@ -16569,6 +18179,585 @@
           "name": "reached",
           "type": "boolean",
           "doc": "Whether it got there: to the end of its path, within 2 blocks of where it was sent (or of what it went after, which it stops short of); `false` when it gave up."
+        }
+      ]
+    },
+    {
+      "name": "CentitySpawnOptions",
+      "doc": "How `nf.centities.spawn` spawns one. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "temporary",
+          "type": "boolean?",
+          "doc": "Not saved: its entities aren't kept with their chunk, the server forgets it on a restart, and it's removed when the script that spawned it unloads (a reload of it, or its centity removed), so nothing it made is left behind. What a shot, a damage number or a summoned helper is. `keep()` makes it a normal one. Default `false`."
+        },
+        {
+          "name": "lifetime",
+          "type": "integer?",
+          "doc": "Removed this many ticks after it's spawned (its `remove` handlers hear it), loaded or not: at least 1. A centity with a lifetime is temporary too. Default: none."
+        }
+      ]
+    },
+    {
+      "name": "BodySettings",
+      "doc": "A centity's body, as `centity:body()` gives it and `centity:set_body` takes it: the fields of `centity.json`'s `body`, in Lua spelling. Every field is optional to `set_body`. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "width",
+          "type": "number?",
+          "doc": "Blocks across, square: more than 0, at most 16."
+        },
+        {
+          "name": "height",
+          "type": "number?",
+          "doc": "Blocks tall: more than 0, at most 32."
+        },
+        {
+          "name": "gravity",
+          "type": "number?",
+          "doc": "Downward acceleration, blocks per second squared."
+        },
+        {
+          "name": "max_fall_speed",
+          "type": "number?",
+          "doc": "The fastest it falls, blocks per second."
+        },
+        {
+          "name": "drag",
+          "type": "number?",
+          "doc": "Fraction of its speed shed per second in the air, 0 to 1."
+        },
+        {
+          "name": "liquid_drag",
+          "type": "number?",
+          "doc": "The same in water or lava."
+        },
+        {
+          "name": "liquid_gravity",
+          "type": "number?",
+          "doc": "How much of its gravity pulls it in water or lava: 0 floats, 1 sinks as in air."
+        },
+        {
+          "name": "acceleration",
+          "type": "number?",
+          "doc": "How fast it reaches its walk on the ground (or flying), blocks per second squared."
+        },
+        {
+          "name": "air_acceleration",
+          "type": "number?",
+          "doc": "The same in the air."
+        },
+        {
+          "name": "friction",
+          "type": "number?",
+          "doc": "How fast it slows to a stop on the ground when it isn't walking, blocks per second squared."
+        },
+        {
+          "name": "step_height",
+          "type": "number?",
+          "doc": "The tallest step it walks straight up, blocks."
+        },
+        {
+          "name": "bounce",
+          "type": "number?",
+          "doc": "0 stops dead against what it hits, 1 bounces off at full speed."
+        },
+        {
+          "name": "fly",
+          "type": "boolean?",
+          "doc": "No gravity: walking steers it in any direction."
+        },
+        {
+          "name": "blocks",
+          "type": "boolean?",
+          "doc": "Collides with the world's blocks."
+        }
+      ]
+    },
+    {
+      "name": "LaunchOptions",
+      "doc": "How `centity:launch` flies it. Everything but `velocity` is optional. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "velocity",
+          "type": "Vec3",
+          "doc": "Blocks per second, along the world's axes. Required."
+        },
+        {
+          "name": "gravity",
+          "type": "number?",
+          "doc": "Downward acceleration, blocks per second squared. Default 0: it flies straight."
+        },
+        {
+          "name": "gravity_delay",
+          "type": "integer?",
+          "doc": "Ticks it flies straight before gravity takes it, as a thrown knife's first stretch. Default 0."
+        },
+        {
+          "name": "drag",
+          "type": "number?",
+          "doc": "Fraction of its speed shed per second, 0 to 1. Default 0."
+        },
+        {
+          "name": "radius",
+          "type": "number?",
+          "doc": "How wide its path is swept for hits, as a sphere's radius in blocks; blocks stop its middle. Default 0.1."
+        },
+        {
+          "name": "pierce",
+          "type": "integer?",
+          "doc": "How many hits it goes on through before one ends it. Default 0: the first ends it."
+        },
+        {
+          "name": "rehit",
+          "type": "integer?",
+          "doc": "Ticks before it can hit the same thing again. Default: it hits each thing once."
+        },
+        {
+          "name": "hits",
+          "type": "QueryOptions?",
+          "doc": "What it can hit, as a spatial query's options say (`centities`, `players`, `entities`, `kinds`, `exclude`, `line_of_sight` aside). It never hits itself or its `owner`. Default: everything."
+        },
+        {
+          "name": "owner",
+          "type": "(Entity|Centity)?",
+          "doc": "Who launched it: never hit, and handed to every event. Default none."
+        },
+        {
+          "name": "blocks",
+          "type": "boolean?",
+          "doc": "Whether blocks stop it (their collision shapes). Default `true`."
+        },
+        {
+          "name": "bounce",
+          "type": "number?",
+          "doc": "Comes off a block instead of ending: the fraction of its speed into the face it keeps, 0 to 1. Default: it doesn't bounce."
+        },
+        {
+          "name": "friction",
+          "type": "number?",
+          "doc": "With `bounce`: the fraction of its speed along the face it keeps, 0 to 1. Default 1."
+        },
+        {
+          "name": "max_bounces",
+          "type": "integer?",
+          "doc": "With `bounce`: how many it makes before the next block ends it. Default: no end."
+        },
+        {
+          "name": "rest_speed",
+          "type": "number?",
+          "doc": "With `bounce`: below this speed, blocks per second, after a bounce off a floor it stops and lies there (a grenade) until its `lifetime` is up. Default 1."
+        },
+        {
+          "name": "stick",
+          "type": "boolean?",
+          "doc": "Sticks in the first block it hits (`stick`) instead of ending: it stays there until its `lifetime` is up. Default `false`."
+        },
+        {
+          "name": "homing",
+          "type": "Homing?",
+          "doc": "Turns toward the nearest thing it can hit within reach. Default: it doesn't."
+        },
+        {
+          "name": "lifetime",
+          "type": "integer?",
+          "doc": "Ticks from launch before it ends (`flight_end`, `\"lifetime\"`), flying, stuck or lying still. At least 1. Default 600: half a minute."
+        },
+        {
+          "name": "aim",
+          "type": "string?",
+          "doc": "A node that's turned every tick so its +Z points the way it flies (an arrow's nose). Default: none is turned."
+        },
+        {
+          "name": "remove_on_end",
+          "type": "boolean?",
+          "doc": "Whether it's removed when its flight ends, after `flight_end`. Default `true`."
+        }
+      ]
+    },
+    {
+      "name": "Homing",
+      "doc": "How a projectile seeks: `LaunchOptions.homing`.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "range",
+          "type": "number",
+          "doc": "How far it looks, in blocks. Required."
+        },
+        {
+          "name": "turn",
+          "type": "number?",
+          "doc": "The most it turns toward its target, in degrees per second. Default 180."
+        }
+      ]
+    },
+    {
+      "name": "FlightHitEvent",
+      "doc": "A projectile touched something it can hit: `hit`. Exactly one of `target` and `entity` is set.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "centity",
+          "type": "Centity",
+          "doc": "The projectile."
+        },
+        {
+          "name": "target",
+          "type": "Centity?",
+          "doc": "The centity it hit, or `nil`."
+        },
+        {
+          "name": "node",
+          "type": "Node?",
+          "doc": "Which of `target`'s nodes (its hitbox), or `nil`."
+        },
+        {
+          "name": "entity",
+          "type": "Entity?",
+          "doc": "The player or entity it hit, or `nil`."
+        },
+        {
+          "name": "position",
+          "type": "Vec3",
+          "doc": "Where its middle was when it first touched."
+        },
+        {
+          "name": "velocity",
+          "type": "Vec3",
+          "doc": "How fast it was going, blocks per second."
+        },
+        {
+          "name": "owner",
+          "type": "(Entity|Centity)?",
+          "doc": "Who launched it, or `nil`."
+        }
+      ]
+    },
+    {
+      "name": "FlightBlockEvent",
+      "doc": "A projectile met a block it bounces off (`bounce`) or sticks in (`stick`).",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "centity",
+          "type": "Centity",
+          "doc": "The projectile."
+        },
+        {
+          "name": "block",
+          "type": "Block",
+          "doc": "The block."
+        },
+        {
+          "name": "position",
+          "type": "Vec3",
+          "doc": "Where it met it."
+        },
+        {
+          "name": "normal",
+          "type": "Vec3",
+          "doc": "The direction straight out of the face it met."
+        },
+        {
+          "name": "speed",
+          "type": "number",
+          "doc": "How fast it was going into it, blocks per second."
+        },
+        {
+          "name": "owner",
+          "type": "(Entity|Centity)?",
+          "doc": "Who launched it, or `nil`."
+        }
+      ]
+    },
+    {
+      "name": "FlightEndEvent",
+      "doc": "A projectile's flight ended: `flight_end`.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "centity",
+          "type": "Centity",
+          "doc": "The projectile."
+        },
+        {
+          "name": "reason",
+          "type": "\"hit\"|\"block\"|\"lifetime\"|\"unloaded\"|\"stopped\"",
+          "doc": "Why: see `flight_end`."
+        },
+        {
+          "name": "position",
+          "type": "Vec3",
+          "doc": "Where it ended."
+        },
+        {
+          "name": "target",
+          "type": "Centity?",
+          "doc": "For `\"hit\"`, the centity it ended on, or `nil`."
+        },
+        {
+          "name": "entity",
+          "type": "Entity?",
+          "doc": "For `\"hit\"`, the player or entity it ended on, or `nil`."
+        },
+        {
+          "name": "block",
+          "type": "Block?",
+          "doc": "For `\"block\"`, the block it ended on, or `nil`."
+        },
+        {
+          "name": "normal",
+          "type": "Vec3?",
+          "doc": "For `\"block\"`, the direction straight out of the face it met, or `nil`."
+        },
+        {
+          "name": "owner",
+          "type": "(Entity|Centity)?",
+          "doc": "Who launched it, or `nil`."
+        }
+      ]
+    },
+    {
+      "name": "CentityDamageOptions",
+      "doc": "Where damage dealt with `centity:damage` comes from, for its handlers. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "source",
+          "type": "(Entity|Centity)?",
+          "doc": "Who or what dealt it."
+        },
+        {
+          "name": "cause",
+          "type": "string?",
+          "doc": "What kind of damage, in your own words: `\"melee\"`, `\"fire\"`."
+        }
+      ]
+    },
+    {
+      "name": "CentityDamageEvent",
+      "doc": "A centity is about to lose health: `damage`.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "centity",
+          "type": "Centity",
+          "doc": "The centity."
+        },
+        {
+          "name": "amount",
+          "type": "number",
+          "doc": "How much it loses: assign to change it."
+        },
+        {
+          "name": "source",
+          "type": "(Entity|Centity)?",
+          "doc": "Who or what dealt it, or `nil`."
+        },
+        {
+          "name": "cause",
+          "type": "string?",
+          "doc": "The damage's `cause`, or `nil`."
+        }
+      ]
+    },
+    {
+      "name": "CentityDeathEvent",
+      "doc": "A centity's health reached 0: `death`.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "centity",
+          "type": "Centity",
+          "doc": "The centity."
+        },
+        {
+          "name": "source",
+          "type": "(Entity|Centity)?",
+          "doc": "What dealt the last blow, or `nil`."
+        },
+        {
+          "name": "cause",
+          "type": "string?",
+          "doc": "The last blow's `cause`, or `nil`."
+        }
+      ]
+    },
+    {
+      "name": "CentityLandEvent",
+      "doc": "A centity's body landed: `land`.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "centity",
+          "type": "Centity",
+          "doc": "The centity."
+        },
+        {
+          "name": "speed",
+          "type": "number",
+          "doc": "How fast it was falling as it landed, blocks per second."
+        }
+      ]
+    },
+    {
+      "name": "CentityBumpEvent",
+      "doc": "A centity's body ran into something: `bump`.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "centity",
+          "type": "Centity",
+          "doc": "The centity."
+        },
+        {
+          "name": "normal",
+          "type": "Vec3",
+          "doc": "The direction straight out of the face it hit: `vec3(0, -1, 0)` for a ceiling."
+        },
+        {
+          "name": "speed",
+          "type": "number",
+          "doc": "How fast it was going into it, blocks per second."
+        }
+      ]
+    },
+    {
+      "name": "Bounds",
+      "doc": "A box along the world's axes: `centity:bounds()`.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "min",
+          "type": "Vec3",
+          "doc": "Its lowest corner."
+        },
+        {
+          "name": "max",
+          "type": "Vec3",
+          "doc": "Its highest corner."
+        }
+      ]
+    },
+    {
+      "name": "TouchEvent",
+      "doc": "A centity's hitboxes started touching something's: `touch`.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "centity",
+          "type": "Centity",
+          "doc": "The centity that hears it."
+        },
+        {
+          "name": "node",
+          "type": "Node",
+          "doc": "Which of its nodes touched (its hitbox)."
+        },
+        {
+          "name": "other",
+          "type": "Centity?",
+          "doc": "The other centity, or `nil`."
+        },
+        {
+          "name": "other_node",
+          "type": "Node?",
+          "doc": "Which of the other centity's nodes it touched, or `nil`."
+        },
+        {
+          "name": "entity",
+          "type": "Entity?",
+          "doc": "The player or entity it touched, or `nil`."
+        }
+      ]
+    },
+    {
+      "name": "StretchOptions",
+      "doc": "How `node:stretch_between` lays a node. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "thickness",
+          "type": "number?",
+          "doc": "Its X and Y scale. Default: as they are."
+        }
+      ]
+    },
+    {
+      "name": "RopeOptions",
+      "doc": "How `node:rope_between` strings a rope. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "length",
+          "type": "number?",
+          "doc": "How long the rope is, in blocks: shorter than the ends' distance it's taut, longer it sags by its slack. Default: always taut."
+        }
+      ]
+    },
+    {
+      "name": "TweenOptions",
+      "doc": "A tween for `node:tween`: at least one of `translation`, `rotation` and `scale`. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "translation",
+          "type": "Vec3?",
+          "doc": "Where it ends up, as `set_translation` takes."
+        },
+        {
+          "name": "rotation",
+          "type": "Vec3?",
+          "doc": "Degrees, as `set_rotation` takes; not the short way round, so 0 to 360 is a whole turn."
+        },
+        {
+          "name": "scale",
+          "type": "Vec3?",
+          "doc": "As `set_scale` takes."
+        },
+        {
+          "name": "ticks",
+          "type": "integer",
+          "doc": "How long, 1 or more (each way, with `back`)."
+        },
+        {
+          "name": "easing",
+          "type": "string?",
+          "doc": "`linear`, `ease_in`, `ease_out`, `ease_in_out` or `step`, as keyframes take. Default `ease_in_out`."
+        },
+        {
+          "name": "back",
+          "type": "boolean?",
+          "doc": "Eases back to where it started after, over as many ticks again. Default `false`."
         }
       ]
     },
@@ -16653,6 +18842,301 @@
           "name": "sky_light",
           "type": "integer?",
           "doc": "Light from the sky, 0 to 15. Required."
+        }
+      ]
+    },
+    {
+      "name": "ActiveBuff",
+      "doc": "A buff someone has now: `buffs()`.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "id",
+          "type": "string",
+          "doc": "Its id."
+        },
+        {
+          "name": "ticks",
+          "type": "integer",
+          "doc": "Ticks it has left."
+        },
+        {
+          "name": "name",
+          "type": "Text?",
+          "doc": "Its file's `name`, or `nil`."
+        },
+        {
+          "name": "icon",
+          "type": "string?",
+          "doc": "Its file's `icon`, a glyph (`<pack>/<key>`), or `nil`."
+        },
+        {
+          "name": "color",
+          "type": "string?",
+          "doc": "Its file's `color`, or `nil`."
+        },
+        {
+          "name": "debuff",
+          "type": "boolean",
+          "doc": "Whether it is one."
+        }
+      ]
+    },
+    {
+      "name": "BuffEvent",
+      "doc": "A buff is about to take hold: `buff_add`. Exactly one of `player` and `centity` is set.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "buff",
+          "type": "string",
+          "doc": "Its id."
+        },
+        {
+          "name": "ticks",
+          "type": "integer",
+          "doc": "How long it will last: assign to change it (at least 1)."
+        },
+        {
+          "name": "player",
+          "type": "Player?",
+          "doc": "Who gets it, or `nil`."
+        },
+        {
+          "name": "centity",
+          "type": "Centity?",
+          "doc": "The centity that gets it, or `nil`."
+        }
+      ]
+    },
+    {
+      "name": "BuffEndEvent",
+      "doc": "A buff ended: `buff_end`. Exactly one of `player` and `centity` is set.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "buff",
+          "type": "string",
+          "doc": "Its id."
+        },
+        {
+          "name": "reason",
+          "type": "\"expired\"|\"removed\"|\"cured\"",
+          "doc": "Why: see `buff_end`."
+        },
+        {
+          "name": "player",
+          "type": "Player?",
+          "doc": "Who had it, or `nil`."
+        },
+        {
+          "name": "centity",
+          "type": "Centity?",
+          "doc": "The centity that had it, or `nil`."
+        }
+      ]
+    },
+    {
+      "name": "RecipeCraftEvent",
+      "doc": "One making of a `station` recipe by `nf.recipes.craft`: `recipe_craft`.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "player",
+          "type": "Player",
+          "doc": "Who it was made for."
+        },
+        {
+          "name": "recipe",
+          "type": "string",
+          "doc": "The recipe's id."
+        },
+        {
+          "name": "result",
+          "type": "Item",
+          "doc": "What this making gives them: the recipe's result, until a handler assigns another."
+        }
+      ]
+    },
+    {
+      "name": "StationRecipe",
+      "doc": "A `station` recipe, as `nf.recipes.available` and `nf.recipes.get` give it.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "id",
+          "type": "string",
+          "doc": "Its id."
+        },
+        {
+          "name": "result",
+          "type": "Item",
+          "doc": "What one making of it gives."
+        },
+        {
+          "name": "materials",
+          "type": "RecipeMaterial[]",
+          "doc": "What one making of it takes."
+        },
+        {
+          "name": "stations",
+          "type": "string[]",
+          "doc": "The blocks that must be near, as its file names them."
+        },
+        {
+          "name": "station_range",
+          "type": "integer",
+          "doc": "How near, in blocks."
+        },
+        {
+          "name": "group",
+          "type": "string?",
+          "doc": "Its `group`, or `nil`."
+        },
+        {
+          "name": "times",
+          "type": "integer?",
+          "doc": "`nf.recipes.available`: how many times over the player can make it now. `nil` from `nf.recipes.get`."
+        }
+      ]
+    },
+    {
+      "name": "RecipeMaterial",
+      "doc": "One material of a `station` recipe: exactly one of `item`, `kind` and `tag`, and how many.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "item",
+          "type": "string?",
+          "doc": "A project item, by id."
+        },
+        {
+          "name": "kind",
+          "type": "string?",
+          "doc": "An item id, `\"minecraft:stick\"`."
+        },
+        {
+          "name": "tag",
+          "type": "string?",
+          "doc": "An item tag, without its `#`."
+        },
+        {
+          "name": "count",
+          "type": "integer",
+          "doc": "How many one making takes."
+        }
+      ]
+    },
+    {
+      "name": "RecipeAvailableOptions",
+      "doc": "What `nf.recipes.available` looks at. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "near",
+          "type": "Vec3?",
+          "doc": "Where its stations are looked for, in the player's world. Default: where they stand."
+        },
+        {
+          "name": "stations",
+          "type": "string[]?",
+          "doc": "Stations counted as near whatever the blocks are: a menu that is a crafting station, a station item held. Default none."
+        },
+        {
+          "name": "group",
+          "type": "string?",
+          "doc": "Only recipes of this `group`. Default: any."
+        },
+        {
+          "name": "all",
+          "type": "boolean?",
+          "doc": "Every station recipe, not only those they can make now: one they can't has `times` 0. Default `false`."
+        }
+      ]
+    },
+    {
+      "name": "RecipeCraftOptions",
+      "doc": "How `nf.recipes.craft` makes a recipe. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "times",
+          "type": "integer?",
+          "doc": "How many times over, at least 1. Default 1."
+        },
+        {
+          "name": "near",
+          "type": "Vec3?",
+          "doc": "Where its stations are looked for. Default: where the player stands."
+        },
+        {
+          "name": "stations",
+          "type": "string[]?",
+          "doc": "Stations counted as near whatever the blocks are."
+        }
+      ]
+    },
+    {
+      "name": "ItemViewEvent",
+      "doc": "A stack is being sent to one player's game, to be shown as this player alone sees it: `view` on a project item, `item_view` on `nf`.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "player",
+          "type": "Player",
+          "doc": "Whose game it is sent to."
+        },
+        {
+          "name": "item",
+          "type": "Item",
+          "doc": "The real stack, as the server keeps it. Changing this table changes nothing: assign `display_name` and `lore`."
+        },
+        {
+          "name": "display_name",
+          "type": "Text?",
+          "doc": "The name this player is shown: the stack's own until a handler assigns another. `nil` for the game's own name."
+        },
+        {
+          "name": "lore",
+          "type": "Text[]?",
+          "doc": "The lore lines this player is shown, the same way. `nil` for none."
+        }
+      ]
+    },
+    {
+      "name": "ItemRenderEvent",
+      "doc": "A stack of a project item is being made, or rewritten to its item's changed file: `render`.",
+      "methods": false,
+      "functions": [],
+      "extends": "Event",
+      "fields": [
+        {
+          "name": "item",
+          "type": "Item",
+          "doc": "The stack as it is about to be, with its `data` and `count`. Changing this table changes nothing: assign `display_name` and `lore`."
+        },
+        {
+          "name": "display_name",
+          "type": "Text?",
+          "doc": "Its name: the file's (or what made it said), until a handler assigns another. `nil` for the game's own name."
+        },
+        {
+          "name": "lore",
+          "type": "Text[]?",
+          "doc": "Its lore lines, the same way. `nil` for none."
         }
       ]
     },
@@ -17094,19 +19578,62 @@
     },
     {
       "name": "SlotBinding",
-      "doc": "Which slot of a storage a menu slot shows: `slot:binding()`.",
+      "doc": "What a menu slot shows: `slot:binding()`. A slot of a storage (`storage` and `index`), or what a player wears (`player` and `equipment`).",
       "methods": false,
       "functions": [],
       "fields": [
         {
           "name": "storage",
-          "type": "Inventory",
+          "type": "Inventory?",
           "doc": "The storage (`player:storage`)."
         },
         {
           "name": "index",
-          "type": "integer",
-          "doc": "Its slot, from 0."
+          "type": "integer?",
+          "doc": "The storage's slot, from 0."
+        },
+        {
+          "name": "player",
+          "type": "Player?",
+          "doc": "Whose equipment."
+        },
+        {
+          "name": "equipment",
+          "type": "string?",
+          "doc": "`head`, `chest`, `legs`, `feet` or `off_hand`."
+        }
+      ]
+    },
+    {
+      "name": "SlotRule",
+      "doc": "What a menu slot takes (`slot:set_rule`). A stack goes in when it's any of `items`, `kinds`, `property` or `wearable` (or when none is given), and never more of it than `max`. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "items",
+          "type": "string[]?",
+          "doc": "The project's items it takes, by id."
+        },
+        {
+          "name": "kinds",
+          "type": "string[]?",
+          "doc": "The game's items it takes, by id or `#tag` (`#minecraft:head_armor`); a project item's stacks never count as their kind."
+        },
+        {
+          "name": "property",
+          "type": "string?",
+          "doc": "A project item with this key in its `properties` (and not `false`)."
+        },
+        {
+          "name": "wearable",
+          "type": "string?",
+          "doc": "What's worn there: `head`, `chest`, `legs`, `feet` or `body`, by its `equipment` slot or, for the game's own items, the slot's armour tag (`#minecraft:head_armor`...)."
+        },
+        {
+          "name": "max",
+          "type": "integer?",
+          "doc": "The most items it holds: 1 for a ring. Default a full stack."
         }
       ]
     },
@@ -18307,6 +20834,221 @@
       ]
     },
     {
+      "name": "FloodOptions",
+      "doc": "How `world:flood` fills. A block is named as it is in a game block file: an id (`\"minecraft:oak_log\"`), a `#tag` (`\"#minecraft:logs\"`) or a project block's id (`\"ruby_ore\"`), or by what it is: `\"solid\"` (what players stand on), `\"liquid\"` (water and lava) or `\"passable\"` (neither: air, torches, flowers). A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "through",
+          "type": "string[]",
+          "doc": "The blocks it fills: each one it reaches that any of these names. Required."
+        },
+        {
+          "name": "except",
+          "type": "string[]?",
+          "doc": "Blocks it doesn't fill even when `through` names them: `{ \"#minecraft:doors\" }` keeps a room's air from leaking out through a door. Default none."
+        },
+        {
+          "name": "directions",
+          "type": "Vec3[]?",
+          "doc": "Which neighbours it goes on to from each block, as offsets of whole blocks (`vec3(0, 1, 0)` is the one above), at most 2 on each axis. Default the six that share a face: `vec3(1, 0, 0)`, `vec3(-1, 0, 0)` and so on. A tree felled up and sideways but never down leaves out every offset with y = -1."
+        },
+        {
+          "name": "limit",
+          "type": "integer?",
+          "doc": "The most blocks it fills, at least 1, at most 32,768. Default 4,096. `stopped` is `\"limit\"` when there was more."
+        },
+        {
+          "name": "bounds",
+          "type": "Bounds?",
+          "doc": "`{ min = Vec3, max = Vec3 }`: it never fills a block outside this box (both corners' blocks included), and `stopped` is `\"bounds\"` when it would have. Default: no box."
+        },
+        {
+          "name": "kinds",
+          "type": "boolean?",
+          "doc": "Also answer what each block is (`kinds`, `edge_kinds`): its id without properties (`\"minecraft:oak_log\"`), or a project block's id. Default `false`."
+        }
+      ]
+    },
+    {
+      "name": "FloodResult",
+      "doc": "What `world:flood` filled.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "positions",
+          "type": "Vec3[]",
+          "doc": "Every block it filled, as its lowest corner (whole numbers), the start first, then outward a step at a time."
+        },
+        {
+          "name": "edges",
+          "type": "Vec3[]",
+          "doc": "Every block next to one it filled that it didn't fill (a tree's leaves, a room's walls and door), once each. Not a block in an unloaded chunk or outside its `bounds`."
+        },
+        {
+          "name": "kinds",
+          "type": "string[]?",
+          "doc": "With `kinds = true`, what each of `positions` is, in the same order. `nil` otherwise."
+        },
+        {
+          "name": "edge_kinds",
+          "type": "string[]?",
+          "doc": "With `kinds = true`, what each of `edges` is, in the same order. `nil` otherwise."
+        },
+        {
+          "name": "stopped",
+          "type": "\"limit\"|\"unloaded\"|\"bounds\"?",
+          "doc": "Why it didn't fill everything it reaches: `\"limit\"` (more past its limit), `\"unloaded\"` (a chunk that isn't loaded, or the world's top or bottom, in its way) or `\"bounds\"`. `nil` when it filled all of it: a closed room, a whole tree."
+        }
+      ]
+    },
+    {
+      "name": "QueryOptions",
+      "doc": "What a spatial query (`world:overlap_box`, `overlap_sphere`, `overlap_cone`, `nearest`) finds. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "centities",
+          "type": "boolean?",
+          "doc": "Whether it finds centities. Default `true`."
+        },
+        {
+          "name": "players",
+          "type": "boolean?",
+          "doc": "Whether it finds players. Default `true`."
+        },
+        {
+          "name": "entities",
+          "type": "boolean?",
+          "doc": "Whether it finds entities that aren't players (mobs, dropped items, arrows...). Default `true`."
+        },
+        {
+          "name": "kinds",
+          "type": "string[]?",
+          "doc": "Only centities of these kinds (their folder names), and entities of these types (`\"minecraft:zombie\"`). Default: any."
+        },
+        {
+          "name": "exclude",
+          "type": "(Centity|Entity)[]?",
+          "doc": "What it leaves out: whatever is asking, usually. Default none."
+        },
+        {
+          "name": "limit",
+          "type": "integer?",
+          "doc": "At most this many, the nearest. At least 1. Default: all."
+        },
+        {
+          "name": "line_of_sight",
+          "type": "boolean?",
+          "doc": "Only what a ray from the query's own point (the middle of a box, the centre of a sphere, a cone's tip, a sweep's start) reaches without a block in the way, aimed at its hitbox's nearest point. Default `false`."
+        }
+      ]
+    },
+    {
+      "name": "SweepOptions",
+      "doc": "How `world:sweep` moves and what it finds: everything `QueryOptions` takes, and these. A key that isn't one of them is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "centities",
+          "type": "boolean?",
+          "doc": "Whether it finds centities. Default `true`."
+        },
+        {
+          "name": "players",
+          "type": "boolean?",
+          "doc": "Whether it finds players. Default `true`."
+        },
+        {
+          "name": "entities",
+          "type": "boolean?",
+          "doc": "Whether it finds entities that aren't players (mobs, dropped items, arrows...). Default `true`."
+        },
+        {
+          "name": "kinds",
+          "type": "string[]?",
+          "doc": "Only centities of these kinds (their folder names), and entities of these types (`\"minecraft:zombie\"`). Default: any."
+        },
+        {
+          "name": "exclude",
+          "type": "(Centity|Entity)[]?",
+          "doc": "What it leaves out: whatever is asking, usually. Default none."
+        },
+        {
+          "name": "limit",
+          "type": "integer?",
+          "doc": "At most this many, the nearest. At least 1. Default: all."
+        },
+        {
+          "name": "line_of_sight",
+          "type": "boolean?",
+          "doc": "Only what a ray from the query's own point (the middle of a box, the centre of a sphere, a cone's tip, a sweep's start) reaches without a block in the way, aimed at its hitbox's nearest point. Default `false`."
+        },
+        {
+          "name": "radius",
+          "type": "number?",
+          "doc": "The moving sphere's radius, in blocks, at least 0. Default 0: a point."
+        },
+        {
+          "name": "blocks",
+          "type": "boolean?",
+          "doc": "Whether blocks stop it (their collision shapes, as `raycast` sees them). Default `true`. A block stops the sphere's middle, not its edge."
+        },
+        {
+          "name": "fluids",
+          "type": "boolean?",
+          "doc": "Whether water and lava stop it, as solid blocks. Default `false`."
+        }
+      ]
+    },
+    {
+      "name": "QueryHit",
+      "doc": "One thing a spatial query found. Exactly one of `centity`, `entity` and `block` is set: a `block` only ends a `world:sweep`.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "centity",
+          "type": "Centity?",
+          "doc": "The centity found, or `nil`."
+        },
+        {
+          "name": "node",
+          "type": "Node?",
+          "doc": "Which of `centity`'s nodes was nearest (its hitbox), or `nil` for anything else."
+        },
+        {
+          "name": "entity",
+          "type": "Entity?",
+          "doc": "The player or entity found, or `nil`."
+        },
+        {
+          "name": "block",
+          "type": "Block?",
+          "doc": "The block a `world:sweep` stopped at, or `nil`."
+        },
+        {
+          "name": "position",
+          "type": "Vec3",
+          "doc": "Where: for an overlap or `nearest`, the point of the hitbox nearest the query's own point; for a `sweep`, where the sphere's middle is when it first touches (on a block, where it stops)."
+        },
+        {
+          "name": "distance",
+          "type": "number",
+          "doc": "How far that is from the query's own point; along the way, for a `sweep`. 0 when the point is inside the hitbox."
+        },
+        {
+          "name": "normal",
+          "type": "Vec3?",
+          "doc": "For a `sweep`'s block, the unit direction straight out of the face it met: what a bounce reflects off. `nil` otherwise."
+        }
+      ]
+    },
+    {
       "name": "RaycastHit",
       "doc": "What `world:raycast` hit: where, and what. Exactly one of `block`, `entity` and `centity` is set.",
       "methods": false,
@@ -18346,6 +21088,29 @@
           "name": "node",
           "type": "Node?",
           "doc": "Which node of `centity` it hit (its hitbox), or `nil` for anything else."
+        }
+      ]
+    },
+    {
+      "name": "BossBarAttachOptions",
+      "doc": "How `bossbar:attach` ties a bar to a centity. Every key is optional; a key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "range",
+          "type": "number?",
+          "doc": "How near a player must be to see it, in blocks. Default 48."
+        },
+        {
+          "name": "health",
+          "type": "boolean?",
+          "doc": "Its progress follows the centity's `health` (when it has any). Default `true`."
+        },
+        {
+          "name": "remove_with",
+          "type": "boolean?",
+          "doc": "Removed when the centity is. Default `true`."
         }
       ]
     },
@@ -18430,6 +21195,24 @@
           "name": "max",
           "type": "number",
           "doc": "Out of how much."
+        },
+        {
+          "name": "segments",
+          "type": "integer",
+          "doc": "How many of its segments are drawn."
+        }
+      ]
+    },
+    {
+      "name": "HudFillOptions",
+      "doc": "How `hud:fill_bar` draws a bar.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "segments",
+          "type": "integer?",
+          "doc": "Draw only this many of the bar's segments, 1 to its own. Default all of them."
         }
       ]
     },
@@ -18855,6 +21638,85 @@
           "name": "scale",
           "type": "number?",
           "doc": "What the coordinates are multiplied by first: smaller is smoother and wider (0.05 changes over about 20 blocks). Default 1."
+        }
+      ]
+    },
+    {
+      "name": "TestShownOptions",
+      "doc": "Where `nf.test.shown` looks. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "menu",
+          "type": "boolean?",
+          "doc": "Whether `slot` is one of the window they have open, numbered from 0 as `menu:slot` numbers them."
+        }
+      ]
+    },
+    {
+      "name": "TestClickOptions",
+      "doc": "How `nf.test.click` clicks. Every key is optional; a key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "hand",
+          "type": "\"main_hand\"|\"off_hand\"?",
+          "doc": "Which hand clicks, and whose item is used. Default `\"main_hand\"`."
+        },
+        {
+          "name": "block",
+          "type": "Block?",
+          "doc": "The block clicked, which must be in a loaded chunk. Default: none, a click at the air."
+        },
+        {
+          "name": "face",
+          "type": "\"up\"|\"down\"|\"north\"|\"south\"|\"east\"|\"west\"?",
+          "doc": "Which face of `block` was clicked. Default `\"up\"`; only with `block`."
+        }
+      ]
+    },
+    {
+      "name": "TestInputKeys",
+      "doc": "The keys `nf.test.input` holds down: each `true` is held, and one left out (or `false`) isn't. A key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "forward",
+          "type": "boolean?",
+          "doc": "Forward (W)."
+        },
+        {
+          "name": "backward",
+          "type": "boolean?",
+          "doc": "Back (S)."
+        },
+        {
+          "name": "left",
+          "type": "boolean?",
+          "doc": "Left (A)."
+        },
+        {
+          "name": "right",
+          "type": "boolean?",
+          "doc": "Right (D)."
+        },
+        {
+          "name": "jump",
+          "type": "boolean?",
+          "doc": "Jump (space)."
+        },
+        {
+          "name": "sneak",
+          "type": "boolean?",
+          "doc": "Sneak (shift)."
+        },
+        {
+          "name": "sprint",
+          "type": "boolean?",
+          "doc": "Sprint (control)."
         }
       ]
     },

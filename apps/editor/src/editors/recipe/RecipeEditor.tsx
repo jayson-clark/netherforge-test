@@ -68,6 +68,7 @@ const TYPE_LABELS: Record<RecipeType, string> = {
   campfire_cooking: 'Campfire',
   smithing_transform: 'Smithing',
   stonecutting: 'Stonecutter',
+  station: 'Station (scripts make it)',
 }
 
 /** GUI pixels to screen pixels, as the menu editor draws windows. */
@@ -203,6 +204,10 @@ function Station({ model, slots }: { model: RecipeFile; slots: SlotActions }) {
       </div>
     )
     caption = "The base's components carry over to the result."
+  } else if (type === 'station') {
+    inputs = <Materials model={model} />
+    caption =
+      "Scripts make it (nf.recipes.craft) from what's in the crafter's inventory, with its stations near. Edit its materials and stations as JSON."
   } else if (type === 'stonecutting') {
     inputs = <SingleSlot model={model} field="ingredient" slots={slots} label="Input" />
     caption = 'One input, cut into the result.'
@@ -228,6 +233,28 @@ function Station({ model, slots }: { model: RecipeFile; slots: SlotActions }) {
       </div>
       <Muted className={styles.caption}>{caption}</Muted>
       {slots.tooltip.tooltip}
+    </div>
+  )
+}
+
+/** A station recipe's materials, with how many of each, and the stations it needs. */
+function Materials({ model }: { model: RecipeFile }) {
+  const name = (ingredient: Ingredient) =>
+    typeof ingredient === 'string' ? ingredient : `item ${ingredient.item ?? ''}`
+  return (
+    <div className={styles.column}>
+      <ul aria-label="Materials">
+        {(model.materials ?? []).map((material, index) => (
+          <li key={index}>
+            {material.count ?? 1} × {name(material.ingredient)}
+          </li>
+        ))}
+      </ul>
+      {model.stations && model.stations.length > 0 && (
+        <Muted>
+          Near: {model.stations.join(', ')} (within {model.stationRange ?? 4} blocks)
+        </Muted>
+      )}
     </div>
   )
 }

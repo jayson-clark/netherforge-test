@@ -14,7 +14,9 @@ import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.api.AnimationEvent
+import dev.netherforge.plugin.api.CentityBumpEvent
 import dev.netherforge.plugin.api.CentityEvent
+import dev.netherforge.plugin.api.CentityLandEvent
 import dev.netherforge.plugin.api.CentityPathEndEvent
 import dev.netherforge.plugin.api.ClickEvent
 import dev.netherforge.plugin.api.EventType
@@ -22,6 +24,7 @@ import dev.netherforge.plugin.api.Events
 import dev.netherforge.plugin.api.LuaEvent
 import dev.netherforge.plugin.api.LuaHandle
 import dev.netherforge.plugin.api.TickEvent
+import dev.netherforge.plugin.api.TouchEvent
 import dev.netherforge.plugin.platform.ClickButton
 import dev.netherforge.plugin.platform.DisplayLook
 import dev.netherforge.plugin.platform.DisplayPose
@@ -33,6 +36,7 @@ import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.platform.Ray
 import dev.netherforge.plugin.profile.TickParts
 import dev.netherforge.plugin.project.Resource
+import dev.netherforge.plugin.script.Scope
 import dev.netherforge.plugin.script.ScopeOwner
 import dev.netherforge.plugin.script.Scripts
 import dev.netherforge.plugin.session.ReloadBatch
@@ -102,6 +106,8 @@ class Centities(
     private val home: () -> String,
     /** Where the profiler takes what each step of an instance's tick costs (`world/centities/sync`). */
     private val parts: TickParts = TickParts.OFF,
+    /** The handle an entity is given in an event (a `Player`, a `Mob`...): the session's, which asks the server what it is. */
+    private val entityHandle: (UUID) -> LuaHandle.Entity = { LuaHandle.Entity(it.toString()) },
     /** An instance was removed for good (or its inert record was): what's kept for it elsewhere goes too. */
     private val onRemoved: (UUID) -> Unit = {}
 ) : RuntimeService {
@@ -124,6 +130,9 @@ class Centities(
 
     val physics = Physics(platform, this)
 
+    /** Centities' `body`: walking, falling and jumping against the blocks. */
+    internal val movers = Movers(platform)
+
     /** Centities walking where `move_to` sent them. */
     val paths = CentityPaths(platform, this)
 
@@ -133,8 +142,17 @@ class Centities(
 
     fun all(): List<Instance> = instances.values.toList()
 
-    /** Every instance's hitboxes by where they are, for physics. */
+    /** Every instance's hitboxes by where they are, for physics and the spatial queries. */
     internal val obstacles = ObstacleGrid(::boxesOf)
+
+    /** `world:overlap_*`, `sweep`, `nearest`: hitboxes here and the server's entities' boxes. */
+    internal val spatial = SpatialQueries(platform, this)
+
+    /** Centities' health, damage and death, and their bars. */
+    internal val healths = Healths(scripts, this)
+
+    /** Centities flying as projectiles (`launch`). */
+    internal val flights = Flights(platform, scripts, spatial, entityHandle, ::remove)
 
     fun find(id: UUID): Instance? = instances[id]
 
@@ -153,6 +171,8 @@ class Centities(
 
     /** Scripts stop; the store gets what changed, places and facings included. */
     override fun stop() {
+        // A temporary instance belongs to scripts that are stopping: nothing of it is kept.
+        for (instance in instances.values.toList()) if (instance.temporary) remove(instance)
         stopAll()
         flush()
         savePlacements { true }
@@ -179,7 +199,7 @@ class Centities(
 
     private fun savePlacements(which: (Instance) -> Boolean) {
         for (instance in instances.values) {
-            if (!instance.natural && which(instance) && stored[instance.id] != placement(instance)) put(record(instance))
+            if (!instance.transient && which(instance) && stored[instance.id] != placement(instance)) put(record(instance))
         }
     }
 
@@ -211,7 +231,7 @@ class Centities(
         for (id in dirty) {
             val instance = instances[id]
             // A temporary instance is never in the store: the store knows an instance only once `keep` makes it a normal one.
-            if (instance?.natural == true) continue
+            if (instance?.transient == true) continue
             val record = instance?.let(::record) ?: inert[id]
             if (record != null) {
                 put(record)
@@ -246,6 +266,7 @@ class Centities(
         instances[id] = instance
         obstacles.add(instance)
         own(instance)
+        healths.adopt(instance)
         autoplay(instance)
         return instance
     }
@@ -285,16 +306,31 @@ class Centities(
      * (the location's own facing is ignored). Its entities exist, its
      * script's body has run and `spawn` has been heard by the time this
      * returns. Null when there's no such centity or no such world. A
-     * [natural] one is temporary (see [Instance.natural]): the spawner makes those.
+     * [natural] one is temporary (see [Instance.natural]): the spawner makes those. A [temporary] one
+     * (see [Instance.temporary]) goes with the scope [owner] and, given [lifetime], that many ticks from now.
      */
-    fun spawn(centity: String, at: Location, yaw: Double = 0.0, natural: Boolean = false): Instance? {
+    fun spawn(
+        centity: String,
+        at: Location,
+        yaw: Double = 0.0,
+        natural: Boolean = false,
+        temporary: Boolean = false,
+        owner: Int? = null,
+        lifetime: Long? = null
+    ): Instance? {
         val definition = definitions[centity] ?: return null
         if (!platform.worlds.exists(at.world)) return null
         val instance = Instance(UUID.randomUUID(), definition, at.copy(yaw = 0.0, pitch = 0.0), yaw)
         // Before anything is made: its entities are made temporary as they're claimed, and its script's `spawn` can ask.
         instance.natural = natural
+        instance.temporary = temporary || lifetime != null
+        if (instance.temporary) {
+            instance.owner = owner
+            instance.expires = lifetime?.let { scripts.now + it }
+        }
         instances[instance.id] = instance
         obstacles.add(instance)
+        healths.adopt(instance)
         autoplay(instance)
         sync(instance)
         changed(instance.id)
@@ -338,6 +374,7 @@ class Centities(
         instance.removing = true
         emit(Events.CENTITY_REMOVE, instance, CentityEvent(handle(instance)))
         instance.removed = true
+        paths.shutAll(instance)
         stopScripts(instance)
         scripts.dropTarget(handle(instance))
         for (entity in instance.entityIds()) {
@@ -366,13 +403,16 @@ class Centities(
     fun naturals(): List<Instance> = instances.values.filter { it.natural && !it.removed }
 
     /**
-     * Makes a natural instance a normal one: its entities are saved with
-     * their chunks and the store hears of it at the end of the tick, so it
-     * survives a restart. False when it wasn't natural.
+     * Makes a natural or temporary instance a normal one: its entities are
+     * saved with their chunks and the store hears of it at the end of the
+     * tick, so it survives a restart. False when it was neither.
      */
     fun keep(instance: Instance): Boolean {
-        if (instance.removed || !instance.natural) return false
+        if (instance.removed || !instance.transient) return false
         instance.natural = false
+        instance.temporary = false
+        instance.owner = null
+        instance.expires = null
         for (entity in instance.entityIds()) platform.entities.setPersistent(entity, true)
         changed(instance.id)
         return true
@@ -390,8 +430,10 @@ class Centities(
      */
     fun teleport(instance: Instance, to: Location, yaw: Double? = null): Boolean {
         if (instance.removed || !platform.worlds.exists(to.world)) return false
-        // A teleport ends a walk, as `stop_pathing` does: no `path_end`. It ends a follow too.
+        // A teleport ends a walk, as `stop_pathing` does: no `path_end`. It ends a follow too, and the doors it
+        // opened shut, since it has gone from them.
         instance.walk = null
+        paths.shutAll(instance)
         unfollow(instance)
         instance.anchor = to.copy(yaw = 0.0, pitch = 0.0)
         if (yaw != null) instance.turnTo(yaw)
@@ -497,7 +539,7 @@ class Centities(
                 instances.remove(instance.id)
                 obstacles.remove(instance)
                 instance.entityIds().forEach { owners.remove(it) }
-                if (instance.natural) {
+                if (instance.transient) {
                     // Nothing to come back to life for: it was never saved.
                     discard(record(instance))
                     scripts.dropTarget(handle(instance))
@@ -517,6 +559,7 @@ class Centities(
                 if (next.indexOf(name) == null) scripts.dropTarget(LuaHandle.Node(instance.id.toString(), name))
             }
             instance.redefine(next)
+            healths.adopt(instance)
             autoplay(instance)
         }
         val revived = inert.values.filter { ResourceRef(it.centity).nameIn(home()) == id }.mapNotNull { restoreOne(it) }
@@ -534,8 +577,36 @@ class Centities(
     /** Instances whose last tick threw: reported once, not every tick. */
     private val failing = HashSet<UUID>()
 
+    /** A scope that spawned temporary instances is gone: so are they. */
+    override fun scopeReleased(scope: Scope) {
+        for (instance in instances.values.toList()) {
+            if (instance.temporary && instance.owner == scope.id && !instance.removed) remove(instance)
+        }
+    }
+
+    /**
+     * Gives [instance] [ticks] more before it's removed (null: no end). One that wasn't temporary becomes so,
+     * going by its lifetime alone (no scope spawned it temporary); one that was keeps going with its scope too.
+     */
+    fun setLifetime(instance: Instance, ticks: Long?) {
+        if (instance.removed) return
+        if (!instance.temporary) {
+            instance.temporary = true
+            for (entity in instance.entityIds()) platform.entities.setPersistent(entity, false)
+            // The store forgets it at the end of the tick: it isn't saved any more.
+            changed(instance.id)
+            stored.remove(instance.id)?.let { store.delete(instance.id) }
+        }
+        instance.expires = ticks?.let { scripts.now + it }
+    }
+
     private fun pass() {
         paths.beginTick()
+        // Lifetimes run out whether or not their chunk is loaded.
+        for (instance in instances.values.toList()) {
+            val expires = instance.expires
+            if (expires != null && scripts.now >= expires && !instance.removed) remove(instance)
+        }
         for (instance in instances.values.toList()) {
             if (instance.removed) continue
             val loaded = parts.time(LOADED) { loaded(instance) }
@@ -553,10 +624,57 @@ class Centities(
                 if (failing.add(instance.id)) log.error("Centity ${instance.centity} (${instance.id}) failed to tick", e)
             }
         }
+        touches()
+    }
+
+    /** What a body's move did, to whoever listens: `land`, then a `bump` for each face it ran into. */
+    private fun moved(instance: Instance, moved: Mover.Moved) {
+        val landed = moved.landed
+        if (landed != null && !instance.removed) emit(Events.CENTITY_LAND, instance, CentityLandEvent(handle(instance), landed))
+        for (bump in moved.bumps) {
+            if (instance.removed) break
+            emit(Events.CENTITY_BUMP, instance, CentityBumpEvent(handle(instance), bump.normal, bump.speed))
+        }
+    }
+
+    /**
+     * `touch`: after every instance has moved this tick, each one something listens to `touch` on hears
+     * what its hitboxes started touching since the last tick. One nobody listens to keeps no contacts.
+     */
+    private fun touches() {
+        for (instance in instances.values.toList()) {
+            if (instance.removed) continue
+            if (!scripts.listening(handle(instance), Events.CENTITY_TOUCH) || !loaded(instance)) {
+                instance.touching = emptySet()
+                continue
+            }
+            val now = parts.time(TOUCH) { spatial.contacts(instance) }
+            val before = instance.touching
+            instance.touching = now.keys
+            val id = instance.id.toString()
+            for ((other, contact) in now) {
+                if (other in before) continue
+                if (instance.removed) break
+                val nodes = instance.definition.nodes
+                emit(
+                    Events.CENTITY_TOUCH,
+                    instance,
+                    TouchEvent(
+                        centity = handle(instance),
+                        node = LuaHandle.Node(id, nodes[contact.node].name),
+                        other = contact.other?.let(::handle),
+                        otherNode = contact.other?.let { LuaHandle.Node(it.id.toString(), it.definition.nodes[contact.otherNode].name) },
+                        entity = contact.entity?.let(entityHandle)
+                    )
+                )
+            }
+        }
     }
 
     private fun tick(instance: Instance) {
         instance.age++
+        // Tweens move the rest pose, which the clips then play over.
+        if (instance.tweens.isNotEmpty()) instance.stepTweens()
         if (instance.animations.active) {
             val ended = parts.time(ANIMATE) {
                 instance.animations.advance(SECONDS_PER_TICK).also { instance.animate() }
@@ -566,16 +684,53 @@ class Centities(
                 emit(Events.CENTITY_ANIMATION_END, instance, AnimationEvent(handle(instance), clip))
             }
         }
+        // A flight moves the whole centity, and nothing else does while it flies.
+        if (instance.flight != null && !instance.removed) parts.time(FLIGHT) { flights.step(instance) }
+        if (instance.health?.shownUntil != null) healths.hideBar(instance, scripts.now)
         // A follow moves it to its player first, as a walk does; it never has both (a walk ends it).
         if (instance.follower != null && !instance.removed) parts.time(FOLLOW) { followTick(instance) }
         // Walking moves the whole centity first, so physics settles its bodies where it has been walked to.
         if (instance.walk != null && !instance.removed) parts.time(WALK) { paths.step(instance) }
+        // Doors a walk opened and didn't get to shut (it was stopped or replaced on the way) shut once it's out of them.
+        if (instance.walk == null && instance.openedDoors.isNotEmpty() && !instance.removed) paths.shutBehind(instance)
+        // Its body moves the whole centity, before physics settles node bodies where it has gone; a walk moves it instead.
+        if (instance.mover != null && instance.walk == null && instance.flight == null && !instance.removed) {
+            val moved = parts.time(BODY) { movers.step(instance) }
+            if (moved != null) moved(instance, moved)
+        }
         if (instance.hasBodies && !instance.removed) parts.time(PHYSICS) { physics.step(instance, SECONDS_PER_TICK) }
         // Rates are handler options (`every`): only a tick some handler is due on is raised, and none when nobody listens.
         if (!instance.removed && scripts.due(handle(instance), Events.CENTITY_TICK, scripts.now)) {
             parts.time(SCRIPTS) { emit(Events.CENTITY_TICK, instance, TickEvent(scripts.now)) }
         }
+        if (instance.ropes.isNotEmpty() && !instance.removed) layRopes(instance)
         if (!instance.removed) parts.time(SYNC) { sync(instance) }
+    }
+
+    /** Lays each strung rope of [instance] between where its ends are now; one whose end has gone is let go. */
+    private fun layRopes(instance: Instance) {
+        val world = instance.anchor.world
+        for ((name, rope) in instance.ropes.entries.toList()) {
+            val index = instance.indexOf(name)
+            val from = where(rope.from, world)
+            val to = where(rope.to, world)
+            if (index == null || from == null || to == null) {
+                instance.ropes.remove(name)
+                continue
+            }
+            Ropes.lay(instance, index, from, to, rope.length)
+        }
+    }
+
+    /** Where a rope's end is in [world] now; null when it's gone or in another world. */
+    private fun where(end: RopeEnd, world: String): Vec3? = when (end) {
+        is RopeEnd.Point -> end.at
+        is RopeEnd.OfNode -> find(end.centity)?.takeIf { !it.removed && it.anchor.world == world }?.let { other ->
+            other.indexOf(end.node)?.let { other.worldMatrix(it).translation() }
+        }
+        is RopeEnd.OfEntity -> platform.worldEntities.info(end.entity)?.location?.takeIf { it.world == world }?.let {
+            Vec3(it.x, it.y + if (platform.players.get(end.entity) != null) PLAYER_HANDS else ENTITY_MIDDLE, it.z)
+        }
     }
 
     /**
@@ -782,7 +937,7 @@ class Centities(
             entities.spawnAnchor(anchor, EntityTag(instance.id, ANCHOR_NODE, EntityRole.ANCHOR))?.let { entity ->
                 instance.anchorEntity = entity
                 owners[entity] = instance to ANCHOR_NODE
-                if (instance.natural) entities.setPersistent(entity, false)
+                if (instance.transient) entities.setPersistent(entity, false)
                 for (player in instance.hiddenFrom) entities.setHidden(player, entity, true)
             }
         }
@@ -824,7 +979,7 @@ class Centities(
         into[node] = entity
         owners[entity] = instance to node
         // A temporary instance's entities aren't saved with their chunk, so a crash can't leave them behind.
-        if (instance.natural) platform.entities.setPersistent(entity, false)
+        if (instance.transient) platform.entities.setPersistent(entity, false)
         for (player in instance.hiddenFrom) platform.entities.setHidden(player, entity, true)
     }
 
@@ -1050,7 +1205,20 @@ class Centities(
      */
     fun raycast(world: String, origin: Vec3, direction: Vec3, maxDistance: Double): HitboxHit? {
         var best: HitboxHit? = null
-        for (instance in instances.values) {
+        // Only the instances whose boxes reach the box around the ray: the grid files them by where they are.
+        val end = origin + direction * maxDistance
+        val candidates = ArrayList<Instance>()
+        obstacles.near(
+            world,
+            minOf(origin.x, end.x),
+            minOf(origin.y, end.y),
+            minOf(origin.z, end.z),
+            maxOf(origin.x, end.x),
+            maxOf(origin.y, end.y),
+            maxOf(origin.z, end.z),
+            candidates
+        )
+        for (instance in candidates) {
             if (instance.removed || instance.anchor.world != world || !loaded(instance)) continue
             val from = instance.fromAnchor(origin)
             val (index, hit) = nearestHitbox(instance, from, direction, best?.distance ?: maxDistance) ?: continue
@@ -1142,6 +1310,12 @@ class Centities(
     }
 
     companion object {
+        /** How far above a player's feet a rope tied to them is: at their hands, standing. */
+        const val PLAYER_HANDS = 1.1
+
+        /** How far above any other entity's feet a rope tied to it is. */
+        const val ENTITY_MIDDLE = 0.5
+
         const val SECONDS_PER_TICK = 0.05
 
         // What the profiler names the parts of an instance's tick (`get_profile`'s `parts`).
@@ -1153,6 +1327,9 @@ class Centities(
         private const val PHYSICS = "$PART/physics"
         private const val SCRIPTS = "$PART/scripts"
         private const val SYNC = "$PART/sync"
+        private const val TOUCH = "$PART/touch"
+        private const val BODY = "$PART/body"
+        private const val FLIGHT = "$PART/flight"
         private const val SYNC_GONE = "$SYNC/reconcile"
         private const val SYNC_ANCHOR = "$SYNC/anchor"
         private const val SYNC_PLACE = "$SYNC/place"

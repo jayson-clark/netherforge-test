@@ -1,5 +1,7 @@
 package dev.netherforge.format.centity
 
+import dev.netherforge.format.Vec3
+
 /**
  * Builds a [CompiledCentity] from a file [CentityValidator] passed without
  * errors. Throws [IllegalArgumentException] if handed one that didn't: that is
@@ -40,6 +42,26 @@ object CentityCompiler {
         val nodes = order.map { name ->
             val def = file.nodes.getValue(name)
             compileNode(name, def, def.parent?.let { index.getValue(it) } ?: -1)
+        }.toMutableList()
+        // A rope draws nothing itself: its display is its links', children of it after every other node, laid
+        // straight along its Z until a script strings it.
+        for ((ropeIndex, name) in order.withIndex()) {
+            val rope = file.nodes.getValue(name).rope ?: continue
+            val node = nodes[ropeIndex]
+            val length = rope.linkLength ?: RopeDef.DEFAULT_LINK_LENGTH
+            val links = (1..rope.links).map { link ->
+                nodes += CompiledCentity.Node(
+                    name = RopeDef.linkName(name, link),
+                    parentIndex = ropeIndex,
+                    transform = Transform(translation = Vec3(0.0, 0.0, (link - 0.5) * length), scale = Vec3(1.0, 1.0, length)),
+                    display = node.display,
+                    hitbox = null,
+                    physics = null
+                )
+                nodes.size - 1
+            }
+            nodes[ropeIndex] =
+                CompiledCentity.Node(name, node.parentIndex, node.transform, null, null, null, CompiledCentity.Rope(links, length))
         }
 
         val animations = file.animations.entries.sortedBy { it.key }.map { (name, clip) ->
@@ -55,10 +77,21 @@ object CentityCompiler {
                 length = (clip.length ?: lastKey).coerceAtLeast(MIN_LENGTH),
                 loop = clip.loop ?: LoopMode.ONCE,
                 autoplay = clip.autoplay ?: false,
-                tracks = tracks
+                tracks = tracks,
+                blend = clip.blend ?: AnimationBlend.REPLACE
             )
         }
 
-        return CompiledCentity(id, file.name, nodes, animations, file.script, file.spawning)
+        return CompiledCentity(
+            id,
+            file.name,
+            nodes,
+            animations,
+            file.script,
+            file.spawning,
+            file.body?.let(ResolvedBody::of),
+            file.health?.let(ResolvedHealth::of),
+            file.properties
+        )
     }
 }

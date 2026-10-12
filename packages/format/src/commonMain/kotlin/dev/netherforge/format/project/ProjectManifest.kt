@@ -6,6 +6,7 @@ import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.format.settings.SettingDef
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonPrimitive
 
 /** `netherforge.json` at the project root. Its presence is what makes a folder a project. */
 @Serializable
@@ -65,7 +66,12 @@ data class ProjectManifest(
      * Scripts read them with `nf.config(name)`; a server keeps its owner's
      * values in `plugins/NetherForge/settings/<namespace>.json`.
      */
-    val settings: Map<String, SettingDef>? = null
+    val settings: Map<String, SettingDef>? = null,
+    /**
+     * The commands that write the project's generated files (`node tools/items.mjs`), run in order from the project's
+     * folder by `netherforge generate`, which then formats the project. Never by the server.
+     */
+    val generate: List<String>? = null
 ) {
     /** Whether [id], a resource of [kind], is one this project exports. */
     fun exports(kind: KindSpec<*, *>, id: String): Boolean = exports?.get(kind.folder)?.contains(id) == true
@@ -90,6 +96,11 @@ data class WorldConfig(
     /** Ticks between spawn attempts per category (`world:set_spawn_interval`): whole numbers, 0 or more. */
     val spawnIntervals: Map<SpawnCategory, Int>? = null,
     /**
+     * Game rules, by the game's id (`keep_inventory`, `minecraft:spawn_mobs`), each `true`/`false` or a whole number as
+     * the rule takes (`world:set_game_rule`). A rule this server's Minecraft doesn't have is skipped, and said in its log.
+     */
+    val gameRules: Map<String, JsonPrimitive>? = null,
+    /**
      * A terrain of the project (`terrain/<id>.json`): the world
      * is made with it, when the project loads and the server has no world by
      * this name (and loaded with it when the server has it saved). Not for the
@@ -108,7 +119,12 @@ data class WorldConfig(
     @Ref(RefKind.DIMENSION_TYPE) val dimensionType: ResourceRef? = null
 ) {
     val isEmpty: Boolean
-        get() = spawnLimits.isNullOrEmpty() && spawnIntervals.isNullOrEmpty() && terrain == null && seed == null && dimensionType == null
+        get() = spawnLimits.isNullOrEmpty() &&
+            spawnIntervals.isNullOrEmpty() &&
+            gameRules.isNullOrEmpty() &&
+            terrain == null &&
+            seed == null &&
+            dimensionType == null
 }
 
 /**

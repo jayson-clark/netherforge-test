@@ -23,7 +23,18 @@ What `centity:on(event, handler)` listens for. See [Events](events.md) for how e
 | `animation_end` | [AnimationEvent](events.md#animationevent) |  | An animation reached its end: a `once` clip has finished, a `hold` clip is holding its last pose. Looping clips never end. |
 | `chunk_load` | [CentityEvent](events.md#centityevent) |  | Its chunk came back into memory (someone came near), so it's ticking again. |
 | `chunk_unload` | [CentityEvent](events.md#centityevent) |  | Its chunk was unloaded (everyone went away): it stops ticking until `chunk_load`. Its handlers stay. |
+| `hit` | [FlightHitEvent](events.md#flighthitevent) | yes | It's flying (`launch`) and its path touched something it can hit: a centity's hitbox, a player or another entity, in the order it meets them, each once (or again after `rehit` ticks). `event:cancel()` lets it pass through as if it weren't there, without using up a `pierce`. Otherwise it goes on through only while it has `pierce` left; past that, this is where it ends (`flight_end`, `"hit"`). |
+| `bounce` | [FlightBlockEvent](events.md#flightblockevent) |  | It's flying with `bounce` and came off a block: `event.normal` is the face it hit, `event.speed` how fast it was going into it. |
+| `stick` | [FlightBlockEvent](events.md#flightblockevent) |  | It's flying with `stick` and stuck in a block: it stays there, its flight over but not ended, until its `lifetime` is up. |
+| `flight_end` | [FlightEndEvent](events.md#flightendevent) |  | Its flight ended: it hit something with no `pierce` left (`"hit"`), met a block it neither bounces off nor sticks in (`"block"`), ran out of `lifetime` (`"lifetime"`), reached a chunk that isn't loaded (`"unloaded"`), or a script stopped it (`"stopped"`). Then, unless `remove_on_end` is `false`, it's removed: its `remove` handlers hear it next. |
+| `damage` | [CentityDamageEvent](events.md#centitydamageevent) | yes | It's about to lose health to `centity:damage`: assign `event.amount` to change how much (a defence, a weakness), or `event:cancel()` it (a moment it can't be hurt). Its health goes down by what's left, its bar shows, and at 0 it dies (`death`). Writable: `amount`. |
+| `death` | [CentityDeathEvent](events.md#centitydeathevent) |  | Its health reached 0. Then, unless its `health` says `removeOnDeath: false`, it's removed: its `remove` handlers hear it next. `event.source` and `event.cause` are what dealt the last blow. |
+| `land` | [CentityLandEvent](events.md#centitylandevent) |  | Its `body` came down onto something after falling (or jumping): once, as it lands. `event.speed` is how fast it was falling, for fall damage or a thud. |
+| `bump` | [CentityBumpEvent](events.md#centitybumpevent) |  | Its `body` ran into something it didn't land on: a wall, or a ceiling. Once each tick it does, with the face's `normal` (pointing back at it) and how fast it was going into it. |
+| `touch` | [TouchEvent](events.md#touchevent) |  | Its hitboxes started touching something's: another centity's, a player's or another entity's (each shown node's boxes, as `world:overlap_box` sees them). Once when they start touching, and again only after they've come apart. Worked out each tick only for centities something listens to this on, so a crowd nobody listens to costs nothing. Both centities hear it when two touch, each with the other in `event.other`. |
 | `path_end` | [CentityPathEndEvent](events.md#centitypathendevent) |  | It stopped walking where `move_to` sent it: it got there (to the end of its path, or within 2 blocks of what it went after), or gave up (no way further, its way blocked with no other way round, or what it went after has gone or left its world). Not after `stop_pathing`, a new `move_to`, `teleport` or a reload of its centity. |
+| `buff_add` | [BuffEvent](events.md#buffevent) | yes | A buff is about to take hold (`add_buff`): assign `event.ticks` to change how long, or `event:cancel()` it (one it can't take). Not heard when it's `blockedBy` another. Writable: `ticks`. |
+| `buff_end` | [BuffEndEvent](events.md#buffendevent) |  | A buff ended: it ran out (`"expired"`), a script took it away (`"removed"`), or another buff cured it (`"cured"`). |
 
 ## `centity:id()`
 
@@ -49,11 +60,33 @@ Whether it appeared by itself, from its `spawning` rules in `centity.json`, and 
 
 **Returns** `boolean`
 
+## `centity:is_temporary()`
+
+Whether a script spawned it temporary (`nf.centities.spawn`'s `temporary` or `lifetime`), and it still is: it isn't saved, and it goes when the script that spawned it unloads, or when its lifetime is up. `false` for one `keep` has kept, and once it's removed.
+
+**Returns** `boolean`
+
+## `centity:lifetime()`
+
+How many ticks a temporary centity with a `lifetime` has left before it's removed, or `nil` for one without (or once it's removed).
+
+**Returns** `integer?`
+
+## `centity:set_lifetime(ticks?)`
+
+Gives it this many ticks more before it's removed, from now. A centity with a lifetime is temporary, so one that wasn't becomes so: it's no longer saved, and goes when its lifetime is up (one spawned temporary still goes with its script too). Leave it out (or `nil`) to take its lifetime away; it stays temporary until `keep`.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `ticks` (optional) | `integer` | At least 1. |
+
+**Returns** `boolean`: `false` once it's removed.
+
 ## `centity:keep()`
 
-Makes a natural centity a normal one: it is saved from now on (it comes back after a restart), is never removed for being far from players, and no longer counts against its cap. Nothing happens to one that is already normal.
+Makes a natural or temporary centity a normal one: it is saved from now on (it comes back after a restart), is never removed for being far from players or because a script unloaded or a lifetime ran out, and no longer counts against a cap. Nothing happens to one that is already normal.
 
-**Returns** `boolean`: Whether it was natural: `false` for one that was already normal, and once it is removed.
+**Returns** `boolean`: Whether it was natural or temporary: `false` for one that was already normal, and once it is removed.
 
 ```lua
 this:on("click", function(event)
@@ -109,6 +142,31 @@ local lamp = assert(this:add_node("lamp", {
 lamp:on("click", function(event)
   lamp:remove()
 end)
+```
+
+## `centity:properties()`
+
+Its `properties` from its `centity.json`: the project's own facts about it, any JSON (`{ damage = 12, class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An empty table when the file has none, `nil` once it's gone.
+
+**Returns** `table?`
+
+```lua
+local stats = assert(this:properties())
+log(stats.damage)
+```
+
+## `centity:bounds()`
+
+The box around all its hitboxes as they're shown now (each shown node's boxes, turned and placed), in the world: what `world:overlap_box` and the other spatial queries test against. `nil` for a centity with no hitboxes showing, or once it's removed.
+
+**Returns** `Bounds?`
+
+```lua
+local box = this:bounds()
+if box then
+  local top = vec3((box.min.x + box.max.x) / 2, box.max.y, (box.min.z + box.max.z) / 2)
+  world:spawn_particle("minecraft:heart", top)
+end
 ```
 
 ## `centity:location()`
@@ -217,6 +275,321 @@ this:follow(player)
 Stops it following its player, where it is now. `false` when it wasn't following, or once it's removed.
 
 **Returns** `boolean`: `false` once it's removed.
+
+## `centity:stat(name)`
+
+One of it's stats. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `name` | `string` | The stat: lowercase letters, digits and `_`. |
+
+**Returns** `number`
+
+```lua
+local damage = 20
+local taken = math.max(1, damage - this:stat("defense") / 2)
+```
+
+## `centity:stats()`
+
+Every stat it has that isn't 0, by name. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.
+
+**Returns** `table<string, number>`
+
+## `centity:modifiers(source)`
+
+What a script's `source` adds to it's stats (`set_modifiers`), or `nil` when it adds nothing.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `source` | `string` | Whose: `"armour"`, `"accessories"`. |
+
+**Returns** `table<string, number>?`
+
+## `centity:set_modifiers(source, modifiers?)`
+
+Sets what `source` adds to it's stats, replacing what it added before: one call per source, each time it changes (a piece of armour put on), and `nil` takes it all away. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `source` | `string` | Whose: any name of your own. |
+| `modifiers` (optional) | `table<string, number>` | A number per stat name. Leave it out (or `nil`) to take the source away. |
+
+**Returns** `boolean`: `false` once it has gone.
+
+```lua
+this:set_modifiers("armour", { defense = 12, move = 0.05 })
+```
+
+## `centity:add_buff(buff, ticks)`
+
+Gives it a buff (`buffs/<id>.json`) for a number of ticks: it takes away the buffs it `cures`, and doesn't take hold while one it's `blockedBy` lasts. Given again while it lasts, its file's `stacking` says what happens to the time. Its `buff_add` handlers may change the ticks or cancel it. While it lasts its `stats` are added to it's; when it runs out, `buff_end` hears it. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online. A buff the project doesn't have is an error.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `buff` | `string` | Its id: `buffs/<id>.json`. |
+| `ticks` | `integer` | How long, at least 1. |
+
+**Returns** `boolean`: Whether it took hold: `false` when one it's `blockedBy` is on it, a handler cancelled it, or it has gone.
+
+```lua
+this:add_buff("ironskin", 20 * 60 * 4)
+```
+
+## `centity:remove_buff(buff)`
+
+Takes a buff away from it (`buff_end` hears `"removed"`).
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `buff` | `string` | Its id. |
+
+**Returns** `boolean`: Whether they had it.
+
+## `centity:has_buff(buff)`
+
+Whether it has a buff now.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `buff` | `string` | Its id. |
+
+**Returns** `boolean`
+
+## `centity:buff_ticks(buff)`
+
+How many ticks a buff it has has left, or `nil` when they don't have it.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `buff` | `string` | Its id. |
+
+**Returns** `integer?`
+
+## `centity:buffs()`
+
+Every buff it has now, with what a HUD shows them by, the first given first.
+
+**Returns** `ActiveBuff[]`
+
+```lua
+for _, buff in ipairs(this:buffs()) do
+  log(buff.id, buff.ticks)
+end
+```
+
+## `centity:health()`
+
+How much health it has left: from its `centity.json`'s `health` (its `max` when it spawns), or what `set_max_health` gave it. `nil` for one without health, or once it's removed. Not saved: after a restart it's whole again.
+
+**Returns** `number?`
+
+## `centity:max_health()`
+
+Its health when whole, or `nil` without health (or once it's removed).
+
+**Returns** `number?`
+
+## `centity:set_health(health)`
+
+Sets how much health it has, between 0 and its `max_health`: no `damage` or `death` event, and 0 doesn't kill it (`damage` does). Its bar shows the change. `false` without health, or once it's removed.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `health` | `number` |  |
+
+**Returns** `boolean`
+
+## `centity:set_max_health(max_health)`
+
+Changes its health when whole (more than 0), keeping what it has but no more than the new most. One without `health` in its file gets health this way (full, and no bar). `false` once it's removed.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `max_health` | `number` |  |
+
+**Returns** `boolean`
+
+```lua
+-- A boss with more health for each player near it.
+this:set_max_health(2000 * #this:world():players())
+this:set_health(assert(this:max_health()))
+```
+
+## `centity:damage(amount, options?)`
+
+Takes health from it: its `damage` handlers may change the amount or cancel it, its health goes down by what's left, its bar shows, and at 0 it dies (`death`, then it's removed unless its file says otherwise). Damage to one already dead does nothing.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `amount` | `number` | How much, at least 0. |
+| `options` (optional) | `CentityDamageOptions` |  |
+
+**Returns** `number?`: How much it took after its handlers (0 when cancelled), or `nil` for one without health, one already dead, or once it's removed.
+
+```lua
+local dealt = target:damage(12, { source = player, cause = "melee" })
+```
+
+## `centity:heal(amount)`
+
+Gives it back health, up to its `max_health`. Its bar shows the change.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `amount` | `number` | At least 0. |
+
+**Returns** `number?`: How much it gained, or `nil` without health (or once it's removed).
+
+## `centity:is_dead()`
+
+Whether its health has reached 0 through `damage`. `false` for one without health. A dead one its file keeps (`removeOnDeath: false`) stays dead until `set_health` gives it health again.
+
+**Returns** `boolean`
+
+## `centity:has_body()`
+
+Whether it has a body: a `body` in its `centity.json`, or one `set_body` gave it. Without one the body functions do nothing (their getters answer `false`, `nil` or `vec3.zero`). `false` once it's removed.
+
+**Returns** `boolean`
+
+## `centity:body()`
+
+Its body's settings as they are now: what its `centity.json`'s `body` says, every field filled in, with what `set_body` changed. `nil` without a body, or once it's removed.
+
+**Returns** `BodySettings?`
+
+## `centity:set_body(settings)`
+
+Changes its body's settings: only the fields given, the rest as they are. One without a body gets one, the fields left out as `centity.json`'s defaults. A body's settings are runtime state, like a node's pose: they last until its centity is reloaded or the server restarts, when it's back to its file's. A value out of range is clamped as in the file; a width or height that isn't more than 0 is an error.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `settings` | `BodySettings` |  |
+
+**Returns** `boolean`: `false` once it's removed.
+
+```lua
+-- Wings: it flies until they're clipped.
+this:set_body({ fly = true, drag = 0.6 })
+```
+
+## `centity:velocity()`
+
+How fast its body is moving, in blocks per second along the world's axes: `vec3.zero` without a body, `nil` once it's removed.
+
+**Returns** `Vec3?`
+
+## `centity:set_velocity(velocity)`
+
+Replaces its body's velocity: a knock back, a dash, a launch. The body carries on from it under gravity and drag, and walking eases it back to its walk.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `velocity` | `Vec3` | Blocks per second, along the world's axes. |
+
+**Returns** `boolean`: `false` without a body.
+
+```lua
+this:set_velocity((this:position() - player:position()):normalized() * 8 + vec3(0, 6, 0))
+```
+
+## `centity:add_velocity(velocity)`
+
+Adds to its body's velocity.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `velocity` | `Vec3` | Blocks per second, along the world's axes. |
+
+**Returns** `boolean`: `false` without a body.
+
+## `centity:walk_velocity()`
+
+The velocity its body is walking at (`set_walk_velocity`), or `nil` when it isn't walking, has no body, or is removed.
+
+**Returns** `Vec3?`
+
+## `centity:set_walk_velocity(velocity?)`
+
+Walks its body: every tick it speeds up or slows down toward this velocity by its `acceleration` (`air_acceleration` while it's off the ground), so it reaches it smoothly and keeps to it, round whatever pushes it about, until it's changed. Only the sideways part counts, unless it flies, when it steers it in any direction. Leave it out (or `nil`) to stop walking: on the ground it then slows to a stop by its `friction`. Walking doesn't turn it: `set_yaw` or `look_at` does.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `velocity` (optional) | `Vec3` | Blocks per second, along the world's axes: a direction times a speed. |
+
+**Returns** `boolean`: `false` without a body.
+
+```lua
+local target = player:position()
+local here = this:position()
+if target and here then
+  this:set_walk_velocity((target - here):flat():normalized() * 3)
+end
+```
+
+## `centity:jump(height)`
+
+Sends its body up fast enough to rise `height` blocks, worked out from its gravity and drag: what a jump over a block (1.2) needs. Whether it's on the ground is for the script to check (`is_on_ground`), so a double jump is one more call.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `height` | `number` | Blocks, at least 0. |
+
+**Returns** `boolean`: `false` without a body.
+
+```lua
+if this:is_on_ground() and this:wall() then
+  this:jump(1.2)
+end
+```
+
+## `centity:is_on_ground()`
+
+Whether its body is standing on something: a block, as of its last move. `false` without a body.
+
+**Returns** `boolean`
+
+## `centity:is_in_liquid()`
+
+Whether its body is in water or lava (the block at its middle). `false` without a body.
+
+**Returns** `boolean`
+
+## `centity:wall()`
+
+The face of what stopped its body sideways on its last move, as the direction straight out of it (`vec3(-1, 0, 0)` for a wall to its east), or `nil` when nothing did, or without a body. What a walker turns round at, or jumps over.
+
+**Returns** `Vec3?`
+
+## `centity:launch(options)`
+
+Makes it a projectile: from now on the server flies the whole centity every tick at its velocity, under its gravity and drag, and sweeps its path (a sphere of `radius`) for what it hits: centities' hitboxes, players and entities (`hit`), and blocks (it ends, bounces or sticks: `flight_end`, `bounce`, `stick`). It flies until it ends, then is removed unless told not to. Nothing about a flight is saved. A launch over a flight replaces it. One with a `body` stops walking while it flies, and walks again after. Every value is in blocks and seconds, as everywhere.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `options` | `LaunchOptions` |  |
+
+**Returns** `boolean`: `false` once it's removed.
+
+```lua
+local eye, facing = assert(player:eye_position()), assert(player:direction())
+local arrow = assert(nf.centities.spawn("arrow", eye, { temporary = true }))
+arrow:launch({ velocity = facing * 40, gravity = 20, radius = 0.15, owner = player, aim = "aim", pierce = 1 })
+```
+
+## `centity:is_launched()`
+
+Whether it's flying as a projectile (`launch`), stuck in a block or lying where it came to rest included: until its flight ends. `false` once it's removed.
+
+**Returns** `boolean`
+
+## `centity:stop_flight()`
+
+Ends its flight where it is, as if it had ended by itself: `flight_end` hears `"stopped"`, and it's removed unless `remove_on_end` was `false`.
+
+**Returns** `boolean`: Whether it was flying: `false` when it wasn't, or once it's removed.
 
 ## `centity:move_to(target, options?)`
 

@@ -37,19 +37,21 @@ export interface TerrainPreviewer {
  * text. [structures] are the project structures its decorations name, read from their `.nbt` files, by the name
  * the file gives each: one left out isn't placed. [sources] is the Lua a file with a `script` runs (its
  * `terrain/<id>.lua` and the modules', by project path: [scriptPaths]); such a file needs [loadLua] to have
- * finished first.
+ * finished first. [blocks] are the project's block ids, so a script that names one places it without listing it.
  */
 export function terrainPreviewer(
   id: string,
   text: string,
   structures: Record<string, TerrainStructureInput> = {},
   sources: Record<string, string> = {},
+  blocks: readonly string[] = [],
 ): TerrainPreviewer {
   const previewer = nf.terrainPreviewer(
     id,
     text,
     Object.keys(structures).length ? JSON.stringify(structures) : null,
     Object.keys(sources).length ? JSON.stringify(sources) : null,
+    blocks.length ? JSON.stringify(blocks) : null,
   )
   return {
     map: (seed, x0, z0, cells, step, minY, maxY) =>

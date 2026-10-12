@@ -1,6 +1,7 @@
 package dev.netherforge.plugin.platform
 
 import dev.netherforge.format.Vec3
+import dev.netherforge.format.game.Box
 import dev.netherforge.format.game.GameIds
 import java.util.UUID
 
@@ -112,6 +113,9 @@ data class SpawnSetup(
 
 /** What a ray hit: the entity, where it entered its box, and that face's normal. */
 data class EntityHit(val id: UUID, val position: Vec3, val normal: Vec3)
+
+/** An entity's bounding box in the world: [kind] namespaced (`minecraft:zombie`), [player] whether it's a player. */
+data class EntityBox(val id: UUID, val kind: String, val player: Boolean, val box: Box)
 
 /**
  * Entities by UUID. Everything answers null or false for an entity that isn't
@@ -227,6 +231,14 @@ interface WorldEntityOps {
 
     /** The first entity's box a ray hits within [maxDistance], leaving out [ignore]. [direction] is a unit vector. */
     fun raycast(world: String, origin: Vec3, direction: Vec3, maxDistance: Double, ignore: Set<UUID>): EntityHit?
+
+    /**
+     * Every entity whose bounding box reaches into [region] (world coordinates) in [world], players
+     * included, as the server measures it now: only in loaded chunks, never one of ours (tagged) or a
+     * player in spectator mode, which nothing can touch. What the spatial queries (`world:overlap_*`,
+     * `sweep`, `nearest`) and centities' `touch` test.
+     */
+    fun boxes(world: String, region: Box): List<EntityBox>
 }
 
 /** Where a real inventory is. */

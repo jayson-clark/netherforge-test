@@ -25,6 +25,17 @@ Its id: its folder name under `blocks/`.
 
 **Returns** `string`
 
+## `projectblock:properties()`
+
+Its `properties` from its `block.json`: the project's own facts about it, any JSON (`{ damage = 12, class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An empty table when the file has none, `nil` once the block is gone.
+
+**Returns** `table?`
+
+```lua
+local stats = assert(this:properties())
+log(stats.damage)
+```
+
 ## `projectblock:exists()`
 
 Whether the project still has it.

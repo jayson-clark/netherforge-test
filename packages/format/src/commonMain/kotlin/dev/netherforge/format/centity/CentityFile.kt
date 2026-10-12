@@ -19,6 +19,7 @@ import kotlinx.serialization.descriptors.element
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -38,10 +39,20 @@ data class CentityFile(
     val name: String? = null,
     val nodes: Map<String, NodeDef> = emptyMap(),
     val animations: Map<String, AnimationDef> = emptyMap(),
+    /** A body that moves the whole centity: walks, falls, jumps and collides with blocks. Absent: it stays where it's put. */
+    val body: BodyDef? = null,
+    /** Health it loses to `damage` and dies at 0: a mob's, a target's. Absent: it has none. */
+    val health: HealthDef? = null,
     /** The centity's one script: a copy runs per instance, with `this` the instance. */
     val script: ScriptDef? = null,
     /** Where and how often it appears by itself, near players. Absent: it only exists where a script spawns it. */
-    val spawning: SpawningDef? = null
+    val spawning: SpawningDef? = null,
+    /**
+     * The project's own facts about it, any JSON (`{ "damage": 12, "class": "melee" }`): what scripts read with
+     * `Centity:properties()`, so data that belongs to the centity lives in its file rather than in a table a script keeps.
+     * Nothing else reads it.
+     */
+    val properties: Map<String, JsonElement>? = null
 ) {
     companion object {
         const val FILE_NAME = "centity.json"
@@ -255,8 +266,32 @@ data class NodeDef(
     val transform: Transform? = null,
     val display: DisplayDef? = null,
     val hitbox: HitboxDef? = null,
-    val physics: PhysicsDef? = null
+    val physics: PhysicsDef? = null,
+    /** A rope or chain: its [display] drawn as links that a script strings between two points (`node:rope_to`). */
+    val rope: RopeDef? = null
 )
+
+/**
+ * A rope node: its display drawn [links] times, each link [linkLength] blocks long, laid by the server along a
+ * line from one end to the other that sags with slack. A link's display is one block long along Z, centred on its
+ * origin, and stretched to its length; only as many links as the ends' distance needs are shown.
+ */
+@Serializable
+data class RopeDef(
+    /** The most links, 1 to [MAX_LINKS]. */
+    val links: Int,
+    /** Each link's length, in blocks. Default [DEFAULT_LINK_LENGTH]. */
+    val linkLength: Double? = null
+) {
+    companion object {
+        const val MAX_LINKS = 64
+        const val DEFAULT_LINK_LENGTH = 0.5
+        const val MAX_LINK_LENGTH = 8.0
+
+        /** A link's node name: `chain[3]`, from 1. */
+        fun linkName(rope: String, link: Int) = "$rope[$link]"
+    }
+}
 
 /**
  * A local transform relative to the parent. Rotation is XYZ euler degrees,
@@ -458,6 +493,75 @@ data class PhysicsDef(
     val entities: Boolean? = null
 )
 
+/**
+ * The `body` block: an upright box, [width] square and [height] tall, standing with its bottom middle at the
+ * centity's position, that the runtime moves every tick: gravity, drag, walking, jumping and the blocks'
+ * collision shapes. It moves the whole centity (its anchor), unlike a node's `physics`, which moves one node.
+ * Rates are per second, as [PhysicsDef]'s; [ResolvedBody] is what an absent field means.
+ */
+@Serializable
+data class BodyDef(
+    /** Blocks across, square. */
+    val width: Double? = null,
+    /** Blocks tall. */
+    val height: Double? = null,
+    /** Downward acceleration, blocks per second squared. */
+    val gravity: Double? = null,
+    /** The fastest it falls, blocks per second. */
+    val maxFallSpeed: Double? = null,
+    /** Fraction of its speed shed per second in the air (flying: on every axis). */
+    val drag: Double? = null,
+    /** Fraction of its speed shed per second in water or lava. */
+    val liquidDrag: Double? = null,
+    /** How much of [gravity] pulls it in water or lava: 0 floats where it is, 1 sinks as in air. */
+    val liquidGravity: Double? = null,
+    /** How fast it reaches the speed it walks at on the ground (and flying), blocks per second squared. */
+    val acceleration: Double? = null,
+    /** The same in the air, when it isn't flying: how much it can steer while it falls or jumps. */
+    val airAcceleration: Double? = null,
+    /** How fast it slows to a stop on the ground when it isn't walking, blocks per second squared. */
+    val friction: Double? = null,
+    /** The tallest step it walks straight up, blocks. 0: it must jump. */
+    val stepHeight: Double? = null,
+    /** 0 stops dead against what it hits, 1 bounces off at the speed it came. */
+    val bounce: Double? = null,
+    /** Flies: no gravity, and walking steers it in any direction. */
+    val fly: Boolean? = null,
+    /** Collides with the world's blocks. */
+    val blocks: Boolean? = null
+)
+
+/**
+ * The `health` block: how much it takes (`max`), whether it's removed when it dies, and a bar drawn over it.
+ * [ResolvedHealth] is what an absent field means.
+ */
+@Serializable
+data class HealthDef(
+    /** Its health when whole, more than 0. */
+    val max: Double,
+    /** Removed when it dies, after its `death` handlers. Default true. */
+    val removeOnDeath: Boolean? = null,
+    /** A bar over it showing how much it has left. Absent: none. */
+    val bar: HealthBarDef? = null
+)
+
+/** A health bar drawn over a centity, as a text display: [segments] of [glyph], the full ones [filled], the rest [empty]. */
+@Serializable
+data class HealthBarDef(
+    /** How many pieces it's drawn in, 1 to 40. Default 10. */
+    val segments: Int? = null,
+    /** Ticks it shows after damage or healing, then hides; 0 shows it always. Default 100. */
+    val showTicks: Int? = null,
+    /** Blocks above the top of its hitboxes (or its position, without any) it's drawn at. Default 0.35. */
+    val offset: Double? = null,
+    /** One piece, as text. Default `▮`. */
+    val glyph: String? = null,
+    /** MiniMessage before the full pieces. Default `<red>`. */
+    @MiniMessage val filled: String? = null,
+    /** MiniMessage before the empty ones. Default `<dark_gray>`. */
+    @MiniMessage val empty: String? = null
+)
+
 @Serializable
 enum class PhysicsShape {
     /** Collapses a multi-box hitbox to the one box around it. */
@@ -480,8 +584,25 @@ data class AnimationDef(
     val loop: LoopMode? = null,
     /** Start when the centity loads, with no script asking. */
     val autoplay: Boolean? = null,
+    /** How its tracks meet the pose under them. Default [AnimationBlend.REPLACE]. */
+    val blend: AnimationBlend? = null,
     val tracks: Map<String, Map<Channel, List<Keyframe>>> = emptyMap()
 )
+
+/** How an animation's tracks meet the pose under them: the rest pose, what scripts set, and the other clips. */
+@Serializable
+enum class AnimationBlend {
+    /** A track owns its channel: the newest clip driving it wins. */
+    @SerialName("replace")
+    REPLACE,
+
+    /**
+     * On top of whatever else poses the node, after every replacing clip: translation and rotation add to it, scale
+     * multiplies it. Keys are changes, so `[0, 0, 0]` (`[1, 1, 1]` for scale) leaves the node as it is.
+     */
+    @SerialName("additive")
+    ADDITIVE
+}
 
 @Serializable
 enum class LoopMode {

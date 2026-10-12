@@ -21,6 +21,19 @@ sealed interface CommandDefinitionOrFunction {
     )
 }
 
+/** A `Integer|Choice`: whichever it was. */
+sealed interface IntegerOrChoice {
+    data class Integer(val value: kotlin.Long) : IntegerOrChoice
+    data class Choice(val value: kotlin.String) : IntegerOrChoice
+
+    object Codec : LuaCodec<IntegerOrChoice> by LuaUnion(
+        listOf(
+            LuaUnion.Member<IntegerOrChoice, kotlin.Long>(LuaCodecs.INTEGER, ::Integer) { (it as? Integer)?.value },
+            LuaUnion.Member<IntegerOrChoice, kotlin.String>(LuaChoice(listOf("cursor")), ::Choice) { (it as? Choice)?.value }
+        )
+    )
+}
+
 /** A `Location|Vec3`: whichever it was. */
 sealed interface LocationOrVec3 {
     data class Location(val value: dev.netherforge.plugin.api.LuaLocation) : LocationOrVec3
@@ -161,8 +174,25 @@ sealed interface Vec3OrChoice {
     )
 }
 
+/** A `Vec3|Node|Entity`: whichever it was. */
+sealed interface Vec3OrNodeOrEntity {
+    data class Vec3(val value: dev.netherforge.format.Vec3) : Vec3OrNodeOrEntity
+    data class Node(val value: LuaHandle.Node) : Vec3OrNodeOrEntity
+    data class Entity(val value: LuaHandle.Entity) : Vec3OrNodeOrEntity
+
+    object Codec : LuaCodec<Vec3OrNodeOrEntity> by LuaUnion(
+        listOf(
+            LuaUnion.Member<Vec3OrNodeOrEntity, dev.netherforge.format.Vec3>(LuaCodecs.VEC3, ::Vec3) { (it as? Vec3)?.value },
+            LuaUnion.Member<Vec3OrNodeOrEntity, LuaHandle.Node>(LuaHandle.Node.Codec, ::Node) { (it as? Node)?.value },
+            LuaUnion.Member<Vec3OrNodeOrEntity, LuaHandle.Entity>(LuaHandle.Entity.Codec, ::Entity) { (it as? Entity)?.value }
+        )
+    )
+}
+
 /** The unions of handle classes, each a [LuaHandle] of one of them, tried in order. */
 object LuaUnions {
+    val CentityOrEntity: LuaCodec<LuaHandle> = LuaHandleUnion(listOf(LuaHandle.Centity.Codec, LuaHandle.Entity.Codec))
     val CentityOrNodeOrPlayerOrEntity: LuaCodec<LuaHandle> = LuaHandleUnion(listOf(LuaHandle.Centity.Codec, LuaHandle.Node.Codec, LuaHandle.Player.Codec, LuaHandle.Entity.Codec))
     val EntityOrBlock: LuaCodec<LuaHandle> = LuaHandleUnion(listOf(LuaHandle.Entity.Codec, LuaHandle.Block.Codec))
+    val EntityOrCentity: LuaCodec<LuaHandle> = LuaHandleUnion(listOf(LuaHandle.Entity.Codec, LuaHandle.Centity.Codec))
 }

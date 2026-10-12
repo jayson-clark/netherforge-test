@@ -3,10 +3,13 @@ package dev.netherforge.plugin.api
 import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.Billboard
 import dev.netherforge.format.centity.BlockDisplay
+import dev.netherforge.format.centity.BodyDef
 import dev.netherforge.format.centity.Channel
+import dev.netherforge.format.centity.Easing
 import dev.netherforge.format.centity.ItemDisplay
 import dev.netherforge.format.centity.LoopMode
 import dev.netherforge.format.centity.ModelDisplay
+import dev.netherforge.format.centity.ResolvedBody
 import dev.netherforge.format.centity.TextAlignment
 import dev.netherforge.format.centity.TextDisplay
 import dev.netherforge.format.game.BlockState
@@ -18,10 +21,16 @@ import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.centity.Centities
 import dev.netherforge.plugin.centity.CentityPaths
+import dev.netherforge.plugin.centity.Flight
 import dev.netherforge.plugin.centity.Instance
+import dev.netherforge.plugin.centity.Mover
 import dev.netherforge.plugin.centity.PathSettings
 import dev.netherforge.plugin.centity.PathTarget
 import dev.netherforge.plugin.centity.Physics
+import dev.netherforge.plugin.centity.QueryFilter
+import dev.netherforge.plugin.centity.RopeEnd
+import dev.netherforge.plugin.centity.Ropes
+import dev.netherforge.plugin.centity.StrungRope
 import dev.netherforge.plugin.data.ScriptData
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaValue
@@ -30,6 +39,8 @@ import dev.netherforge.plugin.physics.Quat
 import dev.netherforge.plugin.platform.DisplayBrightness
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.session.ProjectSession
+import dev.netherforge.plugin.world.StatSheets
+import kotlinx.serialization.json.JsonObject
 import java.util.UUID
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -60,6 +71,20 @@ internal class CentityImpl(private val session: ProjectSession) : CentityApi {
 
     override fun isNatural(self: LuaHandle.Centity): Boolean = instance(self)?.natural == true
 
+    override fun isTemporary(self: LuaHandle.Centity): Boolean = instance(self)?.temporary == true
+
+    override fun lifetime(self: LuaHandle.Centity): Long? {
+        val expires = instance(self)?.expires ?: return null
+        return maxOf(0L, expires - session.scripts.now)
+    }
+
+    override fun setLifetime(self: LuaHandle.Centity, ticks: Long?): Boolean {
+        if (ticks != null && ticks < 1) throw LuaApiException("bad argument 'ticks' (at least 1 expected, got $ticks)")
+        val instance = instance(self) ?: return false
+        centities.setLifetime(instance, ticks)
+        return true
+    }
+
     override fun keep(self: LuaHandle.Centity): Boolean = instance(self)?.let(centities::keep) == true
 
     override fun data(self: LuaHandle.Centity): Any? {
@@ -69,6 +94,320 @@ internal class CentityImpl(private val session: ProjectSession) : CentityApi {
 
     override fun node(self: LuaHandle.Centity, name: String): LuaHandle.Node? =
         instance(self)?.indexOf(name)?.let { LuaHandle.Node(self.id, name) }
+
+    private fun mover(self: LuaHandle.Centity): Mover? = instance(self)?.mover
+
+    private val statCalls by lazy { StatCalls(session) }
+
+    override fun stat(self: LuaHandle.Centity, name: String): Double = statCalls.stat(
+        instance(self)?.let {
+            StatSheets.Holder.Centity(it.id)
+        },
+        name
+    )
+
+    override fun stats(self: LuaHandle.Centity): Map<String, Double> = statCalls.stats(
+        instance(self)?.let {
+            StatSheets.Holder.Centity(it.id)
+        }
+    )
+
+    override fun modifiers(self: LuaHandle.Centity, source: String): Map<String, Double>? = statCalls.modifiers(
+        instance(self)?.let {
+            StatSheets.Holder.Centity(it.id)
+        },
+        source
+    )
+
+    override fun setModifiers(self: LuaHandle.Centity, source: String, modifiers: Map<String, Double>?): Boolean =
+        statCalls.setModifiers(instance(self)?.let { StatSheets.Holder.Centity(it.id) }, source, modifiers)
+
+    override fun addBuff(self: LuaHandle.Centity, buff: String, ticks: Long): Boolean = statCalls.addBuff(
+        instance(self)?.let {
+            StatSheets.Holder.Centity(it.id)
+        },
+        buff,
+        ticks
+    )
+
+    override fun removeBuff(self: LuaHandle.Centity, buff: String): Boolean = statCalls.removeBuff(
+        instance(self)?.let {
+            StatSheets.Holder.Centity(it.id)
+        },
+        buff
+    )
+
+    override fun hasBuff(self: LuaHandle.Centity, buff: String): Boolean = statCalls.hasBuff(
+        instance(self)?.let {
+            StatSheets.Holder.Centity(it.id)
+        },
+        buff
+    )
+
+    override fun buffTicks(self: LuaHandle.Centity, buff: String): Long? = statCalls.buffTicks(
+        instance(self)?.let {
+            StatSheets.Holder.Centity(it.id)
+        },
+        buff
+    )
+
+    override fun buffs(self: LuaHandle.Centity): List<ActiveBuff> = statCalls.buffs(
+        instance(self)?.let {
+            StatSheets.Holder.Centity(it.id)
+        }
+    )
+
+    override fun health(self: LuaHandle.Centity): Double? = instance(self)?.health?.current
+
+    override fun maxHealth(self: LuaHandle.Centity): Double? = instance(self)?.health?.max
+
+    override fun setHealth(self: LuaHandle.Centity, health: Double): Boolean {
+        if (!health.isFinite()) throw LuaApiException("bad argument 'health' (a finite number expected)")
+        val instance = instance(self)?.takeIf { it.health != null } ?: return false
+        centities.healths.set(instance, health)
+        return true
+    }
+
+    override fun setMaxHealth(self: LuaHandle.Centity, maxHealth: Double): Boolean {
+        if (!(maxHealth > 0) ||
+            !maxHealth.isFinite()
+        ) {
+            throw LuaApiException("bad argument 'max_health' (more than 0 expected, got $maxHealth)")
+        }
+        val instance = instance(self) ?: return false
+        centities.healths.setMax(instance, maxHealth)
+        return true
+    }
+
+    override fun damage(self: LuaHandle.Centity, amount: Double, options: CentityDamageOptions?): Double? {
+        if (!(amount >= 0) || !amount.isFinite()) throw LuaApiException("bad argument 'amount' (at least 0 expected, got $amount)")
+        val instance = instance(self) ?: return null
+        return centities.healths.damage(instance, amount, options?.source, options?.cause)
+    }
+
+    override fun heal(self: LuaHandle.Centity, amount: Double): Double? {
+        if (!(amount >= 0) || !amount.isFinite()) throw LuaApiException("bad argument 'amount' (at least 0 expected, got $amount)")
+        val instance = instance(self) ?: return null
+        return centities.healths.heal(instance, amount)
+    }
+
+    override fun isDead(self: LuaHandle.Centity): Boolean = instance(self)?.health?.dead == true
+
+    override fun hasBody(self: LuaHandle.Centity): Boolean = mover(self) != null
+
+    override fun body(self: LuaHandle.Centity): BodySettings? = mover(self)?.settings?.let { b ->
+        BodySettings(
+            width = b.width,
+            height = b.height,
+            gravity = b.gravity,
+            maxFallSpeed = b.maxFallSpeed,
+            drag = b.drag,
+            liquidDrag = b.liquidDrag,
+            liquidGravity = b.liquidGravity,
+            acceleration = b.acceleration,
+            airAcceleration = b.airAcceleration,
+            friction = b.friction,
+            stepHeight = b.stepHeight,
+            bounce = b.bounce,
+            fly = b.fly,
+            blocks = b.blocks
+        )
+    }
+
+    override fun setBody(self: LuaHandle.Centity, settings: BodySettings): Boolean {
+        for ((name, value) in listOf("width" to settings.width, "height" to settings.height)) {
+            if (value != null &&
+                (!(value > 0) || !value.isFinite())
+            ) {
+                throw LuaApiException("bad argument 'settings.$name' (more than 0 expected, got $value)")
+            }
+        }
+        val instance = instance(self) ?: return false
+        val old = instance.mover?.settings ?: ResolvedBody.of(BodyDef())
+        val next = ResolvedBody.of(
+            BodyDef(
+                width = settings.width ?: old.width,
+                height = settings.height ?: old.height,
+                gravity = settings.gravity ?: old.gravity,
+                maxFallSpeed = settings.maxFallSpeed ?: old.maxFallSpeed,
+                drag = settings.drag ?: old.drag,
+                liquidDrag = settings.liquidDrag ?: old.liquidDrag,
+                liquidGravity = settings.liquidGravity ?: old.liquidGravity,
+                acceleration = settings.acceleration ?: old.acceleration,
+                airAcceleration = settings.airAcceleration ?: old.airAcceleration,
+                friction = settings.friction ?: old.friction,
+                stepHeight = settings.stepHeight ?: old.stepHeight,
+                bounce = settings.bounce ?: old.bounce,
+                fly = settings.fly ?: old.fly,
+                blocks = settings.blocks ?: old.blocks
+            )
+        )
+        val mover = instance.mover
+        if (mover == null) instance.mover = Mover(next) else mover.settings = next
+        return true
+    }
+
+    override fun velocity(self: LuaHandle.Centity): Vec3? {
+        val instance = instance(self) ?: return null
+        return instance.flight?.velocity ?: instance.mover?.velocity ?: Vec3.ZERO
+    }
+
+    override fun setVelocity(self: LuaHandle.Centity, velocity: Vec3): Boolean {
+        instance(self)?.flight?.let { flight ->
+            flight.velocity = finiteVelocity(velocity, "velocity")
+            flight.still = false
+            return true
+        }
+        val mover = mover(self) ?: return false
+        mover.velocity = finiteVelocity(velocity, "velocity")
+        if (velocity.y > 0) mover.onGround = false
+        return true
+    }
+
+    override fun addVelocity(self: LuaHandle.Centity, velocity: Vec3): Boolean {
+        instance(self)?.flight?.let { flight ->
+            flight.velocity = flight.velocity + finiteVelocity(velocity, "velocity")
+            flight.still = false
+            return true
+        }
+        val mover = mover(self) ?: return false
+        mover.velocity = mover.velocity + finiteVelocity(velocity, "velocity")
+        if (velocity.y > 0) mover.onGround = false
+        return true
+    }
+
+    override fun walkVelocity(self: LuaHandle.Centity): Vec3? = mover(self)?.walk
+
+    override fun setWalkVelocity(self: LuaHandle.Centity, velocity: Vec3?): Boolean {
+        val mover = mover(self) ?: return false
+        mover.walk = velocity?.let { finiteVelocity(it, "velocity") }
+        return true
+    }
+
+    override fun jump(self: LuaHandle.Centity, height: Double): Boolean {
+        if (!(height >= 0) || !height.isFinite()) throw LuaApiException("bad argument 'height' (at least 0 expected, got $height)")
+        val mover = mover(self) ?: return false
+        mover.velocity = Vec3(mover.velocity.x, mover.jumpSpeed(height), mover.velocity.z)
+        mover.onGround = false
+        return true
+    }
+
+    override fun launch(self: LuaHandle.Centity, options: LaunchOptions): Boolean {
+        finiteVelocity(options.velocity, "options.velocity")
+        fun atLeast(value: Double?, least: Double, name: String) {
+            if (value != null &&
+                (!(value >= least) || !value.isFinite())
+            ) {
+                throw LuaApiException("bad argument 'options.$name' (at least $least expected, got $value)")
+            }
+        }
+        fun within(value: Double?, name: String) {
+            if (value != null && !(value in 0.0..1.0)) throw LuaApiException("bad argument 'options.$name' (0 to 1 expected, got $value)")
+        }
+        atLeast(options.radius, 0.0, "radius")
+        atLeast(options.restSpeed, 0.0, "rest_speed")
+        within(options.drag, "drag")
+        within(options.bounce, "bounce")
+        within(options.friction, "friction")
+        for ((name, value) in listOf(
+            "pierce" to options.pierce,
+            "gravity_delay" to options.gravityDelay,
+            "max_bounces" to options.maxBounces
+        )) {
+            if (value != null && value < 0) throw LuaApiException("bad argument 'options.$name' (at least 0 expected, got $value)")
+        }
+        for ((name, value) in listOf("rehit" to options.rehit, "lifetime" to options.lifetime)) {
+            if (value != null && value < 1) throw LuaApiException("bad argument 'options.$name' (at least 1 expected, got $value)")
+        }
+        options.homing?.let {
+            atLeast(it.range, 0.0, "homing.range")
+            atLeast(it.turn, 0.0, "homing.turn")
+        }
+        val gravity = options.gravity ?: 0.0
+        if (!gravity.isFinite()) throw LuaApiException("bad argument 'options.gravity' (a finite number expected)")
+        val instance = instance(self) ?: return false
+        options.aim?.let {
+            if (instance.indexOf(it) ==
+                null
+            ) {
+                throw LuaApiException("bad argument 'options.aim' (the centity has no node \"$it\")")
+            }
+        }
+        var filter = options.hits?.let(session::queryFilter) ?: QueryFilter()
+        val owner = options.owner
+        when (owner) {
+            is LuaHandle.Centity -> runCatching { UUID.fromString(owner.id) }.getOrNull()?.let {
+                filter =
+                    filter.copy(excludeCentities = filter.excludeCentities + it)
+            }
+            is LuaHandle.Entity -> owner.uuidOrNull()?.let { filter = filter.copy(excludeEntities = filter.excludeEntities + it) }
+            else -> {}
+        }
+        // A query's own limit and line of sight aren't a flight's: it meets what's in its way, in order.
+        filter = filter.copy(limit = Int.MAX_VALUE, lineOfSight = false)
+        // A walk would fight it for the anchor.
+        instance.walk = null
+        instance.flight = Flight(
+            velocity = options.velocity,
+            gravity = gravity,
+            gravityDelay = options.gravityDelay ?: 0,
+            drag = options.drag ?: 0.0,
+            radius = options.radius ?: DEFAULT_RADIUS,
+            pierce = options.pierce ?: 0,
+            rehit = options.rehit,
+            filter = filter,
+            owner = owner,
+            blocks = options.blocks != false,
+            bounce = options.bounce,
+            friction = options.friction ?: 1.0,
+            maxBounces = options.maxBounces,
+            restSpeed = options.restSpeed ?: DEFAULT_REST_SPEED,
+            stick = options.stick == true,
+            homingRange = options.homing?.range,
+            homingTurn = options.homing?.turn ?: DEFAULT_HOMING_TURN,
+            lifetime = options.lifetime ?: DEFAULT_LIFETIME,
+            aim = options.aim,
+            removeOnEnd = options.removeOnEnd != false
+        ).also { centities.flights.aim(instance, it) }
+        return true
+    }
+
+    override fun isLaunched(self: LuaHandle.Centity): Boolean = instance(self)?.flight != null
+
+    override fun stopFlight(self: LuaHandle.Centity): Boolean {
+        val instance = instance(self) ?: return false
+        val flight = instance.flight ?: return false
+        centities.flights.end(instance, flight, "stopped", Vec3(instance.anchor.x, instance.anchor.y, instance.anchor.z))
+        return true
+    }
+
+    override fun isOnGround(self: LuaHandle.Centity): Boolean = mover(self)?.onGround == true
+
+    override fun isInLiquid(self: LuaHandle.Centity): Boolean = mover(self)?.inLiquid == true
+
+    override fun wall(self: LuaHandle.Centity): Vec3? = mover(self)?.wall
+
+    private fun finiteVelocity(v: Vec3, name: String): Vec3 {
+        if (!v.x.isFinite() ||
+            !v.y.isFinite() ||
+            !v.z.isFinite()
+        ) {
+            throw LuaApiException("bad argument '$name' (a finite velocity expected)")
+        }
+        return v
+    }
+
+    override fun properties(self: LuaHandle.Centity): Any? = instance(self)?.definition?.properties.orEmpty().let(::JsonObject).takeIf {
+        instance(self) !=
+            null
+    }
+
+    override fun bounds(self: LuaHandle.Centity): Bounds? {
+        val instance = instance(self) ?: return null
+        val box = centities.obstacles.of(instance).bounds ?: return null
+        val a = instance.anchor
+        return Bounds(Vec3(box.min.x + a.x, box.min.y + a.y, box.min.z + a.z), Vec3(box.max.x + a.x, box.max.y + a.y, box.max.z + a.z))
+    }
 
     override fun location(self: LuaHandle.Centity): LuaLocation? =
         instance(self)?.let { LuaLocation(LuaHandle.World(it.anchor.world), Vec3(it.anchor.x, it.anchor.y, it.anchor.z), it.yaw) }
@@ -163,7 +502,8 @@ internal class CentityImpl(private val session: ProjectSession) : CentityApi {
             height = height,
             stepHeight = step ?: CentityPaths.DEFAULT_STEP_HEIGHT,
             maxDrop = drop ?: CentityPaths.DEFAULT_MAX_DROP,
-            range = range ?: CentityPaths.DEFAULT_RANGE
+            range = range ?: CentityPaths.DEFAULT_RANGE,
+            openDoors = options?.openDoors == true
         )
     }
 
@@ -396,6 +736,85 @@ internal class NodeImpl(private val session: ProjectSession) : NodeApi {
     override fun setRotation(self: LuaHandle.Node, rotation: Vec3) = set(self, Channel.ROTATION, rotation)
 
     override fun setScale(self: LuaHandle.Node, scale: Vec3) = set(self, Channel.SCALE, scale)
+
+    override fun stretchBetween(self: LuaHandle.Node, from: Vec3, to: Vec3, options: StretchOptions?): Boolean {
+        val thickness = options?.thickness?.also {
+            if (!(it > 0) || !it.isFinite()) throw LuaApiException("bad argument 'options.thickness' (more than 0, got $it)")
+        }
+        val (instance, index) = node(self) ?: return false
+        if (instance.removed) return false
+        return Ropes.stretch(instance, index, from, to, thickness)
+    }
+
+    override fun isRope(self: LuaHandle.Node): Boolean {
+        val (instance, index) = node(self) ?: return false
+        return instance.definition.nodes[index].rope != null
+    }
+
+    override fun ropeBetween(self: LuaHandle.Node, from: Vec3OrNodeOrEntity, to: Vec3OrNodeOrEntity, options: RopeOptions?): Boolean {
+        val length = options?.length?.also {
+            if (!(it > 0) || !it.isFinite()) throw LuaApiException("bad argument 'options.length' (more than 0, got $it)")
+        }
+        val (instance, index) = node(self) ?: return false
+        if (instance.definition.nodes[index].rope == null) {
+            throw LuaApiException("node \"${self.name}\" isn't a rope: give it \"rope\" in centity.json")
+        }
+        if (instance.removed) return false
+        val ends = listOf(from, to).map { end ->
+            when (end) {
+                is Vec3OrNodeOrEntity.Vec3 -> RopeEnd.Point(end.value)
+                is Vec3OrNodeOrEntity.Node -> RopeEnd.OfNode(
+                    runCatching { UUID.fromString(end.value.centity) }.getOrNull() ?: return false,
+                    end.value.name
+                )
+                is Vec3OrNodeOrEntity.Entity -> RopeEnd.OfEntity(end.value.uuidOrNull() ?: return false)
+            }
+        }
+        val name = instance.definition.nodes[index].name
+        // Laid on each of its ticks from the next, wherever its ends are then.
+        instance.ropes[name] = StrungRope(ends[0], ends[1], length)
+        return true
+    }
+
+    override fun releaseRope(self: LuaHandle.Node) {
+        val (instance, index) = node(self) ?: return
+        instance.ropes.remove(instance.definition.nodes[index].name)
+    }
+
+    override fun tween(self: LuaHandle.Node, options: TweenOptions): Boolean {
+        val targets = listOfNotNull(
+            options.translation?.let { Channel.TRANSLATION to it },
+            options.rotation?.let { Channel.ROTATION to it },
+            options.scale?.let { Channel.SCALE to it }
+        )
+        if (targets.isEmpty()) throw LuaApiException("bad argument 'options' (a tween needs translation, rotation or scale)")
+        if (options.ticks < 1) throw LuaApiException("bad argument 'options.ticks' (at least 1, got ${options.ticks})")
+        val easing = options.easing?.let { name ->
+            Easing.entries.firstOrNull { it.name.lowercase() == name }
+                ?: throw LuaApiException(
+                    "bad argument 'options.easing' (${Easing.entries.joinToString {
+                        it.name.lowercase()
+                    }}, got \"$name\")"
+                )
+        } ?: Easing.EASE_IN_OUT
+        val (instance, index) = node(self) ?: return false
+        if (instance.removed) return false
+        val ticks = options.ticks.coerceAtMost(Int.MAX_VALUE / 2L).toInt()
+        for ((channel, to) in targets) {
+            instance.tween(Instance.Tween(index, channel, instance.rest(index, channel), to, ticks, easing, options.back == true))
+        }
+        return true
+    }
+
+    override fun isTweening(self: LuaHandle.Node): Boolean {
+        val (instance, index) = node(self) ?: return false
+        return instance.tweens.any { it.index == index }
+    }
+
+    override fun stopTween(self: LuaHandle.Node): Boolean {
+        val (instance, index) = node(self) ?: return false
+        return instance.tweens.removeAll { it.index == index }
+    }
 
     // ---- coordinate spaces: through Instance.worldMatrix, so as shown now ----------
 
@@ -793,7 +1212,8 @@ private fun Vec3.cross(o: Vec3) = Vec3(y * o.z - z * o.y, z * o.x - x * o.z, x *
  * vector) with +X level: the basis right = up × forward, up' = forward × right.
  * Straight up or down, where "level" means nothing, +X stays east.
  */
-private fun lookRotation(forward: Vec3): Vec3 {
+/** The rotation (degrees, X then Y then Z) that points +Z along the unit [forward], keeping +X level. */
+internal fun lookRotation(forward: Vec3): Vec3 {
     val flat = Vec3(0.0, 1.0, 0.0).cross(forward)
     val right = if (flat.length() < 1e-9) Vec3(1.0, 0.0, 0.0) else flat.normalized()
     val up = forward.cross(right)
@@ -810,3 +1230,9 @@ private fun lookRotation(forward: Vec3): Vec3 {
     v[10] = forward.z
     return Quat.fromBasis(basis).toEuler()
 }
+
+/** What a launch without them flies with. */
+private const val DEFAULT_RADIUS = 0.1
+private const val DEFAULT_REST_SPEED = 1.0
+private const val DEFAULT_HOMING_TURN = 180.0
+private const val DEFAULT_LIFETIME = 600L

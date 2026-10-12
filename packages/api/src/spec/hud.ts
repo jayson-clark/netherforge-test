@@ -24,15 +24,31 @@ export const hudClass: LuaClass = {
     },
     {
       name: 'fill_bar',
-      doc: 'Fills a bar: `value` out of `max`, shown as that much of its segments (to the nearest half segment, for a bar with a half picture). A `value` past `max` or below 0 is shown full or empty; a `max` of 0 or less is an error.',
+      doc: "Fills a bar: `value` out of `max`, shown as that much of its segments (to the nearest half segment, for a bar with a half picture). A `value` past `max` or below 0 is shown full or empty; a `max` of 0 or less is an error. With `segments`, only that many of the bar's segments are drawn (1 to the bar's own), placed by the bar's `align`.",
       params: [
         element('bar'),
         { name: 'value', type: 'number', doc: '' },
         { name: 'max', type: 'number', doc: '' },
+        { name: 'options', type: 'HudFillOptions', doc: '', optional: true },
       ],
       returns: [{ type: 'boolean', doc: OFFLINE }],
       example:
         'local hud = player:hud()\nhud:fill_bar("ui/health", player:health() or 0, player:max_health() or 20)\nhud:fill_bar("ui/mana", 40, 100)',
+    },
+    {
+      name: 'fill_bars',
+      doc: "Fills several bars as one long bar, each `per_segment` of `max` a segment: as many segments are drawn as `max` needs, filling the first bar's, then the next's (rows of hearts, ten to a row). A bar no segment reaches is removed. Every name must be a bar; `per_segment` and `max` more than 0.",
+      params: [
+        { name: 'names', type: 'string[]', doc: 'Bars, `<pack>/<key>`, in the order they fill.' },
+        { name: 'value', type: 'number', doc: '' },
+        { name: 'max', type: 'number', doc: '' },
+        { name: 'per_segment', type: 'number', doc: 'How much of `max` a segment stands for.' },
+      ],
+      returns: [
+        { type: 'integer', doc: "How many segments were drawn in all; 0 when they're offline." },
+      ],
+      example:
+        '-- 20 life a heart, ten hearts a row, up to three rows.\nlocal hud = player:hud()\nhud:fill_bars({ "ui/life1", "ui/life2", "ui/life3" }, 230, 400, 20)',
     },
     {
       name: 'bar',
@@ -99,6 +115,24 @@ export const hudShapes: LuaClass[] = [
     fields: [
       field('value', 'number', 'How much of it is full, as set.'),
       field('max', 'number', 'Out of how much.'),
+      {
+        name: 'segments',
+        type: 'integer',
+        doc: 'How many of its segments are drawn.',
+      },
+    ],
+  },
+  {
+    name: 'HudFillOptions',
+    doc: 'How `hud:fill_bar` draws a bar.',
+    methods: false,
+    functions: [],
+    fields: [
+      {
+        name: 'segments',
+        type: 'integer?',
+        doc: "Draw only this many of the bar's segments, 1 to its own. Default all of them.",
+      },
     ],
   },
 ]

@@ -54,6 +54,111 @@ What `player:on(event, handler)` listens for. See [Events](events.md) for how ev
 | `prepare_smithing` | [PlayerPrepareSmithingEvent](events.md#playerpreparesmithingevent) |  | What is in a smithing table changed, and the game is working out the result. Assign `event.result` to make something else, or `nil` for nothing. Only this player's: heard before `nf.on("player_prepare_smithing")`, with the same event, so `event:stop()` keeps it from there. Bubbles. Writable: `result`. |
 | `prepare_grindstone` | [PlayerPrepareGrindstoneEvent](events.md#playerpreparegrindstoneevent) |  | What is in a grindstone changed, and the game is working out the result. Assign `event.result` to make something else, or `nil` for nothing. Only this player's: heard before `nf.on("player_prepare_grindstone")`, with the same event, so `event:stop()` keeps it from there. Bubbles. Writable: `result`. |
 | `enchant_item` | [PlayerEnchantItemEvent](events.md#playerenchantitemevent) | yes | A player is enchanting an item at an enchanting table. `event:cancel()` stops it: nothing is enchanted or spent. Assign `event.cost` to change how many levels it takes. Only this player's: heard before `nf.on("player_enchant_item")`, with the same event, so `event:stop()` keeps it from there. Bubbles. Writable: `cost`. |
+| `buff_add` | [BuffEvent](events.md#buffevent) | yes | A buff is about to take hold (`add_buff`): assign `event.ticks` to change how long, or `event:cancel()` it (one it can't take). Not heard when it's `blockedBy` another. Writable: `ticks`. |
+| `buff_end` | [BuffEndEvent](events.md#buffendevent) |  | A buff ended: it ran out (`"expired"`), a script took it away (`"removed"`), or another buff cured it (`"cured"`). |
+
+## `player:stat(name)`
+
+One of they's stats. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `name` | `string` | The stat: lowercase letters, digits and `_`. |
+
+**Returns** `number`
+
+```lua
+local damage = 20
+local taken = math.max(1, damage - player:stat("defense") / 2)
+```
+
+## `player:stats()`
+
+Every stat they has that isn't 0, by name. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.
+
+**Returns** `table<string, number>`
+
+## `player:modifiers(source)`
+
+What a script's `source` adds to they's stats (`set_modifiers`), or `nil` when it adds nothing.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `source` | `string` | Whose: `"armour"`, `"accessories"`. |
+
+**Returns** `table<string, number>?`
+
+## `player:set_modifiers(source, modifiers?)`
+
+Sets what `source` adds to they's stats, replacing what it added before: one call per source, each time it changes (a piece of armour put on), and `nil` takes it all away. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `source` | `string` | Whose: any name of your own. |
+| `modifiers` (optional) | `table<string, number>` | A number per stat name. Leave it out (or `nil`) to take the source away. |
+
+**Returns** `boolean`: `false` once they has gone.
+
+```lua
+player:set_modifiers("armour", { defense = 12, move = 0.05 })
+```
+
+## `player:add_buff(buff, ticks)`
+
+Gives they a buff (`buffs/<id>.json`) for a number of ticks: it takes away the buffs it `cures`, and doesn't take hold while one it's `blockedBy` lasts. Given again while it lasts, its file's `stacking` says what happens to the time. Its `buff_add` handlers may change the ticks or cancel it. While it lasts its `stats` are added to they's; when it runs out, `buff_end` hears it. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online. A buff the project doesn't have is an error.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `buff` | `string` | Its id: `buffs/<id>.json`. |
+| `ticks` | `integer` | How long, at least 1. |
+
+**Returns** `boolean`: Whether it took hold: `false` when one it's `blockedBy` is on they, a handler cancelled it, or they has gone.
+
+```lua
+player:add_buff("ironskin", 20 * 60 * 4)
+```
+
+## `player:remove_buff(buff)`
+
+Takes a buff away from they (`buff_end` hears `"removed"`).
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `buff` | `string` | Its id. |
+
+**Returns** `boolean`: Whether they had it.
+
+## `player:has_buff(buff)`
+
+Whether they has a buff now.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `buff` | `string` | Its id. |
+
+**Returns** `boolean`
+
+## `player:buff_ticks(buff)`
+
+How many ticks a buff they has has left, or `nil` when they don't have it.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `buff` | `string` | Its id. |
+
+**Returns** `integer?`
+
+## `player:buffs()`
+
+Every buff they has now, with what a HUD shows them by, the first given first.
+
+**Returns** `ActiveBuff[]`
+
+```lua
+for _, buff in ipairs(player:buffs()) do
+  log(buff.id, buff.ticks)
+end
+```
 
 ## `player:name()`
 
@@ -721,6 +826,21 @@ The project menu window they're looking at, or `nil` (nothing open, or a chest t
 
 **Returns** `Menu?`
 
+## `player:refresh_items()`
+
+Sends their game every stack it shows again where it would now look different to them: their inventory, the window they have open and their cursor, each worked out again by the `view` handlers (and `nf.on("item_view")`). Stacks are sent by themselves when they change, but not when only what a `view` handler works its look out from does, so call this then: when a shop menu opens or closes, say. It's done once at the end of the tick however often it's called, and only stacks that look different from what their game was last sent are sent.
+
+**Returns** `boolean`: `false` when they're offline.
+
+```lua
+nf.on("menu_open", function(event)
+  event.player:refresh_items()
+end)
+nf.on("menu_close", function(event)
+  event.player:refresh_items()
+end)
+```
+
 ## `player:close_menu()`
 
 Closes the project menu they have open. Anything else on their screen (a chest, their own inventory) stays open.
@@ -1058,6 +1178,20 @@ Their saved table: one per player, by id, kept across restarts and shared by eve
 local shop = player:data().shop or {}
 player:data().shop = shop
 shop.coins = (shop.coins or 0) + 5
+```
+
+## `player:session()`
+
+Their table for this time online: one per player, the same table every time, shared by every script, and never saved. It's made empty the first time a script asks after they join, kept while they stay (through a module's reload too: it's the player's, not the script's), and dropped once they've left, after their `player_quit` handlers, so the next time they join it's empty again. A whole-project reload (`netherforge.json` changing, or `/nf reload` with no files) empties it, as it does every script's state. Anything a script holds goes in it (handles, functions, a `Task`), so a module needn't keep a map keyed by player and clear it in `player_quit`. By convention each module keeps its own part of it under its name, as with `data()`. `nil` for a player who isn't online.
+
+**Returns** `table?`
+
+```lua
+local session = assert(player:session())
+session.combo = (session.combo or 0) + 1
+if session.combo >= 3 then
+  player:send_message("Combo!")
+end
 ```
 
 ## `player:on(event, handler, options?)`

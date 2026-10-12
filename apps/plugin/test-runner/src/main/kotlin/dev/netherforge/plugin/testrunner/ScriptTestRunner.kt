@@ -15,12 +15,15 @@ import dev.netherforge.plugin.bridge.BridgeOutput
 import dev.netherforge.plugin.lua.SandboxLimits
 import dev.netherforge.plugin.lua.ScriptFailure
 import dev.netherforge.plugin.platform.GameEvent
+import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.testing.TestHarness
 import dev.netherforge.plugin.testing.TestOutcome
+import dev.netherforge.plugin.testkit.FakeItemViews
 import dev.netherforge.plugin.testkit.FakePlatform
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.UUID
 import kotlin.io.path.createDirectories
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.readText
@@ -158,6 +161,15 @@ class ScriptTestRunner(
                 val player = platform.players.add(name)
                 platform.raise.playerJoin(GameEvent.PlayerJoin(player.ref, firstJoin, "$name joined the game"))
                 return player.ref
+            }
+
+            override fun shown(player: UUID, slot: Int?, menu: Boolean): ItemData? {
+                val place = when {
+                    slot == null -> FakeItemViews.Place.Cursor
+                    menu -> FakeItemViews.Place.Menu(platform.menus.viewing(player) ?: return null, slot)
+                    else -> FakeItemViews.Place.Inventory(slot)
+                }
+                return platform.itemViews.shown(player, place)
             }
         }
 

@@ -98,6 +98,9 @@ interface Platform {
     /** Project items on real stacks: rewriting stale looks. */
     val projectItems: ProjectItemOps
 
+    /** How stacks look to the one player they're sent to ([ItemViewOps]). */
+    val itemViews: ItemViewOps
+
     /** Recipes the project adds to the server, and players' recipe books. */
     val recipes: RecipeOps
 
@@ -671,6 +674,30 @@ interface ProjectItemOps {
      */
     fun refresh(inventory: InventoryRef): Int
 }
+
+/**
+ * How stacks look to each player, apart from what they are.
+ *
+ * The adapter asks the runtime about every stack it sends a player's game (their inventory, armour and offhand
+ * included, the window they have open, their cursor; a whole window or one slot): first, cheaply, whether
+ * stacks of its project item may look different to anyone ([PlatformEvents.itemViewing]), and only then how it
+ * looks to that player ([PlatformEvents.itemViewed]), whose name and lore it sends in the real ones' place. What
+ * the server keeps never changes: the stack, how it stacks, what's saved, what anyone else is sent, what
+ * scripts read. What the game sends back is mapped back to what the server holds, so a game that echoes a stack
+ * it was shown (a creative-mode click) can't make the shown look real; and the game's idea of a slot it was
+ * shown a look for still counts as in step, so a click doesn't resend it.
+ */
+interface ItemViewOps {
+    /**
+     * Works out every stack [player]'s game shows again ([PlatformEvents.itemViewed]) and sends those that now
+     * look different from what it was last sent: their inventory, the window they have open, their cursor.
+     * False when they're offline.
+     */
+    fun refresh(player: UUID): Boolean
+}
+
+/** How a stack looks to one player ([PlatformEvents.itemViewed]): the name (null for the game's own) and lore (null for none) they're shown. */
+data class ItemView(val name: String?, val lore: List<String>?)
 
 /**
  * A recipe the project adds: [id] is the project's own (`ruby_sword`), which

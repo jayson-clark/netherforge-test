@@ -288,6 +288,57 @@ class CentityPathTest {
     }
 
     @Test
+    fun `a door it opened is shut behind it when its walk is stopped or replaced, and at once when it's teleported`() {
+        val result = run(
+            """
+            local world = nf.worlds.get("world")
+            world:fill_blocks(vec3(5, 64, -3), vec3(5, 65, 3), "minecraft:stone")
+            world:set_block(vec3(5, 64, 0), "minecraft:oak_door[half=lower]")
+            world:set_block(vec3(5, 65, 0), "minecraft:oak_door[half=upper]")
+            local walker = nf.centities.spawn("walker", vec3(0.5, 64, 0.5))
+            local through = { speed = 4, width = 0.6, open_doors = true }
+            nf.commands.register("go", function() check("go", walker:move_to(vec3(10.5, 64, 0.5), through), true) end)
+            nf.commands.register("other", function() check("other", walker:move_to(vec3(8.5, 64, 5.5), through), true) end)
+            nf.commands.register("stop", function() walker:stop_pathing() end)
+            nf.commands.register("back", function() walker:teleport(vec3(0.5, 64, 0.5)) end)
+            """,
+            after = { server ->
+                val walker = server.only("walker")
+                val commands = server.platform.commands
+                fun open() = server.platform.blocks.get("world", 5, 64, 0)!!.state.contains("open=true")
+                // Stopped short of the door it has just opened: it shuts.
+                commands.runConsole("go")
+                server.tick(18)
+                assertTrue(open(), "opened as it came: ${walker.position()}")
+                commands.runConsole("stop")
+                server.tick(1)
+                assertTrue(!open(), "shut once it stopped outside it")
+                // Sent somewhere else from the doorway: it shuts once that walk has taken it away.
+                commands.runConsole("go")
+                server.tick(7)
+                assertTrue(open() && walker.position().x in 5.0..6.0, "in the doorway: ${walker.position()}")
+                commands.runConsole("other")
+                server.tick(1)
+                assertTrue(open(), "still in it")
+                server.tick(30)
+                assertTrue(!open(), "shut behind it: ${walker.position()}")
+                // Stopped in the doorway, it waits for it to leave; a teleport takes it away at once.
+                commands.runConsole("back")
+                commands.runConsole("go")
+                server.tick(25)
+                assertTrue(walker.position().x in 5.0..6.0, "in the doorway: ${walker.position()}")
+                commands.runConsole("stop")
+                server.tick(5)
+                assertTrue(open(), "held open while it stands in it")
+                commands.runConsole("back")
+                assertTrue(!open(), "shut as it went")
+                assertTrue(walker.openedDoors.isEmpty())
+            }
+        )
+        assertEquals(listOf("done"), result)
+    }
+
+    @Test
     fun `it follows an entity or a centity, until it's within reach or it has gone`() {
         val result = run(
             """

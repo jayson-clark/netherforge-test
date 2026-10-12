@@ -56,6 +56,33 @@ data class SettingChangedEvent(val setting: String, val value: Any? = null, val 
     }
 }
 
+/** Night is falling or day is breaking in a world. */
+data class DaylightEvent(val world: LuaHandle.World, val timeOfDay: Long) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<DaylightEvent>("DaylightEvent") {
+        val worldCodec = LuaHandle.World.Codec
+        val timeOfDayCodec = LuaCodecs.INTEGER
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "world" to worldCodec,
+            "time_of_day" to timeOfDayCodec
+        )
+
+        override fun read(fields: ShapeReader) = DaylightEvent(
+            world = fields.field("world", worldCodec),
+            timeOfDay = fields.field("time_of_day", timeOfDayCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: DaylightEvent) {
+            fields.field("world", value.world, worldCodec)
+            fields.field("time_of_day", value.timeOfDay, timeOfDayCodec)
+        }
+    }
+}
+
 /** A server tick went by. */
 data class TickEvent(val tick: Long) : LuaEvent {
     override fun push(call: LuaCall) = Codec.push(call, this)
@@ -2675,7 +2702,7 @@ data class PlayerStopUsingItemEvent(val player: LuaHandle.Player, val item: Item
 }
 
 /** How a centity walks where `centity:move_to` sends it. A key that isn't one of these is an error. */
-data class CentityPathOptions(val speed: Double? = null, val fly: Boolean? = null, val face: Boolean? = null, val width: Double? = null, val height: Double? = null, val stepHeight: Double? = null, val maxDrop: Double? = null, val range: Double? = null) : LuaShape {
+data class CentityPathOptions(val speed: Double? = null, val fly: Boolean? = null, val face: Boolean? = null, val width: Double? = null, val height: Double? = null, val stepHeight: Double? = null, val maxDrop: Double? = null, val openDoors: Boolean? = null, val range: Double? = null) : LuaShape {
     override fun push(call: LuaCall) = Codec.push(call, this)
 
     object Codec : ShapeCodec<CentityPathOptions>("CentityPathOptions") {
@@ -2686,6 +2713,7 @@ data class CentityPathOptions(val speed: Double? = null, val fly: Boolean? = nul
         val heightCodec = LuaOptional(LuaCodecs.NUMBER)
         val stepHeightCodec = LuaOptional(LuaCodecs.NUMBER)
         val maxDropCodec = LuaOptional(LuaCodecs.NUMBER)
+        val openDoorsCodec = LuaOptional(LuaCodecs.BOOLEAN)
         val rangeCodec = LuaOptional(LuaCodecs.NUMBER)
 
         override val pinned = false
@@ -2698,6 +2726,7 @@ data class CentityPathOptions(val speed: Double? = null, val fly: Boolean? = nul
             "height" to heightCodec,
             "step_height" to stepHeightCodec,
             "max_drop" to maxDropCodec,
+            "open_doors" to openDoorsCodec,
             "range" to rangeCodec
         )
 
@@ -2709,6 +2738,7 @@ data class CentityPathOptions(val speed: Double? = null, val fly: Boolean? = nul
             height = fields.field("height", heightCodec),
             stepHeight = fields.field("step_height", stepHeightCodec),
             maxDrop = fields.field("max_drop", maxDropCodec),
+            openDoors = fields.field("open_doors", openDoorsCodec),
             range = fields.field("range", rangeCodec)
         )
 
@@ -2720,6 +2750,7 @@ data class CentityPathOptions(val speed: Double? = null, val fly: Boolean? = nul
             fields.field("height", value.height, heightCodec)
             fields.field("step_height", value.stepHeight, stepHeightCodec)
             fields.field("max_drop", value.maxDrop, maxDropCodec)
+            fields.field("open_doors", value.openDoors, openDoorsCodec)
             fields.field("range", value.range, rangeCodec)
         }
     }
@@ -2748,6 +2779,696 @@ data class CentityPathEndEvent(val centity: LuaHandle.Centity, val reached: Bool
         override fun write(fields: ShapeWriter, value: CentityPathEndEvent) {
             fields.field("centity", value.centity, centityCodec)
             fields.field("reached", value.reached, reachedCodec)
+        }
+    }
+}
+
+/** How `nf.centities.spawn` spawns one. A key that isn't one of these is an error. */
+data class CentitySpawnOptions(val temporary: Boolean? = null, val lifetime: Long? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<CentitySpawnOptions>("CentitySpawnOptions") {
+        val temporaryCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val lifetimeCodec = LuaOptional(LuaCodecs.INTEGER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "temporary" to temporaryCodec,
+            "lifetime" to lifetimeCodec
+        )
+
+        override fun read(fields: ShapeReader) = CentitySpawnOptions(
+            temporary = fields.field("temporary", temporaryCodec),
+            lifetime = fields.field("lifetime", lifetimeCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: CentitySpawnOptions) {
+            fields.field("temporary", value.temporary, temporaryCodec)
+            fields.field("lifetime", value.lifetime, lifetimeCodec)
+        }
+    }
+}
+
+/**
+ * A centity's body, as `centity:body()` gives it and `centity:set_body` takes it: the fields of
+ * `centity.json`'s `body`, in Lua spelling. Every field is optional to `set_body`. A key that isn't
+ * one of these is an error.
+ */
+data class BodySettings(val width: Double? = null, val height: Double? = null, val gravity: Double? = null, val maxFallSpeed: Double? = null, val drag: Double? = null, val liquidDrag: Double? = null, val liquidGravity: Double? = null, val acceleration: Double? = null, val airAcceleration: Double? = null, val friction: Double? = null, val stepHeight: Double? = null, val bounce: Double? = null, val fly: Boolean? = null, val blocks: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<BodySettings>("BodySettings") {
+        val widthCodec = LuaOptional(LuaCodecs.NUMBER)
+        val heightCodec = LuaOptional(LuaCodecs.NUMBER)
+        val gravityCodec = LuaOptional(LuaCodecs.NUMBER)
+        val maxFallSpeedCodec = LuaOptional(LuaCodecs.NUMBER)
+        val dragCodec = LuaOptional(LuaCodecs.NUMBER)
+        val liquidDragCodec = LuaOptional(LuaCodecs.NUMBER)
+        val liquidGravityCodec = LuaOptional(LuaCodecs.NUMBER)
+        val accelerationCodec = LuaOptional(LuaCodecs.NUMBER)
+        val airAccelerationCodec = LuaOptional(LuaCodecs.NUMBER)
+        val frictionCodec = LuaOptional(LuaCodecs.NUMBER)
+        val stepHeightCodec = LuaOptional(LuaCodecs.NUMBER)
+        val bounceCodec = LuaOptional(LuaCodecs.NUMBER)
+        val flyCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val blocksCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "width" to widthCodec,
+            "height" to heightCodec,
+            "gravity" to gravityCodec,
+            "max_fall_speed" to maxFallSpeedCodec,
+            "drag" to dragCodec,
+            "liquid_drag" to liquidDragCodec,
+            "liquid_gravity" to liquidGravityCodec,
+            "acceleration" to accelerationCodec,
+            "air_acceleration" to airAccelerationCodec,
+            "friction" to frictionCodec,
+            "step_height" to stepHeightCodec,
+            "bounce" to bounceCodec,
+            "fly" to flyCodec,
+            "blocks" to blocksCodec
+        )
+
+        override fun read(fields: ShapeReader) = BodySettings(
+            width = fields.field("width", widthCodec),
+            height = fields.field("height", heightCodec),
+            gravity = fields.field("gravity", gravityCodec),
+            maxFallSpeed = fields.field("max_fall_speed", maxFallSpeedCodec),
+            drag = fields.field("drag", dragCodec),
+            liquidDrag = fields.field("liquid_drag", liquidDragCodec),
+            liquidGravity = fields.field("liquid_gravity", liquidGravityCodec),
+            acceleration = fields.field("acceleration", accelerationCodec),
+            airAcceleration = fields.field("air_acceleration", airAccelerationCodec),
+            friction = fields.field("friction", frictionCodec),
+            stepHeight = fields.field("step_height", stepHeightCodec),
+            bounce = fields.field("bounce", bounceCodec),
+            fly = fields.field("fly", flyCodec),
+            blocks = fields.field("blocks", blocksCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: BodySettings) {
+            fields.field("width", value.width, widthCodec)
+            fields.field("height", value.height, heightCodec)
+            fields.field("gravity", value.gravity, gravityCodec)
+            fields.field("max_fall_speed", value.maxFallSpeed, maxFallSpeedCodec)
+            fields.field("drag", value.drag, dragCodec)
+            fields.field("liquid_drag", value.liquidDrag, liquidDragCodec)
+            fields.field("liquid_gravity", value.liquidGravity, liquidGravityCodec)
+            fields.field("acceleration", value.acceleration, accelerationCodec)
+            fields.field("air_acceleration", value.airAcceleration, airAccelerationCodec)
+            fields.field("friction", value.friction, frictionCodec)
+            fields.field("step_height", value.stepHeight, stepHeightCodec)
+            fields.field("bounce", value.bounce, bounceCodec)
+            fields.field("fly", value.fly, flyCodec)
+            fields.field("blocks", value.blocks, blocksCodec)
+        }
+    }
+}
+
+/**
+ * How `centity:launch` flies it. Everything but `velocity` is optional. A key that isn't one of these
+ * is an error.
+ */
+data class LaunchOptions(val velocity: Vec3, val gravity: Double? = null, val gravityDelay: Long? = null, val drag: Double? = null, val radius: Double? = null, val pierce: Long? = null, val rehit: Long? = null, val hits: QueryOptions? = null, val owner: LuaHandle? = null, val blocks: Boolean? = null, val bounce: Double? = null, val friction: Double? = null, val maxBounces: Long? = null, val restSpeed: Double? = null, val stick: Boolean? = null, val homing: Homing? = null, val lifetime: Long? = null, val aim: String? = null, val removeOnEnd: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<LaunchOptions>("LaunchOptions") {
+        val velocityCodec = LuaCodecs.VEC3
+        val gravityCodec = LuaOptional(LuaCodecs.NUMBER)
+        val gravityDelayCodec = LuaOptional(LuaCodecs.INTEGER)
+        val dragCodec = LuaOptional(LuaCodecs.NUMBER)
+        val radiusCodec = LuaOptional(LuaCodecs.NUMBER)
+        val pierceCodec = LuaOptional(LuaCodecs.INTEGER)
+        val rehitCodec = LuaOptional(LuaCodecs.INTEGER)
+        val hitsCodec = LuaOptional(QueryOptions.Codec)
+        val ownerCodec = LuaOptional(LuaUnions.EntityOrCentity)
+        val blocksCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val bounceCodec = LuaOptional(LuaCodecs.NUMBER)
+        val frictionCodec = LuaOptional(LuaCodecs.NUMBER)
+        val maxBouncesCodec = LuaOptional(LuaCodecs.INTEGER)
+        val restSpeedCodec = LuaOptional(LuaCodecs.NUMBER)
+        val stickCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val homingCodec = LuaOptional(Homing.Codec)
+        val lifetimeCodec = LuaOptional(LuaCodecs.INTEGER)
+        val aimCodec = LuaOptional(LuaCodecs.STRING)
+        val removeOnEndCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "velocity" to velocityCodec,
+            "gravity" to gravityCodec,
+            "gravity_delay" to gravityDelayCodec,
+            "drag" to dragCodec,
+            "radius" to radiusCodec,
+            "pierce" to pierceCodec,
+            "rehit" to rehitCodec,
+            "hits" to hitsCodec,
+            "owner" to ownerCodec,
+            "blocks" to blocksCodec,
+            "bounce" to bounceCodec,
+            "friction" to frictionCodec,
+            "max_bounces" to maxBouncesCodec,
+            "rest_speed" to restSpeedCodec,
+            "stick" to stickCodec,
+            "homing" to homingCodec,
+            "lifetime" to lifetimeCodec,
+            "aim" to aimCodec,
+            "remove_on_end" to removeOnEndCodec
+        )
+
+        override fun read(fields: ShapeReader) = LaunchOptions(
+            velocity = fields.field("velocity", velocityCodec),
+            gravity = fields.field("gravity", gravityCodec),
+            gravityDelay = fields.field("gravity_delay", gravityDelayCodec),
+            drag = fields.field("drag", dragCodec),
+            radius = fields.field("radius", radiusCodec),
+            pierce = fields.field("pierce", pierceCodec),
+            rehit = fields.field("rehit", rehitCodec),
+            hits = fields.field("hits", hitsCodec),
+            owner = fields.field("owner", ownerCodec),
+            blocks = fields.field("blocks", blocksCodec),
+            bounce = fields.field("bounce", bounceCodec),
+            friction = fields.field("friction", frictionCodec),
+            maxBounces = fields.field("max_bounces", maxBouncesCodec),
+            restSpeed = fields.field("rest_speed", restSpeedCodec),
+            stick = fields.field("stick", stickCodec),
+            homing = fields.field("homing", homingCodec),
+            lifetime = fields.field("lifetime", lifetimeCodec),
+            aim = fields.field("aim", aimCodec),
+            removeOnEnd = fields.field("remove_on_end", removeOnEndCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: LaunchOptions) {
+            fields.field("velocity", value.velocity, velocityCodec)
+            fields.field("gravity", value.gravity, gravityCodec)
+            fields.field("gravity_delay", value.gravityDelay, gravityDelayCodec)
+            fields.field("drag", value.drag, dragCodec)
+            fields.field("radius", value.radius, radiusCodec)
+            fields.field("pierce", value.pierce, pierceCodec)
+            fields.field("rehit", value.rehit, rehitCodec)
+            fields.field("hits", value.hits, hitsCodec)
+            fields.field("owner", value.owner, ownerCodec)
+            fields.field("blocks", value.blocks, blocksCodec)
+            fields.field("bounce", value.bounce, bounceCodec)
+            fields.field("friction", value.friction, frictionCodec)
+            fields.field("max_bounces", value.maxBounces, maxBouncesCodec)
+            fields.field("rest_speed", value.restSpeed, restSpeedCodec)
+            fields.field("stick", value.stick, stickCodec)
+            fields.field("homing", value.homing, homingCodec)
+            fields.field("lifetime", value.lifetime, lifetimeCodec)
+            fields.field("aim", value.aim, aimCodec)
+            fields.field("remove_on_end", value.removeOnEnd, removeOnEndCodec)
+        }
+    }
+}
+
+/** How a projectile seeks: `LaunchOptions.homing`. */
+data class Homing(val range: Double, val turn: Double? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<Homing>("Homing") {
+        val rangeCodec = LuaCodecs.NUMBER
+        val turnCodec = LuaOptional(LuaCodecs.NUMBER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "range" to rangeCodec,
+            "turn" to turnCodec
+        )
+
+        override fun read(fields: ShapeReader) = Homing(
+            range = fields.field("range", rangeCodec),
+            turn = fields.field("turn", turnCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: Homing) {
+            fields.field("range", value.range, rangeCodec)
+            fields.field("turn", value.turn, turnCodec)
+        }
+    }
+}
+
+/** A projectile touched something it can hit: `hit`. Exactly one of `target` and `entity` is set. */
+data class FlightHitEvent(val centity: LuaHandle.Centity, val target: LuaHandle.Centity? = null, val node: LuaHandle.Node? = null, val entity: LuaHandle.Entity? = null, val position: Vec3, val velocity: Vec3, val owner: LuaHandle? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<FlightHitEvent>("FlightHitEvent") {
+        val centityCodec = LuaHandle.Centity.Codec
+        val targetCodec = LuaOptional(LuaHandle.Centity.Codec)
+        val nodeCodec = LuaOptional(LuaHandle.Node.Codec)
+        val entityCodec = LuaOptional(LuaHandle.Entity.Codec)
+        val positionCodec = LuaCodecs.VEC3
+        val velocityCodec = LuaCodecs.VEC3
+        val ownerCodec = LuaOptional(LuaUnions.EntityOrCentity)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "target" to targetCodec,
+            "node" to nodeCodec,
+            "entity" to entityCodec,
+            "position" to positionCodec,
+            "velocity" to velocityCodec,
+            "owner" to ownerCodec
+        )
+
+        override fun read(fields: ShapeReader) = FlightHitEvent(
+            centity = fields.field("centity", centityCodec),
+            target = fields.field("target", targetCodec),
+            node = fields.field("node", nodeCodec),
+            entity = fields.field("entity", entityCodec),
+            position = fields.field("position", positionCodec),
+            velocity = fields.field("velocity", velocityCodec),
+            owner = fields.field("owner", ownerCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: FlightHitEvent) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("target", value.target, targetCodec)
+            fields.field("node", value.node, nodeCodec)
+            fields.field("entity", value.entity, entityCodec)
+            fields.field("position", value.position, positionCodec)
+            fields.field("velocity", value.velocity, velocityCodec)
+            fields.field("owner", value.owner, ownerCodec)
+        }
+    }
+}
+
+/** A projectile met a block it bounces off (`bounce`) or sticks in (`stick`). */
+data class FlightBlockEvent(val centity: LuaHandle.Centity, val block: LuaHandle.Block, val position: Vec3, val normal: Vec3, val speed: Double, val owner: LuaHandle? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<FlightBlockEvent>("FlightBlockEvent") {
+        val centityCodec = LuaHandle.Centity.Codec
+        val blockCodec = LuaHandle.Block.Codec
+        val positionCodec = LuaCodecs.VEC3
+        val normalCodec = LuaCodecs.VEC3
+        val speedCodec = LuaCodecs.NUMBER
+        val ownerCodec = LuaOptional(LuaUnions.EntityOrCentity)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "block" to blockCodec,
+            "position" to positionCodec,
+            "normal" to normalCodec,
+            "speed" to speedCodec,
+            "owner" to ownerCodec
+        )
+
+        override fun read(fields: ShapeReader) = FlightBlockEvent(
+            centity = fields.field("centity", centityCodec),
+            block = fields.field("block", blockCodec),
+            position = fields.field("position", positionCodec),
+            normal = fields.field("normal", normalCodec),
+            speed = fields.field("speed", speedCodec),
+            owner = fields.field("owner", ownerCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: FlightBlockEvent) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("block", value.block, blockCodec)
+            fields.field("position", value.position, positionCodec)
+            fields.field("normal", value.normal, normalCodec)
+            fields.field("speed", value.speed, speedCodec)
+            fields.field("owner", value.owner, ownerCodec)
+        }
+    }
+}
+
+/** A projectile's flight ended: `flight_end`. */
+data class FlightEndEvent(val centity: LuaHandle.Centity, val reason: String, val position: Vec3, val target: LuaHandle.Centity? = null, val entity: LuaHandle.Entity? = null, val block: LuaHandle.Block? = null, val normal: Vec3? = null, val owner: LuaHandle? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<FlightEndEvent>("FlightEndEvent") {
+        val centityCodec = LuaHandle.Centity.Codec
+        val reasonCodec = LuaChoice(listOf("hit", "block", "lifetime", "unloaded", "stopped"))
+        val positionCodec = LuaCodecs.VEC3
+        val targetCodec = LuaOptional(LuaHandle.Centity.Codec)
+        val entityCodec = LuaOptional(LuaHandle.Entity.Codec)
+        val blockCodec = LuaOptional(LuaHandle.Block.Codec)
+        val normalCodec = LuaOptional(LuaCodecs.VEC3)
+        val ownerCodec = LuaOptional(LuaUnions.EntityOrCentity)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "reason" to reasonCodec,
+            "position" to positionCodec,
+            "target" to targetCodec,
+            "entity" to entityCodec,
+            "block" to blockCodec,
+            "normal" to normalCodec,
+            "owner" to ownerCodec
+        )
+
+        override fun read(fields: ShapeReader) = FlightEndEvent(
+            centity = fields.field("centity", centityCodec),
+            reason = fields.field("reason", reasonCodec),
+            position = fields.field("position", positionCodec),
+            target = fields.field("target", targetCodec),
+            entity = fields.field("entity", entityCodec),
+            block = fields.field("block", blockCodec),
+            normal = fields.field("normal", normalCodec),
+            owner = fields.field("owner", ownerCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: FlightEndEvent) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("reason", value.reason, reasonCodec)
+            fields.field("position", value.position, positionCodec)
+            fields.field("target", value.target, targetCodec)
+            fields.field("entity", value.entity, entityCodec)
+            fields.field("block", value.block, blockCodec)
+            fields.field("normal", value.normal, normalCodec)
+            fields.field("owner", value.owner, ownerCodec)
+        }
+    }
+}
+
+/**
+ * Where damage dealt with `centity:damage` comes from, for its handlers. A key that isn't one of these
+ * is an error.
+ */
+data class CentityDamageOptions(val source: LuaHandle? = null, val cause: String? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<CentityDamageOptions>("CentityDamageOptions") {
+        val sourceCodec = LuaOptional(LuaUnions.EntityOrCentity)
+        val causeCodec = LuaOptional(LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "source" to sourceCodec,
+            "cause" to causeCodec
+        )
+
+        override fun read(fields: ShapeReader) = CentityDamageOptions(
+            source = fields.field("source", sourceCodec),
+            cause = fields.field("cause", causeCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: CentityDamageOptions) {
+            fields.field("source", value.source, sourceCodec)
+            fields.field("cause", value.cause, causeCodec)
+        }
+    }
+}
+
+/** A centity is about to lose health: `damage`. */
+data class CentityDamageEvent(val centity: LuaHandle.Centity, var amount: Double, val source: LuaHandle? = null, val cause: String? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    override fun write(field: String, call: LuaCall, index: Int) {
+        when (field) {
+            "amount" -> amount = Codec.amountCodec.read(call, index, "event.amount")
+        }
+    }
+
+    object Codec : ShapeCodec<CentityDamageEvent>("CentityDamageEvent") {
+        val centityCodec = LuaHandle.Centity.Codec
+        val amountCodec = LuaCodecs.NUMBER
+        val sourceCodec = LuaOptional(LuaUnions.EntityOrCentity)
+        val causeCodec = LuaOptional(LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "amount" to amountCodec,
+            "source" to sourceCodec,
+            "cause" to causeCodec
+        )
+
+        override fun read(fields: ShapeReader) = CentityDamageEvent(
+            centity = fields.field("centity", centityCodec),
+            amount = fields.field("amount", amountCodec),
+            source = fields.field("source", sourceCodec),
+            cause = fields.field("cause", causeCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: CentityDamageEvent) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("amount", value.amount, amountCodec)
+            fields.field("source", value.source, sourceCodec)
+            fields.field("cause", value.cause, causeCodec)
+        }
+    }
+}
+
+/** A centity's health reached 0: `death`. */
+data class CentityDeathEvent(val centity: LuaHandle.Centity, val source: LuaHandle? = null, val cause: String? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<CentityDeathEvent>("CentityDeathEvent") {
+        val centityCodec = LuaHandle.Centity.Codec
+        val sourceCodec = LuaOptional(LuaUnions.EntityOrCentity)
+        val causeCodec = LuaOptional(LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "source" to sourceCodec,
+            "cause" to causeCodec
+        )
+
+        override fun read(fields: ShapeReader) = CentityDeathEvent(
+            centity = fields.field("centity", centityCodec),
+            source = fields.field("source", sourceCodec),
+            cause = fields.field("cause", causeCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: CentityDeathEvent) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("source", value.source, sourceCodec)
+            fields.field("cause", value.cause, causeCodec)
+        }
+    }
+}
+
+/** A centity's body landed: `land`. */
+data class CentityLandEvent(val centity: LuaHandle.Centity, val speed: Double) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<CentityLandEvent>("CentityLandEvent") {
+        val centityCodec = LuaHandle.Centity.Codec
+        val speedCodec = LuaCodecs.NUMBER
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "speed" to speedCodec
+        )
+
+        override fun read(fields: ShapeReader) = CentityLandEvent(
+            centity = fields.field("centity", centityCodec),
+            speed = fields.field("speed", speedCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: CentityLandEvent) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("speed", value.speed, speedCodec)
+        }
+    }
+}
+
+/** A centity's body ran into something: `bump`. */
+data class CentityBumpEvent(val centity: LuaHandle.Centity, val normal: Vec3, val speed: Double) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<CentityBumpEvent>("CentityBumpEvent") {
+        val centityCodec = LuaHandle.Centity.Codec
+        val normalCodec = LuaCodecs.VEC3
+        val speedCodec = LuaCodecs.NUMBER
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "normal" to normalCodec,
+            "speed" to speedCodec
+        )
+
+        override fun read(fields: ShapeReader) = CentityBumpEvent(
+            centity = fields.field("centity", centityCodec),
+            normal = fields.field("normal", normalCodec),
+            speed = fields.field("speed", speedCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: CentityBumpEvent) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("normal", value.normal, normalCodec)
+            fields.field("speed", value.speed, speedCodec)
+        }
+    }
+}
+
+/** A box along the world's axes: `centity:bounds()`. */
+data class Bounds(val min: Vec3, val max: Vec3) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<Bounds>("Bounds") {
+        val minCodec = LuaCodecs.VEC3
+        val maxCodec = LuaCodecs.VEC3
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "min" to minCodec,
+            "max" to maxCodec
+        )
+
+        override fun read(fields: ShapeReader) = Bounds(
+            min = fields.field("min", minCodec),
+            max = fields.field("max", maxCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: Bounds) {
+            fields.field("min", value.min, minCodec)
+            fields.field("max", value.max, maxCodec)
+        }
+    }
+}
+
+/** A centity's hitboxes started touching something's: `touch`. */
+data class TouchEvent(val centity: LuaHandle.Centity, val node: LuaHandle.Node, val other: LuaHandle.Centity? = null, val otherNode: LuaHandle.Node? = null, val entity: LuaHandle.Entity? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<TouchEvent>("TouchEvent") {
+        val centityCodec = LuaHandle.Centity.Codec
+        val nodeCodec = LuaHandle.Node.Codec
+        val otherCodec = LuaOptional(LuaHandle.Centity.Codec)
+        val otherNodeCodec = LuaOptional(LuaHandle.Node.Codec)
+        val entityCodec = LuaOptional(LuaHandle.Entity.Codec)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "node" to nodeCodec,
+            "other" to otherCodec,
+            "other_node" to otherNodeCodec,
+            "entity" to entityCodec
+        )
+
+        override fun read(fields: ShapeReader) = TouchEvent(
+            centity = fields.field("centity", centityCodec),
+            node = fields.field("node", nodeCodec),
+            other = fields.field("other", otherCodec),
+            otherNode = fields.field("other_node", otherNodeCodec),
+            entity = fields.field("entity", entityCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: TouchEvent) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("node", value.node, nodeCodec)
+            fields.field("other", value.other, otherCodec)
+            fields.field("other_node", value.otherNode, otherNodeCodec)
+            fields.field("entity", value.entity, entityCodec)
+        }
+    }
+}
+
+/** How `node:stretch_between` lays a node. A key that isn't one of these is an error. */
+data class StretchOptions(val thickness: Double? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<StretchOptions>("StretchOptions") {
+        val thicknessCodec = LuaOptional(LuaCodecs.NUMBER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "thickness" to thicknessCodec
+        )
+
+        override fun read(fields: ShapeReader) = StretchOptions(
+            thickness = fields.field("thickness", thicknessCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: StretchOptions) {
+            fields.field("thickness", value.thickness, thicknessCodec)
+        }
+    }
+}
+
+/** How `node:rope_between` strings a rope. A key that isn't one of these is an error. */
+data class RopeOptions(val length: Double? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<RopeOptions>("RopeOptions") {
+        val lengthCodec = LuaOptional(LuaCodecs.NUMBER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "length" to lengthCodec
+        )
+
+        override fun read(fields: ShapeReader) = RopeOptions(
+            length = fields.field("length", lengthCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: RopeOptions) {
+            fields.field("length", value.length, lengthCodec)
+        }
+    }
+}
+
+/**
+ * A tween for `node:tween`: at least one of `translation`, `rotation` and `scale`. A key that isn't
+ * one of these is an error.
+ */
+data class TweenOptions(val translation: Vec3? = null, val rotation: Vec3? = null, val scale: Vec3? = null, val ticks: Long, val easing: String? = null, val back: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<TweenOptions>("TweenOptions") {
+        val translationCodec = LuaOptional(LuaCodecs.VEC3)
+        val rotationCodec = LuaOptional(LuaCodecs.VEC3)
+        val scaleCodec = LuaOptional(LuaCodecs.VEC3)
+        val ticksCodec = LuaCodecs.INTEGER
+        val easingCodec = LuaOptional(LuaCodecs.STRING)
+        val backCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "translation" to translationCodec,
+            "rotation" to rotationCodec,
+            "scale" to scaleCodec,
+            "ticks" to ticksCodec,
+            "easing" to easingCodec,
+            "back" to backCodec
+        )
+
+        override fun read(fields: ShapeReader) = TweenOptions(
+            translation = fields.field("translation", translationCodec),
+            rotation = fields.field("rotation", rotationCodec),
+            scale = fields.field("scale", scaleCodec),
+            ticks = fields.field("ticks", ticksCodec),
+            easing = fields.field("easing", easingCodec),
+            back = fields.field("back", backCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: TweenOptions) {
+            fields.field("translation", value.translation, translationCodec)
+            fields.field("rotation", value.rotation, rotationCodec)
+            fields.field("scale", value.scale, scaleCodec)
+            fields.field("ticks", value.ticks, ticksCodec)
+            fields.field("easing", value.easing, easingCodec)
+            fields.field("back", value.back, backCodec)
         }
     }
 }
@@ -2856,6 +3577,393 @@ data class Brightness(val blockLight: Long? = null, val skyLight: Long? = null) 
         override fun write(fields: ShapeWriter, value: Brightness) {
             fields.field("block_light", value.blockLight, blockLightCodec)
             fields.field("sky_light", value.skyLight, skyLightCodec)
+        }
+    }
+}
+
+/** A buff someone has now: `buffs()`. */
+data class ActiveBuff(val id: String, val ticks: Long, val name: String? = null, val icon: String? = null, val color: String? = null, val debuff: Boolean) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<ActiveBuff>("ActiveBuff") {
+        val idCodec = LuaCodecs.STRING
+        val ticksCodec = LuaCodecs.INTEGER
+        val nameCodec = LuaOptional(LuaCodecs.TEXT)
+        val iconCodec = LuaOptional(LuaCodecs.STRING)
+        val colorCodec = LuaOptional(LuaCodecs.STRING)
+        val debuffCodec = LuaCodecs.BOOLEAN
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "id" to idCodec,
+            "ticks" to ticksCodec,
+            "name" to nameCodec,
+            "icon" to iconCodec,
+            "color" to colorCodec,
+            "debuff" to debuffCodec
+        )
+
+        override fun read(fields: ShapeReader) = ActiveBuff(
+            id = fields.field("id", idCodec),
+            ticks = fields.field("ticks", ticksCodec),
+            name = fields.field("name", nameCodec),
+            icon = fields.field("icon", iconCodec),
+            color = fields.field("color", colorCodec),
+            debuff = fields.field("debuff", debuffCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: ActiveBuff) {
+            fields.field("id", value.id, idCodec)
+            fields.field("ticks", value.ticks, ticksCodec)
+            fields.field("name", value.name, nameCodec)
+            fields.field("icon", value.icon, iconCodec)
+            fields.field("color", value.color, colorCodec)
+            fields.field("debuff", value.debuff, debuffCodec)
+        }
+    }
+}
+
+/** A buff is about to take hold: `buff_add`. Exactly one of `player` and `centity` is set. */
+data class BuffEvent(val buff: String, var ticks: Long, val player: LuaHandle.Player? = null, val centity: LuaHandle.Centity? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    override fun write(field: String, call: LuaCall, index: Int) {
+        when (field) {
+            "ticks" -> ticks = Codec.ticksCodec.read(call, index, "event.ticks")
+        }
+    }
+
+    object Codec : ShapeCodec<BuffEvent>("BuffEvent") {
+        val buffCodec = LuaCodecs.STRING
+        val ticksCodec = LuaCodecs.INTEGER
+        val playerCodec = LuaOptional(LuaHandle.Player.Codec)
+        val centityCodec = LuaOptional(LuaHandle.Centity.Codec)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "buff" to buffCodec,
+            "ticks" to ticksCodec,
+            "player" to playerCodec,
+            "centity" to centityCodec
+        )
+
+        override fun read(fields: ShapeReader) = BuffEvent(
+            buff = fields.field("buff", buffCodec),
+            ticks = fields.field("ticks", ticksCodec),
+            player = fields.field("player", playerCodec),
+            centity = fields.field("centity", centityCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: BuffEvent) {
+            fields.field("buff", value.buff, buffCodec)
+            fields.field("ticks", value.ticks, ticksCodec)
+            fields.field("player", value.player, playerCodec)
+            fields.field("centity", value.centity, centityCodec)
+        }
+    }
+}
+
+/** A buff ended: `buff_end`. Exactly one of `player` and `centity` is set. */
+data class BuffEndEvent(val buff: String, val reason: String, val player: LuaHandle.Player? = null, val centity: LuaHandle.Centity? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<BuffEndEvent>("BuffEndEvent") {
+        val buffCodec = LuaCodecs.STRING
+        val reasonCodec = LuaChoice(listOf("expired", "removed", "cured"))
+        val playerCodec = LuaOptional(LuaHandle.Player.Codec)
+        val centityCodec = LuaOptional(LuaHandle.Centity.Codec)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "buff" to buffCodec,
+            "reason" to reasonCodec,
+            "player" to playerCodec,
+            "centity" to centityCodec
+        )
+
+        override fun read(fields: ShapeReader) = BuffEndEvent(
+            buff = fields.field("buff", buffCodec),
+            reason = fields.field("reason", reasonCodec),
+            player = fields.field("player", playerCodec),
+            centity = fields.field("centity", centityCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: BuffEndEvent) {
+            fields.field("buff", value.buff, buffCodec)
+            fields.field("reason", value.reason, reasonCodec)
+            fields.field("player", value.player, playerCodec)
+            fields.field("centity", value.centity, centityCodec)
+        }
+    }
+}
+
+/** One making of a `station` recipe by `nf.recipes.craft`: `recipe_craft`. */
+data class RecipeCraftEvent(val player: LuaHandle.Player, val recipe: String, var result: ItemData) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    override fun write(field: String, call: LuaCall, index: Int) {
+        when (field) {
+            "result" -> result = Codec.resultCodec.read(call, index, "event.result")
+        }
+    }
+
+    object Codec : ShapeCodec<RecipeCraftEvent>("RecipeCraftEvent") {
+        val playerCodec = LuaHandle.Player.Codec
+        val recipeCodec = LuaCodecs.STRING
+        val resultCodec = LuaCodecs.ITEM
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "player" to playerCodec,
+            "recipe" to recipeCodec,
+            "result" to resultCodec
+        )
+
+        override fun read(fields: ShapeReader) = RecipeCraftEvent(
+            player = fields.field("player", playerCodec),
+            recipe = fields.field("recipe", recipeCodec),
+            result = fields.field("result", resultCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: RecipeCraftEvent) {
+            fields.field("player", value.player, playerCodec)
+            fields.field("recipe", value.recipe, recipeCodec)
+            fields.field("result", value.result, resultCodec)
+        }
+    }
+}
+
+/** A `station` recipe, as `nf.recipes.available` and `nf.recipes.get` give it. */
+data class StationRecipe(val id: String, val result: ItemData, val materials: List<RecipeMaterial>, val stations: List<String>, val stationRange: Long, val group: String? = null, val times: Long? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<StationRecipe>("StationRecipe") {
+        val idCodec = LuaCodecs.STRING
+        val resultCodec = LuaCodecs.ITEM
+        val materialsCodec = LuaList(RecipeMaterial.Codec)
+        val stationsCodec = LuaList(LuaCodecs.STRING)
+        val stationRangeCodec = LuaCodecs.INTEGER
+        val groupCodec = LuaOptional(LuaCodecs.STRING)
+        val timesCodec = LuaOptional(LuaCodecs.INTEGER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "id" to idCodec,
+            "result" to resultCodec,
+            "materials" to materialsCodec,
+            "stations" to stationsCodec,
+            "station_range" to stationRangeCodec,
+            "group" to groupCodec,
+            "times" to timesCodec
+        )
+
+        override fun read(fields: ShapeReader) = StationRecipe(
+            id = fields.field("id", idCodec),
+            result = fields.field("result", resultCodec),
+            materials = fields.field("materials", materialsCodec),
+            stations = fields.field("stations", stationsCodec),
+            stationRange = fields.field("station_range", stationRangeCodec),
+            group = fields.field("group", groupCodec),
+            times = fields.field("times", timesCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: StationRecipe) {
+            fields.field("id", value.id, idCodec)
+            fields.field("result", value.result, resultCodec)
+            fields.field("materials", value.materials, materialsCodec)
+            fields.field("stations", value.stations, stationsCodec)
+            fields.field("station_range", value.stationRange, stationRangeCodec)
+            fields.field("group", value.group, groupCodec)
+            fields.field("times", value.times, timesCodec)
+        }
+    }
+}
+
+/** One material of a `station` recipe: exactly one of `item`, `kind` and `tag`, and how many. */
+data class RecipeMaterial(val item: String? = null, val kind: String? = null, val tag: String? = null, val count: Long) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<RecipeMaterial>("RecipeMaterial") {
+        val itemCodec = LuaOptional(LuaCodecs.STRING)
+        val kindCodec = LuaOptional(LuaCodecs.STRING)
+        val tagCodec = LuaOptional(LuaCodecs.STRING)
+        val countCodec = LuaCodecs.INTEGER
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "item" to itemCodec,
+            "kind" to kindCodec,
+            "tag" to tagCodec,
+            "count" to countCodec
+        )
+
+        override fun read(fields: ShapeReader) = RecipeMaterial(
+            item = fields.field("item", itemCodec),
+            kind = fields.field("kind", kindCodec),
+            tag = fields.field("tag", tagCodec),
+            count = fields.field("count", countCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: RecipeMaterial) {
+            fields.field("item", value.item, itemCodec)
+            fields.field("kind", value.kind, kindCodec)
+            fields.field("tag", value.tag, tagCodec)
+            fields.field("count", value.count, countCodec)
+        }
+    }
+}
+
+/** What `nf.recipes.available` looks at. A key that isn't one of these is an error. */
+data class RecipeAvailableOptions(val near: Vec3? = null, val stations: List<String>? = null, val group: String? = null, val all: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<RecipeAvailableOptions>("RecipeAvailableOptions") {
+        val nearCodec = LuaOptional(LuaCodecs.VEC3)
+        val stationsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val groupCodec = LuaOptional(LuaCodecs.STRING)
+        val allCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "near" to nearCodec,
+            "stations" to stationsCodec,
+            "group" to groupCodec,
+            "all" to allCodec
+        )
+
+        override fun read(fields: ShapeReader) = RecipeAvailableOptions(
+            near = fields.field("near", nearCodec),
+            stations = fields.field("stations", stationsCodec),
+            group = fields.field("group", groupCodec),
+            all = fields.field("all", allCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: RecipeAvailableOptions) {
+            fields.field("near", value.near, nearCodec)
+            fields.field("stations", value.stations, stationsCodec)
+            fields.field("group", value.group, groupCodec)
+            fields.field("all", value.all, allCodec)
+        }
+    }
+}
+
+/** How `nf.recipes.craft` makes a recipe. A key that isn't one of these is an error. */
+data class RecipeCraftOptions(val times: Long? = null, val near: Vec3? = null, val stations: List<String>? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<RecipeCraftOptions>("RecipeCraftOptions") {
+        val timesCodec = LuaOptional(LuaCodecs.INTEGER)
+        val nearCodec = LuaOptional(LuaCodecs.VEC3)
+        val stationsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "times" to timesCodec,
+            "near" to nearCodec,
+            "stations" to stationsCodec
+        )
+
+        override fun read(fields: ShapeReader) = RecipeCraftOptions(
+            times = fields.field("times", timesCodec),
+            near = fields.field("near", nearCodec),
+            stations = fields.field("stations", stationsCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: RecipeCraftOptions) {
+            fields.field("times", value.times, timesCodec)
+            fields.field("near", value.near, nearCodec)
+            fields.field("stations", value.stations, stationsCodec)
+        }
+    }
+}
+
+/**
+ * A stack is being sent to one player's game, to be shown as this player alone sees it: `view` on a
+ * project item, `item_view` on `nf`.
+ */
+data class ItemViewEvent(val player: LuaHandle.Player, val item: ItemData, var displayName: String? = null, var lore: List<String>? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    override fun write(field: String, call: LuaCall, index: Int) {
+        when (field) {
+            "display_name" -> displayName = Codec.displayNameCodec.read(call, index, "event.display_name")
+            "lore" -> lore = Codec.loreCodec.read(call, index, "event.lore")
+        }
+    }
+
+    object Codec : ShapeCodec<ItemViewEvent>("ItemViewEvent") {
+        val playerCodec = LuaHandle.Player.Codec
+        val itemCodec = LuaCodecs.ITEM
+        val displayNameCodec = LuaOptional(LuaCodecs.TEXT)
+        val loreCodec = LuaOptional(LuaList(LuaCodecs.TEXT))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "player" to playerCodec,
+            "item" to itemCodec,
+            "display_name" to displayNameCodec,
+            "lore" to loreCodec
+        )
+
+        override fun read(fields: ShapeReader) = ItemViewEvent(
+            player = fields.field("player", playerCodec),
+            item = fields.field("item", itemCodec),
+            displayName = fields.field("display_name", displayNameCodec),
+            lore = fields.field("lore", loreCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: ItemViewEvent) {
+            fields.field("player", value.player, playerCodec)
+            fields.field("item", value.item, itemCodec)
+            fields.field("display_name", value.displayName, displayNameCodec)
+            fields.field("lore", value.lore, loreCodec)
+        }
+    }
+}
+
+/** A stack of a project item is being made, or rewritten to its item's changed file: `render`. */
+data class ItemRenderEvent(val item: ItemData, var displayName: String? = null, var lore: List<String>? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    override fun write(field: String, call: LuaCall, index: Int) {
+        when (field) {
+            "display_name" -> displayName = Codec.displayNameCodec.read(call, index, "event.display_name")
+            "lore" -> lore = Codec.loreCodec.read(call, index, "event.lore")
+        }
+    }
+
+    object Codec : ShapeCodec<ItemRenderEvent>("ItemRenderEvent") {
+        val itemCodec = LuaCodecs.ITEM
+        val displayNameCodec = LuaOptional(LuaCodecs.TEXT)
+        val loreCodec = LuaOptional(LuaList(LuaCodecs.TEXT))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "item" to itemCodec,
+            "display_name" to displayNameCodec,
+            "lore" to loreCodec
+        )
+
+        override fun read(fields: ShapeReader) = ItemRenderEvent(
+            item = fields.field("item", itemCodec),
+            displayName = fields.field("display_name", displayNameCodec),
+            lore = fields.field("lore", loreCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: ItemRenderEvent) {
+            fields.field("item", value.item, itemCodec)
+            fields.field("display_name", value.displayName, displayNameCodec)
+            fields.field("lore", value.lore, loreCodec)
         }
     }
 }
@@ -3397,29 +4505,83 @@ data class AdvancementProgress(val done: List<String>, val remaining: List<Strin
     }
 }
 
-/** Which slot of a storage a menu slot shows: `slot:binding()`. */
-data class SlotBinding(val storage: LuaHandle.Inventory, val index: Long) : LuaShape {
+/**
+ * What a menu slot shows: `slot:binding()`. A slot of a storage (`storage` and `index`), or what a
+ * player wears (`player` and `equipment`).
+ */
+data class SlotBinding(val storage: LuaHandle.Inventory? = null, val index: Long? = null, val player: LuaHandle.Player? = null, val equipment: String? = null) : LuaShape {
     override fun push(call: LuaCall) = Codec.push(call, this)
 
     object Codec : ShapeCodec<SlotBinding>("SlotBinding") {
-        val storageCodec = LuaHandle.Inventory.Codec
-        val indexCodec = LuaCodecs.INTEGER
+        val storageCodec = LuaOptional(LuaHandle.Inventory.Codec)
+        val indexCodec = LuaOptional(LuaCodecs.INTEGER)
+        val playerCodec = LuaOptional(LuaHandle.Player.Codec)
+        val equipmentCodec = LuaOptional(LuaCodecs.STRING)
 
         override val pinned = false
 
         override val fields: Map<String, LuaCodec<*>> = mapOf(
             "storage" to storageCodec,
-            "index" to indexCodec
+            "index" to indexCodec,
+            "player" to playerCodec,
+            "equipment" to equipmentCodec
         )
 
         override fun read(fields: ShapeReader) = SlotBinding(
             storage = fields.field("storage", storageCodec),
-            index = fields.field("index", indexCodec)
+            index = fields.field("index", indexCodec),
+            player = fields.field("player", playerCodec),
+            equipment = fields.field("equipment", equipmentCodec)
         )
 
         override fun write(fields: ShapeWriter, value: SlotBinding) {
             fields.field("storage", value.storage, storageCodec)
             fields.field("index", value.index, indexCodec)
+            fields.field("player", value.player, playerCodec)
+            fields.field("equipment", value.equipment, equipmentCodec)
+        }
+    }
+}
+
+/**
+ * What a menu slot takes (`slot:set_rule`). A stack goes in when it's any of `items`, `kinds`,
+ * `property` or `wearable` (or when none is given), and never more of it than `max`. A key that isn't
+ * one of these is an error.
+ */
+data class SlotRule(val items: List<String>? = null, val kinds: List<String>? = null, val property: String? = null, val wearable: String? = null, val max: Long? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<SlotRule>("SlotRule") {
+        val itemsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val kindsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val propertyCodec = LuaOptional(LuaCodecs.STRING)
+        val wearableCodec = LuaOptional(LuaCodecs.STRING)
+        val maxCodec = LuaOptional(LuaCodecs.INTEGER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "items" to itemsCodec,
+            "kinds" to kindsCodec,
+            "property" to propertyCodec,
+            "wearable" to wearableCodec,
+            "max" to maxCodec
+        )
+
+        override fun read(fields: ShapeReader) = SlotRule(
+            items = fields.field("items", itemsCodec),
+            kinds = fields.field("kinds", kindsCodec),
+            property = fields.field("property", propertyCodec),
+            wearable = fields.field("wearable", wearableCodec),
+            max = fields.field("max", maxCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: SlotRule) {
+            fields.field("items", value.items, itemsCodec)
+            fields.field("kinds", value.kinds, kindsCodec)
+            fields.field("property", value.property, propertyCodec)
+            fields.field("wearable", value.wearable, wearableCodec)
+            fields.field("max", value.max, maxCodec)
         }
     }
 }
@@ -4401,6 +5563,255 @@ data class RaycastOptions(val blocks: Boolean? = null, val entities: Boolean? = 
     }
 }
 
+/**
+ * How `world:flood` fills. A block is named as it is in a game block file: an id
+ * (`"minecraft:oak_log"`), a `#tag` (`"#minecraft:logs"`) or a project block's id (`"ruby_ore"`), or
+ * by what it is: `"solid"` (what players stand on), `"liquid"` (water and lava) or `"passable"`
+ * (neither: air, torches, flowers). A key that isn't one of these is an error.
+ */
+data class FloodOptions(val through: List<String>, val except: List<String>? = null, val directions: List<Vec3>? = null, val limit: Long? = null, val bounds: Bounds? = null, val kinds: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<FloodOptions>("FloodOptions") {
+        val throughCodec = LuaList(LuaCodecs.STRING)
+        val exceptCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val directionsCodec = LuaOptional(LuaList(LuaCodecs.VEC3))
+        val limitCodec = LuaOptional(LuaCodecs.INTEGER)
+        val boundsCodec = LuaOptional(Bounds.Codec)
+        val kindsCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "through" to throughCodec,
+            "except" to exceptCodec,
+            "directions" to directionsCodec,
+            "limit" to limitCodec,
+            "bounds" to boundsCodec,
+            "kinds" to kindsCodec
+        )
+
+        override fun read(fields: ShapeReader) = FloodOptions(
+            through = fields.field("through", throughCodec),
+            except = fields.field("except", exceptCodec),
+            directions = fields.field("directions", directionsCodec),
+            limit = fields.field("limit", limitCodec),
+            bounds = fields.field("bounds", boundsCodec),
+            kinds = fields.field("kinds", kindsCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: FloodOptions) {
+            fields.field("through", value.through, throughCodec)
+            fields.field("except", value.except, exceptCodec)
+            fields.field("directions", value.directions, directionsCodec)
+            fields.field("limit", value.limit, limitCodec)
+            fields.field("bounds", value.bounds, boundsCodec)
+            fields.field("kinds", value.kinds, kindsCodec)
+        }
+    }
+}
+
+/** What `world:flood` filled. */
+data class FloodResult(val positions: List<Vec3>, val edges: List<Vec3>, val kinds: List<String>? = null, val edgeKinds: List<String>? = null, val stopped: String? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<FloodResult>("FloodResult") {
+        val positionsCodec = LuaList(LuaCodecs.VEC3)
+        val edgesCodec = LuaList(LuaCodecs.VEC3)
+        val kindsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val edgeKindsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val stoppedCodec = LuaOptional(LuaChoice(listOf("limit", "unloaded", "bounds")))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "positions" to positionsCodec,
+            "edges" to edgesCodec,
+            "kinds" to kindsCodec,
+            "edge_kinds" to edgeKindsCodec,
+            "stopped" to stoppedCodec
+        )
+
+        override fun read(fields: ShapeReader) = FloodResult(
+            positions = fields.field("positions", positionsCodec),
+            edges = fields.field("edges", edgesCodec),
+            kinds = fields.field("kinds", kindsCodec),
+            edgeKinds = fields.field("edge_kinds", edgeKindsCodec),
+            stopped = fields.field("stopped", stoppedCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: FloodResult) {
+            fields.field("positions", value.positions, positionsCodec)
+            fields.field("edges", value.edges, edgesCodec)
+            fields.field("kinds", value.kinds, kindsCodec)
+            fields.field("edge_kinds", value.edgeKinds, edgeKindsCodec)
+            fields.field("stopped", value.stopped, stoppedCodec)
+        }
+    }
+}
+
+/**
+ * What a spatial query (`world:overlap_box`, `overlap_sphere`, `overlap_cone`, `nearest`) finds. A key
+ * that isn't one of these is an error.
+ */
+data class QueryOptions(val centities: Boolean? = null, val players: Boolean? = null, val entities: Boolean? = null, val kinds: List<String>? = null, val exclude: List<LuaHandle>? = null, val limit: Long? = null, val lineOfSight: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<QueryOptions>("QueryOptions") {
+        val centitiesCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val playersCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val entitiesCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val kindsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val excludeCodec = LuaOptional(LuaList(LuaUnions.CentityOrEntity))
+        val limitCodec = LuaOptional(LuaCodecs.INTEGER)
+        val lineOfSightCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centities" to centitiesCodec,
+            "players" to playersCodec,
+            "entities" to entitiesCodec,
+            "kinds" to kindsCodec,
+            "exclude" to excludeCodec,
+            "limit" to limitCodec,
+            "line_of_sight" to lineOfSightCodec
+        )
+
+        override fun read(fields: ShapeReader) = QueryOptions(
+            centities = fields.field("centities", centitiesCodec),
+            players = fields.field("players", playersCodec),
+            entities = fields.field("entities", entitiesCodec),
+            kinds = fields.field("kinds", kindsCodec),
+            exclude = fields.field("exclude", excludeCodec),
+            limit = fields.field("limit", limitCodec),
+            lineOfSight = fields.field("line_of_sight", lineOfSightCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: QueryOptions) {
+            fields.field("centities", value.centities, centitiesCodec)
+            fields.field("players", value.players, playersCodec)
+            fields.field("entities", value.entities, entitiesCodec)
+            fields.field("kinds", value.kinds, kindsCodec)
+            fields.field("exclude", value.exclude, excludeCodec)
+            fields.field("limit", value.limit, limitCodec)
+            fields.field("line_of_sight", value.lineOfSight, lineOfSightCodec)
+        }
+    }
+}
+
+/**
+ * How `world:sweep` moves and what it finds: everything `QueryOptions` takes, and these. A key that
+ * isn't one of them is an error.
+ */
+data class SweepOptions(val centities: Boolean? = null, val players: Boolean? = null, val entities: Boolean? = null, val kinds: List<String>? = null, val exclude: List<LuaHandle>? = null, val limit: Long? = null, val lineOfSight: Boolean? = null, val radius: Double? = null, val blocks: Boolean? = null, val fluids: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<SweepOptions>("SweepOptions") {
+        val centitiesCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val playersCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val entitiesCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val kindsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val excludeCodec = LuaOptional(LuaList(LuaUnions.CentityOrEntity))
+        val limitCodec = LuaOptional(LuaCodecs.INTEGER)
+        val lineOfSightCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val radiusCodec = LuaOptional(LuaCodecs.NUMBER)
+        val blocksCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val fluidsCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centities" to centitiesCodec,
+            "players" to playersCodec,
+            "entities" to entitiesCodec,
+            "kinds" to kindsCodec,
+            "exclude" to excludeCodec,
+            "limit" to limitCodec,
+            "line_of_sight" to lineOfSightCodec,
+            "radius" to radiusCodec,
+            "blocks" to blocksCodec,
+            "fluids" to fluidsCodec
+        )
+
+        override fun read(fields: ShapeReader) = SweepOptions(
+            centities = fields.field("centities", centitiesCodec),
+            players = fields.field("players", playersCodec),
+            entities = fields.field("entities", entitiesCodec),
+            kinds = fields.field("kinds", kindsCodec),
+            exclude = fields.field("exclude", excludeCodec),
+            limit = fields.field("limit", limitCodec),
+            lineOfSight = fields.field("line_of_sight", lineOfSightCodec),
+            radius = fields.field("radius", radiusCodec),
+            blocks = fields.field("blocks", blocksCodec),
+            fluids = fields.field("fluids", fluidsCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: SweepOptions) {
+            fields.field("centities", value.centities, centitiesCodec)
+            fields.field("players", value.players, playersCodec)
+            fields.field("entities", value.entities, entitiesCodec)
+            fields.field("kinds", value.kinds, kindsCodec)
+            fields.field("exclude", value.exclude, excludeCodec)
+            fields.field("limit", value.limit, limitCodec)
+            fields.field("line_of_sight", value.lineOfSight, lineOfSightCodec)
+            fields.field("radius", value.radius, radiusCodec)
+            fields.field("blocks", value.blocks, blocksCodec)
+            fields.field("fluids", value.fluids, fluidsCodec)
+        }
+    }
+}
+
+/**
+ * One thing a spatial query found. Exactly one of `centity`, `entity` and `block` is set: a `block`
+ * only ends a `world:sweep`.
+ */
+data class QueryHit(val centity: LuaHandle.Centity? = null, val node: LuaHandle.Node? = null, val entity: LuaHandle.Entity? = null, val block: LuaHandle.Block? = null, val position: Vec3, val distance: Double, val normal: Vec3? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<QueryHit>("QueryHit") {
+        val centityCodec = LuaOptional(LuaHandle.Centity.Codec)
+        val nodeCodec = LuaOptional(LuaHandle.Node.Codec)
+        val entityCodec = LuaOptional(LuaHandle.Entity.Codec)
+        val blockCodec = LuaOptional(LuaHandle.Block.Codec)
+        val positionCodec = LuaCodecs.VEC3
+        val distanceCodec = LuaCodecs.NUMBER
+        val normalCodec = LuaOptional(LuaCodecs.VEC3)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "centity" to centityCodec,
+            "node" to nodeCodec,
+            "entity" to entityCodec,
+            "block" to blockCodec,
+            "position" to positionCodec,
+            "distance" to distanceCodec,
+            "normal" to normalCodec
+        )
+
+        override fun read(fields: ShapeReader) = QueryHit(
+            centity = fields.field("centity", centityCodec),
+            node = fields.field("node", nodeCodec),
+            entity = fields.field("entity", entityCodec),
+            block = fields.field("block", blockCodec),
+            position = fields.field("position", positionCodec),
+            distance = fields.field("distance", distanceCodec),
+            normal = fields.field("normal", normalCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: QueryHit) {
+            fields.field("centity", value.centity, centityCodec)
+            fields.field("node", value.node, nodeCodec)
+            fields.field("entity", value.entity, entityCodec)
+            fields.field("block", value.block, blockCodec)
+            fields.field("position", value.position, positionCodec)
+            fields.field("distance", value.distance, distanceCodec)
+            fields.field("normal", value.normal, normalCodec)
+        }
+    }
+}
+
 /** What `world:raycast` hit: where, and what. Exactly one of `block`, `entity` and `centity` is set. */
 data class RaycastHit(val position: Vec3, val normal: Vec3, val distance: Double, val block: LuaHandle.Block? = null, val entity: LuaHandle.Entity? = null, val centity: LuaHandle.Centity? = null, val node: LuaHandle.Node? = null) : LuaShape {
     override fun push(call: LuaCall) = Codec.push(call, this)
@@ -4444,6 +5855,40 @@ data class RaycastHit(val position: Vec3, val normal: Vec3, val distance: Double
             fields.field("entity", value.entity, entityCodec)
             fields.field("centity", value.centity, centityCodec)
             fields.field("node", value.node, nodeCodec)
+        }
+    }
+}
+
+/**
+ * How `bossbar:attach` ties a bar to a centity. Every key is optional; a key that isn't one of these
+ * is an error.
+ */
+data class BossBarAttachOptions(val range: Double? = null, val health: Boolean? = null, val removeWith: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<BossBarAttachOptions>("BossBarAttachOptions") {
+        val rangeCodec = LuaOptional(LuaCodecs.NUMBER)
+        val healthCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val removeWithCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "range" to rangeCodec,
+            "health" to healthCodec,
+            "remove_with" to removeWithCodec
+        )
+
+        override fun read(fields: ShapeReader) = BossBarAttachOptions(
+            range = fields.field("range", rangeCodec),
+            health = fields.field("health", healthCodec),
+            removeWith = fields.field("remove_with", removeWithCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: BossBarAttachOptions) {
+            fields.field("range", value.range, rangeCodec)
+            fields.field("health", value.health, healthCodec)
+            fields.field("remove_with", value.removeWith, removeWithCodec)
         }
     }
 }
@@ -4533,28 +5978,55 @@ data class LootContext(val player: LuaHandle.Player? = null, val tool: ItemData?
 }
 
 /** What a HUD bar shows: `hud:bar(name)`. */
-data class HudBar(val value: Double, val max: Double) : LuaShape {
+data class HudBar(val value: Double, val max: Double, val segments: Long) : LuaShape {
     override fun push(call: LuaCall) = Codec.push(call, this)
 
     object Codec : ShapeCodec<HudBar>("HudBar") {
         val valueCodec = LuaCodecs.NUMBER
         val maxCodec = LuaCodecs.NUMBER
+        val segmentsCodec = LuaCodecs.INTEGER
 
         override val pinned = false
 
         override val fields: Map<String, LuaCodec<*>> = mapOf(
             "value" to valueCodec,
-            "max" to maxCodec
+            "max" to maxCodec,
+            "segments" to segmentsCodec
         )
 
         override fun read(fields: ShapeReader) = HudBar(
             value = fields.field("value", valueCodec),
-            max = fields.field("max", maxCodec)
+            max = fields.field("max", maxCodec),
+            segments = fields.field("segments", segmentsCodec)
         )
 
         override fun write(fields: ShapeWriter, value: HudBar) {
             fields.field("value", value.value, valueCodec)
             fields.field("max", value.max, maxCodec)
+            fields.field("segments", value.segments, segmentsCodec)
+        }
+    }
+}
+
+/** How `hud:fill_bar` draws a bar. */
+data class HudFillOptions(val segments: Long? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<HudFillOptions>("HudFillOptions") {
+        val segmentsCodec = LuaOptional(LuaCodecs.INTEGER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "segments" to segmentsCodec
+        )
+
+        override fun read(fields: ShapeReader) = HudFillOptions(
+            segments = fields.field("segments", segmentsCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: HudFillOptions) {
+            fields.field("segments", value.segments, segmentsCodec)
         }
     }
 }
@@ -5101,6 +6573,110 @@ data class NoiseOptions(val seed: Long? = null, val scale: Double? = null) : Lua
         override fun write(fields: ShapeWriter, value: NoiseOptions) {
             fields.field("seed", value.seed, seedCodec)
             fields.field("scale", value.scale, scaleCodec)
+        }
+    }
+}
+
+/** Where `nf.test.shown` looks. A key that isn't one of these is an error. */
+data class TestShownOptions(val menu: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<TestShownOptions>("TestShownOptions") {
+        val menuCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "menu" to menuCodec
+        )
+
+        override fun read(fields: ShapeReader) = TestShownOptions(
+            menu = fields.field("menu", menuCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: TestShownOptions) {
+            fields.field("menu", value.menu, menuCodec)
+        }
+    }
+}
+
+/** How `nf.test.click` clicks. Every key is optional; a key that isn't one of these is an error. */
+data class TestClickOptions(val hand: String? = null, val block: LuaHandle.Block? = null, val face: String? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<TestClickOptions>("TestClickOptions") {
+        val handCodec = LuaOptional(LuaChoice(listOf("main_hand", "off_hand")))
+        val blockCodec = LuaOptional(LuaHandle.Block.Codec)
+        val faceCodec = LuaOptional(LuaChoice(listOf("up", "down", "north", "south", "east", "west")))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "hand" to handCodec,
+            "block" to blockCodec,
+            "face" to faceCodec
+        )
+
+        override fun read(fields: ShapeReader) = TestClickOptions(
+            hand = fields.field("hand", handCodec),
+            block = fields.field("block", blockCodec),
+            face = fields.field("face", faceCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: TestClickOptions) {
+            fields.field("hand", value.hand, handCodec)
+            fields.field("block", value.block, blockCodec)
+            fields.field("face", value.face, faceCodec)
+        }
+    }
+}
+
+/**
+ * The keys `nf.test.input` holds down: each `true` is held, and one left out (or `false`) isn't. A key
+ * that isn't one of these is an error.
+ */
+data class TestInputKeys(val forward: Boolean? = null, val backward: Boolean? = null, val left: Boolean? = null, val right: Boolean? = null, val jump: Boolean? = null, val sneak: Boolean? = null, val sprint: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<TestInputKeys>("TestInputKeys") {
+        val forwardCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val backwardCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val leftCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val rightCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val jumpCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val sneakCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val sprintCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "forward" to forwardCodec,
+            "backward" to backwardCodec,
+            "left" to leftCodec,
+            "right" to rightCodec,
+            "jump" to jumpCodec,
+            "sneak" to sneakCodec,
+            "sprint" to sprintCodec
+        )
+
+        override fun read(fields: ShapeReader) = TestInputKeys(
+            forward = fields.field("forward", forwardCodec),
+            backward = fields.field("backward", backwardCodec),
+            left = fields.field("left", leftCodec),
+            right = fields.field("right", rightCodec),
+            jump = fields.field("jump", jumpCodec),
+            sneak = fields.field("sneak", sneakCodec),
+            sprint = fields.field("sprint", sprintCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: TestInputKeys) {
+            fields.field("forward", value.forward, forwardCodec)
+            fields.field("backward", value.backward, backwardCodec)
+            fields.field("left", value.left, leftCodec)
+            fields.field("right", value.right, rightCodec)
+            fields.field("jump", value.jump, jumpCodec)
+            fields.field("sneak", value.sneak, sneakCodec)
+            fields.field("sprint", value.sprint, sprintCodec)
         }
     }
 }

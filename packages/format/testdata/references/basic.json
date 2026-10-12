@@ -236,6 +236,20 @@
     "target": "library:gem"
   },
   {
+    "file": "buffs/frail.json",
+    "path": "$.blockedBy[0]",
+    "kind": "buff",
+    "text": "ironskin",
+    "target": "basic:ironskin"
+  },
+  {
+    "file": "buffs/ironskin.json",
+    "path": "$.cures[0]",
+    "kind": "buff",
+    "text": "frail",
+    "target": "basic:frail"
+  },
+  {
     "file": "blocks/floating_lamp/block.json",
     "path": "$.centity",
     "kind": "centity",

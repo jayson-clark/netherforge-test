@@ -18,8 +18,11 @@ import kotlin.math.floor
  * coordinates can never leave out an instance whose boxes reach the region.
  */
 internal class ObstacleGrid(private val boxesOf: (Instance, Int) -> List<Box>) {
-    /** One instance's shown hitbox boxes, relative to its anchor along the world's axes, in node order, and the box around them all (null with none). */
-    class Obstacles(val boxes: List<Box>, val bounds: Box?)
+    /**
+     * One instance's shown hitbox boxes, relative to its anchor along the world's axes, in node order, the
+     * node index each box is of ([nodes], parallel to [boxes]), and the box around them all (null with none).
+     */
+    class Obstacles(val boxes: List<Box>, val nodes: IntArray, val bounds: Box?)
 
     /** World → cell key → the instances filed there. */
     private val worlds = HashMap<String, HashMap<Long, ArrayList<Instance>>>()
@@ -164,11 +167,15 @@ internal class ObstacleGrid(private val boxesOf: (Instance, Int) -> List<Box>) {
     private fun measure(instance: Instance): Obstacles {
         val world = instance.placed()
         val boxes = mutableListOf<Box>()
+        val nodes = mutableListOf<Int>()
         for ((index, node) in instance.definition.nodes.withIndex()) {
             if (node.hitbox == null || !instance.shown(index)) continue
-            for (box in boxesOf(instance, index)) boxes += boundsOf(listOf(box), world[index])
+            for (box in boxesOf(instance, index)) {
+                boxes += boundsOf(listOf(box), world[index])
+                nodes += index
+            }
         }
-        return Obstacles(boxes, if (boxes.isEmpty()) null else boundsOf(boxes, Matrix4()))
+        return Obstacles(boxes, nodes.toIntArray(), if (boxes.isEmpty()) null else boundsOf(boxes, Matrix4()))
     }
 
     private companion object {

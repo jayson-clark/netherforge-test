@@ -90,6 +90,194 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Added
 
+- **Items that look different to one player.** A project item's `view` event
+  (and `nf.on("item_view")` for every stack) changes the name and lore a stack
+  shows to the one player it's sent to: their inventory, a window they have
+  open, their cursor. The server keeps the real stack, so it still stacks, is
+  saved as it is, and reads as it is to scripts and to everyone else; a stack
+  a creative-mode client sends back is mapped back to the real one.
+  `player:refresh_items()` sends whatever now looks different (a shop menu
+  opening or closing), and `nf.test.shown` reads what a test player's game was
+  sent.
+- **Spatial queries.** `world:overlap_box`, `overlap_sphere` and `overlap_cone`
+  find everything whose hitbox reaches into a region (centities by each shown
+  node's boxes, players and entities by theirs), nearest first;
+  `world:sweep` moves a sphere along a segment and answers everything it
+  passes in order, stopping at a block (with its face's normal) unless told
+  not to, so piercing and bouncing shots need no loop of their own; and
+  `world:nearest` finds the nearest thing, optionally only one in line of
+  sight. Options filter by what it is, by kind, by an exclude list and by a
+  limit. Centities are found through the grid physics files hitboxes in, so a
+  query looks only at what's near it; `world:raycast` uses it too now.
+- **Centities walk through doors.** `move_to`'s `open_doors` goes through the
+  game's wooden doors and fence gates, opening each as the walk comes to it and
+  shutting it once it's through, even when the walk is stopped or replaced on
+  the way (once the centity is out of the doorway) or it's teleported.
+- **`netherforge render` and `gallery`.** An item or a block as its
+  inventory icon, or a centity in its base pose, to a PNG, as the editor draws
+  them (the project's resource pack looks, and the game's from the imported
+  client), without a browser; `gallery` draws them all with an `index.html`.
+  The model geometry the editor draws with is now the shared
+  `@netherforge/models` package, with a software rasteriser beside it.
+- **Generators: `netherforge generate` and an SDK.** `netherforge.json`'s
+  `generate` lists the commands that write a project's generated files;
+  `netherforge generate` runs them in order and formats the project. The
+  command-line file is also an SDK: `import { project } from
+".netherforge/bin/netherforge.mjs"` gives `resources`, `place`, `read`,
+  `write`, `writeJson` and `writeResource`, laid out and formatted as the
+  editor would.
+- **Game rules in `netherforge.json`.** A world in `worlds` takes `gameRules`
+  (`"keep_inventory": true`), set when it loads and on reload, beside its spawn
+  limits; a rule this server lacks is skipped and logged. New problem code
+  `project.world-rule`.
+- **`nf.test.terrain`.** A stand-in for a terrain script's `terrain` (noises,
+  height, area, biome, plans with per-cell numbers), from options, to test
+  worldgen modules on their own.
+- **`vec3` and `nf.math` in terrain scripts.** A terrain script (and the modules
+  it requires) has `vec3` with every `Vec3` method and operator, and `nf.math`
+  (`lerp`, `clamp`, `remap`, `ease`), as other scripts do; the rest of `nf`
+  stays the server's.
+- **What TerraMC's migration asked for.** `flight_end` gives the face's
+  `normal` for a `"block"` end; `bossbar:viewers()` includes the players who see
+  an attached bar for being near; a station recipe's `stations` entry can name
+  choices, `"furnace|hellforge"` (any of them); and `nf.on("recipe_craft")`
+  hears each making of `nf.recipes.craft`, with a writable `result`.
+- **Terrain scripts place the blocks they name.** A game block state or a
+  project block's id that a terrain script or its modules write whole as a
+  string joins the generator by itself, on the server and in the preview:
+  `script.blocks` and `customBlocks` are only for ids put together from pieces.
+- **Structures in terrain scripts.** `chunk:ellipsoid(cx, cy, cz, rx, ry, rz,
+block, { shell, only })`; `terrain.structure()` records `fill`, `set`,
+  `ellipsoid`, `sprinkle` and `loot` once, and `chunk:place_structure(s, x, y,
+z)` draws the part of it in each chunk, so trees and ruins cross chunk
+  borders; `terrain.scatter(name, size, make, reach)` keeps at most one
+  structure per grid cell and draws those that reach a chunk.
+- **Rope nodes and `stretch_between`.** A node with `"rope": { "links",
+"linkLength" }` draws its display as links (`chain[1]`...);
+  `node:rope_between(from, to, { length })` strings it between points, nodes
+  or entities, and the server lays it every tick, sagging by its slack and
+  showing only the links it needs (`release_rope`, `is_rope`).
+  `node:stretch_between(from, to, { thickness })` lays any node from one point
+  to another. New problem code `centity.rope`.
+- **Additive animations and tweens.** An animation with `"blend": "additive"`
+  plays on top of the rest of the pose (translation and rotation added, scale
+  multiplied), after every replacing one, so a squash plays over a walk and
+  over the size a script set; the editor's animation bar has a Blend select.
+  `node:tween({ translation, rotation, scale, ticks, easing, back })` eases a
+  node there (and back), with `is_tweening` and `stop_tween`.
+- **Menu slots with rules, and slots that show what a player wears.**
+  `slot:set_rule({ items, kinds, property, wearable, max })` says what a slot
+  takes, held to clicks, drags, number keys and `shift_into`, with only `max`
+  going in; `slot:rule()` and `slot:accepts(item)`.
+  `slot:bind_equipment(player, "head")` shows and changes what they wear.
+  `slot:binding()` gives `player` and `equipment` for those, and its `storage`
+  and `index` are now optional.
+- **HUD bars and rows that line up, and bars of any length.** A HUD bar or row
+  of icons takes `align` (`left`, `center`, `right`), placed by what it draws;
+  `hud:fill_bar(name, value, max, { segments })` draws only some of a bar's
+  segments, and `hud:fill_bars(names, value, max, per_segment)` fills several
+  bars as one, row after row (hearts ten to a row).
+- **A boss bar tied to a centity.** `bossbar:attach(centity, { range, health,
+remove_with })` shows the bar to every player near the centity and hides it
+  as they go, follows its health, and removes it with the centity; `detach`
+  and `attached`.
+- **Stats, modifiers and buffs.** `buffs/<id>.json` (a kind of its own, with
+  an editor) declares a buff or debuff: its name, icon glyph and colour, the
+  `stats` it adds while it lasts, what it `cures` and what it's `blockedBy`,
+  how it stacks and its most ticks. Players and centities get `add_buff`,
+  `remove_buff`, `has_buff`, `buff_ticks` and `buffs()` (what a HUD shows), with
+  `buff_add` (writable ticks, cancellable) and `buff_end` events; the server
+  counts buffs down. `set_modifiers(source, { defense = 5 })` adds a script's
+  own numbers by source, and `stat(name)` / `stats()` sum every buff and
+  source, so equipment, buffs and bonuses stop being re-added at every call
+  site.
+- **Station recipes.** A recipe of `type: "station"` is one the game never
+  sees: `materials` (ingredients with counts) taken from a player's
+  inventory, `stations` (block ids, `#tags` or project blocks) that must all
+  be within `stationRange`. `nf.recipes.available(player, options)` lists what
+  they can make where they stand (and how many times over),
+  `nf.recipes.craft(player, id, options)` makes it, and `nf.recipes.get(id)`
+  reads one: a Terraria-style crafting menu without a recipe table in Lua.
+- **Health on centities.** `centity.json`'s `health` (`max`, `removeOnDeath`,
+  and a `bar` the server draws over it and shows for a while after each
+  change) with `centity:damage(amount, { source, cause })` through `damage`
+  handlers that may change or cancel it, `heal`, `health`, `set_health`,
+  `max_health`, `set_max_health` (which gives one without health some),
+  `is_dead`, and `death` at 0.
+- **Projectiles: `centity:launch`.** Any centity can fly as a projectile the
+  server moves every tick: its velocity, gravity (after an optional delay) and
+  drag, homing on the nearest thing it can hit, and one swept query a tick for
+  what its path touches, in order (`hit`, which a handler cancels to let it
+  through, and `pierce` to go on through that many). A block ends it, bounces
+  it (`bounce`, with `friction` along the face, `max_bounces`, and coming to
+  rest on a floor below `rest_speed`) or holds it (`stick`). It ends with
+  `flight_end` (hit, block, lifetime, unloaded, stopped) and is removed then
+  unless `remove_on_end = false`; an `aim` node is turned along its flight.
+  `is_launched`, `stop_flight`, and `velocity`/`set_velocity` for one in flight.
+- **`world:flood`.** A breadth-first fill run in the server, reading the
+  world a chunk-sized box at a time: through the blocks `through` names (ids,
+  `#tags`, project blocks, or `solid`, `liquid`, `passable`) but not `except`,
+  along the six faces or any `directions`, up to a `limit` and within
+  `bounds`. It answers the blocks it filled and the blocks it stopped at (a
+  room's walls), what each is with `kinds = true`, and why it stopped short
+  (`limit`, `unloaded`, `bounds`): a felled tree or a house check in one call.
+- **Dusk and dawn.** A world's `dusk` and `dawn` events (then `nf`'s
+  `world_dusk` and `world_dawn`) are heard when its time of day crosses into
+  night (13000 to 22999, as a centity's `"night"` spawn time means it) or back
+  into day, whether the clock ran there or `/time set` jumped there, with the
+  world and its `time_of_day`. Clocks are only looked at while something
+  listens. `world:is_night()` and `world:is_day()` say which it is now.
+- **`player:session()`.** A table per online player for the time they're
+  on, shared by every script and never saved: made empty when a script first
+  asks, kept through a module's reload, and dropped once they've left (after
+  their `player_quit` handlers), so a module needn't keep its own map keyed
+  by player and clear it on quit. `nil` for a player who isn't online.
+- **More `Vec3` helpers.** `v:clamp_length(max_length)` scales a vector
+  down to at most that long (a top speed), `v:reflect(normal)` mirrors it off
+  a surface (a shot bouncing off a sweep's hit), and
+  `point:closest_on_segment(start, finish)` is the nearest point of a line
+  segment (how far something is from a beam, with `distance`).
+- **`nf.test.click`, `release` and `input`.** A script test clicks for a
+  player as their client would, with what they hold filled in:
+  `nf.test.click(player, "right")` raises `player_interact` and then
+  `player_use_item` (through the held project item's `interact` and `use`)
+  and answers whether a handler let it through, with `hand`, `block` and
+  `face` options; `nf.test.release(player, ticks)` raises
+  `player_stop_using_item` for what they hold; and
+  `nf.test.input(player, { forward = true })` raises `player_input` with the
+  keys held. No more hand-built payloads for the commonest inputs.
+- **Temporary centities.** `nf.centities.spawn(kind, place, { temporary = true })`
+  spawns one that's never saved (its entities aren't kept with their chunk)
+  and is removed when the script that spawned it unloads, so a reload or a
+  restart leaves no stuck shot or helper behind; `lifetime = ticks` removes
+  it that long after, loaded or not. `centity:is_temporary()`, `lifetime()`
+  and `set_lifetime()`, and `keep()` makes one normal.
+- **`properties` on items, blocks and centities.** Any JSON a file carries
+  for scripts (`{ "damage": 12, "class": "melee" }`), read with
+  `ProjectItem:properties()`, `ProjectBlock:properties()`,
+  `centity:properties()` and `nf.centities.properties(kind)`, so data that
+  belongs to a resource lives in its file instead of a generated Lua table.
+  An item's `properties` aren't part of its stacks' look.
+- **An item's `render` event.** Heard for every stack `nf.items.create`,
+  `ProjectItem:create` and a loot roll make, and for every stack rewritten to
+  a changed item file: its handlers assign `display_name` and `lore` worked
+  out from the stack's own `data` (a prefix, a rolled stat), which then
+  survive the file changing instead of going back to the file's.
+- **A `body` for centities.** `centity.json`'s `body` (width, height, gravity,
+  drag, liquid drag and gravity, acceleration on the ground and in the air,
+  friction, step height, bounce, `fly`, `blocks`) makes the server walk, drop,
+  jump and stop the whole centity against the blocks' real collision shapes
+  every tick, stepping up what its step height allows, as Minecraft moves an
+  entity: what a mob or a critter moves by, without a script integrating it.
+  Scripts steer it with `set_walk_velocity`, `set_velocity`, `add_velocity`
+  and `jump(height)` (worked out from its gravity and drag), read
+  `is_on_ground`, `is_in_liquid` and `wall`, hear `land` and `bump`, and
+  change it at runtime with `set_body` (which gives a centity one too).
+- **`centity:bounds()` and `touch`.** The box around a centity's shown
+  hitboxes, and an event when its hitboxes start touching another centity's,
+  a player's or an entity's, worked out only for centities something listens
+  to it on.
+
 - **Mining rules and drops for the game's own blocks.** A `game_blocks/<id>.json`
   file gives some of the game's blocks (ids, and tags like `#minecraft:logs`)
   a `hardness`, `tool`, `requiresTool` and `drops` of the project's, so a

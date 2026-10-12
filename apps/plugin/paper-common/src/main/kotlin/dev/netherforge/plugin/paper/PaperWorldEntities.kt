@@ -1,6 +1,8 @@
 package dev.netherforge.plugin.paper
 
 import dev.netherforge.format.Vec3
+import dev.netherforge.format.game.Box
+import dev.netherforge.plugin.platform.EntityBox
 import dev.netherforge.plugin.platform.EntityCategory
 import dev.netherforge.plugin.platform.EntityFlag
 import dev.netherforge.plugin.platform.EntityHit
@@ -28,6 +30,7 @@ import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.plugin.Plugin
 import org.bukkit.potion.PotionEffect
+import org.bukkit.util.BoundingBox
 import org.bukkit.util.Vector
 import java.util.UUID
 import org.bukkit.Location as BukkitLocation
@@ -365,6 +368,22 @@ class PaperWorldEntities(private val plugin: Plugin, private val tagged: PaperEn
         val at = result.hitPosition
         val face = result.hitBlockFace?.direction ?: Vector(-direction.x, -direction.y, -direction.z)
         return EntityHit(entity.uniqueId, Vec3(at.x, at.y, at.z), Vec3(face.x, face.y, face.z))
+    }
+
+    override fun boxes(world: String, region: Box): List<EntityBox> {
+        val w = Bukkit.getWorld(world) ?: return emptyList()
+        // Only loaded chunks' entities are in the world's lists, so this never loads one.
+        val area = BoundingBox(region.min.x, region.min.y, region.min.z, region.max.x, region.max.y, region.max.z)
+        return w.getNearbyEntities(area) { tagged.tagOf(it) == null && !(it is Player && it.gameMode == org.bukkit.GameMode.SPECTATOR) }
+            .map { entity ->
+                val b = entity.boundingBox
+                EntityBox(
+                    entity.uniqueId,
+                    entity.type.key.toString(),
+                    entity is Player,
+                    Box(Vec3(b.minX, b.minY, b.minZ), Vec3(b.maxX, b.maxY, b.maxZ))
+                )
+            }
     }
 
     companion object {

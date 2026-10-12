@@ -52,6 +52,10 @@ Warning. The project has no name. See [the project format](project.md).
 
 Error. A name in `managedWorlds` or `worlds` isn't a world name. See [the project format](project.md).
 
+### `project.world-rule` {#project-world-rule}
+
+Error. A world's `gameRules` names no rule id, or gives one a value that isn't true, false or a whole number. See [the project format](project.md).
+
 ### `project.world-spawn` {#project-world-spawn}
 
 Error. A world's spawn limit or interval in `worlds` is below 0. See [the project format](project.md).
@@ -155,6 +159,10 @@ Error. A reference names a dialog that doesn't exist. See [references](reference
 ### `reference.loot-table` {#reference-loot-table}
 
 Error. A reference names a loot table that doesn't exist. See [references](references.md).
+
+### `reference.buff` {#reference-buff}
+
+Error. A reference names a buff that doesn't exist. See [references](references.md).
 
 ### `reference.advancement` {#reference-advancement}
 
@@ -426,6 +434,22 @@ Warning. A body's `maxSpeed` is 0, so it never moves. See [centities](centity.md
 
 Warning. A body collides with nothing, so nothing stops it falling. See [centities](centity.md).
 
+### `centity.health` {#centity-health}
+
+Error. A centity's `health` has a value it can't have. See [centities](centity.md).
+
+### `centity.rope` {#centity-rope}
+
+Error. A rope node's `links` or `linkLength` is out of range, or it has no display, or has a hitbox or physics. See [centities](centity.md).
+
+### `centity.body-size` {#centity-body-size}
+
+Error. A `body`'s `width` or `height` isn't positive, or is too big. See [centities](centity.md).
+
+### `centity.body-range` {#centity-body-range}
+
+Warning. A `body` value out of its range is clamped. See [centities](centity.md).
+
 ### `centity.spawning-world` {#centity-spawning-world}
 
 Error. A world in `spawning.worlds` isn't a usable world name. See [centities](centity.md).
@@ -457,6 +481,20 @@ Error. `spawning.when` isn't a condition's name: an id, or `ns:id` for a package
 ### `centity.spawning-despawn` {#centity-spawning-despawn}
 
 Warning. `spawning.despawnDistance` is within the spawner's reach, so a natural centity may go as it appears. See [centities](centity.md).
+
+## buff
+
+### `buff.color` {#buff-color}
+
+Error. A buff's `color` isn't `#rrggbb`. See [format/buff.md](buff.md).
+
+### `buff.stat` {#buff-stat}
+
+Error. A buff's `stats` has a name that isn't one, or a value that isn't a number. See [format/buff.md](buff.md).
+
+### `buff.ticks` {#buff-ticks}
+
+Error. A buff's `maxTicks` is below 1. See [format/buff.md](buff.md).
 
 ## Menus
 
@@ -689,6 +727,10 @@ Error. A shaped recipe's `pattern` isn't 1 to 3 equal rows of 1 to 3 characters,
 ### `recipe.key` {#recipe-key}
 
 Error. A shaped recipe's `key` has a key that isn't one character, or one the pattern doesn't use. See [recipes](recipe.md).
+
+### `recipe.station` {#recipe-station}
+
+Error. A station recipe's `stations` or `stationRange` isn't usable. See [recipes](recipe.md).
 
 ### `recipe.ingredients` {#recipe-ingredients}
 

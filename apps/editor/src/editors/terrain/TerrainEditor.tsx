@@ -104,6 +104,7 @@ function useStructures(names: string[]): {
 }
 
 const NO_SOURCES = { sources: {}, key: '' }
+const NO_BLOCKS: readonly string[] = []
 
 /**
  * The Lua terrain [id]'s script may run (its own file and the modules'), when [scripted]: an open document's text
@@ -196,6 +197,7 @@ export function TerrainEditor({ path }: { path: string }) {
   const named = useMemo(() => structuresNamed(model?.decorations), [model])
   const structures = useStructures(named)
   const scripts = useScriptSources(id, hasScript(text))
+  const blocks = useWorkspace((s) => s.outline?.resources.block ?? NO_BLOCKS)
   const file = useMemo<PreviewFile | null>(
     () =>
       text && structures && scripts
@@ -206,9 +208,10 @@ export function TerrainEditor({ path }: { path: string }) {
             structuresKey: structures.key,
             sources: scripts.sources,
             sourcesKey: scripts.key,
+            blocks,
           }
         : null,
-    [id, text, structures, scripts],
+    [id, text, structures, scripts, blocks],
   )
   const fileKey = useMemo(() => (file ? fileKeyOf(file) : ''), [file])
   const world = useMemo<PreviewWorld>(

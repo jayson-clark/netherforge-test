@@ -6,21 +6,21 @@
 -- project's modules: "Lua.runtime.path": ["modules/?.lua", "modules/?/init.lua"].
 -- The sandbox removes io, os, package, load, loadstring, dofile, loadfile, debug, collectgarbage, warn, java.
 
----@alias nf.Event "tick"|"unload"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed"|string
----@alias Centity.Event "spawn"|"remove"|"tick"|"click"|"animation_start"|"animation_end"|"chunk_load"|"chunk_unload"|"path_end"|string
+---@alias nf.Event "tick"|"unload"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"world_dusk"|"world_dawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"recipe_craft"|"item_view"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed"|string
+---@alias Centity.Event "spawn"|"remove"|"tick"|"click"|"animation_start"|"animation_end"|"chunk_load"|"chunk_unload"|"hit"|"bounce"|"stick"|"flight_end"|"damage"|"death"|"land"|"bump"|"touch"|"path_end"|"buff_add"|"buff_end"|string
 ---@alias Node.Event "click"|"collide"|"wake"|"sleep"
 ---@alias Entity.Event "damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
 ---@alias Living.Event "death"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
 ---@alias Mob.Event "path_end"|"target"|"death"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
----@alias Player.Event "join"|"quit"|"chat"|"interact"|"interact_entity"|"move"|"teleport"|"change_world"|"death"|"respawn"|"drop_item"|"pickup_item"|"use_item"|"consume_item"|"swap_hands"|"sneak"|"command"|"input"|"change_slot"|"swing"|"sprint"|"fly"|"jump"|"change_game_mode"|"change_food"|"gain_experience"|"change_level"|"kick"|"complete_advancement"|"stop_using_item"|"break_item"|"open_inventory"|"close_inventory"|"craft"|"prepare_craft"|"prepare_anvil"|"prepare_smithing"|"prepare_grindstone"|"enchant_item"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"hit"|"explode"|"combust"|"mount"|"dismount"
----@alias World.Event "block_break"|"block_place"|"entity_spawn"|"block_explode"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"furnace_smelt"
+---@alias Player.Event "join"|"quit"|"chat"|"interact"|"interact_entity"|"move"|"teleport"|"change_world"|"death"|"respawn"|"drop_item"|"pickup_item"|"use_item"|"consume_item"|"swap_hands"|"sneak"|"command"|"input"|"change_slot"|"swing"|"sprint"|"fly"|"jump"|"change_game_mode"|"change_food"|"gain_experience"|"change_level"|"kick"|"complete_advancement"|"stop_using_item"|"break_item"|"open_inventory"|"close_inventory"|"craft"|"prepare_craft"|"prepare_anvil"|"prepare_smithing"|"prepare_grindstone"|"enchant_item"|"buff_add"|"buff_end"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"hit"|"explode"|"combust"|"mount"|"dismount"
+---@alias World.Event "block_break"|"block_place"|"entity_spawn"|"dusk"|"dawn"|"block_explode"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"furnace_smelt"
 ---@alias ProjectBlock.Event "place"|"break"|"click"|"tick"
 ---@alias Menu.Event "open"|"close"|"click"|"drag"
 ---@alias Slot.Event "click"
 ---@alias MenuTemplate.Event "open"|"close"|"click"|"drag"
 ---@alias Dialog.Event "press"|"close"
 ---@alias Button.Event "press"
----@alias ProjectItem.Event "use"|"interact"|"interact_entity"|"consume"|"hit"|"break_block"|"drop"|"pickup"
+---@alias ProjectItem.Event "use"|"interact"|"interact_entity"|"consume"|"hit"|"break_block"|"drop"|"render"|"view"|"pickup"
 ---@alias Effect.Event "end"
 ---@alias Cutscene.Event "end"|"cue"
 
@@ -33,6 +33,7 @@
 ---@alias BlockId string # A project block's name.
 ---@alias RecipeId string # A project recipe's name.
 ---@alias LootTableId string # A project loot table's name.
+---@alias BuffId string # A project buff's name.
 ---@alias AdvancementId string # A project advancement's name.
 ---@alias AnimationName string # A project animation's name.
 ---@alias NodeName string # A project node's name.
@@ -107,6 +108,8 @@ nf = {}
 ---@overload fun(event: "entity_damage", handler: fun(event: EntityDamageEvent)): Subscription
 ---@overload fun(event: "entity_death", handler: fun(event: EntityDeathEvent)): Subscription
 ---@overload fun(event: "entity_spawn", handler: fun(event: EntitySpawnEvent)): Subscription
+---@overload fun(event: "world_dusk", handler: fun(event: DaylightEvent)): Subscription
+---@overload fun(event: "world_dawn", handler: fun(event: DaylightEvent)): Subscription
 ---@overload fun(event: "player_input", handler: fun(event: PlayerInputEvent)): Subscription
 ---@overload fun(event: "player_change_slot", handler: fun(event: PlayerChangeSlotEvent)): Subscription
 ---@overload fun(event: "player_swing", handler: fun(event: PlayerSwingEvent)): Subscription
@@ -168,6 +171,8 @@ nf = {}
 ---@overload fun(event: "furnace_smelt", handler: fun(event: FurnaceSmeltEvent)): Subscription
 ---@overload fun(event: "server_list_ping", handler: fun(event: ServerListPingEvent)): Subscription
 ---@overload fun(event: "centity_click", handler: fun(event: ClickEvent)): Subscription
+---@overload fun(event: "recipe_craft", handler: fun(event: RecipeCraftEvent)): Subscription
+---@overload fun(event: "item_view", handler: fun(event: ItemViewEvent)): Subscription
 ---@overload fun(event: "centity_natural_spawn", handler: fun(event: CentityNaturalSpawnEvent)): Subscription
 ---@overload fun(event: "menu_open", handler: fun(event: MenuEvent)): Subscription
 ---@overload fun(event: "menu_close", handler: fun(event: MenuEvent)): Subscription
@@ -204,6 +209,8 @@ function nf.on(event, handler, options) end
 ---@overload fun(event: "entity_damage", handler: fun(event: EntityDamageEvent)): Subscription
 ---@overload fun(event: "entity_death", handler: fun(event: EntityDeathEvent)): Subscription
 ---@overload fun(event: "entity_spawn", handler: fun(event: EntitySpawnEvent)): Subscription
+---@overload fun(event: "world_dusk", handler: fun(event: DaylightEvent)): Subscription
+---@overload fun(event: "world_dawn", handler: fun(event: DaylightEvent)): Subscription
 ---@overload fun(event: "player_input", handler: fun(event: PlayerInputEvent)): Subscription
 ---@overload fun(event: "player_change_slot", handler: fun(event: PlayerChangeSlotEvent)): Subscription
 ---@overload fun(event: "player_swing", handler: fun(event: PlayerSwingEvent)): Subscription
@@ -265,6 +272,8 @@ function nf.on(event, handler, options) end
 ---@overload fun(event: "furnace_smelt", handler: fun(event: FurnaceSmeltEvent)): Subscription
 ---@overload fun(event: "server_list_ping", handler: fun(event: ServerListPingEvent)): Subscription
 ---@overload fun(event: "centity_click", handler: fun(event: ClickEvent)): Subscription
+---@overload fun(event: "recipe_craft", handler: fun(event: RecipeCraftEvent)): Subscription
+---@overload fun(event: "item_view", handler: fun(event: ItemViewEvent)): Subscription
 ---@overload fun(event: "centity_natural_spawn", handler: fun(event: CentityNaturalSpawnEvent)): Subscription
 ---@overload fun(event: "menu_open", handler: fun(event: MenuEvent)): Subscription
 ---@overload fun(event: "menu_close", handler: fun(event: MenuEvent)): Subscription
@@ -342,6 +351,8 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: nf, event: "entity_damage", filter?: fun(event: EntityDamageEvent): boolean): EntityDamageEvent
 ---@overload fun(handle: nf, event: "entity_death", filter?: fun(event: EntityDeathEvent): boolean): EntityDeathEvent
 ---@overload fun(handle: nf, event: "entity_spawn", filter?: fun(event: EntitySpawnEvent): boolean): EntitySpawnEvent
+---@overload fun(handle: nf, event: "world_dusk", filter?: fun(event: DaylightEvent): boolean): DaylightEvent
+---@overload fun(handle: nf, event: "world_dawn", filter?: fun(event: DaylightEvent): boolean): DaylightEvent
 ---@overload fun(handle: nf, event: "player_input", filter?: fun(event: PlayerInputEvent): boolean): PlayerInputEvent
 ---@overload fun(handle: nf, event: "player_change_slot", filter?: fun(event: PlayerChangeSlotEvent): boolean): PlayerChangeSlotEvent
 ---@overload fun(handle: nf, event: "player_swing", filter?: fun(event: PlayerSwingEvent): boolean): PlayerSwingEvent
@@ -403,6 +414,8 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: nf, event: "furnace_smelt", filter?: fun(event: FurnaceSmeltEvent): boolean): FurnaceSmeltEvent
 ---@overload fun(handle: nf, event: "server_list_ping", filter?: fun(event: ServerListPingEvent): boolean): ServerListPingEvent
 ---@overload fun(handle: nf, event: "centity_click", filter?: fun(event: ClickEvent): boolean): ClickEvent
+---@overload fun(handle: nf, event: "recipe_craft", filter?: fun(event: RecipeCraftEvent): boolean): RecipeCraftEvent
+---@overload fun(handle: nf, event: "item_view", filter?: fun(event: ItemViewEvent): boolean): ItemViewEvent
 ---@overload fun(handle: nf, event: "centity_natural_spawn", filter?: fun(event: CentityNaturalSpawnEvent): boolean): CentityNaturalSpawnEvent
 ---@overload fun(handle: nf, event: "menu_open", filter?: fun(event: MenuEvent): boolean): MenuEvent
 ---@overload fun(handle: nf, event: "menu_close", filter?: fun(event: MenuEvent): boolean): MenuEvent
@@ -417,7 +430,18 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: Centity, event: "animation_end", filter?: fun(event: AnimationEvent): boolean): AnimationEvent
 ---@overload fun(handle: Centity, event: "chunk_load", filter?: fun(event: CentityEvent): boolean): CentityEvent
 ---@overload fun(handle: Centity, event: "chunk_unload", filter?: fun(event: CentityEvent): boolean): CentityEvent
+---@overload fun(handle: Centity, event: "hit", filter?: fun(event: FlightHitEvent): boolean): FlightHitEvent
+---@overload fun(handle: Centity, event: "bounce", filter?: fun(event: FlightBlockEvent): boolean): FlightBlockEvent
+---@overload fun(handle: Centity, event: "stick", filter?: fun(event: FlightBlockEvent): boolean): FlightBlockEvent
+---@overload fun(handle: Centity, event: "flight_end", filter?: fun(event: FlightEndEvent): boolean): FlightEndEvent
+---@overload fun(handle: Centity, event: "damage", filter?: fun(event: CentityDamageEvent): boolean): CentityDamageEvent
+---@overload fun(handle: Centity, event: "death", filter?: fun(event: CentityDeathEvent): boolean): CentityDeathEvent
+---@overload fun(handle: Centity, event: "land", filter?: fun(event: CentityLandEvent): boolean): CentityLandEvent
+---@overload fun(handle: Centity, event: "bump", filter?: fun(event: CentityBumpEvent): boolean): CentityBumpEvent
+---@overload fun(handle: Centity, event: "touch", filter?: fun(event: TouchEvent): boolean): TouchEvent
 ---@overload fun(handle: Centity, event: "path_end", filter?: fun(event: CentityPathEndEvent): boolean): CentityPathEndEvent
+---@overload fun(handle: Centity, event: "buff_add", filter?: fun(event: BuffEvent): boolean): BuffEvent
+---@overload fun(handle: Centity, event: "buff_end", filter?: fun(event: BuffEndEvent): boolean): BuffEndEvent
 ---@overload fun(handle: Node, event: "click", filter?: fun(event: ClickEvent): boolean): ClickEvent
 ---@overload fun(handle: Node, event: "collide", filter?: fun(event: CollideEvent): boolean): CollideEvent
 ---@overload fun(handle: Node, event: "wake", filter?: fun(event: NodeEvent): boolean): NodeEvent
@@ -475,9 +499,13 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: Player, event: "prepare_smithing", filter?: fun(event: PlayerPrepareSmithingEvent): boolean): PlayerPrepareSmithingEvent
 ---@overload fun(handle: Player, event: "prepare_grindstone", filter?: fun(event: PlayerPrepareGrindstoneEvent): boolean): PlayerPrepareGrindstoneEvent
 ---@overload fun(handle: Player, event: "enchant_item", filter?: fun(event: PlayerEnchantItemEvent): boolean): PlayerEnchantItemEvent
+---@overload fun(handle: Player, event: "buff_add", filter?: fun(event: BuffEvent): boolean): BuffEvent
+---@overload fun(handle: Player, event: "buff_end", filter?: fun(event: BuffEndEvent): boolean): BuffEndEvent
 ---@overload fun(handle: World, event: "block_break", filter?: fun(event: BlockBreakEvent): boolean): BlockBreakEvent
 ---@overload fun(handle: World, event: "block_place", filter?: fun(event: BlockPlaceEvent): boolean): BlockPlaceEvent
 ---@overload fun(handle: World, event: "entity_spawn", filter?: fun(event: EntitySpawnEvent): boolean): EntitySpawnEvent
+---@overload fun(handle: World, event: "dusk", filter?: fun(event: DaylightEvent): boolean): DaylightEvent
+---@overload fun(handle: World, event: "dawn", filter?: fun(event: DaylightEvent): boolean): DaylightEvent
 ---@overload fun(handle: World, event: "block_explode", filter?: fun(event: ExplodeEvent): boolean): ExplodeEvent
 ---@overload fun(handle: World, event: "block_ignite", filter?: fun(event: BlockIgniteEvent): boolean): BlockIgniteEvent
 ---@overload fun(handle: World, event: "block_burn", filter?: fun(event: BlockBurnEvent): boolean): BlockBurnEvent
@@ -523,6 +551,8 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: ProjectItem, event: "hit", filter?: fun(event: EntityDamageEvent): boolean): EntityDamageEvent
 ---@overload fun(handle: ProjectItem, event: "break_block", filter?: fun(event: BlockBreakEvent): boolean): BlockBreakEvent
 ---@overload fun(handle: ProjectItem, event: "drop", filter?: fun(event: PlayerItemEvent): boolean): PlayerItemEvent
+---@overload fun(handle: ProjectItem, event: "render", filter?: fun(event: ItemRenderEvent): boolean): ItemRenderEvent
+---@overload fun(handle: ProjectItem, event: "view", filter?: fun(event: ItemViewEvent): boolean): ItemViewEvent
 ---@overload fun(handle: ProjectItem, event: "pickup", filter?: fun(event: PlayerPickupItemEvent): boolean): PlayerPickupItemEvent
 ---@overload fun(handle: Effect, event: "end", filter?: fun(event: EffectEndEvent): boolean): EffectEndEvent
 ---@overload fun(handle: Cutscene, event: "end", filter?: fun(event: CutsceneEndEvent): boolean): CutsceneEndEvent
@@ -701,11 +731,17 @@ function nf.structures.size(id) end
 ---@class nf.centities
 nf.centities = {}
 
+--- A centity's `properties` from its `centity.json`, without one spawned: what `centity:properties()` answers for every instance of it. An empty table when the file has none; a centity the project doesn't have is an error. A new table each call.
+---@param kind CentityId Its folder name under `centities/`.
+---@return table
+function nf.centities.properties(kind) end
+
 --- Puts a new instance of a centity into the world. Its entities exist, its script's body has run and its `spawn` handlers have heard it by the time this returns. A centity the project doesn't have is an error.
 ---@param kind CentityId Which centity: its folder name under `centities/`.
 ---@param location_or_position Location|Vec3 Where its position (the anchor) goes: a `Location` (it faces the location's `yaw`, when it has one), or a position in the calling centity's world (the server's first world, in a module). Without a yaw it faces south (yaw 0).
+---@param options? CentitySpawnOptions
 ---@return Centity? # The new instance, or `nil` when the world doesn't exist.
-function nf.centities.spawn(kind, location_or_position) end
+function nf.centities.spawn(kind, location_or_position, options) end
 
 --- The live centity instance with this id, or `nil` once it's gone. Ids come from `centity:id()` and are fine to keep.
 ---@param id string An instance id.
@@ -795,7 +831,7 @@ function nf.blocks.all() end
 ---@class nf.recipes
 nf.recipes = {}
 
---- Adds a recipe the server learns at once, sent to everyone online. `definition` says what `recipes/<id>.json` would, in Lua spelling: `type` (`"shaped"`, `"shapeless"`, `"furnace"`, `"blasting"`, `"smoking"`, `"campfire_cooking"`, `"smithing_transform"` or `"stonecutting"`), then what that type takes: `pattern` and `key`, `ingredients`, `ingredient`, or `template`, `base` and `addition`; `result` (an `Item`), and `experience`, `cooking_time`, `group` and `category`. An ingredient is an item id (`"minecraft:stick"`), a tag (`"#minecraft:planks"`) or a project item (`{ item = "ruby" }`). Registering an id again replaces the recipe. It lasts as long as the script that registered it (so a reloaded script registers it again in its body). An id a `recipes/` file has, or anything that file would have an error for, is an error.
+--- Adds a recipe the server learns at once, sent to everyone online. `definition` says what `recipes/<id>.json` would, in Lua spelling: `type` (`"shaped"`, `"shapeless"`, `"furnace"`, `"blasting"`, `"smoking"`, `"campfire_cooking"`, `"smithing_transform"`, `"stonecutting"` or `"station"`), then what that type takes: `pattern` and `key`, `ingredients`, `ingredient`, `template`, `base` and `addition`, or `materials` (each `{ ingredient = ..., count = n }`), `stations` and `station_range`; `result` (an `Item`), and `experience`, `cooking_time`, `group` and `category`. An ingredient is an item id (`"minecraft:stick"`), a tag (`"#minecraft:planks"`) or a project item (`{ item = "ruby" }`). Registering an id again replaces the recipe. It lasts as long as the script that registered it (so a reloaded script registers it again in its body). An id a `recipes/` file has, or anything that file would have an error for, is an error.
 ---@param id string Its id: lowercase letters, digits and `_`, like a file's name. Players discover it by this id.
 ---@param definition table What the recipe is, as `recipes/<id>.json` would say it, with its keys in snake_case.
 function nf.recipes.register(id, definition) end
@@ -804,6 +840,24 @@ function nf.recipes.register(id, definition) end
 ---@param id RecipeId Its id.
 ---@return boolean
 function nf.recipes.remove(id) end
+
+--- A `station` recipe, as `StationRecipe` (its `times` left out), or `nil` when there's no such recipe or it isn't a station recipe. A recipe the game makes (a crafting table's) isn't one: the game crafts those itself.
+---@param id RecipeId Its id.
+---@return StationRecipe?
+function nf.recipes.get(id) end
+
+--- The `station` recipes a player can make now: every station each needs is within its `station_range` of them (or of `options.near`), and their inventory holds its materials, with `times` how many times over. A material matches as a recipe's ingredient does: an item id or a `#tag` takes any stack of that kind but a project item's, and a project item only its own stacks. A station is a block id, a `#tag` of blocks or a project block, near when it's within the recipe's `station_range` (4 by default) on every axis.
+---@param player Player Who makes them: their inventory, and where they stand.
+---@param options? RecipeAvailableOptions
+---@return StationRecipe[] # In id order. Empty for a player who is offline.
+function nf.recipes.available(player, options) end
+
+--- Makes a `station` recipe for a player: takes its materials from their inventory and gives them its result (what doesn't fit drops at their feet), `times` over, or as many times as they can when that's fewer. A station it needs that isn't near makes nothing. A material matches as a recipe's ingredient does: an item id or a `#tag` takes any stack of that kind but a project item's, and a project item only its own stacks. A station is a block id, a `#tag` of blocks or a project block, near when it's within the recipe's `station_range` (4 by default) on every axis. A recipe that isn't a station one is an error.
+---@param player Player
+---@param id RecipeId The recipe's id.
+---@param options? RecipeCraftOptions
+---@return integer # How many times it was made: 0 when it couldn't be, or the player is offline.
+function nf.recipes.craft(player, id, options) end
 
 --- Every recipe's id: the project's files', then those scripts registered.
 ---@return string[]
@@ -1122,10 +1176,39 @@ function nf.test.advance(ticks) end
 function nf.test.player(name) end
 
 --- Raises a server-wide event as the server would, to the scripts: whoever listens to `event` with `nf.on` hears it, and, for an event the server raises about a player, an entity or a world, the handlers on that handle (`player:on("chat")`) hear it first, in the order the server uses. Each can `stop()` or `cancel()` it or set its writable fields. The few events the runtime stages itself (a death, damage, a click on a centity) reach `nf.on` handlers only. `payload` is what the event carries, the same table its handlers read (`event.player`, `event.message`): a field the event does not have is an error naming the fields. What the server would then do with a cancelled event is not simulated: read the result.
----@param event "tick"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed" The event's name, as `nf.on` takes it.
+---@param event "tick"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"world_dusk"|"world_dawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"recipe_craft"|"item_view"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed" The event's name, as `nf.on` takes it.
 ---@param payload? table The payload: its fields by name. Leave it out for an event that has none.
 ---@return RaisedEvent # Whether a handler cancelled it, and the event as the handlers left it.
 function nf.test.raise(event, payload) end
+
+--- A stand-in for a terrain script's `terrain` (what its `...` is), to test worldgen modules on their own: `noise(name):at(...)`, `height`, `area`, `biome`, `seed`, `min_y`, `max_y`, `sea_level` and `plan` as a terrain script has them, each answering what `options` says. `noises` maps a noise's name to its value everywhere, or to a function of the place (`x, y, z`, or `x, z` for a column) giving it; a noise it doesn't name is 0. `height`, `area` and `biome` are a value or a function of the place, `seed`, `min_y`, `max_y` and `sea_level` numbers (defaults 64, `"default"`, `minecraft:plains`, 0, -64, 319 and 63). A plan makes each cell once, with `math.random` seeded for that cell. Chunks, structures and scatters aren't stood in for: `netherforge preview` draws the real thing.
+---@param options? table
+---@return table
+function nf.test.terrain(options) end
+
+--- Clicks for a player as their client would, with what they hold filled in, and raises what the server would for it: `player_interact` (the held project item's `interact` first, and a click on one of the project's blocks reaches it), then, for a right click with an item that nothing cancelled, `player_use_item` (the project item's `use` first). A left click is the attack button at a block or the air: it doesn't break the block (`world:break_block` does that). A click on an entity is `nf.test.raise("player_interact_entity", ...)`. Nothing the game would then do (an item thrown, a door opened) is simulated: read what the handlers did.
+---@param player Player Who clicks: one online, from `nf.test.player`.
+---@param button "left"|"right" Which button: `"right"` uses what they hold.
+---@param options? TestClickOptions Which hand, and the block clicked. Leave it out for the main hand at the air.
+---@return boolean # `true` when it went through, `false` when a handler cancelled it.
+function nf.test.click(player, button, options) end
+
+--- Lets go of the right button for a player who was using an item (drawing a bow, raising a shield, eating) before it finished, as their client would: raises `player_stop_using_item` with the item in their main hand, or in their off hand when the main one is empty. Like the server, it is heard by the player before `nf.on`. An error when both hands are empty.
+---@param player Player Who lets go: one online.
+---@param ticks integer How long they held it, in ticks: a bow drawn for 20 is fully drawn. 0 or more.
+function nf.test.release(player, ticks) end
+
+--- The movement keys a player holds now, as their client says when they change: raises `player_input` (the player's `input` first, then `nf.on`). A key left out is not held, so `nf.test.input(player, {})` lets go of every key. It only raises the event: the player doesn't move, sneak or sprint for it.
+---@param player Player Whose keys: one online.
+---@param held TestInputKeys The keys held down, each `true`.
+function nf.test.input(player, held) end
+
+--- A stack as a player's game was last sent it, after the `view` handlers: what their tooltip says, where the server keeps the real stack (read that from `player:inventory()` or `menu:item`). The fake server sends what changed at the end of each tick, as a real one does, and what `player:refresh_items` finds looks different, so `nf.test.advance(1)` after a change. `nil` for an empty slot, or one their game hasn't been sent.
+---@param player Player Whose game: one online.
+---@param slot integer|"cursor" A slot of their inventory, numbered as `player:inventory()` numbers them; with `menu`, of the window they have open. `"cursor"` for the stack on their cursor.
+---@param options? TestShownOptions Leave it out for their own inventory.
+---@return Item?
+function nf.test.shown(player, slot, options) end
 
 --- One spawned centity: `this` in the centity's script, and what `nf.centities.spawn`, `nf.centities.get` and `nf.centities.all` return. A handle stays valid as long as the instance exists; after it's removed its methods return `nil` or `false` rather than erroring.
 --- A `data()` table, `Item.data` and `nf.json` can keep one: it is saved as what identifies it and comes back as a handle.
@@ -1148,8 +1231,21 @@ function Centity:exists() end
 ---@return boolean
 function Centity:is_natural() end
 
---- Makes a natural centity a normal one: it is saved from now on (it comes back after a restart), is never removed for being far from players, and no longer counts against its cap. Nothing happens to one that is already normal.
----@return boolean # Whether it was natural: `false` for one that was already normal, and once it is removed.
+--- Whether a script spawned it temporary (`nf.centities.spawn`'s `temporary` or `lifetime`), and it still is: it isn't saved, and it goes when the script that spawned it unloads, or when its lifetime is up. `false` for one `keep` has kept, and once it's removed.
+---@return boolean
+function Centity:is_temporary() end
+
+--- How many ticks a temporary centity with a `lifetime` has left before it's removed, or `nil` for one without (or once it's removed).
+---@return integer?
+function Centity:lifetime() end
+
+--- Gives it this many ticks more before it's removed, from now. A centity with a lifetime is temporary, so one that wasn't becomes so: it's no longer saved, and goes when its lifetime is up (one spawned temporary still goes with its script too). Leave it out (or `nil`) to take its lifetime away; it stays temporary until `keep`.
+---@param ticks? integer At least 1.
+---@return boolean # `false` once it's removed.
+function Centity:set_lifetime(ticks) end
+
+--- Makes a natural or temporary centity a normal one: it is saved from now on (it comes back after a restart), is never removed for being far from players or because a script unloaded or a lifetime ran out, and no longer counts against a cap. Nothing happens to one that is already normal.
+---@return boolean # Whether it was natural or temporary: `false` for one that was already normal, and once it is removed.
 function Centity:keep() end
 
 --- One of its nodes by name, or `nil` if it has none by that name.
@@ -1170,6 +1266,14 @@ function Centity:roots() end
 ---@param definition? table A table in the shape of one node of `centity.json`, minus its `parent` (it hangs from the node you call this on), in Lua spelling: `transform` (`{ translation?, rotation?, scale? }`, each a `Vec3`: where it starts, as a rest pose a script can change afterwards), `display` (`{ type = "block", block = "minecraft:stone" }`, `{ type = "item", item = "minecraft:diamond", item_transform? }` or `{ type = "text", text = "<red>Hi", billboard?, alignment?, background?, line_width?, see_through?, shadow? }`), `hitbox` (`{ boxes?, shape?, raycast?, fitted_to? }`, a box being `{ min = Vec3, max = Vec3 }`) and `physics` (`{ gravity?, mass?, bounciness?, friction?, drag?, angular_drag?, max_speed?, max_spin?, collider?, shape?, rotates?, sleeps?, blocks?, entities? }`). Every field is optional: a node with none is a pivot to hang others from. Held to the same rules as `centity.json`, by the same validator: a key it does not take, a value of the wrong type, or a block, item or hitbox the file would be refused for is an error.
 ---@return Node?
 function Centity:add_node(name, definition) end
+
+--- Its `properties` from its `centity.json`: the project's own facts about it, any JSON (`{ damage = 12, class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An empty table when the file has none, `nil` once it's gone.
+---@return table?
+function Centity:properties() end
+
+--- The box around all its hitboxes as they're shown now (each shown node's boxes, turned and placed), in the world: what `world:overlap_box` and the other spatial queries test against. `nil` for a centity with no hitboxes showing, or once it's removed.
+---@return Bounds?
+function Centity:bounds() end
 
 --- Where it stands, in which world, and which way it faces, or `nil` once it's removed. The location's `yaw` is the centity's (`centity:yaw()`); its `pitch` is `nil`, because a centity only turns about the vertical.
 ---@return Location?
@@ -1219,6 +1323,150 @@ function Centity:follow(player) end
 --- Stops it following its player, where it is now. `false` when it wasn't following, or once it's removed.
 ---@return boolean # `false` once it's removed.
 function Centity:stop_following() end
+
+--- One of it's stats. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.
+---@param name string The stat: lowercase letters, digits and `_`.
+---@return number
+function Centity:stat(name) end
+
+--- Every stat it has that isn't 0, by name. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.
+---@return table<string, number>
+function Centity:stats() end
+
+--- What a script's `source` adds to it's stats (`set_modifiers`), or `nil` when it adds nothing.
+---@param source string Whose: `"armour"`, `"accessories"`.
+---@return table<string, number>?
+function Centity:modifiers(source) end
+
+--- Sets what `source` adds to it's stats, replacing what it added before: one call per source, each time it changes (a piece of armour put on), and `nil` takes it all away. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online.
+---@param source string Whose: any name of your own.
+---@param modifiers? table<string, number> A number per stat name. Leave it out (or `nil`) to take the source away.
+---@return boolean # `false` once it has gone.
+function Centity:set_modifiers(source, modifiers) end
+
+--- Gives it a buff (`buffs/<id>.json`) for a number of ticks: it takes away the buffs it `cures`, and doesn't take hold while one it's `blockedBy` lasts. Given again while it lasts, its file's `stacking` says what happens to the time. Its `buff_add` handlers may change the ticks or cancel it. While it lasts its `stats` are added to it's; when it runs out, `buff_end` hears it. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online. A buff the project doesn't have is an error.
+---@param buff BuffId Its id: `buffs/<id>.json`.
+---@param ticks integer How long, at least 1.
+---@return boolean # Whether it took hold: `false` when one it's `blockedBy` is on it, a handler cancelled it, or it has gone.
+function Centity:add_buff(buff, ticks) end
+
+--- Takes a buff away from it (`buff_end` hears `"removed"`).
+---@param buff BuffId Its id.
+---@return boolean # Whether they had it.
+function Centity:remove_buff(buff) end
+
+--- Whether it has a buff now.
+---@param buff BuffId Its id.
+---@return boolean
+function Centity:has_buff(buff) end
+
+--- How many ticks a buff it has has left, or `nil` when they don't have it.
+---@param buff BuffId Its id.
+---@return integer?
+function Centity:buff_ticks(buff) end
+
+--- Every buff it has now, with what a HUD shows them by, the first given first.
+---@return ActiveBuff[]
+function Centity:buffs() end
+
+--- How much health it has left: from its `centity.json`'s `health` (its `max` when it spawns), or what `set_max_health` gave it. `nil` for one without health, or once it's removed. Not saved: after a restart it's whole again.
+---@return number?
+function Centity:health() end
+
+--- Its health when whole, or `nil` without health (or once it's removed).
+---@return number?
+function Centity:max_health() end
+
+--- Sets how much health it has, between 0 and its `max_health`: no `damage` or `death` event, and 0 doesn't kill it (`damage` does). Its bar shows the change. `false` without health, or once it's removed.
+---@param health number
+---@return boolean
+function Centity:set_health(health) end
+
+--- Changes its health when whole (more than 0), keeping what it has but no more than the new most. One without `health` in its file gets health this way (full, and no bar). `false` once it's removed.
+---@param max_health number
+---@return boolean
+function Centity:set_max_health(max_health) end
+
+--- Takes health from it: its `damage` handlers may change the amount or cancel it, its health goes down by what's left, its bar shows, and at 0 it dies (`death`, then it's removed unless its file says otherwise). Damage to one already dead does nothing.
+---@param amount number How much, at least 0.
+---@param options? CentityDamageOptions
+---@return number? # How much it took after its handlers (0 when cancelled), or `nil` for one without health, one already dead, or once it's removed.
+function Centity:damage(amount, options) end
+
+--- Gives it back health, up to its `max_health`. Its bar shows the change.
+---@param amount number At least 0.
+---@return number? # How much it gained, or `nil` without health (or once it's removed).
+function Centity:heal(amount) end
+
+--- Whether its health has reached 0 through `damage`. `false` for one without health. A dead one its file keeps (`removeOnDeath: false`) stays dead until `set_health` gives it health again.
+---@return boolean
+function Centity:is_dead() end
+
+--- Whether it has a body: a `body` in its `centity.json`, or one `set_body` gave it. Without one the body functions do nothing (their getters answer `false`, `nil` or `vec3.zero`). `false` once it's removed.
+---@return boolean
+function Centity:has_body() end
+
+--- Its body's settings as they are now: what its `centity.json`'s `body` says, every field filled in, with what `set_body` changed. `nil` without a body, or once it's removed.
+---@return BodySettings?
+function Centity:body() end
+
+--- Changes its body's settings: only the fields given, the rest as they are. One without a body gets one, the fields left out as `centity.json`'s defaults. A body's settings are runtime state, like a node's pose: they last until its centity is reloaded or the server restarts, when it's back to its file's. A value out of range is clamped as in the file; a width or height that isn't more than 0 is an error.
+---@param settings BodySettings
+---@return boolean # `false` once it's removed.
+function Centity:set_body(settings) end
+
+--- How fast its body is moving, in blocks per second along the world's axes: `vec3.zero` without a body, `nil` once it's removed.
+---@return Vec3?
+function Centity:velocity() end
+
+--- Replaces its body's velocity: a knock back, a dash, a launch. The body carries on from it under gravity and drag, and walking eases it back to its walk.
+---@param velocity Vec3 Blocks per second, along the world's axes.
+---@return boolean # `false` without a body.
+function Centity:set_velocity(velocity) end
+
+--- Adds to its body's velocity.
+---@param velocity Vec3 Blocks per second, along the world's axes.
+---@return boolean # `false` without a body.
+function Centity:add_velocity(velocity) end
+
+--- The velocity its body is walking at (`set_walk_velocity`), or `nil` when it isn't walking, has no body, or is removed.
+---@return Vec3?
+function Centity:walk_velocity() end
+
+--- Walks its body: every tick it speeds up or slows down toward this velocity by its `acceleration` (`air_acceleration` while it's off the ground), so it reaches it smoothly and keeps to it, round whatever pushes it about, until it's changed. Only the sideways part counts, unless it flies, when it steers it in any direction. Leave it out (or `nil`) to stop walking: on the ground it then slows to a stop by its `friction`. Walking doesn't turn it: `set_yaw` or `look_at` does.
+---@param velocity? Vec3 Blocks per second, along the world's axes: a direction times a speed.
+---@return boolean # `false` without a body.
+function Centity:set_walk_velocity(velocity) end
+
+--- Sends its body up fast enough to rise `height` blocks, worked out from its gravity and drag: what a jump over a block (1.2) needs. Whether it's on the ground is for the script to check (`is_on_ground`), so a double jump is one more call.
+---@param height number Blocks, at least 0.
+---@return boolean # `false` without a body.
+function Centity:jump(height) end
+
+--- Whether its body is standing on something: a block, as of its last move. `false` without a body.
+---@return boolean
+function Centity:is_on_ground() end
+
+--- Whether its body is in water or lava (the block at its middle). `false` without a body.
+---@return boolean
+function Centity:is_in_liquid() end
+
+--- The face of what stopped its body sideways on its last move, as the direction straight out of it (`vec3(-1, 0, 0)` for a wall to its east), or `nil` when nothing did, or without a body. What a walker turns round at, or jumps over.
+---@return Vec3?
+function Centity:wall() end
+
+--- Makes it a projectile: from now on the server flies the whole centity every tick at its velocity, under its gravity and drag, and sweeps its path (a sphere of `radius`) for what it hits: centities' hitboxes, players and entities (`hit`), and blocks (it ends, bounces or sticks: `flight_end`, `bounce`, `stick`). It flies until it ends, then is removed unless told not to. Nothing about a flight is saved. A launch over a flight replaces it. One with a `body` stops walking while it flies, and walks again after. Every value is in blocks and seconds, as everywhere.
+---@param options LaunchOptions
+---@return boolean # `false` once it's removed.
+function Centity:launch(options) end
+
+--- Whether it's flying as a projectile (`launch`), stuck in a block or lying where it came to rest included: until its flight ends. `false` once it's removed.
+---@return boolean
+function Centity:is_launched() end
+
+--- Ends its flight where it is, as if it had ended by itself: `flight_end` hears `"stopped"`, and it's removed unless `remove_on_end` was `false`.
+---@return boolean # Whether it was flying: `false` when it wasn't, or once it's removed.
+function Centity:stop_flight() end
 
 --- Makes the whole centity walk somewhere, finding its way round the blocks in the way: to a place in its own world, or after an entity or another centity, looking for a new path to wherever that is every 10 ticks. When it stops, its `path_end` handlers hear whether it got there. A walk goes by the centity's **feet**: the middle of the bottom of its hitboxes as they're placed when it sets off (its position, for a centity without any). The way is found over the blocks' collision shapes, sized to its hitboxes (other centities aren't in the way), and walked a little each tick, before physics and scripts: it steps up and drops down as the options allow, falls when nothing holds it up, and finds another way when a block appears across its path. With `fly = true` it flies instead, through the air in any direction. A new `move_to`, `stop_pathing` and `teleport` end the walk it was on, and so does a reload of its centity (its script's body can set off again). Walks aren't saved, and a centity whose chunk unloads waits where it is until it loads again. Its physics bodies are carried along with it.
 ---@param target Location|Vec3|Entity|Centity Where its feet go: a position in its world, a `Location` (in its world: another world is `false`), or an entity or centity to go after.
@@ -1355,7 +1603,18 @@ function Centity:set_view_range(blocks) end
 ---@overload fun(self: Centity, event: "animation_end", handler: fun(event: AnimationEvent)): Subscription
 ---@overload fun(self: Centity, event: "chunk_load", handler: fun(event: CentityEvent)): Subscription
 ---@overload fun(self: Centity, event: "chunk_unload", handler: fun(event: CentityEvent)): Subscription
+---@overload fun(self: Centity, event: "hit", handler: fun(event: FlightHitEvent)): Subscription
+---@overload fun(self: Centity, event: "bounce", handler: fun(event: FlightBlockEvent)): Subscription
+---@overload fun(self: Centity, event: "stick", handler: fun(event: FlightBlockEvent)): Subscription
+---@overload fun(self: Centity, event: "flight_end", handler: fun(event: FlightEndEvent)): Subscription
+---@overload fun(self: Centity, event: "damage", handler: fun(event: CentityDamageEvent)): Subscription
+---@overload fun(self: Centity, event: "death", handler: fun(event: CentityDeathEvent)): Subscription
+---@overload fun(self: Centity, event: "land", handler: fun(event: CentityLandEvent)): Subscription
+---@overload fun(self: Centity, event: "bump", handler: fun(event: CentityBumpEvent)): Subscription
+---@overload fun(self: Centity, event: "touch", handler: fun(event: TouchEvent)): Subscription
 ---@overload fun(self: Centity, event: "path_end", handler: fun(event: CentityPathEndEvent)): Subscription
+---@overload fun(self: Centity, event: "buff_add", handler: fun(event: BuffEvent)): Subscription
+---@overload fun(self: Centity, event: "buff_end", handler: fun(event: BuffEndEvent)): Subscription
 function Centity:on(event, handler, options) end
 
 --- Like `centity:on`, but the handler runs only the next time the event happens, then stops listening.
@@ -1370,7 +1629,18 @@ function Centity:on(event, handler, options) end
 ---@overload fun(self: Centity, event: "animation_end", handler: fun(event: AnimationEvent)): Subscription
 ---@overload fun(self: Centity, event: "chunk_load", handler: fun(event: CentityEvent)): Subscription
 ---@overload fun(self: Centity, event: "chunk_unload", handler: fun(event: CentityEvent)): Subscription
+---@overload fun(self: Centity, event: "hit", handler: fun(event: FlightHitEvent)): Subscription
+---@overload fun(self: Centity, event: "bounce", handler: fun(event: FlightBlockEvent)): Subscription
+---@overload fun(self: Centity, event: "stick", handler: fun(event: FlightBlockEvent)): Subscription
+---@overload fun(self: Centity, event: "flight_end", handler: fun(event: FlightEndEvent)): Subscription
+---@overload fun(self: Centity, event: "damage", handler: fun(event: CentityDamageEvent)): Subscription
+---@overload fun(self: Centity, event: "death", handler: fun(event: CentityDeathEvent)): Subscription
+---@overload fun(self: Centity, event: "land", handler: fun(event: CentityLandEvent)): Subscription
+---@overload fun(self: Centity, event: "bump", handler: fun(event: CentityBumpEvent)): Subscription
+---@overload fun(self: Centity, event: "touch", handler: fun(event: TouchEvent)): Subscription
 ---@overload fun(self: Centity, event: "path_end", handler: fun(event: CentityPathEndEvent)): Subscription
+---@overload fun(self: Centity, event: "buff_add", handler: fun(event: BuffEvent)): Subscription
+---@overload fun(self: Centity, event: "buff_end", handler: fun(event: BuffEndEvent)): Subscription
 function Centity:once(event, handler) end
 
 --- Raises a custom event on this centity: every `centity:on(event)` handler hears it now, in the order they were registered, before this returns. The payload is handed to them as it is, not copied, so a field a handler assigns is there for the caller to read afterwards. A name without a `:` is an error: built-in events are the server's to raise.
@@ -1432,6 +1702,40 @@ function Node:set_rotation(rotation) end
 --- Scales it along its own axes.
 ---@param scale Vec3 A factor per axis: `vec3.one` is its natural size.
 function Node:set_scale(scale) end
+
+--- Lays it from one point of the world to another: its origin halfway, its Z pointing from `from` to `to`, and its Z scale the distance between them. For a node whose display is one block long along Z and centred on its origin (a beam, a string, a link), that's the whole way from one to the other. Its X and Y scale stay as they are, or are `thickness`.
+---@param from Vec3 A point in the world.
+---@param to Vec3 A point in the world.
+---@param options? StretchOptions
+---@return boolean # `false` once its centity is removed.
+function Node:stretch_between(from, to, options) end
+
+--- Whether it's a rope node (`"rope"` in `centity.json`).
+---@return boolean
+function Node:is_rope() end
+
+--- Strings a rope node between two ends, and keeps it strung each tick as they move, until `release_rope` or another `rope_between`: its links laid along a line from one to the other, sagging with `length`'s slack, as many shown as the distance needs (up to its `links`; the rest hidden). An end is a point, a node (its origin, as shown), or an entity (half a block above its feet; a player's at their hands' height, 1.1 blocks up). An end that's gone (a removed centity, an entity that left) releases the rope. A node that isn't a rope is an error.
+---@param from Vec3|Node|Entity
+---@param to Vec3|Node|Entity
+---@param options? RopeOptions
+---@return boolean # `false` once its centity is removed.
+function Node:rope_between(from, to, options) end
+
+--- Stops keeping a rope strung: its links stay where they were last laid.
+function Node:release_rope() end
+
+--- Eases its translation, rotation or scale from where they are to new values over some ticks, as `set_translation`, `set_rotation` and `set_scale` would each tick: and with `back`, eases them back again. A tween of a channel this node is already tweening replaces it, from where it is; `set_*` on a channel doesn't stop its tween. Animations drive what they drive over it, as they do over `set_*`; an `additive` one changes it.
+---@param options TweenOptions
+---@return boolean # `false` once its centity is removed.
+function Node:tween(options) end
+
+--- Whether a tween is easing any of its channels.
+---@return boolean
+function Node:is_tweening() end
+
+--- Stops its tweens where they are now.
+---@return boolean # `false` when it wasn't tweening.
+function Node:stop_tween() end
 
 --- Where its origin is in the world, as shown now: animation and physics included. `nil` once its centity is removed.
 ---@return Vec3?
@@ -2211,6 +2515,51 @@ function DroppedItem:set_pickup_delay(ticks) end
 ---@class Player: Living
 local Player = {}
 
+--- One of they's stats. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.
+---@param name string The stat: lowercase letters, digits and `_`.
+---@return number
+function Player:stat(name) end
+
+--- Every stat they has that isn't 0, by name. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.
+---@return table<string, number>
+function Player:stats() end
+
+--- What a script's `source` adds to they's stats (`set_modifiers`), or `nil` when it adds nothing.
+---@param source string Whose: `"armour"`, `"accessories"`.
+---@return table<string, number>?
+function Player:modifiers(source) end
+
+--- Sets what `source` adds to they's stats, replacing what it added before: one call per source, each time it changes (a piece of armour put on), and `nil` takes it all away. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online.
+---@param source string Whose: any name of your own.
+---@param modifiers? table<string, number> A number per stat name. Leave it out (or `nil`) to take the source away.
+---@return boolean # `false` once they has gone.
+function Player:set_modifiers(source, modifiers) end
+
+--- Gives they a buff (`buffs/<id>.json`) for a number of ticks: it takes away the buffs it `cures`, and doesn't take hold while one it's `blockedBy` lasts. Given again while it lasts, its file's `stacking` says what happens to the time. Its `buff_add` handlers may change the ticks or cancel it. While it lasts its `stats` are added to they's; when it runs out, `buff_end` hears it. Buffs and modifiers are runtime state: a restart clears them; a player's last while the server runs, offline too, and count down only while they're online. A buff the project doesn't have is an error.
+---@param buff BuffId Its id: `buffs/<id>.json`.
+---@param ticks integer How long, at least 1.
+---@return boolean # Whether it took hold: `false` when one it's `blockedBy` is on they, a handler cancelled it, or they has gone.
+function Player:add_buff(buff, ticks) end
+
+--- Takes a buff away from they (`buff_end` hears `"removed"`).
+---@param buff BuffId Its id.
+---@return boolean # Whether they had it.
+function Player:remove_buff(buff) end
+
+--- Whether they has a buff now.
+---@param buff BuffId Its id.
+---@return boolean
+function Player:has_buff(buff) end
+
+--- How many ticks a buff they has has left, or `nil` when they don't have it.
+---@param buff BuffId Its id.
+---@return integer?
+function Player:buff_ticks(buff) end
+
+--- Every buff they has now, with what a HUD shows them by, the first given first.
+---@return ActiveBuff[]
+function Player:buffs() end
+
 --- Their name, as they have it now (a player can change theirs between visits).
 ---@return string
 function Player:name() end
@@ -2546,6 +2895,10 @@ function Player:open_menu(menu, options) end
 ---@return Menu?
 function Player:menu() end
 
+--- Sends their game every stack it shows again where it would now look different to them: their inventory, the window they have open and their cursor, each worked out again by the `view` handlers (and `nf.on("item_view")`). Stacks are sent by themselves when they change, but not when only what a `view` handler works its look out from does, so call this then: when a shop menu opens or closes, say. It's done once at the end of the tick however often it's called, and only stacks that look different from what their game was last sent are sent.
+---@return boolean # `false` when they're offline.
+function Player:refresh_items() end
+
 --- Closes the project menu they have open. Anything else on their screen (a chest, their own inventory) stays open.
 ---@return boolean # `false` when they're offline or have no menu of ours open.
 function Player:close_menu() end
@@ -2703,6 +3056,10 @@ function Player:set_view_distance(distance) end
 ---@return table
 function Player:data() end
 
+--- Their table for this time online: one per player, the same table every time, shared by every script, and never saved. It's made empty the first time a script asks after they join, kept while they stay (through a module's reload too: it's the player's, not the script's), and dropped once they've left, after their `player_quit` handlers, so the next time they join it's empty again. A whole-project reload (`netherforge.json` changing, or `/nf reload` with no files) empties it, as it does every script's state. Anything a script holds goes in it (handles, functions, a `Task`), so a module needn't keep a map keyed by player and clear it in `player_quit`. By convention each module keeps its own part of it under its name, as with `data()`. `nil` for a player who isn't online.
+---@return table?
+function Player:session() end
+
 --- Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
 ---@param event Player.Event The event's name.
 ---@param handler fun(event: Event) Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`.
@@ -2747,6 +3104,8 @@ function Player:data() end
 ---@overload fun(self: Player, event: "prepare_smithing", handler: fun(event: PlayerPrepareSmithingEvent)): Subscription
 ---@overload fun(self: Player, event: "prepare_grindstone", handler: fun(event: PlayerPrepareGrindstoneEvent)): Subscription
 ---@overload fun(self: Player, event: "enchant_item", handler: fun(event: PlayerEnchantItemEvent)): Subscription
+---@overload fun(self: Player, event: "buff_add", handler: fun(event: BuffEvent)): Subscription
+---@overload fun(self: Player, event: "buff_end", handler: fun(event: BuffEndEvent)): Subscription
 ---@overload fun(self: Player, event: "heal", handler: fun(event: EntityHealEvent)): Subscription
 ---@overload fun(self: Player, event: "launch_projectile", handler: fun(event: ProjectileLaunchEvent)): Subscription
 ---@overload fun(self: Player, event: "shoot_bow", handler: fun(event: EntityShootBowEvent)): Subscription
@@ -2802,6 +3161,8 @@ function Player:on(event, handler, options) end
 ---@overload fun(self: Player, event: "prepare_smithing", handler: fun(event: PlayerPrepareSmithingEvent)): Subscription
 ---@overload fun(self: Player, event: "prepare_grindstone", handler: fun(event: PlayerPrepareGrindstoneEvent)): Subscription
 ---@overload fun(self: Player, event: "enchant_item", handler: fun(event: PlayerEnchantItemEvent)): Subscription
+---@overload fun(self: Player, event: "buff_add", handler: fun(event: BuffEvent)): Subscription
+---@overload fun(self: Player, event: "buff_end", handler: fun(event: BuffEndEvent)): Subscription
 ---@overload fun(self: Player, event: "heal", handler: fun(event: EntityHealEvent)): Subscription
 ---@overload fun(self: Player, event: "launch_projectile", handler: fun(event: ProjectileLaunchEvent)): Subscription
 ---@overload fun(self: Player, event: "shoot_bow", handler: fun(event: EntityShootBowEvent)): Subscription
@@ -2873,6 +3234,14 @@ function World:time_of_day() end
 ---@return boolean # `false` when the world has gone.
 function World:set_time_of_day(ticks) end
 
+--- Whether it is night here: the time of day is 13000 to 22999, from dusk to just before sunrise, as `/time set night` and a centity's `"night"` spawn time mean it. `false` once the world has gone.
+---@return boolean
+function World:is_night() end
+
+--- Whether it is day here: the time of day is 23000 to 12999, the rest of `is_night`'s. `false` once the world has gone.
+---@return boolean
+function World:is_day() end
+
 --- How many whole days have gone by in this world, or `nil` once it has gone.
 ---@return integer?
 function World:day_count() end
@@ -2933,6 +3302,12 @@ function World:block(position) end
 ---@param options? BlockBoxOptions
 ---@return BlockBox?
 function World:blocks(from, to, options) end
+
+--- Fills outward from a block through every block `options.through` names, one neighbour at a time, as far as it reaches: the blocks of a tree (`through = { "#minecraft:logs" }`), the air of a room (`through = { "passable" }`), a lake. It answers every block it filled (`positions`, nearest first by steps) and every block it stopped at (`edges`: a room's walls), with what each is when asked (`kinds`), and `stopped` says why it didn't finish when it didn't: it hit its `limit`, a chunk that isn't loaded or the world's top or bottom (`"unloaded"`: a room open to the sky or the unknown), or its `bounds`. It runs in the server, reading the blocks a box at a time, so a fill of thousands of blocks costs a script one call. A start block it can't fill through answers no positions, and the start as an edge. Blocks in chunks that aren't loaded can't be read or changed: that answers `nil` or `false`, and never loads the chunk (`world:load_chunk` does).
+---@param start Vec3 Any point in the block to start from.
+---@param options FloodOptions
+---@return FloodResult? # `nil` once the world has gone.
+function World:flood(start, options) end
 
 --- Changes the block at a position. A block state the server doesn't have (an unknown block, property or value) is an error. Blocks in chunks that aren't loaded can't be read or changed: that answers `nil` or `false`, and never loads the chunk (`world:load_chunk` does).
 ---@param position Vec3 Any point in the block.
@@ -3036,6 +3411,43 @@ function World:strike_lightning(position, options) end
 ---@return RaycastHit?
 function World:raycast(from, direction, max_distance, options) end
 
+--- Everything whose hitbox is inside or touches a box, nearest the box's middle first. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+---@param min Vec3 One corner, in the world.
+---@param max Vec3 The opposite corner. The corners may come in either order.
+---@param options? QueryOptions
+---@return QueryHit[]
+function World:overlap_box(min, max, options) end
+
+--- Everything whose hitbox comes within `radius` of a point, nearest first: what an explosion or an aura reaches. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+---@param center Vec3 The middle, in the world.
+---@param radius number In blocks, at least 0.
+---@param options? QueryOptions
+---@return QueryHit[]
+function World:overlap_sphere(center, radius, options) end
+
+--- Everything whose hitbox reaches into a cone from a point, nearest first: what a swing or a breath in front of someone reaches. A hitbox counts when its point nearest the cone's axis is within `length` of the tip and within `angle` of the axis, or the tip is inside it. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+---@param origin Vec3 The cone's tip, in the world.
+---@param direction Vec3 Which way it opens: any length but zero.
+---@param length number How far it reaches from the tip, in blocks, at least 0.
+---@param angle number How wide it opens, in degrees from its axis to its side: 0 to 180 (90 is everything in front, 180 a sphere).
+---@param options? QueryOptions
+---@return QueryHit[]
+function World:overlap_cone(origin, direction, length, angle, options) end
+
+--- Moves a sphere of `options.radius` (0, a point, by default) from one point to another and answers everything it touches on the way, in the order it meets them: what a fast or piercing shot passes through in a tick, which a ray (stopping at the first thing) can't say. Blocks stop it unless `blocks = false`: the block it meets is then the last hit, with its `normal`, and nothing past it is found. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+---@param from Vec3 Where it starts, in the world.
+---@param to Vec3 Where it would end.
+---@param options? SweepOptions
+---@return QueryHit[]
+function World:sweep(from, to, options) end
+
+--- The nearest thing whose hitbox comes within `radius` of a point, or `nil` when there's nothing: what a homing shot or a mob looking for a target wants. With `line_of_sight = true`, only something a ray from the point reaches without a block in the way. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+---@param position Vec3 Where to look from, in the world.
+---@param radius number How far to look, in blocks, at least 0.
+---@param options? QueryOptions
+---@return QueryHit?
+function World:nearest(position, radius, options) end
+
 --- A game rule's value: a `boolean` or an `integer`, depending on the rule. `nil` once the world has gone. A rule the server doesn't have is an error.
 ---@param rule string Its id, as the server names it: `"keep_inventory"`, `"random_tick_speed"`.
 ---@return any
@@ -3105,6 +3517,8 @@ function World:place_structure(id, position, options) end
 ---@overload fun(self: World, event: "block_break", handler: fun(event: BlockBreakEvent)): Subscription
 ---@overload fun(self: World, event: "block_place", handler: fun(event: BlockPlaceEvent)): Subscription
 ---@overload fun(self: World, event: "entity_spawn", handler: fun(event: EntitySpawnEvent)): Subscription
+---@overload fun(self: World, event: "dusk", handler: fun(event: DaylightEvent)): Subscription
+---@overload fun(self: World, event: "dawn", handler: fun(event: DaylightEvent)): Subscription
 ---@overload fun(self: World, event: "block_explode", handler: fun(event: ExplodeEvent)): Subscription
 ---@overload fun(self: World, event: "block_ignite", handler: fun(event: BlockIgniteEvent)): Subscription
 ---@overload fun(self: World, event: "block_burn", handler: fun(event: BlockBurnEvent)): Subscription
@@ -3136,6 +3550,8 @@ function World:on(event, handler, options) end
 ---@overload fun(self: World, event: "block_break", handler: fun(event: BlockBreakEvent)): Subscription
 ---@overload fun(self: World, event: "block_place", handler: fun(event: BlockPlaceEvent)): Subscription
 ---@overload fun(self: World, event: "entity_spawn", handler: fun(event: EntitySpawnEvent)): Subscription
+---@overload fun(self: World, event: "dusk", handler: fun(event: DaylightEvent)): Subscription
+---@overload fun(self: World, event: "dawn", handler: fun(event: DaylightEvent)): Subscription
 ---@overload fun(self: World, event: "block_explode", handler: fun(event: ExplodeEvent)): Subscription
 ---@overload fun(self: World, event: "block_ignite", handler: fun(event: BlockIgniteEvent)): Subscription
 ---@overload fun(self: World, event: "block_burn", handler: fun(event: BlockBurnEvent)): Subscription
@@ -3326,6 +3742,10 @@ local ProjectBlock = {}
 ---@return string
 function ProjectBlock:id() end
 
+--- Its `properties` from its `block.json`: the project's own facts about it, any JSON (`{ damage = 12, class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An empty table when the file has none, `nil` once the block is gone.
+---@return table?
+function ProjectBlock:properties() end
+
 --- Whether the project still has it.
 ---@return boolean
 function ProjectBlock:exists() end
@@ -3445,7 +3865,7 @@ function BossBar:show_to(player) end
 ---@return boolean # Whether they were among its viewers: `false` once it's gone.
 function BossBar:hide_from(player) end
 
---- Everyone it's shown to, online or not. Empty once it's gone.
+--- Everyone it's shown to, online or not: by `show_to`, and for an attached bar, whoever is near its centity now. Empty once it's gone.
 ---@return Player[]
 function BossBar:viewers() end
 
@@ -3484,6 +3904,19 @@ function BossBar:style() end
 ---@param style "progress"|"notched_6"|"notched_10"|"notched_12"|"notched_20"
 ---@return boolean # `false` once it's gone.
 function BossBar:set_style(style) end
+
+--- Ties it to a centity: it shows to every player within `range` of it (in its world) and hides from them as they go, and with `health` its progress follows the centity's health: what a boss's bar does. Players it was shown to with `show_to` keep it. A bar attached again moves to the new centity.
+---@param centity Centity
+---@param options? BossBarAttachOptions
+---@return boolean # `false` once it's gone, or the centity has.
+function BossBar:attach(centity, options) end
+
+--- Unties it from its centity: the players it showed to by being near it stop seeing it.
+function BossBar:detach() end
+
+--- The centity it's attached to, or `nil`.
+---@return Centity?
+function BossBar:attached() end
 
 --- Takes it off every screen for good.
 ---@return boolean # `false` once it's gone already.
@@ -3854,7 +4287,27 @@ function Slot:set_item(item) end
 ---@return boolean # `false` once the window is gone, or the storage's player is offline.
 function Slot:bind(storage, index) end
 
---- Stops showing a storage's slot here. The slot is emptied, since what it showed is still in the storage. Its player leaving unbinds every slot bound to their storage.
+--- Makes this slot a view of what a player wears in one place, as `bind` does a storage's slot: what goes in or out of it is put on or taken off at once, and when what they wear changes some other way (a right-click with armour, a script's `set_equipment`) the slot shows it by the next tick. Locked windows let players use it by hand, as a bound slot. The game doesn't check what's put on: give the slot a rule (`set_rule({ wearable = "head", max = 1 })`). Only a window of a menu that isn't `shared` can be bound.
+---@param player Player
+---@param equipment string `head`, `chest`, `legs`, `feet` or `off_hand`.
+---@return boolean # `false` once the window is gone, or they're offline.
+function Slot:bind_equipment(player, equipment) end
+
+--- Says what this slot takes, or with `nil` lets it take anything again. Whatever a player puts in, by a click, a drag, a number key or a shift-click from their own inventory into `shift_into`'s slots, is held to it: a stack it doesn't take stays where it was, and of one it does, only `max` goes in (the rest stays on the cursor). Its `click` handlers still hear what's let through. Scripts' own `set_item` aren't held to it. A shift-click from below that the game moves itself (no `shift_into`) isn't either, in a window that isn't locked.
+---@param rule? SlotRule
+---@return boolean # `false` once the window is gone.
+function Slot:set_rule(rule) end
+
+--- What this slot takes, or `nil` when it takes anything (or the window is gone).
+---@return SlotRule?
+function Slot:rule() end
+
+--- Whether this slot's rule takes this item (any count of it). `true` for a slot without a rule; `false` once the window is gone.
+---@param item Item
+---@return boolean
+function Slot:accepts(item) end
+
+--- Stops showing a storage's slot (or a player's equipment) here. The slot is emptied, since what it showed is still where it was. Its player leaving unbinds every slot bound to their storage or equipment.
 ---@return boolean # `false` when it wasn't bound, or the window is gone.
 function Slot:unbind() end
 
@@ -4047,6 +4500,10 @@ function ProjectItem:exists() end
 ---@return Item?
 function ProjectItem:create(overrides) end
 
+--- Its `properties` from its `item.json`: the project's own facts about it, any JSON (`{ damage = 12, class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An empty table when the file has none, `nil` once the item is gone.
+---@return table?
+function ProjectItem:properties() end
+
 --- Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
 ---@param event ProjectItem.Event The event's name.
 ---@param handler fun(event: Event) Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`.
@@ -4059,6 +4516,8 @@ function ProjectItem:create(overrides) end
 ---@overload fun(self: ProjectItem, event: "hit", handler: fun(event: EntityDamageEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "break_block", handler: fun(event: BlockBreakEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "drop", handler: fun(event: PlayerItemEvent)): Subscription
+---@overload fun(self: ProjectItem, event: "render", handler: fun(event: ItemRenderEvent)): Subscription
+---@overload fun(self: ProjectItem, event: "view", handler: fun(event: ItemViewEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "pickup", handler: fun(event: PlayerPickupItemEvent)): Subscription
 function ProjectItem:on(event, handler, options) end
 
@@ -4073,6 +4532,8 @@ function ProjectItem:on(event, handler, options) end
 ---@overload fun(self: ProjectItem, event: "hit", handler: fun(event: EntityDamageEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "break_block", handler: fun(event: BlockBreakEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "drop", handler: fun(event: PlayerItemEvent)): Subscription
+---@overload fun(self: ProjectItem, event: "render", handler: fun(event: ItemRenderEvent)): Subscription
+---@overload fun(self: ProjectItem, event: "view", handler: fun(event: ItemViewEvent)): Subscription
 ---@overload fun(self: ProjectItem, event: "pickup", handler: fun(event: PlayerPickupItemEvent)): Subscription
 function ProjectItem:once(event, handler) end
 
@@ -4326,12 +4787,21 @@ local Hud = {}
 ---@return Player
 function Hud:player() end
 
---- Fills a bar: `value` out of `max`, shown as that much of its segments (to the nearest half segment, for a bar with a half picture). A `value` past `max` or below 0 is shown full or empty; a `max` of 0 or less is an error.
+--- Fills a bar: `value` out of `max`, shown as that much of its segments (to the nearest half segment, for a bar with a half picture). A `value` past `max` or below 0 is shown full or empty; a `max` of 0 or less is an error. With `segments`, only that many of the bar's segments are drawn (1 to the bar's own), placed by the bar's `align`.
 ---@param name string The bar, as `<pack>/<key>`: a key of a resource pack's `hud.bars` (a package's as `ns:<pack>/<key>`).
 ---@param value number
 ---@param max number
+---@param options? HudFillOptions
 ---@return boolean # `false` when they're offline.
-function Hud:fill_bar(name, value, max) end
+function Hud:fill_bar(name, value, max, options) end
+
+--- Fills several bars as one long bar, each `per_segment` of `max` a segment: as many segments are drawn as `max` needs, filling the first bar's, then the next's (rows of hearts, ten to a row). A bar no segment reaches is removed. Every name must be a bar; `per_segment` and `max` more than 0.
+---@param names string[] Bars, `<pack>/<key>`, in the order they fill.
+---@param value number
+---@param max number
+---@param per_segment number How much of `max` a segment stands for.
+---@return integer # How many segments were drawn in all; 0 when they're offline.
+function Hud:fill_bars(names, value, max, per_segment) end
 
 --- What a bar shows, or `nil` when nothing set it (or they're offline).
 ---@param name string The bar, as `<pack>/<key>`: a key of a resource pack's `hud.bars` (a package's as `ns:<pack>/<key>`).
@@ -4418,6 +4888,22 @@ function Vec3:distance_squared(other) end
 ---@param fraction number Usually 0 to 1; outside that it carries on past either end.
 ---@return Vec3
 function Vec3:lerp(other, fraction) end
+
+--- The same direction, scaled down to at most `max_length` long: a copy if it is no longer than that already. Keeps a velocity under a top speed.
+---@param max_length number The longest it may be, 0 or more.
+---@return Vec3
+function Vec3:clamp_length(max_length) end
+
+--- Mirrored off a surface: `v - 2 * v:dot(n) * n` for the surface's unit normal `n`, so the part into the surface turns back out and the part along it carries on. How a shot bounces off a wall, with a sweep's `normal`.
+---@param normal Vec3 Which way the surface faces. Any length but zero: it is normalized first.
+---@return Vec3
+function Vec3:reflect(normal) end
+
+--- The point on the line segment from `start` to `finish` nearest to this point: its foot on the segment, or the nearer end when that falls past one. `start` when the two are the same point. With `distance`, how far a point is from a beam or a path.
+---@param start Vec3 One end.
+---@param finish Vec3 The other end.
+---@return Vec3
+function Vec3:closest_on_segment(start, finish) end
 
 --- A copy with `y` set to 0: the horizontal part.
 ---@return Vec3
@@ -4525,6 +5011,11 @@ function Event:uncancel() end
 ---@field setting string The setting's name, as `netherforge.json` declares it.
 ---@field value any What it is now, as `nf.config` gives it.
 ---@field previous any What it was.
+
+--- Night is falling or day is breaking in a world.
+---@class DaylightEvent: Event
+---@field world World The world.
+---@field time_of_day integer The world's time of day when it was seen, in ticks, as `world:time_of_day()` says: 13000 or a little past at dusk, 23000 or a little past at dawn, or wherever `/time set` put it.
 
 --- A server tick went by.
 ---@class TickEvent: Event
@@ -5015,12 +5506,151 @@ function Event:uncancel() end
 ---@field height number? How tall a gap it needs, in blocks: more than 0, at most 16. Default: its hitboxes' height (1 without hitboxes).
 ---@field step_height number? Walking: how high a step it goes straight up, in blocks: at least 0. Default 1, a block, as a mob jumps one.
 ---@field max_drop number? Walking: how far down it will drop off an edge, in blocks: at least 0. Default 3.
+---@field open_doors boolean? Walking: goes through the game's wooden doors and fence gates (`#minecraft:wooden_doors`, `#minecraft:fence_gates`), opening each as it comes to it and shutting it again once it's through (one it found open stays open). Iron doors stay in its way. Default `false`.
 ---@field range number? How far from where it sets off it looks for a way, in blocks: more than 0, at most 128. A target further away than this is `false`. Default 48. One search looks at no more than 4096 places, so a long way round may only take it part of the way.
 
 --- A centity stopped walking where `move_to` sent it.
 ---@class CentityPathEndEvent: Event
 ---@field centity Centity The instance.
 ---@field reached boolean Whether it got there: to the end of its path, within 2 blocks of where it was sent (or of what it went after, which it stops short of); `false` when it gave up.
+
+--- How `nf.centities.spawn` spawns one. A key that isn't one of these is an error.
+---@class CentitySpawnOptions
+---@field temporary boolean? Not saved: its entities aren't kept with their chunk, the server forgets it on a restart, and it's removed when the script that spawned it unloads (a reload of it, or its centity removed), so nothing it made is left behind. What a shot, a damage number or a summoned helper is. `keep()` makes it a normal one. Default `false`.
+---@field lifetime integer? Removed this many ticks after it's spawned (its `remove` handlers hear it), loaded or not: at least 1. A centity with a lifetime is temporary too. Default: none.
+
+--- A centity's body, as `centity:body()` gives it and `centity:set_body` takes it: the fields of `centity.json`'s `body`, in Lua spelling. Every field is optional to `set_body`. A key that isn't one of these is an error.
+---@class BodySettings
+---@field width number? Blocks across, square: more than 0, at most 16.
+---@field height number? Blocks tall: more than 0, at most 32.
+---@field gravity number? Downward acceleration, blocks per second squared.
+---@field max_fall_speed number? The fastest it falls, blocks per second.
+---@field drag number? Fraction of its speed shed per second in the air, 0 to 1.
+---@field liquid_drag number? The same in water or lava.
+---@field liquid_gravity number? How much of its gravity pulls it in water or lava: 0 floats, 1 sinks as in air.
+---@field acceleration number? How fast it reaches its walk on the ground (or flying), blocks per second squared.
+---@field air_acceleration number? The same in the air.
+---@field friction number? How fast it slows to a stop on the ground when it isn't walking, blocks per second squared.
+---@field step_height number? The tallest step it walks straight up, blocks.
+---@field bounce number? 0 stops dead against what it hits, 1 bounces off at full speed.
+---@field fly boolean? No gravity: walking steers it in any direction.
+---@field blocks boolean? Collides with the world's blocks.
+
+--- How `centity:launch` flies it. Everything but `velocity` is optional. A key that isn't one of these is an error.
+---@class LaunchOptions
+---@field velocity Vec3 Blocks per second, along the world's axes. Required.
+---@field gravity number? Downward acceleration, blocks per second squared. Default 0: it flies straight.
+---@field gravity_delay integer? Ticks it flies straight before gravity takes it, as a thrown knife's first stretch. Default 0.
+---@field drag number? Fraction of its speed shed per second, 0 to 1. Default 0.
+---@field radius number? How wide its path is swept for hits, as a sphere's radius in blocks; blocks stop its middle. Default 0.1.
+---@field pierce integer? How many hits it goes on through before one ends it. Default 0: the first ends it.
+---@field rehit integer? Ticks before it can hit the same thing again. Default: it hits each thing once.
+---@field hits QueryOptions? What it can hit, as a spatial query's options say (`centities`, `players`, `entities`, `kinds`, `exclude`, `line_of_sight` aside). It never hits itself or its `owner`. Default: everything.
+---@field owner (Entity|Centity)? Who launched it: never hit, and handed to every event. Default none.
+---@field blocks boolean? Whether blocks stop it (their collision shapes). Default `true`.
+---@field bounce number? Comes off a block instead of ending: the fraction of its speed into the face it keeps, 0 to 1. Default: it doesn't bounce.
+---@field friction number? With `bounce`: the fraction of its speed along the face it keeps, 0 to 1. Default 1.
+---@field max_bounces integer? With `bounce`: how many it makes before the next block ends it. Default: no end.
+---@field rest_speed number? With `bounce`: below this speed, blocks per second, after a bounce off a floor it stops and lies there (a grenade) until its `lifetime` is up. Default 1.
+---@field stick boolean? Sticks in the first block it hits (`stick`) instead of ending: it stays there until its `lifetime` is up. Default `false`.
+---@field homing Homing? Turns toward the nearest thing it can hit within reach. Default: it doesn't.
+---@field lifetime integer? Ticks from launch before it ends (`flight_end`, `"lifetime"`), flying, stuck or lying still. At least 1. Default 600: half a minute.
+---@field aim string? A node that's turned every tick so its +Z points the way it flies (an arrow's nose). Default: none is turned.
+---@field remove_on_end boolean? Whether it's removed when its flight ends, after `flight_end`. Default `true`.
+
+--- How a projectile seeks: `LaunchOptions.homing`.
+---@class Homing
+---@field range number How far it looks, in blocks. Required.
+---@field turn number? The most it turns toward its target, in degrees per second. Default 180.
+
+--- A projectile touched something it can hit: `hit`. Exactly one of `target` and `entity` is set.
+---@class FlightHitEvent: Event
+---@field centity Centity The projectile.
+---@field target Centity? The centity it hit, or `nil`.
+---@field node Node? Which of `target`'s nodes (its hitbox), or `nil`.
+---@field entity Entity? The player or entity it hit, or `nil`.
+---@field position Vec3 Where its middle was when it first touched.
+---@field velocity Vec3 How fast it was going, blocks per second.
+---@field owner (Entity|Centity)? Who launched it, or `nil`.
+
+--- A projectile met a block it bounces off (`bounce`) or sticks in (`stick`).
+---@class FlightBlockEvent: Event
+---@field centity Centity The projectile.
+---@field block Block The block.
+---@field position Vec3 Where it met it.
+---@field normal Vec3 The direction straight out of the face it met.
+---@field speed number How fast it was going into it, blocks per second.
+---@field owner (Entity|Centity)? Who launched it, or `nil`.
+
+--- A projectile's flight ended: `flight_end`.
+---@class FlightEndEvent: Event
+---@field centity Centity The projectile.
+---@field reason "hit"|"block"|"lifetime"|"unloaded"|"stopped" Why: see `flight_end`.
+---@field position Vec3 Where it ended.
+---@field target Centity? For `"hit"`, the centity it ended on, or `nil`.
+---@field entity Entity? For `"hit"`, the player or entity it ended on, or `nil`.
+---@field block Block? For `"block"`, the block it ended on, or `nil`.
+---@field normal Vec3? For `"block"`, the direction straight out of the face it met, or `nil`.
+---@field owner (Entity|Centity)? Who launched it, or `nil`.
+
+--- Where damage dealt with `centity:damage` comes from, for its handlers. A key that isn't one of these is an error.
+---@class CentityDamageOptions
+---@field source (Entity|Centity)? Who or what dealt it.
+---@field cause string? What kind of damage, in your own words: `"melee"`, `"fire"`.
+
+--- A centity is about to lose health: `damage`.
+---@class CentityDamageEvent: Event
+---@field centity Centity The centity.
+---@field amount number How much it loses: assign to change it.
+---@field source (Entity|Centity)? Who or what dealt it, or `nil`.
+---@field cause string? The damage's `cause`, or `nil`.
+
+--- A centity's health reached 0: `death`.
+---@class CentityDeathEvent: Event
+---@field centity Centity The centity.
+---@field source (Entity|Centity)? What dealt the last blow, or `nil`.
+---@field cause string? The last blow's `cause`, or `nil`.
+
+--- A centity's body landed: `land`.
+---@class CentityLandEvent: Event
+---@field centity Centity The centity.
+---@field speed number How fast it was falling as it landed, blocks per second.
+
+--- A centity's body ran into something: `bump`.
+---@class CentityBumpEvent: Event
+---@field centity Centity The centity.
+---@field normal Vec3 The direction straight out of the face it hit: `vec3(0, -1, 0)` for a ceiling.
+---@field speed number How fast it was going into it, blocks per second.
+
+--- A box along the world's axes: `centity:bounds()`.
+---@class Bounds
+---@field min Vec3 Its lowest corner.
+---@field max Vec3 Its highest corner.
+
+--- A centity's hitboxes started touching something's: `touch`.
+---@class TouchEvent: Event
+---@field centity Centity The centity that hears it.
+---@field node Node Which of its nodes touched (its hitbox).
+---@field other Centity? The other centity, or `nil`.
+---@field other_node Node? Which of the other centity's nodes it touched, or `nil`.
+---@field entity Entity? The player or entity it touched, or `nil`.
+
+--- How `node:stretch_between` lays a node. A key that isn't one of these is an error.
+---@class StretchOptions
+---@field thickness number? Its X and Y scale. Default: as they are.
+
+--- How `node:rope_between` strings a rope. A key that isn't one of these is an error.
+---@class RopeOptions
+---@field length number? How long the rope is, in blocks: shorter than the ends' distance it's taut, longer it sags by its slack. Default: always taut.
+
+--- A tween for `node:tween`: at least one of `translation`, `rotation` and `scale`. A key that isn't one of these is an error.
+---@class TweenOptions
+---@field translation Vec3? Where it ends up, as `set_translation` takes.
+---@field rotation Vec3? Degrees, as `set_rotation` takes; not the short way round, so 0 to 360 is a whole turn.
+---@field scale Vec3? As `set_scale` takes.
+---@field ticks integer How long, 1 or more (each way, with `back`).
+---@field easing string? `linear`, `ease_in`, `ease_out`, `ease_in_out` or `step`, as keyframes take. Default `ease_in_out`.
+---@field back boolean? Eases back to where it started after, over as many ticks again. Default `false`.
 
 --- How `centity:play_animation` plays an animation this time. The file says how it plays by default.
 ---@class AnimationOptions
@@ -5042,6 +5672,78 @@ function Event:uncancel() end
 ---@class Brightness
 ---@field block_light integer? Light from blocks (torches, lamps), 0 to 15. Required.
 ---@field sky_light integer? Light from the sky, 0 to 15. Required.
+
+--- A buff someone has now: `buffs()`.
+---@class ActiveBuff
+---@field id string Its id.
+---@field ticks integer Ticks it has left.
+---@field name Text? Its file's `name`, or `nil`.
+---@field icon string? Its file's `icon`, a glyph (`<pack>/<key>`), or `nil`.
+---@field color string? Its file's `color`, or `nil`.
+---@field debuff boolean Whether it is one.
+
+--- A buff is about to take hold: `buff_add`. Exactly one of `player` and `centity` is set.
+---@class BuffEvent: Event
+---@field buff string Its id.
+---@field ticks integer How long it will last: assign to change it (at least 1).
+---@field player Player? Who gets it, or `nil`.
+---@field centity Centity? The centity that gets it, or `nil`.
+
+--- A buff ended: `buff_end`. Exactly one of `player` and `centity` is set.
+---@class BuffEndEvent: Event
+---@field buff string Its id.
+---@field reason "expired"|"removed"|"cured" Why: see `buff_end`.
+---@field player Player? Who had it, or `nil`.
+---@field centity Centity? The centity that had it, or `nil`.
+
+--- One making of a `station` recipe by `nf.recipes.craft`: `recipe_craft`.
+---@class RecipeCraftEvent: Event
+---@field player Player Who it was made for.
+---@field recipe string The recipe's id.
+---@field result Item What this making gives them: the recipe's result, until a handler assigns another.
+
+--- A `station` recipe, as `nf.recipes.available` and `nf.recipes.get` give it.
+---@class StationRecipe
+---@field id string Its id.
+---@field result Item What one making of it gives.
+---@field materials RecipeMaterial[] What one making of it takes.
+---@field stations string[] The blocks that must be near, as its file names them.
+---@field station_range integer How near, in blocks.
+---@field group string? Its `group`, or `nil`.
+---@field times integer? `nf.recipes.available`: how many times over the player can make it now. `nil` from `nf.recipes.get`.
+
+--- One material of a `station` recipe: exactly one of `item`, `kind` and `tag`, and how many.
+---@class RecipeMaterial
+---@field item string? A project item, by id.
+---@field kind string? An item id, `"minecraft:stick"`.
+---@field tag string? An item tag, without its `#`.
+---@field count integer How many one making takes.
+
+--- What `nf.recipes.available` looks at. A key that isn't one of these is an error.
+---@class RecipeAvailableOptions
+---@field near Vec3? Where its stations are looked for, in the player's world. Default: where they stand.
+---@field stations string[]? Stations counted as near whatever the blocks are: a menu that is a crafting station, a station item held. Default none.
+---@field group string? Only recipes of this `group`. Default: any.
+---@field all boolean? Every station recipe, not only those they can make now: one they can't has `times` 0. Default `false`.
+
+--- How `nf.recipes.craft` makes a recipe. A key that isn't one of these is an error.
+---@class RecipeCraftOptions
+---@field times integer? How many times over, at least 1. Default 1.
+---@field near Vec3? Where its stations are looked for. Default: where the player stands.
+---@field stations string[]? Stations counted as near whatever the blocks are.
+
+--- A stack is being sent to one player's game, to be shown as this player alone sees it: `view` on a project item, `item_view` on `nf`.
+---@class ItemViewEvent: Event
+---@field player Player Whose game it is sent to.
+---@field item Item The real stack, as the server keeps it. Changing this table changes nothing: assign `display_name` and `lore`.
+---@field display_name Text? The name this player is shown: the stack's own until a handler assigns another. `nil` for the game's own name.
+---@field lore Text[]? The lore lines this player is shown, the same way. `nil` for none.
+
+--- A stack of a project item is being made, or rewritten to its item's changed file: `render`.
+---@class ItemRenderEvent: Event
+---@field item Item The stack as it is about to be, with its `data` and `count`. Changing this table changes nothing: assign `display_name` and `lore`.
+---@field display_name Text? Its name: the file's (or what made it said), until a handler assigns another. `nil` for the game's own name.
+---@field lore Text[]? Its lore lines, the same way. `nil` for none.
 
 --- Which entities `world:entities` lists. Every key is optional; an entity is listed when it matches all of those given. A key that isn't one of these is an error.
 ---@class EntityFilter
@@ -5153,10 +5855,20 @@ function Event:uncancel() end
 ---@field done string[] The criteria they've met.
 ---@field remaining string[] The criteria left.
 
---- Which slot of a storage a menu slot shows: `slot:binding()`.
+--- What a menu slot shows: `slot:binding()`. A slot of a storage (`storage` and `index`), or what a player wears (`player` and `equipment`).
 ---@class SlotBinding
----@field storage Inventory The storage (`player:storage`).
----@field index integer Its slot, from 0.
+---@field storage Inventory? The storage (`player:storage`).
+---@field index integer? The storage's slot, from 0.
+---@field player Player? Whose equipment.
+---@field equipment string? `head`, `chest`, `legs`, `feet` or `off_hand`.
+
+--- What a menu slot takes (`slot:set_rule`). A stack goes in when it's any of `items`, `kinds`, `property` or `wearable` (or when none is given), and never more of it than `max`. A key that isn't one of these is an error.
+---@class SlotRule
+---@field items string[]? The project's items it takes, by id.
+---@field kinds string[]? The game's items it takes, by id or `#tag` (`#minecraft:head_armor`); a project item's stacks never count as their kind.
+---@field property string? A project item with this key in its `properties` (and not `false`).
+---@field wearable string? What's worn there: `head`, `chest`, `legs`, `feet` or `body`, by its `equipment` slot or, for the game's own items, the slot's armour tag (`#minecraft:head_armor`...).
+---@field max integer? The most items it holds: 1 for a ring. Default a full stack.
 
 --- An item stack as a plain table: what `menu:item` returns and what `menu:set_item` takes. Only `kind` is required, or `item` instead. Read one, change a field and write it back, and nothing else about it changes: whatever the stack carries that these fields can't say (a book's pages, another plugin's data) rides along in `raw`, which you never write yourself. A field that isn't one of these is an error.
 ---@class Item
@@ -5448,6 +6160,56 @@ function Event:uncancel() end
 ---@field centities boolean? Whether centities' hitboxes stop it. Default `true`.
 ---@field fluids boolean? Whether water and lava stop it, as solid blocks. Default `false`: it goes through them.
 
+--- How `world:flood` fills. A block is named as it is in a game block file: an id (`"minecraft:oak_log"`), a `#tag` (`"#minecraft:logs"`) or a project block's id (`"ruby_ore"`), or by what it is: `"solid"` (what players stand on), `"liquid"` (water and lava) or `"passable"` (neither: air, torches, flowers). A key that isn't one of these is an error.
+---@class FloodOptions
+---@field through string[] The blocks it fills: each one it reaches that any of these names. Required.
+---@field except string[]? Blocks it doesn't fill even when `through` names them: `{ "#minecraft:doors" }` keeps a room's air from leaking out through a door. Default none.
+---@field directions Vec3[]? Which neighbours it goes on to from each block, as offsets of whole blocks (`vec3(0, 1, 0)` is the one above), at most 2 on each axis. Default the six that share a face: `vec3(1, 0, 0)`, `vec3(-1, 0, 0)` and so on. A tree felled up and sideways but never down leaves out every offset with y = -1.
+---@field limit integer? The most blocks it fills, at least 1, at most 32,768. Default 4,096. `stopped` is `"limit"` when there was more.
+---@field bounds Bounds? `{ min = Vec3, max = Vec3 }`: it never fills a block outside this box (both corners' blocks included), and `stopped` is `"bounds"` when it would have. Default: no box.
+---@field kinds boolean? Also answer what each block is (`kinds`, `edge_kinds`): its id without properties (`"minecraft:oak_log"`), or a project block's id. Default `false`.
+
+--- What `world:flood` filled.
+---@class FloodResult
+---@field positions Vec3[] Every block it filled, as its lowest corner (whole numbers), the start first, then outward a step at a time.
+---@field edges Vec3[] Every block next to one it filled that it didn't fill (a tree's leaves, a room's walls and door), once each. Not a block in an unloaded chunk or outside its `bounds`.
+---@field kinds string[]? With `kinds = true`, what each of `positions` is, in the same order. `nil` otherwise.
+---@field edge_kinds string[]? With `kinds = true`, what each of `edges` is, in the same order. `nil` otherwise.
+---@field stopped "limit"|"unloaded"|"bounds"? Why it didn't fill everything it reaches: `"limit"` (more past its limit), `"unloaded"` (a chunk that isn't loaded, or the world's top or bottom, in its way) or `"bounds"`. `nil` when it filled all of it: a closed room, a whole tree.
+
+--- What a spatial query (`world:overlap_box`, `overlap_sphere`, `overlap_cone`, `nearest`) finds. A key that isn't one of these is an error.
+---@class QueryOptions
+---@field centities boolean? Whether it finds centities. Default `true`.
+---@field players boolean? Whether it finds players. Default `true`.
+---@field entities boolean? Whether it finds entities that aren't players (mobs, dropped items, arrows...). Default `true`.
+---@field kinds string[]? Only centities of these kinds (their folder names), and entities of these types (`"minecraft:zombie"`). Default: any.
+---@field exclude (Centity|Entity)[]? What it leaves out: whatever is asking, usually. Default none.
+---@field limit integer? At most this many, the nearest. At least 1. Default: all.
+---@field line_of_sight boolean? Only what a ray from the query's own point (the middle of a box, the centre of a sphere, a cone's tip, a sweep's start) reaches without a block in the way, aimed at its hitbox's nearest point. Default `false`.
+
+--- How `world:sweep` moves and what it finds: everything `QueryOptions` takes, and these. A key that isn't one of them is an error.
+---@class SweepOptions
+---@field centities boolean? Whether it finds centities. Default `true`.
+---@field players boolean? Whether it finds players. Default `true`.
+---@field entities boolean? Whether it finds entities that aren't players (mobs, dropped items, arrows...). Default `true`.
+---@field kinds string[]? Only centities of these kinds (their folder names), and entities of these types (`"minecraft:zombie"`). Default: any.
+---@field exclude (Centity|Entity)[]? What it leaves out: whatever is asking, usually. Default none.
+---@field limit integer? At most this many, the nearest. At least 1. Default: all.
+---@field line_of_sight boolean? Only what a ray from the query's own point (the middle of a box, the centre of a sphere, a cone's tip, a sweep's start) reaches without a block in the way, aimed at its hitbox's nearest point. Default `false`.
+---@field radius number? The moving sphere's radius, in blocks, at least 0. Default 0: a point.
+---@field blocks boolean? Whether blocks stop it (their collision shapes, as `raycast` sees them). Default `true`. A block stops the sphere's middle, not its edge.
+---@field fluids boolean? Whether water and lava stop it, as solid blocks. Default `false`.
+
+--- One thing a spatial query found. Exactly one of `centity`, `entity` and `block` is set: a `block` only ends a `world:sweep`.
+---@class QueryHit
+---@field centity Centity? The centity found, or `nil`.
+---@field node Node? Which of `centity`'s nodes was nearest (its hitbox), or `nil` for anything else.
+---@field entity Entity? The player or entity found, or `nil`.
+---@field block Block? The block a `world:sweep` stopped at, or `nil`.
+---@field position Vec3 Where: for an overlap or `nearest`, the point of the hitbox nearest the query's own point; for a `sweep`, where the sphere's middle is when it first touches (on a block, where it stops).
+---@field distance number How far that is from the query's own point; along the way, for a `sweep`. 0 when the point is inside the hitbox.
+---@field normal Vec3? For a `sweep`'s block, the unit direction straight out of the face it met: what a bounce reflects off. `nil` otherwise.
+
 --- What `world:raycast` hit: where, and what. Exactly one of `block`, `entity` and `centity` is set.
 ---@class RaycastHit
 ---@field position Vec3 Where the ray met it, in the world.
@@ -5457,6 +6219,12 @@ function Event:uncancel() end
 ---@field entity Entity? The entity it hit, or `nil`.
 ---@field centity Centity? The centity whose hitbox it hit, or `nil`.
 ---@field node Node? Which node of `centity` it hit (its hitbox), or `nil` for anything else.
+
+--- How `bossbar:attach` ties a bar to a centity. Every key is optional; a key that isn't one of these is an error.
+---@class BossBarAttachOptions
+---@field range number? How near a player must be to see it, in blocks. Default 48.
+---@field health boolean? Its progress follows the centity's `health` (when it has any). Default `true`.
+---@field remove_with boolean? Removed when the centity is. Default `true`.
 
 --- What `nf.bossbars.create` makes a bar with. Every key is optional; a key that isn't one of these is an error.
 ---@class BossBarOptions
@@ -5478,6 +6246,11 @@ function Event:uncancel() end
 ---@class HudBar
 ---@field value number How much of it is full, as set.
 ---@field max number Out of how much.
+---@field segments integer How many of its segments are drawn.
+
+--- How `hud:fill_bar` draws a bar.
+---@class HudFillOptions
+---@field segments integer? Draw only this many of the bar's segments, 1 to its own. Default all of them.
 
 --- What a spawn condition (`nf.spawning.condition`) is asked about: one centity at one place.
 ---@class SpawnCheck
@@ -5587,6 +6360,26 @@ function Event:uncancel() end
 ---@class NoiseOptions
 ---@field seed integer? Which noise: each seed is a different pattern. Default 0.
 ---@field scale number? What the coordinates are multiplied by first: smaller is smoother and wider (0.05 changes over about 20 blocks). Default 1.
+
+--- Where `nf.test.shown` looks. A key that isn't one of these is an error.
+---@class TestShownOptions
+---@field menu boolean? Whether `slot` is one of the window they have open, numbered from 0 as `menu:slot` numbers them.
+
+--- How `nf.test.click` clicks. Every key is optional; a key that isn't one of these is an error.
+---@class TestClickOptions
+---@field hand "main_hand"|"off_hand"? Which hand clicks, and whose item is used. Default `"main_hand"`.
+---@field block Block? The block clicked, which must be in a loaded chunk. Default: none, a click at the air.
+---@field face "up"|"down"|"north"|"south"|"east"|"west"? Which face of `block` was clicked. Default `"up"`; only with `block`.
+
+--- The keys `nf.test.input` holds down: each `true` is held, and one left out (or `false`) isn't. A key that isn't one of these is an error.
+---@class TestInputKeys
+---@field forward boolean? Forward (W).
+---@field backward boolean? Back (S).
+---@field left boolean? Left (A).
+---@field right boolean? Right (D).
+---@field jump boolean? Jump (space).
+---@field sneak boolean? Sneak (shift).
+---@field sprint boolean? Sprint (control).
 
 --- What `nf.test.raise` gives back.
 ---@class RaisedEvent

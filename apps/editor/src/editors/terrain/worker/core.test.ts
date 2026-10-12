@@ -25,6 +25,7 @@ const file = (change: Partial<PreviewFile> = {}): PreviewFile => ({
   structuresKey: 'structures/pole.nbt@1',
   sources: {},
   sourcesKey: '',
+  blocks: [],
   ...change,
 })
 const WORLD: PreviewWorld = { seed: '7', minY: -64, maxY: 320 }

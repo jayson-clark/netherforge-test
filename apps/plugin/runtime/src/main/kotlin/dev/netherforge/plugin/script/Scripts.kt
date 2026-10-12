@@ -312,6 +312,19 @@ class Scripts internal constructor(
         val total = (totals[owner to event] ?: 0) + count - before
         if (total > 0) totals[owner to event] = total else totals.remove(owner to event)
         for (watch in watches) watch.update()
+        if (count != before) counts[event]?.forEach { it() }
+    }
+
+    /** What [counting] calls, by event name, whenever any target's count of handlers for it changes. */
+    private val counts = HashMap<String, MutableList<() -> Unit>>()
+
+    /**
+     * Calls [changed] whenever a handler for any of [events] is added or goes, on any target: a script
+     * listening, or one stopping (its scope unloading on a reload). Unlike [watch], it hears a script
+     * replaced by another that listens just the same.
+     */
+    fun counting(vararg events: EventType<*>, changed: () -> Unit) {
+        for (event in events) counts.getOrPut(event.luaName) { mutableListOf() } += changed
     }
 
     /** Handlers per declaring class (`"Living"`, `nf`) and event, over every target that has it. */
@@ -362,8 +375,13 @@ class Scripts internal constructor(
 
     /** A handler failed in the event core: reported; [gaveUp] when its subscription was cancelled for it. */
     internal fun handlerFailed(scope: Scope, what: String, failure: ScriptFailure, gaveUp: Boolean) {
+        handlerFailures++
         onError(scope, failure, what, gaveUp)
     }
+
+    /** How many handlers have failed so far: one that changes over an [emit] means a handler of it failed. */
+    var handlerFailures = 0L
+        private set
 
     /** Raises [event] on [target] (null for `nf`). Returns whether it ended cancelled. */
     fun <P : LuaEvent> emit(event: EventType<P>, target: LuaHandle?, payload: P, precancelled: Boolean = false): Boolean =

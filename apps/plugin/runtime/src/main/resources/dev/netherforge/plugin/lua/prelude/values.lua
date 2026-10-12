@@ -216,6 +216,45 @@ function Vec3_body.lerp(a, b, f)
   return new_vec3(a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f, a[3] + (b[3] - a[3]) * f)
 end
 
+function Vec3_body.clamp_length(v, max_length)
+  if max_length < 0 then
+    error("bad argument 'max_length' (a length can't be negative)", 2)
+  end
+  local squared = v[1] * v[1] + v[2] * v[2] + v[3] * v[3]
+  if squared <= max_length * max_length then
+    return v
+  end
+  local scale = max_length / sqrt(squared)
+  return new_vec3(v[1] * scale, v[2] * scale, v[3] * scale)
+end
+
+-- v − 2 (v · n) n, for the unit normal n.
+function Vec3_body.reflect(v, normal)
+  local length = sqrt(normal[1] * normal[1] + normal[2] * normal[2] + normal[3] * normal[3])
+  if length == 0 then
+    error("bad argument 'normal' (a surface's normal can't be zero)", 2)
+  end
+  local nx, ny, nz = normal[1] / length, normal[2] / length, normal[3] / length
+  local twice = 2 * (v[1] * nx + v[2] * ny + v[3] * nz)
+  return new_vec3(v[1] - twice * nx, v[2] - twice * ny, v[3] - twice * nz)
+end
+
+-- The projection of p − start onto the segment, its fraction kept within 0 to 1.
+function Vec3_body.closest_on_segment(p, start, finish)
+  local dx, dy, dz = finish[1] - start[1], finish[2] - start[2], finish[3] - start[3]
+  local squared = dx * dx + dy * dy + dz * dz
+  if squared == 0 then
+    return start
+  end
+  local t = ((p[1] - start[1]) * dx + (p[2] - start[2]) * dy + (p[3] - start[3]) * dz) / squared
+  if t < 0 then
+    t = 0
+  elseif t > 1 then
+    t = 1
+  end
+  return new_vec3(start[1] + dx * t, start[2] + dy * t, start[3] + dz * t)
+end
+
 function Vec3_body.flat(v)
   return new_vec3(v[1], 0, v[3])
 end

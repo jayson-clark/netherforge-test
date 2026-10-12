@@ -124,15 +124,26 @@ class FakeMenus(private val platform: FakePlatform) : MenuOps {
         windows[window]?.let { it.refreshes++ }
     }
 
-    /** A player clicks a slot of the window they have open; true when the click was cancelled. */
-    fun click(player: FakePlayer, slot: Int?, top: Boolean = true, click: String = "left", moves: Boolean = top): Boolean {
+    /**
+     * A player clicks a slot of the window they have open, holding what's on their cursor there (and, for a
+     * `number_key`, pressing [hotbar]); true when the click was cancelled.
+     */
+    fun click(
+        player: FakePlayer,
+        slot: Int?,
+        top: Boolean = true,
+        click: String = "left",
+        moves: Boolean = top,
+        hotbar: Int? = null
+    ): Boolean {
         val window = viewing(player.ref.uuid) ?: error("${player.ref.name} has no window open")
         val held = when {
             slot == null -> null
             top -> windows.getValue(window).slots.getOrNull(slot)
             else -> player.inventorySlots.getOrNull(slot)
         }
-        return platform.events!!.menuClicked(window, MenuClick(player.ref, slot, top, click, null, held, null, moves))
+        val cursor = windows.getValue(window).cursors[player.ref.uuid]
+        return platform.events!!.menuClicked(window, MenuClick(player.ref, slot, top, click, hotbar, held, cursor, moves))
     }
 
     /**

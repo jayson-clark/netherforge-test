@@ -184,6 +184,7 @@ const PAGES: Record<(typeof DOCUMENT_KINDS)[number], string[]> = {
   centity: ['centity.md'],
   bundle: ['packages.md'],
   datapack: ['datapack.md'],
+  buff: ['buff.md'],
 }
 
 /** Every name a schema gives a property: its `properties`, and the names a map's keys may be (`propertyNames`). */
@@ -193,7 +194,12 @@ function keysOf(node: unknown, into: Set<string> = new Set()): Set<string> {
   } else if (node && typeof node === 'object') {
     for (const [key, value] of Object.entries(node)) {
       if (key === 'properties' && value && typeof value === 'object') {
-        for (const name of Object.keys(value)) into.add(name)
+        // A map of names to their schemas: walk each schema, never the map as one (a key named `properties` isn't the keyword).
+        for (const [name, schema] of Object.entries(value)) {
+          into.add(name)
+          keysOf(schema, into)
+        }
+        continue
       }
       if (key === 'propertyNames') {
         const names = (value as { enum?: unknown }).enum

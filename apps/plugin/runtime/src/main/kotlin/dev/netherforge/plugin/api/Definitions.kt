@@ -144,11 +144,11 @@ private fun fileSpelling(element: JsonElement, where: String, item: (JsonElement
 /** The keys a recipe definition takes, in Lua's spelling. */
 private val RECIPE_KEYS = listOf(
     "type", "pattern", "key", "ingredients", "ingredient", "template", "base", "addition", "result", "experience",
-    "cooking_time", "group", "category"
+    "cooking_time", "group", "category", "materials", "stations", "station_range"
 )
 
 /** A recipe's keys whose values are lists. */
-private val RECIPE_LISTS = setOf("pattern", "ingredients")
+private val RECIPE_LISTS = setOf("pattern", "ingredients", "materials", "stations")
 
 /**
  * The recipe [definition] describes, validated as `recipes/<id>.json` would
@@ -208,6 +208,7 @@ internal fun nodeFrom(name: String, parentIndex: Int, definition: LuaValue?, gam
     if ("parent" in table) {
         throw LuaApiException("$ROOT.parent: a node's parent is the node it's added to (add_node adds a root)")
     }
+    if ("rope" in table) throw LuaApiException("$ROOT.rope: a rope's links are built with its centity, so only centity.json can have one")
     val file = when (val result = CanonicalJson.parse(NodeDef.serializer(), nodeSpelling(table, ROOT).toString(), ROOT)) {
         is CanonicalJson.Parsed.Ok -> result.value
         is CanonicalJson.Parsed.Failed -> throw LuaApiException(message(result.problem))

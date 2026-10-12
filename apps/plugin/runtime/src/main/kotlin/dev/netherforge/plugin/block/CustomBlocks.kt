@@ -413,6 +413,9 @@ internal class CustomBlocks(
     /** Whether the project has a block called [name] that runs. */
     fun has(name: String): Boolean = name in defs
 
+    /** [name]'s `properties` from its file (empty when it has none), or null when the project has no such block. */
+    fun properties(name: String): Map<String, kotlinx.serialization.json.JsonElement>? = defs[name]?.let { it.file.properties.orEmpty() }
+
     fun ids(): List<String> = defs.keys.sorted()
 
     /** The block at a position, or null when it isn't one of the project's blocks (or its chunk hasn't been looked at). */

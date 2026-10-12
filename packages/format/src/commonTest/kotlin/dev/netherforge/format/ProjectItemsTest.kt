@@ -115,8 +115,9 @@ class ProjectItemsTest {
         val file = ItemKind.serializer.descriptor
         val itemFields = (0 until item.elementsCount).map(item::getElementName).toSet()
         val fileFields = (0 until file.elementsCount).map(file::getElementName).toSet()
-        // `block` and `drawWithoutAmmo` are the item's own behaviour, read from the file rather than carried by a stack's look.
-        assertEquals(itemFields - ItemFile.STACK_FIELDS, fileFields - setOf("\$schema", "script", "block", "drawWithoutAmmo"))
+        // `block` and `drawWithoutAmmo` are the item's own behaviour, and `properties` scripts' data about it, read from
+        // the file rather than carried by a stack's look.
+        assertEquals(itemFields - ItemFile.STACK_FIELDS, fileFields - setOf("\$schema", "script", "block", "drawWithoutAmmo", "properties"))
         assertTrue(ItemFile.STACK_FIELDS.all { it in itemFields })
     }
 }

@@ -25,6 +25,7 @@ import dev.netherforge.plugin.platform.DropsAnswer
 import dev.netherforge.plugin.platform.EntityTag
 import dev.netherforge.plugin.platform.GameEvents
 import dev.netherforge.plugin.platform.ItemData
+import dev.netherforge.plugin.platform.ItemView
 import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.platform.MenuClick
 import dev.netherforge.plugin.platform.PickAnswer
@@ -59,6 +60,12 @@ class ServerEvents internal constructor(private val runtime: NetherForgeRuntime)
     override val game: GameEvents = RuntimeGameEvents(runtime)
 
     override fun tick() = runtime.tick()
+
+    override fun itemRendered(stack: ItemData): ItemData = items.render(stack)
+
+    override fun itemViewing(reference: String?): Boolean = running && items.viewing(reference)
+
+    override fun itemViewed(player: UUID, stack: ItemData): ItemView? = if (running) items.view(player, stack) else null
 
     /** A player's event with [item]: heard first by its project item's [itemEvent] handlers, when it's a stack of one. */
     private fun <P : LuaEvent> itemEvent(

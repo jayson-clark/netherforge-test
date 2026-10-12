@@ -22,6 +22,7 @@
     "@modelcontextprotocol/sdk": "^1.32.0",
     "@netherforge/api": "workspace:*",
     "@netherforge/format": "workspace:*",
+    "@netherforge/models": "workspace:*",
     "@netherforge/terrain-preview": "workspace:*",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",

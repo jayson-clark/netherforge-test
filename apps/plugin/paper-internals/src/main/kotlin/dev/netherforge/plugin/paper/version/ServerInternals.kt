@@ -4,6 +4,7 @@ import dev.netherforge.plugin.paper.WorldStorage
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.Mob
 import net.minecraft.world.entity.ai.goal.GoalSelector
+import net.minecraft.world.item.ItemStack
 import org.bukkit.WorldCreator
 
 /**
@@ -38,4 +39,7 @@ internal interface ServerInternals {
 
     /** Tells [player] alone the world clock [clock] is at [ticks], not running. Nothing for a clock the server hasn't. */
     fun sendClock(player: ServerPlayer, clock: String, ticks: Long)
+
+    /** [stack] as a Bukkit stack that is the very stack (no copy): `asCraftMirror`, named `asBukkitMirror` from 26.3. */
+    fun mirror(stack: ItemStack): org.bukkit.inventory.ItemStack
 }

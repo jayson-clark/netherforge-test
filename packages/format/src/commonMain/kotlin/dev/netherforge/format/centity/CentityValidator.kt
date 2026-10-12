@@ -52,6 +52,66 @@ object CentityValidator {
         validateAnimations(file, sink)
         file.script?.let { Rules.script(it, "$.script", sink, files) }
         file.spawning?.let { validateSpawning(it, sink, game) }
+        file.body?.let { validateBody(it, sink) }
+        file.health?.let { validateHealth(file, it, sink) }
+    }
+
+    private fun validateHealth(file: CentityFile, health: HealthDef, sink: ProblemSink) {
+        if (!(health.max > 0) || !health.max.isFinite()) {
+            sink.report(ProblemCodes.CENTITY_HEALTH, "max must be more than 0", "$.health.max")
+        }
+        val bar = health.bar ?: return
+        val segments = bar.segments
+        if (segments != null && segments !in 1..ResolvedHealth.MAX_SEGMENTS) {
+            sink.report(ProblemCodes.CENTITY_HEALTH, "segments must be 1 to ${ResolvedHealth.MAX_SEGMENTS}", "$.health.bar.segments")
+        }
+        if (bar.showTicks != null && bar.showTicks < 0) {
+            sink.report(ProblemCodes.CENTITY_HEALTH, "showTicks can't be below 0", "$.health.bar.showTicks")
+        }
+        if (bar.glyph != null && bar.glyph.isEmpty()) sink.report(ProblemCodes.CENTITY_HEALTH, "glyph can't be empty", "$.health.bar.glyph")
+        val own = file.nodes[ResolvedHealth.BAR_NODE]
+        if (own != null && own.display !is TextDisplay) {
+            sink.report(
+                ProblemCodes.CENTITY_HEALTH,
+                "The node \"${ResolvedHealth.BAR_NODE}\" draws the health bar, so it must be a text display",
+                "${nodePath(ResolvedHealth.BAR_NODE)}.display"
+            )
+        }
+    }
+
+    private fun validateBody(body: BodyDef, sink: ProblemSink) {
+        val at = "$.body"
+        for ((field, value, most) in listOf(
+            Triple("width", body.width, ResolvedBody.MAX_WIDTH),
+            Triple("height", body.height, ResolvedBody.MAX_HEIGHT)
+        )) {
+            if (value != null && (value <= 0 || value > most)) {
+                sink.report(
+                    ProblemCodes.CENTITY_BODY_SIZE,
+                    "$field must be more than 0 and at most ${CanonicalJson.formatNumber(most.toString())} blocks",
+                    "$at.$field"
+                )
+            }
+        }
+        for ((field, value) in listOf("drag" to body.drag, "liquidDrag" to body.liquidDrag, "bounce" to body.bounce)) {
+            if (value != null && (value < 0 || value > 1)) {
+                sink.report(ProblemCodes.CENTITY_BODY_RANGE, "$field is clamped to between 0 and 1", "$at.$field")
+            }
+        }
+        for ((field, value) in listOf(
+            "maxFallSpeed" to body.maxFallSpeed,
+            "liquidGravity" to body.liquidGravity,
+            "acceleration" to body.acceleration,
+            "airAcceleration" to body.airAcceleration,
+            "friction" to body.friction,
+            "stepHeight" to body.stepHeight
+        )) {
+            if (value != null &&
+                value < 0
+            ) {
+                sink.report(ProblemCodes.CENTITY_BODY_RANGE, "A negative $field is treated as zero", "$at.$field")
+            }
+        }
     }
 
     private fun validateSpawning(spawning: SpawningDef, sink: ProblemSink, game: GameData?) {
@@ -178,9 +238,30 @@ object CentityValidator {
     }
 
     private fun validateContent(name: String, node: NodeDef, sink: ProblemSink, game: GameData?) {
+        node.rope?.let { validateRope(name, node, it, sink) }
         node.display?.let { validateDisplay(name, it, sink, game) }
         node.hitbox?.let { validateHitbox(name, node, it, sink) }
         node.physics?.let { validatePhysics(name, it, sink) }
+    }
+
+    private fun validateRope(name: String, node: NodeDef, rope: RopeDef, sink: ProblemSink) {
+        val at = "${nodePath(name)}.rope"
+        if (rope.links !in 1..RopeDef.MAX_LINKS) {
+            sink.report(ProblemCodes.CENTITY_ROPE, "links must be 1 to ${RopeDef.MAX_LINKS}", "$at.links")
+        }
+        rope.linkLength?.let {
+            if (it <= 0 || it > RopeDef.MAX_LINK_LENGTH) {
+                sink.report(
+                    ProblemCodes.CENTITY_ROPE,
+                    "linkLength must be more than 0 and at most ${CanonicalJson.formatNumber(RopeDef.MAX_LINK_LENGTH.toString())} blocks",
+                    "$at.linkLength"
+                )
+            }
+        }
+        if (node.display == null) sink.report(ProblemCodes.CENTITY_ROPE, "a rope needs a display: what each link draws", at)
+        if (node.hitbox != null || node.physics != null) {
+            sink.report(ProblemCodes.CENTITY_ROPE, "a rope can't have a hitbox or physics: it's laid by the server", at)
+        }
     }
 
     private fun validateDisplay(name: String, display: DisplayDef, sink: ProblemSink, game: GameData?) {

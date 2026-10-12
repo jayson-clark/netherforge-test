@@ -21,6 +21,7 @@ import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.platform.RecipeOps
 import dev.netherforge.plugin.session.ProjectSession
+import dev.netherforge.plugin.world.StatSheets
 import kotlinx.serialization.json.JsonPrimitive
 import java.util.UUID
 
@@ -55,6 +56,33 @@ internal class PlayerImpl(private val session: ProjectSession) : PlayerApi {
     private fun text(value: Double) = if (value == Math.floor(value) && value.isFinite()) value.toLong().toString() else value.toString()
 
     /** Looked up every time: a player can come back with another name. */
+    private val statCalls by lazy { StatCalls(session) }
+
+    override fun stat(self: LuaHandle.Player, name: String): Double =
+        statCalls.stat(self.uuidOrNull()?.let(StatSheets.Holder::Player), name)
+
+    override fun stats(self: LuaHandle.Player): Map<String, Double> = statCalls.stats(self.uuidOrNull()?.let(StatSheets.Holder::Player))
+
+    override fun modifiers(self: LuaHandle.Player, source: String): Map<String, Double>? =
+        statCalls.modifiers(self.uuidOrNull()?.let(StatSheets.Holder::Player), source)
+
+    override fun setModifiers(self: LuaHandle.Player, source: String, modifiers: Map<String, Double>?): Boolean =
+        statCalls.setModifiers(self.uuidOrNull()?.let(StatSheets.Holder::Player), source, modifiers)
+
+    override fun addBuff(self: LuaHandle.Player, buff: String, ticks: Long): Boolean =
+        statCalls.addBuff(self.uuidOrNull()?.let(StatSheets.Holder::Player), buff, ticks)
+
+    override fun removeBuff(self: LuaHandle.Player, buff: String): Boolean =
+        statCalls.removeBuff(self.uuidOrNull()?.let(StatSheets.Holder::Player), buff)
+
+    override fun hasBuff(self: LuaHandle.Player, buff: String): Boolean =
+        statCalls.hasBuff(self.uuidOrNull()?.let(StatSheets.Holder::Player), buff)
+
+    override fun buffTicks(self: LuaHandle.Player, buff: String): Long? =
+        statCalls.buffTicks(self.uuidOrNull()?.let(StatSheets.Holder::Player), buff)
+
+    override fun buffs(self: LuaHandle.Player): List<ActiveBuff> = statCalls.buffs(self.uuidOrNull()?.let(StatSheets.Holder::Player))
+
     override fun name(self: LuaHandle.Player): String =
         self.uuidOrNull()?.let(players::get)?.name ?: players.known(self.id)?.name ?: self.id
 
@@ -323,6 +351,12 @@ internal class PlayerImpl(private val session: ProjectSession) : PlayerApi {
         self.uuidOrNull()?.let { session.platform.menus.viewing(it) }?.let { session.menus.windowOf(it) }
 
     override fun menu(self: LuaHandle.Player): LuaHandle.Menu? = window(self)?.let { LuaHandle.Menu(it.id) }
+
+    override fun refreshItems(self: LuaHandle.Player): Boolean {
+        val uuid = online(self) ?: return false
+        session.items.refreshView(uuid)
+        return true
+    }
 
     override fun closeMenu(self: LuaHandle.Player): Boolean {
         val window = window(self) ?: return false
@@ -597,6 +631,12 @@ internal class PlayerImpl(private val session: ProjectSession) : PlayerApi {
     }
 
     override fun data(self: LuaHandle.Player): Any? = session.data.table(ScriptData.Owner.Player(anyone(self)), "player ${name(self)}")
+
+    // A table made before they left is still theirs until their `player_quit` handlers are done.
+    override fun session(self: LuaHandle.Player): Any? {
+        val uuid = self.uuidOrNull() ?: return null
+        return session.sessionTables.existing(uuid) ?: online(self)?.let(session.sessionTables::table)
+    }
 
     private companion object {
         /** Who a ban says made it when the script doesn't. */

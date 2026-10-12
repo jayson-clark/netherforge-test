@@ -17,6 +17,7 @@ export const NAME_ALIASES: Record<NameKind, string> = {
   block: 'BlockId',
   recipe: 'RecipeId',
   loot_table: 'LootTableId',
+  buff: 'BuffId',
   advancement: 'AdvancementId',
   animation: 'AnimationName',
   node: 'NodeName',

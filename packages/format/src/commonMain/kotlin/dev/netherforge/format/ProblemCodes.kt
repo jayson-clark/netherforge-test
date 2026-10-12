@@ -83,6 +83,7 @@ object ProblemCodes {
     private const val TERRAIN = "format/terrain.md"
     private const val BIOME = "format/biome.md"
     private const val SKY = "format/sky.md"
+    private const val BUFF = "format/buff.md"
     private const val DATAPACK = "format/datapack.md"
     private const val DIMENSION_TYPE = "format/dimension-type.md"
     private const val RESOURCE_PACK = "format/resource-pack.md"
@@ -111,6 +112,12 @@ object ProblemCodes {
         error("project.feature", PROJECT, "Something the project uses arrived in a newer Minecraft than `minecraft` names.")
     val PROJECT_NAME = warning("project.name", PROJECT, "The project has no name.")
     val PROJECT_WORLD_NAME = error("project.world-name", PROJECT, "A name in `managedWorlds` or `worlds` isn't a world name.")
+    val PROJECT_WORLD_RULE =
+        error(
+            "project.world-rule",
+            PROJECT,
+            "A world's `gameRules` names no rule id, or gives one a value that isn't true, false or a whole number."
+        )
     val PROJECT_WORLD_SPAWN = error("project.world-spawn", PROJECT, "A world's spawn limit or interval in `worlds` is below 0.")
     val PROJECT_WORLD_HEIGHT =
         error(
@@ -166,6 +173,7 @@ object ProblemCodes {
     val REFERENCE_ITEM = error("reference.item", REFERENCES, "A reference names a project item that doesn't exist.")
     val REFERENCE_DIALOG = error("reference.dialog", REFERENCES, "A reference names a dialog that doesn't exist.")
     val REFERENCE_LOOT_TABLE = error("reference.loot-table", REFERENCES, "A reference names a loot table that doesn't exist.")
+    val REFERENCE_BUFF = error("reference.buff", REFERENCES, "A reference names a buff that doesn't exist.")
     val REFERENCE_ADVANCEMENT = error("reference.advancement", REFERENCES, "A reference names an advancement that doesn't exist.")
     val REFERENCE_BLOCK = error("reference.block", REFERENCES, "A reference names a project block that doesn't exist.")
     val REFERENCE_CENTITY = error("reference.centity", REFERENCES, "A reference names a centity that doesn't exist.")
@@ -298,6 +306,18 @@ object ProblemCodes {
     val CENTITY_PHYSICS_RANGE = warning("centity.physics-range", CENTITY, "A physics value outside 0 to 1 is clamped.")
     val CENTITY_PHYSICS_STUCK = warning("centity.physics-stuck", CENTITY, "A body's `maxSpeed` is 0, so it never moves.")
     val CENTITY_PHYSICS_FALLS = warning("centity.physics-falls", CENTITY, "A body collides with nothing, so nothing stops it falling.")
+    val BUFF_COLOR = error("buff.color", BUFF, "A buff's `color` isn't `#rrggbb`.")
+    val BUFF_STAT = error("buff.stat", BUFF, "A buff's `stats` has a name that isn't one, or a value that isn't a number.")
+    val BUFF_TICKS = error("buff.ticks", BUFF, "A buff's `maxTicks` is below 1.")
+    val CENTITY_HEALTH = error("centity.health", CENTITY, "A centity's `health` has a value it can't have.")
+    val CENTITY_ROPE =
+        error(
+            "centity.rope",
+            CENTITY,
+            "A rope node's `links` or `linkLength` is out of range, or it has no display, or has a hitbox or physics."
+        )
+    val CENTITY_BODY_SIZE = error("centity.body-size", CENTITY, "A `body`'s `width` or `height` isn't positive, or is too big.")
+    val CENTITY_BODY_RANGE = warning("centity.body-range", CENTITY, "A `body` value out of its range is clamped.")
     val CENTITY_SPAWNING_WORLD = error("centity.spawning-world", CENTITY, "A world in `spawning.worlds` isn't a usable world name.")
     val CENTITY_SPAWNING_BIOME =
         error("centity.spawning-biome", CENTITY, "A biome or biome tag in `spawning.biomes` isn't one the target version has.")
@@ -398,6 +418,7 @@ object ProblemCodes {
         )
     val RECIPE_KEY =
         error("recipe.key", RECIPE, "A shaped recipe's `key` has a key that isn't one character, or one the pattern doesn't use.")
+    val RECIPE_STATION = error("recipe.station", RECIPE, "A station recipe's `stations` or `stationRange` isn't usable.")
     val RECIPE_INGREDIENTS = error("recipe.ingredients", RECIPE, "A shapeless recipe has no ingredients, or more than 9.")
     val RECIPE_INGREDIENT = error("recipe.ingredient", RECIPE, "An ingredient isn't an item id (other than air) or an item tag.")
     val RECIPE_UNKNOWN_ITEM = error("recipe.unknown-item", RECIPE, "An ingredient names an item the target version doesn't have.")

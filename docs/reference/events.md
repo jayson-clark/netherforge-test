@@ -64,6 +64,8 @@ What `nf.on` listens for.
 | `entity_damage` | [EntityDamageEvent](events.md#entitydamageevent) | yes | Something is hurting an entity (a player included): after the entity's own `damage` handlers. `event:cancel()` stops it; assign `event.amount` to change how much it takes. Writable: `amount`. |
 | `entity_death` | [EntityDeathEvent](events.md#entitydeathevent) |  | An entity died (a player included): after the entity's own `death` handlers, and for a player after `player_death`. Assign `event.drops` and `event.experience` to change what it drops. Writable: `drops`, `experience`. |
 | `entity_spawn` | [EntitySpawnEvent](events.md#entityspawnevent) | yes | An entity is coming into a world (not a player joining, and never the entities centities are drawn with): after the world's own `entity_spawn` handlers. `event:cancel()` stops it. |
+| `world_dusk` | [DaylightEvent](events.md#daylightevent) |  | Night fell in a world: its time of day went from day (23000 to 12999) into night (13000 to 22999), by the clock or by `/time set`. After the world's own `dusk` handlers. |
+| `world_dawn` | [DaylightEvent](events.md#daylightevent) |  | Day broke in a world: its time of day went from night (13000 to 22999) into day (23000 to 12999), by the clock or by `/time set`. After the world's own `dawn` handlers. |
 | `player_input` | [PlayerInputEvent](events.md#playerinputevent) |  | A player's movement keys changed: what they hold down now, as their game sends it (forward, back, left, right, jump, sneak, sprint), whether or not they can move. For steering something they ride or controlling a centity. The server only watches input while something listens, so it costs nothing otherwise. |
 | `player_change_slot` | [PlayerChangeSlotEvent](events.md#playerchangeslotevent) | yes | A player picked another hotbar slot: a number key or the scroll wheel. `event:cancel()` keeps the slot they had. |
 | `player_swing` | [PlayerSwingEvent](events.md#playerswingevent) | yes | A player swung an arm: every left click, on a block, an entity or the air, and some right clicks. The one way to hear a left click on the air. `event:cancel()` stops others seeing the swing, but not what the click does. |
@@ -125,6 +127,8 @@ What `nf.on` listens for.
 | `furnace_smelt` | [FurnaceSmeltEvent](events.md#furnacesmeltevent) | yes | A furnace, smoker or blast furnace finished smelting one item. `event:cancel()` stops it: the item stays unsmelted. Assign `event.result` to make something else. After the world's own `furnace_smelt` handlers. Writable: `result`. |
 | `server_list_ping` | [ServerListPingEvent](events.md#serverlistpingevent) | yes | Someone's server list is asking about the server: what it says, how many are on and how many fit. `event:cancel()` doesn't answer, so the server shows as offline to them. The ping waits on the main thread for the handlers (at most two seconds, then it's answered as it was), so keep them quick. The server only waits while something listens. Writable: `description`, `online`, `max_players`, `hide_players`. |
 | `centity_click` | [ClickEvent](events.md#clickevent) |  | A player clicked any centity: the end of a click's path, after the clicked node, the nodes above it and the centity itself, unless one of them called `event:stop()`. |
+| `recipe_craft` | [RecipeCraftEvent](events.md#recipecraftevent) |  | `nf.recipes.craft` is making a `station` recipe once: its materials are taken, and `event.result` is about to be given. Assign `event.result` to give something else (the same item with a rolled prefix, a stack of a different size). Heard once for each making, so each gets its own; while nobody listens, the makings are given in stacks. Writable: `result`. |
+| `item_view` | [ItemViewEvent](events.md#itemviewevent) |  | Any stack is being sent to one player's game (their inventory, a window they have open, their cursor): after its project item's own `view` handlers, for a stack of one, and for every other stack too. Assign `event.display_name` and `event.lore` to change how it looks to `event.player` alone; nothing the server keeps changes. While nobody listens, stacks are sent as they are; while someone does, every stack sent is worked out here first, so prefer an item's own `view` when only some items change. Writable: `display_name`, `lore`. |
 | `centity_natural_spawn` | [CentityNaturalSpawnEvent](events.md#centitynaturalspawnevent) | yes | A centity is about to appear by itself, from the `spawning` block of its `centity.json`: once for each one of a group, before it exists. `event:cancel()` refuses it (it doesn't count against anything, and the spawner tries again later); assign `event.location` to move it. It is asked after the spawner has checked the place against the centity's rules, and before the centity's own `spawn`. Writable: `location`. |
 | `menu_open` | [MenuEvent](events.md#menuevent) |  | Someone opened any menu window: after that window's own `open` handlers. |
 | `menu_close` | [MenuEvent](events.md#menuevent) |  | Someone closed any menu window: after that window's own `close` handlers. |
@@ -195,6 +199,14 @@ nf.on("entity_damage", function(event)
 end)
 ```
 
+### nf world_dusk
+
+```lua
+nf.on("world_dusk", function(event)
+  log("night falls over", event.world:name())
+end)
+```
+
 ### nf player_input
 
 ```lua
@@ -222,6 +234,28 @@ end)
 nf.on("server_list_ping", function(event)
   event.description = "<gold>Arena night</gold>\n<gray>" .. event.online .. " playing"
   event.max_players = event.online + 1
+end)
+```
+
+### nf recipe_craft
+
+```lua
+nf.on("recipe_craft", function(event)
+  if event.result.item == "copper_sword" then
+    local sword = event.result
+    sword.data = { prefix = "Sharp" }
+    event.result = nf.items.create("copper_sword", sword)
+  end
+end)
+```
+
+### nf item_view
+
+```lua
+nf.on("item_view", function(event)
+  if event.player:menu() and event.item.kind == "minecraft:diamond" then
+    event.display_name = "<aqua>Diamond <gray>(sells for 50)"
+  end
 end)
 ```
 
@@ -260,7 +294,18 @@ What [Centity](centity.md) listens for.
 | `animation_end` | [AnimationEvent](events.md#animationevent) |  | An animation reached its end: a `once` clip has finished, a `hold` clip is holding its last pose. Looping clips never end. |
 | `chunk_load` | [CentityEvent](events.md#centityevent) |  | Its chunk came back into memory (someone came near), so it's ticking again. |
 | `chunk_unload` | [CentityEvent](events.md#centityevent) |  | Its chunk was unloaded (everyone went away): it stops ticking until `chunk_load`. Its handlers stay. |
+| `hit` | [FlightHitEvent](events.md#flighthitevent) | yes | It's flying (`launch`) and its path touched something it can hit: a centity's hitbox, a player or another entity, in the order it meets them, each once (or again after `rehit` ticks). `event:cancel()` lets it pass through as if it weren't there, without using up a `pierce`. Otherwise it goes on through only while it has `pierce` left; past that, this is where it ends (`flight_end`, `"hit"`). |
+| `bounce` | [FlightBlockEvent](events.md#flightblockevent) |  | It's flying with `bounce` and came off a block: `event.normal` is the face it hit, `event.speed` how fast it was going into it. |
+| `stick` | [FlightBlockEvent](events.md#flightblockevent) |  | It's flying with `stick` and stuck in a block: it stays there, its flight over but not ended, until its `lifetime` is up. |
+| `flight_end` | [FlightEndEvent](events.md#flightendevent) |  | Its flight ended: it hit something with no `pierce` left (`"hit"`), met a block it neither bounces off nor sticks in (`"block"`), ran out of `lifetime` (`"lifetime"`), reached a chunk that isn't loaded (`"unloaded"`), or a script stopped it (`"stopped"`). Then, unless `remove_on_end` is `false`, it's removed: its `remove` handlers hear it next. |
+| `damage` | [CentityDamageEvent](events.md#centitydamageevent) | yes | It's about to lose health to `centity:damage`: assign `event.amount` to change how much (a defence, a weakness), or `event:cancel()` it (a moment it can't be hurt). Its health goes down by what's left, its bar shows, and at 0 it dies (`death`). Writable: `amount`. |
+| `death` | [CentityDeathEvent](events.md#centitydeathevent) |  | Its health reached 0. Then, unless its `health` says `removeOnDeath: false`, it's removed: its `remove` handlers hear it next. `event.source` and `event.cause` are what dealt the last blow. |
+| `land` | [CentityLandEvent](events.md#centitylandevent) |  | Its `body` came down onto something after falling (or jumping): once, as it lands. `event.speed` is how fast it was falling, for fall damage or a thud. |
+| `bump` | [CentityBumpEvent](events.md#centitybumpevent) |  | Its `body` ran into something it didn't land on: a wall, or a ceiling. Once each tick it does, with the face's `normal` (pointing back at it) and how fast it was going into it. |
+| `touch` | [TouchEvent](events.md#touchevent) |  | Its hitboxes started touching something's: another centity's, a player's or another entity's (each shown node's boxes, as `world:overlap_box` sees them). Once when they start touching, and again only after they've come apart. Worked out each tick only for centities something listens to this on, so a crowd nobody listens to costs nothing. Both centities hear it when two touch, each with the other in `event.other`. |
 | `path_end` | [CentityPathEndEvent](events.md#centitypathendevent) |  | It stopped walking where `move_to` sent it: it got there (to the end of its path, or within 2 blocks of what it went after), or gave up (no way further, its way blocked with no other way round, or what it went after has gone or left its world). Not after `stop_pathing`, a new `move_to`, `teleport` or a reload of its centity. |
+| `buff_add` | [BuffEvent](events.md#buffevent) | yes | A buff is about to take hold (`add_buff`): assign `event.ticks` to change how long, or `event:cancel()` it (one it can't take). Not heard when it's `blockedBy` another. Writable: `ticks`. |
+| `buff_end` | [BuffEndEvent](events.md#buffendevent) |  | A buff ended: it ran out (`"expired"`), a script took it away (`"removed"`), or another buff cured it (`"cured"`). |
 
 ### centity spawn
 
@@ -289,12 +334,86 @@ this:on("click", function(event)
 end)
 ```
 
+### centity hit
+
+```lua
+this:on("hit", function(event)
+  if event.target then
+    event.target:emit("game:struck", { damage = 4 })
+  end
+end)
+```
+
+### centity flight_end
+
+```lua
+this:on("flight_end", function(event)
+  this:world():explode(event.position, 2)
+end)
+```
+
+### centity damage
+
+```lua
+this:on("damage", function(event)
+  event.amount = math.max(1, event.amount - 4) -- armour
+end)
+```
+
+### centity death
+
+```lua
+this:on("death", function(event)
+  nf.loot.roll("slime", { location = this:location() })
+end)
+```
+
+### centity land
+
+```lua
+this:on("land", function(event)
+  if event.speed > 12 then
+    this:emit("game:hurt", { amount = event.speed - 12 })
+  end
+end)
+```
+
+### centity bump
+
+```lua
+this:on("bump", function(event)
+  if event.normal.y == 0 and this:is_on_ground() then
+    this:jump(1.2)
+  end
+end)
+```
+
+### centity touch
+
+```lua
+this:on("touch", function(event)
+  if event.other then
+    event.other:emit("game:bumped", { by = this })
+  end
+end)
+```
+
 ### centity path_end
 
 ```lua
 this:on("path_end", function(event)
   if not event.reached then
     this:move_to(vec3(0, 64, 0))
+  end
+end)
+```
+
+### centity buff_end
+
+```lua
+player:on("buff_end", function(event)
+  if event.buff == "ironskin" then
+    event.player:send_message("<gray>Your skin softens.")
   end
 end)
 ```
@@ -449,6 +568,18 @@ What [Player](player.md) listens for.
 | `prepare_smithing` | [PlayerPrepareSmithingEvent](events.md#playerpreparesmithingevent) |  | What is in a smithing table changed, and the game is working out the result. Assign `event.result` to make something else, or `nil` for nothing. Only this player's: heard before `nf.on("player_prepare_smithing")`, with the same event, so `event:stop()` keeps it from there. Bubbles. Writable: `result`. |
 | `prepare_grindstone` | [PlayerPrepareGrindstoneEvent](events.md#playerpreparegrindstoneevent) |  | What is in a grindstone changed, and the game is working out the result. Assign `event.result` to make something else, or `nil` for nothing. Only this player's: heard before `nf.on("player_prepare_grindstone")`, with the same event, so `event:stop()` keeps it from there. Bubbles. Writable: `result`. |
 | `enchant_item` | [PlayerEnchantItemEvent](events.md#playerenchantitemevent) | yes | A player is enchanting an item at an enchanting table. `event:cancel()` stops it: nothing is enchanted or spent. Assign `event.cost` to change how many levels it takes. Only this player's: heard before `nf.on("player_enchant_item")`, with the same event, so `event:stop()` keeps it from there. Bubbles. Writable: `cost`. |
+| `buff_add` | [BuffEvent](events.md#buffevent) | yes | A buff is about to take hold (`add_buff`): assign `event.ticks` to change how long, or `event:cancel()` it (one it can't take). Not heard when it's `blockedBy` another. Writable: `ticks`. |
+| `buff_end` | [BuffEndEvent](events.md#buffendevent) |  | A buff ended: it ran out (`"expired"`), a script took it away (`"removed"`), or another buff cured it (`"cured"`). |
+
+### player buff_end
+
+```lua
+player:on("buff_end", function(event)
+  if event.buff == "ironskin" then
+    event.player:send_message("<gray>Your skin softens.")
+  end
+end)
+```
 
 ## Events on World
 
@@ -459,6 +590,8 @@ What [World](world.md) listens for.
 | `block_break` | [BlockBreakEvent](events.md#blockbreakevent) | yes | A player is breaking a block in this world: before `nf.on("block_break")`, with the same event, so `event:cancel()` here stops it and `event:stop()` keeps it from `nf`. Assign `event.drops` and `event.experience` to change what it drops. Bubbles. Writable: `drops`, `experience`. |
 | `block_place` | [BlockPlaceEvent](events.md#blockplaceevent) | yes | A player is placing a block in this world: before `nf.on("block_place")`, with the same event. Bubbles. |
 | `entity_spawn` | [EntitySpawnEvent](events.md#entityspawnevent) | yes | An entity is coming into this world: before `nf.on("entity_spawn")`, with the same event, so `event:cancel()` here stops it and `event:stop()` keeps it from `nf`. Bubbles. |
+| `dusk` | [DaylightEvent](events.md#daylightevent) |  | Night fell here: the time of day went from day (23000 to 12999) into night (13000 to 22999), by the clock or by `/time set`. Heard before `nf.on("world_dusk")`, with the same event, so `event:stop()` keeps it from there. The runtime looks at the clock every tick, and only while something listens; a jump from one night to the next (a whole day skipped) is no change, so nothing is heard. Bubbles. |
+| `dawn` | [DaylightEvent](events.md#daylightevent) |  | Day broke here: the time of day went from night (13000 to 22999) into day (23000 to 12999), by the clock or by `/time set` (sleeping through the night too). Heard before `nf.on("world_dawn")`, with the same event, so `event:stop()` keeps it from there. Bubbles. |
 | `block_explode` | [ExplodeEvent](events.md#explodeevent) | yes | A block exploded: a bed in the nether or the end, a respawn anchor charged away from the overworld. `event:cancel()` stops the explosion breaking anything; assign `event.breaks_blocks = false` to keep every block standing but still hurt what is near, or `event.yield` to change how much of what breaks drops. In this world: heard before `nf.on("block_explode")`, with the same event, so `event:stop()` keeps it from there. Bubbles. Writable: `breaks_blocks`, `yield`. |
 | `block_ignite` | [BlockIgniteEvent](events.md#blockigniteevent) | yes | A block is catching fire: flint and steel, a fire charge, lava, lightning, fire spreading, an explosion. `event:cancel()` keeps it from burning. In this world: heard before `nf.on("block_ignite")`, with the same event, so `event:stop()` keeps it from there. Bubbles. |
 | `block_burn` | [BlockBurnEvent](events.md#blockburnevent) | yes | A block is burning away in a fire. `event:cancel()` keeps it there (it may still catch fire again). In this world: heard before `nf.on("block_burn")`, with the same event, so `event:stop()` keeps it from there. Bubbles. |
@@ -498,6 +631,16 @@ end)
 nf.worlds.default():on("entity_spawn", function(event)
   if event.entity:kind() == "minecraft:phantom" then
     event:cancel()
+  end
+end)
+```
+
+### world dusk
+
+```lua
+nf.worlds.default():on("dusk", function(event)
+  for _, player in ipairs(event.world:players()) do
+    player:send_message("<gray>Night falls.")
   end
 end)
 ```
@@ -665,6 +808,8 @@ What [ProjectItem](projectitem.md) listens for.
 | `hit` | [EntityDamageEvent](events.md#entitydamageevent) | yes | A player is attacking an entity with a stack of this item in their main hand: `event.attacker` is the player, `event.entity` who is hit, `event.amount` the damage (writable). Read the stack with `event.attacker:held_item()`. Then the entity's own `damage`, then `nf.on("entity_damage")`, with the same event. Bubbles. Writable: `amount`. |
 | `break_block` | [BlockBreakEvent](events.md#blockbreakevent) | yes | A player is breaking a block with a stack of this item in their main hand (read it with `event.player:held_item()`). Then the world's own `block_break`, then `nf.on("block_break")`, with the same event; assign `event.drops` and `event.experience` to change what it drops. Bubbles. Writable: `drops`, `experience`. |
 | `drop` | [PlayerItemEvent](events.md#playeritemevent) | yes | A player is dropping a stack of this item (`event.item`). Then the player's own `drop_item`, then `nf.on("player_drop_item")`, with the same event, so `event:cancel()` here cancels it for all of them and `event:stop()` keeps it from them. Bubbles. |
+| `render` | [ItemRenderEvent](events.md#itemrenderevent) |  | The server is making a stack of this item, or rewriting one to the item's file after it changed: assign `event.display_name` and `event.lore` to give it a name and lore worked out from the stack (its `data`, its count), which the file's can't say: a prefix in the name, stats in the lore. It's heard for every stack `nf.items.create`, `ProjectItem:create` and a loot roll make, and for every stack that takes a changed file's look, so a name worked out here survives the file changing (one set any other way goes back to the file's then). A stack whose `data` a script changes keeps its name until it's made again: hand it to `nf.items.create` with its `data` to work it out anew. Writable: `display_name`, `lore`. |
+| `view` | [ItemViewEvent](events.md#itemviewevent) |  | A stack of this item is being sent to one player's game: their inventory (hotbar, armour and offhand too), a window they have open, the stack on their cursor. Assign `event.display_name` and `event.lore` to change how it looks to `event.player` alone, now: a price while they have a shop open, a hint for their class. Nothing the server keeps changes: not the stack, how it stacks, what's saved, what anyone else sees, nor what scripts read from inventories. Both start as the stack's own (after its `render`), so this adds to them. The game is sent a stack again only when it changes, so call `player:refresh_items()` when what this works out from changes (a menu opening or closing). If a handler fails, the stack is sent as it is. Then `nf.on("item_view")`, with the same event; `event:stop()` keeps it from there. Bubbles. Writable: `display_name`, `lore`. |
 | `pickup` | [PlayerPickupItemEvent](events.md#playerpickupitemevent) | yes | A player is picking up a stack of this item (`event.item`) from the item entity `event.entity`. Then the player's own `pickup_item`, then `nf.on("player_pickup_item")`, with the same event, so `event:cancel()` here cancels it for all of them and `event:stop()` keeps it from them. Bubbles. |
 
 ### projectitem use
@@ -680,6 +825,30 @@ end)
 ```lua
 this:on("hit", function(event)
   event.amount = event.amount * 2
+end)
+```
+
+### projectitem render
+
+```lua
+this:on("render", function(event)
+  local prefix = event.item.data and event.item.data.prefix
+  if prefix then
+    event.display_name = "<green>" .. prefix .. " Copper Sword"
+  end
+end)
+```
+
+### projectitem view
+
+```lua
+this:on("view", function(event)
+  local menu = event.player:menu()
+  if menu and menu:kind() == "shop" then
+    local lore = event.lore or {}
+    lore[#lore + 1] = "<gold>Sells for 5 coins"
+    event.lore = lore
+  end
 end)
 ```
 
@@ -780,6 +949,17 @@ Has the fields and methods of [Event](#event) too.
 | `setting` | `string` | The setting's name, as `netherforge.json` declares it. |
 | `value` | `any` | What it is now, as `nf.config` gives it. |
 | `previous` | `any` | What it was. |
+
+## DaylightEvent
+
+Night is falling or day is breaking in a world.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `world` | `World` | The world. |
+| `time_of_day` | `integer` | The world's time of day when it was seen, in ticks, as `world:time_of_day()` says: 13000 or a little past at dusk, 23000 or a little past at dawn, or wherever `/time set` put it. |
 
 ## TickEvent
 
@@ -1722,6 +1902,7 @@ How a centity walks where `centity:move_to` sends it. A key that isn't one of th
 | `height` | `number?` | How tall a gap it needs, in blocks: more than 0, at most 16. Default: its hitboxes' height (1 without hitboxes). |
 | `step_height` | `number?` | Walking: how high a step it goes straight up, in blocks: at least 0. Default 1, a block, as a mob jumps one. |
 | `max_drop` | `number?` | Walking: how far down it will drop off an edge, in blocks: at least 0. Default 3. |
+| `open_doors` | `boolean?` | Walking: goes through the game's wooden doors and fence gates (`#minecraft:wooden_doors`, `#minecraft:fence_gates`), opening each as it comes to it and shutting it again once it's through (one it found open stays open). Iron doors stay in its way. Default `false`. |
 | `range` | `number?` | How far from where it sets off it looks for a way, in blocks: more than 0, at most 128. A target further away than this is `false`. Default 48. One search looks at no more than 4096 places, so a long way round may only take it part of the way. |
 
 ## CentityPathEndEvent
@@ -1734,6 +1915,228 @@ Has the fields and methods of [Event](#event) too.
 | --- | --- | --- |
 | `centity` | `Centity` | The instance. |
 | `reached` | `boolean` | Whether it got there: to the end of its path, within 2 blocks of where it was sent (or of what it went after, which it stops short of); `false` when it gave up. |
+
+## CentitySpawnOptions
+
+How `nf.centities.spawn` spawns one. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `temporary` | `boolean?` | Not saved: its entities aren't kept with their chunk, the server forgets it on a restart, and it's removed when the script that spawned it unloads (a reload of it, or its centity removed), so nothing it made is left behind. What a shot, a damage number or a summoned helper is. `keep()` makes it a normal one. Default `false`. |
+| `lifetime` | `integer?` | Removed this many ticks after it's spawned (its `remove` handlers hear it), loaded or not: at least 1. A centity with a lifetime is temporary too. Default: none. |
+
+## BodySettings
+
+A centity's body, as `centity:body()` gives it and `centity:set_body` takes it: the fields of `centity.json`'s `body`, in Lua spelling. Every field is optional to `set_body`. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `width` | `number?` | Blocks across, square: more than 0, at most 16. |
+| `height` | `number?` | Blocks tall: more than 0, at most 32. |
+| `gravity` | `number?` | Downward acceleration, blocks per second squared. |
+| `max_fall_speed` | `number?` | The fastest it falls, blocks per second. |
+| `drag` | `number?` | Fraction of its speed shed per second in the air, 0 to 1. |
+| `liquid_drag` | `number?` | The same in water or lava. |
+| `liquid_gravity` | `number?` | How much of its gravity pulls it in water or lava: 0 floats, 1 sinks as in air. |
+| `acceleration` | `number?` | How fast it reaches its walk on the ground (or flying), blocks per second squared. |
+| `air_acceleration` | `number?` | The same in the air. |
+| `friction` | `number?` | How fast it slows to a stop on the ground when it isn't walking, blocks per second squared. |
+| `step_height` | `number?` | The tallest step it walks straight up, blocks. |
+| `bounce` | `number?` | 0 stops dead against what it hits, 1 bounces off at full speed. |
+| `fly` | `boolean?` | No gravity: walking steers it in any direction. |
+| `blocks` | `boolean?` | Collides with the world's blocks. |
+
+## LaunchOptions
+
+How `centity:launch` flies it. Everything but `velocity` is optional. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `velocity` | `Vec3` | Blocks per second, along the world's axes. Required. |
+| `gravity` | `number?` | Downward acceleration, blocks per second squared. Default 0: it flies straight. |
+| `gravity_delay` | `integer?` | Ticks it flies straight before gravity takes it, as a thrown knife's first stretch. Default 0. |
+| `drag` | `number?` | Fraction of its speed shed per second, 0 to 1. Default 0. |
+| `radius` | `number?` | How wide its path is swept for hits, as a sphere's radius in blocks; blocks stop its middle. Default 0.1. |
+| `pierce` | `integer?` | How many hits it goes on through before one ends it. Default 0: the first ends it. |
+| `rehit` | `integer?` | Ticks before it can hit the same thing again. Default: it hits each thing once. |
+| `hits` | `QueryOptions?` | What it can hit, as a spatial query's options say (`centities`, `players`, `entities`, `kinds`, `exclude`, `line_of_sight` aside). It never hits itself or its `owner`. Default: everything. |
+| `owner` | `(Entity\|Centity)?` | Who launched it: never hit, and handed to every event. Default none. |
+| `blocks` | `boolean?` | Whether blocks stop it (their collision shapes). Default `true`. |
+| `bounce` | `number?` | Comes off a block instead of ending: the fraction of its speed into the face it keeps, 0 to 1. Default: it doesn't bounce. |
+| `friction` | `number?` | With `bounce`: the fraction of its speed along the face it keeps, 0 to 1. Default 1. |
+| `max_bounces` | `integer?` | With `bounce`: how many it makes before the next block ends it. Default: no end. |
+| `rest_speed` | `number?` | With `bounce`: below this speed, blocks per second, after a bounce off a floor it stops and lies there (a grenade) until its `lifetime` is up. Default 1. |
+| `stick` | `boolean?` | Sticks in the first block it hits (`stick`) instead of ending: it stays there until its `lifetime` is up. Default `false`. |
+| `homing` | `Homing?` | Turns toward the nearest thing it can hit within reach. Default: it doesn't. |
+| `lifetime` | `integer?` | Ticks from launch before it ends (`flight_end`, `"lifetime"`), flying, stuck or lying still. At least 1. Default 600: half a minute. |
+| `aim` | `string?` | A node that's turned every tick so its +Z points the way it flies (an arrow's nose). Default: none is turned. |
+| `remove_on_end` | `boolean?` | Whether it's removed when its flight ends, after `flight_end`. Default `true`. |
+
+## Homing
+
+How a projectile seeks: `LaunchOptions.homing`.
+
+| Field | Type | |
+| --- | --- | --- |
+| `range` | `number` | How far it looks, in blocks. Required. |
+| `turn` | `number?` | The most it turns toward its target, in degrees per second. Default 180. |
+
+## FlightHitEvent
+
+A projectile touched something it can hit: `hit`. Exactly one of `target` and `entity` is set.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity` | The projectile. |
+| `target` | `Centity?` | The centity it hit, or `nil`. |
+| `node` | `Node?` | Which of `target`'s nodes (its hitbox), or `nil`. |
+| `entity` | `Entity?` | The player or entity it hit, or `nil`. |
+| `position` | `Vec3` | Where its middle was when it first touched. |
+| `velocity` | `Vec3` | How fast it was going, blocks per second. |
+| `owner` | `(Entity\|Centity)?` | Who launched it, or `nil`. |
+
+## FlightBlockEvent
+
+A projectile met a block it bounces off (`bounce`) or sticks in (`stick`).
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity` | The projectile. |
+| `block` | `Block` | The block. |
+| `position` | `Vec3` | Where it met it. |
+| `normal` | `Vec3` | The direction straight out of the face it met. |
+| `speed` | `number` | How fast it was going into it, blocks per second. |
+| `owner` | `(Entity\|Centity)?` | Who launched it, or `nil`. |
+
+## FlightEndEvent
+
+A projectile's flight ended: `flight_end`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity` | The projectile. |
+| `reason` | `"hit"\|"block"\|"lifetime"\|"unloaded"\|"stopped"` | Why: see `flight_end`. |
+| `position` | `Vec3` | Where it ended. |
+| `target` | `Centity?` | For `"hit"`, the centity it ended on, or `nil`. |
+| `entity` | `Entity?` | For `"hit"`, the player or entity it ended on, or `nil`. |
+| `block` | `Block?` | For `"block"`, the block it ended on, or `nil`. |
+| `normal` | `Vec3?` | For `"block"`, the direction straight out of the face it met, or `nil`. |
+| `owner` | `(Entity\|Centity)?` | Who launched it, or `nil`. |
+
+## CentityDamageOptions
+
+Where damage dealt with `centity:damage` comes from, for its handlers. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `source` | `(Entity\|Centity)?` | Who or what dealt it. |
+| `cause` | `string?` | What kind of damage, in your own words: `"melee"`, `"fire"`. |
+
+## CentityDamageEvent
+
+A centity is about to lose health: `damage`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity` | The centity. |
+| `amount` | `number` | How much it loses: assign to change it. |
+| `source` | `(Entity\|Centity)?` | Who or what dealt it, or `nil`. |
+| `cause` | `string?` | The damage's `cause`, or `nil`. |
+
+## CentityDeathEvent
+
+A centity's health reached 0: `death`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity` | The centity. |
+| `source` | `(Entity\|Centity)?` | What dealt the last blow, or `nil`. |
+| `cause` | `string?` | The last blow's `cause`, or `nil`. |
+
+## CentityLandEvent
+
+A centity's body landed: `land`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity` | The centity. |
+| `speed` | `number` | How fast it was falling as it landed, blocks per second. |
+
+## CentityBumpEvent
+
+A centity's body ran into something: `bump`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity` | The centity. |
+| `normal` | `Vec3` | The direction straight out of the face it hit: `vec3(0, -1, 0)` for a ceiling. |
+| `speed` | `number` | How fast it was going into it, blocks per second. |
+
+## Bounds
+
+A box along the world's axes: `centity:bounds()`.
+
+| Field | Type | |
+| --- | --- | --- |
+| `min` | `Vec3` | Its lowest corner. |
+| `max` | `Vec3` | Its highest corner. |
+
+## TouchEvent
+
+A centity's hitboxes started touching something's: `touch`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity` | The centity that hears it. |
+| `node` | `Node` | Which of its nodes touched (its hitbox). |
+| `other` | `Centity?` | The other centity, or `nil`. |
+| `other_node` | `Node?` | Which of the other centity's nodes it touched, or `nil`. |
+| `entity` | `Entity?` | The player or entity it touched, or `nil`. |
+
+## StretchOptions
+
+How `node:stretch_between` lays a node. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `thickness` | `number?` | Its X and Y scale. Default: as they are. |
+
+## RopeOptions
+
+How `node:rope_between` strings a rope. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `length` | `number?` | How long the rope is, in blocks: shorter than the ends' distance it's taut, longer it sags by its slack. Default: always taut. |
+
+## TweenOptions
+
+A tween for `node:tween`: at least one of `translation`, `rotation` and `scale`. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `translation` | `Vec3?` | Where it ends up, as `set_translation` takes. |
+| `rotation` | `Vec3?` | Degrees, as `set_rotation` takes; not the short way round, so 0 to 360 is a whole turn. |
+| `scale` | `Vec3?` | As `set_scale` takes. |
+| `ticks` | `integer` | How long, 1 or more (each way, with `back`). |
+| `easing` | `string?` | `linear`, `ease_in`, `ease_out`, `ease_in_out` or `step`, as keyframes take. Default `ease_in_out`. |
+| `back` | `boolean?` | Eases back to where it started after, over as many ticks again. Default `false`. |
 
 ## AnimationOptions
 
@@ -1767,6 +2170,128 @@ Fixed light levels a display is drawn with: `node:set_brightness`.
 | --- | --- | --- |
 | `block_light` | `integer?` | Light from blocks (torches, lamps), 0 to 15. Required. |
 | `sky_light` | `integer?` | Light from the sky, 0 to 15. Required. |
+
+## ActiveBuff
+
+A buff someone has now: `buffs()`.
+
+| Field | Type | |
+| --- | --- | --- |
+| `id` | `string` | Its id. |
+| `ticks` | `integer` | Ticks it has left. |
+| `name` | `Text?` | Its file's `name`, or `nil`. |
+| `icon` | `string?` | Its file's `icon`, a glyph (`<pack>/<key>`), or `nil`. |
+| `color` | `string?` | Its file's `color`, or `nil`. |
+| `debuff` | `boolean` | Whether it is one. |
+
+## BuffEvent
+
+A buff is about to take hold: `buff_add`. Exactly one of `player` and `centity` is set.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `buff` | `string` | Its id. |
+| `ticks` | `integer` | How long it will last: assign to change it (at least 1). |
+| `player` | `Player?` | Who gets it, or `nil`. |
+| `centity` | `Centity?` | The centity that gets it, or `nil`. |
+
+## BuffEndEvent
+
+A buff ended: `buff_end`. Exactly one of `player` and `centity` is set.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `buff` | `string` | Its id. |
+| `reason` | `"expired"\|"removed"\|"cured"` | Why: see `buff_end`. |
+| `player` | `Player?` | Who had it, or `nil`. |
+| `centity` | `Centity?` | The centity that had it, or `nil`. |
+
+## RecipeCraftEvent
+
+One making of a `station` recipe by `nf.recipes.craft`: `recipe_craft`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `player` | `Player` | Who it was made for. |
+| `recipe` | `string` | The recipe's id. |
+| `result` | `Item` | What this making gives them: the recipe's result, until a handler assigns another. |
+
+## StationRecipe
+
+A `station` recipe, as `nf.recipes.available` and `nf.recipes.get` give it.
+
+| Field | Type | |
+| --- | --- | --- |
+| `id` | `string` | Its id. |
+| `result` | `Item` | What one making of it gives. |
+| `materials` | `RecipeMaterial[]` | What one making of it takes. |
+| `stations` | `string[]` | The blocks that must be near, as its file names them. |
+| `station_range` | `integer` | How near, in blocks. |
+| `group` | `string?` | Its `group`, or `nil`. |
+| `times` | `integer?` | `nf.recipes.available`: how many times over the player can make it now. `nil` from `nf.recipes.get`. |
+
+## RecipeMaterial
+
+One material of a `station` recipe: exactly one of `item`, `kind` and `tag`, and how many.
+
+| Field | Type | |
+| --- | --- | --- |
+| `item` | `string?` | A project item, by id. |
+| `kind` | `string?` | An item id, `"minecraft:stick"`. |
+| `tag` | `string?` | An item tag, without its `#`. |
+| `count` | `integer` | How many one making takes. |
+
+## RecipeAvailableOptions
+
+What `nf.recipes.available` looks at. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `near` | `Vec3?` | Where its stations are looked for, in the player's world. Default: where they stand. |
+| `stations` | `string[]?` | Stations counted as near whatever the blocks are: a menu that is a crafting station, a station item held. Default none. |
+| `group` | `string?` | Only recipes of this `group`. Default: any. |
+| `all` | `boolean?` | Every station recipe, not only those they can make now: one they can't has `times` 0. Default `false`. |
+
+## RecipeCraftOptions
+
+How `nf.recipes.craft` makes a recipe. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `times` | `integer?` | How many times over, at least 1. Default 1. |
+| `near` | `Vec3?` | Where its stations are looked for. Default: where the player stands. |
+| `stations` | `string[]?` | Stations counted as near whatever the blocks are. |
+
+## ItemViewEvent
+
+A stack is being sent to one player's game, to be shown as this player alone sees it: `view` on a project item, `item_view` on `nf`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `player` | `Player` | Whose game it is sent to. |
+| `item` | `Item` | The real stack, as the server keeps it. Changing this table changes nothing: assign `display_name` and `lore`. |
+| `display_name` | `Text?` | The name this player is shown: the stack's own until a handler assigns another. `nil` for the game's own name. |
+| `lore` | `Text[]?` | The lore lines this player is shown, the same way. `nil` for none. |
+
+## ItemRenderEvent
+
+A stack of a project item is being made, or rewritten to its item's changed file: `render`.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `item` | `Item` | The stack as it is about to be, with its `data` and `count`. Changing this table changes nothing: assign `display_name` and `lore`. |
+| `display_name` | `Text?` | Its name: the file's (or what made it said), until a handler assigns another. `nil` for the game's own name. |
+| `lore` | `Text[]?` | Its lore lines, the same way. `nil` for none. |
 
 ## EntityFilter
 
@@ -1958,12 +2483,26 @@ How far a player is with an advancement, by its criteria's names as the advancem
 
 ## SlotBinding
 
-Which slot of a storage a menu slot shows: `slot:binding()`.
+What a menu slot shows: `slot:binding()`. A slot of a storage (`storage` and `index`), or what a player wears (`player` and `equipment`).
 
 | Field | Type | |
 | --- | --- | --- |
-| `storage` | `Inventory` | The storage (`player:storage`). |
-| `index` | `integer` | Its slot, from 0. |
+| `storage` | `Inventory?` | The storage (`player:storage`). |
+| `index` | `integer?` | The storage's slot, from 0. |
+| `player` | `Player?` | Whose equipment. |
+| `equipment` | `string?` | `head`, `chest`, `legs`, `feet` or `off_hand`. |
+
+## SlotRule
+
+What a menu slot takes (`slot:set_rule`). A stack goes in when it's any of `items`, `kinds`, `property` or `wearable` (or when none is given), and never more of it than `max`. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `items` | `string[]?` | The project's items it takes, by id. |
+| `kinds` | `string[]?` | The game's items it takes, by id or `#tag` (`#minecraft:head_armor`); a project item's stacks never count as their kind. |
+| `property` | `string?` | A project item with this key in its `properties` (and not `false`). |
+| `wearable` | `string?` | What's worn there: `head`, `chest`, `legs`, `feet` or `body`, by its `equipment` slot or, for the game's own items, the slot's armour tag (`#minecraft:head_armor`...). |
+| `max` | `integer?` | The most items it holds: 1 for a ring. Default a full stack. |
 
 ## Item
 
@@ -2413,6 +2952,76 @@ What a ray can hit. A key that isn't one of these is an error.
 | `centities` | `boolean?` | Whether centities' hitboxes stop it. Default `true`. |
 | `fluids` | `boolean?` | Whether water and lava stop it, as solid blocks. Default `false`: it goes through them. |
 
+## FloodOptions
+
+How `world:flood` fills. A block is named as it is in a game block file: an id (`"minecraft:oak_log"`), a `#tag` (`"#minecraft:logs"`) or a project block's id (`"ruby_ore"`), or by what it is: `"solid"` (what players stand on), `"liquid"` (water and lava) or `"passable"` (neither: air, torches, flowers). A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `through` | `string[]` | The blocks it fills: each one it reaches that any of these names. Required. |
+| `except` | `string[]?` | Blocks it doesn't fill even when `through` names them: `{ "#minecraft:doors" }` keeps a room's air from leaking out through a door. Default none. |
+| `directions` | `Vec3[]?` | Which neighbours it goes on to from each block, as offsets of whole blocks (`vec3(0, 1, 0)` is the one above), at most 2 on each axis. Default the six that share a face: `vec3(1, 0, 0)`, `vec3(-1, 0, 0)` and so on. A tree felled up and sideways but never down leaves out every offset with y = -1. |
+| `limit` | `integer?` | The most blocks it fills, at least 1, at most 32,768. Default 4,096. `stopped` is `"limit"` when there was more. |
+| `bounds` | `Bounds?` | `{ min = Vec3, max = Vec3 }`: it never fills a block outside this box (both corners' blocks included), and `stopped` is `"bounds"` when it would have. Default: no box. |
+| `kinds` | `boolean?` | Also answer what each block is (`kinds`, `edge_kinds`): its id without properties (`"minecraft:oak_log"`), or a project block's id. Default `false`. |
+
+## FloodResult
+
+What `world:flood` filled.
+
+| Field | Type | |
+| --- | --- | --- |
+| `positions` | `Vec3[]` | Every block it filled, as its lowest corner (whole numbers), the start first, then outward a step at a time. |
+| `edges` | `Vec3[]` | Every block next to one it filled that it didn't fill (a tree's leaves, a room's walls and door), once each. Not a block in an unloaded chunk or outside its `bounds`. |
+| `kinds` | `string[]?` | With `kinds = true`, what each of `positions` is, in the same order. `nil` otherwise. |
+| `edge_kinds` | `string[]?` | With `kinds = true`, what each of `edges` is, in the same order. `nil` otherwise. |
+| `stopped` | `"limit"\|"unloaded"\|"bounds"?` | Why it didn't fill everything it reaches: `"limit"` (more past its limit), `"unloaded"` (a chunk that isn't loaded, or the world's top or bottom, in its way) or `"bounds"`. `nil` when it filled all of it: a closed room, a whole tree. |
+
+## QueryOptions
+
+What a spatial query (`world:overlap_box`, `overlap_sphere`, `overlap_cone`, `nearest`) finds. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centities` | `boolean?` | Whether it finds centities. Default `true`. |
+| `players` | `boolean?` | Whether it finds players. Default `true`. |
+| `entities` | `boolean?` | Whether it finds entities that aren't players (mobs, dropped items, arrows...). Default `true`. |
+| `kinds` | `string[]?` | Only centities of these kinds (their folder names), and entities of these types (`"minecraft:zombie"`). Default: any. |
+| `exclude` | `(Centity\|Entity)[]?` | What it leaves out: whatever is asking, usually. Default none. |
+| `limit` | `integer?` | At most this many, the nearest. At least 1. Default: all. |
+| `line_of_sight` | `boolean?` | Only what a ray from the query's own point (the middle of a box, the centre of a sphere, a cone's tip, a sweep's start) reaches without a block in the way, aimed at its hitbox's nearest point. Default `false`. |
+
+## SweepOptions
+
+How `world:sweep` moves and what it finds: everything `QueryOptions` takes, and these. A key that isn't one of them is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centities` | `boolean?` | Whether it finds centities. Default `true`. |
+| `players` | `boolean?` | Whether it finds players. Default `true`. |
+| `entities` | `boolean?` | Whether it finds entities that aren't players (mobs, dropped items, arrows...). Default `true`. |
+| `kinds` | `string[]?` | Only centities of these kinds (their folder names), and entities of these types (`"minecraft:zombie"`). Default: any. |
+| `exclude` | `(Centity\|Entity)[]?` | What it leaves out: whatever is asking, usually. Default none. |
+| `limit` | `integer?` | At most this many, the nearest. At least 1. Default: all. |
+| `line_of_sight` | `boolean?` | Only what a ray from the query's own point (the middle of a box, the centre of a sphere, a cone's tip, a sweep's start) reaches without a block in the way, aimed at its hitbox's nearest point. Default `false`. |
+| `radius` | `number?` | The moving sphere's radius, in blocks, at least 0. Default 0: a point. |
+| `blocks` | `boolean?` | Whether blocks stop it (their collision shapes, as `raycast` sees them). Default `true`. A block stops the sphere's middle, not its edge. |
+| `fluids` | `boolean?` | Whether water and lava stop it, as solid blocks. Default `false`. |
+
+## QueryHit
+
+One thing a spatial query found. Exactly one of `centity`, `entity` and `block` is set: a `block` only ends a `world:sweep`.
+
+| Field | Type | |
+| --- | --- | --- |
+| `centity` | `Centity?` | The centity found, or `nil`. |
+| `node` | `Node?` | Which of `centity`'s nodes was nearest (its hitbox), or `nil` for anything else. |
+| `entity` | `Entity?` | The player or entity found, or `nil`. |
+| `block` | `Block?` | The block a `world:sweep` stopped at, or `nil`. |
+| `position` | `Vec3` | Where: for an overlap or `nearest`, the point of the hitbox nearest the query's own point; for a `sweep`, where the sphere's middle is when it first touches (on a block, where it stops). |
+| `distance` | `number` | How far that is from the query's own point; along the way, for a `sweep`. 0 when the point is inside the hitbox. |
+| `normal` | `Vec3?` | For a `sweep`'s block, the unit direction straight out of the face it met: what a bounce reflects off. `nil` otherwise. |
+
 ## RaycastHit
 
 What `world:raycast` hit: where, and what. Exactly one of `block`, `entity` and `centity` is set.
@@ -2426,6 +3035,16 @@ What `world:raycast` hit: where, and what. Exactly one of `block`, `entity` and 
 | `entity` | `Entity?` | The entity it hit, or `nil`. |
 | `centity` | `Centity?` | The centity whose hitbox it hit, or `nil`. |
 | `node` | `Node?` | Which node of `centity` it hit (its hitbox), or `nil` for anything else. |
+
+## BossBarAttachOptions
+
+How `bossbar:attach` ties a bar to a centity. Every key is optional; a key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `range` | `number?` | How near a player must be to see it, in blocks. Default 48. |
+| `health` | `boolean?` | Its progress follows the centity's `health` (when it has any). Default `true`. |
+| `remove_with` | `boolean?` | Removed when the centity is. Default `true`. |
 
 ## BossBarOptions
 
@@ -2459,6 +3078,15 @@ What a HUD bar shows: `hud:bar(name)`.
 | --- | --- | --- |
 | `value` | `number` | How much of it is full, as set. |
 | `max` | `number` | Out of how much. |
+| `segments` | `integer` | How many of its segments are drawn. |
+
+## HudFillOptions
+
+How `hud:fill_bar` draws a bar.
+
+| Field | Type | |
+| --- | --- | --- |
+| `segments` | `integer?` | Draw only this many of the bar's segments, 1 to its own. Default all of them. |
 
 ## SpawnCheck
 
@@ -2652,6 +3280,38 @@ Which noise `nf.random.noise2` and `noise3` give. A key that isn't one of these 
 | --- | --- | --- |
 | `seed` | `integer?` | Which noise: each seed is a different pattern. Default 0. |
 | `scale` | `number?` | What the coordinates are multiplied by first: smaller is smoother and wider (0.05 changes over about 20 blocks). Default 1. |
+
+## TestShownOptions
+
+Where `nf.test.shown` looks. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `menu` | `boolean?` | Whether `slot` is one of the window they have open, numbered from 0 as `menu:slot` numbers them. |
+
+## TestClickOptions
+
+How `nf.test.click` clicks. Every key is optional; a key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `hand` | `"main_hand"\|"off_hand"?` | Which hand clicks, and whose item is used. Default `"main_hand"`. |
+| `block` | `Block?` | The block clicked, which must be in a loaded chunk. Default: none, a click at the air. |
+| `face` | `"up"\|"down"\|"north"\|"south"\|"east"\|"west"?` | Which face of `block` was clicked. Default `"up"`; only with `block`. |
+
+## TestInputKeys
+
+The keys `nf.test.input` holds down: each `true` is held, and one left out (or `false`) isn't. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `forward` | `boolean?` | Forward (W). |
+| `backward` | `boolean?` | Back (S). |
+| `left` | `boolean?` | Left (A). |
+| `right` | `boolean?` | Right (D). |
+| `jump` | `boolean?` | Jump (space). |
+| `sneak` | `boolean?` | Sneak (shift). |
+| `sprint` | `boolean?` | Sprint (control). |
 
 ## RaisedEvent
 

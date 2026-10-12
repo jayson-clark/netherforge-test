@@ -9,6 +9,20 @@
   {
     "severity": "error",
     "file": "netherforge.json",
+    "message": "\"Bad Rule\" isn't a game rule's id (keep_inventory)",
+    "path": "$.worlds.realm.gameRules[\"Bad Rule\"]",
+    "code": "project.world-rule"
+  },
+  {
+    "severity": "error",
+    "file": "netherforge.json",
+    "message": "keep_inventory is true, false or a whole number, as the rule takes",
+    "path": "$.worlds.realm.gameRules.keep_inventory",
+    "code": "project.world-rule"
+  },
+  {
+    "severity": "error",
+    "file": "netherforge.json",
     "message": "spawnLimits.monster is -1: a whole number, 0 or more",
     "path": "$.worlds.arena.spawnLimits.monster",
     "code": "project.world-spawn"

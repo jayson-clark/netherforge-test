@@ -286,11 +286,18 @@ interface NfStructuresApi {
 /** Centity instances: spawning new ones and finding live ones. */
 interface NfCentitiesApi {
     /**
+     * A centity's `properties` from its `centity.json`, without one spawned: what `centity:properties()`
+     * answers for every instance of it. An empty table when the file has none; a centity the project
+     * doesn't have is an error. A new table each call.
+     */
+    fun properties(caller: Caller, kind: String): Any?
+
+    /**
      * Puts a new instance of a centity into the world. Its entities exist, its script's body has run and
      * its `spawn` handlers have heard it by the time this returns. A centity the project doesn't have is
      * an error.
      */
-    fun spawn(caller: Caller, kind: String, locationOrPosition: LocationOrVec3): LuaHandle.Centity?
+    fun spawn(caller: Caller, kind: String, locationOrPosition: LocationOrVec3, options: CentitySpawnOptions?): LuaHandle.Centity?
 
     /**
      * The live centity instance with this id, or `nil` once it's gone. Ids come from `centity:id()` and
@@ -432,13 +439,14 @@ interface NfRecipesApi {
     /**
      * Adds a recipe the server learns at once, sent to everyone online. `definition` says what
      * `recipes/<id>.json` would, in Lua spelling: `type` (`"shaped"`, `"shapeless"`, `"furnace"`,
-     * `"blasting"`, `"smoking"`, `"campfire_cooking"`, `"smithing_transform"` or `"stonecutting"`), then
-     * what that type takes: `pattern` and `key`, `ingredients`, `ingredient`, or `template`, `base` and
-     * `addition`; `result` (an `Item`), and `experience`, `cooking_time`, `group` and `category`. An
-     * ingredient is an item id (`"minecraft:stick"`), a tag (`"#minecraft:planks"`) or a project item (`{
-     * item = "ruby" }`). Registering an id again replaces the recipe. It lasts as long as the script that
-     * registered it (so a reloaded script registers it again in its body). An id a `recipes/` file has, or
-     * anything that file would have an error for, is an error.
+     * `"blasting"`, `"smoking"`, `"campfire_cooking"`, `"smithing_transform"`, `"stonecutting"` or
+     * `"station"`), then what that type takes: `pattern` and `key`, `ingredients`, `ingredient`,
+     * `template`, `base` and `addition`, or `materials` (each `{ ingredient = ..., count = n }`),
+     * `stations` and `station_range`; `result` (an `Item`), and `experience`, `cooking_time`, `group` and
+     * `category`. An ingredient is an item id (`"minecraft:stick"`), a tag (`"#minecraft:planks"`) or a
+     * project item (`{ item = "ruby" }`). Registering an id again replaces the recipe. It lasts as long as
+     * the script that registered it (so a reloaded script registers it again in its body). An id a
+     * `recipes/` file has, or anything that file would have an error for, is an error.
      */
     fun register(caller: Caller, id: String, definition: LuaValue)
 
@@ -448,6 +456,34 @@ interface NfRecipesApi {
      * the file instead).
      */
     fun remove(caller: Caller, id: String): Boolean
+
+    /**
+     * A `station` recipe, as `StationRecipe` (its `times` left out), or `nil` when there's no such recipe
+     * or it isn't a station recipe. A recipe the game makes (a crafting table's) isn't one: the game
+     * crafts those itself.
+     */
+    fun get(caller: Caller, id: String): StationRecipe?
+
+    /**
+     * The `station` recipes a player can make now: every station each needs is within its `station_range`
+     * of them (or of `options.near`), and their inventory holds its materials, with `times` how many times
+     * over. A material matches as a recipe's ingredient does: an item id or a `#tag` takes any stack of
+     * that kind but a project item's, and a project item only its own stacks. A station is a block id, a
+     * `#tag` of blocks or a project block, near when it's within the recipe's `station_range` (4 by
+     * default) on every axis.
+     */
+    fun available(caller: Caller, player: LuaHandle.Player, options: RecipeAvailableOptions?): List<StationRecipe>
+
+    /**
+     * Makes a `station` recipe for a player: takes its materials from their inventory and gives them its
+     * result (what doesn't fit drops at their feet), `times` over, or as many times as they can when
+     * that's fewer. A station it needs that isn't near makes nothing. A material matches as a recipe's
+     * ingredient does: an item id or a `#tag` takes any stack of that kind but a project item's, and a
+     * project item only its own stacks. A station is a block id, a `#tag` of blocks or a project block,
+     * near when it's within the recipe's `station_range` (4 by default) on every axis. A recipe that isn't
+     * a station one is an error.
+     */
+    fun craft(caller: Caller, player: LuaHandle.Player, id: String, options: RecipeCraftOptions?): Long
 
     /** Every recipe's id: the project's files', then those scripts registered. */
     fun all(caller: Caller): List<String>
@@ -853,6 +889,42 @@ interface NfTestApi {
      * simulated: read the result.
      */
     fun raise(caller: Caller, event: String, payload: LuaValue?): RaisedEvent
+
+    /**
+     * Clicks for a player as their client would, with what they hold filled in, and raises what the server
+     * would for it: `player_interact` (the held project item's `interact` first, and a click on one of the
+     * project's blocks reaches it), then, for a right click with an item that nothing cancelled,
+     * `player_use_item` (the project item's `use` first). A left click is the attack button at a block or
+     * the air: it doesn't break the block (`world:break_block` does that). A click on an entity is
+     * `nf.test.raise("player_interact_entity", ...)`. Nothing the game would then do (an item thrown, a
+     * door opened) is simulated: read what the handlers did.
+     */
+    fun click(caller: Caller, player: LuaHandle.Player, button: String, options: TestClickOptions?): Boolean
+
+    /**
+     * Lets go of the right button for a player who was using an item (drawing a bow, raising a shield,
+     * eating) before it finished, as their client would: raises `player_stop_using_item` with the item in
+     * their main hand, or in their off hand when the main one is empty. Like the server, it is heard by
+     * the player before `nf.on`. An error when both hands are empty.
+     */
+    fun release(caller: Caller, player: LuaHandle.Player, ticks: Long)
+
+    /**
+     * The movement keys a player holds now, as their client says when they change: raises `player_input`
+     * (the player's `input` first, then `nf.on`). A key left out is not held, so `nf.test.input(player,
+     * {})` lets go of every key. It only raises the event: the player doesn't move, sneak or sprint for
+     * it.
+     */
+    fun input(caller: Caller, player: LuaHandle.Player, held: TestInputKeys)
+
+    /**
+     * A stack as a player's game was last sent it, after the `view` handlers: what their tooltip says,
+     * where the server keeps the real stack (read that from `player:inventory()` or `menu:item`). The fake
+     * server sends what changed at the end of each tick, as a real one does, and what
+     * `player:refresh_items` finds looks different, so `nf.test.advance(1)` after a change. `nil` for an
+     * empty slot, or one their game hasn't been sent.
+     */
+    fun shown(caller: Caller, player: LuaHandle.Player, slot: IntegerOrChoice, options: TestShownOptions?): ItemData?
 }
 
 /**
@@ -881,9 +953,30 @@ interface CentityApi {
     fun isNatural(self: LuaHandle.Centity): Boolean
 
     /**
-     * Makes a natural centity a normal one: it is saved from now on (it comes back after a restart), is
-     * never removed for being far from players, and no longer counts against its cap. Nothing happens to
-     * one that is already normal.
+     * Whether a script spawned it temporary (`nf.centities.spawn`'s `temporary` or `lifetime`), and it
+     * still is: it isn't saved, and it goes when the script that spawned it unloads, or when its lifetime
+     * is up. `false` for one `keep` has kept, and once it's removed.
+     */
+    fun isTemporary(self: LuaHandle.Centity): Boolean
+
+    /**
+     * How many ticks a temporary centity with a `lifetime` has left before it's removed, or `nil` for one
+     * without (or once it's removed).
+     */
+    fun lifetime(self: LuaHandle.Centity): Long?
+
+    /**
+     * Gives it this many ticks more before it's removed, from now. A centity with a lifetime is temporary,
+     * so one that wasn't becomes so: it's no longer saved, and goes when its lifetime is up (one spawned
+     * temporary still goes with its script too). Leave it out (or `nil`) to take its lifetime away; it
+     * stays temporary until `keep`.
+     */
+    fun setLifetime(self: LuaHandle.Centity, ticks: Long?): Boolean
+
+    /**
+     * Makes a natural or temporary centity a normal one: it is saved from now on (it comes back after a
+     * restart), is never removed for being far from players or because a script unloaded or a lifetime ran
+     * out, and no longer counts against a cap. Nothing happens to one that is already normal.
      */
     fun keep(self: LuaHandle.Centity): Boolean
 
@@ -911,6 +1004,20 @@ interface CentityApi {
      * removed.
      */
     fun addNode(self: LuaHandle.Centity, name: String, definition: LuaValue?): LuaHandle.Node?
+
+    /**
+     * Its `properties` from its `centity.json`: the project's own facts about it, any JSON (`{ damage =
+     * 12, class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An
+     * empty table when the file has none, `nil` once it's gone.
+     */
+    fun properties(self: LuaHandle.Centity): Any?
+
+    /**
+     * The box around all its hitboxes as they're shown now (each shown node's boxes, turned and placed),
+     * in the world: what `world:overlap_box` and the other spatial queries test against. `nil` for a
+     * centity with no hitboxes showing, or once it's removed.
+     */
+    fun bounds(self: LuaHandle.Centity): Bounds?
 
     /**
      * Where it stands, in which world, and which way it faces, or `nil` once it's removed. The location's
@@ -982,6 +1089,187 @@ interface CentityApi {
      * removed.
      */
     fun stopFollowing(self: LuaHandle.Centity): Boolean
+
+    /**
+     * One of it's stats. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum of
+     * what every buff it has adds (its file's `stats`) and every modifier a script set (`set_modifiers`),
+     * 0 when nothing gives it any. What a stat means is the scripts': the engine only adds them up.
+     */
+    fun stat(self: LuaHandle.Centity, name: String): Double
+
+    /**
+     * Every stat it has that isn't 0, by name. A stat is a number by name (`"defense"`, `"move"`,
+     * `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a
+     * script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the
+     * engine only adds them up.
+     */
+    fun stats(self: LuaHandle.Centity): Map<String, Double>
+
+    /** What a script's `source` adds to it's stats (`set_modifiers`), or `nil` when it adds nothing. */
+    fun modifiers(self: LuaHandle.Centity, source: String): Map<String, Double>?
+
+    /**
+     * Sets what `source` adds to it's stats, replacing what it added before: one call per source, each
+     * time it changes (a piece of armour put on), and `nil` takes it all away. Buffs and modifiers are
+     * runtime state: a restart clears them; a player's last while the server runs, offline too, and count
+     * down only while they're online.
+     */
+    fun setModifiers(self: LuaHandle.Centity, source: String, modifiers: Map<String, Double>?): Boolean
+
+    /**
+     * Gives it a buff (`buffs/<id>.json`) for a number of ticks: it takes away the buffs it `cures`, and
+     * doesn't take hold while one it's `blockedBy` lasts. Given again while it lasts, its file's
+     * `stacking` says what happens to the time. Its `buff_add` handlers may change the ticks or cancel it.
+     * While it lasts its `stats` are added to it's; when it runs out, `buff_end` hears it. Buffs and
+     * modifiers are runtime state: a restart clears them; a player's last while the server runs, offline
+     * too, and count down only while they're online. A buff the project doesn't have is an error.
+     */
+    fun addBuff(self: LuaHandle.Centity, buff: String, ticks: Long): Boolean
+
+    /** Takes a buff away from it (`buff_end` hears `"removed"`). */
+    fun removeBuff(self: LuaHandle.Centity, buff: String): Boolean
+
+    /** Whether it has a buff now. */
+    fun hasBuff(self: LuaHandle.Centity, buff: String): Boolean
+
+    /** How many ticks a buff it has has left, or `nil` when they don't have it. */
+    fun buffTicks(self: LuaHandle.Centity, buff: String): Long?
+
+    /** Every buff it has now, with what a HUD shows them by, the first given first. */
+    fun buffs(self: LuaHandle.Centity): List<ActiveBuff>
+
+    /**
+     * How much health it has left: from its `centity.json`'s `health` (its `max` when it spawns), or what
+     * `set_max_health` gave it. `nil` for one without health, or once it's removed. Not saved: after a
+     * restart it's whole again.
+     */
+    fun health(self: LuaHandle.Centity): Double?
+
+    /** Its health when whole, or `nil` without health (or once it's removed). */
+    fun maxHealth(self: LuaHandle.Centity): Double?
+
+    /**
+     * Sets how much health it has, between 0 and its `max_health`: no `damage` or `death` event, and 0
+     * doesn't kill it (`damage` does). Its bar shows the change. `false` without health, or once it's
+     * removed.
+     */
+    fun setHealth(self: LuaHandle.Centity, health: Double): Boolean
+
+    /**
+     * Changes its health when whole (more than 0), keeping what it has but no more than the new most. One
+     * without `health` in its file gets health this way (full, and no bar). `false` once it's removed.
+     */
+    fun setMaxHealth(self: LuaHandle.Centity, maxHealth: Double): Boolean
+
+    /**
+     * Takes health from it: its `damage` handlers may change the amount or cancel it, its health goes down
+     * by what's left, its bar shows, and at 0 it dies (`death`, then it's removed unless its file says
+     * otherwise). Damage to one already dead does nothing.
+     */
+    fun damage(self: LuaHandle.Centity, amount: Double, options: CentityDamageOptions?): Double?
+
+    /** Gives it back health, up to its `max_health`. Its bar shows the change. */
+    fun heal(self: LuaHandle.Centity, amount: Double): Double?
+
+    /**
+     * Whether its health has reached 0 through `damage`. `false` for one without health. A dead one its
+     * file keeps (`removeOnDeath: false`) stays dead until `set_health` gives it health again.
+     */
+    fun isDead(self: LuaHandle.Centity): Boolean
+
+    /**
+     * Whether it has a body: a `body` in its `centity.json`, or one `set_body` gave it. Without one the
+     * body functions do nothing (their getters answer `false`, `nil` or `vec3.zero`). `false` once it's
+     * removed.
+     */
+    fun hasBody(self: LuaHandle.Centity): Boolean
+
+    /**
+     * Its body's settings as they are now: what its `centity.json`'s `body` says, every field filled in,
+     * with what `set_body` changed. `nil` without a body, or once it's removed.
+     */
+    fun body(self: LuaHandle.Centity): BodySettings?
+
+    /**
+     * Changes its body's settings: only the fields given, the rest as they are. One without a body gets
+     * one, the fields left out as `centity.json`'s defaults. A body's settings are runtime state, like a
+     * node's pose: they last until its centity is reloaded or the server restarts, when it's back to its
+     * file's. A value out of range is clamped as in the file; a width or height that isn't more than 0 is
+     * an error.
+     */
+    fun setBody(self: LuaHandle.Centity, settings: BodySettings): Boolean
+
+    /**
+     * How fast its body is moving, in blocks per second along the world's axes: `vec3.zero` without a
+     * body, `nil` once it's removed.
+     */
+    fun velocity(self: LuaHandle.Centity): Vec3?
+
+    /**
+     * Replaces its body's velocity: a knock back, a dash, a launch. The body carries on from it under
+     * gravity and drag, and walking eases it back to its walk.
+     */
+    fun setVelocity(self: LuaHandle.Centity, velocity: Vec3): Boolean
+
+    /** Adds to its body's velocity. */
+    fun addVelocity(self: LuaHandle.Centity, velocity: Vec3): Boolean
+
+    /**
+     * The velocity its body is walking at (`set_walk_velocity`), or `nil` when it isn't walking, has no
+     * body, or is removed.
+     */
+    fun walkVelocity(self: LuaHandle.Centity): Vec3?
+
+    /**
+     * Walks its body: every tick it speeds up or slows down toward this velocity by its `acceleration`
+     * (`air_acceleration` while it's off the ground), so it reaches it smoothly and keeps to it, round
+     * whatever pushes it about, until it's changed. Only the sideways part counts, unless it flies, when
+     * it steers it in any direction. Leave it out (or `nil`) to stop walking: on the ground it then slows
+     * to a stop by its `friction`. Walking doesn't turn it: `set_yaw` or `look_at` does.
+     */
+    fun setWalkVelocity(self: LuaHandle.Centity, velocity: Vec3?): Boolean
+
+    /**
+     * Sends its body up fast enough to rise `height` blocks, worked out from its gravity and drag: what a
+     * jump over a block (1.2) needs. Whether it's on the ground is for the script to check
+     * (`is_on_ground`), so a double jump is one more call.
+     */
+    fun jump(self: LuaHandle.Centity, height: Double): Boolean
+
+    /** Whether its body is standing on something: a block, as of its last move. `false` without a body. */
+    fun isOnGround(self: LuaHandle.Centity): Boolean
+
+    /** Whether its body is in water or lava (the block at its middle). `false` without a body. */
+    fun isInLiquid(self: LuaHandle.Centity): Boolean
+
+    /**
+     * The face of what stopped its body sideways on its last move, as the direction straight out of it
+     * (`vec3(-1, 0, 0)` for a wall to its east), or `nil` when nothing did, or without a body. What a
+     * walker turns round at, or jumps over.
+     */
+    fun wall(self: LuaHandle.Centity): Vec3?
+
+    /**
+     * Makes it a projectile: from now on the server flies the whole centity every tick at its velocity,
+     * under its gravity and drag, and sweeps its path (a sphere of `radius`) for what it hits: centities'
+     * hitboxes, players and entities (`hit`), and blocks (it ends, bounces or sticks: `flight_end`,
+     * `bounce`, `stick`). It flies until it ends, then is removed unless told not to. Nothing about a
+     * flight is saved. A launch over a flight replaces it. One with a `body` stops walking while it flies,
+     * and walks again after. Every value is in blocks and seconds, as everywhere.
+     */
+    fun launch(self: LuaHandle.Centity, options: LaunchOptions): Boolean
+
+    /**
+     * Whether it's flying as a projectile (`launch`), stuck in a block or lying where it came to rest
+     * included: until its flight ends. `false` once it's removed.
+     */
+    fun isLaunched(self: LuaHandle.Centity): Boolean
+
+    /**
+     * Ends its flight where it is, as if it had ended by itself: `flight_end` hears `"stopped"`, and it's
+     * removed unless `remove_on_end` was `false`.
+     */
+    fun stopFlight(self: LuaHandle.Centity): Boolean
 
     /**
      * Makes the whole centity walk somewhere, finding its way round the blocks in the way: to a place in
@@ -1218,6 +1506,45 @@ interface NodeApi {
 
     /** Scales it along its own axes. */
     fun setScale(self: LuaHandle.Node, scale: Vec3)
+
+    /**
+     * Lays it from one point of the world to another: its origin halfway, its Z pointing from `from` to
+     * `to`, and its Z scale the distance between them. For a node whose display is one block long along Z
+     * and centred on its origin (a beam, a string, a link), that's the whole way from one to the other.
+     * Its X and Y scale stay as they are, or are `thickness`.
+     */
+    fun stretchBetween(self: LuaHandle.Node, from: Vec3, to: Vec3, options: StretchOptions?): Boolean
+
+    /** Whether it's a rope node (`"rope"` in `centity.json`). */
+    fun isRope(self: LuaHandle.Node): Boolean
+
+    /**
+     * Strings a rope node between two ends, and keeps it strung each tick as they move, until
+     * `release_rope` or another `rope_between`: its links laid along a line from one to the other, sagging
+     * with `length`'s slack, as many shown as the distance needs (up to its `links`; the rest hidden). An
+     * end is a point, a node (its origin, as shown), or an entity (half a block above its feet; a player's
+     * at their hands' height, 1.1 blocks up). An end that's gone (a removed centity, an entity that left)
+     * releases the rope. A node that isn't a rope is an error.
+     */
+    fun ropeBetween(self: LuaHandle.Node, from: Vec3OrNodeOrEntity, to: Vec3OrNodeOrEntity, options: RopeOptions?): Boolean
+
+    /** Stops keeping a rope strung: its links stay where they were last laid. */
+    fun releaseRope(self: LuaHandle.Node)
+
+    /**
+     * Eases its translation, rotation or scale from where they are to new values over some ticks, as
+     * `set_translation`, `set_rotation` and `set_scale` would each tick: and with `back`, eases them back
+     * again. A tween of a channel this node is already tweening replaces it, from where it is; `set_*` on
+     * a channel doesn't stop its tween. Animations drive what they drive over it, as they do over `set_*`;
+     * an `additive` one changes it.
+     */
+    fun tween(self: LuaHandle.Node, options: TweenOptions): Boolean
+
+    /** Whether a tween is easing any of its channels. */
+    fun isTweening(self: LuaHandle.Node): Boolean
+
+    /** Stops its tweens where they are now. */
+    fun stopTween(self: LuaHandle.Node): Boolean
 
     /**
      * Where its origin is in the world, as shown now: animation and physics included. `nil` once its
@@ -1969,6 +2296,55 @@ interface DroppedItemApi {
  * and a saddle 42 (what the game keeps there for any entity).
  */
 interface PlayerApi {
+    /**
+     * One of they's stats. A stat is a number by name (`"defense"`, `"move"`, `"damage_melee"`): the sum
+     * of what every buff it has adds (its file's `stats`) and every modifier a script set
+     * (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the engine only
+     * adds them up.
+     */
+    fun stat(self: LuaHandle.Player, name: String): Double
+
+    /**
+     * Every stat they has that isn't 0, by name. A stat is a number by name (`"defense"`, `"move"`,
+     * `"damage_melee"`): the sum of what every buff it has adds (its file's `stats`) and every modifier a
+     * script set (`set_modifiers`), 0 when nothing gives it any. What a stat means is the scripts': the
+     * engine only adds them up.
+     */
+    fun stats(self: LuaHandle.Player): Map<String, Double>
+
+    /** What a script's `source` adds to they's stats (`set_modifiers`), or `nil` when it adds nothing. */
+    fun modifiers(self: LuaHandle.Player, source: String): Map<String, Double>?
+
+    /**
+     * Sets what `source` adds to they's stats, replacing what it added before: one call per source, each
+     * time it changes (a piece of armour put on), and `nil` takes it all away. Buffs and modifiers are
+     * runtime state: a restart clears them; a player's last while the server runs, offline too, and count
+     * down only while they're online.
+     */
+    fun setModifiers(self: LuaHandle.Player, source: String, modifiers: Map<String, Double>?): Boolean
+
+    /**
+     * Gives they a buff (`buffs/<id>.json`) for a number of ticks: it takes away the buffs it `cures`, and
+     * doesn't take hold while one it's `blockedBy` lasts. Given again while it lasts, its file's
+     * `stacking` says what happens to the time. Its `buff_add` handlers may change the ticks or cancel it.
+     * While it lasts its `stats` are added to they's; when it runs out, `buff_end` hears it. Buffs and
+     * modifiers are runtime state: a restart clears them; a player's last while the server runs, offline
+     * too, and count down only while they're online. A buff the project doesn't have is an error.
+     */
+    fun addBuff(self: LuaHandle.Player, buff: String, ticks: Long): Boolean
+
+    /** Takes a buff away from they (`buff_end` hears `"removed"`). */
+    fun removeBuff(self: LuaHandle.Player, buff: String): Boolean
+
+    /** Whether they has a buff now. */
+    fun hasBuff(self: LuaHandle.Player, buff: String): Boolean
+
+    /** How many ticks a buff they has has left, or `nil` when they don't have it. */
+    fun buffTicks(self: LuaHandle.Player, buff: String): Long?
+
+    /** Every buff they has now, with what a HUD shows them by, the first given first. */
+    fun buffs(self: LuaHandle.Player): List<ActiveBuff>
+
     /** Their name, as they have it now (a player can change theirs between visits). */
     fun name(self: LuaHandle.Player): String
 
@@ -2280,6 +2656,16 @@ interface PlayerApi {
     fun menu(self: LuaHandle.Player): LuaHandle.Menu?
 
     /**
+     * Sends their game every stack it shows again where it would now look different to them: their
+     * inventory, the window they have open and their cursor, each worked out again by the `view` handlers
+     * (and `nf.on("item_view")`). Stacks are sent by themselves when they change, but not when only what a
+     * `view` handler works its look out from does, so call this then: when a shop menu opens or closes,
+     * say. It's done once at the end of the tick however often it's called, and only stacks that look
+     * different from what their game was last sent are sent.
+     */
+    fun refreshItems(self: LuaHandle.Player): Boolean
+
+    /**
      * Closes the project menu they have open. Anything else on their screen (a chest, their own inventory)
      * stays open.
      */
@@ -2476,6 +2862,18 @@ interface PlayerApi {
      * and the log says so. It's also saved when they leave.
      */
     fun data(self: LuaHandle.Player): Any?
+
+    /**
+     * Their table for this time online: one per player, the same table every time, shared by every script,
+     * and never saved. It's made empty the first time a script asks after they join, kept while they stay
+     * (through a module's reload too: it's the player's, not the script's), and dropped once they've left,
+     * after their `player_quit` handlers, so the next time they join it's empty again. A whole-project
+     * reload (`netherforge.json` changing, or `/nf reload` with no files) empties it, as it does every
+     * script's state. Anything a script holds goes in it (handles, functions, a `Task`), so a module
+     * needn't keep a map keyed by player and clear it in `player_quit`. By convention each module keeps
+     * its own part of it under its name, as with `data()`. `nil` for a player who isn't online.
+     */
+    fun session(self: LuaHandle.Player): Any?
 }
 
 /**
@@ -2528,6 +2926,18 @@ interface WorldApi {
      * daylight cycle game rule).
      */
     fun setTimeOfDay(self: LuaHandle.World, ticks: Long): Boolean
+
+    /**
+     * Whether it is night here: the time of day is 13000 to 22999, from dusk to just before sunrise, as
+     * `/time set night` and a centity's `"night"` spawn time mean it. `false` once the world has gone.
+     */
+    fun isNight(self: LuaHandle.World): Boolean
+
+    /**
+     * Whether it is day here: the time of day is 23000 to 12999, the rest of `is_night`'s. `false` once
+     * the world has gone.
+     */
+    fun isDay(self: LuaHandle.World): Boolean
 
     /** How many whole days have gone by in this world, or `nil` once it has gone. */
     fun dayCount(self: LuaHandle.World): Long?
@@ -2596,6 +3006,20 @@ interface WorldApi {
      * when any of the box is in a chunk that isn't loaded, or the world has gone.
      */
     fun blocks(self: LuaHandle.World, from: Vec3, to: Vec3, options: BlockBoxOptions?): BlockBox?
+
+    /**
+     * Fills outward from a block through every block `options.through` names, one neighbour at a time, as
+     * far as it reaches: the blocks of a tree (`through = { "#minecraft:logs" }`), the air of a room
+     * (`through = { "passable" }`), a lake. It answers every block it filled (`positions`, nearest first
+     * by steps) and every block it stopped at (`edges`: a room's walls), with what each is when asked
+     * (`kinds`), and `stopped` says why it didn't finish when it didn't: it hit its `limit`, a chunk that
+     * isn't loaded or the world's top or bottom (`"unloaded"`: a room open to the sky or the unknown), or
+     * its `bounds`. It runs in the server, reading the blocks a box at a time, so a fill of thousands of
+     * blocks costs a script one call. A start block it can't fill through answers no positions, and the
+     * start as an edge. Blocks in chunks that aren't loaded can't be read or changed: that answers `nil`
+     * or `false`, and never loads the chunk (`world:load_chunk` does).
+     */
+    fun flood(self: LuaHandle.World, start: Vec3, options: FloodOptions): FloodResult?
 
     /**
      * Changes the block at a position. A block state the server doesn't have (an unknown block, property
@@ -2703,6 +3127,57 @@ interface WorldApi {
      * `nil` when it hits nothing, and in a world that has gone. Blocks in unloaded chunks aren't hit.
      */
     fun raycast(self: LuaHandle.World, from: Vec3, direction: Vec3, maxDistance: Double, options: RaycastOptions?): RaycastHit?
+
+    /**
+     * Everything whose hitbox is inside or touches a box, nearest the box's middle first. It finds
+     * centities by their hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden
+     * node has none), players and other entities by theirs, as `options` allows: everything, by default. A
+     * centity is found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or
+     * `nil`) in a world that has gone.
+     */
+    fun overlapBox(self: LuaHandle.World, min: Vec3, max: Vec3, options: QueryOptions?): List<QueryHit>
+
+    /**
+     * Everything whose hitbox comes within `radius` of a point, nearest first: what an explosion or an
+     * aura reaches. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and
+     * physics see them; a hidden node has none), players and other entities by theirs, as `options`
+     * allows: everything, by default. A centity is found once, by its nearest node. Only what's in loaded
+     * chunks is found. An empty list (or `nil`) in a world that has gone.
+     */
+    fun overlapSphere(self: LuaHandle.World, center: Vec3, radius: Double, options: QueryOptions?): List<QueryHit>
+
+    /**
+     * Everything whose hitbox reaches into a cone from a point, nearest first: what a swing or a breath in
+     * front of someone reaches. A hitbox counts when its point nearest the cone's axis is within `length`
+     * of the tip and within `angle` of the axis, or the tip is inside it. It finds centities by their
+     * hitboxes (each shown node's boxes, as `raycast` and physics see them; a hidden node has none),
+     * players and other entities by theirs, as `options` allows: everything, by default. A centity is
+     * found once, by its nearest node. Only what's in loaded chunks is found. An empty list (or `nil`) in
+     * a world that has gone.
+     */
+    fun overlapCone(self: LuaHandle.World, origin: Vec3, direction: Vec3, length: Double, angle: Double, options: QueryOptions?): List<QueryHit>
+
+    /**
+     * Moves a sphere of `options.radius` (0, a point, by default) from one point to another and answers
+     * everything it touches on the way, in the order it meets them: what a fast or piercing shot passes
+     * through in a tick, which a ray (stopping at the first thing) can't say. Blocks stop it unless
+     * `blocks = false`: the block it meets is then the last hit, with its `normal`, and nothing past it is
+     * found. It finds centities by their hitboxes (each shown node's boxes, as `raycast` and physics see
+     * them; a hidden node has none), players and other entities by theirs, as `options` allows:
+     * everything, by default. A centity is found once, by its nearest node. Only what's in loaded chunks
+     * is found. An empty list (or `nil`) in a world that has gone.
+     */
+    fun sweep(self: LuaHandle.World, from: Vec3, to: Vec3, options: SweepOptions?): List<QueryHit>
+
+    /**
+     * The nearest thing whose hitbox comes within `radius` of a point, or `nil` when there's nothing: what
+     * a homing shot or a mob looking for a target wants. With `line_of_sight = true`, only something a ray
+     * from the point reaches without a block in the way. It finds centities by their hitboxes (each shown
+     * node's boxes, as `raycast` and physics see them; a hidden node has none), players and other entities
+     * by theirs, as `options` allows: everything, by default. A centity is found once, by its nearest
+     * node. Only what's in loaded chunks is found. An empty list (or `nil`) in a world that has gone.
+     */
+    fun nearest(self: LuaHandle.World, position: Vec3, radius: Double, options: QueryOptions?): QueryHit?
 
     /**
      * A game rule's value: a `boolean` or an `integer`, depending on the rule. `nil` once the world has
@@ -2990,6 +3465,13 @@ interface ProjectBlockApi {
     /** Its id: its folder name under `blocks/`. */
     fun id(self: LuaHandle.ProjectBlock): String
 
+    /**
+     * Its `properties` from its `block.json`: the project's own facts about it, any JSON (`{ damage = 12,
+     * class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An
+     * empty table when the file has none, `nil` once the block is gone.
+     */
+    fun properties(self: LuaHandle.ProjectBlock): Any?
+
     /** Whether the project still has it. */
     fun exists(self: LuaHandle.ProjectBlock): Boolean
 
@@ -3094,7 +3576,10 @@ interface BossBarApi {
     /** Stops showing it to a player. */
     fun hideFrom(self: LuaHandle.BossBar, player: LuaHandle.Player): Boolean
 
-    /** Everyone it's shown to, online or not. Empty once it's gone. */
+    /**
+     * Everyone it's shown to, online or not: by `show_to`, and for an attached bar, whoever is near its
+     * centity now. Empty once it's gone.
+     */
     fun viewers(self: LuaHandle.BossBar): List<LuaHandle.Player>
 
     /** What it says, as MiniMessage, or `nil` once it's gone. */
@@ -3120,6 +3605,19 @@ interface BossBarApi {
 
     /** Makes it one bar, or splits it into 6, 10, 12 or 20 notches. */
     fun setStyle(self: LuaHandle.BossBar, style: String): Boolean
+
+    /**
+     * Ties it to a centity: it shows to every player within `range` of it (in its world) and hides from
+     * them as they go, and with `health` its progress follows the centity's health: what a boss's bar
+     * does. Players it was shown to with `show_to` keep it. A bar attached again moves to the new centity.
+     */
+    fun attach(self: LuaHandle.BossBar, centity: LuaHandle.Centity, options: BossBarAttachOptions?): Boolean
+
+    /** Unties it from its centity: the players it showed to by being near it stop seeing it. */
+    fun detach(self: LuaHandle.BossBar)
+
+    /** The centity it's attached to, or `nil`. */
+    fun attached(self: LuaHandle.BossBar): LuaHandle.Centity?
 
     /** Takes it off every screen for good. */
     fun remove(self: LuaHandle.BossBar): Boolean
@@ -3516,8 +4014,38 @@ interface SlotApi {
     fun bind(self: LuaHandle.Slot, storage: LuaHandle.Inventory, index: Long?): Boolean
 
     /**
-     * Stops showing a storage's slot here. The slot is emptied, since what it showed is still in the
-     * storage. Its player leaving unbinds every slot bound to their storage.
+     * Makes this slot a view of what a player wears in one place, as `bind` does a storage's slot: what
+     * goes in or out of it is put on or taken off at once, and when what they wear changes some other way
+     * (a right-click with armour, a script's `set_equipment`) the slot shows it by the next tick. Locked
+     * windows let players use it by hand, as a bound slot. The game doesn't check what's put on: give the
+     * slot a rule (`set_rule({ wearable = "head", max = 1 })`). Only a window of a menu that isn't
+     * `shared` can be bound.
+     */
+    fun bindEquipment(self: LuaHandle.Slot, player: LuaHandle.Player, equipment: String): Boolean
+
+    /**
+     * Says what this slot takes, or with `nil` lets it take anything again. Whatever a player puts in, by
+     * a click, a drag, a number key or a shift-click from their own inventory into `shift_into`'s slots,
+     * is held to it: a stack it doesn't take stays where it was, and of one it does, only `max` goes in
+     * (the rest stays on the cursor). Its `click` handlers still hear what's let through. Scripts' own
+     * `set_item` aren't held to it. A shift-click from below that the game moves itself (no `shift_into`)
+     * isn't either, in a window that isn't locked.
+     */
+    fun setRule(self: LuaHandle.Slot, rule: SlotRule?): Boolean
+
+    /** What this slot takes, or `nil` when it takes anything (or the window is gone). */
+    fun rule(self: LuaHandle.Slot): SlotRule?
+
+    /**
+     * Whether this slot's rule takes this item (any count of it). `true` for a slot without a rule;
+     * `false` once the window is gone.
+     */
+    fun accepts(self: LuaHandle.Slot, item: ItemData): Boolean
+
+    /**
+     * Stops showing a storage's slot (or a player's equipment) here. The slot is emptied, since what it
+     * showed is still where it was. Its player leaving unbinds every slot bound to their storage or
+     * equipment.
      */
     fun unbind(self: LuaHandle.Slot): Boolean
 
@@ -3645,6 +4173,13 @@ interface ProjectItemApi {
      * the item is gone.
      */
     fun create(self: LuaHandle.ProjectItem, overrides: LuaValue?): ItemData?
+
+    /**
+     * Its `properties` from its `item.json`: the project's own facts about it, any JSON (`{ damage = 12,
+     * class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An
+     * empty table when the file has none, `nil` once the item is gone.
+     */
+    fun properties(self: LuaHandle.ProjectItem): Any?
 }
 
 /**
@@ -3827,9 +4362,17 @@ interface HudApi {
     /**
      * Fills a bar: `value` out of `max`, shown as that much of its segments (to the nearest half segment,
      * for a bar with a half picture). A `value` past `max` or below 0 is shown full or empty; a `max` of 0
-     * or less is an error.
+     * or less is an error. With `segments`, only that many of the bar's segments are drawn (1 to the bar's
+     * own), placed by the bar's `align`.
      */
-    fun fillBar(self: LuaHandle.Hud, name: String, value: Double, max: Double): Boolean
+    fun fillBar(self: LuaHandle.Hud, name: String, value: Double, max: Double, options: HudFillOptions?): Boolean
+
+    /**
+     * Fills several bars as one long bar, each `per_segment` of `max` a segment: as many segments are
+     * drawn as `max` needs, filling the first bar's, then the next's (rows of hearts, ten to a row). A bar
+     * no segment reaches is removed. Every name must be a bar; `per_segment` and `max` more than 0.
+     */
+    fun fillBars(self: LuaHandle.Hud, names: List<String>, value: Double, max: Double, perSegment: Double): Long
 
     /** What a bar shows, or `nil` when nothing set it (or they're offline). */
     fun bar(self: LuaHandle.Hud, name: String): HudBar?

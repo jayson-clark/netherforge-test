@@ -71,7 +71,11 @@ class StartupGenerators(private val platform: Platform, private val source: Proj
             WorldGenerators.runningBiomes(snapshot),
             { plan?.stateOf(it)?.toString() },
             { name -> WorldGenerators.structureFile(snapshot, name, source::resolve)?.let(platform.structures::template) },
-            { at, terrain -> WorldGenerators.scriptsFor(at, terrain, files, source::read, scriptFailed(at)) }
+            scriptBlocks = { at, terrain ->
+                val sources = terrain.script?.let { WorldGenerators.sourcesFor(at, it, files, source::read) }.orEmpty()
+                terrain.withScriptBlocks(sources.values, { platform.game.block(it) != null }) { plan?.stateOf(it) != null }
+            },
+            scriptsOf = { at, terrain -> WorldGenerators.scriptsFor(at, terrain, files, source::read, scriptFailed(at)) }
         ) { at, message ->
             log.warn("terrain $at: $message")
         }

@@ -79,6 +79,9 @@ enum class RefKind(
     @SerialName("loot_table")
     LOOT_TABLE("loot table", RefScope.RESOURCE, resourceKind = "loot_table"),
 
+    @SerialName("buff")
+    BUFF("buff", RefScope.RESOURCE, resourceKind = "buff"),
+
     @SerialName("advancement")
     ADVANCEMENT("advancement", RefScope.RESOURCE, resourceKind = "advancement"),
 

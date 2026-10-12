@@ -66,16 +66,19 @@ class CompiledHud(
 }
 
 /**
- * What one player's HUD shows of the pack's elements, by key: a bar's value and max, the icons a row shows (in
- * order), a line's text (MiniMessage). An element it doesn't have isn't drawn.
+ * What one player's HUD shows of the pack's elements, by key: a bar's fill, the icons a row shows (in order), a
+ * line's text (MiniMessage). An element it doesn't have isn't drawn.
  */
 data class HudState(
-    val bars: Map<String, Pair<Double, Double>> = emptyMap(),
+    val bars: Map<String, BarFill> = emptyMap(),
     val icons: Map<String, List<String>> = emptyMap(),
     val texts: Map<String, String> = emptyMap()
 ) {
     val isEmpty: Boolean get() = bars.isEmpty() && icons.isEmpty() && texts.isEmpty()
 }
+
+/** A bar's [value] out of [max], over [segments] of its segments (all of them when null). */
+data class BarFill(val value: Double, val max: Double, val segments: Int? = null)
 
 /**
  * The action bar line that draws a player's HUD: MiniMessage, every element in key order (bars, then rows of
@@ -97,35 +100,30 @@ object HudLine {
             if (chars.isNotEmpty()) out.append("<white><!shadow><font:${hud.font}>").append(chars).append("</font></!shadow></white>")
         }
         for ((key, bar) in hud.bars) {
-            val (value, max) = state.bars[key] ?: continue
+            val fill = state.bars[key] ?: continue
             val slot = bar.slot ?: continue
-            val pieces = segments(bar, value, max)
-            val chars = StringBuilder(PackFonts.offset(bar.def.x))
+            val pieces = segments(bar, fill.value, fill.max, fill.segments ?: bar.def.segments)
+            val left = left(bar.def.x, bar.def.align, slot * pieces.size - (bar.def.gap ?: 0))
+            val chars = StringBuilder(PackFonts.offset(left))
             for (piece in pieces) chars.append(piece.char).append(PackFonts.offset(slot - piece.advance!!))
-            chars.append(PackFonts.offset(-(bar.def.x + slot * pieces.size)))
+            chars.append(PackFonts.offset(-(left + slot * pieces.size)))
             run(chars.toString())
         }
         for ((key, row) in hud.icons) {
             val shown = state.icons[key]?.mapNotNull { row.icons[it] }?.takeIf { it.isNotEmpty() } ?: continue
             if (shown.any { it.advance == null }) continue
             val gap = row.def.gap ?: DEFAULT_ICON_GAP
-            val chars = StringBuilder(PackFonts.offset(row.def.x))
-            var moved = 0
-            for (piece in shown) {
-                chars.append(piece.char).append(PackFonts.offset(gap))
-                moved += piece.advance!! + gap
-            }
-            chars.append(PackFonts.offset(-(row.def.x + moved)))
+            val moved = shown.sumOf { it.advance!! + gap }
+            val left = left(row.def.x, row.def.align, moved - gap)
+            val chars = StringBuilder(PackFonts.offset(left))
+            for (piece in shown) chars.append(piece.char).append(PackFonts.offset(gap))
+            chars.append(PackFonts.offset(-(left + moved)))
             run(chars.toString())
         }
         for ((key, def) in hud.texts) {
             val text = state.texts[key]?.takeIf { it.isNotEmpty() } ?: continue
             val wide = width(text) ?: continue
-            val left = when (def.align ?: HudAlign.LEFT) {
-                HudAlign.LEFT -> def.x
-                HudAlign.CENTER -> def.x - wide / 2
-                HudAlign.RIGHT -> def.x - wide
-            }
+            val left = left(def.x, def.align, wide)
             run(PackFonts.offset(left))
             // Its own colours and its own shadow, in the game's font; reset after, so no style of it (bold widens every
             // character, the moves too) reaches the elements after it.
@@ -135,9 +133,19 @@ object HudLine {
         return out.toString()
     }
 
-    /** The pictures of [bar] for [value] out of [max], left to right: the whole segments, a half one, the rest empty. */
-    fun segments(bar: CompiledHud.Bar, value: Double, max: Double): List<CompiledHud.Piece> {
-        val count = bar.def.segments
+    /** Where something [wide] pixels across has its left edge, when [align] puts that part of it at [x]. */
+    private fun left(x: Int, align: HudAlign?, wide: Int): Int = when (align ?: HudAlign.LEFT) {
+        HudAlign.LEFT -> x
+        HudAlign.CENTER -> x - wide / 2
+        HudAlign.RIGHT -> x - wide
+    }
+
+    /**
+     * The pictures of [bar] for [value] out of [max] over [shown] of its segments (1 to its own), left to right:
+     * the whole segments, a half one, the rest empty.
+     */
+    fun segments(bar: CompiledHud.Bar, value: Double, max: Double, shown: Int = bar.def.segments): List<CompiledHud.Piece> {
+        val count = shown.coerceIn(1, bar.def.segments)
         val fraction = if (max > 0 && value.isFinite()) (value / max).coerceIn(0.0, 1.0) else 0.0
         val halves = if (bar.half != null) round(fraction * count * 2).toInt() else round(fraction * count).toInt() * 2
         val full = halves / 2

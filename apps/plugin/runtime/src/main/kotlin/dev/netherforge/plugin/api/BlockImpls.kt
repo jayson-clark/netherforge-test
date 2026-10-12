@@ -4,6 +4,7 @@ import dev.netherforge.format.block.BlockFacing
 import dev.netherforge.format.project.BlockKind
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.session.ProjectSession
+import kotlinx.serialization.json.JsonObject
 
 /** `nf.blocks`: the project's blocks. */
 internal class NfBlocksImpl(private val session: ProjectSession) : NfBlocksApi {
@@ -19,6 +20,8 @@ internal class ProjectBlockImpl(private val session: ProjectSession) : ProjectBl
     override fun id(self: LuaHandle.ProjectBlock): String = session.names.spell(self.id)
 
     override fun exists(self: LuaHandle.ProjectBlock): Boolean = session.customBlocks.has(self.id)
+
+    override fun properties(self: LuaHandle.ProjectBlock): Any? = session.customBlocks.properties(self.id)?.let(::JsonObject)
 
     override fun place(self: LuaHandle.ProjectBlock, location: LuaLocation, options: BlockPlaceOptions?): LuaHandle.CustomBlock? {
         if (!session.customBlocks.has(self.id)) return null

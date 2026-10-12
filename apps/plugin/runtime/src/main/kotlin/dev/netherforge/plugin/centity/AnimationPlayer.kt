@@ -1,10 +1,12 @@
 package dev.netherforge.plugin.centity
 
 import dev.netherforge.format.Vec3
+import dev.netherforge.format.centity.AnimationBlend
 import dev.netherforge.format.centity.Channel
 import dev.netherforge.format.centity.CompiledAnimation
 import dev.netherforge.format.centity.LoopMode
 import dev.netherforge.format.centity.Transform
+import dev.netherforge.format.centity.posed
 
 /**
  * The clips playing on one instance, and what they do to its pose.
@@ -12,7 +14,9 @@ import dev.netherforge.format.centity.Transform
  * A clip owns the channels its tracks drive while it plays; everything else
  * stays at the rest pose (the authored transform, or what a script last set).
  * Clips are applied in the order they were started, so the newest wins where
- * two drive the same channel. When a `once` clip ends its channels fall back
+ * two drive the same channel. Additive clips come after all of those, each
+ * changing the pose they leave (translation and rotation added, scale
+ * multiplied), so a squash plays on top of a walk. When a `once` clip ends its channels fall back
  * to rest; a `hold` clip keeps its last pose until stopped; a `loop` clip
  * never ends.
  *
@@ -146,28 +150,33 @@ class AnimationPlayer {
     fun applyAhead(pose: Array<Transform>, seconds: Double) = apply(pose, seconds)
 
     private fun apply(pose: Array<Transform>, ahead: Double) {
-        for (entry in playing.values) {
-            val time = if (entry.ended || entry.paused) entry.time else entry.time + ahead * entry.speed
-            val position = entry.clip.resolve(time, entry.loop)
-            if (position.ended && entry.loop == LoopMode.ONCE && ahead > 0.0) continue
-            val at = position.time
-            val weight = entry.blend?.let { blend ->
-                if (blend.seconds <= 0.0) 1.0 else ((blend.elapsed + ahead) / blend.seconds).coerceIn(0.0, 1.0)
-            } ?: 1.0
-            for (track in entry.clip.tracks) {
-                if (track.nodeIndex !in pose.indices) continue
-                var value = track.sample(at)
-                if (weight < 1.0) {
-                    val from = entry.blend!!.from.getOrNull(track.nodeIndex)?.channel(track.channel) ?: track.channel.identity
-                    value = blend(track.channel, from, value, weight)
+        for (blend in AnimationBlend.entries) {
+            for (entry in playing.values) if (entry.clip.blend == blend) apply(pose, ahead, entry)
+        }
+    }
+
+    private fun apply(pose: Array<Transform>, ahead: Double, entry: Playing) {
+        val time = if (entry.ended || entry.paused) entry.time else entry.time + ahead * entry.speed
+        val position = entry.clip.resolve(time, entry.loop)
+        if (position.ended && entry.loop == LoopMode.ONCE && ahead > 0.0) return
+        val at = position.time
+        val weight = entry.blend?.let { blend ->
+            if (blend.seconds <= 0.0) 1.0 else ((blend.elapsed + ahead) / blend.seconds).coerceIn(0.0, 1.0)
+        } ?: 1.0
+        val additive = entry.clip.blend == AnimationBlend.ADDITIVE
+        for (track in entry.clip.tracks) {
+            if (track.nodeIndex !in pose.indices) continue
+            var value = track.sample(at)
+            if (weight < 1.0) {
+                // An additive clip eases in from no change at all; a replacing one from the pose shown when it started.
+                val from = if (additive) {
+                    track.channel.identity
+                } else {
+                    entry.blend!!.from.getOrNull(track.nodeIndex)?.channel(track.channel) ?: track.channel.identity
                 }
-                val current = pose[track.nodeIndex]
-                pose[track.nodeIndex] = when (track.channel) {
-                    Channel.TRANSLATION -> current.copy(translation = value)
-                    Channel.ROTATION -> current.copy(rotation = value)
-                    Channel.SCALE -> current.copy(scale = value)
-                }
+                value = blend(track.channel, from, value, weight)
             }
+            pose[track.nodeIndex] = pose[track.nodeIndex].posed(track.channel, value, entry.clip.blend)
         }
     }
 

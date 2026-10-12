@@ -113,6 +113,30 @@ function Centity.is_natural(self)
   return prim["Centity.is_natural"](self_key)
 end
 
+function Centity.is_temporary(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.is_temporary"](self_key)
+end
+
+function Centity.lifetime(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.lifetime"](self_key)
+end
+
+function Centity.set_lifetime(self, ticks)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.set_lifetime"](self_key, ticks)
+end
+
 function Centity.keep(self)
   local self_key = ids[self]
   if self_key == nil or not Centity_is[class_of(self)] then
@@ -151,6 +175,22 @@ function Centity.add_node(self, name, definition)
     self_key = self_of(self, "Centity")
   end
   return prim["Centity.add_node"](self_key, name, definition)
+end
+
+function Centity.properties(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.properties"](self_key)
+end
+
+function Centity.bounds(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.bounds"](self_key)
 end
 
 function Centity.location(self)
@@ -260,6 +300,279 @@ function Centity.stop_following(self)
     self_key = self_of(self, "Centity")
   end
   return prim["Centity.stop_following"](self_key)
+end
+
+function Centity.stat(self, name)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.stat"](self_key, name)
+end
+
+function Centity.stats(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.stats"](self_key)
+end
+
+function Centity.modifiers(self, source)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.modifiers"](self_key, source)
+end
+
+function Centity.set_modifiers(self, source, modifiers)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.set_modifiers"](self_key, source, modifiers)
+end
+
+function Centity.add_buff(self, buff, ticks)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.add_buff"](self_key, buff, ticks)
+end
+
+function Centity.remove_buff(self, buff)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.remove_buff"](self_key, buff)
+end
+
+function Centity.has_buff(self, buff)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.has_buff"](self_key, buff)
+end
+
+function Centity.buff_ticks(self, buff)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.buff_ticks"](self_key, buff)
+end
+
+function Centity.buffs(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.buffs"](self_key)
+end
+
+function Centity.health(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.health"](self_key)
+end
+
+function Centity.max_health(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.max_health"](self_key)
+end
+
+function Centity.set_health(self, health)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.set_health"](self_key, health)
+end
+
+function Centity.set_max_health(self, max_health)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.set_max_health"](self_key, max_health)
+end
+
+function Centity.damage(self, amount, options)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.damage"](self_key, amount, options)
+end
+
+function Centity.heal(self, amount)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.heal"](self_key, amount)
+end
+
+function Centity.is_dead(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.is_dead"](self_key)
+end
+
+function Centity.has_body(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.has_body"](self_key)
+end
+
+function Centity.body(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.body"](self_key)
+end
+
+function Centity.set_body(self, settings)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.set_body"](self_key, settings)
+end
+
+function Centity.velocity(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  local result_x, result_y, result_z = prim["Centity.velocity"](self_key)
+  if result_x == nil then
+    return nil
+  end
+  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+end
+
+function Centity.set_velocity(self, velocity)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  if genuine_mt(velocity) ~= Vec3_mt then
+    want_vec3(velocity, "velocity")
+  end
+  return prim["Centity.set_velocity"](self_key, velocity[1], velocity[2], velocity[3])
+end
+
+function Centity.add_velocity(self, velocity)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  if genuine_mt(velocity) ~= Vec3_mt then
+    want_vec3(velocity, "velocity")
+  end
+  return prim["Centity.add_velocity"](self_key, velocity[1], velocity[2], velocity[3])
+end
+
+function Centity.walk_velocity(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  local result_x, result_y, result_z = prim["Centity.walk_velocity"](self_key)
+  if result_x == nil then
+    return nil
+  end
+  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+end
+
+function Centity.set_walk_velocity(self, velocity)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  local velocity_x, velocity_y, velocity_z
+  if velocity ~= nil then
+    if genuine_mt(velocity) ~= Vec3_mt then
+      want_vec3_opt(velocity, "velocity")
+    end
+    velocity_x, velocity_y, velocity_z = velocity[1], velocity[2], velocity[3]
+  end
+  return prim["Centity.set_walk_velocity"](self_key, velocity_x, velocity_y, velocity_z)
+end
+
+function Centity.jump(self, height)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.jump"](self_key, height)
+end
+
+function Centity.is_on_ground(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.is_on_ground"](self_key)
+end
+
+function Centity.is_in_liquid(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.is_in_liquid"](self_key)
+end
+
+function Centity.wall(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  local result_x, result_y, result_z = prim["Centity.wall"](self_key)
+  if result_x == nil then
+    return nil
+  end
+  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+end
+
+function Centity.launch(self, options)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.launch"](self_key, options)
+end
+
+function Centity.is_launched(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.is_launched"](self_key)
+end
+
+function Centity.stop_flight(self)
+  local self_key = ids[self]
+  if self_key == nil or not Centity_is[class_of(self)] then
+    self_key = self_of(self, "Centity")
+  end
+  return prim["Centity.stop_flight"](self_key)
 end
 
 function Centity.move_to(self, target, options)
@@ -646,6 +959,68 @@ function Node.set_scale(self, scale)
     want_vec3(scale, "scale")
   end
   prim["Node.set_scale"](self_key, scale[1], scale[2], scale[3])
+end
+
+function Node.stretch_between(self, from, to, options)
+  local self_key = ids[self]
+  if self_key == nil or not Node_is[class_of(self)] then
+    self_key = self_of(self, "Node")
+  end
+  if genuine_mt(from) ~= Vec3_mt then
+    want_vec3(from, "from")
+  end
+  if genuine_mt(to) ~= Vec3_mt then
+    want_vec3(to, "to")
+  end
+  return prim["Node.stretch_between"](self_key, from[1], from[2], from[3], to[1], to[2], to[3], options)
+end
+
+function Node.is_rope(self)
+  local self_key = ids[self]
+  if self_key == nil or not Node_is[class_of(self)] then
+    self_key = self_of(self, "Node")
+  end
+  return prim["Node.is_rope"](self_key)
+end
+
+function Node.rope_between(self, from, to, options)
+  local self_key = ids[self]
+  if self_key == nil or not Node_is[class_of(self)] then
+    self_key = self_of(self, "Node")
+  end
+  return prim["Node.rope_between"](self_key, from, to, options)
+end
+
+function Node.release_rope(self)
+  local self_key = ids[self]
+  if self_key == nil or not Node_is[class_of(self)] then
+    self_key = self_of(self, "Node")
+  end
+  prim["Node.release_rope"](self_key)
+end
+
+function Node.tween(self, options)
+  local self_key = ids[self]
+  if self_key == nil or not Node_is[class_of(self)] then
+    self_key = self_of(self, "Node")
+  end
+  return prim["Node.tween"](self_key, options)
+end
+
+function Node.is_tweening(self)
+  local self_key = ids[self]
+  if self_key == nil or not Node_is[class_of(self)] then
+    self_key = self_of(self, "Node")
+  end
+  return prim["Node.is_tweening"](self_key)
+end
+
+function Node.stop_tween(self)
+  local self_key = ids[self]
+  if self_key == nil or not Node_is[class_of(self)] then
+    self_key = self_of(self, "Node")
+  end
+  return prim["Node.stop_tween"](self_key)
 end
 
 function Node.world_position(self)
@@ -1983,6 +2358,78 @@ end
 
 local Player = class("Player", "Living")
 
+function Player.stat(self, name)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.stat"](self_key, name)
+end
+
+function Player.stats(self)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.stats"](self_key)
+end
+
+function Player.modifiers(self, source)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.modifiers"](self_key, source)
+end
+
+function Player.set_modifiers(self, source, modifiers)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.set_modifiers"](self_key, source, modifiers)
+end
+
+function Player.add_buff(self, buff, ticks)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.add_buff"](self_key, buff, ticks)
+end
+
+function Player.remove_buff(self, buff)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.remove_buff"](self_key, buff)
+end
+
+function Player.has_buff(self, buff)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.has_buff"](self_key, buff)
+end
+
+function Player.buff_ticks(self, buff)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.buff_ticks"](self_key, buff)
+end
+
+function Player.buffs(self)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.buffs"](self_key)
+end
+
 function Player.name(self)
   local self_key = ids[self]
   if self_key == nil or not Player_is[class_of(self)] then
@@ -2554,6 +3001,14 @@ function Player.menu(self)
   return prim["Player.menu"](self_key)
 end
 
+function Player.refresh_items(self)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.refresh_items"](self_key)
+end
+
 function Player.close_menu(self)
   local self_key = ids[self]
   if self_key == nil or not Player_is[class_of(self)] then
@@ -2826,6 +3281,14 @@ function Player.data(self)
   return prim["Player.data"](self_key)
 end
 
+function Player.session(self)
+  local self_key = ids[self]
+  if self_key == nil or not Player_is[class_of(self)] then
+    self_key = self_of(self, "Player")
+  end
+  return prim["Player.session"](self_key)
+end
+
 function Player.on(self, event, handler, options)
   if ids[self] == nil or not Player_is[class_of(self)] then
     self_of(self, "Player")
@@ -2963,6 +3426,22 @@ function World.set_time_of_day(self, ticks)
   return prim["World.set_time_of_day"](self_key, ticks)
 end
 
+function World.is_night(self)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  return prim["World.is_night"](self_key)
+end
+
+function World.is_day(self)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  return prim["World.is_day"](self_key)
+end
+
 function World.day_count(self)
   local self_key = ids[self]
   if self_key == nil or not World_is[class_of(self)] then
@@ -3074,6 +3553,17 @@ function World.blocks(self, from, to, options)
     want_vec3(to, "to")
   end
   return prim["World.blocks"](self_key, from[1], from[2], from[3], to[1], to[2], to[3], options)
+end
+
+function World.flood(self, start, options)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  if genuine_mt(start) ~= Vec3_mt then
+    want_vec3(start, "start")
+  end
+  return prim["World.flood"](self_key, start[1], start[2], start[3], options)
 end
 
 function World.set_block(self, position, state, options)
@@ -3246,6 +3736,70 @@ function World.raycast(self, from, direction, max_distance, options)
     want_vec3(direction, "direction")
   end
   return prim["World.raycast"](self_key, from[1], from[2], from[3], direction[1], direction[2], direction[3], max_distance, options)
+end
+
+function World.overlap_box(self, min, max, options)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  if genuine_mt(min) ~= Vec3_mt then
+    want_vec3(min, "min")
+  end
+  if genuine_mt(max) ~= Vec3_mt then
+    want_vec3(max, "max")
+  end
+  return prim["World.overlap_box"](self_key, min[1], min[2], min[3], max[1], max[2], max[3], options)
+end
+
+function World.overlap_sphere(self, center, radius, options)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  if genuine_mt(center) ~= Vec3_mt then
+    want_vec3(center, "center")
+  end
+  return prim["World.overlap_sphere"](self_key, center[1], center[2], center[3], radius, options)
+end
+
+function World.overlap_cone(self, origin, direction, length, angle, options)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  if genuine_mt(origin) ~= Vec3_mt then
+    want_vec3(origin, "origin")
+  end
+  if genuine_mt(direction) ~= Vec3_mt then
+    want_vec3(direction, "direction")
+  end
+  return prim["World.overlap_cone"](self_key, origin[1], origin[2], origin[3], direction[1], direction[2], direction[3], length, angle, options)
+end
+
+function World.sweep(self, from, to, options)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  if genuine_mt(from) ~= Vec3_mt then
+    want_vec3(from, "from")
+  end
+  if genuine_mt(to) ~= Vec3_mt then
+    want_vec3(to, "to")
+  end
+  return prim["World.sweep"](self_key, from[1], from[2], from[3], to[1], to[2], to[3], options)
+end
+
+function World.nearest(self, position, radius, options)
+  local self_key = ids[self]
+  if self_key == nil or not World_is[class_of(self)] then
+    self_key = self_of(self, "World")
+  end
+  if genuine_mt(position) ~= Vec3_mt then
+    want_vec3(position, "position")
+  end
+  return prim["World.nearest"](self_key, position[1], position[2], position[3], radius, options)
 end
 
 function World.game_rule(self, rule)
@@ -3721,6 +4275,14 @@ function ProjectBlock.id(self)
   return prim["ProjectBlock.id"](self_key)
 end
 
+function ProjectBlock.properties(self)
+  local self_key = ids[self]
+  if self_key == nil or not ProjectBlock_is[class_of(self)] then
+    self_key = self_of(self, "ProjectBlock")
+  end
+  return prim["ProjectBlock.properties"](self_key)
+end
+
 function ProjectBlock.exists(self)
   local self_key = ids[self]
   if self_key == nil or not ProjectBlock_is[class_of(self)] then
@@ -4000,6 +4562,30 @@ function BossBar.set_style(self, style)
     self_key = self_of(self, "BossBar")
   end
   return prim["BossBar.set_style"](self_key, style)
+end
+
+function BossBar.attach(self, centity, options)
+  local self_key = ids[self]
+  if self_key == nil or not BossBar_is[class_of(self)] then
+    self_key = self_of(self, "BossBar")
+  end
+  return prim["BossBar.attach"](self_key, centity, options)
+end
+
+function BossBar.detach(self)
+  local self_key = ids[self]
+  if self_key == nil or not BossBar_is[class_of(self)] then
+    self_key = self_of(self, "BossBar")
+  end
+  prim["BossBar.detach"](self_key)
+end
+
+function BossBar.attached(self)
+  local self_key = ids[self]
+  if self_key == nil or not BossBar_is[class_of(self)] then
+    self_key = self_of(self, "BossBar")
+  end
+  return prim["BossBar.attached"](self_key)
 end
 
 function BossBar.remove(self)
@@ -4670,6 +5256,38 @@ function Slot.bind(self, storage, index)
   return prim["Slot.bind"](self_key, storage, index)
 end
 
+function Slot.bind_equipment(self, player, equipment)
+  local self_key = ids[self]
+  if self_key == nil or not Slot_is[class_of(self)] then
+    self_key = self_of(self, "Slot")
+  end
+  return prim["Slot.bind_equipment"](self_key, player, equipment)
+end
+
+function Slot.set_rule(self, rule)
+  local self_key = ids[self]
+  if self_key == nil or not Slot_is[class_of(self)] then
+    self_key = self_of(self, "Slot")
+  end
+  return prim["Slot.set_rule"](self_key, rule)
+end
+
+function Slot.rule(self)
+  local self_key = ids[self]
+  if self_key == nil or not Slot_is[class_of(self)] then
+    self_key = self_of(self, "Slot")
+  end
+  return prim["Slot.rule"](self_key)
+end
+
+function Slot.accepts(self, item)
+  local self_key = ids[self]
+  if self_key == nil or not Slot_is[class_of(self)] then
+    self_key = self_of(self, "Slot")
+  end
+  return prim["Slot.accepts"](self_key, item)
+end
+
 function Slot.unbind(self)
   local self_key = ids[self]
   if self_key == nil or not Slot_is[class_of(self)] then
@@ -5054,6 +5672,14 @@ function ProjectItem.create(self, overrides)
     self_key = self_of(self, "ProjectItem")
   end
   return prim["ProjectItem.create"](self_key, overrides)
+end
+
+function ProjectItem.properties(self)
+  local self_key = ids[self]
+  if self_key == nil or not ProjectItem_is[class_of(self)] then
+    self_key = self_of(self, "ProjectItem")
+  end
+  return prim["ProjectItem.properties"](self_key)
 end
 
 function ProjectItem.on(self, event, handler, options)
@@ -5627,12 +6253,20 @@ function Hud.player(self)
   return prim["Hud.player"](self_key)
 end
 
-function Hud.fill_bar(self, name, value, max)
+function Hud.fill_bar(self, name, value, max, options)
   local self_key = ids[self]
   if self_key == nil or not Hud_is[class_of(self)] then
     self_key = self_of(self, "Hud")
   end
-  return prim["Hud.fill_bar"](self_key, name, value, max)
+  return prim["Hud.fill_bar"](self_key, name, value, max, options)
+end
+
+function Hud.fill_bars(self, names, value, max, per_segment)
+  local self_key = ids[self]
+  if self_key == nil or not Hud_is[class_of(self)] then
+    self_key = self_of(self, "Hud")
+  end
+  return prim["Hud.fill_bars"](self_key, names, value, max, per_segment)
 end
 
 function Hud.bar(self, name)
@@ -5765,6 +6399,39 @@ function values.Vec3.lerp(self, other, fraction)
     want(fraction, "number", "fraction")
   end
   return value_body.Vec3.lerp(self, other, fraction)
+end
+
+function values.Vec3.clamp_length(self, max_length)
+  if genuine_mt(self) ~= Vec3_mt then
+    value_self(self, "Vec3")
+  end
+  if type_of(max_length) ~= "number" then
+    want(max_length, "number", "max_length")
+  end
+  return value_body.Vec3.clamp_length(self, max_length)
+end
+
+function values.Vec3.reflect(self, normal)
+  if genuine_mt(self) ~= Vec3_mt then
+    value_self(self, "Vec3")
+  end
+  if genuine_mt(normal) ~= Vec3_mt then
+    vector_arg(normal, "normal", 2)
+  end
+  return value_body.Vec3.reflect(self, normal)
+end
+
+function values.Vec3.closest_on_segment(self, start, finish)
+  if genuine_mt(self) ~= Vec3_mt then
+    value_self(self, "Vec3")
+  end
+  if genuine_mt(start) ~= Vec3_mt then
+    vector_arg(start, "start", 2)
+  end
+  if genuine_mt(finish) ~= Vec3_mt then
+    vector_arg(finish, "finish", 2)
+  end
+  return value_body.Vec3.closest_on_segment(self, start, finish)
 end
 
 function values.Vec3.flat(self)
@@ -6122,8 +6789,12 @@ namespaces["nf.structures"] = function(scope, ns)
 end
 
 namespaces["nf.centities"] = function(scope, ns)
-  function ns.spawn(kind, location_or_position)
-    return prim["nf.centities.spawn"](scope, kind, location_or_position)
+  function ns.properties(kind)
+    return prim["nf.centities.properties"](scope, kind)
+  end
+
+  function ns.spawn(kind, location_or_position, options)
+    return prim["nf.centities.spawn"](scope, kind, location_or_position, options)
   end
 
   function ns.get(id)
@@ -6196,6 +6867,18 @@ namespaces["nf.recipes"] = function(scope, ns)
 
   function ns.remove(id)
     return prim["nf.recipes.remove"](scope, id)
+  end
+
+  function ns.get(id)
+    return prim["nf.recipes.get"](scope, id)
+  end
+
+  function ns.available(player, options)
+    return prim["nf.recipes.available"](scope, player, options)
+  end
+
+  function ns.craft(player, id, options)
+    return prim["nf.recipes.craft"](scope, player, id, options)
   end
 
   function ns.all()
@@ -6447,6 +7130,29 @@ namespaces["nf.test"] = function(scope, ns)
 
   function ns.raise(event, payload)
     return prim["nf.test.raise"](scope, event, payload)
+  end
+
+  function ns.click(player, button, options)
+    return prim["nf.test.click"](scope, player, button, options)
+  end
+
+  function ns.release(player, ticks)
+    prim["nf.test.release"](scope, player, ticks)
+  end
+
+  function ns.input(player, held)
+    prim["nf.test.input"](scope, player, held)
+  end
+
+  function ns.shown(player, slot, options)
+    return prim["nf.test.shown"](scope, player, slot, options)
+  end
+
+  function ns.terrain(options)
+    if options ~= nil and type_of(options) ~= "table" then
+      want_opt(options, "table", "options")
+    end
+    return hand["nf.test"].terrain(scope, options)
   end
 end
 

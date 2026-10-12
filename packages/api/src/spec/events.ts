@@ -109,6 +109,14 @@ export const shapes: LuaClass[] = [
     { name: 'value', type: 'any', doc: 'What it is now, as `nf.config` gives it.' },
     { name: 'previous', type: 'any', doc: 'What it was.' },
   ]),
+  payload('DaylightEvent', 'Night is falling or day is breaking in a world.', [
+    { name: 'world', type: 'World', doc: 'The world.' },
+    {
+      name: 'time_of_day',
+      type: 'integer',
+      doc: "The world's time of day when it was seen, in ticks, as `world:time_of_day()` says: 13000 or a little past at dusk, 23000 or a little past at dawn, or wherever `/time set` put it.",
+    },
+  ]),
   payload('TickEvent', 'A server tick went by.', [
     {
       name: 'tick',
@@ -578,11 +586,39 @@ export const nfEvents: EventSpec[] = [
     cancellable: true,
     raised: inWorld('entity_spawn', 'world'),
   },
+  {
+    name: 'world_dusk',
+    doc: "Night fell in a world: its time of day went from day (23000 to 12999) into night (13000 to 22999), by the clock or by `/time set`. After the world's own `dusk` handlers.",
+    payload: 'DaylightEvent',
+    example:
+      'nf.on("world_dusk", function(event)\n  log("night falls over", event.world:name())\nend)',
+  },
+  {
+    name: 'world_dawn',
+    doc: "Day broke in a world: its time of day went from night (13000 to 22999) into day (23000 to 12999), by the clock or by `/time set`. After the world's own `dawn` handlers.",
+    payload: 'DaylightEvent',
+  },
   ...gameNkEvents,
   {
     name: 'centity_click',
     doc: "A player clicked any centity: the end of a click's path, after the clicked node, the nodes above it and the centity itself, unless one of them called `event:stop()`.",
     payload: 'ClickEvent',
+  },
+  {
+    name: 'recipe_craft',
+    doc: '`nf.recipes.craft` is making a `station` recipe once: its materials are taken, and `event.result` is about to be given. Assign `event.result` to give something else (the same item with a rolled prefix, a stack of a different size). Heard once for each making, so each gets its own; while nobody listens, the makings are given in stacks.',
+    payload: 'RecipeCraftEvent',
+    writable: ['result'],
+    example:
+      'nf.on("recipe_craft", function(event)\n  if event.result.item == "copper_sword" then\n    local sword = event.result\n    sword.data = { prefix = "Sharp" }\n    event.result = nf.items.create("copper_sword", sword)\n  end\nend)',
+  },
+  {
+    name: 'item_view',
+    doc: "Any stack is being sent to one player's game (their inventory, a window they have open, their cursor): after its project item's own `view` handlers, for a stack of one, and for every other stack too. Assign `event.display_name` and `event.lore` to change how it looks to `event.player` alone; nothing the server keeps changes. While nobody listens, stacks are sent as they are; while someone does, every stack sent is worked out here first, so prefer an item's own `view` when only some items change.",
+    payload: 'ItemViewEvent',
+    writable: ['display_name', 'lore'],
+    example:
+      'nf.on("item_view", function(event)\n  if event.player:menu() and event.item.kind == "minecraft:diamond" then\n    event.display_name = "<aqua>Diamond <gray>(sells for 50)"\n  end\nend)',
   },
   {
     name: 'centity_natural_spawn',

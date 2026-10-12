@@ -27,6 +27,49 @@ The plugin never needs a client-only fact (game-data skill). So:
   deliberate change from the reference, which resolved model/text shapes on the
   server from baked tables.
 
+## Spatial queries and `touch`
+
+`world:overlap_box`/`overlap_sphere`/`overlap_cone`, `sweep` and `nearest` (`centity/Spatial.kt`):
+a `QueryShape` (its broad-phase `region`, the `origin` distances and the line of sight are measured
+from, and `test(box)`, the narrow phase) run by `SpatialQueries` against centities' hitboxes through
+`Centities.obstacles` (the same `ObstacleGrid` physics uses, whose `Obstacles.nodes` says which node
+each box is of) and the server's entity boxes (`WorldEntityOps.boxes`, a contract case). A centity is
+found once, by its nearest box; results are sorted by distance, then the line of sight (one block ray
+each) and the limit apply. `Capsule` (a sweep) is exact where the sphere first meets a face (a slab
+test against the box grown by the radius) and halves its way in at an edge or a corner. `sweep` itself
+casts one block ray first and shortens the capsule to it, so nothing past the block is found.
+`world:raycast`'s centity half uses the grid too. `touch` is `Centities.touches()`, after the whole
+pass so every instance has moved: `SpatialQueries.contacts` per listening instance, compared with
+`Instance.touching`. Tests: `SpatialQueryTest`.
+
+## Bodies (`centity.json`'s `body`)
+
+A centity's `body` moves the whole centity, where a node's `physics` moves one node. Format: `BodyDef`
+(the file), `ResolvedBody` (defaults and clamps, what the validator's `centity.body-*` problems say),
+`CompiledCentity.body`. Runtime: `Instance.mover` (a `Mover`: settings, velocity, walk, what its last
+move found; reset by `redefine`) and `centity/Movers.kt`, stepped in the pipeline after a walk and
+before physics (skipped while `move_to` walks it). One step: drag, then gravity (less in a liquid,
+read from the block at its middle), then the walk's approach (so a walk lands on exactly the speed it
+asks for); then the move, Minecraft's way: one `RegionShapes` read of the blocks around the swept box
+(unloaded chunks are full cubes), clipped up or down first, then the longer sideways axis first; a
+blocked sideways move on the ground is tried again from `stepHeight` higher and kept if it got
+further. A body that starts overlapping a block rises out. `jumpSpeed` halves its way to the launch
+speed whose apex, integrated tick by tick exactly as the step does, is the height asked. The anchor is
+set directly (only into a chunk whose entities are loaded), as a walk sets it; `land` and `bump` are
+raised from what the step returns. Tests: `CentityBodyTest`.
+
+## Flights (`centity:launch`)
+
+`Instance.flight` (a `Flight`: the launch's options resolved, with its velocity, age, bounces, whether it's
+`still` (stuck or resting) and `hitAt`, what it hit and when), stepped by `centity/Flights.kt` first in the
+pipeline; while it flies a walk is ended and the body waits. One step: homing (the nearest a `Sphere` query
+finds, turned toward by at most its rate), gravity after its delay, drag; one block ray from here to there,
+then one `Capsule` query up to the block for what the path touches, in order, each raising `hit` (cancelled:
+it passes) and using a `pierce` or ending it; then the block: stick, bounce (the normal part by `bounce`, the
+part along the face by `friction`, resting on a floor below `rest_speed`) or end. A handler that removes it,
+stops it or launches it again ends that step (`instance.flight !== flight`). `end` raises `flight_end` and
+removes it unless `remove_on_end` is false. Tests: `FlightTest`.
+
 ## Physics: where things are
 
 | Path (`apps/plugin/runtime/.../`) | Owns                                                                              |

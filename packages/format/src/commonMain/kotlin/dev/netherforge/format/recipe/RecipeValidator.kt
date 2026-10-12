@@ -30,7 +30,10 @@ object RecipeValidator {
             "base" to (file.base != null),
             "addition" to (file.addition != null),
             "experience" to (file.experience != null),
-            "cookingTime" to (file.cookingTime != null)
+            "cookingTime" to (file.cookingTime != null),
+            "materials" to (file.materials != null),
+            "stations" to (file.stations != null),
+            "stationRange" to (file.stationRange != null)
         )
         for ((field, present) in fields) {
             if (present && field !in type.requiredFields && field !in type.optionalFields) {
@@ -55,6 +58,7 @@ object RecipeValidator {
                     )
                 }
             }
+            RecipeType.STATION -> station(file, sink)
             else -> Unit
         }
         if (type.cooking) {
@@ -89,6 +93,33 @@ object RecipeValidator {
         file.template?.let { add("$.template" to it) }
         file.base?.let { add("$.base" to it) }
         file.addition?.let { add("$.addition" to it) }
+        file.materials?.forEachIndexed { index, material -> add("$.materials[$index].ingredient" to material.ingredient) }
+    }
+
+    private fun station(file: RecipeFile, sink: ProblemSink) {
+        val materials = file.materials ?: return
+        if (materials.isEmpty()) sink.report(ProblemCodes.RECIPE_INGREDIENTS, "A station recipe takes at least one material", "$.materials")
+        materials.forEachIndexed { index, material ->
+            val count = material.count
+            if (count != null &&
+                count < 1
+            ) {
+                sink.report(ProblemCodes.RECIPE_INGREDIENTS, "count must be at least 1", "$.materials[$index].count")
+            }
+        }
+        file.stations?.forEachIndexed { index, station ->
+            if (station.split('|').any { it.isBlank() }) {
+                sink.report(
+                    ProblemCodes.RECIPE_STATION,
+                    "A station is a block id, a #tag or a project block, or several of them between | (any of them)",
+                    "$.stations[$index]"
+                )
+            }
+        }
+        val range = file.stationRange
+        if (range != null && range !in 1..Material.MAX_STATION_RANGE) {
+            sink.report(ProblemCodes.RECIPE_STATION, "stationRange must be 1 to ${Material.MAX_STATION_RANGE}", "$.stationRange")
+        }
     }
 
     private fun shaped(file: RecipeFile, sink: ProblemSink) {

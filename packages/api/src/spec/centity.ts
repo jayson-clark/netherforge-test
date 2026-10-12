@@ -1,3 +1,4 @@
+import { buffEvents, statFunctions } from './stats.ts'
 import type { EventSpec, Fn, LuaClass } from '../types.ts'
 import { DATA_SAVING, DATA_VALUES } from './data.ts'
 import { eventFunctions } from './events.ts'
@@ -128,6 +129,68 @@ const centityEvents: EventSpec[] = [
     payload: 'CentityEvent',
   },
   {
+    name: 'hit',
+    doc: "It's flying (`launch`) and its path touched something it can hit: a centity's hitbox, a player or another entity, in the order it meets them, each once (or again after `rehit` ticks). `event:cancel()` lets it pass through as if it weren't there, without using up a `pierce`. Otherwise it goes on through only while it has `pierce` left; past that, this is where it ends (`flight_end`, `\"hit\"`).",
+    payload: 'FlightHitEvent',
+    cancellable: true,
+    example:
+      'this:on("hit", function(event)\n  if event.target then\n    event.target:emit("game:struck", { damage = 4 })\n  end\nend)',
+  },
+  {
+    name: 'bounce',
+    doc: "It's flying with `bounce` and came off a block: `event.normal` is the face it hit, `event.speed` how fast it was going into it.",
+    payload: 'FlightBlockEvent',
+  },
+  {
+    name: 'stick',
+    doc: "It's flying with `stick` and stuck in a block: it stays there, its flight over but not ended, until its `lifetime` is up.",
+    payload: 'FlightBlockEvent',
+  },
+  {
+    name: 'flight_end',
+    doc: 'Its flight ended: it hit something with no `pierce` left (`"hit"`), met a block it neither bounces off nor sticks in (`"block"`), ran out of `lifetime` (`"lifetime"`), reached a chunk that isn\'t loaded (`"unloaded"`), or a script stopped it (`"stopped"`). Then, unless `remove_on_end` is `false`, it\'s removed: its `remove` handlers hear it next.',
+    payload: 'FlightEndEvent',
+    example:
+      'this:on("flight_end", function(event)\n  this:world():explode(event.position, 2)\nend)',
+  },
+  {
+    name: 'damage',
+    doc: "It's about to lose health to `centity:damage`: assign `event.amount` to change how much (a defence, a weakness), or `event:cancel()` it (a moment it can't be hurt). Its health goes down by what's left, its bar shows, and at 0 it dies (`death`).",
+    payload: 'CentityDamageEvent',
+    cancellable: true,
+    writable: ['amount'],
+    example:
+      'this:on("damage", function(event)\n  event.amount = math.max(1, event.amount - 4) -- armour\nend)',
+  },
+  {
+    name: 'death',
+    doc: "Its health reached 0. Then, unless its `health` says `removeOnDeath: false`, it's removed: its `remove` handlers hear it next. `event.source` and `event.cause` are what dealt the last blow.",
+    payload: 'CentityDeathEvent',
+    example:
+      'this:on("death", function(event)\n  nf.loot.roll("slime", { location = this:location() })\nend)',
+  },
+  {
+    name: 'land',
+    doc: 'Its `body` came down onto something after falling (or jumping): once, as it lands. `event.speed` is how fast it was falling, for fall damage or a thud.',
+    payload: 'CentityLandEvent',
+    example:
+      'this:on("land", function(event)\n  if event.speed > 12 then\n    this:emit("game:hurt", { amount = event.speed - 12 })\n  end\nend)',
+  },
+  {
+    name: 'bump',
+    doc: "Its `body` ran into something it didn't land on: a wall, or a ceiling. Once each tick it does, with the face's `normal` (pointing back at it) and how fast it was going into it.",
+    payload: 'CentityBumpEvent',
+    example:
+      'this:on("bump", function(event)\n  if event.normal.y == 0 and this:is_on_ground() then\n    this:jump(1.2)\n  end\nend)',
+  },
+  {
+    name: 'touch',
+    doc: "Its hitboxes started touching something's: another centity's, a player's or another entity's (each shown node's boxes, as `world:overlap_box` sees them). Once when they start touching, and again only after they've come apart. Worked out each tick only for centities something listens to this on, so a crowd nobody listens to costs nothing. Both centities hear it when two touch, each with the other in `event.other`.",
+    payload: 'TouchEvent',
+    example:
+      'this:on("touch", function(event)\n  if event.other then\n    event.other:emit("game:bumped", { by = this })\n  end\nend)',
+  },
+  {
     name: 'path_end',
     doc: `It stopped walking where \`move_to\` sent it: it got there (to the end of its path, or within ${PATH_REACH} blocks of what it went after), or gave up (no way further, its way blocked with no other way round, or what it went after has gone or left its world). Not after \`stop_pathing\`, a new \`move_to\`, \`teleport\` or a reload of its centity.`,
     payload: 'CentityPathEndEvent',
@@ -172,6 +235,10 @@ const NODE_DEFINITION =
 const ADDED_NODES =
   "A node a script adds is **runtime state**, like a rest pose a script sets: it takes part in everything a declared node does (its transform follows its parent, a display and an interaction entity are spawned for it and sent to players, a hitbox takes clicks and `click` bubbles up through its parents, a `physics` body is simulated and collides, `raycast` hits it) except what a file names: an animation clip can't drive it, because clips are written against the file's nodes, though it follows its animated parent. It is **not saved**: after a restart, and when its centity is reloaded, it's gone, and the script's body, which runs again, is where to add it. Only nodes a script added can be removed; the nodes `centity.json` declares can't be."
 
+/** What's true of a body's settings at runtime. */
+const BODY_RUNTIME =
+  "A body's settings are runtime state, like a node's pose: they last until its centity is reloaded or the server restarts, when it's back to its file's."
+
 /** A spawned centity instance. `this` in its script. */
 export const centityClass: LuaClass = {
   name: 'Centity',
@@ -180,7 +247,7 @@ export const centityClass: LuaClass = {
   handle: { key: [{ name: 'id', type: 'string' }] },
   saveable: true,
   fields: [],
-  events: centityEvents,
+  events: [...centityEvents, ...buffEvents],
   customEvents: true,
   functions: [
     {
@@ -208,13 +275,31 @@ export const centityClass: LuaClass = {
       returns: [{ type: 'boolean' }],
     },
     {
+      name: 'is_temporary',
+      doc: "Whether a script spawned it temporary (`nf.centities.spawn`'s `temporary` or `lifetime`), and it still is: it isn't saved, and it goes when the script that spawned it unloads, or when its lifetime is up. `false` for one `keep` has kept, and once it's removed.",
+      params: [],
+      returns: [{ type: 'boolean' }],
+    },
+    {
+      name: 'lifetime',
+      doc: "How many ticks a temporary centity with a `lifetime` has left before it's removed, or `nil` for one without (or once it's removed).",
+      params: [],
+      returns: [{ type: 'integer?' }],
+    },
+    {
+      name: 'set_lifetime',
+      doc: "Gives it this many ticks more before it's removed, from now. A centity with a lifetime is temporary, so one that wasn't becomes so: it's no longer saved, and goes when its lifetime is up (one spawned temporary still goes with its script too). Leave it out (or `nil`) to take its lifetime away; it stays temporary until `keep`.",
+      params: [{ name: 'ticks', type: 'integer', doc: 'At least 1.', optional: true }],
+      returns: [{ type: 'boolean', doc: "`false` once it's removed." }],
+    },
+    {
       name: 'keep',
-      doc: 'Makes a natural centity a normal one: it is saved from now on (it comes back after a restart), is never removed for being far from players, and no longer counts against its cap. Nothing happens to one that is already normal.',
+      doc: 'Makes a natural or temporary centity a normal one: it is saved from now on (it comes back after a restart), is never removed for being far from players or because a script unloaded or a lifetime ran out, and no longer counts against a cap. Nothing happens to one that is already normal.',
       params: [],
       returns: [
         {
           type: 'boolean',
-          doc: 'Whether it was natural: `false` for one that was already normal, and once it is removed.',
+          doc: 'Whether it was natural or temporary: `false` for one that was already normal, and once it is removed.',
         },
       ],
       example:
@@ -251,6 +336,21 @@ export const centityClass: LuaClass = {
       returns: [{ type: 'Node?' }],
       example:
         'local lamp = assert(this:add_node("lamp", {\n  transform = { translation = vec3(0, 2, 0) },\n  display = { type = "block", block = "minecraft:sea_lantern" },\n  hitbox = {},\n}))\nlamp:on("click", function(event)\n  lamp:remove()\nend)',
+    },
+    {
+      name: 'properties',
+      doc: 'Its `properties` from its `centity.json`: the project\'s own facts about it, any JSON (`{ damage = 12, class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An empty table when the file has none, `nil` once it\'s gone.',
+      params: [],
+      returns: [{ type: 'table?' }],
+      example: 'local stats = assert(this:properties())\nlog(stats.damage)',
+    },
+    {
+      name: 'bounds',
+      doc: "The box around all its hitboxes as they're shown now (each shown node's boxes, turned and placed), in the world: what `world:overlap_box` and the other spatial queries test against. `nil` for a centity with no hitboxes showing, or once it's removed.",
+      params: [],
+      returns: [{ type: 'Bounds?' }],
+      example:
+        'local box = this:bounds()\nif box then\n  local top = vec3((box.min.x + box.max.x) / 2, box.max.y, (box.min.z + box.max.z) / 2)\n  world:spawn_particle("minecraft:heart", top)\nend',
     },
     {
       name: 'location',
@@ -344,7 +444,182 @@ export const centityClass: LuaClass = {
       params: [],
       returns: [{ type: 'boolean', doc: "`false` once it's removed." }],
     },
+    ...statFunctions('it', 'this'),
+    {
+      name: 'health',
+      doc: "How much health it has left: from its `centity.json`'s `health` (its `max` when it spawns), or what `set_max_health` gave it. `nil` for one without health, or once it's removed. Not saved: after a restart it's whole again.",
+      params: [],
+      returns: [{ type: 'number?' }],
+    },
+    {
+      name: 'max_health',
+      doc: "Its health when whole, or `nil` without health (or once it's removed).",
+      params: [],
+      returns: [{ type: 'number?' }],
+    },
+    {
+      name: 'set_health',
+      doc: "Sets how much health it has, between 0 and its `max_health`: no `damage` or `death` event, and 0 doesn't kill it (`damage` does). Its bar shows the change. `false` without health, or once it's removed.",
+      params: [{ name: 'health', type: 'number', doc: '' }],
+      returns: [{ type: 'boolean' }],
+    },
+    {
+      name: 'set_max_health',
+      doc: "Changes its health when whole (more than 0), keeping what it has but no more than the new most. One without `health` in its file gets health this way (full, and no bar). `false` once it's removed.",
+      params: [{ name: 'max_health', type: 'number', doc: '' }],
+      returns: [{ type: 'boolean' }],
+      example:
+        '-- A boss with more health for each player near it.\nthis:set_max_health(2000 * #this:world():players())\nthis:set_health(assert(this:max_health()))',
+    },
+    {
+      name: 'damage',
+      doc: "Takes health from it: its `damage` handlers may change the amount or cancel it, its health goes down by what's left, its bar shows, and at 0 it dies (`death`, then it's removed unless its file says otherwise). Damage to one already dead does nothing.",
+      params: [
+        { name: 'amount', type: 'number', doc: 'How much, at least 0.' },
+        { name: 'options', type: 'CentityDamageOptions', doc: '', optional: true },
+      ],
+      returns: [
+        {
+          type: 'number?',
+          doc: "How much it took after its handlers (0 when cancelled), or `nil` for one without health, one already dead, or once it's removed.",
+        },
+      ],
+      example: 'local dealt = target:damage(12, { source = player, cause = "melee" })',
+    },
+    {
+      name: 'heal',
+      doc: 'Gives it back health, up to its `max_health`. Its bar shows the change.',
+      params: [{ name: 'amount', type: 'number', doc: 'At least 0.' }],
+      returns: [
+        {
+          type: 'number?',
+          doc: "How much it gained, or `nil` without health (or once it's removed).",
+        },
+      ],
+    },
+    {
+      name: 'is_dead',
+      doc: 'Whether its health has reached 0 through `damage`. `false` for one without health. A dead one its file keeps (`removeOnDeath: false`) stays dead until `set_health` gives it health again.',
+      params: [],
+      returns: [{ type: 'boolean' }],
+    },
+    {
+      name: 'has_body',
+      doc: "Whether it has a body: a `body` in its `centity.json`, or one `set_body` gave it. Without one the body functions do nothing (their getters answer `false`, `nil` or `vec3.zero`). `false` once it's removed.",
+      params: [],
+      returns: [{ type: 'boolean' }],
+    },
+    {
+      name: 'body',
+      doc: "Its body's settings as they are now: what its `centity.json`'s `body` says, every field filled in, with what `set_body` changed. `nil` without a body, or once it's removed.",
+      params: [],
+      returns: [{ type: 'BodySettings?' }],
+    },
+    {
+      name: 'set_body',
+      doc: `Changes its body's settings: only the fields given, the rest as they are. One without a body gets one, the fields left out as \`centity.json\`'s defaults. ${BODY_RUNTIME} A value out of range is clamped as in the file; a width or height that isn't more than 0 is an error.`,
+      params: [{ name: 'settings', type: 'BodySettings', doc: '' }],
+      returns: [{ type: 'boolean', doc: "`false` once it's removed." }],
+      example:
+        "-- Wings: it flies until they're clipped.\nthis:set_body({ fly = true, drag = 0.6 })",
+    },
+    {
+      name: 'velocity',
+      doc: "How fast its body is moving, in blocks per second along the world's axes: `vec3.zero` without a body, `nil` once it's removed.",
+      params: [],
+      returns: [{ type: 'Vec3?' }],
+    },
+    {
+      name: 'set_velocity',
+      doc: "Replaces its body's velocity: a knock back, a dash, a launch. The body carries on from it under gravity and drag, and walking eases it back to its walk.",
+      params: [
+        { name: 'velocity', type: 'Vec3', doc: "Blocks per second, along the world's axes." },
+      ],
+      returns: [{ type: 'boolean', doc: '`false` without a body.' }],
+      example:
+        'this:set_velocity((this:position() - player:position()):normalized() * 8 + vec3(0, 6, 0))',
+    },
+    {
+      name: 'add_velocity',
+      doc: "Adds to its body's velocity.",
+      params: [
+        { name: 'velocity', type: 'Vec3', doc: "Blocks per second, along the world's axes." },
+      ],
+      returns: [{ type: 'boolean', doc: '`false` without a body.' }],
+    },
+    {
+      name: 'walk_velocity',
+      doc: "The velocity its body is walking at (`set_walk_velocity`), or `nil` when it isn't walking, has no body, or is removed.",
+      params: [],
+      returns: [{ type: 'Vec3?' }],
+    },
+    {
+      name: 'set_walk_velocity',
+      doc: "Walks its body: every tick it speeds up or slows down toward this velocity by its `acceleration` (`air_acceleration` while it's off the ground), so it reaches it smoothly and keeps to it, round whatever pushes it about, until it's changed. Only the sideways part counts, unless it flies, when it steers it in any direction. Leave it out (or `nil`) to stop walking: on the ground it then slows to a stop by its `friction`. Walking doesn't turn it: `set_yaw` or `look_at` does.",
+      params: [
+        {
+          name: 'velocity',
+          type: 'Vec3',
+          doc: "Blocks per second, along the world's axes: a direction times a speed.",
+          optional: true,
+        },
+      ],
+      returns: [{ type: 'boolean', doc: '`false` without a body.' }],
+      example:
+        'local target = player:position()\nlocal here = this:position()\nif target and here then\n  this:set_walk_velocity((target - here):flat():normalized() * 3)\nend',
+    },
+    {
+      name: 'jump',
+      doc: "Sends its body up fast enough to rise `height` blocks, worked out from its gravity and drag: what a jump over a block (1.2) needs. Whether it's on the ground is for the script to check (`is_on_ground`), so a double jump is one more call.",
+      params: [{ name: 'height', type: 'number', doc: 'Blocks, at least 0.' }],
+      returns: [{ type: 'boolean', doc: '`false` without a body.' }],
+      example: 'if this:is_on_ground() and this:wall() then\n  this:jump(1.2)\nend',
+    },
+    {
+      name: 'is_on_ground',
+      doc: 'Whether its body is standing on something: a block, as of its last move. `false` without a body.',
+      params: [],
+      returns: [{ type: 'boolean' }],
+    },
+    {
+      name: 'is_in_liquid',
+      doc: 'Whether its body is in water or lava (the block at its middle). `false` without a body.',
+      params: [],
+      returns: [{ type: 'boolean' }],
+    },
+    {
+      name: 'wall',
+      doc: 'The face of what stopped its body sideways on its last move, as the direction straight out of it (`vec3(-1, 0, 0)` for a wall to its east), or `nil` when nothing did, or without a body. What a walker turns round at, or jumps over.',
+      params: [],
+      returns: [{ type: 'Vec3?' }],
+    },
+    {
+      name: 'launch',
+      doc: "Makes it a projectile: from now on the server flies the whole centity every tick at its velocity, under its gravity and drag, and sweeps its path (a sphere of `radius`) for what it hits: centities' hitboxes, players and entities (`hit`), and blocks (it ends, bounces or sticks: `flight_end`, `bounce`, `stick`). It flies until it ends, then is removed unless told not to. Nothing about a flight is saved. A launch over a flight replaces it. One with a `body` stops walking while it flies, and walks again after. Every value is in blocks and seconds, as everywhere.",
+      params: [{ name: 'options', type: 'LaunchOptions', doc: '' }],
+      returns: [{ type: 'boolean', doc: "`false` once it's removed." }],
+      example:
+        'local eye, facing = assert(player:eye_position()), assert(player:direction())\nlocal arrow = assert(nf.centities.spawn("arrow", eye, { temporary = true }))\narrow:launch({ velocity = facing * 40, gravity = 20, radius = 0.15, owner = player, aim = "aim", pierce = 1 })',
+    },
+    {
+      name: 'is_launched',
+      doc: "Whether it's flying as a projectile (`launch`), stuck in a block or lying where it came to rest included: until its flight ends. `false` once it's removed.",
+      params: [],
+      returns: [{ type: 'boolean' }],
+    },
+    {
+      name: 'stop_flight',
+      doc: 'Ends its flight where it is, as if it had ended by itself: `flight_end` hears `"stopped"`, and it\'s removed unless `remove_on_end` was `false`.',
+      params: [],
+      returns: [
+        {
+          type: 'boolean',
+          doc: "Whether it was flying: `false` when it wasn't, or once it's removed.",
+        },
+      ],
+    },
     ...pathFunctions,
+
     {
       name: 'data',
       doc: `This instance's own saved table, kept with the instance across restarts and removed with it. Every script that holds the instance (its own, a module's) gets the same table. ${DATA_VALUES} ${DATA_SAVING} \`nil\` once it's removed.`,
@@ -631,6 +906,62 @@ export const nodeClass: LuaClass = {
         { name: 'scale', type: 'Vec3', doc: 'A factor per axis: `vec3.one` is its natural size.' },
       ],
       returns: [],
+    },
+    {
+      name: 'stretch_between',
+      doc: "Lays it from one point of the world to another: its origin halfway, its Z pointing from `from` to `to`, and its Z scale the distance between them. For a node whose display is one block long along Z and centred on its origin (a beam, a string, a link), that's the whole way from one to the other. Its X and Y scale stay as they are, or are `thickness`.",
+      params: [
+        { name: 'from', type: 'Vec3', doc: 'A point in the world.' },
+        { name: 'to', type: 'Vec3', doc: 'A point in the world.' },
+        { name: 'options', type: 'StretchOptions', doc: '', optional: true },
+      ],
+      returns: [{ type: 'boolean', doc: '`false` once its centity is removed.' }],
+      example:
+        'local beam = assert(this:node("beam"))\nlocal here = assert(this:position())\nbeam:stretch_between(here, vec3(10, 70, 4), { thickness = 0.2 })',
+    },
+    {
+      name: 'is_rope',
+      doc: 'Whether it\'s a rope node (`"rope"` in `centity.json`).',
+      params: [],
+      returns: [{ type: 'boolean' }],
+    },
+    {
+      name: 'rope_between',
+      doc: "Strings a rope node between two ends, and keeps it strung each tick as they move, until `release_rope` or another `rope_between`: its links laid along a line from one to the other, sagging with `length`'s slack, as many shown as the distance needs (up to its `links`; the rest hidden). An end is a point, a node (its origin, as shown), or an entity (half a block above its feet; a player's at their hands' height, 1.1 blocks up). An end that's gone (a removed centity, an entity that left) releases the rope. A node that isn't a rope is an error.",
+      params: [
+        { name: 'from', type: 'Vec3|Node|Entity', doc: '' },
+        { name: 'to', type: 'Vec3|Node|Entity', doc: '' },
+        { name: 'options', type: 'RopeOptions', doc: '', optional: true },
+      ],
+      returns: [{ type: 'boolean', doc: '`false` once its centity is removed.' }],
+      example:
+        '-- A chain from the player\'s hand to the ball.\nlocal player = assert(nf.players.online()[1])\nassert(this:node("chain")):rope_between(player, assert(this:node("ball")), { length = 6 })',
+    },
+    {
+      name: 'release_rope',
+      doc: 'Stops keeping a rope strung: its links stay where they were last laid.',
+      params: [],
+      returns: [],
+    },
+    {
+      name: 'tween',
+      doc: "Eases its translation, rotation or scale from where they are to new values over some ticks, as `set_translation`, `set_rotation` and `set_scale` would each tick: and with `back`, eases them back again. A tween of a channel this node is already tweening replaces it, from where it is; `set_*` on a channel doesn't stop its tween. Animations drive what they drive over it, as they do over `set_*`; an `additive` one changes it.",
+      params: [{ name: 'options', type: 'TweenOptions', doc: '' }],
+      returns: [{ type: 'boolean', doc: '`false` once its centity is removed.' }],
+      example:
+        '-- Squash flat as it lands, and spring back.\nthis:on("land", function()\n  this:node("root"):tween({ scale = vec3(1.4, 0.6, 1.4), ticks = 3, easing = "ease_out", back = true })\nend)',
+    },
+    {
+      name: 'is_tweening',
+      doc: 'Whether a tween is easing any of its channels.',
+      params: [],
+      returns: [{ type: 'boolean' }],
+    },
+    {
+      name: 'stop_tween',
+      doc: 'Stops its tweens where they are now.',
+      params: [],
+      returns: [{ type: 'boolean', doc: "`false` when it wasn't tweening." }],
     },
     {
       name: 'world_position',
@@ -1074,6 +1405,11 @@ export const centityShapes: LuaClass[] = [
         doc: `Walking: how far down it will drop off an edge, in blocks: at least 0. Default ${DEFAULT_MAX_DROP}.`,
       },
       {
+        name: 'open_doors',
+        type: 'boolean?',
+        doc: "Walking: goes through the game's wooden doors and fence gates (`#minecraft:wooden_doors`, `#minecraft:fence_gates`), opening each as it comes to it and shutting it again once it's through (one it found open stays open). Iron doors stay in its way. Default `false`.",
+      },
+      {
         name: 'range',
         type: 'number?',
         doc: `How far from where it sets off it looks for a way, in blocks: more than 0, at most ${MAX_RANGE}. A target further away than this is \`false\`. Default ${DEFAULT_RANGE}. One search looks at no more than ${NODE_LIMIT} places, so a long way round may only take it part of the way.`,
@@ -1092,6 +1428,397 @@ export const centityShapes: LuaClass[] = [
         name: 'reached',
         type: 'boolean',
         doc: `Whether it got there: to the end of its path, within ${PATH_REACH} blocks of where it was sent (or of what it went after, which it stops short of); \`false\` when it gave up.`,
+      },
+    ],
+  },
+  {
+    name: 'CentitySpawnOptions',
+    doc: "How `nf.centities.spawn` spawns one. A key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      {
+        name: 'temporary',
+        type: 'boolean?',
+        doc: "Not saved: its entities aren't kept with their chunk, the server forgets it on a restart, and it's removed when the script that spawned it unloads (a reload of it, or its centity removed), so nothing it made is left behind. What a shot, a damage number or a summoned helper is. `keep()` makes it a normal one. Default `false`.",
+      },
+      {
+        name: 'lifetime',
+        type: 'integer?',
+        doc: "Removed this many ticks after it's spawned (its `remove` handlers hear it), loaded or not: at least 1. A centity with a lifetime is temporary too. Default: none.",
+      },
+    ],
+  },
+  {
+    name: 'BodySettings',
+    doc: "A centity's body, as `centity:body()` gives it and `centity:set_body` takes it: the fields of `centity.json`'s `body`, in Lua spelling. Every field is optional to `set_body`. A key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      { name: 'width', type: 'number?', doc: 'Blocks across, square: more than 0, at most 16.' },
+      { name: 'height', type: 'number?', doc: 'Blocks tall: more than 0, at most 32.' },
+      {
+        name: 'gravity',
+        type: 'number?',
+        doc: 'Downward acceleration, blocks per second squared.',
+      },
+      { name: 'max_fall_speed', type: 'number?', doc: 'The fastest it falls, blocks per second.' },
+      {
+        name: 'drag',
+        type: 'number?',
+        doc: 'Fraction of its speed shed per second in the air, 0 to 1.',
+      },
+      { name: 'liquid_drag', type: 'number?', doc: 'The same in water or lava.' },
+      {
+        name: 'liquid_gravity',
+        type: 'number?',
+        doc: 'How much of its gravity pulls it in water or lava: 0 floats, 1 sinks as in air.',
+      },
+      {
+        name: 'acceleration',
+        type: 'number?',
+        doc: 'How fast it reaches its walk on the ground (or flying), blocks per second squared.',
+      },
+      { name: 'air_acceleration', type: 'number?', doc: 'The same in the air.' },
+      {
+        name: 'friction',
+        type: 'number?',
+        doc: "How fast it slows to a stop on the ground when it isn't walking, blocks per second squared.",
+      },
+      {
+        name: 'step_height',
+        type: 'number?',
+        doc: 'The tallest step it walks straight up, blocks.',
+      },
+      {
+        name: 'bounce',
+        type: 'number?',
+        doc: '0 stops dead against what it hits, 1 bounces off at full speed.',
+      },
+      { name: 'fly', type: 'boolean?', doc: 'No gravity: walking steers it in any direction.' },
+      { name: 'blocks', type: 'boolean?', doc: "Collides with the world's blocks." },
+    ],
+  },
+  {
+    name: 'LaunchOptions',
+    doc: "How `centity:launch` flies it. Everything but `velocity` is optional. A key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      {
+        name: 'velocity',
+        type: 'Vec3',
+        doc: "Blocks per second, along the world's axes. Required.",
+      },
+      {
+        name: 'gravity',
+        type: 'number?',
+        doc: 'Downward acceleration, blocks per second squared. Default 0: it flies straight.',
+      },
+      {
+        name: 'gravity_delay',
+        type: 'integer?',
+        doc: "Ticks it flies straight before gravity takes it, as a thrown knife's first stretch. Default 0.",
+      },
+      {
+        name: 'drag',
+        type: 'number?',
+        doc: 'Fraction of its speed shed per second, 0 to 1. Default 0.',
+      },
+      {
+        name: 'radius',
+        type: 'number?',
+        doc: "How wide its path is swept for hits, as a sphere's radius in blocks; blocks stop its middle. Default 0.1.",
+      },
+      {
+        name: 'pierce',
+        type: 'integer?',
+        doc: 'How many hits it goes on through before one ends it. Default 0: the first ends it.',
+      },
+      {
+        name: 'rehit',
+        type: 'integer?',
+        doc: 'Ticks before it can hit the same thing again. Default: it hits each thing once.',
+      },
+      {
+        name: 'hits',
+        type: 'QueryOptions?',
+        doc: "What it can hit, as a spatial query's options say (`centities`, `players`, `entities`, `kinds`, `exclude`, `line_of_sight` aside). It never hits itself or its `owner`. Default: everything.",
+      },
+      {
+        name: 'owner',
+        type: '(Entity|Centity)?',
+        doc: 'Who launched it: never hit, and handed to every event. Default none.',
+      },
+      {
+        name: 'blocks',
+        type: 'boolean?',
+        doc: 'Whether blocks stop it (their collision shapes). Default `true`.',
+      },
+      {
+        name: 'bounce',
+        type: 'number?',
+        doc: "Comes off a block instead of ending: the fraction of its speed into the face it keeps, 0 to 1. Default: it doesn't bounce.",
+      },
+      {
+        name: 'friction',
+        type: 'number?',
+        doc: 'With `bounce`: the fraction of its speed along the face it keeps, 0 to 1. Default 1.',
+      },
+      {
+        name: 'max_bounces',
+        type: 'integer?',
+        doc: 'With `bounce`: how many it makes before the next block ends it. Default: no end.',
+      },
+      {
+        name: 'rest_speed',
+        type: 'number?',
+        doc: 'With `bounce`: below this speed, blocks per second, after a bounce off a floor it stops and lies there (a grenade) until its `lifetime` is up. Default 1.',
+      },
+      {
+        name: 'stick',
+        type: 'boolean?',
+        doc: 'Sticks in the first block it hits (`stick`) instead of ending: it stays there until its `lifetime` is up. Default `false`.',
+      },
+      {
+        name: 'homing',
+        type: 'Homing?',
+        doc: "Turns toward the nearest thing it can hit within reach. Default: it doesn't.",
+      },
+      {
+        name: 'lifetime',
+        type: 'integer?',
+        doc: 'Ticks from launch before it ends (`flight_end`, `\"lifetime\"`), flying, stuck or lying still. At least 1. Default 600: half a minute.',
+      },
+      {
+        name: 'aim',
+        type: 'string?',
+        doc: "A node that's turned every tick so its +Z points the way it flies (an arrow's nose). Default: none is turned.",
+      },
+      {
+        name: 'remove_on_end',
+        type: 'boolean?',
+        doc: "Whether it's removed when its flight ends, after `flight_end`. Default `true`.",
+      },
+    ],
+  },
+  {
+    name: 'Homing',
+    doc: 'How a projectile seeks: `LaunchOptions.homing`.',
+    methods: false,
+    functions: [],
+    fields: [
+      { name: 'range', type: 'number', doc: 'How far it looks, in blocks. Required.' },
+      {
+        name: 'turn',
+        type: 'number?',
+        doc: 'The most it turns toward its target, in degrees per second. Default 180.',
+      },
+    ],
+  },
+  {
+    name: 'FlightHitEvent',
+    doc: 'A projectile touched something it can hit: `hit`. Exactly one of `target` and `entity` is set.',
+    methods: false,
+    functions: [],
+    extends: 'Event',
+    fields: [
+      { name: 'centity', type: 'Centity', doc: 'The projectile.' },
+      { name: 'target', type: 'Centity?', doc: 'The centity it hit, or `nil`.' },
+      { name: 'node', type: 'Node?', doc: "Which of `target`'s nodes (its hitbox), or `nil`." },
+      { name: 'entity', type: 'Entity?', doc: 'The player or entity it hit, or `nil`.' },
+      { name: 'position', type: 'Vec3', doc: 'Where its middle was when it first touched.' },
+      { name: 'velocity', type: 'Vec3', doc: 'How fast it was going, blocks per second.' },
+      { name: 'owner', type: '(Entity|Centity)?', doc: 'Who launched it, or `nil`.' },
+    ],
+  },
+  {
+    name: 'FlightBlockEvent',
+    doc: 'A projectile met a block it bounces off (`bounce`) or sticks in (`stick`).',
+    methods: false,
+    functions: [],
+    extends: 'Event',
+    fields: [
+      { name: 'centity', type: 'Centity', doc: 'The projectile.' },
+      { name: 'block', type: 'Block', doc: 'The block.' },
+      { name: 'position', type: 'Vec3', doc: 'Where it met it.' },
+      { name: 'normal', type: 'Vec3', doc: 'The direction straight out of the face it met.' },
+      { name: 'speed', type: 'number', doc: 'How fast it was going into it, blocks per second.' },
+      { name: 'owner', type: '(Entity|Centity)?', doc: 'Who launched it, or `nil`.' },
+    ],
+  },
+  {
+    name: 'FlightEndEvent',
+    doc: "A projectile's flight ended: `flight_end`.",
+    methods: false,
+    functions: [],
+    extends: 'Event',
+    fields: [
+      { name: 'centity', type: 'Centity', doc: 'The projectile.' },
+      {
+        name: 'reason',
+        type: '"hit"|"block"|"lifetime"|"unloaded"|"stopped"',
+        doc: 'Why: see `flight_end`.',
+      },
+      { name: 'position', type: 'Vec3', doc: 'Where it ended.' },
+      { name: 'target', type: 'Centity?', doc: 'For `"hit"`, the centity it ended on, or `nil`.' },
+      {
+        name: 'entity',
+        type: 'Entity?',
+        doc: 'For `"hit"`, the player or entity it ended on, or `nil`.',
+      },
+      { name: 'block', type: 'Block?', doc: 'For `"block"`, the block it ended on, or `nil`.' },
+      {
+        name: 'normal',
+        type: 'Vec3?',
+        doc: 'For `"block"`, the direction straight out of the face it met, or `nil`.',
+      },
+      { name: 'owner', type: '(Entity|Centity)?', doc: 'Who launched it, or `nil`.' },
+    ],
+  },
+  {
+    name: 'CentityDamageOptions',
+    doc: "Where damage dealt with `centity:damage` comes from, for its handlers. A key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      { name: 'source', type: '(Entity|Centity)?', doc: 'Who or what dealt it.' },
+      {
+        name: 'cause',
+        type: 'string?',
+        doc: 'What kind of damage, in your own words: `"melee"`, `"fire"`.',
+      },
+    ],
+  },
+  {
+    name: 'CentityDamageEvent',
+    doc: 'A centity is about to lose health: `damage`.',
+    methods: false,
+    functions: [],
+    extends: 'Event',
+    fields: [
+      { name: 'centity', type: 'Centity', doc: 'The centity.' },
+      { name: 'amount', type: 'number', doc: 'How much it loses: assign to change it.' },
+      { name: 'source', type: '(Entity|Centity)?', doc: 'Who or what dealt it, or `nil`.' },
+      { name: 'cause', type: 'string?', doc: "The damage's `cause`, or `nil`." },
+    ],
+  },
+  {
+    name: 'CentityDeathEvent',
+    doc: "A centity's health reached 0: `death`.",
+    methods: false,
+    functions: [],
+    extends: 'Event',
+    fields: [
+      { name: 'centity', type: 'Centity', doc: 'The centity.' },
+      { name: 'source', type: '(Entity|Centity)?', doc: 'What dealt the last blow, or `nil`.' },
+      { name: 'cause', type: 'string?', doc: "The last blow's `cause`, or `nil`." },
+    ],
+  },
+  {
+    name: 'CentityLandEvent',
+    doc: "A centity's body landed: `land`.",
+    methods: false,
+    functions: [],
+    extends: 'Event',
+    fields: [
+      { name: 'centity', type: 'Centity', doc: 'The centity.' },
+      {
+        name: 'speed',
+        type: 'number',
+        doc: 'How fast it was falling as it landed, blocks per second.',
+      },
+    ],
+  },
+  {
+    name: 'CentityBumpEvent',
+    doc: "A centity's body ran into something: `bump`.",
+    methods: false,
+    functions: [],
+    extends: 'Event',
+    fields: [
+      { name: 'centity', type: 'Centity', doc: 'The centity.' },
+      {
+        name: 'normal',
+        type: 'Vec3',
+        doc: 'The direction straight out of the face it hit: `vec3(0, -1, 0)` for a ceiling.',
+      },
+      { name: 'speed', type: 'number', doc: 'How fast it was going into it, blocks per second.' },
+    ],
+  },
+  {
+    name: 'Bounds',
+    doc: "A box along the world's axes: `centity:bounds()`.",
+    methods: false,
+    functions: [],
+    fields: [
+      { name: 'min', type: 'Vec3', doc: 'Its lowest corner.' },
+      { name: 'max', type: 'Vec3', doc: 'Its highest corner.' },
+    ],
+  },
+  {
+    name: 'TouchEvent',
+    doc: "A centity's hitboxes started touching something's: `touch`.",
+    methods: false,
+    functions: [],
+    extends: 'Event',
+    fields: [
+      { name: 'centity', type: 'Centity', doc: 'The centity that hears it.' },
+      { name: 'node', type: 'Node', doc: 'Which of its nodes touched (its hitbox).' },
+      { name: 'other', type: 'Centity?', doc: 'The other centity, or `nil`.' },
+      {
+        name: 'other_node',
+        type: 'Node?',
+        doc: "Which of the other centity's nodes it touched, or `nil`.",
+      },
+      { name: 'entity', type: 'Entity?', doc: 'The player or entity it touched, or `nil`.' },
+    ],
+  },
+  {
+    name: 'StretchOptions',
+    doc: "How `node:stretch_between` lays a node. A key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      { name: 'thickness', type: 'number?', doc: 'Its X and Y scale. Default: as they are.' },
+    ],
+  },
+  {
+    name: 'RopeOptions',
+    doc: "How `node:rope_between` strings a rope. A key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      {
+        name: 'length',
+        type: 'number?',
+        doc: "How long the rope is, in blocks: shorter than the ends' distance it's taut, longer it sags by its slack. Default: always taut.",
+      },
+    ],
+  },
+  {
+    name: 'TweenOptions',
+    doc: "A tween for `node:tween`: at least one of `translation`, `rotation` and `scale`. A key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      { name: 'translation', type: 'Vec3?', doc: 'Where it ends up, as `set_translation` takes.' },
+      {
+        name: 'rotation',
+        type: 'Vec3?',
+        doc: 'Degrees, as `set_rotation` takes; not the short way round, so 0 to 360 is a whole turn.',
+      },
+      { name: 'scale', type: 'Vec3?', doc: 'As `set_scale` takes.' },
+      { name: 'ticks', type: 'integer', doc: 'How long, 1 or more (each way, with `back`).' },
+      {
+        name: 'easing',
+        type: 'string?',
+        doc: '`linear`, `ease_in`, `ease_out`, `ease_in_out` or `step`, as keyframes take. Default `ease_in_out`.',
+      },
+      {
+        name: 'back',
+        type: 'boolean?',
+        doc: 'Eases back to where it started after, over as many ticks again. Default `false`.',
       },
     ],
   },

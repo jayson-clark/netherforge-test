@@ -1,7 +1,10 @@
 {
   "script": { "file": "main.lua", "budget": 10 },
+  "body": { "width": 0, "height": 40, "drag": 2, "stepHeight": -1 },
+  "health": { "max": 0, "bar": { "segments": 50, "showTicks": -1, "glyph": "" } },
   "nodes": {
     "root": { "parent": "root" },
+    "health_bar": { "display": { "type": "block", "block": "minecraft:stone" } },
     "held": { "display": { "type": "item", "item": "Not An Item" } },
     "sign": { "display": { "type": "text", "text": "hi", "lineWidth": 0 } },
     "button": { "hitbox": { "boxes": [] } },

@@ -12,6 +12,7 @@ import dev.netherforge.plugin.contract.DatapackOpsContract
 import dev.netherforge.plugin.contract.DialogOpsContract
 import dev.netherforge.plugin.contract.EntityOpsContract
 import dev.netherforge.plugin.contract.InventoryOpsContract
+import dev.netherforge.plugin.contract.ItemViewOpsContract
 import dev.netherforge.plugin.contract.LootOpsContract
 import dev.netherforge.plugin.contract.MenuOpsContract
 import dev.netherforge.plugin.contract.MobGoalOpsContract
@@ -123,6 +124,10 @@ class PaperProjectItemOpsTest : ProjectItemOpsContract() {
     override fun connect() = PaperContractServer.current
 }
 
+class PaperItemViewOpsTest : ItemViewOpsContract() {
+    override fun connect() = PaperContractServer.current
+}
+
 class PaperRecipeOpsTest : RecipeOpsContract() {
     override fun connect() = PaperContractServer.current
 }
@@ -210,6 +215,7 @@ object PaperContracts {
         PaperDialogOpsTest::class.java,
         PaperResourcePackOpsTest::class.java,
         PaperProjectItemOpsTest::class.java,
+        PaperItemViewOpsTest::class.java,
         PaperRecipeOpsTest::class.java,
         PaperLootOpsTest::class.java,
         PaperDatapackOpsTest::class.java,

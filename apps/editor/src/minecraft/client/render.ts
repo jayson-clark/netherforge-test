@@ -5,36 +5,25 @@
  */
 import * as THREE from 'three'
 import type { ClientAssets } from './assets'
-import { buildElements, buildSprite, placementMatrix, type BuiltGroup } from './geometry'
+import {
+  buildElements,
+  buildSprite,
+  displayMatrix,
+  placementMatrix,
+  tintFor,
+  type BuiltGroup,
+} from './geometry'
 import {
   blockPlacements,
   isSpriteModel,
   itemModelRef,
   resolveModel,
-  splitId,
   spriteLayers,
-  type DisplayEntry,
   type RawModel,
   type ResolvedModel,
 } from './model'
 
-/**
- * Tint for faces with a `tintindex` (grass, leaves, water). The real colour
- * depends on the biome; the editor pretends to be in plains. These are
- * colours, not game facts about any particular block.
- */
-const TINTS = {
-  grass: new THREE.Color(0x91bd59),
-  foliage: new THREE.Color(0x77ab2f),
-  water: new THREE.Color(0x3f76e4),
-}
-
-export function tintFor(id: string): THREE.Color {
-  const { path } = splitId(id)
-  if (path.includes('water')) return TINTS.water
-  if (path.includes('leaves') || path.includes('vine')) return TINTS.foliage
-  return TINTS.grass
-}
+export { tintFor }
 
 const blocks = new WeakMap<ClientAssets, Map<string, Promise<BuiltGroup[]>>>()
 const items = new WeakMap<ClientAssets, Map<string, Promise<ItemGeometry | null>>>()
@@ -100,7 +89,7 @@ export function itemGeometry(
         ? buildSprite(spriteLayers(model))
         : buildElements(model.elements, model.textures, { tint: tintFor(item) })
       if (groups.length === 0) return null
-      return { groups, matrix: itemMatrix(model.display[context]) }
+      return { groups, matrix: displayMatrix(model.display[context]) }
     })()
     cache.set(key, pending)
   }
@@ -126,7 +115,7 @@ export function blockLookGeometry(
       if (!model) return null
       const groups = buildElements(model.elements, { ...model.textures, ...faces })
       if (groups.length === 0) return null
-      return { groups, matrix: itemMatrix(model.display[context]) }
+      return { groups, matrix: displayMatrix(model.display[context]) }
     })()
     cache.set(key, pending)
   }
@@ -135,7 +124,7 @@ export function blockLookGeometry(
 
 /** A flat picture ([url], a project file) as an item drawn flat, centred, as a texture look is. */
 export function pictureGeometry(url: string): ItemGeometry {
-  return { groups: buildSprite([url]), matrix: itemMatrix(undefined) }
+  return { groups: buildSprite([url]), matrix: displayMatrix(undefined) }
 }
 
 /**
@@ -166,37 +155,11 @@ export function packModelGeometry(
         ? buildSprite(spriteLayers(resolved))
         : buildElements(resolved.elements, resolved.textures)
       if (groups.length === 0) return null
-      return { groups, matrix: itemMatrix(resolved.display[context]) }
+      return { groups, matrix: displayMatrix(resolved.display[context]) }
     })()
     cache.set(key, pending)
   }
   return pending
-}
-
-/**
- * Vanilla applies the display transform about the model centre, then draws
- * the item centred on the entity: the transform, then a half-block shift.
- */
-function itemMatrix(entry: DisplayEntry | undefined): THREE.Matrix4 {
-  const matrix = new THREE.Matrix4()
-  if (entry) {
-    const [tx, ty, tz] = entry.translation ?? [0, 0, 0]
-    const [rx, ry, rz] = entry.rotation ?? [0, 0, 0]
-    const [sx, sy, sz] = entry.scale ?? [1, 1, 1]
-    matrix.compose(
-      new THREE.Vector3(tx / 16, ty / 16, tz / 16),
-      new THREE.Quaternion().setFromEuler(
-        new THREE.Euler(
-          THREE.MathUtils.degToRad(rx),
-          THREE.MathUtils.degToRad(ry),
-          THREE.MathUtils.degToRad(rz),
-          'XYZ',
-        ),
-      ),
-      new THREE.Vector3(sx, sy, sz),
-    )
-  }
-  return matrix.multiply(new THREE.Matrix4().makeTranslation(-0.5, -0.5, -0.5))
 }
 
 /** Whether a model's texture is a URL already (a project file a pack model draws) rather than a client texture id. */

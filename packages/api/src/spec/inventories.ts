@@ -167,7 +167,7 @@ export const bossBarClass: LuaClass = {
     },
     {
       name: 'viewers',
-      doc: "Everyone it's shown to, online or not. Empty once it's gone.",
+      doc: "Everyone it's shown to, online or not: by `show_to`, and for an attached bar, whoever is near its centity now. Empty once it's gone.",
       params: [],
       returns: [{ type: 'Player[]' }],
     },
@@ -219,6 +219,29 @@ export const bossBarClass: LuaClass = {
       doc: 'Makes it one bar, or splits it into 6, 10, 12 or 20 notches.',
       params: [{ name: 'style', type: BAR_STYLE, doc: '' }],
       returns: [{ type: 'boolean', doc: `${GONE}.` }],
+    },
+    {
+      name: 'attach',
+      doc: "Ties it to a centity: it shows to every player within `range` of it (in its world) and hides from them as they go, and with `health` its progress follows the centity's health: what a boss's bar does. Players it was shown to with `show_to` keep it. A bar attached again moves to the new centity.",
+      params: [
+        { name: 'centity', type: 'Centity', doc: '' },
+        { name: 'options', type: 'BossBarAttachOptions', doc: '', optional: true },
+      ],
+      returns: [{ type: 'boolean', doc: `${GONE}, or the centity has.` }],
+      example:
+        'local bar = nf.bossbars.create({ text = "<red>King Slime", color = "blue" })\nbar:attach(this, { range = 64 })',
+    },
+    {
+      name: 'detach',
+      doc: 'Unties it from its centity: the players it showed to by being near it stop seeing it.',
+      params: [],
+      returns: [],
+    },
+    {
+      name: 'attached',
+      doc: "The centity it's attached to, or `nil`.",
+      params: [],
+      returns: [{ type: 'Centity?' }],
     },
     {
       name: 'remove',
@@ -310,6 +333,27 @@ export const nfBossbars: LuaClass = {
 
 /** The plain tables inventories, boss bars and sidebars take. */
 export const inventoryShapes: LuaClass[] = [
+  shape(
+    'BossBarAttachOptions',
+    "How `bossbar:attach` ties a bar to a centity. Every key is optional; a key that isn't one of these is an error.",
+    [
+      {
+        name: 'range',
+        type: 'number?',
+        doc: 'How near a player must be to see it, in blocks. Default 48.',
+      },
+      {
+        name: 'health',
+        type: 'boolean?',
+        doc: "Its progress follows the centity's `health` (when it has any). Default `true`.",
+      },
+      {
+        name: 'remove_with',
+        type: 'boolean?',
+        doc: 'Removed when the centity is. Default `true`.',
+      },
+    ],
+  ),
   shape(
     'BossBarOptions',
     "What `nf.bossbars.create` makes a bar with. Every key is optional; a key that isn't one of these is an error.",

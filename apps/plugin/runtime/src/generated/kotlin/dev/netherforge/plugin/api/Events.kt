@@ -187,6 +187,18 @@ object Events {
     val NF_ENTITY_SPAWN = EventType<EntitySpawnEvent>("nf", "entity_spawn", payload = EntitySpawnEvent.Codec, cancellable = true, bubbles = false, writable = emptyList(), local = false, since = null)
 
     /**
+     * Night fell in a world: its time of day went from day (23000 to 12999) into night (13000 to 22999),
+     * by the clock or by `/time set`. After the world's own `dusk` handlers.
+     */
+    val NF_WORLD_DUSK = EventType<DaylightEvent>("nf", "world_dusk", payload = DaylightEvent.Codec, cancellable = false, bubbles = false, writable = emptyList(), local = false, since = null)
+
+    /**
+     * Day broke in a world: its time of day went from night (13000 to 22999) into day (23000 to 12999), by
+     * the clock or by `/time set`. After the world's own `dawn` handlers.
+     */
+    val NF_WORLD_DAWN = EventType<DaylightEvent>("nf", "world_dawn", payload = DaylightEvent.Codec, cancellable = false, bubbles = false, writable = emptyList(), local = false, since = null)
+
+    /**
      * A player's movement keys changed: what they hold down now, as their game sends it (forward, back,
      * left, right, jump, sneak, sprint), whether or not they can move. For steering something they ride or
      * controlling a centity. The server only watches input while something listens, so it costs nothing
@@ -576,6 +588,24 @@ object Events {
     val NF_CENTITY_CLICK = EventType<ClickEvent>("nf", "centity_click", payload = ClickEvent.Codec, cancellable = false, bubbles = false, writable = emptyList(), local = false, since = null)
 
     /**
+     * `nf.recipes.craft` is making a `station` recipe once: its materials are taken, and `event.result` is
+     * about to be given. Assign `event.result` to give something else (the same item with a rolled prefix,
+     * a stack of a different size). Heard once for each making, so each gets its own; while nobody
+     * listens, the makings are given in stacks.
+     */
+    val NF_RECIPE_CRAFT = EventType<RecipeCraftEvent>("nf", "recipe_craft", payload = RecipeCraftEvent.Codec, cancellable = false, bubbles = false, writable = listOf("result"), local = false, since = null)
+
+    /**
+     * Any stack is being sent to one player's game (their inventory, a window they have open, their
+     * cursor): after its project item's own `view` handlers, for a stack of one, and for every other stack
+     * too. Assign `event.display_name` and `event.lore` to change how it looks to `event.player` alone;
+     * nothing the server keeps changes. While nobody listens, stacks are sent as they are; while someone
+     * does, every stack sent is worked out here first, so prefer an item's own `view` when only some items
+     * change.
+     */
+    val NF_ITEM_VIEW = EventType<ItemViewEvent>("nf", "item_view", payload = ItemViewEvent.Codec, cancellable = false, bubbles = false, writable = listOf("display_name", "lore"), local = false, since = null)
+
+    /**
      * A centity is about to appear by itself, from the `spawning` block of its `centity.json`: once for
      * each one of a group, before it exists. `event:cancel()` refuses it (it doesn't count against
      * anything, and the spawner tries again later); assign `event.location` to move it. It is asked after
@@ -654,12 +684,87 @@ object Events {
     val CENTITY_CHUNK_UNLOAD = EventType<CentityEvent>("Centity", "chunk_unload", payload = CentityEvent.Codec, cancellable = false, bubbles = false, writable = emptyList(), local = false, since = null)
 
     /**
+     * It's flying (`launch`) and its path touched something it can hit: a centity's hitbox, a player or
+     * another entity, in the order it meets them, each once (or again after `rehit` ticks).
+     * `event:cancel()` lets it pass through as if it weren't there, without using up a `pierce`. Otherwise
+     * it goes on through only while it has `pierce` left; past that, this is where it ends (`flight_end`,
+     * `"hit"`).
+     */
+    val CENTITY_HIT = EventType<FlightHitEvent>("Centity", "hit", payload = FlightHitEvent.Codec, cancellable = true, bubbles = false, writable = emptyList(), local = false, since = null)
+
+    /**
+     * It's flying with `bounce` and came off a block: `event.normal` is the face it hit, `event.speed` how
+     * fast it was going into it.
+     */
+    val CENTITY_BOUNCE = EventType<FlightBlockEvent>("Centity", "bounce", payload = FlightBlockEvent.Codec, cancellable = false, bubbles = false, writable = emptyList(), local = false, since = null)
+
+    /**
+     * It's flying with `stick` and stuck in a block: it stays there, its flight over but not ended, until
+     * its `lifetime` is up.
+     */
+    val CENTITY_STICK = EventType<FlightBlockEvent>("Centity", "stick", payload = FlightBlockEvent.Codec, cancellable = false, bubbles = false, writable = emptyList(), local = false, since = null)
+
+    /**
+     * Its flight ended: it hit something with no `pierce` left (`"hit"`), met a block it neither bounces
+     * off nor sticks in (`"block"`), ran out of `lifetime` (`"lifetime"`), reached a chunk that isn't
+     * loaded (`"unloaded"`), or a script stopped it (`"stopped"`). Then, unless `remove_on_end` is
+     * `false`, it's removed: its `remove` handlers hear it next.
+     */
+    val CENTITY_FLIGHT_END = EventType<FlightEndEvent>("Centity", "flight_end", payload = FlightEndEvent.Codec, cancellable = false, bubbles = false, writable = emptyList(), local = false, since = null)
+
+    /**
+     * It's about to lose health to `centity:damage`: assign `event.amount` to change how much (a defence,
+     * a weakness), or `event:cancel()` it (a moment it can't be hurt). Its health goes down by what's
+     * left, its bar shows, and at 0 it dies (`death`).
+     */
+    val CENTITY_DAMAGE = EventType<CentityDamageEvent>("Centity", "damage", payload = CentityDamageEvent.Codec, cancellable = true, bubbles = false, writable = listOf("amount"), local = false, since = null)
+
+    /**
+     * Its health reached 0. Then, unless its `health` says `removeOnDeath: false`, it's removed: its
+     * `remove` handlers hear it next. `event.source` and `event.cause` are what dealt the last blow.
+     */
+    val CENTITY_DEATH = EventType<CentityDeathEvent>("Centity", "death", payload = CentityDeathEvent.Codec, cancellable = false, bubbles = false, writable = emptyList(), local = false, since = null)
+
+    /**
+     * Its `body` came down onto something after falling (or jumping): once, as it lands. `event.speed` is
+     * how fast it was falling, for fall damage or a thud.
+     */
+    val CENTITY_LAND = EventType<CentityLandEvent>("Centity", "land", payload = CentityLandEvent.Codec, cancellable = false, bubbles = false, writable = emptyList(), local = false, since = null)
+
+    /**
+     * Its `body` ran into something it didn't land on: a wall, or a ceiling. Once each tick it does, with
+     * the face's `normal` (pointing back at it) and how fast it was going into it.
+     */
+    val CENTITY_BUMP = EventType<CentityBumpEvent>("Centity", "bump", payload = CentityBumpEvent.Codec, cancellable = false, bubbles = false, writable = emptyList(), local = false, since = null)
+
+    /**
+     * Its hitboxes started touching something's: another centity's, a player's or another entity's (each
+     * shown node's boxes, as `world:overlap_box` sees them). Once when they start touching, and again only
+     * after they've come apart. Worked out each tick only for centities something listens to this on, so a
+     * crowd nobody listens to costs nothing. Both centities hear it when two touch, each with the other in
+     * `event.other`.
+     */
+    val CENTITY_TOUCH = EventType<TouchEvent>("Centity", "touch", payload = TouchEvent.Codec, cancellable = false, bubbles = false, writable = emptyList(), local = false, since = null)
+
+    /**
      * It stopped walking where `move_to` sent it: it got there (to the end of its path, or within 2 blocks
      * of what it went after), or gave up (no way further, its way blocked with no other way round, or what
      * it went after has gone or left its world). Not after `stop_pathing`, a new `move_to`, `teleport` or
      * a reload of its centity.
      */
     val CENTITY_PATH_END = EventType<CentityPathEndEvent>("Centity", "path_end", payload = CentityPathEndEvent.Codec, cancellable = false, bubbles = false, writable = emptyList(), local = false, since = null)
+
+    /**
+     * A buff is about to take hold (`add_buff`): assign `event.ticks` to change how long, or
+     * `event:cancel()` it (one it can't take). Not heard when it's `blockedBy` another.
+     */
+    val CENTITY_BUFF_ADD = EventType<BuffEvent>("Centity", "buff_add", payload = BuffEvent.Codec, cancellable = true, bubbles = false, writable = listOf("ticks"), local = false, since = null)
+
+    /**
+     * A buff ended: it ran out (`"expired"`), a script took it away (`"removed"`), or another buff cured
+     * it (`"cured"`).
+     */
+    val CENTITY_BUFF_END = EventType<BuffEndEvent>("Centity", "buff_end", payload = BuffEndEvent.Codec, cancellable = false, bubbles = false, writable = emptyList(), local = false, since = null)
 
     /**
      * A player clicked this node's hitbox, or the hitbox of a node under it (`event.target` says which).
@@ -1073,6 +1178,18 @@ object Events {
     val PLAYER_ENCHANT_ITEM = EventType<PlayerEnchantItemEvent>("Player", "enchant_item", payload = PlayerEnchantItemEvent.Codec, cancellable = true, bubbles = true, writable = listOf("cost"), local = false, since = null)
 
     /**
+     * A buff is about to take hold (`add_buff`): assign `event.ticks` to change how long, or
+     * `event:cancel()` it (one it can't take). Not heard when it's `blockedBy` another.
+     */
+    val PLAYER_BUFF_ADD = EventType<BuffEvent>("Player", "buff_add", payload = BuffEvent.Codec, cancellable = true, bubbles = false, writable = listOf("ticks"), local = false, since = null)
+
+    /**
+     * A buff ended: it ran out (`"expired"`), a script took it away (`"removed"`), or another buff cured
+     * it (`"cured"`).
+     */
+    val PLAYER_BUFF_END = EventType<BuffEndEvent>("Player", "buff_end", payload = BuffEndEvent.Codec, cancellable = false, bubbles = false, writable = emptyList(), local = false, since = null)
+
+    /**
      * A player is breaking a block in this world: before `nf.on("block_break")`, with the same event, so
      * `event:cancel()` here stops it and `event:stop()` keeps it from `nf`. Assign `event.drops` and
      * `event.experience` to change what it drops.
@@ -1087,6 +1204,21 @@ object Events {
      * `event:cancel()` here stops it and `event:stop()` keeps it from `nf`.
      */
     val WORLD_ENTITY_SPAWN = EventType<EntitySpawnEvent>("World", "entity_spawn", payload = EntitySpawnEvent.Codec, cancellable = true, bubbles = true, writable = emptyList(), local = false, since = null)
+
+    /**
+     * Night fell here: the time of day went from day (23000 to 12999) into night (13000 to 22999), by the
+     * clock or by `/time set`. Heard before `nf.on("world_dusk")`, with the same event, so `event:stop()`
+     * keeps it from there. The runtime looks at the clock every tick, and only while something listens; a
+     * jump from one night to the next (a whole day skipped) is no change, so nothing is heard.
+     */
+    val WORLD_DUSK = EventType<DaylightEvent>("World", "dusk", payload = DaylightEvent.Codec, cancellable = false, bubbles = true, writable = emptyList(), local = false, since = null)
+
+    /**
+     * Day broke here: the time of day went from night (13000 to 22999) into day (23000 to 12999), by the
+     * clock or by `/time set` (sleeping through the night too). Heard before `nf.on("world_dawn")`, with
+     * the same event, so `event:stop()` keeps it from there.
+     */
+    val WORLD_DAWN = EventType<DaylightEvent>("World", "dawn", payload = DaylightEvent.Codec, cancellable = false, bubbles = true, writable = emptyList(), local = false, since = null)
 
     /**
      * A block exploded: a bed in the nether or the end, a respawn anchor charged away from the overworld.
@@ -1427,6 +1559,30 @@ object Events {
     val PROJECTITEM_DROP = EventType<PlayerItemEvent>("ProjectItem", "drop", payload = PlayerItemEvent.Codec, cancellable = true, bubbles = true, writable = emptyList(), local = false, since = null)
 
     /**
+     * The server is making a stack of this item, or rewriting one to the item's file after it changed:
+     * assign `event.display_name` and `event.lore` to give it a name and lore worked out from the stack
+     * (its `data`, its count), which the file's can't say: a prefix in the name, stats in the lore. It's
+     * heard for every stack `nf.items.create`, `ProjectItem:create` and a loot roll make, and for every
+     * stack that takes a changed file's look, so a name worked out here survives the file changing (one
+     * set any other way goes back to the file's then). A stack whose `data` a script changes keeps its
+     * name until it's made again: hand it to `nf.items.create` with its `data` to work it out anew.
+     */
+    val PROJECTITEM_RENDER = EventType<ItemRenderEvent>("ProjectItem", "render", payload = ItemRenderEvent.Codec, cancellable = false, bubbles = false, writable = listOf("display_name", "lore"), local = false, since = null)
+
+    /**
+     * A stack of this item is being sent to one player's game: their inventory (hotbar, armour and offhand
+     * too), a window they have open, the stack on their cursor. Assign `event.display_name` and
+     * `event.lore` to change how it looks to `event.player` alone, now: a price while they have a shop
+     * open, a hint for their class. Nothing the server keeps changes: not the stack, how it stacks, what's
+     * saved, what anyone else sees, nor what scripts read from inventories. Both start as the stack's own
+     * (after its `render`), so this adds to them. The game is sent a stack again only when it changes, so
+     * call `player:refresh_items()` when what this works out from changes (a menu opening or closing). If
+     * a handler fails, the stack is sent as it is. Then `nf.on("item_view")`, with the same event;
+     * `event:stop()` keeps it from there.
+     */
+    val PROJECTITEM_VIEW = EventType<ItemViewEvent>("ProjectItem", "view", payload = ItemViewEvent.Codec, cancellable = false, bubbles = true, writable = listOf("display_name", "lore"), local = false, since = null)
+
+    /**
      * A player is picking up a stack of this item (`event.item`) from the item entity `event.entity`. Then
      * the player's own `pickup_item`, then `nf.on("player_pickup_item")`, with the same event, so
      * `event:cancel()` here cancels it for all of them and `event:stop()` keeps it from them.
@@ -1453,29 +1609,29 @@ object Events {
     /** The cutscene reached a cue that names an `event` (`cues` in its file), at that time. */
     val CUTSCENE_CUE = EventType<CutsceneCueEvent>("Cutscene", "cue", payload = CutsceneCueEvent.Codec, cancellable = false, bubbles = false, writable = emptyList(), local = false, since = null)
 
-    val all: List<EventType<*>> = listOf(NF_TICK, NF_UNLOAD, NF_PLAYER_JOIN, NF_PLAYER_QUIT, NF_PLAYER_CHAT, NF_PLAYER_INTERACT, NF_PLAYER_INTERACT_ENTITY, NF_PLAYER_MOVE, NF_PLAYER_TELEPORT, NF_PLAYER_CHANGE_WORLD, NF_PLAYER_DEATH, NF_PLAYER_RESPAWN, NF_PLAYER_DROP_ITEM, NF_PLAYER_PICKUP_ITEM, NF_PLAYER_USE_ITEM, NF_PLAYER_CONSUME_ITEM, NF_PLAYER_SWAP_HANDS, NF_PLAYER_SNEAK, NF_PLAYER_COMMAND, NF_BLOCK_BREAK, NF_BLOCK_PLACE, NF_ENTITY_DAMAGE, NF_ENTITY_DEATH, NF_ENTITY_SPAWN, NF_PLAYER_INPUT, NF_PLAYER_CHANGE_SLOT, NF_PLAYER_SWING, NF_PLAYER_SPRINT, NF_PLAYER_FLY, NF_PLAYER_JUMP, NF_PLAYER_CHANGE_GAME_MODE, NF_PLAYER_CHANGE_FOOD, NF_PLAYER_GAIN_EXPERIENCE, NF_PLAYER_CHANGE_LEVEL, NF_PLAYER_KICK, NF_PLAYER_COMPLETE_ADVANCEMENT, NF_PLAYER_STOP_USING_ITEM, NF_PLAYER_BREAK_ITEM, NF_ENTITY_HEAL, NF_PROJECTILE_LAUNCH, NF_PROJECTILE_HIT, NF_ENTITY_SHOOT_BOW, NF_ENTITY_TARGET, NF_ENTITY_EXPLODE, NF_BLOCK_EXPLODE, NF_ENTITY_COMBUST, NF_ENTITY_CHANGE_EFFECT, NF_BLOCK_IGNITE, NF_BLOCK_BURN, NF_BLOCK_SPREAD, NF_BLOCK_FLOW, NF_BLOCK_GROW, NF_BLOCK_FADE, NF_BLOCK_FORM, NF_LEAVES_DECAY, NF_PISTON_EXTEND, NF_PISTON_RETRACT, NF_BLOCK_REDSTONE, NF_SIGN_CHANGE, NF_BLOCK_START_BREAK, NF_BLOCK_DROP_ITEM, NF_WEATHER_CHANGE, NF_THUNDER_CHANGE, NF_LIGHTNING_STRIKE, NF_CHUNK_LOAD, NF_CHUNK_GENERATED, NF_CHUNK_UNLOAD, NF_WORLD_LOAD, NF_WORLD_UNLOAD, NF_ENTITY_MOUNT, NF_ENTITY_DISMOUNT, NF_VEHICLE_MOVE, NF_VEHICLE_DAMAGE, NF_VEHICLE_DESTROY, NF_PLAYER_OPEN_INVENTORY, NF_PLAYER_CLOSE_INVENTORY, NF_PLAYER_CRAFT, NF_PLAYER_PREPARE_CRAFT, NF_PLAYER_PREPARE_ANVIL, NF_PLAYER_PREPARE_SMITHING, NF_PLAYER_PREPARE_GRINDSTONE, NF_PLAYER_ENCHANT_ITEM, NF_FURNACE_SMELT, NF_SERVER_LIST_PING, NF_CENTITY_CLICK, NF_CENTITY_NATURAL_SPAWN, NF_MENU_OPEN, NF_MENU_CLOSE, NF_MENU_CLICK, NF_DIALOG_PRESS, NF_SETTING_CHANGED, CENTITY_SPAWN, CENTITY_REMOVE, CENTITY_TICK, CENTITY_CLICK, CENTITY_ANIMATION_START, CENTITY_ANIMATION_END, CENTITY_CHUNK_LOAD, CENTITY_CHUNK_UNLOAD, CENTITY_PATH_END, NODE_CLICK, NODE_COLLIDE, NODE_WAKE, NODE_SLEEP, ENTITY_DAMAGE, ENTITY_INTERACT, ENTITY_HIT, ENTITY_EXPLODE, ENTITY_COMBUST, ENTITY_MOUNT, ENTITY_DISMOUNT, LIVING_DEATH, LIVING_HEAL, LIVING_LAUNCH_PROJECTILE, LIVING_SHOOT_BOW, LIVING_CHANGE_EFFECT, MOB_PATH_END, MOB_TARGET, PLAYER_JOIN, PLAYER_QUIT, PLAYER_CHAT, PLAYER_INTERACT, PLAYER_INTERACT_ENTITY, PLAYER_MOVE, PLAYER_TELEPORT, PLAYER_CHANGE_WORLD, PLAYER_DEATH, PLAYER_RESPAWN, PLAYER_DROP_ITEM, PLAYER_PICKUP_ITEM, PLAYER_USE_ITEM, PLAYER_CONSUME_ITEM, PLAYER_SWAP_HANDS, PLAYER_SNEAK, PLAYER_COMMAND, PLAYER_INPUT, PLAYER_CHANGE_SLOT, PLAYER_SWING, PLAYER_SPRINT, PLAYER_FLY, PLAYER_JUMP, PLAYER_CHANGE_GAME_MODE, PLAYER_CHANGE_FOOD, PLAYER_GAIN_EXPERIENCE, PLAYER_CHANGE_LEVEL, PLAYER_KICK, PLAYER_COMPLETE_ADVANCEMENT, PLAYER_STOP_USING_ITEM, PLAYER_BREAK_ITEM, PLAYER_OPEN_INVENTORY, PLAYER_CLOSE_INVENTORY, PLAYER_CRAFT, PLAYER_PREPARE_CRAFT, PLAYER_PREPARE_ANVIL, PLAYER_PREPARE_SMITHING, PLAYER_PREPARE_GRINDSTONE, PLAYER_ENCHANT_ITEM, WORLD_BLOCK_BREAK, WORLD_BLOCK_PLACE, WORLD_ENTITY_SPAWN, WORLD_BLOCK_EXPLODE, WORLD_BLOCK_IGNITE, WORLD_BLOCK_BURN, WORLD_BLOCK_SPREAD, WORLD_BLOCK_FLOW, WORLD_BLOCK_GROW, WORLD_BLOCK_FADE, WORLD_BLOCK_FORM, WORLD_LEAVES_DECAY, WORLD_PISTON_EXTEND, WORLD_PISTON_RETRACT, WORLD_BLOCK_REDSTONE, WORLD_SIGN_CHANGE, WORLD_BLOCK_START_BREAK, WORLD_BLOCK_DROP_ITEM, WORLD_WEATHER_CHANGE, WORLD_THUNDER_CHANGE, WORLD_LIGHTNING_STRIKE, WORLD_CHUNK_LOAD, WORLD_CHUNK_GENERATED, WORLD_CHUNK_UNLOAD, WORLD_FURNACE_SMELT, PROJECTBLOCK_PLACE, PROJECTBLOCK_BREAK, PROJECTBLOCK_CLICK, PROJECTBLOCK_TICK, MENU_OPEN, MENU_CLOSE, MENU_CLICK, MENU_DRAG, SLOT_CLICK, MENUTEMPLATE_OPEN, MENUTEMPLATE_CLOSE, MENUTEMPLATE_CLICK, MENUTEMPLATE_DRAG, DIALOG_PRESS, DIALOG_CLOSE, BUTTON_PRESS, PROJECTITEM_USE, PROJECTITEM_INTERACT, PROJECTITEM_INTERACT_ENTITY, PROJECTITEM_CONSUME, PROJECTITEM_HIT, PROJECTITEM_BREAK_BLOCK, PROJECTITEM_DROP, PROJECTITEM_PICKUP, EFFECT_END, CUTSCENE_END, CUTSCENE_CUE)
+    val all: List<EventType<*>> = listOf(NF_TICK, NF_UNLOAD, NF_PLAYER_JOIN, NF_PLAYER_QUIT, NF_PLAYER_CHAT, NF_PLAYER_INTERACT, NF_PLAYER_INTERACT_ENTITY, NF_PLAYER_MOVE, NF_PLAYER_TELEPORT, NF_PLAYER_CHANGE_WORLD, NF_PLAYER_DEATH, NF_PLAYER_RESPAWN, NF_PLAYER_DROP_ITEM, NF_PLAYER_PICKUP_ITEM, NF_PLAYER_USE_ITEM, NF_PLAYER_CONSUME_ITEM, NF_PLAYER_SWAP_HANDS, NF_PLAYER_SNEAK, NF_PLAYER_COMMAND, NF_BLOCK_BREAK, NF_BLOCK_PLACE, NF_ENTITY_DAMAGE, NF_ENTITY_DEATH, NF_ENTITY_SPAWN, NF_WORLD_DUSK, NF_WORLD_DAWN, NF_PLAYER_INPUT, NF_PLAYER_CHANGE_SLOT, NF_PLAYER_SWING, NF_PLAYER_SPRINT, NF_PLAYER_FLY, NF_PLAYER_JUMP, NF_PLAYER_CHANGE_GAME_MODE, NF_PLAYER_CHANGE_FOOD, NF_PLAYER_GAIN_EXPERIENCE, NF_PLAYER_CHANGE_LEVEL, NF_PLAYER_KICK, NF_PLAYER_COMPLETE_ADVANCEMENT, NF_PLAYER_STOP_USING_ITEM, NF_PLAYER_BREAK_ITEM, NF_ENTITY_HEAL, NF_PROJECTILE_LAUNCH, NF_PROJECTILE_HIT, NF_ENTITY_SHOOT_BOW, NF_ENTITY_TARGET, NF_ENTITY_EXPLODE, NF_BLOCK_EXPLODE, NF_ENTITY_COMBUST, NF_ENTITY_CHANGE_EFFECT, NF_BLOCK_IGNITE, NF_BLOCK_BURN, NF_BLOCK_SPREAD, NF_BLOCK_FLOW, NF_BLOCK_GROW, NF_BLOCK_FADE, NF_BLOCK_FORM, NF_LEAVES_DECAY, NF_PISTON_EXTEND, NF_PISTON_RETRACT, NF_BLOCK_REDSTONE, NF_SIGN_CHANGE, NF_BLOCK_START_BREAK, NF_BLOCK_DROP_ITEM, NF_WEATHER_CHANGE, NF_THUNDER_CHANGE, NF_LIGHTNING_STRIKE, NF_CHUNK_LOAD, NF_CHUNK_GENERATED, NF_CHUNK_UNLOAD, NF_WORLD_LOAD, NF_WORLD_UNLOAD, NF_ENTITY_MOUNT, NF_ENTITY_DISMOUNT, NF_VEHICLE_MOVE, NF_VEHICLE_DAMAGE, NF_VEHICLE_DESTROY, NF_PLAYER_OPEN_INVENTORY, NF_PLAYER_CLOSE_INVENTORY, NF_PLAYER_CRAFT, NF_PLAYER_PREPARE_CRAFT, NF_PLAYER_PREPARE_ANVIL, NF_PLAYER_PREPARE_SMITHING, NF_PLAYER_PREPARE_GRINDSTONE, NF_PLAYER_ENCHANT_ITEM, NF_FURNACE_SMELT, NF_SERVER_LIST_PING, NF_CENTITY_CLICK, NF_RECIPE_CRAFT, NF_ITEM_VIEW, NF_CENTITY_NATURAL_SPAWN, NF_MENU_OPEN, NF_MENU_CLOSE, NF_MENU_CLICK, NF_DIALOG_PRESS, NF_SETTING_CHANGED, CENTITY_SPAWN, CENTITY_REMOVE, CENTITY_TICK, CENTITY_CLICK, CENTITY_ANIMATION_START, CENTITY_ANIMATION_END, CENTITY_CHUNK_LOAD, CENTITY_CHUNK_UNLOAD, CENTITY_HIT, CENTITY_BOUNCE, CENTITY_STICK, CENTITY_FLIGHT_END, CENTITY_DAMAGE, CENTITY_DEATH, CENTITY_LAND, CENTITY_BUMP, CENTITY_TOUCH, CENTITY_PATH_END, CENTITY_BUFF_ADD, CENTITY_BUFF_END, NODE_CLICK, NODE_COLLIDE, NODE_WAKE, NODE_SLEEP, ENTITY_DAMAGE, ENTITY_INTERACT, ENTITY_HIT, ENTITY_EXPLODE, ENTITY_COMBUST, ENTITY_MOUNT, ENTITY_DISMOUNT, LIVING_DEATH, LIVING_HEAL, LIVING_LAUNCH_PROJECTILE, LIVING_SHOOT_BOW, LIVING_CHANGE_EFFECT, MOB_PATH_END, MOB_TARGET, PLAYER_JOIN, PLAYER_QUIT, PLAYER_CHAT, PLAYER_INTERACT, PLAYER_INTERACT_ENTITY, PLAYER_MOVE, PLAYER_TELEPORT, PLAYER_CHANGE_WORLD, PLAYER_DEATH, PLAYER_RESPAWN, PLAYER_DROP_ITEM, PLAYER_PICKUP_ITEM, PLAYER_USE_ITEM, PLAYER_CONSUME_ITEM, PLAYER_SWAP_HANDS, PLAYER_SNEAK, PLAYER_COMMAND, PLAYER_INPUT, PLAYER_CHANGE_SLOT, PLAYER_SWING, PLAYER_SPRINT, PLAYER_FLY, PLAYER_JUMP, PLAYER_CHANGE_GAME_MODE, PLAYER_CHANGE_FOOD, PLAYER_GAIN_EXPERIENCE, PLAYER_CHANGE_LEVEL, PLAYER_KICK, PLAYER_COMPLETE_ADVANCEMENT, PLAYER_STOP_USING_ITEM, PLAYER_BREAK_ITEM, PLAYER_OPEN_INVENTORY, PLAYER_CLOSE_INVENTORY, PLAYER_CRAFT, PLAYER_PREPARE_CRAFT, PLAYER_PREPARE_ANVIL, PLAYER_PREPARE_SMITHING, PLAYER_PREPARE_GRINDSTONE, PLAYER_ENCHANT_ITEM, PLAYER_BUFF_ADD, PLAYER_BUFF_END, WORLD_BLOCK_BREAK, WORLD_BLOCK_PLACE, WORLD_ENTITY_SPAWN, WORLD_DUSK, WORLD_DAWN, WORLD_BLOCK_EXPLODE, WORLD_BLOCK_IGNITE, WORLD_BLOCK_BURN, WORLD_BLOCK_SPREAD, WORLD_BLOCK_FLOW, WORLD_BLOCK_GROW, WORLD_BLOCK_FADE, WORLD_BLOCK_FORM, WORLD_LEAVES_DECAY, WORLD_PISTON_EXTEND, WORLD_PISTON_RETRACT, WORLD_BLOCK_REDSTONE, WORLD_SIGN_CHANGE, WORLD_BLOCK_START_BREAK, WORLD_BLOCK_DROP_ITEM, WORLD_WEATHER_CHANGE, WORLD_THUNDER_CHANGE, WORLD_LIGHTNING_STRIKE, WORLD_CHUNK_LOAD, WORLD_CHUNK_GENERATED, WORLD_CHUNK_UNLOAD, WORLD_FURNACE_SMELT, PROJECTBLOCK_PLACE, PROJECTBLOCK_BREAK, PROJECTBLOCK_CLICK, PROJECTBLOCK_TICK, MENU_OPEN, MENU_CLOSE, MENU_CLICK, MENU_DRAG, SLOT_CLICK, MENUTEMPLATE_OPEN, MENUTEMPLATE_CLOSE, MENUTEMPLATE_CLICK, MENUTEMPLATE_DRAG, DIALOG_PRESS, DIALOG_CLOSE, BUTTON_PRESS, PROJECTITEM_USE, PROJECTITEM_INTERACT, PROJECTITEM_INTERACT_ENTITY, PROJECTITEM_CONSUME, PROJECTITEM_HIT, PROJECTITEM_BREAK_BLOCK, PROJECTITEM_DROP, PROJECTITEM_RENDER, PROJECTITEM_VIEW, PROJECTITEM_PICKUP, EFFECT_END, CUTSCENE_END, CUTSCENE_CUE)
 
     /**
      * Each class's events by name, its own and those it inherits up its chain (a `Mob`'s
      * `death` is `LIVING_DEATH`), a class's own replacing one of the same name further up.
      */
     private val byClass: Map<String, Map<String, EventType<*>>> = mapOf(
-        "nf" to mapOf("tick" to NF_TICK, "unload" to NF_UNLOAD, "player_join" to NF_PLAYER_JOIN, "player_quit" to NF_PLAYER_QUIT, "player_chat" to NF_PLAYER_CHAT, "player_interact" to NF_PLAYER_INTERACT, "player_interact_entity" to NF_PLAYER_INTERACT_ENTITY, "player_move" to NF_PLAYER_MOVE, "player_teleport" to NF_PLAYER_TELEPORT, "player_change_world" to NF_PLAYER_CHANGE_WORLD, "player_death" to NF_PLAYER_DEATH, "player_respawn" to NF_PLAYER_RESPAWN, "player_drop_item" to NF_PLAYER_DROP_ITEM, "player_pickup_item" to NF_PLAYER_PICKUP_ITEM, "player_use_item" to NF_PLAYER_USE_ITEM, "player_consume_item" to NF_PLAYER_CONSUME_ITEM, "player_swap_hands" to NF_PLAYER_SWAP_HANDS, "player_sneak" to NF_PLAYER_SNEAK, "player_command" to NF_PLAYER_COMMAND, "block_break" to NF_BLOCK_BREAK, "block_place" to NF_BLOCK_PLACE, "entity_damage" to NF_ENTITY_DAMAGE, "entity_death" to NF_ENTITY_DEATH, "entity_spawn" to NF_ENTITY_SPAWN, "player_input" to NF_PLAYER_INPUT, "player_change_slot" to NF_PLAYER_CHANGE_SLOT, "player_swing" to NF_PLAYER_SWING, "player_sprint" to NF_PLAYER_SPRINT, "player_fly" to NF_PLAYER_FLY, "player_jump" to NF_PLAYER_JUMP, "player_change_game_mode" to NF_PLAYER_CHANGE_GAME_MODE, "player_change_food" to NF_PLAYER_CHANGE_FOOD, "player_gain_experience" to NF_PLAYER_GAIN_EXPERIENCE, "player_change_level" to NF_PLAYER_CHANGE_LEVEL, "player_kick" to NF_PLAYER_KICK, "player_complete_advancement" to NF_PLAYER_COMPLETE_ADVANCEMENT, "player_stop_using_item" to NF_PLAYER_STOP_USING_ITEM, "player_break_item" to NF_PLAYER_BREAK_ITEM, "entity_heal" to NF_ENTITY_HEAL, "projectile_launch" to NF_PROJECTILE_LAUNCH, "projectile_hit" to NF_PROJECTILE_HIT, "entity_shoot_bow" to NF_ENTITY_SHOOT_BOW, "entity_target" to NF_ENTITY_TARGET, "entity_explode" to NF_ENTITY_EXPLODE, "block_explode" to NF_BLOCK_EXPLODE, "entity_combust" to NF_ENTITY_COMBUST, "entity_change_effect" to NF_ENTITY_CHANGE_EFFECT, "block_ignite" to NF_BLOCK_IGNITE, "block_burn" to NF_BLOCK_BURN, "block_spread" to NF_BLOCK_SPREAD, "block_flow" to NF_BLOCK_FLOW, "block_grow" to NF_BLOCK_GROW, "block_fade" to NF_BLOCK_FADE, "block_form" to NF_BLOCK_FORM, "leaves_decay" to NF_LEAVES_DECAY, "piston_extend" to NF_PISTON_EXTEND, "piston_retract" to NF_PISTON_RETRACT, "block_redstone" to NF_BLOCK_REDSTONE, "sign_change" to NF_SIGN_CHANGE, "block_start_break" to NF_BLOCK_START_BREAK, "block_drop_item" to NF_BLOCK_DROP_ITEM, "weather_change" to NF_WEATHER_CHANGE, "thunder_change" to NF_THUNDER_CHANGE, "lightning_strike" to NF_LIGHTNING_STRIKE, "chunk_load" to NF_CHUNK_LOAD, "chunk_generated" to NF_CHUNK_GENERATED, "chunk_unload" to NF_CHUNK_UNLOAD, "world_load" to NF_WORLD_LOAD, "world_unload" to NF_WORLD_UNLOAD, "entity_mount" to NF_ENTITY_MOUNT, "entity_dismount" to NF_ENTITY_DISMOUNT, "vehicle_move" to NF_VEHICLE_MOVE, "vehicle_damage" to NF_VEHICLE_DAMAGE, "vehicle_destroy" to NF_VEHICLE_DESTROY, "player_open_inventory" to NF_PLAYER_OPEN_INVENTORY, "player_close_inventory" to NF_PLAYER_CLOSE_INVENTORY, "player_craft" to NF_PLAYER_CRAFT, "player_prepare_craft" to NF_PLAYER_PREPARE_CRAFT, "player_prepare_anvil" to NF_PLAYER_PREPARE_ANVIL, "player_prepare_smithing" to NF_PLAYER_PREPARE_SMITHING, "player_prepare_grindstone" to NF_PLAYER_PREPARE_GRINDSTONE, "player_enchant_item" to NF_PLAYER_ENCHANT_ITEM, "furnace_smelt" to NF_FURNACE_SMELT, "server_list_ping" to NF_SERVER_LIST_PING, "centity_click" to NF_CENTITY_CLICK, "centity_natural_spawn" to NF_CENTITY_NATURAL_SPAWN, "menu_open" to NF_MENU_OPEN, "menu_close" to NF_MENU_CLOSE, "menu_click" to NF_MENU_CLICK, "dialog_press" to NF_DIALOG_PRESS, "setting_changed" to NF_SETTING_CHANGED),
-        "Centity" to mapOf("spawn" to CENTITY_SPAWN, "remove" to CENTITY_REMOVE, "tick" to CENTITY_TICK, "click" to CENTITY_CLICK, "animation_start" to CENTITY_ANIMATION_START, "animation_end" to CENTITY_ANIMATION_END, "chunk_load" to CENTITY_CHUNK_LOAD, "chunk_unload" to CENTITY_CHUNK_UNLOAD, "path_end" to CENTITY_PATH_END),
+        "nf" to mapOf("tick" to NF_TICK, "unload" to NF_UNLOAD, "player_join" to NF_PLAYER_JOIN, "player_quit" to NF_PLAYER_QUIT, "player_chat" to NF_PLAYER_CHAT, "player_interact" to NF_PLAYER_INTERACT, "player_interact_entity" to NF_PLAYER_INTERACT_ENTITY, "player_move" to NF_PLAYER_MOVE, "player_teleport" to NF_PLAYER_TELEPORT, "player_change_world" to NF_PLAYER_CHANGE_WORLD, "player_death" to NF_PLAYER_DEATH, "player_respawn" to NF_PLAYER_RESPAWN, "player_drop_item" to NF_PLAYER_DROP_ITEM, "player_pickup_item" to NF_PLAYER_PICKUP_ITEM, "player_use_item" to NF_PLAYER_USE_ITEM, "player_consume_item" to NF_PLAYER_CONSUME_ITEM, "player_swap_hands" to NF_PLAYER_SWAP_HANDS, "player_sneak" to NF_PLAYER_SNEAK, "player_command" to NF_PLAYER_COMMAND, "block_break" to NF_BLOCK_BREAK, "block_place" to NF_BLOCK_PLACE, "entity_damage" to NF_ENTITY_DAMAGE, "entity_death" to NF_ENTITY_DEATH, "entity_spawn" to NF_ENTITY_SPAWN, "world_dusk" to NF_WORLD_DUSK, "world_dawn" to NF_WORLD_DAWN, "player_input" to NF_PLAYER_INPUT, "player_change_slot" to NF_PLAYER_CHANGE_SLOT, "player_swing" to NF_PLAYER_SWING, "player_sprint" to NF_PLAYER_SPRINT, "player_fly" to NF_PLAYER_FLY, "player_jump" to NF_PLAYER_JUMP, "player_change_game_mode" to NF_PLAYER_CHANGE_GAME_MODE, "player_change_food" to NF_PLAYER_CHANGE_FOOD, "player_gain_experience" to NF_PLAYER_GAIN_EXPERIENCE, "player_change_level" to NF_PLAYER_CHANGE_LEVEL, "player_kick" to NF_PLAYER_KICK, "player_complete_advancement" to NF_PLAYER_COMPLETE_ADVANCEMENT, "player_stop_using_item" to NF_PLAYER_STOP_USING_ITEM, "player_break_item" to NF_PLAYER_BREAK_ITEM, "entity_heal" to NF_ENTITY_HEAL, "projectile_launch" to NF_PROJECTILE_LAUNCH, "projectile_hit" to NF_PROJECTILE_HIT, "entity_shoot_bow" to NF_ENTITY_SHOOT_BOW, "entity_target" to NF_ENTITY_TARGET, "entity_explode" to NF_ENTITY_EXPLODE, "block_explode" to NF_BLOCK_EXPLODE, "entity_combust" to NF_ENTITY_COMBUST, "entity_change_effect" to NF_ENTITY_CHANGE_EFFECT, "block_ignite" to NF_BLOCK_IGNITE, "block_burn" to NF_BLOCK_BURN, "block_spread" to NF_BLOCK_SPREAD, "block_flow" to NF_BLOCK_FLOW, "block_grow" to NF_BLOCK_GROW, "block_fade" to NF_BLOCK_FADE, "block_form" to NF_BLOCK_FORM, "leaves_decay" to NF_LEAVES_DECAY, "piston_extend" to NF_PISTON_EXTEND, "piston_retract" to NF_PISTON_RETRACT, "block_redstone" to NF_BLOCK_REDSTONE, "sign_change" to NF_SIGN_CHANGE, "block_start_break" to NF_BLOCK_START_BREAK, "block_drop_item" to NF_BLOCK_DROP_ITEM, "weather_change" to NF_WEATHER_CHANGE, "thunder_change" to NF_THUNDER_CHANGE, "lightning_strike" to NF_LIGHTNING_STRIKE, "chunk_load" to NF_CHUNK_LOAD, "chunk_generated" to NF_CHUNK_GENERATED, "chunk_unload" to NF_CHUNK_UNLOAD, "world_load" to NF_WORLD_LOAD, "world_unload" to NF_WORLD_UNLOAD, "entity_mount" to NF_ENTITY_MOUNT, "entity_dismount" to NF_ENTITY_DISMOUNT, "vehicle_move" to NF_VEHICLE_MOVE, "vehicle_damage" to NF_VEHICLE_DAMAGE, "vehicle_destroy" to NF_VEHICLE_DESTROY, "player_open_inventory" to NF_PLAYER_OPEN_INVENTORY, "player_close_inventory" to NF_PLAYER_CLOSE_INVENTORY, "player_craft" to NF_PLAYER_CRAFT, "player_prepare_craft" to NF_PLAYER_PREPARE_CRAFT, "player_prepare_anvil" to NF_PLAYER_PREPARE_ANVIL, "player_prepare_smithing" to NF_PLAYER_PREPARE_SMITHING, "player_prepare_grindstone" to NF_PLAYER_PREPARE_GRINDSTONE, "player_enchant_item" to NF_PLAYER_ENCHANT_ITEM, "furnace_smelt" to NF_FURNACE_SMELT, "server_list_ping" to NF_SERVER_LIST_PING, "centity_click" to NF_CENTITY_CLICK, "recipe_craft" to NF_RECIPE_CRAFT, "item_view" to NF_ITEM_VIEW, "centity_natural_spawn" to NF_CENTITY_NATURAL_SPAWN, "menu_open" to NF_MENU_OPEN, "menu_close" to NF_MENU_CLOSE, "menu_click" to NF_MENU_CLICK, "dialog_press" to NF_DIALOG_PRESS, "setting_changed" to NF_SETTING_CHANGED),
+        "Centity" to mapOf("spawn" to CENTITY_SPAWN, "remove" to CENTITY_REMOVE, "tick" to CENTITY_TICK, "click" to CENTITY_CLICK, "animation_start" to CENTITY_ANIMATION_START, "animation_end" to CENTITY_ANIMATION_END, "chunk_load" to CENTITY_CHUNK_LOAD, "chunk_unload" to CENTITY_CHUNK_UNLOAD, "hit" to CENTITY_HIT, "bounce" to CENTITY_BOUNCE, "stick" to CENTITY_STICK, "flight_end" to CENTITY_FLIGHT_END, "damage" to CENTITY_DAMAGE, "death" to CENTITY_DEATH, "land" to CENTITY_LAND, "bump" to CENTITY_BUMP, "touch" to CENTITY_TOUCH, "path_end" to CENTITY_PATH_END, "buff_add" to CENTITY_BUFF_ADD, "buff_end" to CENTITY_BUFF_END),
         "Node" to mapOf("click" to NODE_CLICK, "collide" to NODE_COLLIDE, "wake" to NODE_WAKE, "sleep" to NODE_SLEEP),
         "Entity" to mapOf("damage" to ENTITY_DAMAGE, "interact" to ENTITY_INTERACT, "hit" to ENTITY_HIT, "explode" to ENTITY_EXPLODE, "combust" to ENTITY_COMBUST, "mount" to ENTITY_MOUNT, "dismount" to ENTITY_DISMOUNT),
         "Living" to mapOf("death" to LIVING_DEATH, "heal" to LIVING_HEAL, "launch_projectile" to LIVING_LAUNCH_PROJECTILE, "shoot_bow" to LIVING_SHOOT_BOW, "change_effect" to LIVING_CHANGE_EFFECT, "damage" to ENTITY_DAMAGE, "interact" to ENTITY_INTERACT, "hit" to ENTITY_HIT, "explode" to ENTITY_EXPLODE, "combust" to ENTITY_COMBUST, "mount" to ENTITY_MOUNT, "dismount" to ENTITY_DISMOUNT),
         "Mob" to mapOf("path_end" to MOB_PATH_END, "target" to MOB_TARGET, "death" to LIVING_DEATH, "heal" to LIVING_HEAL, "launch_projectile" to LIVING_LAUNCH_PROJECTILE, "shoot_bow" to LIVING_SHOOT_BOW, "change_effect" to LIVING_CHANGE_EFFECT, "damage" to ENTITY_DAMAGE, "interact" to ENTITY_INTERACT, "hit" to ENTITY_HIT, "explode" to ENTITY_EXPLODE, "combust" to ENTITY_COMBUST, "mount" to ENTITY_MOUNT, "dismount" to ENTITY_DISMOUNT),
         "DroppedItem" to mapOf("damage" to ENTITY_DAMAGE, "interact" to ENTITY_INTERACT, "hit" to ENTITY_HIT, "explode" to ENTITY_EXPLODE, "combust" to ENTITY_COMBUST, "mount" to ENTITY_MOUNT, "dismount" to ENTITY_DISMOUNT),
-        "Player" to mapOf("join" to PLAYER_JOIN, "quit" to PLAYER_QUIT, "chat" to PLAYER_CHAT, "interact" to PLAYER_INTERACT, "interact_entity" to PLAYER_INTERACT_ENTITY, "move" to PLAYER_MOVE, "teleport" to PLAYER_TELEPORT, "change_world" to PLAYER_CHANGE_WORLD, "death" to PLAYER_DEATH, "respawn" to PLAYER_RESPAWN, "drop_item" to PLAYER_DROP_ITEM, "pickup_item" to PLAYER_PICKUP_ITEM, "use_item" to PLAYER_USE_ITEM, "consume_item" to PLAYER_CONSUME_ITEM, "swap_hands" to PLAYER_SWAP_HANDS, "sneak" to PLAYER_SNEAK, "command" to PLAYER_COMMAND, "input" to PLAYER_INPUT, "change_slot" to PLAYER_CHANGE_SLOT, "swing" to PLAYER_SWING, "sprint" to PLAYER_SPRINT, "fly" to PLAYER_FLY, "jump" to PLAYER_JUMP, "change_game_mode" to PLAYER_CHANGE_GAME_MODE, "change_food" to PLAYER_CHANGE_FOOD, "gain_experience" to PLAYER_GAIN_EXPERIENCE, "change_level" to PLAYER_CHANGE_LEVEL, "kick" to PLAYER_KICK, "complete_advancement" to PLAYER_COMPLETE_ADVANCEMENT, "stop_using_item" to PLAYER_STOP_USING_ITEM, "break_item" to PLAYER_BREAK_ITEM, "open_inventory" to PLAYER_OPEN_INVENTORY, "close_inventory" to PLAYER_CLOSE_INVENTORY, "craft" to PLAYER_CRAFT, "prepare_craft" to PLAYER_PREPARE_CRAFT, "prepare_anvil" to PLAYER_PREPARE_ANVIL, "prepare_smithing" to PLAYER_PREPARE_SMITHING, "prepare_grindstone" to PLAYER_PREPARE_GRINDSTONE, "enchant_item" to PLAYER_ENCHANT_ITEM, "heal" to LIVING_HEAL, "launch_projectile" to LIVING_LAUNCH_PROJECTILE, "shoot_bow" to LIVING_SHOOT_BOW, "change_effect" to LIVING_CHANGE_EFFECT, "damage" to ENTITY_DAMAGE, "hit" to ENTITY_HIT, "explode" to ENTITY_EXPLODE, "combust" to ENTITY_COMBUST, "mount" to ENTITY_MOUNT, "dismount" to ENTITY_DISMOUNT),
-        "World" to mapOf("block_break" to WORLD_BLOCK_BREAK, "block_place" to WORLD_BLOCK_PLACE, "entity_spawn" to WORLD_ENTITY_SPAWN, "block_explode" to WORLD_BLOCK_EXPLODE, "block_ignite" to WORLD_BLOCK_IGNITE, "block_burn" to WORLD_BLOCK_BURN, "block_spread" to WORLD_BLOCK_SPREAD, "block_flow" to WORLD_BLOCK_FLOW, "block_grow" to WORLD_BLOCK_GROW, "block_fade" to WORLD_BLOCK_FADE, "block_form" to WORLD_BLOCK_FORM, "leaves_decay" to WORLD_LEAVES_DECAY, "piston_extend" to WORLD_PISTON_EXTEND, "piston_retract" to WORLD_PISTON_RETRACT, "block_redstone" to WORLD_BLOCK_REDSTONE, "sign_change" to WORLD_SIGN_CHANGE, "block_start_break" to WORLD_BLOCK_START_BREAK, "block_drop_item" to WORLD_BLOCK_DROP_ITEM, "weather_change" to WORLD_WEATHER_CHANGE, "thunder_change" to WORLD_THUNDER_CHANGE, "lightning_strike" to WORLD_LIGHTNING_STRIKE, "chunk_load" to WORLD_CHUNK_LOAD, "chunk_generated" to WORLD_CHUNK_GENERATED, "chunk_unload" to WORLD_CHUNK_UNLOAD, "furnace_smelt" to WORLD_FURNACE_SMELT),
+        "Player" to mapOf("join" to PLAYER_JOIN, "quit" to PLAYER_QUIT, "chat" to PLAYER_CHAT, "interact" to PLAYER_INTERACT, "interact_entity" to PLAYER_INTERACT_ENTITY, "move" to PLAYER_MOVE, "teleport" to PLAYER_TELEPORT, "change_world" to PLAYER_CHANGE_WORLD, "death" to PLAYER_DEATH, "respawn" to PLAYER_RESPAWN, "drop_item" to PLAYER_DROP_ITEM, "pickup_item" to PLAYER_PICKUP_ITEM, "use_item" to PLAYER_USE_ITEM, "consume_item" to PLAYER_CONSUME_ITEM, "swap_hands" to PLAYER_SWAP_HANDS, "sneak" to PLAYER_SNEAK, "command" to PLAYER_COMMAND, "input" to PLAYER_INPUT, "change_slot" to PLAYER_CHANGE_SLOT, "swing" to PLAYER_SWING, "sprint" to PLAYER_SPRINT, "fly" to PLAYER_FLY, "jump" to PLAYER_JUMP, "change_game_mode" to PLAYER_CHANGE_GAME_MODE, "change_food" to PLAYER_CHANGE_FOOD, "gain_experience" to PLAYER_GAIN_EXPERIENCE, "change_level" to PLAYER_CHANGE_LEVEL, "kick" to PLAYER_KICK, "complete_advancement" to PLAYER_COMPLETE_ADVANCEMENT, "stop_using_item" to PLAYER_STOP_USING_ITEM, "break_item" to PLAYER_BREAK_ITEM, "open_inventory" to PLAYER_OPEN_INVENTORY, "close_inventory" to PLAYER_CLOSE_INVENTORY, "craft" to PLAYER_CRAFT, "prepare_craft" to PLAYER_PREPARE_CRAFT, "prepare_anvil" to PLAYER_PREPARE_ANVIL, "prepare_smithing" to PLAYER_PREPARE_SMITHING, "prepare_grindstone" to PLAYER_PREPARE_GRINDSTONE, "enchant_item" to PLAYER_ENCHANT_ITEM, "buff_add" to PLAYER_BUFF_ADD, "buff_end" to PLAYER_BUFF_END, "heal" to LIVING_HEAL, "launch_projectile" to LIVING_LAUNCH_PROJECTILE, "shoot_bow" to LIVING_SHOOT_BOW, "change_effect" to LIVING_CHANGE_EFFECT, "damage" to ENTITY_DAMAGE, "hit" to ENTITY_HIT, "explode" to ENTITY_EXPLODE, "combust" to ENTITY_COMBUST, "mount" to ENTITY_MOUNT, "dismount" to ENTITY_DISMOUNT),
+        "World" to mapOf("block_break" to WORLD_BLOCK_BREAK, "block_place" to WORLD_BLOCK_PLACE, "entity_spawn" to WORLD_ENTITY_SPAWN, "dusk" to WORLD_DUSK, "dawn" to WORLD_DAWN, "block_explode" to WORLD_BLOCK_EXPLODE, "block_ignite" to WORLD_BLOCK_IGNITE, "block_burn" to WORLD_BLOCK_BURN, "block_spread" to WORLD_BLOCK_SPREAD, "block_flow" to WORLD_BLOCK_FLOW, "block_grow" to WORLD_BLOCK_GROW, "block_fade" to WORLD_BLOCK_FADE, "block_form" to WORLD_BLOCK_FORM, "leaves_decay" to WORLD_LEAVES_DECAY, "piston_extend" to WORLD_PISTON_EXTEND, "piston_retract" to WORLD_PISTON_RETRACT, "block_redstone" to WORLD_BLOCK_REDSTONE, "sign_change" to WORLD_SIGN_CHANGE, "block_start_break" to WORLD_BLOCK_START_BREAK, "block_drop_item" to WORLD_BLOCK_DROP_ITEM, "weather_change" to WORLD_WEATHER_CHANGE, "thunder_change" to WORLD_THUNDER_CHANGE, "lightning_strike" to WORLD_LIGHTNING_STRIKE, "chunk_load" to WORLD_CHUNK_LOAD, "chunk_generated" to WORLD_CHUNK_GENERATED, "chunk_unload" to WORLD_CHUNK_UNLOAD, "furnace_smelt" to WORLD_FURNACE_SMELT),
         "ProjectBlock" to mapOf("place" to PROJECTBLOCK_PLACE, "break" to PROJECTBLOCK_BREAK, "click" to PROJECTBLOCK_CLICK, "tick" to PROJECTBLOCK_TICK),
         "Menu" to mapOf("open" to MENU_OPEN, "close" to MENU_CLOSE, "click" to MENU_CLICK, "drag" to MENU_DRAG),
         "Slot" to mapOf("click" to SLOT_CLICK),
         "MenuTemplate" to mapOf("open" to MENUTEMPLATE_OPEN, "close" to MENUTEMPLATE_CLOSE, "click" to MENUTEMPLATE_CLICK, "drag" to MENUTEMPLATE_DRAG),
         "Dialog" to mapOf("press" to DIALOG_PRESS, "close" to DIALOG_CLOSE),
         "Button" to mapOf("press" to BUTTON_PRESS),
-        "ProjectItem" to mapOf("use" to PROJECTITEM_USE, "interact" to PROJECTITEM_INTERACT, "interact_entity" to PROJECTITEM_INTERACT_ENTITY, "consume" to PROJECTITEM_CONSUME, "hit" to PROJECTITEM_HIT, "break_block" to PROJECTITEM_BREAK_BLOCK, "drop" to PROJECTITEM_DROP, "pickup" to PROJECTITEM_PICKUP),
+        "ProjectItem" to mapOf("use" to PROJECTITEM_USE, "interact" to PROJECTITEM_INTERACT, "interact_entity" to PROJECTITEM_INTERACT_ENTITY, "consume" to PROJECTITEM_CONSUME, "hit" to PROJECTITEM_HIT, "break_block" to PROJECTITEM_BREAK_BLOCK, "drop" to PROJECTITEM_DROP, "render" to PROJECTITEM_RENDER, "view" to PROJECTITEM_VIEW, "pickup" to PROJECTITEM_PICKUP),
         "Effect" to mapOf("end" to EFFECT_END),
         "Cutscene" to mapOf("end" to CUTSCENE_END, "cue" to CUTSCENE_CUE)
     )

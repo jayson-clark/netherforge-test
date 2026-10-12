@@ -61,11 +61,32 @@ on a node is optional.
 | `display`   | What the node draws.                                  |
 | `hitbox`    | Where it can be clicked.                              |
 | `physics`   | Makes it a rigid body.                                |
+| `rope`      | Makes it a rope of links: see below.                  |
 
 Parents can't form a cycle. Siblings are ordered by name.
 
 A node has no script of its own. The centity's script reaches a node with
 `this:node("top")` and listens on it there.
+
+### `rope`
+
+```json partial
+"chain": {
+  "display": { "type": "item", "item": "minecraft:iron_chain" },
+  "rope": { "links": 12, "linkLength": 0.35 }
+}
+```
+
+A rope node draws nothing itself: its `display` is drawn by `links` nodes of
+its own (1 to 64), named `chain[1]` to `chain[12]`, each `linkLength` blocks
+long (default 0.5, at most 8). Until a script strings it they lie in a line
+along its Z. `node:rope_between(from, to, { length })` strings it between two
+ends (points, nodes or entities) and the server lays its links between them
+every tick as they move, sagging by the slack when `length` is more than the
+distance, and showing only as many links as that needs. A link's display is
+stretched along its Z to its length, so draw it one block long along Z,
+centred on its origin. A rope can't have a `hitbox` or `physics`
+(`centity.rope`), and only `centity.json` can make one.
 
 ### `transform`
 
@@ -164,6 +185,92 @@ All optional. Rates are per second.
 | `sleeps`      | Stop simulating once at rest                                  | true                         |
 | `blocks`      | Collide with the world                                        | true                         |
 | `entities`    | Collide with other centities' hitboxes                        | true                         |
+
+## `body`
+
+```json partial
+"body": { "width": 0.9, "height": 0.75, "stepHeight": 0, "bounce": 0.2 }
+```
+
+A body moves the **whole centity**: an upright box, `width` square and
+`height` tall, standing with its bottom middle at the centity's position,
+which the server walks, drops, jumps and stops against the blocks' collision
+shapes every tick (a slab is half a block, a fence a block and a half). It's
+what a mob, a critter or a rolling boulder moves by, where a node's `physics`
+tumbles one node. Scripts steer it ([`Centity`](../reference/centity.md):
+`set_walk_velocity`, `jump`, `set_velocity`) and read what it's doing
+(`is_on_ground`, `is_in_liquid`, `wall`; the `land` and `bump` events). Its
+hitboxes are separate: they're what clicks and queries test.
+
+All optional. Rates are per second, as `physics`'s are.
+
+| Key               | Meaning                                                                         | Default |
+| ----------------- | ------------------------------------------------------------------------------- | ------- |
+| `width`           | Blocks across, square: more than 0, at most 16                                  | 0.6     |
+| `height`          | Blocks tall: more than 0, at most 32                                            | 1.8     |
+| `gravity`         | Downward acceleration, blocks/s²                                                | 32      |
+| `maxFallSpeed`    | The fastest it falls, blocks/s                                                  | 78.4    |
+| `drag`            | Fraction of its speed shed per second in the air (every axis), 0 to 1           | 0.33    |
+| `liquidDrag`      | The same in water or lava                                                       | 0.98    |
+| `liquidGravity`   | How much of `gravity` pulls it in water or lava: 0 floats, 1 sinks as in air    | 0.25    |
+| `acceleration`    | How fast it reaches the speed it walks at, on the ground (or flying), blocks/s² | 20      |
+| `airAcceleration` | The same in the air: how much it can steer while it falls or jumps              | 5       |
+| `friction`        | How fast it slows to a stop on the ground when it isn't walking, blocks/s²      | 24      |
+| `stepHeight`      | The tallest step it walks straight up, blocks; 0 means it must jump             | 0.6     |
+| `bounce`          | 0 stops dead against what it hits, 1 bounces off at the speed it came           | 0       |
+| `fly`             | No gravity: walking steers it in any direction, and drag slows it on every axis | false   |
+| `blocks`          | Collides with the world's blocks; `false` passes through them                   | true    |
+
+A body that starts inside blocks (spawned there, or the world changed round
+it) rises out of them. It doesn't move into a chunk that isn't loaded. While
+`move_to` walks the centity, the walk moves it and the body waits; a teleport
+keeps its velocity. Nothing about it is saved: after a restart it starts at
+rest where the centity stands.
+
+## `health`
+
+```json partial
+"health": { "max": 14, "bar": { "segments": 10, "showTicks": 100 } }
+```
+
+Health it loses to scripts' `centity:damage` and dies at 0: its `damage`
+handlers may change or cancel each blow, and `death` hears it at 0, after
+which it's removed (unless `removeOnDeath` is `false`). Scripts read and set it
+([`Centity`](../reference/centity.md): `health`, `max_health`, `set_health`,
+`heal`, `is_dead`). It isn't saved: after a restart it's whole.
+
+| Key             | Meaning                                                       | Default |
+| --------------- | ------------------------------------------------------------- | ------- |
+| `max`           | Its health when whole, more than 0. Required.                 | —       |
+| `removeOnDeath` | Removed when it dies, after its `death` handlers.             | true    |
+| `bar`           | A bar over it showing what it has left (below). Absent: none. | none    |
+
+`bar` draws the health left as a line of `segments` pieces, the full ones in
+`filled` and the rest in `empty`, on a text display node called `health_bar`:
+the file's own (a text display, placed and styled as you like), or one the
+server adds `offset` blocks over the top of its hitboxes. It shows for
+`showTicks` after each change and hides again; with `showTicks` 0 it always
+shows.
+
+| Key         | Meaning                                                          | Default       |
+| ----------- | ---------------------------------------------------------------- | ------------- |
+| `segments`  | How many pieces, 1 to 40                                         | 10            |
+| `showTicks` | Ticks it shows after a change; 0 always                          | 100           |
+| `offset`    | Blocks over the top of its hitboxes, for the bar the server adds | 0.35          |
+| `glyph`     | One piece, as text                                               | `▮`           |
+| `filled`    | MiniMessage before the full pieces                               | `<red>`       |
+| `empty`     | MiniMessage before the empty ones                                | `<dark_gray>` |
+
+## `properties`
+
+```json partial
+"properties": { "damage": 12, "class": "melee", "tags": ["blade"] }
+```
+
+The project's own facts about this centity, as any JSON: what scripts read with
+`centity:properties()` on an instance, or `nf.centities.properties(kind)` without one, so data that belongs to it lives in its file instead of
+a table a script keeps in step. Nothing but scripts reads it, and changing it
+reloads it like any change to its file.
 
 ## `script`
 
@@ -314,6 +421,7 @@ or move it.
 | `loop`     | `once` (play, then return to the base pose), `loop`, or `hold` (stay on the last pose). | `once`              |
 | `autoplay` | Start when the centity loads, without a script.                                         | false               |
 | `length`   | Seconds. Keys after it never play.                                                      | the last key's time |
+| `blend`    | `replace` (its tracks own their channels) or `additive` (on top of the pose under it).  | `replace`           |
 | `tracks`   | Node name → channel (`translation`, `rotation`, `scale`) → keyframes.                   | —                   |
 
 A keyframe is `{ "time", "value", "easing" }`. `easing` shapes the segment
@@ -321,6 +429,13 @@ leaving the key: `linear` (default), `step`, `ease_in`, `ease_out` or
 `ease_in_out`. A track owns its whole channel. Outside its keys, it holds the
 nearest one. Rotation interpolates each axis the short way round, so a spin
 needs a key at least every 180°.
+
+An `additive` animation changes whatever poses the node otherwise (its rest
+pose, what a script set, the replacing animations playing), after all of them:
+its translation and rotation keys are added, its scale keys multiply. So its
+keys are changes, `[0, 0, 0]` (`[1, 1, 1]` for scale) leaving the node as it
+is: a squash `[1.3, 0.7, 1.3]` flattens a slime whatever size a script made it,
+while it walks. With `blend_ticks` it eases in from no change.
 
 Players' games ease display entities between poses themselves, so while only
 animations move a node the server sends a pose some ticks ahead and lets the

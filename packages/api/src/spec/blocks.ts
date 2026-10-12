@@ -58,6 +58,13 @@ export const projectBlockClass: LuaClass = {
       returns: [{ type: 'string' }],
     },
     {
+      name: 'properties',
+      doc: 'Its `properties` from its `block.json`: the project\'s own facts about it, any JSON (`{ damage = 12, class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An empty table when the file has none, `nil` once the block is gone.',
+      params: [],
+      returns: [{ type: 'table?' }],
+      example: 'local stats = assert(this:properties())\nlog(stats.damage)',
+    },
+    {
       name: 'exists',
       doc: 'Whether the project still has it.',
       params: [],

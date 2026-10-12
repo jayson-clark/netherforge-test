@@ -35,8 +35,8 @@ set_item(a rich item)	19
 set_item(a stack read back)	19
 set_item(an item with data)	30
 set_item({ kind, count })	21
-spawn a centity with no script	11
-spawn a scripted centity	236
+spawn a centity with no script	12
+spawn a scripted centity	237
 v * 2	22
 v + w	28
 v.x	6

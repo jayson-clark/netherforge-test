@@ -1,3 +1,4 @@
+import { buffEvents, statFunctions } from './stats.ts'
 import type { EventSpec, Field, Fn, LuaClass } from '../types.ts'
 import { DATA_SAVING, DATA_VALUES } from './data.ts'
 import { eventFunctions, nfEvents } from './events.ts'
@@ -855,8 +856,9 @@ export const playerClass: LuaClass = {
   methods: true,
   extends: 'Living',
   fields: [],
-  events: playerEvents,
+  events: [...playerEvents, ...buffEvents],
   functions: [
+    ...statFunctions('they', 'player'),
     {
       name: 'name',
       doc: 'Their name, as they have it now (a player can change theirs between visits).',
@@ -1215,6 +1217,14 @@ export const playerClass: LuaClass = {
       returns: [{ type: 'Menu?' }],
     },
     {
+      name: 'refresh_items',
+      doc: 'Sends their game every stack it shows again where it would now look different to them: their inventory, the window they have open and their cursor, each worked out again by the `view` handlers (and `nf.on("item_view")`). Stacks are sent by themselves when they change, but not when only what a `view` handler works its look out from does, so call this then: when a shop menu opens or closes, say. It\'s done once at the end of the tick however often it\'s called, and only stacks that look different from what their game was last sent are sent.',
+      params: [],
+      returns: [{ type: 'boolean', doc: "`false` when they're offline." }],
+      example:
+        'nf.on("menu_open", function(event)\n  event.player:refresh_items()\nend)\nnf.on("menu_close", function(event)\n  event.player:refresh_items()\nend)',
+    },
+    {
       name: 'close_menu',
       doc: 'Closes the project menu they have open. Anything else on their screen (a chest, their own inventory) stays open.',
       params: [],
@@ -1399,6 +1409,14 @@ export const playerClass: LuaClass = {
       returns: [{ type: 'table' }],
       example:
         'local shop = player:data().shop or {}\nplayer:data().shop = shop\nshop.coins = (shop.coins or 0) + 5',
+    },
+    {
+      name: 'session',
+      doc: "Their table for this time online: one per player, the same table every time, shared by every script, and never saved. It's made empty the first time a script asks after they join, kept while they stay (through a module's reload too: it's the player's, not the script's), and dropped once they've left, after their `player_quit` handlers, so the next time they join it's empty again. A whole-project reload (`netherforge.json` changing, or `/nf reload` with no files) empties it, as it does every script's state. Anything a script holds goes in it (handles, functions, a `Task`), so a module needn't keep a map keyed by player and clear it in `player_quit`. By convention each module keeps its own part of it under its name, as with `data()`. `nil` for a player who isn't online.",
+      params: [],
+      returns: [{ type: 'table?' }],
+      example:
+        'local session = assert(player:session())\nsession.combo = (session.combo or 0) + 1\nif session.combo >= 3 then\n  player:send_message("Combo!")\nend',
     },
     ...eventFunctions(
       'Player',

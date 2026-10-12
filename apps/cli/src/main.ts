@@ -1,9 +1,10 @@
 import { parseArgs } from 'node:util'
 import { statSync } from 'node:fs'
 import path from 'node:path'
-import { build, check, format, lock, type Outcome } from './commands.ts'
+import { build, check, format, generate, lock, type Outcome } from './commands.ts'
 import { findProjectRoot } from './project.ts'
 import { preview } from './preview.ts'
+import { gallery, render } from './render.ts'
 import { test } from './test.ts'
 
 declare const __NETHERFORGE_VERSION__: string
@@ -19,6 +20,11 @@ Usage:
   netherforge format [dir] [--check]
       Rewrite project JSON in canonical form, as the editor saves it.
       With --check, change nothing and exit 1 if a file isn't canonical.
+  netherforge generate [dir]
+      Run netherforge.json's "generate" commands in order, from the
+      project's folder, stopping at the first that fails, then format the
+      project. A generator writes the project with the SDK this file exports:
+      import { project } from "../.netherforge/bin/netherforge.mjs".
   netherforge lock   [dir] [--update]
       Write netherforge.lock as the project's dependencies resolve now
       (the editor does this whenever they change). A git dependency stays
@@ -49,6 +55,14 @@ Usage:
       requires) as the server does. Prints the picture's size, what its
       colours are and what the script failed at. Problems in the file print
       as check prints them and exit 1.
+  netherforge render <item|block|centity file> --out <file>.png [--size <pixels>]
+      Draw an item or a block as its inventory icon (64 pixels), or a
+      centity in its base pose from the front, its right and above (256),
+      as the editor draws them: the project's resource pack looks, and the
+      game's own from the Minecraft client the editor imported.
+  netherforge gallery [dir] [--out <folder>] [--size <pixels>]
+      Draw every item, block and centity of the project into --out
+      (default build/gallery), with an index.html showing them all.
   netherforge test   [dir|file] [--json] [--junit <file>] [--filter <text>]
                      [--game-data <file>]
       Run the project's *_test.lua files on a fake server, each test on a
@@ -108,8 +122,8 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env):
   // `netherforge test tests/shop_test.lua` runs that file's tests, from the project it's in.
   const testFile =
     command === 'test' && dir.endsWith('_test.lua') && isFile(dir) ? path.resolve(dir) : null
-  // `netherforge preview terrain/hills.json` draws that file, from the project it's in.
-  const previewFile = command === 'preview' ? path.resolve(dir) : null
+  // `netherforge preview terrain/hills.json` draws that file, from the project it's in; so does render.
+  const previewFile = command === 'preview' || command === 'render' ? path.resolve(dir) : null
   const root = findProjectRoot(
     testFile ? path.dirname(testFile) : previewFile ? path.dirname(previewFile) : dir,
   )
@@ -120,6 +134,19 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env):
       return check(root, { json: values.json, gameData: values['game-data'] }, env)
     case 'format':
       return format(root, { check: values.check })
+    case 'generate':
+      return generate(root)
+    case 'render':
+    case 'gallery': {
+      const size = values.size as string | undefined
+      if (size !== undefined && !/^\d+$/.test(size)) {
+        return { out: [], err: [`--size is a whole number of pixels, not "${size}".`], code: 2 }
+      }
+      const options = { out: values.out, size: size === undefined ? undefined : Number(size) }
+      return command === 'render'
+        ? render(root, previewFile!, options, env)
+        : gallery(root, options, env)
+    }
     case 'lock':
       return lock(root, { update: values.update }, env)
     case 'build':

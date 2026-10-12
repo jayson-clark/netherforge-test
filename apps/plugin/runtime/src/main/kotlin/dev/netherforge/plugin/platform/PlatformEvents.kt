@@ -23,6 +23,26 @@ interface PlatformEvents {
     fun tick()
 
     /**
+     * [stack], a project item's stack the platform just rewrote to its item's current look
+     * ([ProjectItemOps.refresh]), as its item's `render` handlers finish it (a name and lore worked out from
+     * its data): what to put in its place. [stack] itself when nobody listens.
+     */
+    fun itemRendered(stack: ItemData): ItemData
+
+    /**
+     * Whether a stack of the project item [reference] names (as its stamp reads, `shop:ruby`; null for a stack
+     * that's no project item's) may look different to some player ([ItemViewOps]): asked for every stack sent to
+     * a player's game, so it's cheap, and false while no script listens.
+     */
+    fun itemViewing(reference: String?): Boolean
+
+    /**
+     * How [stack] looks to [player], whose game it's being sent to, as the `view` handlers leave it; null when
+     * it looks as it is (nobody changed it, or a handler failed). Asked only when [itemViewing] said it may.
+     */
+    fun itemViewed(player: UUID, stack: ItemData): ItemView?
+
+    /**
      * A click on a block or the air with [hand] (`main_hand` or `off_hand`),
      * holding [item], on [face] of [block] (both null for the air). True
      * cancels it.
