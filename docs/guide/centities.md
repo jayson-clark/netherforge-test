@@ -188,6 +188,16 @@ this:on("tick", function()
 end)
 ```
 
+A node shaped like a beam (one block long along Z, centred on its origin) can
+be laid from one point to another with `node:stretch_between(from, to)`. For a
+chain or a string between two moving things, make the node a `rope` in
+`centity.json` and string it: the server lays its links every tick.
+
+```lua
+-- From the player's hands to the ball, with a little slack.
+this:node("chain"):rope_between(player, this:node("ball"), { length = 6 })
+```
+
 Or ease a node there over some ticks, and back again, with `node:tween`:
 
 ```lua

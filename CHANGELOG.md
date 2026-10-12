@@ -100,6 +100,13 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **Rope nodes and `stretch_between`.** A node with `"rope": { "links",
+"linkLength" }` draws its display as links (`chain[1]`...);
+  `node:rope_between(from, to, { length })` strings it between points, nodes
+  or entities, and the server lays it every tick, sagging by its slack and
+  showing only the links it needs (`release_rope`, `is_rope`).
+  `node:stretch_between(from, to, { thickness })` lays any node from one point
+  to another. New problem code `centity.rope`.
 - **Additive animations and tweens.** An animation with `"blend": "additive"`
   plays on top of the rest of the pose (translation and rotation added, scale
   multiplied), after every replacing one, so a squash plays over a walk and

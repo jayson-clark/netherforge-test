@@ -362,6 +362,7 @@ Node:is_glowing	15
 Node:is_kinematic	15
 Node:is_on_ground	15
 Node:is_physics_enabled	15
+Node:is_rope	15
 Node:is_tweening	15
 Node:is_visible	15
 Node:look_at	48
@@ -371,7 +372,9 @@ Node:name	15
 Node:on	141
 Node:once	80
 Node:parent	15
+Node:release_rope	16
 Node:remove	15
+Node:rope_between	70
 Node:rotate	50
 Node:rotation	18
 Node:scale	18
@@ -396,6 +399,7 @@ Node:set_translation	49
 Node:set_velocity	48
 Node:set_visible	18
 Node:stop_tween	15
+Node:stretch_between	84
 Node:to_local	51
 Node:to_world	51
 Node:translation	18

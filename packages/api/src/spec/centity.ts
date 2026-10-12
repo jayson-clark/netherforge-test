@@ -908,6 +908,42 @@ export const nodeClass: LuaClass = {
       returns: [],
     },
     {
+      name: 'stretch_between',
+      doc: "Lays it from one point of the world to another: its origin halfway, its Z pointing from `from` to `to`, and its Z scale the distance between them. For a node whose display is one block long along Z and centred on its origin (a beam, a string, a link), that's the whole way from one to the other. Its X and Y scale stay as they are, or are `thickness`.",
+      params: [
+        { name: 'from', type: 'Vec3', doc: 'A point in the world.' },
+        { name: 'to', type: 'Vec3', doc: 'A point in the world.' },
+        { name: 'options', type: 'StretchOptions', doc: '', optional: true },
+      ],
+      returns: [{ type: 'boolean', doc: '`false` once its centity is removed.' }],
+      example:
+        'local beam = assert(this:node("beam"))\nlocal here = assert(this:position())\nbeam:stretch_between(here, vec3(10, 70, 4), { thickness = 0.2 })',
+    },
+    {
+      name: 'is_rope',
+      doc: 'Whether it\'s a rope node (`"rope"` in `centity.json`).',
+      params: [],
+      returns: [{ type: 'boolean' }],
+    },
+    {
+      name: 'rope_between',
+      doc: "Strings a rope node between two ends, and keeps it strung each tick as they move, until `release_rope` or another `rope_between`: its links laid along a line from one to the other, sagging with `length`'s slack, as many shown as the distance needs (up to its `links`; the rest hidden). An end is a point, a node (its origin, as shown), or an entity (half a block above its feet; a player's at their hands' height, 1.1 blocks up). An end that's gone (a removed centity, an entity that left) releases the rope. A node that isn't a rope is an error.",
+      params: [
+        { name: 'from', type: 'Vec3|Node|Entity', doc: '' },
+        { name: 'to', type: 'Vec3|Node|Entity', doc: '' },
+        { name: 'options', type: 'RopeOptions', doc: '', optional: true },
+      ],
+      returns: [{ type: 'boolean', doc: '`false` once its centity is removed.' }],
+      example:
+        '-- A chain from the player\'s hand to the ball.\nlocal player = assert(nf.players.online()[1])\nassert(this:node("chain")):rope_between(player, assert(this:node("ball")), { length = 6 })',
+    },
+    {
+      name: 'release_rope',
+      doc: 'Stops keeping a rope strung: its links stay where they were last laid.',
+      params: [],
+      returns: [],
+    },
+    {
       name: 'tween',
       doc: "Eases its translation, rotation or scale from where they are to new values over some ticks, as `set_translation`, `set_rotation` and `set_scale` would each tick: and with `back`, eases them back again. A tween of a channel this node is already tweening replaces it, from where it is; `set_*` on a channel doesn't stop its tween. Animations drive what they drive over it, as they do over `set_*`; an `additive` one changes it.",
       params: [{ name: 'options', type: 'TweenOptions', doc: '' }],
@@ -1726,6 +1762,28 @@ export const centityShapes: LuaClass[] = [
         doc: "Which of the other centity's nodes it touched, or `nil`.",
       },
       { name: 'entity', type: 'Entity?', doc: 'The player or entity it touched, or `nil`.' },
+    ],
+  },
+  {
+    name: 'StretchOptions',
+    doc: "How `node:stretch_between` lays a node. A key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      { name: 'thickness', type: 'number?', doc: 'Its X and Y scale. Default: as they are.' },
+    ],
+  },
+  {
+    name: 'RopeOptions',
+    doc: "How `node:rope_between` strings a rope. A key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      {
+        name: 'length',
+        type: 'number?',
+        doc: "How long the rope is, in blocks: shorter than the ends' distance it's taut, longer it sags by its slack. Default: always taut.",
+      },
     ],
   },
   {

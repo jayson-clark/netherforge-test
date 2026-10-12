@@ -46,10 +46,14 @@ class CompiledCentity(
         val transform: Transform,
         val display: DisplayDef?,
         val hitbox: HitboxDef?,
-        val physics: ResolvedPhysics?
+        val physics: ResolvedPhysics?,
+        /** For a rope node: its links' indices into [nodes], in order from its start, and how long each is. */
+        val rope: Rope? = null
     ) {
         val isRoot: Boolean get() = parentIndex < 0
     }
+
+    class Rope(val links: List<Int>, val linkLength: Double)
 }
 
 class CompiledAnimation(

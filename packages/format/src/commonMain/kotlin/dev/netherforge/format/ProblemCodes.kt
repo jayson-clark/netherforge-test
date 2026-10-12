@@ -304,6 +304,12 @@ object ProblemCodes {
     val BUFF_STAT = error("buff.stat", BUFF, "A buff's `stats` has a name that isn't one, or a value that isn't a number.")
     val BUFF_TICKS = error("buff.ticks", BUFF, "A buff's `maxTicks` is below 1.")
     val CENTITY_HEALTH = error("centity.health", CENTITY, "A centity's `health` has a value it can't have.")
+    val CENTITY_ROPE =
+        error(
+            "centity.rope",
+            CENTITY,
+            "A rope node's `links` or `linkLength` is out of range, or it has no display, or has a hitbox or physics."
+        )
     val CENTITY_BODY_SIZE = error("centity.body-size", CENTITY, "A `body`'s `width` or `height` isn't positive, or is too big.")
     val CENTITY_BODY_RANGE = warning("centity.body-range", CENTITY, "A `body` value out of its range is clamped.")
     val CENTITY_SPAWNING_WORLD = error("centity.spawning-world", CENTITY, "A world in `spawning.worlds` isn't a usable world name.")

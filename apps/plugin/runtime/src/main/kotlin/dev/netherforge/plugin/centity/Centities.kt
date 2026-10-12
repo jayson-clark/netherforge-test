@@ -698,7 +698,34 @@ class Centities(
         if (!instance.removed && scripts.due(handle(instance), Events.CENTITY_TICK, scripts.now)) {
             parts.time(SCRIPTS) { emit(Events.CENTITY_TICK, instance, TickEvent(scripts.now)) }
         }
+        if (instance.ropes.isNotEmpty() && !instance.removed) layRopes(instance)
         if (!instance.removed) parts.time(SYNC) { sync(instance) }
+    }
+
+    /** Lays each strung rope of [instance] between where its ends are now; one whose end has gone is let go. */
+    private fun layRopes(instance: Instance) {
+        val world = instance.anchor.world
+        for ((name, rope) in instance.ropes.entries.toList()) {
+            val index = instance.indexOf(name)
+            val from = where(rope.from, world)
+            val to = where(rope.to, world)
+            if (index == null || from == null || to == null) {
+                instance.ropes.remove(name)
+                continue
+            }
+            Ropes.lay(instance, index, from, to, rope.length)
+        }
+    }
+
+    /** Where a rope's end is in [world] now; null when it's gone or in another world. */
+    private fun where(end: RopeEnd, world: String): Vec3? = when (end) {
+        is RopeEnd.Point -> end.at
+        is RopeEnd.OfNode -> find(end.centity)?.takeIf { !it.removed && it.anchor.world == world }?.let { other ->
+            other.indexOf(end.node)?.let { other.worldMatrix(it).translation() }
+        }
+        is RopeEnd.OfEntity -> platform.worldEntities.info(end.entity)?.location?.takeIf { it.world == world }?.let {
+            Vec3(it.x, it.y + if (platform.players.get(end.entity) != null) PLAYER_HANDS else ENTITY_MIDDLE, it.z)
+        }
     }
 
     /**
@@ -1278,6 +1305,12 @@ class Centities(
     }
 
     companion object {
+        /** How far above a player's feet a rope tied to them is: at their hands, standing. */
+        const val PLAYER_HANDS = 1.1
+
+        /** How far above any other entity's feet a rope tied to it is. */
+        const val ENTITY_MIDDLE = 0.5
+
         const val SECONDS_PER_TICK = 0.05
 
         // What the profiler names the parts of an instance's tick (`get_profile`'s `parts`).

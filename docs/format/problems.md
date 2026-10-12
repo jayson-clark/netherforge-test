@@ -434,6 +434,10 @@ Warning. A body collides with nothing, so nothing stops it falling. See [centiti
 
 Error. A centity's `health` has a value it can't have. See [centities](centity.md).
 
+### `centity.rope` {#centity-rope}
+
+Error. A rope node's `links` or `linkLength` is out of range, or it has no display, or has a hitbox or physics. See [centities](centity.md).
+
 ### `centity.body-size` {#centity-body-size}
 
 Error. A `body`'s `width` or `height` isn't positive, or is too big. See [centities](centity.md).

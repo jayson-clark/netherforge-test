@@ -266,8 +266,32 @@ data class NodeDef(
     val transform: Transform? = null,
     val display: DisplayDef? = null,
     val hitbox: HitboxDef? = null,
-    val physics: PhysicsDef? = null
+    val physics: PhysicsDef? = null,
+    /** A rope or chain: its [display] drawn as links that a script strings between two points (`node:rope_to`). */
+    val rope: RopeDef? = null
 )
+
+/**
+ * A rope node: its display drawn [links] times, each link [linkLength] blocks long, laid by the server along a
+ * line from one end to the other that sags with slack. A link's display is one block long along Z, centred on its
+ * origin, and stretched to its length; only as many links as the ends' distance needs are shown.
+ */
+@Serializable
+data class RopeDef(
+    /** The most links, 1 to [MAX_LINKS]. */
+    val links: Int,
+    /** Each link's length, in blocks. Default [DEFAULT_LINK_LENGTH]. */
+    val linkLength: Double? = null
+) {
+    companion object {
+        const val MAX_LINKS = 64
+        const val DEFAULT_LINK_LENGTH = 0.5
+        const val MAX_LINK_LENGTH = 8.0
+
+        /** A link's node name: `chain[3]`, from 1. */
+        fun linkName(rope: String, link: Int) = "$rope[$link]"
+    }
+}
 
 /**
  * A local transform relative to the parent. Rotation is XYZ euler degrees,

@@ -961,6 +961,44 @@ function Node.set_scale(self, scale)
   prim["Node.set_scale"](self_key, scale[1], scale[2], scale[3])
 end
 
+function Node.stretch_between(self, from, to, options)
+  local self_key = ids[self]
+  if self_key == nil or not Node_is[class_of(self)] then
+    self_key = self_of(self, "Node")
+  end
+  if genuine_mt(from) ~= Vec3_mt then
+    want_vec3(from, "from")
+  end
+  if genuine_mt(to) ~= Vec3_mt then
+    want_vec3(to, "to")
+  end
+  return prim["Node.stretch_between"](self_key, from[1], from[2], from[3], to[1], to[2], to[3], options)
+end
+
+function Node.is_rope(self)
+  local self_key = ids[self]
+  if self_key == nil or not Node_is[class_of(self)] then
+    self_key = self_of(self, "Node")
+  end
+  return prim["Node.is_rope"](self_key)
+end
+
+function Node.rope_between(self, from, to, options)
+  local self_key = ids[self]
+  if self_key == nil or not Node_is[class_of(self)] then
+    self_key = self_of(self, "Node")
+  end
+  return prim["Node.rope_between"](self_key, from, to, options)
+end
+
+function Node.release_rope(self)
+  local self_key = ids[self]
+  if self_key == nil or not Node_is[class_of(self)] then
+    self_key = self_of(self, "Node")
+  end
+  prim["Node.release_rope"](self_key)
+end
+
 function Node.tween(self, options)
   local self_key = ids[self]
   if self_key == nil or not Node_is[class_of(self)] then

@@ -113,6 +113,48 @@
   },
   {
     "severity": "error",
+    "file": "centities/rope/centity.json",
+    "message": "links must be 1 to 64",
+    "path": "$.nodes.chain.rope.links",
+    "code": "centity.rope"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rope/centity.json",
+    "message": "linkLength must be more than 0 and at most 8 blocks",
+    "path": "$.nodes.chain.rope.linkLength",
+    "code": "centity.rope"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rope/centity.json",
+    "message": "a rope needs a display: what each link draws",
+    "path": "$.nodes.chain.rope",
+    "code": "centity.rope"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rope/centity.json",
+    "message": "a rope can't have a hitbox or physics: it's laid by the server",
+    "path": "$.nodes.string.rope",
+    "code": "centity.rope"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rope/centity.json",
+    "message": "A hitbox has either boxes or shape: \"collision\", not both",
+    "path": "$.nodes.string.hitbox",
+    "code": "centity.hitbox-both"
+  },
+  {
+    "severity": "error",
+    "file": "centities/rope/centity.json",
+    "message": "shape: \"collision\" needs a block display on the same node",
+    "path": "$.nodes.string.hitbox.shape",
+    "code": "centity.hitbox-collision"
+  },
+  {
+    "severity": "error",
     "file": "centities/rules/centity.json",
     "message": "Node \"root\" is its own parent",
     "path": "$.nodes.root.parent",

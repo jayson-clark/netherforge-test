@@ -389,6 +389,9 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
         }
     }
 
+    /** Its rope nodes strung between two ends, by node name: laid again each tick. */
+    val ropes = HashMap<String, StrungRope>(0)
+
     /** The tweens easing its nodes, at most one per node and channel. */
     val tweens = ArrayList<Tween>(0)
 

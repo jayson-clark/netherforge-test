@@ -28,6 +28,9 @@ import dev.netherforge.plugin.centity.PathSettings
 import dev.netherforge.plugin.centity.PathTarget
 import dev.netherforge.plugin.centity.Physics
 import dev.netherforge.plugin.centity.QueryFilter
+import dev.netherforge.plugin.centity.RopeEnd
+import dev.netherforge.plugin.centity.Ropes
+import dev.netherforge.plugin.centity.StrungRope
 import dev.netherforge.plugin.data.ScriptData
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaValue
@@ -732,6 +735,50 @@ internal class NodeImpl(private val session: ProjectSession) : NodeApi {
     override fun setRotation(self: LuaHandle.Node, rotation: Vec3) = set(self, Channel.ROTATION, rotation)
 
     override fun setScale(self: LuaHandle.Node, scale: Vec3) = set(self, Channel.SCALE, scale)
+
+    override fun stretchBetween(self: LuaHandle.Node, from: Vec3, to: Vec3, options: StretchOptions?): Boolean {
+        val thickness = options?.thickness?.also {
+            if (!(it > 0) || !it.isFinite()) throw LuaApiException("bad argument 'options.thickness' (more than 0, got $it)")
+        }
+        val (instance, index) = node(self) ?: return false
+        if (instance.removed) return false
+        return Ropes.stretch(instance, index, from, to, thickness)
+    }
+
+    override fun isRope(self: LuaHandle.Node): Boolean {
+        val (instance, index) = node(self) ?: return false
+        return instance.definition.nodes[index].rope != null
+    }
+
+    override fun ropeBetween(self: LuaHandle.Node, from: Vec3OrNodeOrEntity, to: Vec3OrNodeOrEntity, options: RopeOptions?): Boolean {
+        val length = options?.length?.also {
+            if (!(it > 0) || !it.isFinite()) throw LuaApiException("bad argument 'options.length' (more than 0, got $it)")
+        }
+        val (instance, index) = node(self) ?: return false
+        if (instance.definition.nodes[index].rope == null) {
+            throw LuaApiException("node \"${self.name}\" isn't a rope: give it \"rope\" in centity.json")
+        }
+        if (instance.removed) return false
+        val ends = listOf(from, to).map { end ->
+            when (end) {
+                is Vec3OrNodeOrEntity.Vec3 -> RopeEnd.Point(end.value)
+                is Vec3OrNodeOrEntity.Node -> RopeEnd.OfNode(
+                    runCatching { UUID.fromString(end.value.centity) }.getOrNull() ?: return false,
+                    end.value.name
+                )
+                is Vec3OrNodeOrEntity.Entity -> RopeEnd.OfEntity(end.value.uuidOrNull() ?: return false)
+            }
+        }
+        val name = instance.definition.nodes[index].name
+        // Laid on each of its ticks from the next, wherever its ends are then.
+        instance.ropes[name] = StrungRope(ends[0], ends[1], length)
+        return true
+    }
+
+    override fun releaseRope(self: LuaHandle.Node) {
+        val (instance, index) = node(self) ?: return
+        instance.ropes.remove(instance.definition.nodes[index].name)
+    }
 
     override fun tween(self: LuaHandle.Node, options: TweenOptions): Boolean {
         val targets = listOfNotNull(

@@ -1499,6 +1499,30 @@ interface NodeApi {
     fun setScale(self: LuaHandle.Node, scale: Vec3)
 
     /**
+     * Lays it from one point of the world to another: its origin halfway, its Z pointing from `from` to
+     * `to`, and its Z scale the distance between them. For a node whose display is one block long along Z
+     * and centred on its origin (a beam, a string, a link), that's the whole way from one to the other.
+     * Its X and Y scale stay as they are, or are `thickness`.
+     */
+    fun stretchBetween(self: LuaHandle.Node, from: Vec3, to: Vec3, options: StretchOptions?): Boolean
+
+    /** Whether it's a rope node (`"rope"` in `centity.json`). */
+    fun isRope(self: LuaHandle.Node): Boolean
+
+    /**
+     * Strings a rope node between two ends, and keeps it strung each tick as they move, until
+     * `release_rope` or another `rope_between`: its links laid along a line from one to the other, sagging
+     * with `length`'s slack, as many shown as the distance needs (up to its `links`; the rest hidden). An
+     * end is a point, a node (its origin, as shown), or an entity (half a block above its feet; a player's
+     * at their hands' height, 1.1 blocks up). An end that's gone (a removed centity, an entity that left)
+     * releases the rope. A node that isn't a rope is an error.
+     */
+    fun ropeBetween(self: LuaHandle.Node, from: Vec3OrNodeOrEntity, to: Vec3OrNodeOrEntity, options: RopeOptions?): Boolean
+
+    /** Stops keeping a rope strung: its links stay where they were last laid. */
+    fun releaseRope(self: LuaHandle.Node)
+
+    /**
      * Eases its translation, rotation or scale from where they are to new values over some ticks, as
      * `set_translation`, `set_rotation` and `set_scale` would each tick: and with `back`, eases them back
      * again. A tween of a channel this node is already tweening replaces it, from where it is; `set_*` on

@@ -238,9 +238,30 @@ object CentityValidator {
     }
 
     private fun validateContent(name: String, node: NodeDef, sink: ProblemSink, game: GameData?) {
+        node.rope?.let { validateRope(name, node, it, sink) }
         node.display?.let { validateDisplay(name, it, sink, game) }
         node.hitbox?.let { validateHitbox(name, node, it, sink) }
         node.physics?.let { validatePhysics(name, it, sink) }
+    }
+
+    private fun validateRope(name: String, node: NodeDef, rope: RopeDef, sink: ProblemSink) {
+        val at = "${nodePath(name)}.rope"
+        if (rope.links !in 1..RopeDef.MAX_LINKS) {
+            sink.report(ProblemCodes.CENTITY_ROPE, "links must be 1 to ${RopeDef.MAX_LINKS}", "$at.links")
+        }
+        rope.linkLength?.let {
+            if (it <= 0 || it > RopeDef.MAX_LINK_LENGTH) {
+                sink.report(
+                    ProblemCodes.CENTITY_ROPE,
+                    "linkLength must be more than 0 and at most ${CanonicalJson.formatNumber(RopeDef.MAX_LINK_LENGTH.toString())} blocks",
+                    "$at.linkLength"
+                )
+            }
+        }
+        if (node.display == null) sink.report(ProblemCodes.CENTITY_ROPE, "a rope needs a display: what each link draws", at)
+        if (node.hitbox != null || node.physics != null) {
+            sink.report(ProblemCodes.CENTITY_ROPE, "a rope can't have a hitbox or physics: it's laid by the server", at)
+        }
     }
 
     private fun validateDisplay(name: String, display: DisplayDef, sink: ProblemSink, game: GameData?) {

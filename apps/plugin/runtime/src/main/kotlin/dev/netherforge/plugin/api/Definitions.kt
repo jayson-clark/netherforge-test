@@ -208,6 +208,7 @@ internal fun nodeFrom(name: String, parentIndex: Int, definition: LuaValue?, gam
     if ("parent" in table) {
         throw LuaApiException("$ROOT.parent: a node's parent is the node it's added to (add_node adds a root)")
     }
+    if ("rope" in table) throw LuaApiException("$ROOT.rope: a rope's links are built with its centity, so only centity.json can have one")
     val file = when (val result = CanonicalJson.parse(NodeDef.serializer(), nodeSpelling(table, ROOT).toString(), ROOT)) {
         is CanonicalJson.Parsed.Ok -> result.value
         is CanonicalJson.Parsed.Failed -> throw LuaApiException(message(result.problem))

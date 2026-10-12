@@ -61,11 +61,32 @@ on a node is optional.
 | `display`   | What the node draws.                                  |
 | `hitbox`    | Where it can be clicked.                              |
 | `physics`   | Makes it a rigid body.                                |
+| `rope`      | Makes it a rope of links: see below.                  |
 
 Parents can't form a cycle. Siblings are ordered by name.
 
 A node has no script of its own. The centity's script reaches a node with
 `this:node("top")` and listens on it there.
+
+### `rope`
+
+```json partial
+"chain": {
+  "display": { "type": "item", "item": "minecraft:chain" },
+  "rope": { "links": 12, "linkLength": 0.35 }
+}
+```
+
+A rope node draws nothing itself: its `display` is drawn by `links` nodes of
+its own (1 to 64), named `chain[1]` to `chain[12]`, each `linkLength` blocks
+long (default 0.5, at most 8). Until a script strings it they lie in a line
+along its Z. `node:rope_between(from, to, { length })` strings it between two
+ends (points, nodes or entities) and the server lays its links between them
+every tick as they move, sagging by the slack when `length` is more than the
+distance, and showing only as many links as that needs. A link's display is
+stretched along its Z to its length, so draw it one block long along Z,
+centred on its origin. A rope can't have a `hitbox` or `physics`
+(`centity.rope`), and only `centity.json` can make one.
 
 ### `transform`
 

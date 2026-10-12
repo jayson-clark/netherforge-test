@@ -2069,6 +2069,22 @@ Has the fields and methods of [Event](#event) too.
 | `other_node` | `Node?` | Which of the other centity's nodes it touched, or `nil`. |
 | `entity` | `Entity?` | The player or entity it touched, or `nil`. |
 
+## StretchOptions
+
+How `node:stretch_between` lays a node. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `thickness` | `number?` | Its X and Y scale. Default: as they are. |
+
+## RopeOptions
+
+How `node:rope_between` strings a rope. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `length` | `number?` | How long the rope is, in blocks: shorter than the ends' distance it's taut, longer it sags by its slack. Default: always taut. |
+
 ## TweenOptions
 
 A tween for `node:tween`: at least one of `translation`, `rotation` and `scale`. A key that isn't one of these is an error.

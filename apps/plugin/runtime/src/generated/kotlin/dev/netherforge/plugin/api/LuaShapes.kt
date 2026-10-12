@@ -3373,6 +3373,52 @@ data class TouchEvent(val centity: LuaHandle.Centity, val node: LuaHandle.Node, 
     }
 }
 
+/** How `node:stretch_between` lays a node. A key that isn't one of these is an error. */
+data class StretchOptions(val thickness: Double? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<StretchOptions>("StretchOptions") {
+        val thicknessCodec = LuaOptional(LuaCodecs.NUMBER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "thickness" to thicknessCodec
+        )
+
+        override fun read(fields: ShapeReader) = StretchOptions(
+            thickness = fields.field("thickness", thicknessCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: StretchOptions) {
+            fields.field("thickness", value.thickness, thicknessCodec)
+        }
+    }
+}
+
+/** How `node:rope_between` strings a rope. A key that isn't one of these is an error. */
+data class RopeOptions(val length: Double? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<RopeOptions>("RopeOptions") {
+        val lengthCodec = LuaOptional(LuaCodecs.NUMBER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "length" to lengthCodec
+        )
+
+        override fun read(fields: ShapeReader) = RopeOptions(
+            length = fields.field("length", lengthCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: RopeOptions) {
+            fields.field("length", value.length, lengthCodec)
+        }
+    }
+}
+
 /**
  * A tween for `node:tween`: at least one of `translation`, `rotation` and `scale`. A key that isn't
  * one of these is an error.

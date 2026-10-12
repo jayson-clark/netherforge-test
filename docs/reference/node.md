@@ -117,6 +117,52 @@ Scales it along its own axes.
 | --- | --- | --- |
 | `scale` | `Vec3` | A factor per axis: `vec3.one` is its natural size. |
 
+## `node:stretch_between(from, to, options?)`
+
+Lays it from one point of the world to another: its origin halfway, its Z pointing from `from` to `to`, and its Z scale the distance between them. For a node whose display is one block long along Z and centred on its origin (a beam, a string, a link), that's the whole way from one to the other. Its X and Y scale stay as they are, or are `thickness`.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `from` | `Vec3` | A point in the world. |
+| `to` | `Vec3` | A point in the world. |
+| `options` (optional) | `StretchOptions` |  |
+
+**Returns** `boolean`: `false` once its centity is removed.
+
+```lua
+local beam = assert(this:node("beam"))
+local here = assert(this:position())
+beam:stretch_between(here, vec3(10, 70, 4), { thickness = 0.2 })
+```
+
+## `node:is_rope()`
+
+Whether it's a rope node (`"rope"` in `centity.json`).
+
+**Returns** `boolean`
+
+## `node:rope_between(from, to, options?)`
+
+Strings a rope node between two ends, and keeps it strung each tick as they move, until `release_rope` or another `rope_between`: its links laid along a line from one to the other, sagging with `length`'s slack, as many shown as the distance needs (up to its `links`; the rest hidden). An end is a point, a node (its origin, as shown), or an entity (half a block above its feet; a player's at their hands' height, 1.1 blocks up). An end that's gone (a removed centity, an entity that left) releases the rope. A node that isn't a rope is an error.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `from` | `Vec3\|Node\|Entity` |  |
+| `to` | `Vec3\|Node\|Entity` |  |
+| `options` (optional) | `RopeOptions` |  |
+
+**Returns** `boolean`: `false` once its centity is removed.
+
+```lua
+-- A chain from the player's hand to the ball.
+local player = assert(nf.players.online()[1])
+assert(this:node("chain")):rope_between(player, assert(this:node("ball")), { length = 6 })
+```
+
+## `node:release_rope()`
+
+Stops keeping a rope strung: its links stay where they were last laid.
+
 ## `node:tween(options)`
 
 Eases its translation, rotation or scale from where they are to new values over some ticks, as `set_translation`, `set_rotation` and `set_scale` would each tick: and with `back`, eases them back again. A tween of a channel this node is already tweening replaces it, from where it is; `set_*` on a channel doesn't stop its tween. Animations drive what they drive over it, as they do over `set_*`; an `additive` one changes it.
