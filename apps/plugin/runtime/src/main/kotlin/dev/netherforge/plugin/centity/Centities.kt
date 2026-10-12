@@ -670,6 +670,8 @@ class Centities(
 
     private fun tick(instance: Instance) {
         instance.age++
+        // Tweens move the rest pose, which the clips then play over.
+        if (instance.tweens.isNotEmpty()) instance.stepTweens()
         if (instance.animations.active) {
             val ended = parts.time(ANIMATE) {
                 instance.animations.advance(SECONDS_PER_TICK).also { instance.animate() }

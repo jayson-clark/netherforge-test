@@ -217,6 +217,23 @@ export function AnimationTimeline({
         </select>
       </label>
       <label className={styles.inline}>
+        Blend
+        <select
+          aria-label="Blend mode"
+          title="replace: its tracks own their channels. additive: on top of the pose under it, scale multiplied."
+          value={clip?.blend ?? 'replace'}
+          onChange={(event) =>
+            editClip((target) => {
+              if (event.target.value === 'replace') delete target.blend
+              else target.blend = event.target.value as AnimationDef['blend']
+            })
+          }
+        >
+          <option value="replace">replace</option>
+          <option value="additive">additive</option>
+        </select>
+      </label>
+      <label className={styles.inline}>
         <input
           type="checkbox"
           aria-label="Autoplay"

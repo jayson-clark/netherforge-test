@@ -117,6 +117,35 @@ Scales it along its own axes.
 | --- | --- | --- |
 | `scale` | `Vec3` | A factor per axis: `vec3.one` is its natural size. |
 
+## `node:tween(options)`
+
+Eases its translation, rotation or scale from where they are to new values over some ticks, as `set_translation`, `set_rotation` and `set_scale` would each tick: and with `back`, eases them back again. A tween of a channel this node is already tweening replaces it, from where it is; `set_*` on a channel doesn't stop its tween. Animations drive what they drive over it, as they do over `set_*`; an `additive` one changes it.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `options` | `TweenOptions` |  |
+
+**Returns** `boolean`: `false` once its centity is removed.
+
+```lua
+-- Squash flat as it lands, and spring back.
+this:on("land", function()
+  this:node("root"):tween({ scale = vec3(1.4, 0.6, 1.4), ticks = 3, easing = "ease_out", back = true })
+end)
+```
+
+## `node:is_tweening()`
+
+Whether a tween is easing any of its channels.
+
+**Returns** `boolean`
+
+## `node:stop_tween()`
+
+Stops its tweens where they are now.
+
+**Returns** `boolean`: `false` when it wasn't tweening.
+
 ## `node:world_position()`
 
 Where its origin is in the world, as shown now: animation and physics included. `nil` once its centity is removed.

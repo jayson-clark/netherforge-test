@@ -5,6 +5,7 @@ import dev.netherforge.format.centity.Billboard
 import dev.netherforge.format.centity.BlockDisplay
 import dev.netherforge.format.centity.BodyDef
 import dev.netherforge.format.centity.Channel
+import dev.netherforge.format.centity.Easing
 import dev.netherforge.format.centity.ItemDisplay
 import dev.netherforge.format.centity.LoopMode
 import dev.netherforge.format.centity.ModelDisplay
@@ -731,6 +732,41 @@ internal class NodeImpl(private val session: ProjectSession) : NodeApi {
     override fun setRotation(self: LuaHandle.Node, rotation: Vec3) = set(self, Channel.ROTATION, rotation)
 
     override fun setScale(self: LuaHandle.Node, scale: Vec3) = set(self, Channel.SCALE, scale)
+
+    override fun tween(self: LuaHandle.Node, options: TweenOptions): Boolean {
+        val targets = listOfNotNull(
+            options.translation?.let { Channel.TRANSLATION to it },
+            options.rotation?.let { Channel.ROTATION to it },
+            options.scale?.let { Channel.SCALE to it }
+        )
+        if (targets.isEmpty()) throw LuaApiException("bad argument 'options' (a tween needs translation, rotation or scale)")
+        if (options.ticks < 1) throw LuaApiException("bad argument 'options.ticks' (at least 1, got ${options.ticks})")
+        val easing = options.easing?.let { name ->
+            Easing.entries.firstOrNull { it.name.lowercase() == name }
+                ?: throw LuaApiException(
+                    "bad argument 'options.easing' (${Easing.entries.joinToString {
+                        it.name.lowercase()
+                    }}, got \"$name\")"
+                )
+        } ?: Easing.EASE_IN_OUT
+        val (instance, index) = node(self) ?: return false
+        if (instance.removed) return false
+        val ticks = options.ticks.coerceAtMost(Int.MAX_VALUE / 2L).toInt()
+        for ((channel, to) in targets) {
+            instance.tween(Instance.Tween(index, channel, instance.rest(index, channel), to, ticks, easing, options.back == true))
+        }
+        return true
+    }
+
+    override fun isTweening(self: LuaHandle.Node): Boolean {
+        val (instance, index) = node(self) ?: return false
+        return instance.tweens.any { it.index == index }
+    }
+
+    override fun stopTween(self: LuaHandle.Node): Boolean {
+        val (instance, index) = node(self) ?: return false
+        return instance.tweens.removeAll { it.index == index }
+    }
 
     // ---- coordinate spaces: through Instance.worldMatrix, so as shown now ----------
 

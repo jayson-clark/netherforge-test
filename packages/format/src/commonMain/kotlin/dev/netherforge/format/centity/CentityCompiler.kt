@@ -55,7 +55,8 @@ object CentityCompiler {
                 length = (clip.length ?: lastKey).coerceAtLeast(MIN_LENGTH),
                 loop = clip.loop ?: LoopMode.ONCE,
                 autoplay = clip.autoplay ?: false,
-                tracks = tracks
+                tracks = tracks,
+                blend = clip.blend ?: AnimationBlend.REPLACE
             )
         }
 

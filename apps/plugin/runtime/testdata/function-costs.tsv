@@ -362,6 +362,7 @@ Node:is_glowing	15
 Node:is_kinematic	15
 Node:is_on_ground	15
 Node:is_physics_enabled	15
+Node:is_tweening	15
 Node:is_visible	15
 Node:look_at	48
 Node:mass	15
@@ -394,9 +395,11 @@ Node:set_scale	49
 Node:set_translation	49
 Node:set_velocity	48
 Node:set_visible	18
+Node:stop_tween	15
 Node:to_local	51
 Node:to_world	51
 Node:translation	18
+Node:tween	98
 Node:velocity	18
 Node:wake	16
 Node:world_direction	51

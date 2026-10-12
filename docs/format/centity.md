@@ -400,6 +400,7 @@ or move it.
 | `loop`     | `once` (play, then return to the base pose), `loop`, or `hold` (stay on the last pose). | `once`              |
 | `autoplay` | Start when the centity loads, without a script.                                         | false               |
 | `length`   | Seconds. Keys after it never play.                                                      | the last key's time |
+| `blend`    | `replace` (its tracks own their channels) or `additive` (on top of the pose under it).  | `replace`           |
 | `tracks`   | Node name → channel (`translation`, `rotation`, `scale`) → keyframes.                   | —                   |
 
 A keyframe is `{ "time", "value", "easing" }`. `easing` shapes the segment
@@ -407,6 +408,13 @@ leaving the key: `linear` (default), `step`, `ease_in`, `ease_out` or
 `ease_in_out`. A track owns its whole channel. Outside its keys, it holds the
 nearest one. Rotation interpolates each axis the short way round, so a spin
 needs a key at least every 180°.
+
+An `additive` animation changes whatever poses the node otherwise (its rest
+pose, what a script set, the replacing animations playing), after all of them:
+its translation and rotation keys are added, its scale keys multiply. So its
+keys are changes, `[0, 0, 0]` (`[1, 1, 1]` for scale) leaving the node as it
+is: a squash `[1.3, 0.7, 1.3]` flattens a slime whatever size a script made it,
+while it walks. With `blend_ticks` it eases in from no change.
 
 Players' games ease display entities between poses themselves, so while only
 animations move a node the server sends a pose some ticks ahead and lets the

@@ -3373,6 +3373,52 @@ data class TouchEvent(val centity: LuaHandle.Centity, val node: LuaHandle.Node, 
     }
 }
 
+/**
+ * A tween for `node:tween`: at least one of `translation`, `rotation` and `scale`. A key that isn't
+ * one of these is an error.
+ */
+data class TweenOptions(val translation: Vec3? = null, val rotation: Vec3? = null, val scale: Vec3? = null, val ticks: Long, val easing: String? = null, val back: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<TweenOptions>("TweenOptions") {
+        val translationCodec = LuaOptional(LuaCodecs.VEC3)
+        val rotationCodec = LuaOptional(LuaCodecs.VEC3)
+        val scaleCodec = LuaOptional(LuaCodecs.VEC3)
+        val ticksCodec = LuaCodecs.INTEGER
+        val easingCodec = LuaOptional(LuaCodecs.STRING)
+        val backCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "translation" to translationCodec,
+            "rotation" to rotationCodec,
+            "scale" to scaleCodec,
+            "ticks" to ticksCodec,
+            "easing" to easingCodec,
+            "back" to backCodec
+        )
+
+        override fun read(fields: ShapeReader) = TweenOptions(
+            translation = fields.field("translation", translationCodec),
+            rotation = fields.field("rotation", rotationCodec),
+            scale = fields.field("scale", scaleCodec),
+            ticks = fields.field("ticks", ticksCodec),
+            easing = fields.field("easing", easingCodec),
+            back = fields.field("back", backCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: TweenOptions) {
+            fields.field("translation", value.translation, translationCodec)
+            fields.field("rotation", value.rotation, rotationCodec)
+            fields.field("scale", value.scale, scaleCodec)
+            fields.field("ticks", value.ticks, ticksCodec)
+            fields.field("easing", value.easing, easingCodec)
+            fields.field("back", value.back, backCodec)
+        }
+    }
+}
+
 /** How `centity:play_animation` plays an animation this time. The file says how it plays by default. */
 data class AnimationOptions(val speed: Double? = null, val fromTick: Double? = null, val loop: Boolean? = null, val blendTicks: Long? = null) : LuaShape {
     override fun push(call: LuaCall) = Codec.push(call, this)

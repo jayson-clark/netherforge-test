@@ -1499,6 +1499,21 @@ interface NodeApi {
     fun setScale(self: LuaHandle.Node, scale: Vec3)
 
     /**
+     * Eases its translation, rotation or scale from where they are to new values over some ticks, as
+     * `set_translation`, `set_rotation` and `set_scale` would each tick: and with `back`, eases them back
+     * again. A tween of a channel this node is already tweening replaces it, from where it is; `set_*` on
+     * a channel doesn't stop its tween. Animations drive what they drive over it, as they do over `set_*`;
+     * an `additive` one changes it.
+     */
+    fun tween(self: LuaHandle.Node, options: TweenOptions): Boolean
+
+    /** Whether a tween is easing any of its channels. */
+    fun isTweening(self: LuaHandle.Node): Boolean
+
+    /** Stops its tweens where they are now. */
+    fun stopTween(self: LuaHandle.Node): Boolean
+
+    /**
      * Where its origin is in the world, as shown now: animation and physics included. `nil` once its
      * centity is removed.
      */

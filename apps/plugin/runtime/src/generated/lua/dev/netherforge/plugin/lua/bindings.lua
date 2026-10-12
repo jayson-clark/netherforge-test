@@ -961,6 +961,30 @@ function Node.set_scale(self, scale)
   prim["Node.set_scale"](self_key, scale[1], scale[2], scale[3])
 end
 
+function Node.tween(self, options)
+  local self_key = ids[self]
+  if self_key == nil or not Node_is[class_of(self)] then
+    self_key = self_of(self, "Node")
+  end
+  return prim["Node.tween"](self_key, options)
+end
+
+function Node.is_tweening(self)
+  local self_key = ids[self]
+  if self_key == nil or not Node_is[class_of(self)] then
+    self_key = self_of(self, "Node")
+  end
+  return prim["Node.is_tweening"](self_key)
+end
+
+function Node.stop_tween(self)
+  local self_key = ids[self]
+  if self_key == nil or not Node_is[class_of(self)] then
+    self_key = self_of(self, "Node")
+  end
+  return prim["Node.stop_tween"](self_key)
+end
+
 function Node.world_position(self)
   local self_key = ids[self]
   if self_key == nil or not Node_is[class_of(self)] then

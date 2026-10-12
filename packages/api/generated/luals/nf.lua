@@ -1684,6 +1684,19 @@ function Node:set_rotation(rotation) end
 ---@param scale Vec3 A factor per axis: `vec3.one` is its natural size.
 function Node:set_scale(scale) end
 
+--- Eases its translation, rotation or scale from where they are to new values over some ticks, as `set_translation`, `set_rotation` and `set_scale` would each tick: and with `back`, eases them back again. A tween of a channel this node is already tweening replaces it, from where it is; `set_*` on a channel doesn't stop its tween. Animations drive what they drive over it, as they do over `set_*`; an `additive` one changes it.
+---@param options TweenOptions
+---@return boolean # `false` once its centity is removed.
+function Node:tween(options) end
+
+--- Whether a tween is easing any of its channels.
+---@return boolean
+function Node:is_tweening() end
+
+--- Stops its tweens where they are now.
+---@return boolean # `false` when it wasn't tweening.
+function Node:stop_tween() end
+
 --- Where its origin is in the world, as shown now: animation and physics included. `nil` once its centity is removed.
 ---@return Vec3?
 function Node:world_position() end
@@ -5573,6 +5586,15 @@ function Event:uncancel() end
 ---@field other Centity? The other centity, or `nil`.
 ---@field other_node Node? Which of the other centity's nodes it touched, or `nil`.
 ---@field entity Entity? The player or entity it touched, or `nil`.
+
+--- A tween for `node:tween`: at least one of `translation`, `rotation` and `scale`. A key that isn't one of these is an error.
+---@class TweenOptions
+---@field translation Vec3? Where it ends up, as `set_translation` takes.
+---@field rotation Vec3? Degrees, as `set_rotation` takes; not the short way round, so 0 to 360 is a whole turn.
+---@field scale Vec3? As `set_scale` takes.
+---@field ticks integer How long, 1 or more (each way, with `back`).
+---@field easing string? `linear`, `ease_in`, `ease_out`, `ease_in_out` or `step`, as keyframes take. Default `ease_in_out`.
+---@field back boolean? Eases back to where it started after, over as many ticks again. Default `false`.
 
 --- How `centity:play_animation` plays an animation this time. The file says how it plays by default.
 ---@class AnimationOptions

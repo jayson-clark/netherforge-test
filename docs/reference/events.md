@@ -2069,6 +2069,19 @@ Has the fields and methods of [Event](#event) too.
 | `other_node` | `Node?` | Which of the other centity's nodes it touched, or `nil`. |
 | `entity` | `Entity?` | The player or entity it touched, or `nil`. |
 
+## TweenOptions
+
+A tween for `node:tween`: at least one of `translation`, `rotation` and `scale`. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `translation` | `Vec3?` | Where it ends up, as `set_translation` takes. |
+| `rotation` | `Vec3?` | Degrees, as `set_rotation` takes; not the short way round, so 0 to 360 is a whole turn. |
+| `scale` | `Vec3?` | As `set_scale` takes. |
+| `ticks` | `integer` | How long, 1 or more (each way, with `back`). |
+| `easing` | `string?` | `linear`, `ease_in`, `ease_out`, `ease_in_out` or `step`, as keyframes take. Default `ease_in_out`. |
+| `back` | `boolean?` | Eases back to where it started after, over as many ticks again. Default `false`. |
+
 ## AnimationOptions
 
 How `centity:play_animation` plays an animation this time. The file says how it plays by default.

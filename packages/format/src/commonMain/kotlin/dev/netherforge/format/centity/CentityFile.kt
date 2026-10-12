@@ -560,8 +560,25 @@ data class AnimationDef(
     val loop: LoopMode? = null,
     /** Start when the centity loads, with no script asking. */
     val autoplay: Boolean? = null,
+    /** How its tracks meet the pose under them. Default [AnimationBlend.REPLACE]. */
+    val blend: AnimationBlend? = null,
     val tracks: Map<String, Map<Channel, List<Keyframe>>> = emptyMap()
 )
+
+/** How an animation's tracks meet the pose under them: the rest pose, what scripts set, and the other clips. */
+@Serializable
+enum class AnimationBlend {
+    /** A track owns its channel: the newest clip driving it wins. */
+    @SerialName("replace")
+    REPLACE,
+
+    /**
+     * On top of whatever else poses the node, after every replacing clip: translation and rotation add to it, scale
+     * multiplies it. Keys are changes, so `[0, 0, 0]` (`[1, 1, 1]` for scale) leaves the node as it is.
+     */
+    @SerialName("additive")
+    ADDITIVE
+}
 
 @Serializable
 enum class LoopMode {

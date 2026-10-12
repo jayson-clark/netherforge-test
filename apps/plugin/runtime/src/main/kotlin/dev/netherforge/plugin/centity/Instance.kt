@@ -4,6 +4,7 @@ import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.Channel
 import dev.netherforge.format.centity.CompiledCentity
 import dev.netherforge.format.centity.DisplayDef
+import dev.netherforge.format.centity.Easing
 import dev.netherforge.format.centity.Transform
 import dev.netherforge.format.math.Matrix4
 import dev.netherforge.format.math.degreesToRadians
@@ -360,12 +361,52 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
         Channel.SCALE -> pose[index].scaleOrDefault
     }
 
+    /** A channel of the rest pose: the authored transform, or what a script last set. */
+    fun rest(index: Int, channel: Channel): Vec3 = when (channel) {
+        Channel.TRANSLATION -> rest[index].translationOrDefault
+        Channel.ROTATION -> rest[index].rotationOrDefault
+        Channel.SCALE -> rest[index].scaleOrDefault
+    }
+
     /** Sets a channel of the rest pose. An animation driving the channel still overrides it while it plays. */
     fun set(index: Int, channel: Channel, value: Vec3) {
         rest[index] = rest[index].with(channel, value)
         pose[index] = pose[index].with(channel, value)
         edited[index] = true
         posed()
+    }
+
+    /** A channel of a node's rest pose easing from [from] to [to] over [ticks] (and back, with [back]). */
+    class Tween(val index: Int, val channel: Channel, val from: Vec3, val to: Vec3, val ticks: Int, val easing: Easing, val back: Boolean) {
+        var tick = 0
+        val done: Boolean get() = tick >= if (back) ticks * 2 else ticks
+
+        /** Where it is at [tick]: out, then (with [back]) home again. */
+        fun value(): Vec3 {
+            val out = if (tick <= ticks) tick.toDouble() / ticks else 2.0 - tick.toDouble() / ticks
+            val t = easing.apply(out.coerceIn(0.0, 1.0))
+            return Vec3(from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t, from.z + (to.z - from.z) * t)
+        }
+    }
+
+    /** The tweens easing its nodes, at most one per node and channel. */
+    val tweens = ArrayList<Tween>(0)
+
+    /** Starts [tween], replacing any of the same node and channel. */
+    fun tween(tween: Tween) {
+        tweens.removeAll { it.index == tween.index && it.channel == tween.channel }
+        tweens += tween
+    }
+
+    /** Moves every tween on a tick, setting its channel's rest pose, and drops those that are done. */
+    fun stepTweens() {
+        val iterator = tweens.iterator()
+        while (iterator.hasNext()) {
+            val tween = iterator.next()
+            tween.tick++
+            set(tween.index, tween.channel, tween.value())
+            if (tween.done) iterator.remove()
+        }
     }
 
     /** The pose or facing changed: sync it, and measure it again. */

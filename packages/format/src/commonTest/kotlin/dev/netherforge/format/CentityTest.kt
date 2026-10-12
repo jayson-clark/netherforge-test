@@ -1,5 +1,6 @@
 package dev.netherforge.format
 
+import dev.netherforge.format.centity.AnimationBlend
 import dev.netherforge.format.centity.AnimationDef
 import dev.netherforge.format.centity.BlockDisplay
 import dev.netherforge.format.centity.CentityCompiler
@@ -67,6 +68,28 @@ class CentityTest {
         assertEquals(0.25, spin.resolve(1.25).time, 1e-9)
         val posed = Composer.pose(compiled, spin, 0.5)
         assertClose(Vec3(0.0, 90.0, 0.0), posed[1].rotation!!)
+    }
+
+    @Test
+    fun anAdditiveClipChangesTheAuthoredPose() {
+        val file = tower.copy(
+            animations = mapOf(
+                "bump" to AnimationDef(
+                    blend = AnimationBlend.ADDITIVE,
+                    tracks = mapOf(
+                        "top" to mapOf(
+                            Channel.TRANSLATION to listOf(Keyframe(0.0, Vec3(0.0, 0.5, 0.0))),
+                            Channel.SCALE to listOf(Keyframe(0.0, Vec3(2.0, 0.5, 2.0)))
+                        )
+                    )
+                )
+            )
+        )
+        val compiled = CentityCompiler.compile("tower", file)
+        val posed = Composer.pose(compiled, compiled.animation("bump")!!, 0.0)
+        // top rests at y 1: the clip lifts it by half a block, and halves its height (its scale was 1).
+        assertClose(Vec3(0.0, 1.5, 0.0), posed[1].translation!!)
+        assertClose(Vec3(2.0, 0.5, 2.0), posed[1].scale!!)
     }
 
     @Test

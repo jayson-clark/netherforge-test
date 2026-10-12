@@ -58,7 +58,8 @@ class CompiledAnimation(
     val length: Double,
     val loop: LoopMode,
     val autoplay: Boolean,
-    val tracks: List<Track>
+    val tracks: List<Track>,
+    val blend: AnimationBlend = AnimationBlend.REPLACE
 ) {
     /** Keys sorted by time, never empty. */
     class Track(val nodeIndex: Int, val channel: Channel, val keys: List<Keyframe>) {
@@ -133,20 +134,30 @@ object Composer {
 
     /**
      * The local transforms after sampling [animation] at [time] over the
-     * authored pose. A track owns its whole channel.
+     * authored pose. A track owns its whole channel, or for an additive clip,
+     * adds to it (scale multiplies).
      */
     fun pose(centity: CompiledCentity, animation: CompiledAnimation, time: Double): List<Transform> {
         val at = animation.resolve(time).time
         val locals = centity.nodes.map { it.transform }.toMutableList()
         for (track in animation.tracks) {
-            val value = track.sample(at)
-            val base = locals[track.nodeIndex]
-            locals[track.nodeIndex] = when (track.channel) {
-                Channel.TRANSLATION -> base.copy(translation = value)
-                Channel.ROTATION -> base.copy(rotation = value)
-                Channel.SCALE -> base.copy(scale = value)
-            }
+            locals[track.nodeIndex] = locals[track.nodeIndex].posed(track.channel, track.sample(at), animation.blend)
         }
         return locals
+    }
+}
+
+/**
+ * This transform with [channel] set to [value] ([AnimationBlend.REPLACE]) or changed by it
+ * ([AnimationBlend.ADDITIVE]: translation and rotation added, scale multiplied).
+ */
+fun Transform.posed(channel: Channel, value: Vec3, blend: AnimationBlend = AnimationBlend.REPLACE): Transform {
+    val additive = blend == AnimationBlend.ADDITIVE
+    return when (channel) {
+        Channel.TRANSLATION -> copy(translation = if (additive) translationOrDefault + value else value)
+        Channel.ROTATION -> copy(rotation = if (additive) rotationOrDefault + value else value)
+        Channel.SCALE -> copy(
+            scale = if (additive) Vec3(scaleOrDefault.x * value.x, scaleOrDefault.y * value.y, scaleOrDefault.z * value.z) else value
+        )
     }
 }

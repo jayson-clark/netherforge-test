@@ -188,6 +188,18 @@ this:on("tick", function()
 end)
 ```
 
+Or ease a node there over some ticks, and back again, with `node:tween`:
+
+```lua
+this:on("land", function()
+  this:node("root"):tween({ scale = vec3(1.4, 0.6, 1.4), ticks = 3, easing = "ease_out", back = true })
+end)
+```
+
+A tween sets the same rest pose `set_*` does, so animations play over it. An
+animation with `"blend": "additive"` plays on top of everything else instead:
+a squash or a recoil keyed as a change, whatever size or pose the rest has.
+
 Positions, offsets, rotations and scales are `Vec3` values: build one with
 `vec3(x, y, z)`, and add, subtract and scale them with `+`, `-` and `*`. A
 node's `translation`, `rotation` and `scale` are in its **parent's** space (a

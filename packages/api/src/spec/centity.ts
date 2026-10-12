@@ -908,6 +908,26 @@ export const nodeClass: LuaClass = {
       returns: [],
     },
     {
+      name: 'tween',
+      doc: "Eases its translation, rotation or scale from where they are to new values over some ticks, as `set_translation`, `set_rotation` and `set_scale` would each tick: and with `back`, eases them back again. A tween of a channel this node is already tweening replaces it, from where it is; `set_*` on a channel doesn't stop its tween. Animations drive what they drive over it, as they do over `set_*`; an `additive` one changes it.",
+      params: [{ name: 'options', type: 'TweenOptions', doc: '' }],
+      returns: [{ type: 'boolean', doc: '`false` once its centity is removed.' }],
+      example:
+        '-- Squash flat as it lands, and spring back.\nthis:on("land", function()\n  this:node("root"):tween({ scale = vec3(1.4, 0.6, 1.4), ticks = 3, easing = "ease_out", back = true })\nend)',
+    },
+    {
+      name: 'is_tweening',
+      doc: 'Whether a tween is easing any of its channels.',
+      params: [],
+      returns: [{ type: 'boolean' }],
+    },
+    {
+      name: 'stop_tween',
+      doc: 'Stops its tweens where they are now.',
+      params: [],
+      returns: [{ type: 'boolean', doc: "`false` when it wasn't tweening." }],
+    },
+    {
       name: 'world_position',
       doc: 'Where its origin is in the world, as shown now: animation and physics included. `nil` once its centity is removed.',
       params: [],
@@ -1706,6 +1726,32 @@ export const centityShapes: LuaClass[] = [
         doc: "Which of the other centity's nodes it touched, or `nil`.",
       },
       { name: 'entity', type: 'Entity?', doc: 'The player or entity it touched, or `nil`.' },
+    ],
+  },
+  {
+    name: 'TweenOptions',
+    doc: "A tween for `node:tween`: at least one of `translation`, `rotation` and `scale`. A key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      { name: 'translation', type: 'Vec3?', doc: 'Where it ends up, as `set_translation` takes.' },
+      {
+        name: 'rotation',
+        type: 'Vec3?',
+        doc: 'Degrees, as `set_rotation` takes; not the short way round, so 0 to 360 is a whole turn.',
+      },
+      { name: 'scale', type: 'Vec3?', doc: 'As `set_scale` takes.' },
+      { name: 'ticks', type: 'integer', doc: 'How long, 1 or more (each way, with `back`).' },
+      {
+        name: 'easing',
+        type: 'string?',
+        doc: '`linear`, `ease_in`, `ease_out`, `ease_in_out` or `step`, as keyframes take. Default `ease_in_out`.',
+      },
+      {
+        name: 'back',
+        type: 'boolean?',
+        doc: 'Eases back to where it started after, over as many ticks again. Default `false`.',
+      },
     ],
   },
   {

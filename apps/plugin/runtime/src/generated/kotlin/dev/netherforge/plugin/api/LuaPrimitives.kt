@@ -1714,6 +1714,31 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         0
     }
 
+    fn("Node.tween") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.Node
+        val options = call.arg(2, "options", TweenOptions.Codec)
+        val result = api.node.tween(self, options)
+        call.push(result, LuaCodecs.BOOLEAN)
+        1
+    }
+
+    fn("Node.is_tweening") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.Node
+        val result = api.node.isTweening(self)
+        call.push(result, LuaCodecs.BOOLEAN)
+        1
+    }
+
+    fn("Node.stop_tween") { call ->
+        val lua = call.lua
+        val self = call.self(1) as LuaHandle.Node
+        val result = api.node.stopTween(self)
+        call.push(result, LuaCodecs.BOOLEAN)
+        1
+    }
+
     fn("Node.world_position") { call ->
         val lua = call.lua
         val self = call.self(1) as LuaHandle.Node

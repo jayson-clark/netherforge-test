@@ -100,6 +100,12 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **Additive animations and tweens.** An animation with `"blend": "additive"`
+  plays on top of the rest of the pose (translation and rotation added, scale
+  multiplied), after every replacing one, so a squash plays over a walk and
+  over the size a script set; the editor's animation bar has a Blend select.
+  `node:tween({ translation, rotation, scale, ticks, easing, back })` eases a
+  node there (and back), with `is_tweening` and `stop_tween`.
 - **Menu slots with rules, and slots that show what a player wears.**
   `slot:set_rule({ items, kinds, property, wearable, max })` says what a slot
   takes, held to clicks, drags, number keys and `shift_into`, with only `max`
