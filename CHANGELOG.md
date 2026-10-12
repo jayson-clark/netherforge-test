@@ -100,6 +100,13 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   sight. Options filter by what it is, by kind, by an exclude list and by a
   limit. Centities are found through the grid physics files hitboxes in, so a
   query looks only at what's near it; `world:raycast` uses it too now.
+- **Generators: `netherforge generate` and an SDK.** `netherforge.json`'s
+  `generate` lists the commands that write a project's generated files;
+  `netherforge generate` runs them in order and formats the project. The
+  command-line file is also an SDK: `import { project } from
+".netherforge/bin/netherforge.mjs"` gives `resources`, `place`, `read`,
+  `write`, `writeJson` and `writeResource`, laid out and formatted as the
+  editor would.
 - **Game rules in `netherforge.json`.** A world in `worlds` takes `gameRules`
   (`"keep_inventory": true`), set when it loads and on reload, beside its spawn
   limits; a rule this server lacks is skipped and logged. New problem code

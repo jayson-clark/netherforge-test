@@ -7,6 +7,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs'
+import { spawnSync } from 'node:child_process'
 import path from 'node:path'
 import * as nf from '@netherforge/format'
 import {
@@ -295,4 +296,44 @@ export function format(root: string, options: { check?: boolean }): Outcome {
     }
   }
   return { out, err, code }
+}
+
+/**
+ * `netherforge generate`: netherforge.json's `generate` commands, in order, from [root] (their output goes straight
+ * to the terminal), stopping at the first that fails; then the project formatted.
+ */
+export function generate(root: string): Outcome {
+  let commands: unknown
+  try {
+    commands = (
+      JSON.parse(readFileSync(path.join(root, MANIFEST_FILE), 'utf8')) as { generate?: unknown }
+    ).generate
+  } catch (error) {
+    return { out: [], err: [`Can't read netherforge.json: ${(error as Error).message}`], code: 1 }
+  }
+  if (commands === undefined)
+    return { out: ['netherforge.json has no "generate" commands.'], err: [], code: 0 }
+  if (!Array.isArray(commands) || commands.some((it) => typeof it !== 'string')) {
+    return {
+      out: [],
+      err: ['netherforge.json\'s "generate" is a list of commands (strings).'],
+      code: 2,
+    }
+  }
+  const out: string[] = []
+  for (const command of commands as string[]) {
+    process.stdout.write(`> ${command}\n`)
+    const result = spawnSync(command, { cwd: root, shell: true, stdio: 'inherit' })
+    if (result.status !== 0) {
+      return {
+        out,
+        err: [
+          `"${command}" failed (${result.error?.message ?? `exit ${result.status}`}): stopped.`,
+        ],
+        code: 1,
+      }
+    }
+  }
+  const formatted = format(root, {})
+  return { out: [...out, ...formatted.out], err: formatted.err, code: formatted.code }
 }

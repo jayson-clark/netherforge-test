@@ -730,6 +730,12 @@ fun newResourceFiles(kind: String, id: String, gameDataJson: String?, group: Str
     "{\"needsGame\":${JsonPrimitive(e.message.orEmpty())}}"
 }
 
+/**
+ * Where a resource of [kind] named [id] is read from, in [group] folders as on disk (`(weapons)/(swords)`, or null):
+ * its main file (`items/(weapons)/sword/item.json`), or its one file for a single-file kind (`recipes/ruby.json`).
+ */
+fun resourcePath(kind: String, id: String, group: String?): String = kindOf(kind).pathOf(id, group?.ifEmpty { null })
+
 /** What a new script of [kind] (a kind whose resources run Lua) starts as; [id] is the resource's. */
 fun newScript(kind: String, id: String): String = Templates.script(kindOf(kind), id)
 

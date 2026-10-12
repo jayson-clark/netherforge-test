@@ -181,3 +181,33 @@ see [Check its work](agents.md#check-its-work).
 
 For Lua, use whatever formatter you like. [StyLua](https://github.com/JohnnyMorganz/StyLua)
 with two-space indentation matches the examples.
+
+## Generators
+
+A project may write some of its files with code of its own (items from a
+table, art from shapes, recipes from a spreadsheet). List the commands in
+`netherforge.json`'s `generate`, and `netherforge generate` runs them in order,
+then formats the project:
+
+```json
+"generate": ["node tools/items.mjs", "node tools/recipes.mjs"]
+```
+
+A Node generator writes the project with the SDK the command line exports,
+so it never spells out where a kind's files go or formats afterwards:
+
+```js
+import { project } from '../.netherforge/bin/netherforge.mjs'
+
+const p = project()
+for (const gem of ['ruby', 'sapphire']) {
+  // In items/(gems)/<id>/item.json, unless it's already somewhere else.
+  p.writeResource('items', gem, { kind: 'minecraft:paper', name: gem }, { group: 'gems' })
+}
+p.resources('items') // every item, by id: { kind, id, group, path }
+```
+
+`place(kind, id, group)` says where a resource's file is or would go,
+`write(file, text)` and `writeJson(file, value)` write any project file (JSON
+of the project in canonical form), and `read`/`readJson` read one. An
+unchanged file isn't touched, so a generator that runs again changes nothing.

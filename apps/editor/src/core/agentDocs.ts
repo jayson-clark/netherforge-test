@@ -87,6 +87,8 @@ export function agentReadme(version: string, pages: Record<string, string>, stam
       `  - \`node ${AGENT_FILES.cli} format\` rewrites project JSON in canonical form.`,
       `  - \`node ${AGENT_FILES.cli} preview terrain/<id>.json --out map.png\` draws a terrain`,
       '    as the editor does (`--slice x --at 0` for the ground through a line).',
+      `  - \`node ${AGENT_FILES.cli} generate\` runs netherforge.json's \`generate\` commands, then formats;`,
+      `    a generator writes the project with \`import { project } from "${AGENT_FILES.cli}"\`.`,
     )
   }
   for (const [prefix, title, about] of SECTIONS) {

@@ -1,7 +1,7 @@
 import { parseArgs } from 'node:util'
 import { statSync } from 'node:fs'
 import path from 'node:path'
-import { build, check, format, lock, type Outcome } from './commands.ts'
+import { build, check, format, lock, type Outcome, generate } from './commands.ts'
 import { findProjectRoot } from './project.ts'
 import { preview } from './preview.ts'
 import { test } from './test.ts'
@@ -19,6 +19,11 @@ Usage:
   netherforge format [dir] [--check]
       Rewrite project JSON in canonical form, as the editor saves it.
       With --check, change nothing and exit 1 if a file isn't canonical.
+  netherforge generate [dir]
+      Run netherforge.json's "generate" commands in order, from the
+      project's folder, stopping at the first that fails, then format the
+      project. A generator writes the project with the SDK this file exports:
+      import { project } from "../.netherforge/bin/netherforge.mjs".
   netherforge lock   [dir] [--update]
       Write netherforge.lock as the project's dependencies resolve now
       (the editor does this whenever they change). A git dependency stays
@@ -120,6 +125,8 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env):
       return check(root, { json: values.json, gameData: values['game-data'] }, env)
     case 'format':
       return format(root, { check: values.check })
+    case 'generate':
+      return generate(root)
     case 'lock':
       return lock(root, { update: values.update }, env)
     case 'build':

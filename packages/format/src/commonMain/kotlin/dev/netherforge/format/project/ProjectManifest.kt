@@ -66,7 +66,12 @@ data class ProjectManifest(
      * Scripts read them with `nf.config(name)`; a server keeps its owner's
      * values in `plugins/NetherForge/settings/<namespace>.json`.
      */
-    val settings: Map<String, SettingDef>? = null
+    val settings: Map<String, SettingDef>? = null,
+    /**
+     * The commands that write the project's generated files (`node tools/items.mjs`), run in order from the project's
+     * folder by `netherforge generate`, which then formats the project. Never by the server.
+     */
+    val generate: List<String>? = null
 ) {
     /** Whether [id], a resource of [kind], is one this project exports. */
     fun exports(kind: KindSpec<*, *>, id: String): Boolean = exports?.get(kind.folder)?.contains(id) == true
