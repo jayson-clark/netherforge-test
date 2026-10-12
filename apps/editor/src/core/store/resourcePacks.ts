@@ -130,13 +130,19 @@ export function resourcePackModels(s: Workspace): Record<string, PackModels> {
   return out
 }
 
-/** Project paths of every skin and glyph picture: the ones whose advance format needs pixels for. */
+/**
+ * Project paths of every skin and glyph picture (whose advance format needs pixels for) and every
+ * picture replacing one of the game's textures (whose size format checks against the game's).
+ */
 export function measuredTextures(files: Record<string, ResourcePackFile>): string[] {
   const out = new Set<string>()
   for (const [namespace, pack] of Object.entries(files)) {
     for (const entry of [...Object.values(pack.skins ?? {}), ...Object.values(pack.glyphs ?? {})]) {
       if (typeof entry?.texture === 'string')
         out.add(resourcePackTexturePath(namespace, entry.texture))
+    }
+    for (const picture of Object.values(pack.textures ?? {})) {
+      if (typeof picture === 'string') out.add(resourcePackTexturePath(namespace, picture))
     }
   }
   return [...out].sort()
