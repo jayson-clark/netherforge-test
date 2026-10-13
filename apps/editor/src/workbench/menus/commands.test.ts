@@ -1,3 +1,4 @@
+import { DEFAULT_DOCKS, findPanel } from '@/core/store/docks'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { AppStores } from '@/state/providers'
 import type { AppMenu, MenuEntry } from '@/core/backend/types'
@@ -145,7 +146,7 @@ describe('paletteCommands', () => {
     const labels = paletteCommands(context(true)).map((it) => it.label)
     expect(labels).toEqual(
       expect.arrayContaining([
-        'Hide Outline',
+        'Hide Left Dock',
         'Project Settings',
         'Editor Settings: Agents',
         'New Centity…',
@@ -206,8 +207,18 @@ describe("the kinds' commands", () => {
         'view.panel:console',
       ]),
     )
+    app.layout.getState().set({ bottomOpen: false })
     runCommand('view.panel:console', context(false))
-    expect(app.layout.getState().bottomRightTab).toBe('console')
+    expect(findPanel(app.layout.getState().docks, 'console')?.group.active).toBe('console')
+    expect(app.layout.getState().bottomOpen).toBe(true)
+  })
+
+  it('resets the layout from the View menu', () => {
+    const view = buildMenus(context(false)).find((it) => it.label === 'View')!
+    expect(view.items.some((it) => it.kind === 'item' && it.id === 'view.resetLayout')).toBe(true)
+    app.layout.getState().movePanel('inspector', { area: 'bottom' })
+    runCommand('view.resetLayout', context(false))
+    expect(app.layout.getState().docks).toBe(DEFAULT_DOCKS)
   })
 })
 

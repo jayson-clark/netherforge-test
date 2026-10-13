@@ -44,9 +44,9 @@ export async function openExample(page: Page, query = '') {
 /** The project explorer's resources (the bottom dock's Project tab). */
 export const explorer = (page: Page) => page.getByRole('listbox').first()
 
-/** Shows a bottom dock tab: `Project`, `Instances` (left), `Problems`, `Console` (right). */
+/** Shows a dock panel's tab, wherever it's docked: `Project`, `Problems`, `Console`, `Instances`… */
 export async function showPanel(page: Page, name: string) {
-  await page.getByRole('region', { name: 'Panels' }).getByRole('tab', { name }).click()
+  await page.locator('[data-dock]').getByRole('tab', { name }).click()
 }
 
 /** Runs [fn] against the memory backend in the page. */

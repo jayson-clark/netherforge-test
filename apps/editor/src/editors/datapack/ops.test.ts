@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PackMeta } from '@/core/format'
-import { fileGroups, formatText, rangeText } from './ops'
+import { addOverlay, fileGroups, formatText, parseFormat, rangeText, removeOverlay } from './ops'
 
 const meta: PackMeta = {
   pack: { min_format: 94, max_format: 121 },
@@ -41,5 +41,24 @@ describe('datapack files', () => {
       ['mc26_1', '101 to 107', ['mc26_1/data/basic/worldgen/configured_feature/rock.json']],
       ['', '', ['mc1_21/rock.json', 'notes.json']],
     ])
+  })
+})
+
+describe('editing pack.mcmeta', () => {
+  it('reads formats back as the game writes them', () => {
+    expect(parseFormat('94')).toBe(94)
+    expect(parseFormat(' 94.1 ')).toEqual([94, 1])
+    expect(parseFormat('94.1.2')).toBeNull()
+    expect(parseFormat('soon')).toBeNull()
+  })
+
+  it('adds an overlay for the pack’s formats and drops overlays once none is left', () => {
+    const next: PackMeta = { pack: { min_format: 94, max_format: 121 } }
+    addOverlay(next, 'mc26_3')
+    expect(next.overlays).toEqual({
+      entries: [{ min_format: 94, max_format: 121, directory: 'mc26_3' }],
+    })
+    removeOverlay(next, 0)
+    expect('overlays' in next).toBe(false)
   })
 })

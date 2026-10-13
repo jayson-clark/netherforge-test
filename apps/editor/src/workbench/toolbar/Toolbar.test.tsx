@@ -1,3 +1,4 @@
+import { DEFAULT_DOCKS } from '@/core/store/docks'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AppInfo } from '@/core/backend/types'
@@ -80,9 +81,9 @@ describe('the toolbar', () => {
     const { app } = await show()
     const docks = screen.getByRole('group', { name: 'Docks' })
     for (const [name, key] of [
-      ['Outline', 'outlineOpen'],
+      ['Left dock', 'outlineOpen'],
       ['Bottom dock', 'bottomOpen'],
-      ['Inspector', 'inspectorOpen'],
+      ['Right dock', 'inspectorOpen'],
     ] as const) {
       const button = within(docks).getByRole('button', { name })
       const open = app.layout.getState()[key]
@@ -91,6 +92,18 @@ describe('the toolbar', () => {
       expect(app.layout.getState()[key]).toBe(!open)
       expect(pressed(button)).toBe(String(!open))
     }
+  })
+
+  it('resets the layout', async () => {
+    const { app } = await show()
+    app.layout.getState().movePanel('console', { area: 'left' })
+    app.layout.getState().set({ bottomOpen: false })
+    fireEvent.click(
+      within(screen.getByRole('group', { name: 'Docks' })).getByRole('button', {
+        name: 'Reset layout',
+      }),
+    )
+    expect(app.layout.getState()).toMatchObject({ docks: DEFAULT_DOCKS, bottomOpen: true })
   })
 })
 

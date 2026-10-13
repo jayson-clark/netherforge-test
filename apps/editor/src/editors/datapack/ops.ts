@@ -61,3 +61,28 @@ export function fileGroups(meta: PackMeta, files: string[]): FileGroup[] {
   }
   return other.files.length > 0 ? [...groups, other] : groups
 }
+
+/** A format as typed back into the file: `94` is 94, `94.1` is `[94, 1]`; null when it's neither. */
+export function parseFormat(text: string): number | [number, number] | null {
+  const match = /^\s*(\d+)(?:\.(\d+))?\s*$/.exec(text)
+  if (!match) return null
+  const major = Number(match[1])
+  return match[2] === undefined ? major : [major, Number(match[2])]
+}
+
+/** Adds an overlay for [directory], for the pack's own formats to start from. */
+export function addOverlay(meta: PackMeta, directory: string): void {
+  meta.overlays ??= {}
+  meta.overlays.entries = [
+    ...(meta.overlays.entries ?? []),
+    { min_format: meta.pack.min_format, max_format: meta.pack.max_format, directory },
+  ]
+}
+
+/** Removes overlay [index]; none left removes `overlays`. */
+export function removeOverlay(meta: PackMeta, index: number): void {
+  const entries = meta.overlays?.entries
+  if (!entries) return
+  entries.splice(index, 1)
+  if (entries.length === 0) delete meta.overlays
+}

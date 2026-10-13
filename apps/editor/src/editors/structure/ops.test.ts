@@ -1,7 +1,21 @@
 import { produce } from 'immer'
 import { describe, expect, it } from 'vitest'
 import { canonicalizeModel, type StructureGeneration } from '@/core/format'
-import { biomesText, newGeneration, parseBiomes, poolNames, setBiomes, setCount } from './ops'
+import {
+  addElement,
+  addPool,
+  biomesText,
+  deletePool,
+  newGeneration,
+  parseBiomes,
+  poolNames,
+  removeElement,
+  renamePool,
+  setBiomes,
+  setCount,
+  setElement,
+  setProjection,
+} from './ops'
 
 describe('structure generation edits', () => {
   it('starts in the overworld with the game defaults, and format writes it', () => {
@@ -37,5 +51,42 @@ describe('structure generation edits', () => {
         pools: { roads: { elements: [] }, houses: { elements: [] } },
       }),
     ).toEqual(['roads', 'houses'])
+  })
+})
+
+describe('structure pools', () => {
+  it('adds, renames and deletes pools and their pieces, writing defaults as no key', () => {
+    const model: StructureGeneration = { biomes: ['plains'] }
+    const next = produce(model, (draft) => {
+      addPool(draft, 'houses')
+      addElement(draft, 'houses', 'house')
+      addElement(draft, 'houses', 'hut')
+      setElement(draft, 'houses', 1, { weight: 3 })
+      addPool(draft, 'roads')
+      addElement(draft, 'roads', 'road')
+      setProjection(draft, 'roads', 'terrain_matching')
+    })
+    expect(next.pools).toEqual({
+      houses: { elements: [{ structure: 'house' }, { structure: 'hut', weight: 3 }] },
+      roads: { elements: [{ structure: 'road' }], projection: 'terrain_matching' },
+    })
+    const text = canonicalizeModel('structure_generation', 'structures/village.json', next)
+    expect(JSON.parse(text.text!).pools).toEqual(next.pools)
+
+    const renamed = produce(next, (draft) => {
+      renamePool(draft, 'houses', 'homes')
+      setElement(draft, 'homes', 1, { weight: null, structure: 'cabin' })
+      setProjection(draft, 'roads', 'rigid')
+      removeElement(draft, 'homes', 0)
+    })
+    expect(renamed.pools).toEqual({
+      homes: { elements: [{ structure: 'cabin' }] },
+      roads: { elements: [{ structure: 'road' }] },
+    })
+    const gone = produce(renamed, (draft) => {
+      deletePool(draft, 'homes')
+      deletePool(draft, 'roads')
+    })
+    expect('pools' in gone).toBe(false)
   })
 })

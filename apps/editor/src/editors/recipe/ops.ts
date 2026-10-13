@@ -300,6 +300,48 @@ export function setShapelessIngredient(
   recipe.ingredients = list
 }
 
+/**
+ * Sets a station recipe's material [index]: one past the end adds one (one of it), null removes it.
+ * A material keeps its count when its ingredient changes.
+ */
+export function setMaterial(
+  recipe: RecipeFile,
+  index: number,
+  ingredient: Ingredient | null,
+): void {
+  const list = recipe.materials ?? []
+  if (ingredient === null) {
+    if (index < list.length) list.splice(index, 1)
+  } else if (index < list.length) {
+    list[index]!.ingredient = ingredient
+  } else {
+    list.push({ ingredient })
+  }
+  recipe.materials = list
+}
+
+/** How many of material [index] it takes: 1 (or none given) leaves `count` out. */
+export function setMaterialCount(
+  recipe: RecipeFile,
+  index: number,
+  count: number | undefined,
+): void {
+  const material = recipe.materials?.[index]
+  if (!material) return
+  if (count === undefined || Math.round(count) <= 1) delete material.count
+  else material.count = Math.round(count)
+}
+
+/** A station recipe's `stations` from text: commas or lines between them (`a | b` is one either-or). */
+export function setStations(recipe: RecipeFile, text: string): void {
+  const stations = text
+    .split(/[,\n]/)
+    .map((it) => it.trim().replace(/\s*\|\s*/g, ' | '))
+    .filter(Boolean)
+  if (stations.length) recipe.stations = stations
+  else delete recipe.stations
+}
+
 /** The one-ingredient places: cooking and stonecutting take `ingredient`, smithing the other three. */
 export type SlotField = 'ingredient' | 'template' | 'base' | 'addition'
 

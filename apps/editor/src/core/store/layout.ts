@@ -1,30 +1,36 @@
 /**
- * The workbench's own state: dock sizes and which are open, the bottom
- * dock's two columns (their tabs and where they split), the project explorer's view, which tree rows are expanded, and
+ * The workbench's own state: dock sizes and which are open, where each
+ * panel is in them (`docks.ts`), the project explorer's view, which tree rows are expanded, and
  * the tabs that were open. None of it is in the project; it's remembered per
  * project in the webview's storage, and a project opens as it was left.
  */
 import { createStore, type StoreApi } from 'zustand/vanilla'
+import {
+  DEFAULT_DOCKS,
+  findPanel,
+  movePanel,
+  readDocks,
+  resizeSplit,
+  selectPanel,
+  type DockArea,
+  type Docks,
+  type DockTarget,
+} from './docks'
 import { SETTINGS_PATH } from './tabs'
 import type { WorkspaceStore } from './workspace'
-
-/** The bottom dock's two columns. Which panels there are is the workbench's (`DOCK_PANELS`). */
-export type DockColumn = 'left' | 'right'
 
 export type ExplorerView = 'grid' | 'list'
 
 export interface Layout {
+  /** The left, right and bottom docks' sizes, and whether each shows (named for what they start with). */
   outlineWidth: number
   inspectorWidth: number
   bottomHeight: number
   outlineOpen: boolean
   inspectorOpen: boolean
   bottomOpen: boolean
-  /** The panel showing in each of the bottom dock's columns, by its id; null for the column's first. */
-  bottomLeftTab: string | null
-  bottomRightTab: string | null
-  /** The left column's share of the bottom dock's width. */
-  bottomSplit: number
+  /** Where each panel is: every dock's splits and tab groups. */
+  docks: Docks
   /** The explorer's folder: a kind's id, or null for the first. */
   explorerFolder: string | null
   /** Tile edge in pixels. */
@@ -44,8 +50,14 @@ export interface Layout {
 export interface LayoutActions {
   set(patch: Partial<Layout>): void
   toggle(dock: 'outline' | 'inspector' | 'bottom'): void
-  /** Opens the bottom dock with panel [id] showing in [column], its column. */
-  showBottom(column: DockColumn, id: string): void
+  /** Shows panel [id]: its tab in its group, and its dock if hidden. */
+  reveal(id: string): void
+  /** Moves panel [id] to [target] (a group's tabs, beside a group, a dock), showing it. */
+  movePanel(id: string, target: DockTarget): void
+  /** A split's children's shares. */
+  resizeSplit(id: string, sizes: number[]): void
+  /** Every dock where it started, at its first size and showing; the rest (tabs, explorer, trees) stays. */
+  resetLayout(): void
   setExpanded(key: string, open: boolean): void
 }
 
@@ -56,7 +68,6 @@ export const LIMITS = {
   outlineWidth: [160, 520],
   inspectorWidth: [240, 640],
   bottomHeight: [100, 700],
-  bottomSplit: [0.2, 0.8],
   tileSize: [56, 160],
 } as const
 
@@ -67,9 +78,7 @@ export const DEFAULT_LAYOUT: Layout = {
   outlineOpen: true,
   inspectorOpen: true,
   bottomOpen: true,
-  bottomLeftTab: null,
-  bottomRightTab: null,
-  bottomSplit: 0.5,
+  docks: DEFAULT_DOCKS,
   explorerFolder: null,
   tileSize: 84,
   explorerView: 'grid',
@@ -77,6 +86,13 @@ export const DEFAULT_LAYOUT: Layout = {
   openPaths: [],
   activePath: null,
 }
+
+/** The flag that shows each dock. */
+export const OPEN = {
+  left: 'outlineOpen',
+  right: 'inspectorOpen',
+  bottom: 'bottomOpen',
+} as const satisfies Record<DockArea, keyof Layout>
 
 const clamp = (value: number, [min, max]: readonly [number, number]) =>
   Math.max(min, Math.min(max, value))
@@ -108,13 +124,10 @@ export function readLayout(stored: unknown): Layout {
     inspectorWidth: num('inspectorWidth'),
     bottomHeight: num('bottomHeight'),
     tileSize: num('tileSize'),
-    bottomSplit: num('bottomSplit'),
     outlineOpen: bool('outlineOpen'),
     inspectorOpen: bool('inspectorOpen'),
     bottomOpen: bool('bottomOpen'),
-    // A panel that's gone since is the column's first: the dock decides.
-    bottomLeftTab: typeof it.bottomLeftTab === 'string' ? it.bottomLeftTab : null,
-    bottomRightTab: typeof it.bottomRightTab === 'string' ? it.bottomRightTab : null,
+    docks: readDocks(it.docks),
     explorerFolder: typeof it.explorerFolder === 'string' ? it.explorerFolder : null,
     explorerView: it.explorerView === 'list' ? 'list' : 'grid',
     expanded,
@@ -127,7 +140,10 @@ const layoutOf = (state: LayoutState): Layout => {
   const layout: Partial<LayoutState> = { ...state }
   delete layout.set
   delete layout.toggle
-  delete layout.showBottom
+  delete layout.reveal
+  delete layout.movePanel
+  delete layout.resizeSplit
+  delete layout.resetLayout
   delete layout.setExpanded
   return layout as Layout
 }
@@ -177,12 +193,38 @@ export function createLayout(): LayoutStore {
       const key = `${dock}Open` as const
       set({ [key]: !get()[key] } as Partial<Layout>)
     },
-    showBottom: (column, id) =>
-      set(
-        column === 'left'
-          ? { bottomOpen: true, bottomLeftTab: id }
-          : { bottomOpen: true, bottomRightTab: id },
-      ),
+    reveal(id) {
+      const docks = selectPanel(get().docks, id)
+      const found = findPanel(docks, id)
+      if (!found) return
+      set({ docks, [OPEN[found.area]]: true })
+    },
+    movePanel(id, target) {
+      const docks = selectPanel(movePanel(get().docks, id, target), id)
+      const found = findPanel(docks, id)
+      set(found ? { docks, [OPEN[found.area]]: true } : { docks })
+    },
+    resizeSplit: (id, sizes) => set({ docks: resizeSplit(get().docks, id, sizes) }),
+    resetLayout() {
+      const {
+        outlineWidth,
+        inspectorWidth,
+        bottomHeight,
+        outlineOpen,
+        inspectorOpen,
+        bottomOpen,
+        docks,
+      } = DEFAULT_LAYOUT
+      set({
+        outlineWidth,
+        inspectorWidth,
+        bottomHeight,
+        outlineOpen,
+        inspectorOpen,
+        bottomOpen,
+        docks,
+      })
+    },
     setExpanded(key, open) {
       if (get().expanded[key] === open) return
       set({ expanded: { ...get().expanded, [key]: open } })

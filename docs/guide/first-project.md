@@ -75,9 +75,15 @@ are good ones to explore: `examples/basic` has a little of everything, and
   rename, drag around and delete from; a centity lists them above its nodes,
   so they stay close at hand. A script's tab shows its resource's outline too.
 - The **Inspector**, on the right, edits whatever is selected.
-- The bottom dock has two columns: the Project explorer and **Instances** on
-  the left, **Problems** and the **Console** on the right. Drag the line
-  between them to change their widths.
+- The bottom dock has the Project explorer on the left and, on the right, a
+  tab for each of the other panels: **Problems**, the **Console**,
+  **Instances**, **Tests**, the **Profiler** and **Debug**.
+- Every panel, the Outline and the Inspector included, is a tab you can
+  drag: onto another panel's tabs to join them, onto the edge of a panel to
+  split it there (side by side or one above the other), or while dragging
+  onto the strip that shows for a hidden or empty dock. Right-click a
+  panel's tab to do the same from a menu. **View → Reset Layout** (or the
+  reset button beside the dock buttons) puts everything back.
 
 <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>P</kbd> goes to any resource or file by
 name, and <kbd>Ctrl</kbd>+<kbd>Tab</kbd> (with <kbd>Shift</kbd> to go the

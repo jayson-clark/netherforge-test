@@ -9,7 +9,7 @@ import { useGlyphMap } from '@/minecraft/text/glyphs'
 import { dirname } from '@/core/paths'
 import { useApp, useWorkspace } from '@/state/providers'
 import { Button } from '@/ui/Button'
-import { SelectField, Section } from '@/ui/fields'
+import { CheckField, JsonObjectField, SelectField, Section } from '@/ui/fields'
 import { Muted } from '@/ui/text'
 import { InspectorPanel } from '@/editors/shared/docks'
 import { EditorBar, EditorScreen, Stage } from '@/editors/shared/EditorLayout'
@@ -103,6 +103,28 @@ export function ItemScreen({ path }: { path: string }) {
               edit((draft) => {
                 if (value) draft.block = value
                 else delete draft.block
+              })
+            }
+          />
+          <CheckField
+            label="Bow draws without ammo"
+            dataPath="drawWithoutAmmo"
+            value={model.drawWithoutAmmo === true}
+            onChange={(on) =>
+              edit((draft) => {
+                if (on) draft.drawWithoutAmmo = true
+                else delete draft.drawWithoutAmmo
+              })
+            }
+          />
+          <JsonObjectField
+            label="Properties"
+            dataPath="properties"
+            value={model.properties}
+            onChange={(value) =>
+              edit((draft) => {
+                if (value === undefined) delete draft.properties
+                else draft.properties = value
               })
             }
           />

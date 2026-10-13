@@ -14,6 +14,7 @@ import { setKey } from '@/core/draft'
 import { useMemo, useRef, useState } from 'react'
 import {
   RECIPE_GRID,
+  RECIPE_STATION_RANGE,
   RECIPE_TYPES,
   RecipeTypeValues,
   type ItemDef,
@@ -29,7 +30,7 @@ import { useProjectItemIds } from '@/minecraft/item/projectItems'
 import { useGlyphMap } from '@/minecraft/text/glyphs'
 import { useApp, useWorkspace } from '@/state/providers'
 import { useView, useViewState } from '@/editors/views'
-import { NumberField, Section, SelectField, TextField } from '@/ui/fields'
+import { NumberField, NumberInput, Section, SelectField, TextField } from '@/ui/fields'
 import { fieldPath, focusField } from '@/editors/shared/focus'
 import { Button } from '@/ui/Button'
 import { cx } from '@/ui/cx'
@@ -48,7 +49,10 @@ import {
   type GridOffset,
   ingredientStack,
   setCell,
+  setMaterial,
+  setMaterialCount,
   setRecipeType,
+  setStations,
   setShapelessIngredient,
   setSlotIngredient,
   swapCells,
@@ -79,6 +83,7 @@ const SLOT = 18 * SCALE
 type Target =
   | { kind: 'cell'; index: number }
   | { kind: 'shapeless'; index: number }
+  | { kind: 'material'; index: number }
   | { kind: 'slot'; field: SlotField }
 
 export function RecipeEditor({ path }: { path: string }) {
@@ -112,6 +117,7 @@ export function RecipeEditor({ path }: { path: string }) {
     }
     edit((draft) => {
       if (target.kind === 'shapeless') setShapelessIngredient(draft, target.index, ingredient)
+      else if (target.kind === 'material') setMaterial(draft, target.index, ingredient)
       else setSlotIngredient(draft, target.field, ingredient)
     })
   }
@@ -123,6 +129,7 @@ export function RecipeEditor({ path }: { path: string }) {
   const current = (target: Target): Ingredient | null => {
     if (target.kind === 'cell') return cellsOf(model, offset)[target.index] ?? null
     if (target.kind === 'shapeless') return model.ingredients?.[target.index] ?? null
+    if (target.kind === 'material') return model.materials?.[target.index]?.ingredient ?? null
     return model[target.field] ?? null
   }
   const slots: SlotActions = {
@@ -155,7 +162,7 @@ export function RecipeEditor({ path }: { path: string }) {
         <EditAsJson path={path} />
       </EditorBar>
       <Stage>
-        <Station model={model} slots={slots} />
+        <Station model={model} slots={slots} edit={edit} />
         <RecipeProblems problems={problems} />
       </Stage>
       <InspectorPanel>
@@ -185,7 +192,15 @@ interface SlotActions {
 }
 
 /** The station's window: its slots laid out like the game's, an arrow, and the result. */
-function Station({ model, slots }: { model: RecipeFile; slots: SlotActions }) {
+function Station({
+  model,
+  slots,
+  edit,
+}: {
+  model: RecipeFile
+  slots: SlotActions
+  edit: (recipe: (draft: RecipeFile) => void) => void
+}) {
   const type = model.type
   let inputs: React.ReactNode
   let caption: string
@@ -205,9 +220,9 @@ function Station({ model, slots }: { model: RecipeFile; slots: SlotActions }) {
     )
     caption = "The base's components carry over to the result."
   } else if (type === 'station') {
-    inputs = <Materials model={model} />
+    inputs = <Materials model={model} slots={slots} edit={edit} />
     caption =
-      "Scripts make it (nf.recipes.craft) from what's in the crafter's inventory, with its stations near. Edit its materials and stations as JSON."
+      "Scripts make it (nf.recipes.craft) from what's in the crafter's inventory, with its stations near. Click the last slot to add a material; right-click removes one."
   } else if (type === 'stonecutting') {
     inputs = <SingleSlot model={model} field="ingredient" slots={slots} label="Input" />
     caption = 'One input, cut into the result.'
@@ -237,25 +252,51 @@ function Station({ model, slots }: { model: RecipeFile; slots: SlotActions }) {
   )
 }
 
-/** A station recipe's materials, with how many of each, and the stations it needs. */
-function Materials({ model }: { model: RecipeFile }) {
-  const name = (ingredient: Ingredient) =>
-    typeof ingredient === 'string' ? ingredient : `item ${ingredient.item ?? ''}`
+/** A station recipe's materials: a slot each (click picks, right-click removes) with how many, and one to add. */
+function Materials({
+  model,
+  slots,
+  edit,
+}: {
+  model: RecipeFile
+  slots: SlotActions
+  edit: (recipe: (draft: RecipeFile) => void) => void
+}) {
+  const list = model.materials ?? []
   return (
-    <div className={styles.column}>
-      <ul aria-label="Materials">
-        {(model.materials ?? []).map((material, index) => (
-          <li key={index}>
-            {material.count ?? 1} × {name(material.ingredient)}
+    <ul className={styles.materials} aria-label="Materials" data-path="materials">
+      {[...list, null].map((material, index) => {
+        const at = fieldPath(['materials', index])
+        const label = material ? `Material ${index + 1}` : 'New material'
+        return (
+          <li key={index} className={styles.material}>
+            <IngredientSlot
+              label={label}
+              ingredient={material?.ingredient ?? null}
+              tooltip={slots.tooltip}
+              dataPath={material ? `${at}.ingredient` : undefined}
+              problems={material ? problemsUnder(slots.problems, at) : []}
+              onOpen={() => slots.open({ kind: 'material', index }, label)}
+              onClear={() => slots.clear({ kind: 'material', index })}
+            />
+            {material && (
+              <span className={styles.materialCount}>
+                ×
+                <NumberInput
+                  label={`Material ${index + 1} count`}
+                  dataPath={`${at}.count`}
+                  value={material.count}
+                  placeholder="1"
+                  step={1}
+                  min={1}
+                  onChange={(value) => edit((draft) => setMaterialCount(draft, index, value))}
+                />
+              </span>
+            )}
           </li>
-        ))}
-      </ul>
-      {model.stations && model.stations.length > 0 && (
-        <Muted>
-          Near: {model.stations.join(', ')} (within {model.stationRange ?? 4} blocks)
-        </Muted>
-      )}
-    </div>
+        )
+      })}
+    </ul>
   )
 }
 
@@ -637,6 +678,38 @@ function RecipeInspector({
               onChange={(value) => edit((draft) => setKey(draft, 'experience', value))}
             />
             <FieldProblems problems={problems} field="experience" />
+          </>
+        )}
+        {model.type === 'station' && (
+          <>
+            <TextField
+              label="Stations near"
+              dataPath="stations"
+              value={(model.stations ?? []).join(', ')}
+              placeholder="none (minecraft:crafting_table, #tag, work_bench, a | b)"
+              onChange={(text) => edit((draft) => setStations(draft, text))}
+            />
+            <FieldProblems problems={problems} field="stations" />
+            <NumberField
+              label="Within (blocks)"
+              dataPath="stationRange"
+              value={model.stationRange}
+              placeholder={String(RECIPE_STATION_RANGE.default)}
+              step={1}
+              min={1}
+              onChange={(value) =>
+                edit((draft) =>
+                  setKey(
+                    draft,
+                    'stationRange',
+                    value === undefined
+                      ? undefined
+                      : Math.min(RECIPE_STATION_RANGE.max, Math.round(value)),
+                  ),
+                )
+              }
+            />
+            <FieldProblems problems={problems} field="stationRange" />
           </>
         )}
         {model.type === 'stonecutting' && (

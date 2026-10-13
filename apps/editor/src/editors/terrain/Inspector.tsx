@@ -1860,7 +1860,9 @@ function StructuresSection({ model, edit }: Parts) {
  * The file's Lua stages: whether it hands them to `terrain/<id>.lua` (made from format's template when it isn't
  * there), the budget each call gets, the noises the script asks for and the blocks it places besides the file's.
  */
-function ScriptSection({ path, model, edit, gesture }: Parts & { path: string }) {
+const SCRIPT_LOOT_LIST = 'terrain-script-loot'
+
+function ScriptSection({ path, model, edit, gesture, lootTables }: Parts & { path: string }) {
   const { workspace } = useApp()
   const files = useWorkspace((s) => s.files)
   const script = model.script
@@ -1919,6 +1921,21 @@ function ScriptSection({ path, model, edit, gesture }: Parts & { path: string })
             placeholder="ruby_ore"
             onChange={(ids) => edit((d) => setScriptBlocks(d, 'customBlocks', ids))}
           />
+          <TextField
+            label="Loot tables it fills"
+            dataPath="script.loot"
+            value={(script.loot ?? []).join(', ')}
+            placeholder="none (chunk:set_loot names them)"
+            list={SCRIPT_LOOT_LIST}
+            onChange={(text) => {
+              const ids = text
+                .split(',')
+                .map((it) => it.trim())
+                .filter(Boolean)
+              edit((d) => setScriptBlocks(d, 'loot', ids))
+            }}
+          />
+          <Datalist id={SCRIPT_LOOT_LIST} values={lootTables} />
           {names.map((name) => {
             const here = ['script', 'noises', name]
             return (

@@ -401,7 +401,7 @@ export function setScripted(file: TerrainFile, on: boolean): void {
 /** The script's `blocks` or `customBlocks`, a list; empty takes the key away. */
 export function setScriptBlocks(
   file: TerrainFile,
-  key: 'blocks' | 'customBlocks',
+  key: 'blocks' | 'customBlocks' | 'loot',
   ids: string[] | undefined,
 ): void {
   if (!file.script) return

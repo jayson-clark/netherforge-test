@@ -14,6 +14,11 @@ import {
   type BlockModelDef,
   type EquipmentAssetDef,
   type GlyphDef,
+  type HudBarDef,
+  type HudDef,
+  type HudElement,
+  type HudIconsDef,
+  type HudTextDef,
   type ItemModelDef,
   type ResourcePackFile,
   type RefKind,
@@ -34,11 +39,12 @@ export const ENTRY_KINDS: EntryKind[] = [
 ]
 
 /**
- * What the pack editor can pick: an entry, a texture (its path under `textures/`), a sound (its event key) or a
- * game texture it redraws (`game`, by the game's name: `block/stone`).
+ * What the pack editor can pick: an entry, a texture (its path under `textures/`), a sound (its event key), a
+ * game texture it redraws (`game`, by the game's name: `block/stone`), a game model it redraws (`gameModel`,
+ * `block/lantern`) or a HUD element (`hud`, by its key: a bar, a row of icons or a line of text).
  */
 export interface ResourcePackPick {
-  kind: EntryKind | 'textures' | 'sounds' | 'game'
+  kind: EntryKind | 'textures' | 'sounds' | 'game' | 'gameModel' | 'hud'
   key: string
 }
 
@@ -322,4 +328,141 @@ export function pngSize(bytes: Uint8Array): { width: number; height: number } | 
   if (bytes.length < 24 || signature.some((b, i) => bytes[i] !== b)) return null
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
   return { width: view.getUint32(16), height: view.getUint32(20) }
+}
+
+/** Draws the game's model [name] (`block/lantern`) with the pack's model file [model], or with undefined, the game's own again. */
+export function setGameModel(
+  pack: ResourcePackFile,
+  name: string,
+  model: string | undefined,
+): void {
+  const models = { ...(pack.models ?? {}) }
+  if (model === undefined) delete models[name]
+  else models[name] = model
+  setKey(pack, 'models', Object.keys(models).length > 0 ? models : undefined)
+}
+
+/** Removes a sound event's own entry in pack.json (its file, if any, stays the event it is). */
+export function removeSoundEntry(pack: ResourcePackFile, key: string): void {
+  if (!pack.sounds?.[key]) return
+  const sounds = { ...pack.sounds }
+  delete sounds[key]
+  setKey(pack, 'sounds', Object.keys(sounds).length > 0 ? sounds : undefined)
+}
+
+/** Adds a sound event entry [key] that plays [files] (a key in the game's namespace replaces the game's event). */
+export function addSoundEntry(pack: ResourcePackFile, key: string, files: string[]): void {
+  pack.sounds = { ...(pack.sounds ?? {}), [key]: files.length > 0 ? { files } : {} }
+}
+
+/** A HUD element's kind: a bar, a row of icons or a line of text. */
+export type HudKind = 'bars' | 'icons' | 'texts'
+export const HUD_KINDS: HudKind[] = ['bars', 'icons', 'texts']
+export type HudElementDef = HudBarDef | HudIconsDef | HudTextDef
+
+/** Every key of the pack's HUD elements, of any kind (scripts name them all `<pack>/<key>`), sorted. */
+export function hudKeys(pack: ResourcePackFile): string[] {
+  const hud = pack.hud
+  return HUD_KINDS.flatMap((kind) => Object.keys(hud?.[kind] ?? {})).sort()
+}
+
+/** Which kind HUD element [key] is, or null when the pack has none by that key. */
+export function hudKindOf(pack: ResourcePackFile, key: string): HudKind | null {
+  return HUD_KINDS.find((kind) => pack.hud?.[kind]?.[key] !== undefined) ?? null
+}
+
+/** A HUD left with nothing in it goes, and so does each empty part of it. */
+function tidyHud(pack: ResourcePackFile): void {
+  const hud = pack.hud
+  if (!hud) return
+  for (const key of ['bars', 'icons', 'texts', 'replace'] as const) {
+    if (hud[key] && Object.keys(hud[key]).length === 0) delete hud[key]
+  }
+  if (hud.hide?.length === 0) delete hud.hide
+  if (Object.keys(hud).length === 0) delete pack.hud
+}
+
+/** A new element of [kind]: a bar or row drawn with [texture], a line of text, at the middle of the screen. */
+export function newHudElement(kind: HudKind, texture: string): HudElementDef {
+  if (kind === 'bars') return { full: texture, empty: texture, segments: 10, x: 0, y: 30 }
+  if (kind === 'icons') return { icons: { icon: texture }, x: 0, y: 42 }
+  return { x: 0 }
+}
+
+export function addHudElement(
+  pack: ResourcePackFile,
+  kind: HudKind,
+  key: string,
+  def: HudElementDef,
+): void {
+  pack.hud ??= {}
+  ;(pack.hud as Record<HudKind, Record<string, HudElementDef>>)[kind] = {
+    ...(pack.hud[kind] ?? {}),
+    [key]: def,
+  }
+}
+
+export function removeHudElement(pack: ResourcePackFile, key: string): void {
+  const kind = hudKindOf(pack, key)
+  if (!kind) return
+  delete pack.hud![kind]![key]
+  tidyHud(pack)
+}
+
+export function renameHudElement(pack: ResourcePackFile, from: string, to: string): void {
+  const kind = hudKindOf(pack, from)
+  if (!kind || from === to || hudKindOf(pack, to)) return
+  const elements = pack.hud![kind] as Record<string, HudElementDef>
+  elements[to] = elements[from]!
+  delete elements[from]
+}
+
+/** Hides the game's own HUD element (or shows it again), keeping `hide` in the game's order. */
+export function setHudHidden(
+  pack: ResourcePackFile,
+  element: HudElement,
+  hidden: boolean,
+  order: readonly HudElement[],
+): void {
+  const now = new Set(pack.hud?.hide ?? [])
+  if (hidden) now.add(element)
+  else now.delete(element)
+  pack.hud ??= {}
+  pack.hud.hide = order.filter((it) => now.has(it))
+  tidyHud(pack)
+}
+
+/** Redraws the game's HUD sprite [sprite] (`hud/hotbar`) with [texture], or with undefined, the game's again. */
+export function setHudReplace(
+  pack: ResourcePackFile,
+  sprite: string,
+  texture: string | undefined,
+): void {
+  pack.hud ??= {}
+  const replace: HudDef['replace'] = { ...(pack.hud.replace ?? {}) }
+  if (texture === undefined) delete replace[sprite]
+  else replace[sprite] = texture
+  pack.hud.replace = replace
+  tidyHud(pack)
+}
+
+/** Sets an icon of a row ([texture] undefined removes it; a row keeps at least one, as format asks). */
+export function setHudIcon(
+  pack: ResourcePackFile,
+  row: string,
+  icon: string,
+  texture: string | undefined,
+): void {
+  const def = pack.hud?.icons?.[row]
+  if (!def) return
+  if (texture !== undefined) def.icons[icon] = texture
+  else if (Object.keys(def.icons).length > 1) delete def.icons[icon]
+}
+
+/** Renames icon [from] of a row to [to] (scripts show icons by these keys). */
+export function renameHudIcon(pack: ResourcePackFile, row: string, from: string, to: string): void {
+  const def = pack.hud?.icons?.[row]
+  if (!def?.icons[from] || from === to || def.icons[to]) return
+  def.icons[to] = def.icons[from]!
+  delete def.icons[from]
 }

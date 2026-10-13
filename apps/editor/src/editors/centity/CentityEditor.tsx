@@ -39,7 +39,14 @@ export function CentityEditor({ path }: { path: string }) {
       changeView.update({ clip: segments[1], time: 0 })
       return null
     }
-    if (segments[0] === 'name' || segments[0] === 'script' || segments[0] === 'spawning') {
+    if (
+      segments[0] === 'name' ||
+      segments[0] === 'script' ||
+      segments[0] === 'spawning' ||
+      segments[0] === 'body' ||
+      segments[0] === 'health' ||
+      segments[0] === 'properties'
+    ) {
       changeView.select()
       return ['centity', ...segments]
     }

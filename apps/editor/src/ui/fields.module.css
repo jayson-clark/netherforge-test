@@ -143,3 +143,14 @@
   color: var(--muted);
   padding: 0 4px;
 }
+.json {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.json > textarea {
+  width: 100%;
+  font-family: var(--mono);
+  resize: vertical;
+}

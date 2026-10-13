@@ -1,18 +1,20 @@
 /**
  * "Generates in the world" on a structure's screen: `structures/<id>.json`,
  * where the game places the structure by itself (biomes, spacing, height,
- * terrain). The section is a switch: on writes a new file through format,
- * off deletes it (after asking). Each change is saved at once, since this
- * file has no tab of its own to save from. Pools (more pieces) are listed
- * but edited in the file: docs/format/worlds.md has them.
+ * terrain), and the pools of more pieces its jigsaw blocks pick from. The
+ * section is a switch: on writes a new file through format, off deletes it
+ * (after asking). Each change is saved at once, since this file has no tab of
+ * its own to save from. docs/format/worlds.md has the fields.
  */
 import { useEffect } from 'react'
 import {
   canonicalizeModel,
   GenerationStepValues,
+  PoolProjectionValues,
   StructureHeightmapValues,
   TerrainAdaptationValues,
   type GenerationStep,
+  type PoolProjection,
   type StructureGeneration,
   type StructureHeightmap,
   type TerrainAdaptation,
@@ -21,9 +23,36 @@ import { setKey } from '@/core/draft'
 import { modelOf } from '@/core/store/documents'
 import { useApp, useWorkspace } from '@/state/providers'
 import { ask } from '@/ui/dialogs'
-import { NumberField, Section, SelectField, TextField } from '@/ui/fields'
+import { ID_PATTERN } from '@/core/paths'
+import { Button, IconButton } from '@/ui/Button'
+import {
+  FieldGroup,
+  NumberField,
+  NumberInput,
+  Row,
+  Section,
+  SelectField,
+  TextField,
+} from '@/ui/fields'
 import { Hint } from '@/ui/text'
-import { biomesText, newGeneration, poolNames, setBiomes, setCount } from './ops'
+import {
+  addElement,
+  addPool,
+  biomesText,
+  deletePool,
+  newGeneration,
+  poolNames,
+  removeElement,
+  renamePool,
+  setBiomes,
+  setCount,
+  setElement,
+  setProjection,
+  START_POOL,
+} from './ops'
+
+/** One empty list, so a selector returns the same value while there's no outline yet. */
+const NO_STRUCTURES: string[] = []
 
 const label = (value: string) => value.replaceAll('_', ' ')
 
@@ -144,11 +173,16 @@ export function Generation({ id, path, exists }: { id: string; path: string; exi
             step={1}
             onChange={(value) => edit((draft) => setCount(draft, 'startHeight', value))}
           />
-          {poolNames(model).length > 0 && (
-            <Hint aria-label="Pools">
-              Pieces from pools: {poolNames(model).join(', ')}. Edit them in {path}.
-            </Hint>
-          )}
+          <NumberField
+            label="Salt"
+            dataPath="salt"
+            value={model.salt}
+            placeholder="from its name"
+            step={1}
+            min={0}
+            onChange={(value) => edit((draft) => setCount(draft, 'salt', value))}
+          />
+          <Pools id={id} model={model} edit={edit} />
         </>
       )}
       {problems.map((problem, index) => (
@@ -158,5 +192,162 @@ export function Generation({ id, path, exists }: { id: string; path: string; exi
       ))}
       <Hint>Changing this restarts the dev server: the game reads structures as it starts.</Hint>
     </Section>
+  )
+}
+
+/** The jigsaw pools: more pieces, by name, each picked by weight where a jigsaw block names it. */
+function Pools({
+  id,
+  model,
+  edit,
+}: {
+  id: string
+  model: StructureGeneration
+  edit: (recipe: (draft: StructureGeneration) => void) => void
+}) {
+  const structures = useWorkspace((s) => s.outline?.resources.structure ?? NO_STRUCTURES)
+  const names = poolNames(model)
+  const askName = (title: string, initial: string, except?: string) =>
+    ask.prompt({
+      title,
+      label: 'Pool name',
+      initial,
+      confirmLabel: 'OK',
+      validate: (value) =>
+        !ID_PATTERN.test(value)
+          ? 'Lowercase letters, digits and _'
+          : value === START_POOL
+            ? `"${START_POOL}" is the structure's own template`
+            : value !== except && names.includes(value)
+              ? 'That pool exists'
+              : null,
+    })
+  const structureOptions = (current: string) => [
+    ...structures.map((it) => ({ value: it, label: it })),
+    ...(current && !structures.includes(current)
+      ? [{ value: current, label: `${current} (missing)` }]
+      : []),
+  ]
+  return (
+    <FieldGroup header="Jigsaw pools" data-path="pools">
+      {names.length > 0 && (
+        <>
+          <NumberField
+            label="Depth"
+            dataPath="depth"
+            value={model.depth}
+            placeholder="7"
+            step={1}
+            min={1}
+            onChange={(value) => edit((draft) => setCount(draft, 'depth', value))}
+          />
+          <NumberField
+            label="Reach (blocks)"
+            dataPath="maxDistance"
+            value={model.maxDistance}
+            placeholder="80"
+            step={1}
+            min={1}
+            onChange={(value) => edit((draft) => setCount(draft, 'maxDistance', value))}
+          />
+        </>
+      )}
+      {names.map((name) => {
+        const pool = model.pools![name]!
+        const at = `pools.${name}`
+        return (
+          <FieldGroup
+            key={name}
+            data-path={at}
+            aria-label={`Pool ${name}`}
+            role="group"
+            header={
+              <>
+                {id}/{name}
+                <IconButton
+                  icon="edit"
+                  label={`Rename pool ${name}`}
+                  onClick={async () => {
+                    const to = await askName(`Rename pool ${name}`, name, name)
+                    if (to && to !== name) edit((draft) => renamePool(draft, name, to))
+                  }}
+                />
+                <IconButton
+                  icon="trash"
+                  label={`Delete pool ${name}`}
+                  onClick={() => edit((draft) => deletePool(draft, name))}
+                />
+              </>
+            }
+          >
+            <SelectField<PoolProjection>
+              label="Projection"
+              dataPath={`${at}.projection`}
+              value={pool.projection ?? 'rigid'}
+              options={PoolProjectionValues.map((value) => ({ value, label: label(value) }))}
+              onChange={(value) => edit((draft) => setProjection(draft, name, value))}
+            />
+            {pool.elements.map((element, index) => (
+              <Row key={index} label={`Piece ${index + 1}`}>
+                <select
+                  aria-label={`Pool ${name} piece ${index + 1}`}
+                  data-path={`${at}.elements[${index}].structure`}
+                  value={element.structure}
+                  onChange={(event) =>
+                    edit((draft) =>
+                      setElement(draft, name, index, { structure: event.target.value }),
+                    )
+                  }
+                >
+                  {structureOptions(element.structure).map((it) => (
+                    <option key={it.value} value={it.value}>
+                      {it.label}
+                    </option>
+                  ))}
+                </select>
+                <NumberInput
+                  label={`Pool ${name} piece ${index + 1} weight`}
+                  dataPath={`${at}.elements[${index}].weight`}
+                  value={element.weight}
+                  placeholder="1"
+                  step={1}
+                  min={1}
+                  onChange={(value) =>
+                    edit((draft) => setElement(draft, name, index, { weight: value ?? null }))
+                  }
+                />
+                <IconButton
+                  icon="trash"
+                  label={`Remove pool ${name} piece ${index + 1}`}
+                  onClick={() => edit((draft) => removeElement(draft, name, index))}
+                />
+              </Row>
+            ))}
+            <Button
+              size="small"
+              icon="plus"
+              disabled={structures.length === 0}
+              onClick={() => edit((draft) => addElement(draft, name, structures[0]!))}
+            >
+              Add piece
+            </Button>
+          </FieldGroup>
+        )
+      })}
+      <Button
+        size="small"
+        icon="plus"
+        onClick={async () => {
+          const name = await askName('New pool', names.length ? '' : 'pieces')
+          if (name) edit((draft) => addPool(draft, name))
+        }}
+      >
+        Add pool
+      </Button>
+      <Hint>
+        A jigsaw block whose target pool is {'<namespace>'}:{id}/{'<pool>'} picks a piece of that
+        pool by weight. Without pools the structure is one piece.
+      </Hint>
+    </FieldGroup>
   )
 }

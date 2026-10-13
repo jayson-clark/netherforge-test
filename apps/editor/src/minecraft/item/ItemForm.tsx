@@ -28,6 +28,7 @@ import type { GlyphMap } from '@/minecraft/text/MiniText'
 import {
   CheckField,
   Datalist,
+  JsonObjectField,
   NumberField,
   NumberInput,
   Row,
@@ -364,6 +365,14 @@ export function ItemEditor({
         defaultLabel={item.hold ? 'off' : 'on'}
         onChange={(value) => onEdit((draft) => setUseEffects(draft, 'interactVibrations', value))}
       />
+      {offers('data') && (
+        <JsonObjectField
+          label="Script data"
+          dataPath={at('data')}
+          value={item.data}
+          onChange={(value) => set('data', value)}
+        />
+      )}
     </div>
   )
 }

@@ -235,7 +235,7 @@ test('the palette finds commands only after ">", and runs one', async ({ page })
   await palette(page).fill('show console')
   await matches.getByRole('option', { name: /^Show Console/ }).click()
   await expect(
-    page.getByRole('tablist', { name: 'Output panels' }).getByRole('tab', { name: /Console/ }),
+    page.getByRole('region', { name: 'Bottom dock' }).getByRole('tab', { name: /Console/ }),
   ).toHaveAttribute('aria-selected', 'true')
 })
 
@@ -252,7 +252,7 @@ test('a project opens again as it was left: its tabs, the active one, and its do
 
   // The outline resizes by dragging its splitter or with its arrow keys.
   const outlineWidth = async () => (await page.locator('#outline').boundingBox())!.width
-  const splitter = page.getByRole('separator', { name: 'Resize the outline' })
+  const splitter = page.getByRole('separator', { name: 'Resize the left dock' })
   const grip = (await splitter.boundingBox())!
   // A 1px line that takes its space (the previews' pixels depend on the layout around them).
   expect(grip.width).toBe(1)
@@ -265,7 +265,7 @@ test('a project opens again as it was left: its tabs, the active one, and its do
   await page.keyboard.press('ArrowLeft')
   await expect.poll(outlineWidth).toBeLessThan(340)
   const resized = await outlineWidth()
-  await page.getByRole('button', { name: 'Inspector', exact: true }).click()
+  await page.getByRole('button', { name: 'Right dock', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Inspector dock' })).toBeHidden()
 
   await page.keyboard.press('ControlOrMeta+Shift+p')
@@ -304,11 +304,11 @@ test('the menu bar toggles a dock, showing it checked, and opens quick open', as
   await expect(toolbar.getByRole('button', { name: 'Save', exact: true })).toHaveCount(0)
   await expect(toolbar.getByRole('button', { name: 'Undo' })).toHaveCount(0)
 
-  await chooseMenu(page, 'View', 'Inspector')
+  await chooseMenu(page, 'View', 'Right Dock')
   await expect(page.getByRole('region', { name: 'Inspector dock' })).toBeHidden()
   await page.getByRole('menubar').getByRole('menuitem', { name: 'View', exact: true }).click()
   await expect(
-    page.getByRole('menu', { name: 'View' }).getByRole('menuitemcheckbox', { name: /^Inspector/ }),
+    page.getByRole('menu', { name: 'View' }).getByRole('menuitemcheckbox', { name: /^Right Dock/ }),
   ).toHaveAttribute('aria-checked', 'false')
   await page.keyboard.press('Escape')
   await expect(page.getByRole('menu', { name: 'View' })).toBeHidden()
@@ -371,4 +371,50 @@ test('leaving a project with unsaved edits asks first, and Open Recent brings it
     .click()
   await expect(tab(page, 'tower')).toBeVisible()
   expect(JSON.parse((await files(page))[TOWER]!).nodes.top.transform.translation).toEqual([0, 1, 0])
+})
+
+test('dock panels drag between docks, split a group, and the layout resets', async ({ page }) => {
+  await openExample(page)
+  await openCentity(page, 'tower')
+  const bottom = page.getByRole('region', { name: 'Bottom dock' })
+  const right = page.getByRole('region', { name: 'Right dock' })
+  await expect(bottom.getByRole('tablist')).toHaveCount(2)
+
+  // Onto the inspector's tab: into the right dock's group.
+  await bottom
+    .getByRole('tab', { name: 'Console' })
+    .dragTo(right.getByRole('tab', { name: 'Inspector' }))
+  await expect(right.getByRole('tab', { name: 'Console' })).toHaveAttribute('aria-selected', 'true')
+  await expect(right.getByRole('log', { name: 'Console' })).toBeVisible()
+  await expect(bottom.getByRole('tab', { name: 'Console' })).toHaveCount(0)
+
+  // Onto the lower edge of the right dock's panel: the group splits, one above the other.
+  const body = right.getByRole('tabpanel')
+  const box = (await body.boundingBox())!
+  await right.getByRole('tab', { name: 'Console' }).dragTo(body, {
+    targetPosition: { x: box.width / 2, y: box.height - 8 },
+  })
+  await expect(right.getByRole('tablist')).toHaveCount(2)
+  await expect(right.getByRole('region', { name: 'Inspector dock' })).toBeVisible()
+  await expect(right.getByRole('log', { name: 'Console' })).toBeVisible()
+
+  // Into a hidden dock: it shows again with the panel.
+  await page.keyboard.press('ControlOrMeta+b')
+  await expect(page.getByRole('region', { name: 'Left dock' })).toBeHidden()
+  // Its strip shows only once a drag has started, so the drag is by hand.
+  await bottom.getByRole('tab', { name: 'Problems' }).hover()
+  await page.mouse.down()
+  await page.mouse.move(400, 300, { steps: 4 })
+  await page.getByText('Left dock', { exact: true }).hover()
+  await page.mouse.up()
+  await expect(
+    page.getByRole('region', { name: 'Left dock' }).getByRole('tab', { name: /Problems/ }),
+  ).toBeVisible()
+
+  await chooseMenu(page, 'View', 'Reset Layout')
+  await expect(right.getByRole('tablist')).toHaveCount(1)
+  await expect(bottom.getByRole('tab', { name: 'Console' })).toBeVisible()
+  await expect(
+    page.getByRole('region', { name: 'Left dock' }).getByRole('tab', { name: /Problems/ }),
+  ).toHaveCount(0)
 })

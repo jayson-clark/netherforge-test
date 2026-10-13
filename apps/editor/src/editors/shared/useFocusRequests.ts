@@ -8,7 +8,7 @@ import { fieldPath, focusField } from './focus'
  * [route] selects whatever the JSON path is about (a slot, a button) and
  * returns the field path to focus, or null to stop. The field is looked for
  * in the inspector first, then in the editor itself (a recipe's slots), and
- * the inspector dock opens if it was closed.
+ * the Inspector panel shows (its tab, and its dock) if it didn't.
  */
 export function useFocusRequests(
   path: string,
@@ -20,7 +20,7 @@ export function useFocusRequests(
     if (!focus?.jsonPath) return
     const target = route(parseJsonPath(focus.jsonPath))
     if (target === null) return
-    layout.getState().set({ inspectorOpen: true })
+    layout.getState().reveal('inspector')
     // Wait for the inspector to show what was selected.
     const timer = setTimeout(
       () =>

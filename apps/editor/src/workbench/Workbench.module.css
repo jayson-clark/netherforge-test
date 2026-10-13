@@ -5,6 +5,14 @@
   display: flex;
   flex-direction: column;
 }
+/* Around the docks: where a dragged panel's strips for empty or hidden docks are placed. */
+.docks {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
 /* Resizable groups: the library sizes each panel; a class styles the panel's inside. */
 .main {
   flex: 1;

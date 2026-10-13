@@ -125,3 +125,24 @@
   padding: 0 8px 4px 108px;
   font-size: var(--font-size-sm);
 }
+.materials {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.material {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.materialCount {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.materialCount input {
+  width: 4em;
+}

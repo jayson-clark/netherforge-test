@@ -9,6 +9,7 @@ import {
   SAVE_DELAY_MS,
   type LayoutStorage,
 } from './layout'
+import { DEFAULT_DOCKS, findPanel, groupsOf } from './docks'
 import { SETTINGS_PATH } from './tabs'
 import { createWorkspace } from './workspace'
 
@@ -24,9 +25,7 @@ describe('readLayout', () => {
     const layout = readLayout({
       outlineWidth: 10_000,
       bottomHeight: 'tall',
-      bottomLeftTab: 'console',
-      bottomRightTab: 'nowhere',
-      bottomSplit: 0.95,
+      docks: { left: { type: 'tabs', id: 'l', tabs: ['console', 'nowhere'], active: 'x' } },
       explorerView: 'list',
       expanded: { 'files:a': true, 'files:b': 'yes' },
       openPaths: ['a.json', 3],
@@ -34,9 +33,19 @@ describe('readLayout', () => {
     })
     expect(layout.outlineWidth).toBe(520)
     expect(layout.bottomHeight).toBe(DEFAULT_LAYOUT.bottomHeight)
-    expect(layout.bottomLeftTab).toBe('console')
-    expect(readLayout({ bottomRightTab: 3 }).bottomRightTab).toBeNull()
-    expect(layout.bottomSplit).toBe(0.8)
+    // What's gone is left out; what's missing joins a panel it starts beside.
+    expect(layout.docks.left).toMatchObject({ id: 'l', active: 'console' })
+    expect(groupsOf(layout.docks.left)[0]!.tabs).toEqual([
+      'console',
+      'outline',
+      'instances',
+      'tests',
+      'profiler',
+      'debug',
+    ])
+    // Panels starting alone go to their dock, which the stored layout left empty: one group there.
+    expect(layout.docks.bottom).toMatchObject({ type: 'tabs', tabs: ['project', 'problems'] })
+    expect(readLayout({ docks: 3 }).docks).toEqual(DEFAULT_DOCKS)
     expect(layout.explorerView).toBe('list')
     expect(layout.expanded).toEqual({ 'files:a': true })
     expect(layout.openPaths).toEqual(['a.json'])
@@ -44,18 +53,38 @@ describe('readLayout', () => {
   })
 })
 
-describe('showBottom', () => {
-  it('opens the dock with the panel in its column, leaving the other alone', () => {
+describe('reveal', () => {
+  it("opens the panel's dock with its tab showing, leaving other groups alone", () => {
     const layout = createLayout()
-    layout.getState().set({ bottomOpen: false, bottomLeftTab: 'instances' })
-    layout.getState().showBottom('right', 'console')
+    layout.getState().set({ bottomOpen: false })
+    layout.getState().reveal('debug')
+    expect(layout.getState().bottomOpen).toBe(true)
+    expect(groupsOf(layout.getState().docks.bottom).map((it) => it.active)).toEqual([
+      'project',
+      'problems',
+      'debug',
+    ])
+    layout.getState().set({ inspectorOpen: false })
+    layout.getState().reveal('inspector')
+    expect(layout.getState().inspectorOpen).toBe(true)
+  })
+})
+
+describe('movePanel and resetLayout', () => {
+  it('opens the dock a panel moves to, and puts every dock back as it started', () => {
+    const layout = createLayout()
+    layout.getState().set({ inspectorOpen: false, outlineWidth: 400, explorerView: 'list' })
+    layout.getState().movePanel('console', { group: 'right', edge: 'bottom' })
+    expect(layout.getState().inspectorOpen).toBe(true)
+    expect(findPanel(layout.getState().docks, 'console')?.area).toBe('right')
+    layout.getState().resetLayout()
     expect(layout.getState()).toMatchObject({
-      bottomOpen: true,
-      bottomLeftTab: 'instances',
-      bottomRightTab: 'console',
+      docks: DEFAULT_DOCKS,
+      inspectorOpen: true,
+      outlineWidth: DEFAULT_LAYOUT.outlineWidth,
+      // Not the docks': kept.
+      explorerView: 'list',
     })
-    layout.getState().showBottom('left', 'project')
-    expect(layout.getState()).toMatchObject({ bottomLeftTab: 'project', bottomRightTab: 'console' })
   })
 })
 
@@ -76,7 +105,8 @@ describe('followProject', () => {
     await workspace.getState().openFile('menus/shop/menu.json')
     workspace.getState().openSettings()
     workspace.getState().activate('script:centities/tower/script.lua')
-    layout.getState().set({ outlineWidth: 300, bottomRightTab: 'console', bottomSplit: 0.3 })
+    layout.getState().set({ outlineWidth: 300 })
+    layout.getState().movePanel('console', { group: 'left-outline', edge: 'bottom' })
     layout.getState().toggle('inspector')
     // Written a moment after the last change, not on every one.
     await vi.advanceTimersByTimeAsync(SAVE_DELAY_MS - 1)
@@ -99,8 +129,7 @@ describe('followProject', () => {
     await workspace.getState().openProject(EXAMPLE_ROOT)
     await settle()
     expect(layout.getState().outlineWidth).toBe(300)
-    expect(layout.getState().bottomRightTab).toBe('console')
-    expect(layout.getState().bottomSplit).toBe(0.3)
+    expect(findPanel(layout.getState().docks, 'console')?.area).toBe('left')
     expect(layout.getState().inspectorOpen).toBe(false)
     expect(workspace.getState().tabs.map((it) => it.path)).toEqual([
       'centities/tower/script.lua',

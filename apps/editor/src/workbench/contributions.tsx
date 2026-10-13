@@ -1,16 +1,18 @@
 /**
  * What the workbench contributes beside the editors' kinds and file tabs
- * (`editors/registry.tsx`): the settings tab and the bottom dock's panels.
+ * (`editors/registry.tsx`): the settings tab and the docks' panels.
  * Every tab type and every panel is listed once, here or there.
  */
 import { lazy } from 'react'
 import { useRun } from '@/state/providers'
-import type { DockColumn, LayoutStore } from '@/core/store/layout'
+import type { LayoutStore } from '@/core/store/layout'
 import type { TabType } from '@/core/store/tabs'
 import type { DockPanel, TabView } from '@/editors/contributions'
 import { EDITOR_TABS } from '@/editors/registry'
 import { Count } from '@/ui/Badge'
 import { Explorer } from './explorer/Explorer'
+import { InspectorDock } from './docks/InspectorDock'
+import { OutlineDock } from './outline/OutlineDock'
 import { ConsolePanel } from './panels/Console'
 import { DebugBadge, DebugPanel } from './panels/Debug'
 import { InstancesPanel } from './panels/Instances'
@@ -54,26 +56,38 @@ function ConsoleLines() {
   return lines > 0 ? <Count value={lines} /> : null
 }
 
-/** The bottom dock's panels, in their columns' order. */
+/**
+ * The docks' panels, in the View menu's order. Where each starts is
+ * `DEFAULT_DOCKS` (`core/store/docks.ts`), which names every one.
+ */
 export const DOCK_PANELS: DockPanel[] = [
+  {
+    id: 'outline',
+    title: 'Outline',
+    view: OutlineDock,
+    menu: { label: 'Outline', hint: "The active resource's parts and files", icon: 'list' },
+  },
+  {
+    id: 'inspector',
+    title: 'Inspector',
+    view: InspectorDock,
+    menu: { label: 'Inspector', hint: "The selection's fields", icon: 'edit' },
+  },
   {
     id: 'project',
     title: 'Project',
-    column: 'left',
     view: Explorer,
     menu: { label: 'Project Explorer', hint: 'Every resource in the project', icon: 'grid' },
   },
   {
     id: 'instances',
     title: 'Instances',
-    column: 'left',
     view: InstancesPanel,
     menu: { label: 'Instances', hint: 'Centities alive on the dev server', icon: 'list' },
   },
   {
     id: 'problems',
     title: 'Problems',
-    column: 'right',
     view: ProblemsPanel,
     badge: ProblemCounts,
     menu: { label: 'Problems', hint: 'What validation found in the project', icon: 'warning' },
@@ -81,7 +95,6 @@ export const DOCK_PANELS: DockPanel[] = [
   {
     id: 'console',
     title: 'Console',
-    column: 'right',
     view: ConsolePanel,
     badge: ConsoleLines,
     menu: { label: 'Console', hint: "The dev server's log and commands", icon: 'code' },
@@ -89,7 +102,6 @@ export const DOCK_PANELS: DockPanel[] = [
   {
     id: 'tests',
     title: 'Tests',
-    column: 'right',
     view: TestsPanel,
     badge: UnpassedTests,
     menu: {
@@ -101,7 +113,6 @@ export const DOCK_PANELS: DockPanel[] = [
   {
     id: 'profiler',
     title: 'Profiler',
-    column: 'right',
     view: ProfilerPanel,
     menu: {
       label: 'Profiler',
@@ -112,7 +123,6 @@ export const DOCK_PANELS: DockPanel[] = [
   {
     id: 'debug',
     title: 'Debug',
-    column: 'right',
     view: DebugPanel,
     badge: DebugBadge,
     menu: {
@@ -123,17 +133,12 @@ export const DOCK_PANELS: DockPanel[] = [
   },
 ]
 
-/** The panels of one column, in order. */
-export const panelsIn = (column: DockColumn) => DOCK_PANELS.filter((it) => it.column === column)
+const BY_ID = new Map(DOCK_PANELS.map((it) => [it.id, it]))
 
-/** The panel a column shows for the layout's [id]: that one, or the column's first when it's gone. */
-export const shownPanel = (column: DockColumn, id: string | null): DockPanel => {
-  const panels = panelsIn(column)
-  return panels.find((it) => it.id === id) ?? panels[0]!
-}
+/** The panel with [id], if there is one. */
+export const panelById = (id: string): DockPanel | undefined => BY_ID.get(id)
 
-/** Opens the bottom dock on panel [id], in its own column. */
+/** Shows panel [id] wherever it's docked: its tab, and its dock if hidden. */
 export function showPanel(layout: LayoutStore, id: string) {
-  const panel = DOCK_PANELS.find((it) => it.id === id)
-  if (panel) layout.getState().showBottom(panel.column, panel.id)
+  layout.getState().reveal(id)
 }

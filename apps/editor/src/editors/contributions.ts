@@ -167,13 +167,14 @@ export interface TabView {
   outline?: { subtitle: string; view: ComponentType }
 }
 
-/** A panel in the bottom dock. Its [id] is remembered in the layout, so it never changes. */
+/**
+ * A panel in the docks. Its [id] is remembered in the layout (where it is,
+ * `core/store/docks.ts`, which also says where it starts), so it never changes.
+ */
 export interface DockPanel {
   id: string
   /** Its tab's name. */
   title: string
-  /** The bottom dock's column it lives in. */
-  column: 'left' | 'right'
   view: ComponentType
   /** Beside its title (counts). */
   badge?: ComponentType

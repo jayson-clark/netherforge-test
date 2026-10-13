@@ -3,6 +3,19 @@ import { canonicalizeModel, type ResourcePackFile } from '@/core/format'
 import { exampleFiles, exampleProject } from '@/testing/fixtures'
 import {
   addEntry,
+  addHudElement,
+  addSoundEntry,
+  hudKeys,
+  hudKindOf,
+  newHudElement,
+  removeHudElement,
+  removeSoundEntry,
+  renameHudElement,
+  renameHudIcon,
+  setGameModel,
+  setHudHidden,
+  setHudIcon,
+  setHudReplace,
   duplicateEntry,
   freeEntryKey,
   idFrom,
@@ -144,5 +157,70 @@ describe('game textures', () => {
     expect(unusedTextures(pack, ['vanilla/block/stone.png', 'other.png'])).toEqual(['other.png'])
     setGameTexture(pack, 'block/stone', undefined)
     expect(pack).toEqual({})
+  })
+})
+
+describe('the HUD, game models and sound events', () => {
+  const canonical = (pack: ResourcePackFile) =>
+    JSON.parse(
+      canonicalizeModel('resource_pack', 'resource_packs/ui/pack.json', pack).text!,
+    ) as ResourcePackFile
+
+  it('adds, renames and removes HUD elements, keyed across kinds, and drops an empty HUD', () => {
+    const pack: ResourcePackFile = {}
+    addHudElement(pack, 'bars', 'mana', newHudElement('bars', 'hud/mana.png'))
+    addHudElement(pack, 'icons', 'effects', newHudElement('icons', 'hud/poison.png'))
+    addHudElement(pack, 'texts', 'label', newHudElement('texts', ''))
+    expect(hudKeys(pack)).toEqual(['effects', 'label', 'mana'])
+    expect(hudKindOf(pack, 'effects')).toBe('icons')
+    expect(canonical(pack).hud).toEqual(pack.hud)
+
+    renameHudElement(pack, 'mana', 'label')
+    expect(hudKindOf(pack, 'mana')).toBe('bars')
+    renameHudElement(pack, 'mana', 'energy')
+    expect(hudKindOf(pack, 'energy')).toBe('bars')
+
+    setHudIcon(pack, 'effects', 'regen', 'hud/regen.png')
+    renameHudIcon(pack, 'effects', 'icon', 'poison')
+    setHudIcon(pack, 'effects', 'regen', undefined)
+    setHudIcon(pack, 'effects', 'poison', undefined)
+    expect(pack.hud!.icons!.effects!.icons).toEqual({ poison: 'hud/poison.png' })
+
+    for (const key of hudKeys(pack)) removeHudElement(pack, key)
+    expect('hud' in pack).toBe(false)
+  })
+
+  it('hides the game’s elements in its order and redraws its sprites', () => {
+    const order = ['health', 'food', 'armor', 'air', 'experience'] as const
+    const pack: ResourcePackFile = {}
+    setHudHidden(pack, 'food', true, order)
+    setHudHidden(pack, 'health', true, order)
+    setHudReplace(pack, 'hud/hotbar', 'hud/hotbar.png')
+    expect(pack.hud).toEqual({
+      hide: ['health', 'food'],
+      replace: { 'hud/hotbar': 'hud/hotbar.png' },
+    })
+    setHudHidden(pack, 'food', false, order)
+    setHudHidden(pack, 'health', false, order)
+    setHudReplace(pack, 'hud/hotbar', undefined)
+    expect('hud' in pack).toBe(false)
+  })
+
+  it('redraws the game’s models and adds and removes sound events', () => {
+    const pack: ResourcePackFile = {}
+    setGameModel(pack, 'block/lantern', 'lantern.json')
+    expect(pack.models).toEqual({ 'block/lantern': 'lantern.json' })
+    setGameModel(pack, 'block/lantern', undefined)
+    expect('models' in pack).toBe(false)
+
+    addSoundEntry(pack, 'minecraft:block.stone.break', ['blocks/break_1.ogg'])
+    addSoundEntry(pack, 'step', [])
+    expect(pack.sounds).toEqual({
+      'minecraft:block.stone.break': { files: ['blocks/break_1.ogg'] },
+      step: {},
+    })
+    removeSoundEntry(pack, 'step')
+    removeSoundEntry(pack, 'minecraft:block.stone.break')
+    expect('sounds' in pack).toBe(false)
   })
 })

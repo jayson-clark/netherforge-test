@@ -1,17 +1,20 @@
 /**
  * Project settings: `netherforge.json` as a form. The name, namespace and
- * version, the target and format (shown, not changed here: a new target or
- * format is a different project), `managedWorlds`, the existing server worlds scripts may unload
- * and delete, `requires`, what the project's scripts need that a package must declare
+ * version, the target Minecraft version (one the editor runs) and the format
+ * (shown: there's one), `managedWorlds`, the existing server worlds scripts may unload
+ * and delete, `worlds` (each world's terrain, seed, dimension type, game rules and how mobs
+ * spawn there), `requires`, what the project's scripts need that a package must declare
  * (moderation, a database, HTTP hosts, other plugins), beside what the whole tree requires
- * (format's combined list, from the outline), `allow`, the permissions scripts may grant, and
- * `worlds`, how mobs spawn per world, and `settings`, what the server's owner may change ([SettingsSection]). Edits
+ * (format's combined list, from the outline), `allow`, the permissions scripts may grant,
+ * `dependencies` and `exports` (what this project uses of others, and what others may use of
+ * it), `generate`, and `settings`, what the server's owner may change ([SettingsSection]). Edits
  * go through the store like any model document, so undo, canonical saving
- * and hot reload are the usual ones; "Edit as JSON" is the way to anything
- * else.
+ * and hot reload are the usual ones.
  */
 import { useState } from 'react'
 import {
+  KINDS,
+  NAMESPACE_PATTERN,
   HTTP_HOST_PATTERN,
   HTTP_HOST_RULE,
   NAMESPACE_RULE,
@@ -23,10 +26,21 @@ import {
   type SpawnCategory,
   WORLD_NAME_PATTERN,
   WORLD_NAME_RULE,
+  type KindId,
   type ProjectManifest,
 } from '@/core/format'
 import { useWorkspace } from '@/state/providers'
-import { CheckField, NumberInput, Row, Section, TextField } from '@/ui/fields'
+import { ask } from '@/ui/dialogs'
+import {
+  Check,
+  CheckField,
+  FieldGroup,
+  NumberInput,
+  Row,
+  Section,
+  SelectField,
+  TextField,
+} from '@/ui/fields'
 import { IconButton, Button } from '@/ui/Button'
 import { Hint, Mono, Muted } from '@/ui/text'
 import { useFocusRequests } from '@/editors/shared/useFocusRequests'
@@ -42,9 +56,17 @@ import {
   removeManagedWorld,
   removePermission,
   removeRequired,
+  parseGameRule,
+  removeDependency,
   removeWorldSpawn,
+  setDependency,
+  setExported,
+  setGameRule,
+  setGenerate,
   setRequired,
   setWorldSpawn,
+  setWorldValue,
+  type DependencySource,
   type RequiredFlag,
   type RequiredList,
   type SpawnField,
@@ -55,6 +77,10 @@ const WORLD_RULE = capitalised(WORLD_NAME_RULE)
 const PERMISSION_RULE = capitalised(PERMISSION_NODE_RULE)
 const HOST_RULE = capitalised(HTTP_HOST_RULE)
 const PLUGIN_RULE = capitalised(PLUGIN_NAME_RULE)
+
+/** One empty list, so a selector returns the same value while there's no outline yet. */
+const NO_IDS: string[] = []
+const NO_VERSIONS: string[] = []
 
 export function ProjectEditor({ path }: { path: string }) {
   const { doc, model, edit } = useModelDoc<ProjectManifest>(path)
@@ -103,9 +129,14 @@ export function ProjectEditor({ path }: { path: string }) {
               })
             }
           />
-          <Row label="Minecraft">
-            <span aria-label="Target Minecraft version">{model.minecraft}</span>
-          </Row>
+          <TargetVersion
+            current={model.minecraft}
+            onChange={(minecraft) =>
+              edit((draft) => {
+                draft.minecraft = minecraft
+              })
+            }
+          />
           <Row label="Format">
             <span>{model.formatVersion}</span>
           </Row>
@@ -120,6 +151,8 @@ export function ProjectEditor({ path }: { path: string }) {
           onSet={(world, field, category, value) =>
             edit((draft) => setWorldSpawn(draft, world, field, category, value))
           }
+          onValue={(world, key, value) => edit((draft) => setWorldValue(draft, world, key, value))}
+          onRule={(world, rule, value) => edit((draft) => setGameRule(draft, world, rule, value))}
           onRemove={(world) => edit((draft) => removeWorldSpawn(draft, world))}
         />
         <Requirements
@@ -134,6 +167,31 @@ export function ProjectEditor({ path }: { path: string }) {
           onAdd={(node) => edit((draft) => addPermission(draft, node))}
           onRemove={(node) => edit((draft) => removePermission(draft, node))}
         />
+        <Dependencies
+          namespace={model.namespace}
+          dependencies={model.dependencies}
+          onSet={(namespace, source) => edit((draft) => setDependency(draft, namespace, source))}
+          onRemove={(namespace) => edit((draft) => removeDependency(draft, namespace))}
+        />
+        <Exports
+          exports={model.exports}
+          onSet={(folder, id, on) => edit((draft) => setExported(draft, folder, id, on))}
+        />
+        <Section title="Generators">
+          <TextField
+            label="Commands"
+            dataPath="generate"
+            multiline
+            value={(model.generate ?? []).join('\n')}
+            placeholder="node tools/items.mjs (one a line)"
+            onChange={(text) => edit((draft) => setGenerate(draft, text))}
+          />
+          <Hint>
+            What <Mono>netherforge generate</Mono> runs, in order from the project&apos;s folder, to
+            write generated files; it stops at the first that fails, then formats the project. The
+            server never runs them.
+          </Hint>
+        </Section>
         <SettingsSection settings={model.settings} edit={edit} />
       </Page>
     </EditorScreen>
@@ -181,6 +239,8 @@ function ManagedWorlds({
 function WorldSpawning({
   worlds,
   onSet,
+  onValue,
+  onRule,
   onRemove,
 }: {
   worlds: ProjectManifest['worlds']
@@ -190,8 +250,23 @@ function WorldSpawning({
     category: SpawnCategory,
     value: number | undefined,
   ) => void
+  onValue: (
+    world: string,
+    key: 'terrain' | 'seed' | 'dimensionType',
+    value: string | number | undefined,
+  ) => void
+  onRule: (world: string, rule: string, value: boolean | number | undefined) => void
   onRemove: (world: string) => void
 }) {
+  const terrains = useWorkspace((s) => s.outline?.resources.terrain ?? NO_IDS)
+  const dimensions = useWorkspace((s) => s.outline?.resources.dimension_type ?? NO_IDS)
+  const choices = (ids: string[], current: string | undefined, none: string) => [
+    { value: '', label: none },
+    ...ids.map((it) => ({ value: it, label: it })),
+    ...(current && !ids.includes(current)
+      ? [{ value: current, label: `${current} (missing)` }]
+      : []),
+  ]
   const [added, setAdded] = useState<string[]>([])
   const [name, setName] = useState('')
   const saved = Object.keys(worlds ?? {})
@@ -211,13 +286,15 @@ function WorldSpawning({
     setName('')
   }
   return (
-    <Section title="Mob spawning by world">
+    <Section title="Worlds">
       <Hint>
-        How the game spawns mobs in a world on the server, by the world&apos;s name (it needn&apos;t
-        be one the project manages). The limit is the most mobs of a category around each player,
-        the interval the ticks between spawn attempts; 0 stops the category spawning naturally.
-        Blank keeps the server&apos;s own setting (<Mono>bukkit.yml</Mono>). Applied when the
-        project loads and reloads, and whenever the world is loaded or created.
+        Settings for a world on the server, by the world&apos;s name (it needn&apos;t be one the
+        project manages). A world with a terrain or a dimension type the server doesn&apos;t have
+        yet is made with them when the project loads. Mob spawning: the limit is the most mobs of a
+        category around each player, the interval the ticks between spawn attempts; 0 stops the
+        category spawning naturally. Blank keeps the server&apos;s own setting (
+        <Mono>bukkit.yml</Mono>). Applied when the project loads and reloads, and whenever the world
+        is loaded or created.
       </Hint>
       {names.length === 0 && <Muted>None.</Muted>}
       {names.map((world) => (
@@ -239,6 +316,36 @@ function WorldSpawning({
               }}
             />
           </legend>
+          <SelectField
+            label="Terrain"
+            dataPath={`worlds.${world}.terrain`}
+            value={worlds?.[world]?.terrain ?? ''}
+            options={choices(terrains, worlds?.[world]?.terrain, "(the server's generator)")}
+            onChange={(value) => onValue(world, 'terrain', value || undefined)}
+          />
+          <TextField
+            label="Seed"
+            dataPath={`worlds.${world}.seed`}
+            value={worlds?.[world]?.seed === undefined ? '' : String(worlds[world]!.seed)}
+            placeholder="random"
+            onChange={(text) => {
+              const seed = Number(text.trim())
+              if (text.trim() === '') onValue(world, 'seed', undefined)
+              else if (Number.isSafeInteger(seed)) onValue(world, 'seed', seed)
+            }}
+          />
+          <SelectField
+            label="Dimension type"
+            dataPath={`worlds.${world}.dimensionType`}
+            value={worlds?.[world]?.dimensionType ?? ''}
+            options={choices(dimensions, worlds?.[world]?.dimensionType, "(the world's own)")}
+            onChange={(value) => onValue(world, 'dimensionType', value || undefined)}
+          />
+          <GameRules
+            world={world}
+            rules={worlds?.[world]?.gameRules as Record<string, unknown> | undefined}
+            onRule={(rule, value) => onRule(world, rule, value)}
+          />
           <table className={styles.requirements}>
             <thead>
               <tr>
@@ -284,7 +391,7 @@ function WorldSpawning({
           }}
         />
         <Button size="small" icon="plus" disabled={trimmed === '' || error !== null} onClick={add}>
-          Add spawn world
+          Add world
         </Button>
       </div>
       {error && (
@@ -519,5 +626,252 @@ function NameList({
         </Hint>
       )}
     </>
+  )
+}
+
+/** `minecraft`: the version the project targets, from those this editor runs a server for. */
+function TargetVersion({
+  current,
+  onChange,
+}: {
+  current: string
+  onChange: (version: string) => void
+}) {
+  const versions = useWorkspace((s) => s.appInfo?.minecraftVersions ?? NO_VERSIONS)
+  const options = versions.includes(current) ? versions : [current, ...versions]
+  return (
+    <>
+      <SelectField
+        label="Minecraft"
+        dataPath="minecraft"
+        value={current}
+        options={options.map((it) => ({ value: it, label: it }))}
+        onChange={onChange}
+      />
+      <Hint>
+        The server the editor runs and the game data validation checks against. Import this
+        version&apos;s client (Settings › Minecraft) for its pictures, and restart the dev server to
+        run it.
+      </Hint>
+    </>
+  )
+}
+
+/** A world's `gameRules`: each `true`, `false` or a whole number, by the game's id. */
+function GameRules({
+  world,
+  rules,
+  onRule,
+}: {
+  world: string
+  rules: Record<string, unknown> | undefined
+  onRule: (rule: string, value: boolean | number | undefined) => void
+}) {
+  const entries = Object.entries(rules ?? {})
+  return (
+    <FieldGroup header="Game rules" data-path={`worlds.${world}.gameRules`}>
+      {entries.map(([rule, value]) => (
+        <Row key={rule} label={<Mono>{rule}</Mono>}>
+          <input
+            aria-label={`${world} ${rule}`}
+            data-path={`worlds.${world}.gameRules.${rule}`}
+            defaultValue={String(value)}
+            key={String(value)}
+            onBlur={(event) => {
+              const parsed = parseGameRule(event.target.value)
+              if (parsed === null) event.target.value = String(value)
+              else if (parsed !== value) onRule(rule, parsed)
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') event.currentTarget.blur()
+            }}
+          />
+          <IconButton
+            icon="trash"
+            label={`Remove ${world} ${rule}`}
+            onClick={() => onRule(rule, undefined)}
+          />
+        </Row>
+      ))}
+      <Button
+        size="small"
+        icon="plus"
+        onClick={async () => {
+          const rule = await ask.prompt({
+            title: `New game rule for ${world}`,
+            label: 'Rule (the game’s id)',
+            initial: '',
+            confirmLabel: 'Add',
+            validate: (value) =>
+              !/^([a-z0-9_.-]+:)?[a-zA-Z0-9_.-]+$/.test(value)
+                ? 'A game rule id: keep_inventory, minecraft:random_tick_speed'
+                : rules?.[value] !== undefined
+                  ? 'That rule is set'
+                  : null,
+          })
+          if (!rule) return
+          const value = await ask.prompt({
+            title: `${rule} in ${world}`,
+            label: 'Value: true, false or a whole number',
+            initial: 'true',
+            confirmLabel: 'Set',
+            validate: (text) =>
+              parseGameRule(text) === null ? 'true, false or a whole number' : null,
+          })
+          const parsed = value === null ? null : parseGameRule(value)
+          if (parsed !== null) onRule(rule, parsed)
+        }}
+      >
+        Add game rule
+      </Button>
+    </FieldGroup>
+  )
+}
+
+/** `dependencies`: the packages the project uses, by namespace: a folder beside it, or a git repository. */
+function Dependencies({
+  namespace,
+  dependencies,
+  onSet,
+  onRemove,
+}: {
+  namespace: string
+  dependencies: ProjectManifest['dependencies']
+  onSet: (namespace: string, source: DependencySource) => void
+  onRemove: (namespace: string) => void
+}) {
+  const entries = Object.entries(dependencies ?? {})
+  const add = async (kind: 'path' | 'git') => {
+    const name = await ask.prompt({
+      title: kind === 'path' ? 'Depend on a folder' : 'Depend on a git repository',
+      label: 'Its namespace (what this project names its things by)',
+      initial: '',
+      confirmLabel: 'Next',
+      validate: (value) =>
+        !NAMESPACE_PATTERN.test(value)
+          ? capitalised(NAMESPACE_RULE)
+          : value === namespace
+            ? "That's this project's own"
+            : dependencies?.[value]
+              ? 'It depends on that one already'
+              : null,
+    })
+    if (!name) return
+    const where = await ask.prompt({
+      title: `${name}'s source`,
+      label: kind === 'path' ? 'Folder, relative to this one' : 'Repository URL',
+      initial: kind === 'path' ? `../${name}` : 'https://',
+      confirmLabel: 'Add',
+      validate: (value) => (value.trim() ? null : 'Required'),
+    })
+    if (!where) return
+    onSet(name, kind === 'path' ? { path: where.trim() } : { git: where.trim() })
+  }
+  return (
+    <Section title="Dependencies">
+      <Hint>
+        Packages this project uses: their exported resources are named <Mono>ns:id</Mono>. A git
+        dependency is fetched at its rev (a branch, tag or commit; the default branch without one)
+        and pinned in <Mono>netherforge.lock</Mono>.
+      </Hint>
+      {entries.length === 0 && <Muted>None.</Muted>}
+      {entries.map(([name, dependency]) => (
+        <fieldset
+          key={name}
+          className={styles.setting}
+          aria-label={`Dependency ${name}`}
+          data-path={`dependencies.${name}`}
+          tabIndex={-1}
+        >
+          <legend className={styles.settingName}>
+            <Mono>{name}</Mono>
+            <IconButton
+              icon="trash"
+              label={`Remove dependency ${name}`}
+              onClick={() => onRemove(name)}
+            />
+          </legend>
+          {dependency.git !== undefined ? (
+            <>
+              <TextField
+                label="Repository"
+                dataPath={`dependencies.${name}.git`}
+                value={dependency.git}
+                onChange={(git) =>
+                  git.trim() &&
+                  onSet(name, {
+                    git: git.trim(),
+                    ...(dependency.rev ? { rev: dependency.rev } : {}),
+                  })
+                }
+              />
+              <TextField
+                label="Rev"
+                dataPath={`dependencies.${name}.rev`}
+                value={dependency.rev}
+                placeholder="the default branch"
+                onChange={(rev) =>
+                  onSet(name, { git: dependency.git!, ...(rev.trim() ? { rev: rev.trim() } : {}) })
+                }
+              />
+            </>
+          ) : (
+            <TextField
+              label="Folder"
+              dataPath={`dependencies.${name}.path`}
+              value={dependency.path}
+              onChange={(path) => path.trim() && onSet(name, { path: path.trim() })}
+            />
+          )}
+        </fieldset>
+      ))}
+      <div className={styles.add}>
+        <Button size="small" icon="plus" onClick={() => void add('path')}>
+          Add folder dependency
+        </Button>
+        <Button size="small" icon="plus" onClick={() => void add('git')}>
+          Add git dependency
+        </Button>
+      </div>
+    </Section>
+  )
+}
+
+/** `exports`: what projects that depend on this one may use of it, ticked per resource. */
+function Exports({
+  exports,
+  onSet,
+}: {
+  exports: ProjectManifest['exports']
+  onSet: (folder: string, id: string, on: boolean) => void
+}) {
+  const resources = useWorkspace((s) => s.outline?.resources)
+  const kinds = (Object.keys(KINDS) as KindId[]).filter(
+    (kind) => KINDS[kind].exportable && (resources?.[kind]?.length ?? 0) > 0,
+  )
+  return (
+    <Section title="Exports">
+      <Hint>
+        When another project depends on this one, it may use only what&apos;s ticked here, by{' '}
+        <Mono>ns:id</Mono>. Everything else stays this project&apos;s own.
+      </Hint>
+      {kinds.length === 0 && <Muted>No resources yet.</Muted>}
+      {kinds.map((kind) => {
+        const folder = KINDS[kind].folder
+        const listed = exports?.[folder] ?? []
+        return (
+          <FieldGroup key={kind} header={<Mono>{folder}</Mono>} data-path={`exports.${folder}`}>
+            {resources![kind]!.map((id) => (
+              <Check
+                key={id}
+                label={id}
+                checked={listed.includes(id)}
+                onChange={(on) => onSet(folder, id, on)}
+              />
+            ))}
+          </FieldGroup>
+        )
+      })}
+    </Section>
   )
 }

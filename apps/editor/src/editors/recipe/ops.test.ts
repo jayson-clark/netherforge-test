@@ -12,8 +12,11 @@ import {
   ORIGIN,
   sameIngredient,
   setCell,
+  setMaterial,
+  setMaterialCount,
   setRecipeType,
   setShapelessIngredient,
+  setStations,
   setSlotIngredient,
   shapedOf,
   swapCells,
@@ -272,5 +275,42 @@ describe('a station recipe', () => {
     setRecipeType(recipe, 'shapeless')
     expect(recipe.ingredients).toEqual(['minecraft:stick', { item: 'ruby' }])
     expect(recipe.materials).toBeUndefined()
+  })
+})
+
+describe('station recipes', () => {
+  it('adds, changes and removes materials, a count of 1 being no key', () => {
+    const recipe: RecipeFile = { type: 'station', materials: [], result: { item: 'torch' } }
+    const next = produce(recipe, (draft) => {
+      setMaterial(draft, 0, { item: 'gel' })
+      setMaterial(draft, 1, '#minecraft:planks')
+      setMaterialCount(draft, 1, 2.4)
+      setMaterial(draft, 1, '#minecraft:logs')
+    })
+    expect(next.materials).toEqual([
+      { ingredient: { item: 'gel' } },
+      { ingredient: '#minecraft:logs', count: 2 },
+    ])
+    const cleared = produce(next, (draft) => {
+      setMaterialCount(draft, 1, 1)
+      setMaterial(draft, 0, null)
+    })
+    expect(cleared.materials).toEqual([{ ingredient: '#minecraft:logs' }])
+  })
+
+  it('reads stations from commas and lines, keeping either-or ones whole', () => {
+    const recipe: RecipeFile = {
+      type: 'station',
+      materials: [],
+      result: { kind: 'minecraft:torch' },
+    }
+    const next = produce(recipe, (draft) =>
+      setStations(draft, 'work_bench,\n minecraft:furnace|minecraft:blast_furnace '),
+    )
+    expect(next.stations).toEqual(['work_bench', 'minecraft:furnace | minecraft:blast_furnace'])
+    expect(
+      JSON.parse(canonicalizeModel('recipe', 'recipes/torch.json', next).text!).stations,
+    ).toEqual(next.stations)
+    expect('stations' in produce(next, (draft) => setStations(draft, ' , '))).toBe(false)
   })
 })

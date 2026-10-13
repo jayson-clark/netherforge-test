@@ -4,14 +4,21 @@
  * drawn from format's `compileResourcePacks` numbers (a skin over the window it
  * fits, a glyph inside a line of text, an item model in a slot, a tooltip's
  * nine-slice frame). PNGs are imported into `textures/` and Ogg files into
- * `sounds/` as project files; every sound file is a sound event. Game
- * textures are the game's own pictures (`block/stone`) it redraws, for every
- * player, each started from a copy of the game's out of the client import.
+ * `sounds/` as project files; every sound file is a sound event, and pack.json
+ * adds events that pick among files or replace the game's. Game textures and
+ * game models are the game's own (`block/stone`) it redraws, for every
+ * player, each texture started from a copy of the game's out of the client
+ * import. The HUD's bars, rows of icons and lines of text are gallery entries
+ * too; which of the game's HUD elements it hides and which sprites it redraws
+ * are the pack's own fields.
  */
 import { setKey } from '@/core/draft'
 import { useRef, useState, type ChangeEvent } from 'react'
 import {
   GLYPH_DEFAULTS,
+  HUD_LIMITS,
+  HudAlignValues,
+  HudElementValues,
   MENU_ROWS,
   MenuTypeValues,
   ItemModelParentValues,
@@ -21,6 +28,9 @@ import {
   RESOURCE_PACK_TEXTURE_PATH_PATTERN,
   RESOURCE_PACK_TEXTURE_PATH_RULE,
   SKIN_DEFAULTS,
+  type HudAlign,
+  type HudBarDef,
+  type HudIconsDef,
   type ResourcePackFile,
   type SkinDef,
   type TooltipDef,
@@ -34,7 +44,9 @@ import { MiniText, TextPreview } from '@/minecraft/text/MiniText'
 import { ask } from '@/ui/dialogs'
 import {
   CheckField,
+  Check,
   Datalist,
+  FieldGroup,
   NumberField,
   Row,
   Section,
@@ -46,6 +58,7 @@ import { cx } from '@/ui/cx'
 import { Icon } from '@/ui/Icon'
 import { Hint, Muted } from '@/ui/text'
 import { InspectorPanel } from '@/editors/shared/docks'
+import { fieldPath } from '@/editors/shared/focus'
 import { EditorBar, EditorScreen } from '@/editors/shared/EditorLayout'
 import { Gallery, GallerySection } from '@/editors/shared/Gallery'
 import { useFocusRequests } from '@/editors/shared/useFocusRequests'
@@ -53,11 +66,26 @@ import { EditAsJson, useModelDoc } from '@/editors/shared/modelDoc'
 import { RawDocView } from '@/editors/shared/RawDocView'
 import {
   addEntry,
+  addHudElement,
+  addSoundEntry,
   DEFAULT_FOLDER,
   ENTRY_KINDS,
   entryTextures,
   freeEntryKey,
   gameTextureCopyPath,
+  HUD_KINDS,
+  hudKeys,
+  hudKindOf,
+  newHudElement,
+  removeHudElement,
+  removeSoundEntry,
+  renameHudElement,
+  renameHudIcon,
+  setGameModel,
+  setHudHidden,
+  setHudIcon,
+  setHudReplace,
+  type HudKind,
   importPath,
   isOgg,
   newEntry,
@@ -125,6 +153,7 @@ export function ResourcePackEditor({ path }: { path: string }) {
   const soundInput = useRef<HTMLInputElement>(null)
   const [importFolder, setImportFolder] = useState(DEFAULT_FOLDER.skins)
   const game = useGameTextures()
+  const packModels = useResourcePackModels()
   const ws = () => workspace.getState()
   const pick = (next: Pick) => (next ? view.select(next) : view.select())
 
@@ -134,6 +163,15 @@ export function ResourcePackEditor({ path }: { path: string }) {
     if (kind === 'textures' && typeof key === 'string') {
       pick({ kind: 'game', key })
       return segments.slice(2)
+    }
+    if (kind === 'models' && typeof key === 'string') {
+      pick({ kind: 'gameModel', key })
+      return segments
+    }
+    const [, part, element] = segments
+    if (kind === 'hud' && HUD_KINDS.includes(part as HudKind) && typeof element === 'string') {
+      pick({ kind: 'hud', key: element })
+      return segments
     }
     if ((ENTRY_KINDS.includes(kind as EntryKind) || kind === 'sounds') && typeof key === 'string') {
       pick({ kind: kind as EntryKind | 'sounds', key })
@@ -288,6 +326,81 @@ export function ResourcePackEditor({ path }: { path: string }) {
   const redrawn = Object.entries(model.textures ?? {}).sort(([a], [b]) =>
     a < b ? -1 : a > b ? 1 : 0,
   )
+  const remodelled = Object.entries(model.models ?? {}).sort(([a], [b]) =>
+    a < b ? -1 : a > b ? 1 : 0,
+  )
+  const modelFiles = Object.keys(packModels[pack]?.files ?? {}).sort()
+
+  /** Redraws one of the game's models with a model file of the pack. */
+  const remodel = async () => {
+    if (modelFiles.length === 0) {
+      ws().notify(
+        'error',
+        'Put a model file in the pack’s models/ folder first: it’s what’s drawn.',
+      )
+      return
+    }
+    const name = await ask.prompt({
+      title: 'Redraw a game model',
+      label: 'Game model (its path under models/, without .json)',
+      message: 'Every block state and item the game draws with it takes the new shape.',
+      initial: 'block/',
+      confirmLabel: 'Redraw',
+      validate: (value) =>
+        !/^[a-z0-9_]+(\/[a-z0-9_.-]+)+$/.test(value)
+          ? 'A model path: block/lantern, item/stick…'
+          : model.models?.[value]
+            ? 'The pack redraws it already'
+            : null,
+    })
+    if (!name) return
+    edit((draft) => setGameModel(draft, name, modelFiles[0]))
+    pick({ kind: 'gameModel', key: name })
+  }
+
+  const hud = hudKeys(model)
+  const addHud = async (kind: HudKind) => {
+    const texture = textures[0]
+    if (!texture && kind !== 'texts') {
+      ws().notify('error', 'Import a PNG first: a bar or a row of icons is drawn from textures.')
+      return
+    }
+    const key = await ask.prompt({
+      title: `New HUD ${HUD_LABELS[kind]}`,
+      label: 'Key',
+      message: `Scripts fill it as ${pack}/<key> (player:hud()).`,
+      initial: '',
+      confirmLabel: 'Create',
+      validate: (value) =>
+        !ID_PATTERN.test(value)
+          ? 'Lowercase letters, digits and _'
+          : hudKindOf(model, value)
+            ? 'Another HUD element has that key'
+            : null,
+    })
+    if (!key) return
+    edit((draft) => addHudElement(draft, kind, key, newHudElement(kind, texture ?? '')))
+    pick({ kind: 'hud', key })
+  }
+
+  const addSound = async () => {
+    const key = await ask.prompt({
+      title: 'New sound event',
+      label: 'Key',
+      message: `${pack}/<key> plays one of its files at random. A key like minecraft:block.stone.break replaces the game's event for every player.`,
+      initial: '',
+      confirmLabel: 'Create',
+      validate: (value) =>
+        !/^([a-z0-9_]+(\/[a-z0-9_]+)*|minecraft:[a-z0-9_.]+)$/.test(value)
+          ? 'Lowercase letters, digits, _ and / (or minecraft:<event>)'
+          : sounds.some((it) => it.key === value)
+            ? 'That event exists'
+            : null,
+    })
+    if (!key) return
+    edit((draft) => addSoundEntry(draft, key, soundFiles.slice(0, 1)))
+    pick({ kind: 'sounds', key })
+  }
 
   return (
     <EditorScreen>
@@ -391,6 +504,52 @@ export function ResourcePackEditor({ path }: { path: string }) {
           }))}
         />
         <GallerySection
+          title="Game models"
+          picked={picked?.kind === 'gameModel' ? picked.key : null}
+          onPick={(key) => pick({ kind: 'gameModel', key })}
+          actions={
+            <IconButton icon="plus" label="Redraw a game model" onClick={() => void remodel()} />
+          }
+          cards={remodelled.map(([name, file]) => ({
+            key: name,
+            label: `Game model ${name}`,
+            title: `${name} → models/${file}`,
+            caption: name,
+            picture: <Icon name={modelFiles.includes(file) ? 'cube' : 'warning'} />,
+          }))}
+        />
+        <GallerySection
+          title="HUD"
+          picked={picked?.kind === 'hud' ? picked.key : null}
+          onPick={(key) => pick({ kind: 'hud', key })}
+          actions={
+            <>
+              {HUD_KINDS.map((kind) => (
+                <IconButton
+                  key={kind}
+                  icon={kind === 'bars' ? 'chart' : kind === 'icons' ? 'grid' : 'list'}
+                  label={`New HUD ${HUD_LABELS[kind]}`}
+                  onClick={() => void addHud(kind)}
+                />
+              ))}
+            </>
+          }
+          cards={hud.map((key) => {
+            const texture = hudPicture(model, key)
+            return {
+              key,
+              label: `HUD ${HUD_LABELS[hudKindOf(model, key)!]} ${key}`,
+              caption: key,
+              picture:
+                texture && textures.includes(texture) ? (
+                  <img src={textureUrl(texture)} alt="" />
+                ) : (
+                  <Icon name={texture ? 'warning' : 'list'} />
+                ),
+            }
+          })}
+        />
+        <GallerySection
           title="Textures"
           picked={picked?.kind === 'textures' ? picked.key : null}
           onPick={(key) => pick({ kind: 'textures', key })}
@@ -411,6 +570,9 @@ export function ResourcePackEditor({ path }: { path: string }) {
           title="Sounds"
           picked={picked?.kind === 'sounds' ? picked.key : null}
           onPick={(key) => pick({ kind: 'sounds', key })}
+          actions={
+            <IconButton icon="plus" label="New sound event" onClick={() => void addSound()} />
+          }
           cards={sounds.map(({ key, files: plays }) => ({
             key,
             label: `Sound ${key}`,
@@ -445,6 +607,25 @@ export function ResourcePackEditor({ path }: { path: string }) {
             onRemoved={() => pick(null)}
           />
         )}
+        {picked?.kind === 'gameModel' && model.models?.[picked.key] !== undefined && (
+          <GameModelInspector
+            name={picked.key}
+            file={model.models[picked.key]!}
+            modelFiles={modelFiles}
+            edit={edit}
+            onRemoved={() => pick(null)}
+          />
+        )}
+        {picked?.kind === 'hud' && hudKindOf(model, picked.key) && (
+          <HudInspector
+            pack={pack}
+            hudKey={picked.key}
+            model={model}
+            textures={textures}
+            edit={edit}
+            onPick={pick}
+          />
+        )}
         {picked?.kind === 'sounds' && sounds.some((it) => it.key === picked.key) && (
           <SoundInspector
             pack={pack}
@@ -460,6 +641,8 @@ export function ResourcePackEditor({ path }: { path: string }) {
           picked.kind !== 'textures' &&
           picked.kind !== 'sounds' &&
           picked.kind !== 'game' &&
+          picked.kind !== 'gameModel' &&
+          picked.kind !== 'hud' &&
           model[picked.kind]?.[picked.key] && (
             <EntryInspector
               pack={pack}
@@ -493,6 +676,7 @@ export function ResourcePackEditor({ path }: { path: string }) {
             is the sound <code>{pack}/&lt;its path&gt;</code>.
           </Hint>
         </Section>
+        <GameHudSection model={model} textures={textures} game={game} edit={edit} />
       </InspectorPanel>
     </EditorScreen>
   )
@@ -665,8 +849,9 @@ function SoundInspector({
   const { workspace } = useApp()
   const url = useProjectFileUrl()
   const def = model.sounds?.[soundKey]
-  const at = (key: string) => `sounds.${soundKey}.${key}`
+  const at = (key: string) => fieldPath(['sounds', soundKey, key])
   const file = soundFileOf(soundKey)
+  const listId = `sound-files-${pack}`
   return (
     <Section title={`Sound ${pack}/${soundKey}`}>
       <Row label="Plays">
@@ -689,6 +874,21 @@ function SoundInspector({
           {plays.length > 1 && <Muted>One at random each time.</Muted>}
         </div>
       </Row>
+      <TextField
+        label="Files"
+        dataPath={at('files')}
+        value={(def?.files ?? []).join(', ')}
+        placeholder={soundKey.includes(':') ? 'step/grass_1.ogg, …' : `${file} (its own)`}
+        list={listId}
+        onChange={(text) => {
+          const files = text
+            .split(',')
+            .map((it) => it.trim())
+            .filter(Boolean)
+          edit((draft) => setSoundValue(draft, soundKey, 'files', files.length ? files : undefined))
+        }}
+      />
+      <Datalist id={listId} values={soundFiles} />
       <NumberField
         label="Volume"
         dataPath={at('volume')}
@@ -722,6 +922,20 @@ function SoundInspector({
         placeholder="(none)"
         onChange={(value) => edit((draft) => setSoundValue(draft, soundKey, 'subtitle', value))}
       />
+      {def && !soundFiles.includes(file) && (
+        <Row label="">
+          <Button
+            size="small"
+            icon="trash"
+            onClick={() => {
+              edit((draft) => removeSoundEntry(draft, soundKey))
+              onDeleted()
+            }}
+          >
+            Remove event
+          </Button>
+        </Row>
+      )}
       {soundFiles.includes(file) && (
         <Row label="">
           <Button
@@ -1091,5 +1305,379 @@ function TooltipPreview({ pack, def }: { pack: string; def: TooltipDef }) {
         </span>
       </span>
     </Row>
+  )
+}
+
+const HUD_LABELS: Record<HudKind, string> = { bars: 'bar', icons: 'icons', texts: 'text' }
+
+/** The picture a HUD element's card shows: a bar's full segment, a row's first icon; none for text. */
+function hudPicture(model: ResourcePackFile, key: string): string | undefined {
+  const hud = model.hud
+  return hud?.bars?.[key]?.full ?? Object.values(hud?.icons?.[key]?.icons ?? {})[0]
+}
+
+function GameModelInspector({
+  name,
+  file,
+  modelFiles,
+  edit,
+  onRemoved,
+}: {
+  name: string
+  file: string
+  modelFiles: string[]
+  edit: (recipe: (draft: ResourcePackFile) => void) => void
+  onRemoved: () => void
+}) {
+  return (
+    <Section
+      title={`Game model ${name}`}
+      actions={
+        <IconButton
+          icon="trash"
+          label="Draw the game's own again"
+          onClick={() => {
+            edit((draft) => setGameModel(draft, name, undefined))
+            onRemoved()
+          }}
+        />
+      }
+    >
+      <SelectField
+        label="Drawn with"
+        dataPath={fieldPath(['models', name])}
+        value={file}
+        options={[
+          ...modelFiles.map((it) => ({ value: it, label: `models/${it}` })),
+          ...(modelFiles.includes(file)
+            ? []
+            : [{ value: file, label: `models/${file} (missing)` }]),
+        ]}
+        onChange={(next) => edit((draft) => setGameModel(draft, name, next))}
+      />
+      <Hint>
+        Every block state and item the game draws with {name} takes this shape, for every player.
+        What collides with a block and what a player selects stay the game&apos;s.
+      </Hint>
+    </Section>
+  )
+}
+
+/** The game's own HUD: which elements the pack hides, and which sprites it draws instead. */
+function GameHudSection({
+  model,
+  textures,
+  game,
+  edit,
+}: {
+  model: ResourcePackFile
+  textures: string[]
+  game: GameTextures | null
+  edit: (recipe: (draft: ResourcePackFile) => void) => void
+}) {
+  const hidden = model.hud?.hide ?? []
+  const replaced = Object.entries(model.hud?.replace ?? {}).sort(([a], [b]) =>
+    a < b ? -1 : a > b ? 1 : 0,
+  )
+  const sprites = game?.sprites ?? []
+  const textureOptions = (current: string) => [
+    ...textures.map((it) => ({ value: it, label: it })),
+    ...(textures.includes(current) ? [] : [{ value: current, label: `${current} (missing)` }]),
+  ]
+  return (
+    <Section title="The game's HUD">
+      <FieldGroup header="Hidden for every player" data-path="hud.hide">
+        {HudElementValues.map((element) => (
+          <Check
+            key={element}
+            label={element}
+            checked={hidden.includes(element)}
+            onChange={(on) => edit((draft) => setHudHidden(draft, element, on, HudElementValues))}
+          />
+        ))}
+      </FieldGroup>
+      <FieldGroup header="Sprites drawn instead" data-path="hud.replace">
+        {replaced.map(([sprite, texture]) => (
+          <Row key={sprite} label={sprite}>
+            <select
+              aria-label={`Sprite ${sprite}`}
+              data-path={fieldPath(['hud', 'replace', sprite])}
+              value={texture}
+              onChange={(event) =>
+                edit((draft) => setHudReplace(draft, sprite, event.target.value))
+              }
+            >
+              {textureOptions(texture).map((it) => (
+                <option key={it.value} value={it.value}>
+                  {it.label}
+                </option>
+              ))}
+            </select>
+            <IconButton
+              icon="trash"
+              label={`Draw the game's ${sprite} again`}
+              onClick={() => edit((draft) => setHudReplace(draft, sprite, undefined))}
+            />
+          </Row>
+        ))}
+        <Button
+          size="small"
+          icon="plus"
+          disabled={textures.length === 0}
+          onClick={async () => {
+            const sprite = await ask.prompt({
+              title: 'Redraw a HUD sprite',
+              label: 'Sprite (its path under the client’s textures/gui/sprites/)',
+              initial: 'hud/',
+              confirmLabel: 'Redraw',
+              suggestions: sprites,
+              validate: (value) =>
+                !/^[a-z0-9_]+(\/[a-z0-9_]+)*$/.test(value)
+                  ? 'A sprite name: hud/hotbar, hud/heart/full…'
+                  : model.hud?.replace?.[value]
+                    ? 'The pack redraws it already'
+                    : null,
+            })
+            if (sprite) edit((draft) => setHudReplace(draft, sprite, textures[0]!))
+          }}
+        >
+          Redraw a sprite
+        </Button>
+      </FieldGroup>
+      <Hint>
+        Hiding and redrawing apply to every player. Draw a sprite at the game&apos;s own pixel size.
+      </Hint>
+    </Section>
+  )
+}
+
+/** One of the pack's HUD elements: a bar, a row of icons or a line of text, which scripts fill per player. */
+function HudInspector({
+  pack,
+  hudKey,
+  model,
+  textures,
+  edit,
+  onPick,
+}: {
+  pack: string
+  hudKey: string
+  model: ResourcePackFile
+  textures: string[]
+  edit: (recipe: (draft: ResourcePackFile) => void) => void
+  onPick: (pick: Pick) => void
+}) {
+  const { workspace } = useApp()
+  const kind = hudKindOf(model, hudKey)!
+  const def = model.hud![kind]![hudKey]!
+  const at = (...rest: string[]) => fieldPath(['hud', kind, hudKey, ...rest])
+  const editDef = <D,>(recipe: (draft: D) => void) =>
+    edit((draft) => {
+      const target = draft.hud?.[kind]?.[hudKey]
+      if (target) recipe(target as D)
+    })
+  const set = (key: string, value: unknown) =>
+    editDef<Record<string, unknown>>((d) => setKey(d, key, value))
+  const whole = (value: number | undefined) => (value === undefined ? undefined : Math.round(value))
+  const textureSelect = (
+    label: string,
+    key: string,
+    value: string | undefined,
+    optional: boolean,
+  ) => (
+    <SelectField
+      key={key}
+      label={label}
+      dataPath={at(key)}
+      value={value ?? ''}
+      options={[
+        ...(optional || !value ? [{ value: '', label: optional ? '(none)' : '(choose)' }] : []),
+        ...textures.map((it) => ({ value: it, label: it })),
+        ...(value && !textures.includes(value) ? [{ value, label: `${value} (missing)` }] : []),
+      ]}
+      onChange={(next) => set(key, next || undefined)}
+    />
+  )
+  const place = (y: boolean) => (
+    <>
+      <NumberField
+        label="X"
+        dataPath={at('x')}
+        value={(def as { x: number }).x}
+        step={1}
+        onChange={(value) =>
+          value !== undefined &&
+          set('x', Math.max(-HUD_LIMITS.maxX, Math.min(HUD_LIMITS.maxX, Math.round(value))))
+        }
+      />
+      {y && (
+        <NumberField
+          label="Y"
+          dataPath={at('y')}
+          value={(def as { y: number }).y}
+          step={1}
+          min={0}
+          onChange={(value) =>
+            value !== undefined && set('y', Math.min(HUD_LIMITS.maxY, Math.round(value)))
+          }
+        />
+      )}
+      <SelectField<HudAlign | ''>
+        label="Align"
+        dataPath={at('align')}
+        value={(def as { align?: HudAlign }).align ?? ''}
+        options={[
+          { value: '', label: 'left (default)' },
+          ...HudAlignValues.filter((it) => it !== 'left').map((it) => ({ value: it, label: it })),
+        ]}
+        onChange={(value) => set('align', value || undefined)}
+      />
+    </>
+  )
+  return (
+    <Section
+      title={`HUD ${HUD_LABELS[kind]} ${pack}/${hudKey}`}
+      actions={
+        <IconButton
+          icon="trash"
+          label={`Delete HUD element ${hudKey}`}
+          onClick={() => {
+            edit((draft) => removeHudElement(draft, hudKey))
+            onPick(null)
+          }}
+        />
+      }
+    >
+      <TextField
+        label="Key"
+        value={hudKey}
+        onChange={(next) => {
+          if (!ID_PATTERN.test(next) || hudKindOf(model, next)) {
+            workspace
+              .getState()
+              .notify('error', `"${next}" isn't a free key (lowercase letters, digits and _)`)
+            return
+          }
+          edit((draft) => renameHudElement(draft, hudKey, next))
+          onPick({ kind: 'hud', key: next })
+        }}
+      />
+      {kind === 'bars' && (
+        <>
+          {textureSelect('Full', 'full', (def as HudBarDef).full, false)}
+          {textureSelect('Half', 'half', (def as HudBarDef).half, true)}
+          {textureSelect('Empty', 'empty', (def as HudBarDef).empty, false)}
+          <NumberField
+            label="Segments"
+            dataPath={at('segments')}
+            value={(def as HudBarDef).segments}
+            step={1}
+            min={1}
+            onChange={(value) =>
+              value !== undefined &&
+              set('segments', Math.min(HUD_LIMITS.maxSegments, Math.round(value)))
+            }
+          />
+          <NumberField
+            label="Gap"
+            dataPath={at('gap')}
+            value={(def as HudBarDef).gap}
+            placeholder="0"
+            step={1}
+            min={0}
+            onChange={(value) => set('gap', whole(value) || undefined)}
+          />
+          <CheckField
+            label="Fills from the right"
+            dataPath={at('reverse')}
+            value={(def as HudBarDef).reverse === true}
+            onChange={(on) => set('reverse', on || undefined)}
+          />
+          {place(true)}
+        </>
+      )}
+      {kind === 'icons' && (
+        <>
+          <FieldGroup header="Icons" data-path={at('icons')}>
+            {Object.entries((def as HudIconsDef).icons).map(([icon, texture]) => (
+              <Row key={icon} label="">
+                <input
+                  aria-label={`Icon ${icon} key`}
+                  defaultValue={icon}
+                  key={icon}
+                  onBlur={(event) => {
+                    const next = event.target.value.trim()
+                    if (next === icon) return
+                    if (!ID_PATTERN.test(next) || (def as HudIconsDef).icons[next]) {
+                      event.target.value = icon
+                      return
+                    }
+                    edit((draft) => renameHudIcon(draft, hudKey, icon, next))
+                  }}
+                />
+                <select
+                  aria-label={`Icon ${icon}`}
+                  data-path={at('icons', icon)}
+                  value={texture}
+                  onChange={(event) =>
+                    edit((draft) => setHudIcon(draft, hudKey, icon, event.target.value))
+                  }
+                >
+                  {[...textures, ...(textures.includes(texture) ? [] : [texture])].map((it) => (
+                    <option key={it} value={it}>
+                      {it}
+                    </option>
+                  ))}
+                </select>
+                <IconButton
+                  icon="trash"
+                  label={`Remove icon ${icon}`}
+                  disabled={Object.keys((def as HudIconsDef).icons).length <= 1}
+                  onClick={() => edit((draft) => setHudIcon(draft, hudKey, icon, undefined))}
+                />
+              </Row>
+            ))}
+            <Button
+              size="small"
+              icon="plus"
+              disabled={textures.length === 0}
+              onClick={async () => {
+                const icon = await ask.prompt({
+                  title: 'New icon',
+                  label: 'Key (what scripts show it by)',
+                  initial: '',
+                  confirmLabel: 'Add',
+                  validate: (value) =>
+                    !ID_PATTERN.test(value)
+                      ? 'Lowercase letters, digits and _'
+                      : (def as HudIconsDef).icons[value]
+                        ? 'That icon exists'
+                        : null,
+                })
+                if (icon) edit((draft) => setHudIcon(draft, hudKey, icon, textures[0]!))
+              }}
+            >
+              Add icon
+            </Button>
+          </FieldGroup>
+          <NumberField
+            label="Gap"
+            dataPath={at('gap')}
+            value={(def as HudIconsDef).gap}
+            placeholder={String(HUD_LIMITS.iconGap)}
+            step={1}
+            min={0}
+            onChange={(value) => set('gap', whole(value))}
+          />
+          {place(true)}
+        </>
+      )}
+      {kind === 'texts' && place(false)}
+      <Hint>
+        GUI pixels: x from the middle of the screen ({-HUD_LIMITS.maxX} to {HUD_LIMITS.maxX}), y up
+        from the bottom (0 to {HUD_LIMITS.maxY}). The hotbar&apos;s top is at 22, hearts at 30.
+        {kind === 'texts' && ' A line of text is drawn on the action bar’s own line.'}
+      </Hint>
+    </Section>
   )
 }

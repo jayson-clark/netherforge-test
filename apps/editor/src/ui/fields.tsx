@@ -276,6 +276,82 @@ export function TextField({
   )
 }
 
+const jsonText = (value: Record<string, unknown> | undefined) =>
+  value === undefined ? '' : JSON.stringify(value, null, 2)
+
+/**
+ * A JSON object (`properties`, a stack's `data`), typed as text: committed on blur or
+ * Ctrl/Cmd+Enter when it parses as an object, cleared (undefined) when empty. What doesn't parse
+ * stays typed, with why, and commits nothing.
+ */
+export function JsonObjectField({
+  label,
+  value,
+  onChange,
+  dataPath,
+  placeholder = '{ "key": "value" }',
+}: {
+  label: string
+  value: Record<string, unknown> | undefined
+  onChange: (value: Record<string, unknown> | undefined) => void
+  dataPath?: string
+  placeholder?: string
+}) {
+  const id = useId()
+  const [text, setText] = useState(jsonText(value))
+  const [error, setError] = useState<string | null>(null)
+  const [shown, setShown] = useState(value)
+  if (shown !== value) {
+    setShown(value)
+    setText(jsonText(value))
+    setError(null)
+  }
+  const commit = () => {
+    const trimmed = text.trim()
+    if (trimmed === '') {
+      setError(null)
+      if (value !== undefined) onChange(undefined)
+      return
+    }
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(trimmed)
+    } catch (e) {
+      setError(`Not JSON: ${(e as Error).message}`)
+      return
+    }
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      setError('A JSON object, in { }')
+      return
+    }
+    setError(null)
+    if (JSON.stringify(parsed) !== JSON.stringify(value))
+      onChange(parsed as Record<string, unknown>)
+  }
+  return (
+    <Row label={label} htmlFor={id}>
+      <div className={styles.json}>
+        <textarea
+          id={id}
+          aria-label={label}
+          data-path={dataPath}
+          data-commit={text === jsonText(value) ? 'clean' : 'draft'}
+          rows={Math.min(10, Math.max(3, text.split('\n').length))}
+          value={text}
+          placeholder={placeholder}
+          spellCheck={false}
+          onChange={(event) => setText(event.target.value)}
+          onBlur={commit}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) commit()
+          }}
+        />
+        {error && <FormError role="alert">{error}</FormError>}
+      </div>
+    </Row>
+  )
+}
+
 export function SelectField<T extends string>({
   label,
   value,

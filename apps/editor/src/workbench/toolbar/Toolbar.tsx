@@ -62,8 +62,8 @@ export function Toolbar({
       <span className={styles.group} role="group" aria-label="Docks">
         <IconButton
           icon="panelLeft"
-          label="Outline"
-          title={`Show or hide the outline (${keys('Mod+B')})`}
+          label="Left dock"
+          title={`Show or hide the left dock (${keys('Mod+B')})`}
           active={outlineOpen}
           onClick={() => layout.getState().toggle('outline')}
         />
@@ -76,10 +76,16 @@ export function Toolbar({
         />
         <IconButton
           icon="panelRight"
-          label="Inspector"
-          title={`Show or hide the inspector (${keys('Mod+Alt+B')})`}
+          label="Right dock"
+          title={`Show or hide the right dock (${keys('Mod+Alt+B')})`}
           active={inspectorOpen}
           onClick={() => layout.getState().toggle('inspector')}
+        />
+        <IconButton
+          icon="refresh"
+          label="Reset layout"
+          title="Reset the layout: every panel back where it started"
+          onClick={() => layout.getState().resetLayout()}
         />
       </span>
       <IconButton

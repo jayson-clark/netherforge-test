@@ -110,7 +110,7 @@ export function removeWorldSpawn(manifest: ProjectManifest, world: string) {
 function dropEmptyWorld(manifest: ProjectManifest, world: string) {
   const config = manifest.worlds?.[world]
   if (config) {
-    for (const field of ['spawnLimits', 'spawnIntervals'] as const) {
+    for (const field of ['spawnLimits', 'spawnIntervals', 'gameRules'] as const) {
       if (config[field] && Object.keys(config[field]).length === 0) delete config[field]
     }
     if (Object.keys(config).length === 0) delete manifest.worlds![world]
@@ -121,4 +121,108 @@ function dropEmptyWorld(manifest: ProjectManifest, world: string) {
 function dropEmpty(manifest: ProjectManifest) {
   if (manifest.requires && Object.keys(manifest.requires).length === 0) delete manifest.requires
   if (manifest.allow && Object.keys(manifest.allow).length === 0) delete manifest.allow
+}
+
+/** A world's own setting other than spawning: its terrain, seed or dimension type; undefined takes it out. */
+export function setWorldValue(
+  manifest: ProjectManifest,
+  world: string,
+  key: 'terrain' | 'seed' | 'dimensionType',
+  value: string | number | undefined,
+) {
+  if (value === undefined || value === '') {
+    const config = manifest.worlds?.[world]
+    if (!config) return
+    delete config[key]
+    dropEmptyWorld(manifest, world)
+    return
+  }
+  manifest.worlds ??= {}
+  const target = (manifest.worlds[world] ??= {})
+  ;(target as Record<string, unknown>)[key] = value
+  sortWorlds(manifest)
+}
+
+/** A game rule's value as typed: `true`, `false` or a whole number; anything else isn't one (null). */
+export function parseGameRule(text: string): boolean | number | null {
+  const trimmed = text.trim()
+  if (trimmed === 'true') return true
+  if (trimmed === 'false') return false
+  return /^-?\d+$/.test(trimmed) ? Number(trimmed) : null
+}
+
+/** Sets game rule [rule] of [world] (`keep_inventory`), or with undefined takes it out. */
+export function setGameRule(
+  manifest: ProjectManifest,
+  world: string,
+  rule: string,
+  value: boolean | number | undefined,
+) {
+  if (value === undefined) {
+    const rules = manifest.worlds?.[world]?.gameRules
+    if (!rules) return
+    delete rules[rule]
+    dropEmptyWorld(manifest, world)
+    return
+  }
+  manifest.worlds ??= {}
+  const target = (manifest.worlds[world] ??= {})
+  // The generated type says string; the file holds the rule's own JSON value.
+  const rules = { ...(target.gameRules ?? {}), [rule]: value } as Record<string, unknown>
+  target.gameRules = Object.fromEntries(
+    Object.keys(rules)
+      .sort()
+      .map((it) => [it, rules[it]]),
+  ) as Record<string, string>
+  sortWorlds(manifest)
+}
+
+function sortWorlds(manifest: ProjectManifest) {
+  if (!manifest.worlds) return
+  manifest.worlds = Object.fromEntries(
+    Object.entries(manifest.worlds).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+  )
+}
+
+/** A dependency's source: a folder beside the project, or a git repository at a rev (a branch, tag or commit). */
+export type DependencySource = { path: string } | { git: string; rev?: string }
+
+/** Adds or replaces the dependency [namespace]. */
+export function setDependency(
+  manifest: ProjectManifest,
+  namespace: string,
+  source: DependencySource,
+) {
+  const next = { ...(manifest.dependencies ?? {}), [namespace]: source }
+  manifest.dependencies = Object.fromEntries(
+    Object.entries(next).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+  )
+}
+
+export function removeDependency(manifest: ProjectManifest, namespace: string) {
+  if (!manifest.dependencies) return
+  delete manifest.dependencies[namespace]
+  if (Object.keys(manifest.dependencies).length === 0) delete manifest.dependencies
+}
+
+/** Exports resource [id] of the kind kept in [folder] (`items`), or stops exporting it. */
+export function setExported(manifest: ProjectManifest, folder: string, id: string, on: boolean) {
+  const now = new Set(manifest.exports?.[folder] ?? [])
+  if (on) now.add(id)
+  else now.delete(id)
+  const exports = { ...(manifest.exports ?? {}) }
+  if (now.size > 0) exports[folder] = [...now].sort()
+  else delete exports[folder]
+  if (Object.keys(exports).length > 0) manifest.exports = exports
+  else delete manifest.exports
+}
+
+/** `generate`'s commands from text, one a line; none takes it out. */
+export function setGenerate(manifest: ProjectManifest, text: string) {
+  const commands = text
+    .split('\n')
+    .map((it) => it.trim())
+    .filter(Boolean)
+  if (commands.length > 0) manifest.generate = commands
+  else delete manifest.generate
 }

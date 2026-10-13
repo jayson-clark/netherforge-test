@@ -30,7 +30,7 @@ import {
 import { useProjectFileUrl } from '@/state/useResourcePacks'
 import { useWorkspace } from '@/state/providers'
 import type { ProjectOutline } from '@/core/format'
-import { CheckField, NumberField, SelectField, Section } from '@/ui/fields'
+import { CheckField, JsonObjectField, NumberField, SelectField, Section } from '@/ui/fields'
 import { Hint, Muted } from '@/ui/text'
 import { BLOCK_FACES, lookOf } from '@/minecraft/block/look'
 import { setSound, soundRefs } from './ops'
@@ -247,6 +247,12 @@ export function BlockEditor({ path }: { path: string }) {
               bottom centre when it's placed, and removed with it.
             </Hint>
           )}
+          <JsonObjectField
+            label="Properties"
+            dataPath="properties"
+            value={model.properties}
+            onChange={(value) => set('properties', value)}
+          />
         </Section>
         <Section title="Sounds">
           <SelectField

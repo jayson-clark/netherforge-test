@@ -11,6 +11,8 @@ import { useGameClientAssets } from './useClientAssets'
 export interface GameTextures {
   /** Every texture's `[width, height]` by name (`block/stone`), sorted by name. */
   sizes: Record<string, number[]>
+  /** The HUD's GUI sprites (`hud/heart/full`), sorted; none from an import before the editor listed them. */
+  sprites: string[]
   /** The picture of [name], to show. */
   url(name: string): string
   /** The PNG of [name] and its `.mcmeta` (an animation's frames) when it has one; null when it can't be read. */
@@ -33,6 +35,7 @@ function gameTextures(assets: ClientAssets, index: ClientIndex | null): GameText
   const url = (name: string) => assets.textureUrl(`minecraft:${name}`)
   return {
     sizes,
+    sprites: [...(index?.sprites ?? [])].sort(),
     url,
     async files(name) {
       const png = await bytes(url(name))

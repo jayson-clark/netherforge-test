@@ -1,14 +1,17 @@
 /**
- * The main window once a project is open: the toolbar; the outline dock,
- * the editor area and the inspector dock side by side; the bottom dock
- * (project explorer, Problems, Console, Instances) under them; the status
- * bar. Every dock resizes, hides (toolbar buttons, the View menu, Ctrl/Cmd+B, J, Alt+B)
- * and is remembered per project.
+ * The main window once a project is open: the toolbar; the left dock, the
+ * editor area and the right dock side by side; the bottom dock under them;
+ * the status bar. The docks hold the panels (`DOCK_PANELS`: by default the
+ * outline on the left, the inspector on the right, the project explorer and
+ * the rest at the bottom), in tab groups that split and that a tab drags
+ * between (`DockArea`). Every dock resizes, hides (toolbar buttons, the View
+ * menu, Ctrl/Cmd+B, J, Alt+B) and is remembered per project; View → Reset
+ * Layout puts them back.
  */
 import { Suspense, useEffect, useState, useSyncExternalStore } from 'react'
 import { Group, Panel, usePanelRef, type PanelProps, type PanelSize } from 'react-resizable-panels'
 import { useApp, useLayout, useRun, useWorkspace } from '@/state/providers'
-import { DEFAULT_LAYOUT, LIMITS } from '@/core/store/layout'
+import { DEFAULT_LAYOUT, LIMITS, OPEN } from '@/core/store/layout'
 import type { KindContribution } from '@/editors/contributions'
 import { KIND_CONTRIBUTIONS } from '@/editors/registry'
 import { InspectorTarget } from '@/editors/shared/docks'
@@ -18,10 +21,9 @@ import { cx } from '@/ui/cx'
 import { Spacer } from '@/ui/layout'
 import { Splitter } from '@/ui/Splitter'
 import { showPanel } from './contributions'
-import { BottomDock } from './docks/BottomDock'
-import { InspectorDock } from './docks/InspectorDock'
+import { AreaDrops, DockAreaView } from './docks/DockArea'
+import { useInspectorTarget } from './docks/InspectorDock'
 import { EditorArea } from './editorArea/EditorArea'
-import { OutlineDock } from './outline/OutlineDock'
 import { useFollowDebugStops } from './debugStops'
 import { QuickOpen } from './quickOpen/QuickOpen'
 import { openQuickOpen, useQuickOpen } from './quickOpen/store'
@@ -40,8 +42,11 @@ type DockSize = 'outlineWidth' | 'inspectorWidth' | 'bottomHeight'
 export function Workbench() {
   const { workspace, run, layout } = useApp()
   const quickOpen = useQuickOpen((s) => s.open)
-  const [inspectorTarget, setInspectorTarget] = useState<HTMLElement | null>(null)
+  const inspectorTarget = useInspectorTarget()
   const dock = useLayout((s) => s)
+  const left = dock.outlineOpen && dock.docks.left !== null
+  const right = dock.inspectorOpen && dock.docks.right !== null
+  const bottomShown = dock.bottomOpen && dock.docks.bottom !== null
 
   // Quick open is this project's; it isn't open when the next one opens.
   useEffect(() => () => useQuickOpen.setState({ open: false }), [])
@@ -67,90 +72,91 @@ export function Workbench() {
   // Double-click on a splitter: the dock's default size.
   const reset = (panel: PanelRef, key: DockSize) => panel.current?.resize(DEFAULT_LAYOUT[key])
 
-  // The inspector stays mounted while hidden (an editor's inspector always has a target): it
-  // collapses rather than going away.
-  const inspector = usePanelRef()
-  useEffect(() => {
-    const panel = inspector.current
-    if (!panel) return
-    if (!dock.inspectorOpen) panel.collapse()
-    else if (panel.isCollapsed()) panel.resize(layout.getState().inspectorWidth)
-  }, [dock.inspectorOpen, inspector, layout])
+  // The side docks stay in their group while hidden or empty, collapsed: taking a panel out
+  // would lay the group out again from every panel's first size, undoing the other side's.
   const outline = usePanelRef()
+  const inspector = usePanelRef()
   const bottom = usePanelRef()
+  useCollapsed(outline, left, 'outlineWidth')
+  useCollapsed(inspector, right, 'inspectorWidth')
+  // Dragged past its edge, a side dock closes like its toggle does.
+  const sideSized =
+    (key: 'outlineWidth' | 'inspectorWidth', area: 'left' | 'right') => (size: PanelSize) => {
+      const state = layout.getState()
+      const flag = OPEN[area]
+      if (size.inPixels === 0 && state[flag] && state.docks[area] !== null) {
+        state.set({ [flag]: false })
+      } else sized(key)(size)
+    }
 
   return (
     <div className={styles.workbench}>
       <Toolbar onSettings={() => workspace.getState().openSettings()} onQuickOpen={openQuickOpen} />
       <TrustBanner />
-      <Group orientation="vertical" className={styles.main}>
-        <Panel id="middle" className={styles.middle} style={OWN_SCROLL}>
-          <Group orientation="horizontal">
-            {dock.outlineOpen && (
-              <>
+      <InspectorTarget.Provider value={inspectorTarget}>
+        <div className={styles.docks}>
+          <Group orientation="vertical" className={styles.main}>
+            <Panel id="middle" className={styles.middle} style={OWN_SCROLL}>
+              <Group orientation="horizontal">
                 <DockPanel
                   id="outline"
                   size="outlineWidth"
+                  collapsed={!left}
                   panelRef={outline}
                   className={styles.side}
-                  onResize={sized('outlineWidth')}
+                  onResize={sideSized('outlineWidth', 'left')}
                 >
-                  <OutlineDock />
+                  {left && <DockAreaView area="left" />}
                 </DockPanel>
                 <Splitter
-                  label="Resize the outline"
+                  label="Resize the left dock"
+                  hidden={!left}
                   onReset={() => reset(outline, 'outlineWidth')}
                 />
+                <Panel id="editor" className={styles.editor} style={OWN_SCROLL}>
+                  {/* The one 3D canvas every editor's viewport draws in. */}
+                  <ViewportHost>
+                    <EditorArea />
+                  </ViewportHost>
+                </Panel>
+                <Splitter
+                  label="Resize the right dock"
+                  hidden={!right}
+                  onReset={() => reset(inspector, 'inspectorWidth')}
+                />
+                <DockPanel
+                  id="inspector"
+                  size="inspectorWidth"
+                  collapsed={!right}
+                  panelRef={inspector}
+                  className={styles.side}
+                  onResize={sideSized('inspectorWidth', 'right')}
+                >
+                  {right && <DockAreaView area="right" />}
+                </DockPanel>
+              </Group>
+            </Panel>
+            {bottomShown && (
+              <>
+                <Splitter
+                  label="Resize the bottom dock"
+                  onReset={() => reset(bottom, 'bottomHeight')}
+                />
+                <DockPanel
+                  id="bottom"
+                  size="bottomHeight"
+                  panelRef={bottom}
+                  className={styles.bottom}
+                  onResize={sized('bottomHeight')}
+                >
+                  <DockAreaView area="bottom" />
+                </DockPanel>
               </>
             )}
-            <Panel id="editor" className={styles.editor} style={OWN_SCROLL}>
-              <InspectorTarget.Provider value={inspectorTarget}>
-                {/* The one 3D canvas every editor's viewport draws in. */}
-                <ViewportHost>
-                  <EditorArea />
-                </ViewportHost>
-              </InspectorTarget.Provider>
-            </Panel>
-            <Splitter
-              label="Resize the inspector"
-              hidden={!dock.inspectorOpen}
-              onReset={() => reset(inspector, 'inspectorWidth')}
-            />
-            <DockPanel
-              id="inspector"
-              size="inspectorWidth"
-              collapsed={!dock.inspectorOpen}
-              panelRef={inspector}
-              className={styles.side}
-              onResize={(size) => {
-                // Dragged past its edge, it closes like the toggle does.
-                if (size.inPixels === 0 && layout.getState().inspectorOpen) {
-                  layout.getState().set({ inspectorOpen: false })
-                } else sized('inspectorWidth')(size)
-              }}
-            >
-              <InspectorDock target={setInspectorTarget} hidden={!dock.inspectorOpen} />
-            </DockPanel>
           </Group>
-        </Panel>
-        {dock.bottomOpen && (
-          <>
-            <Splitter
-              label="Resize the bottom dock"
-              onReset={() => reset(bottom, 'bottomHeight')}
-            />
-            <DockPanel
-              id="bottom"
-              size="bottomHeight"
-              panelRef={bottom}
-              className={styles.bottom}
-              onResize={sized('bottomHeight')}
-            >
-              <BottomDock />
-            </DockPanel>
-          </>
-        )}
-      </Group>
+          <AreaDrops />
+        </div>
+      </InspectorTarget.Provider>
       <StatusBar />
       {quickOpen && <QuickOpen onClose={() => useQuickOpen.setState({ open: false })} />}
       <Notices />
@@ -161,10 +167,21 @@ export function Workbench() {
   )
 }
 
+/** Collapses a side dock's panel while it's hidden or empty, and opens it at its remembered size. */
+function useCollapsed(panel: PanelRef, shown: boolean, key: DockSize) {
+  const { layout } = useApp()
+  useEffect(() => {
+    const it = panel.current
+    if (!it) return
+    if (!shown) it.collapse()
+    else if (it.isCollapsed()) it.resize(layout.getState()[key])
+  }, [shown, panel, layout, key])
+}
+
 /**
  * A dock's panel, in pixels within its limits, keeping its size as the library holds it: its
  * default is the remembered size when it appears (a changed default would lay the group out
- * again mid-drag). A collapsible one (the inspector) starts collapsed when [collapsed].
+ * again mid-drag). A collapsible one (a side dock) starts collapsed when [collapsed].
  */
 function DockPanel({
   size,

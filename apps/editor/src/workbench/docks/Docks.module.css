@@ -1,5 +1,5 @@
 .dock {
-  flex: 1;
+  height: 100%;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -7,8 +7,13 @@
   background: var(--bg-panel);
   overflow: hidden;
 }
-.hidden {
-  display: none;
+/* Holds the editors' inspector element while the panel shows. */
+.host {
+  flex: none;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .target {
   flex: 1;
@@ -24,28 +29,10 @@
   padding: 16px 12px;
   color: var(--muted);
 }
-/* Only when the editor put nothing in the dock. */
-.target:not(:empty) + .empty {
+/* Only when the editor put nothing in the panel. */
+.host:has(> .target:not(:empty)) + .empty {
   display: none;
 }
-.body {
+.host:has(> .target:not(:empty)) {
   flex: 1;
-  min-height: 0;
-  overflow: auto;
-}
-/* The bottom dock's two columns, side by side (a resizable group). */
-.split {
-  flex: 1;
-  display: flex;
-  min-width: 0;
-  min-height: 0;
-  background: var(--bg-panel);
-  overflow: hidden;
-}
-.column {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
 }

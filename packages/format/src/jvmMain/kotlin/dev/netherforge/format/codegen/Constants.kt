@@ -8,7 +8,10 @@ import dev.netherforge.format.biome.BiomeSpawn
 import dev.netherforge.format.biome.MoodSound
 import dev.netherforge.format.block.BlockCarriers
 import dev.netherforge.format.block.VanillaFile
+import dev.netherforge.format.centity.ResolvedBody
+import dev.netherforge.format.centity.ResolvedHealth
 import dev.netherforge.format.centity.ResolvedPhysics
+import dev.netherforge.format.centity.RopeDef
 import dev.netherforge.format.centity.SpawningDef
 import dev.netherforge.format.centity.TextDisplay
 import dev.netherforge.format.cutscene.Cue
@@ -37,11 +40,14 @@ import dev.netherforge.format.project.ModuleKind
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.project.ProjectManifest
 import dev.netherforge.format.project.Templates
+import dev.netherforge.format.recipe.Material
 import dev.netherforge.format.recipe.RecipeType
 import dev.netherforge.format.recipe.RecipeValidator
 import dev.netherforge.format.ref.Ref
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.resourcepack.GlyphDef
+import dev.netherforge.format.resourcepack.HudDef
+import dev.netherforge.format.resourcepack.HudLine
 import dev.netherforge.format.resourcepack.ItemModelParent
 import dev.netherforge.format.resourcepack.PackFonts
 import dev.netherforge.format.resourcepack.PackSounds
@@ -212,6 +218,10 @@ internal object Constants {
         append(
             "export const RECIPE_GRID = { size: ${RecipeValidator.GRID}, mostIngredients: ${RecipeValidator.MOST_INGREDIENTS} } as const\n"
         )
+        append("/** A station recipe's default and furthest `stationRange`. */\n")
+        append(
+            "export const RECIPE_STATION_RANGE = { default: ${Material.DEFAULT_STATION_RANGE}, max: ${Material.MAX_STATION_RANGE} } as const\n"
+        )
         append(
             "/** What each recipe type takes: its ingredient and number fields, its recipe book categories, " +
                 "a group, and its default cooking time (0: it doesn't cook). */\n"
@@ -242,6 +252,51 @@ internal object Constants {
         append("  angularDrag: ${num(ResolvedPhysics.DEFAULT_ANGULAR_DRAG)},\n")
         append("  maxSpeed: ${num(ResolvedPhysics.DEFAULT_MAX_SPEED)},\n")
         append("  maxSpin: ${num(ResolvedPhysics.DEFAULT_MAX_SPIN)},\n")
+        append("} as const\n\n")
+
+        append(
+            "/** Where a pack's HUD elements may be (GUI pixels from the screen's middle and bottom), " +
+                "its bars' most segments, and a row of icons' default gap. */\n"
+        )
+        append(
+            "export const HUD_LIMITS = { maxX: ${HudDef.MAX_X}, maxY: ${HudDef.MAX_Y}, maxSegments: ${HudDef.MAX_SEGMENTS}, iconGap: ${HudLine.DEFAULT_ICON_GAP} } as const\n\n"
+        )
+
+        append("/** What an absent `body` field means, and how big a body may be. */\n")
+        append("export const BODY_DEFAULTS = {\n")
+        append("  width: ${num(ResolvedBody.DEFAULT_WIDTH)},\n")
+        append("  height: ${num(ResolvedBody.DEFAULT_HEIGHT)},\n")
+        append("  maxWidth: ${num(ResolvedBody.MAX_WIDTH)},\n")
+        append("  maxHeight: ${num(ResolvedBody.MAX_HEIGHT)},\n")
+        append("  gravity: ${num(ResolvedBody.DEFAULT_GRAVITY)},\n")
+        append("  maxFallSpeed: ${num(ResolvedBody.DEFAULT_MAX_FALL_SPEED)},\n")
+        append("  drag: ${num(ResolvedBody.DEFAULT_DRAG)},\n")
+        append("  liquidDrag: ${num(ResolvedBody.DEFAULT_LIQUID_DRAG)},\n")
+        append("  liquidGravity: ${num(ResolvedBody.DEFAULT_LIQUID_GRAVITY)},\n")
+        append("  acceleration: ${num(ResolvedBody.DEFAULT_ACCELERATION)},\n")
+        append("  airAcceleration: ${num(ResolvedBody.DEFAULT_AIR_ACCELERATION)},\n")
+        append("  friction: ${num(ResolvedBody.DEFAULT_FRICTION)},\n")
+        append("  stepHeight: ${num(ResolvedBody.DEFAULT_STEP_HEIGHT)},\n")
+        append("  bounce: ${num(ResolvedBody.DEFAULT_BOUNCE)},\n")
+        append("} as const\n\n")
+
+        append("/** What an absent `health.bar` field means, and the most segments. */\n")
+        append("export const HEALTH_BAR_DEFAULTS = {\n")
+        append("  segments: ${ResolvedHealth.DEFAULT_SEGMENTS},\n")
+        append("  maxSegments: ${ResolvedHealth.MAX_SEGMENTS},\n")
+        append("  showTicks: ${ResolvedHealth.DEFAULT_SHOW_TICKS},\n")
+        append("  offset: ${num(ResolvedHealth.DEFAULT_OFFSET)},\n")
+        append("  glyph: ${CanonicalJson.quote(ResolvedHealth.DEFAULT_GLYPH)},\n")
+        append("  filled: ${CanonicalJson.quote(ResolvedHealth.DEFAULT_FILLED)},\n")
+        append("  empty: ${CanonicalJson.quote(ResolvedHealth.DEFAULT_EMPTY)},\n")
+        append("  node: ${CanonicalJson.quote(ResolvedHealth.BAR_NODE)},\n")
+        append("} as const\n\n")
+
+        append("/** A rope's limits, and what an absent `linkLength` means. */\n")
+        append("export const ROPE_LIMITS = {\n")
+        append("  maxLinks: ${RopeDef.MAX_LINKS},\n")
+        append("  linkLength: ${num(RopeDef.DEFAULT_LINK_LENGTH)},\n")
+        append("  maxLinkLength: ${num(RopeDef.MAX_LINK_LENGTH)},\n")
         append("} as const\n\n")
 
         append("/** What an absent `spawning` field means, and the ring around a player the spawner places centities in. */\n")
@@ -416,6 +471,8 @@ internal object Constants {
         append("  template: boolean\n")
         append("  /** Its resources may sit in group folders (`items/(weapons)/ruby_wand/`): all but a resource pack's. */\n")
         append("  groupable: boolean\n")
+        append("  /** A package may list its resources in `exports`: all but what belongs to the package alone (its migrations). */\n")
+        append("  exportable: boolean\n")
         append("}\n\n")
         append("/** Every resource kind, in the order a reload batch reloads them. */\n")
         append("export const KINDS = {\n")
@@ -429,7 +486,7 @@ internal object Constants {
                         kind.mainFile
                     )}, extension: ${opt(extension)}, companion: ${opt(companion)}, contents: ${str(kind.contents.name.lowercase())}, " +
                     "scripted: ${kind.script != null}, template: ${kind.template("id", TEMPLATE_GAME) != null}, " +
-                    "groupable: ${kind.groupable} },\n"
+                    "groupable: ${kind.groupable}, exportable: ${kind.exportable} },\n"
             )
         }
         append("} as const satisfies Record<string, KindInfo>\n")
