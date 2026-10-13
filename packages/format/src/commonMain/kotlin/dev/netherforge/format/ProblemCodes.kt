@@ -947,6 +947,12 @@ object ProblemCodes {
         warning("settings.value", SETTINGS, "A server's settings file holds a value a setting can't have, so the setting has its default.")
     val SETTINGS_UNKNOWN =
         warning("settings.unknown", SETTINGS, "A server's settings file holds a value for a setting the package doesn't declare.")
+    val RUNTIME_WEB_DISABLED =
+        warning(
+            "runtime.web-disabled",
+            PROJECT,
+            "A package declares `requires.web`, but the server owner hasn't turned web routes on (`web.enabled`), so its routes aren't served."
+        )
     val RUNTIME_PLUGIN_MISSING =
         error(
             "runtime.plugin-missing",

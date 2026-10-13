@@ -78,6 +78,7 @@ class ProblemCoverageTest {
         "runtime.unbundled" to plugin("PackagesTest"),
         "runtime.bundle-hash" to plugin("PackagesTest"),
         "runtime.plugin-missing" to plugin("InteropTest"),
+        "runtime.web-disabled" to plugin("WebRoutesTest"),
         "runtime.blocks" to plugin("BlockTest"),
         "runtime.terrain" to plugin("TerrainTest"),
         "runtime.dimension-type" to plugin("DimensionTypeTest"),

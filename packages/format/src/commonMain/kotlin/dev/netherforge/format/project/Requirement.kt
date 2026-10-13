@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
  * Something a package's scripts can do only when its `netherforge.json`
  * declares it (`"requires"`, [ProjectRequires]): the capabilities "Trust" in
  * PLAN.md's decisions is about. Its [id] is how the API spec's `requires`
- * names it (`moderation`, `db`, `http`, `plugin:vault`) and how the editor,
+ * names it (`moderation`, `db`, `web`, `http`, `plugin:vault`) and how the editor,
  * the server's log and `/nf requires` show it (`http:discord.com`).
  *
  * The one place a declaration is read: the runtime's check
@@ -43,6 +43,14 @@ sealed class Requirement {
         override fun grantedBy(requires: ProjectRequires?) = requires?.db == true
     }
 
+    /** Answering web requests to the server under the package's own path (`nf.web`). */
+    data object Web : Requirement() {
+        override val id = "web"
+        override val declaration = "\"requires\": { \"web\": true }"
+
+        override fun grantedBy(requires: ProjectRequires?) = requires?.web == true
+    }
+
     /**
      * HTTP requests to [host] (lowercase), or, with none, to any host the
      * package declares: what the spec's `requires: "http"` checks before the
@@ -71,6 +79,7 @@ sealed class Requirement {
         fun parse(id: String): Requirement? = when {
             id == Moderation.id -> Moderation
             id == Db.id -> Db
+            id == Web.id -> Web
             id == "http" -> Http()
             id.startsWith("http:") -> id.removePrefix("http:").takeIf(Names::isHostName)?.let(::Http)
             id.startsWith("plugin:") -> id.removePrefix("plugin:").takeIf(Names::isPluginName)?.let(::Plugin)
@@ -97,6 +106,7 @@ sealed class Requirement {
             if (requires == null) return@buildList
             if (requires.moderation == true) add(Moderation)
             if (requires.db == true) add(Db)
+            if (requires.web == true) add(Web)
             requires.http.orEmpty().filter(Names::isHttpHost).distinct().sorted().forEach { add(Http(it)) }
             requires.plugins.orEmpty().filter(Names::isPluginName).distinct().sorted().forEach { add(Plugin(it)) }
         }
@@ -120,8 +130,9 @@ sealed class Requirement {
                 when (r) {
                     Moderation -> 0
                     Db -> 1
-                    is Http -> 2
-                    is Plugin -> 3
+                    Web -> 2
+                    is Http -> 3
+                    is Plugin -> 4
                 }
             }
             return by.entries.sortedWith(compareBy({ order(it.key) }, { it.key.id })).map { (requirement, packages) ->

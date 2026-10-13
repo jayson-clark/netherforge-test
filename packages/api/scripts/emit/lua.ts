@@ -450,18 +450,17 @@ export function bindingsLua(classes: ClassBinding[], spec: ApiSpec): string {
       continue
     }
     const name = binding.cls.name
-    body.push(
-      '',
-      `-- ${name} ${'-'.repeat(Math.max(4, 74 - name.length))}`,
-      '',
+    // Each class's table is a local of its own block: the chunk would otherwise near Lua's
+    // limit of 200 locals (`PreludeModulesTest`) as classes are added.
+    const section: string[] = [
       binding.handle.parent
         ? `local ${name} = class("${name}", "${binding.handle.parent}")`
         : `local ${name} = class("${name}")`,
       ...(binding.handle.parent ? [] : ['', ...constructor(binding), '', ...keyAccessor(binding)]),
-    )
-    for (const fn of binding.functions) body.push('', ...fnLines(name, fn))
+    ]
+    for (const fn of binding.functions) section.push('', ...fnLines(name, fn))
     for (const fn of hand.get(name) ?? [])
-      body.push(
+      section.push(
         '',
         ...wrapperLines(
           name,
@@ -470,6 +469,14 @@ export function bindingsLua(classes: ClassBinding[], spec: ApiSpec): string {
           sets,
         ),
       )
+    body.push(
+      '',
+      `-- ${name} ${'-'.repeat(Math.max(4, 74 - name.length))}`,
+      '',
+      'do',
+      ...section.map((line) => (line === '' ? line : `  ${line}`)),
+      'end',
+    )
   }
   // The value types' methods: `values.Vec3` is the table `__index` reads.
   for (const value of spec.values ?? []) {

@@ -40,6 +40,26 @@
     "requires": "http"
   },
   {
+    "function": "nf.http.stream",
+    "requires": "http"
+  },
+  {
+    "function": "nf.http.websocket",
+    "requires": "http"
+  },
+  {
+    "function": "nf.web.route",
+    "requires": "web"
+  },
+  {
+    "function": "nf.web.url",
+    "requires": "web"
+  },
+  {
+    "function": "nf.web.oauth",
+    "requires": "web"
+  },
+  {
     "function": "Player:ban",
     "requires": "moderation"
   },

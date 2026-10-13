@@ -41,6 +41,7 @@ import dev.netherforge.plugin.data.PlayerPermissions
 import dev.netherforge.plugin.data.ScriptData
 import dev.netherforge.plugin.data.SessionTables
 import dev.netherforge.plugin.dialog.Dialogs
+import dev.netherforge.plugin.http.Connections
 import dev.netherforge.plugin.http.HttpClient
 import dev.netherforge.plugin.hud.Huds
 import dev.netherforge.plugin.interop.Placeholders
@@ -66,6 +67,8 @@ import dev.netherforge.plugin.script.Scripts
 import dev.netherforge.plugin.settings.OwnerSettings
 import dev.netherforge.plugin.store.PackageSchemas
 import dev.netherforge.plugin.testing.ScriptTests
+import dev.netherforge.plugin.web.OAuthFlows
+import dev.netherforge.plugin.web.WebRoutes
 import dev.netherforge.plugin.world.BlockData
 import dev.netherforge.plugin.world.BossBars
 import dev.netherforge.plugin.world.Daylight
@@ -223,8 +226,17 @@ class ProjectSession internal constructor(
     /** What each package declared it needs (`requires`), the check every capability goes through, and the sum whoever runs the server sees. */
     val requirements = service(Requirements(log, { snapshot }, { names.calling() }) { names.callingHidden() })
 
-    /** `nf.http.request`'s client: closed with the session, so reloads leave no threads behind. */
-    val http = service(HttpClient { config.http })
+    /** `nf.http`'s client and its connections' transport: closed with the session, so reloads leave no threads or sockets behind. */
+    val http = service(HttpClient(config.testing != null) { config.http })
+
+    /** The streams and WebSockets scripts hold open, each its script's (after [http], so they end before it closes). */
+    val connections = service(Connections(scripts, { config.http }, { http.connections }, { ticks }, keepHistory = config.testing != null))
+
+    /** The web routes scripts answer (`nf.web.route`) and the requests waiting on them. */
+    val web = service(WebRoutes(scripts, config.web, { runtime.web }, { ticks }, runtime::webBase) { snapshot })
+
+    /** "Log in with…" flows (`nf.web.oauth`), each with a route of its own (after [web], so they end before it). */
+    val oauth = service(OAuthFlows(scripts, web, async, { http.fetcher }, { ticks }, testing = config.testing != null))
 
     /** The other plugins packages declared, whether the server has them (a problem for each it doesn't), and the check before a call into one. */
     internal val plugins = service(Plugins(platform, log, ::problemsChanged) { namespace })

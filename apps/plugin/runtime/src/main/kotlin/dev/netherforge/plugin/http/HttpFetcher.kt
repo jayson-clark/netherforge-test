@@ -4,6 +4,7 @@ import dev.netherforge.plugin.HttpConfig
 import dev.netherforge.plugin.async.WorkFailed
 import dev.netherforge.plugin.lua.LuaApiException
 import okhttp3.ConnectionPool
+import okhttp3.Dispatcher
 import okhttp3.Dns
 import okhttp3.Headers
 import okhttp3.HttpUrl
@@ -62,7 +63,7 @@ class HttpFetcher(
     /** Where a name leads: called once for each connection made to a host that isn't an IP in the URL. */
     private val resolve: (String) -> List<InetAddress> = { InetAddress.getAllByName(it).toList() },
     /** Makes the sockets connections are made on; a test's records and redirects them. */
-    socketFactory: SocketFactory = SocketFactory.getDefault()
+    private val socketFactory: SocketFactory = SocketFactory.getDefault()
 ) : Closeable {
     private val client: OkHttpClient = OkHttpClient.Builder()
         .proxy(Proxy.NO_PROXY)
@@ -111,7 +112,7 @@ class HttpFetcher(
      * at: the JDK would read some of them as addresses and, given others, ask
      * DNS, and OkHttp would then connect to what it read.
      */
-    private fun checkLiteral(url: HttpUrl) {
+    internal fun checkLiteral(url: HttpUrl) {
         val host = url.host
         if (!LITERAL.matches(host)) return
         val address =
@@ -196,7 +197,7 @@ class HttpFetcher(
         }
     }
 
-    private fun request(call: HttpCall, url: HttpUrl): Request {
+    internal fun request(call: HttpCall, url: HttpUrl): Request {
         val headers = Headers.Builder().apply {
             if (call.headers.keys.none { it.equals("user-agent", ignoreCase = true) }) add("User-Agent", USER_AGENT)
             for ((name, value) in call.headers) add(name, value)
@@ -209,7 +210,7 @@ class HttpFetcher(
         return Request.Builder().url(url).headers(headers).method(call.method, body).build()
     }
 
-    private fun headersOf(headers: Headers): Map<String, String> {
+    internal fun headersOf(headers: Headers): Map<String, String> {
         val all = LinkedHashMap<String, String>()
         for (name in headers.names()) all[name.lowercase()] = headers.values(name).joinToString(", ")
         return all
@@ -234,7 +235,7 @@ class HttpFetcher(
     private fun timedOut() = WorkFailed("it timed out after ${limits.timeoutSeconds} seconds")
 
     /** What OkHttp's [e] says, in this API's words: a refusal or a name that doesn't resolve ([Unreachable]) as it was worded, a timeout, a connection, the rest. */
-    private fun failed(e: IOException, url: HttpUrl): WorkFailed {
+    internal fun failed(e: IOException, url: HttpUrl): WorkFailed {
         var cause: Throwable? = e
         while (cause != null) {
             if (cause is Unreachable) return WorkFailed(cause.message.orEmpty())
@@ -255,6 +256,24 @@ class HttpFetcher(
         return String(body, charset)
     }
 
+    /**
+     * A client for one connection that stays open (`nf.http.stream`'s,
+     * `nf.http.websocket`'s): this one's guard and rules (the checked [Dns], no
+     * proxy, redirects left to the caller), on [dispatcher]'s threads, with a
+     * pool of its own that keeps nothing (so no two connections share a socket,
+     * and each one's bytes are its own), sockets from [sockets] (given this
+     * fetcher's factory), no read or call timeout (the main thread ends one that
+     * idles), and a WebSocket ping every [PING_SECONDS].
+     */
+    internal fun connectionClient(dispatcher: Dispatcher, sockets: (SocketFactory) -> SocketFactory): OkHttpClient = client.newBuilder()
+        .dispatcher(dispatcher)
+        .connectionPool(ConnectionPool(0, 1, TimeUnit.SECONDS))
+        .socketFactory(sockets(socketFactory))
+        .readTimeout(0, TimeUnit.SECONDS)
+        .callTimeout(0, TimeUnit.SECONDS)
+        .pingInterval(PING_SECONDS, TimeUnit.SECONDS)
+        .build()
+
     /** Cancels what's in flight, closes pooled connections and ends OkHttp's threads: after this the fetcher makes no more requests. */
     override fun close() {
         client.dispatcher.cancelAll()
@@ -269,7 +288,8 @@ class HttpFetcher(
     internal val stopped: Boolean get() = client.dispatcher.executorService.isShutdown
 
     companion object {
-        private val REDIRECTS = setOf(301, 302, 303, 307, 308)
+        internal val REDIRECTS = setOf(301, 302, 303, 307, 308)
+        private const val PING_SECONDS = 30L
         private val CREDENTIALS = setOf("authorization", "cookie", "proxy-authorization")
         private val BODY_HEADERS = setOf("content-type", "content-length", "content-encoding")
         private val BODY_METHODS = setOf("POST", "PUT", "PATCH")

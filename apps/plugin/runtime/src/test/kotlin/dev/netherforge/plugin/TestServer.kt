@@ -57,6 +57,8 @@ class TestServer(
     writeManifest: Boolean = true,
     /** `http:` in `config.yml`, when not the defaults. */
     private val http: HttpConfig = HttpConfig(),
+    /** `web:` in `config.yml`, when not the defaults (web routes off). */
+    private val web: WebConfig = WebConfig(),
     /** `databases:` in `config.yml`: the named connections `nf.db("name")` may open. */
     private val databases: DatabasesConfig = DatabasesConfig(),
     /** How a named connection's pool is made, when not HikariCP: tests give an embedded database. */
@@ -106,6 +108,7 @@ class TestServer(
                     databases = databases,
                     sandbox = sandbox,
                     http = http,
+                    web = web,
                     resolvesPackages = resolvesPackages,
                     packageCache = packageCache
                 )

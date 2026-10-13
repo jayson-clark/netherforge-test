@@ -36,6 +36,8 @@ data class RuntimeConfig(
     val sandbox: SandboxLimits = SandboxLimits(),
     /** What `nf.http.request` may reach and how much of it a package may do. */
     val http: HttpConfig = HttpConfig(),
+    /** Whether `nf.web` routes are served, and the owner's limits on them. */
+    val web: WebConfig = WebConfig(),
     /**
      * Whether the project's dependencies are found where `netherforge.json`'s
      * paths point: on the editor's dev server (and in tests). A production
@@ -97,6 +99,7 @@ data class RuntimeConfig(
             val performance = performance(settings.section("performance"))
             val schedules = ScheduleConfig(settings.section("schedules").text("time-zone"))
             val http = http(settings.section("http"))
+            val web = web(settings.section("web"))
             val databases = DatabasesConfig.read(settings.section("databases"))
             properties(Bridge.PROJECT_PROPERTY)?.takeIf { it.isNotBlank() }?.let { project ->
                 val port = properties(Bridge.PORT_PROPERTY)?.toIntOrNull()
@@ -108,6 +111,7 @@ data class RuntimeConfig(
                     performance = performance,
                     schedules = schedules,
                     http = http,
+                    web = web,
                     databases = databases,
                     packageCache = properties(Bridge.PACKAGE_CACHE_PROPERTY)?.takeIf {
                         it.isNotBlank()
@@ -124,6 +128,7 @@ data class RuntimeConfig(
                 performance = performance,
                 schedules = schedules,
                 http = http,
+                web = web,
                 databases = databases,
                 resolvesPackages = false
             )
@@ -156,7 +161,39 @@ data class RuntimeConfig(
                 maxRequestBytes = section.int("max-request-bytes")?.takeIf { it > 0 } ?: defaults.maxRequestBytes,
                 maxResponseBytes = section.int("max-response-bytes")?.takeIf { it > 0 } ?: defaults.maxResponseBytes,
                 timeoutSeconds = section.int("timeout-seconds")?.takeIf { it > 0 } ?: defaults.timeoutSeconds,
-                requestsPerMinute = section.int("requests-per-minute")?.takeIf { it > 0 } ?: defaults.requestsPerMinute
+                requestsPerMinute = section.int("requests-per-minute")?.takeIf { it > 0 } ?: defaults.requestsPerMinute,
+                connections = connections(section.section("connections"))
+            )
+        }
+
+        /** `http.connections:`: what `nf.http.stream` and `nf.http.websocket` may hold open and move. A number that isn't a positive one is the default. */
+        private fun connections(section: Map<String, Any?>): ConnectionLimits {
+            val defaults = ConnectionLimits()
+            fun positive(key: String, default: Int) = section.int(key)?.takeIf { it > 0 } ?: default
+            return ConnectionLimits(
+                maxPerPackage = positive("max-per-package", defaults.maxPerPackage),
+                maxTotal = positive("max-total", defaults.maxTotal),
+                maxMessageBytes = positive("max-message-bytes", defaults.maxMessageBytes),
+                bytesPerMinute = positive("bytes-per-minute", defaults.bytesPerMinute),
+                idleSeconds = positive("idle-seconds", defaults.idleSeconds),
+                maxQueuedMessages = positive("max-queued-messages", defaults.maxQueuedMessages),
+                messagesPerTick = positive("messages-per-tick", defaults.messagesPerTick)
+            )
+        }
+
+        /** `web:`: whether `nf.web` routes are served, and their limits. Read on dev servers too; a number that isn't a positive one is the default. */
+        private fun web(section: Map<String, Any?>): WebConfig {
+            val defaults = WebConfig()
+            fun positive(key: String, default: Int) = section.int(key)?.takeIf { it > 0 } ?: default
+            return WebConfig(
+                enabled = section.boolean("enabled") ?: defaults.enabled,
+                publicUrl = section.text("public-url")?.trimEnd('/'),
+                trustProxyHeaders = section.boolean("trust-proxy-headers") ?: defaults.trustProxyHeaders,
+                maxBodyBytes = positive("max-body-bytes", defaults.maxBodyBytes),
+                maxResponseBytes = positive("max-response-bytes", defaults.maxResponseBytes),
+                requestsPerMinutePerIp = positive("requests-per-minute-per-ip", defaults.requestsPerMinutePerIp),
+                maxPending = positive("max-pending", defaults.maxPending),
+                handlerTimeoutSeconds = positive("handler-timeout-seconds", defaults.handlerTimeoutSeconds)
             )
         }
 
@@ -229,13 +266,59 @@ data class HttpConfig(
     val maxRequestBytes: Int = 1024 * 1024,
     val maxResponseBytes: Int = 4 * 1024 * 1024,
     val timeoutSeconds: Int = 15,
-    val requestsPerMinute: Int = 60
+    val requestsPerMinute: Int = 60,
+    /** What `nf.http.stream` and `nf.http.websocket` may hold open and move. */
+    val connections: ConnectionLimits = ConnectionLimits()
 ) {
     companion object {
         /** Redirects one request follows before it fails. */
         const val MAX_REDIRECTS = 5
     }
 }
+
+/**
+ * `http.connections:` in `config.yml`: the owner's limits on the connections
+ * `nf.http.stream` and `nf.http.websocket` hold open (each also counts as a
+ * request against `requests-per-minute` when it opens). [maxPerPackage] open
+ * at once per package and [maxTotal] in all; one line, event or message (either
+ * way) of at most [maxMessageBytes]; [bytesPerMinute] read from and written to
+ * the network per package, counted on the wire; ended after [idleSeconds] with
+ * nothing sent or received. While scripts haven't taken them, at most
+ * [maxQueuedMessages] wait per connection, and the server stops reading until
+ * they're taken; [messagesPerTick] are handed to scripts per connection a tick.
+ */
+data class ConnectionLimits(
+    val maxPerPackage: Int = 4,
+    val maxTotal: Int = 32,
+    val maxMessageBytes: Int = 1024 * 1024,
+    val bytesPerMinute: Int = 16 * 1024 * 1024,
+    val idleSeconds: Int = 300,
+    val maxQueuedMessages: Int = 1000,
+    val messagesPerTick: Int = 100
+)
+
+/**
+ * `web:` in `config.yml`, read on dev servers too: whether `nf.web` routes
+ * are served ([enabled]; off by default), on the resource pack's listener
+ * (`resource-pack.bind` and `.port`), and the owner's limits on them.
+ * [publicUrl] is what `nf.web.url` builds on (the listener's own address
+ * when unset); [trustProxyHeaders] makes `X-Forwarded-For` the client's
+ * address, for a server behind the owner's own reverse proxy. A request
+ * body over [maxBodyBytes] is `413`; an address past
+ * [requestsPerMinutePerIp] is `429`; past [maxPending] waiting for the main
+ * thread is `503`; a handler that hasn't answered after
+ * [handlerTimeoutSeconds] is `504`.
+ */
+data class WebConfig(
+    val enabled: Boolean = false,
+    val publicUrl: String? = null,
+    val trustProxyHeaders: Boolean = false,
+    val maxBodyBytes: Int = 64 * 1024,
+    val maxResponseBytes: Int = 1024 * 1024,
+    val requestsPerMinutePerIp: Int = 60,
+    val maxPending: Int = 64,
+    val handlerTimeoutSeconds: Int = 10
+)
 
 data class BridgeConfig(
     val port: Int,

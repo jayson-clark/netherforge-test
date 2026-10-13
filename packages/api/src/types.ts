@@ -111,7 +111,7 @@ export interface Fn {
  * (a database) or `plugin:<name>` (another plugin, like `plugin:vault`). `REQUIREMENTS`
  * (`src/requirements.ts`) says how each is declared.
  */
-export type Requirement = 'moderation' | 'http' | 'db' | `plugin:${string}`
+export type Requirement = 'moderation' | 'http' | 'db' | 'web' | `plugin:${string}`
 
 /** What the server reads a command argument as, before the runtime sees it: the runtime's `ArgumentReading`. */
 export type ArgumentReading =

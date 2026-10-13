@@ -398,6 +398,15 @@ class BridgeTest {
                 val noBot = editor.request(BotsExtension.act, BotActParams("Nobody", BotAction.Jump))
                 assertEquals("no bot named \"Nobody\"", noBot.error!!.message)
 
+                // What it looks at: a centity's hitbox is named by its instance and the node a click there reaches.
+                val box = server.platform.entities.all.getValue(top)
+                val look = BotAction.LookAt(box.location.x, box.location.y + box.height / 2, box.location.z)
+                assertTrue(editor.request(BotsExtension.act, BotActParams("Tester", look)).ok)
+                val seen = editor.request(BotsExtension.state, BotParams("Tester")).result!!.target
+                assertEquals(top.toString(), seen?.entity, "$seen")
+                assertEquals(tower.id.toString(), seen?.centity)
+                assertEquals("top", seen?.node)
+
                 assertTrue(editor.request(BotsExtension.leave, BotParams("Tester")).ok)
                 assertEquals(emptyList(), server.platform.bots.list())
             }

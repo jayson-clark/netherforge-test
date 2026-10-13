@@ -90,6 +90,39 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Added
 
+- **Streams and WebSockets.** `nf.http.stream` follows a response that keeps
+  coming (NDJSON lines, Server-Sent Events or chunks) and `nf.http.websocket`
+  holds a WebSocket open: each hands scripts `open`, `message` and one `end`
+  as events on the main thread. They go only to the hosts a package declares
+  in `requires.http`, under `nf.http.request`'s address rules, and belong to
+  the script that opened them, closing when it unloads. The owner limits them
+  in `config.yml`'s `http.connections` (how many open, message size, bytes a
+  minute, idle time, how many messages wait); a connection past a limit ends
+  `"limit"`. When scripts fall behind, the server stops reading rather than
+  dropping messages. In a test, `nf.test.connections`, `accept`, `receive`,
+  `sent` and `disconnect` play the far end, with nothing on the network.
+  A URL in `requires.http` (`"wss://gateway.discord.gg"`) now says which host
+  to write.
+
+- **Web routes.** A package that declares `"requires": { "web": true }` can
+  answer web requests with `nf.web.route`, under its own `/<namespace>/` path:
+  webhooks, small pages, JSON for a website. A handler can answer later, from a
+  task or a callback. `nf.web.url` builds links from the owner's
+  `web.public-url`. `nf.web.verify_signature` checks a webhook's HMAC in
+  constant time, and `nf.web.oauth` runs a "log in with…" flow (OAuth 2 with
+  PKCE) that keeps the state and code verifier on the server. Routes are off
+  until the owner turns them on in `config.yml`'s `web:` section, which also
+  limits body sizes, requests a minute per address and how many may wait.
+  They're served on the resource pack's port, behind the owner's reverse proxy
+  for HTTPS. `/nf requires` lists every route. In a test, `nf.test.request`
+  makes requests and `nf.test.oauth_token` stands in for a token endpoint.
+
+- **Bots say what they're looking at.** `bot_state` has a `target`: the block
+  (with its face and state) or entity in the bot's crosshair within reach,
+  picked as the game picks it, and for a centity's hitbox the instance and the
+  node a click there reaches. Turn a bot with `look`/`look_at` and check what a
+  click would hit before clicking.
+
 - **A package can show looks a project that depends on it hands over.** A
   resource pack look (an item model, glyph, skin, tooltip, equipment look or
   sound) named in full, `<namespace>:<pack>/<key>`, may be any loaded
@@ -740,6 +773,14 @@ remove_with })` shows the bar to every player near the centity and hides it
   Only a dev server has them.
 
 ### Fixed
+
+- **A bot's click lands where it looks.** `interact` and `attack` with no
+  target used to turn the bot to the middle of whatever it was looking at
+  before clicking, so a `look` or `look_at` aimed at one spot of a large
+  hitbox (a square of a board) was lost. Now the bot clicks exactly where it
+  looks, without turning. Both actions also take `x`, `y` and `z` to aim at a
+  point on the entity they name. The fake server's bots also click
+  NetherForge's hitboxes in their crosshair now, as Paper's do.
 
 - The sandbox no longer refuses patterns like `^%[%s*([%w_]+)%s*"` on a few
   hundred bytes. Its worst-case model now sees that when a quantified item

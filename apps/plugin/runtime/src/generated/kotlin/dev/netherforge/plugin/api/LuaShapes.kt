@@ -6367,6 +6367,438 @@ data class HttpResponse(val status: Long, val headers: Map<String, String>, val 
     }
 }
 
+/** What `nf.http.stream` takes: `nf.http.request`'s options, and `format`. */
+data class HttpStreamOptions(val url: String, val method: String? = null, val headers: Map<String, String>? = null, val body: String? = null, val format: String? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<HttpStreamOptions>("HttpStreamOptions") {
+        val urlCodec = LuaCodecs.STRING
+        val methodCodec = LuaOptional(LuaChoice(listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")))
+        val headersCodec = LuaOptional(LuaMap(LuaCodecs.STRING, LuaCodecs.STRING))
+        val bodyCodec = LuaOptional(LuaCodecs.STRING)
+        val formatCodec = LuaOptional(LuaChoice(listOf("lines", "events", "chunks")))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "url" to urlCodec,
+            "method" to methodCodec,
+            "headers" to headersCodec,
+            "body" to bodyCodec,
+            "format" to formatCodec
+        )
+
+        override fun read(fields: ShapeReader) = HttpStreamOptions(
+            url = fields.field("url", urlCodec),
+            method = fields.field("method", methodCodec),
+            headers = fields.field("headers", headersCodec),
+            body = fields.field("body", bodyCodec),
+            format = fields.field("format", formatCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: HttpStreamOptions) {
+            fields.field("url", value.url, urlCodec)
+            fields.field("method", value.method, methodCodec)
+            fields.field("headers", value.headers, headersCodec)
+            fields.field("body", value.body, bodyCodec)
+            fields.field("format", value.format, formatCodec)
+        }
+    }
+}
+
+/** What `nf.http.websocket` takes. */
+data class WebSocketOptions(val url: String, val headers: Map<String, String>? = null, val protocols: List<String>? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<WebSocketOptions>("WebSocketOptions") {
+        val urlCodec = LuaCodecs.STRING
+        val headersCodec = LuaOptional(LuaMap(LuaCodecs.STRING, LuaCodecs.STRING))
+        val protocolsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "url" to urlCodec,
+            "headers" to headersCodec,
+            "protocols" to protocolsCodec
+        )
+
+        override fun read(fields: ShapeReader) = WebSocketOptions(
+            url = fields.field("url", urlCodec),
+            headers = fields.field("headers", headersCodec),
+            protocols = fields.field("protocols", protocolsCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: WebSocketOptions) {
+            fields.field("url", value.url, urlCodec)
+            fields.field("headers", value.headers, headersCodec)
+            fields.field("protocols", value.protocols, protocolsCodec)
+        }
+    }
+}
+
+/** A stream's response began. */
+data class HttpStreamOpenEvent(val stream: LuaHandle.HttpStream, val status: Long, val headers: Map<String, String>) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<HttpStreamOpenEvent>("HttpStreamOpenEvent") {
+        val streamCodec = LuaHandle.HttpStream.Codec
+        val statusCodec = LuaCodecs.INTEGER
+        val headersCodec = LuaMap(LuaCodecs.STRING, LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "stream" to streamCodec,
+            "status" to statusCodec,
+            "headers" to headersCodec
+        )
+
+        override fun read(fields: ShapeReader) = HttpStreamOpenEvent(
+            stream = fields.field("stream", streamCodec),
+            status = fields.field("status", statusCodec),
+            headers = fields.field("headers", headersCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: HttpStreamOpenEvent) {
+            fields.field("stream", value.stream, streamCodec)
+            fields.field("status", value.status, statusCodec)
+            fields.field("headers", value.headers, headersCodec)
+        }
+    }
+}
+
+/** A piece of a stream arrived. */
+data class HttpStreamMessageEvent(val stream: LuaHandle.HttpStream, val data: String, val type: String? = null, val id: String? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<HttpStreamMessageEvent>("HttpStreamMessageEvent") {
+        val streamCodec = LuaHandle.HttpStream.Codec
+        val dataCodec = LuaCodecs.STRING
+        val typeCodec = LuaOptional(LuaCodecs.STRING)
+        val idCodec = LuaOptional(LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "stream" to streamCodec,
+            "data" to dataCodec,
+            "type" to typeCodec,
+            "id" to idCodec
+        )
+
+        override fun read(fields: ShapeReader) = HttpStreamMessageEvent(
+            stream = fields.field("stream", streamCodec),
+            data = fields.field("data", dataCodec),
+            type = fields.field("type", typeCodec),
+            id = fields.field("id", idCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: HttpStreamMessageEvent) {
+            fields.field("stream", value.stream, streamCodec)
+            fields.field("data", value.data, dataCodec)
+            fields.field("type", value.type, typeCodec)
+            fields.field("id", value.id, idCodec)
+        }
+    }
+}
+
+/** A stream ended. */
+data class HttpStreamEndEvent(val stream: LuaHandle.HttpStream, val reason: String, val status: Long? = null, val detail: String? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<HttpStreamEndEvent>("HttpStreamEndEvent") {
+        val streamCodec = LuaHandle.HttpStream.Codec
+        val reasonCodec = LuaChoice(listOf("finished", "closed", "failed", "limit", "idle", "unloaded"))
+        val statusCodec = LuaOptional(LuaCodecs.INTEGER)
+        val detailCodec = LuaOptional(LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "stream" to streamCodec,
+            "reason" to reasonCodec,
+            "status" to statusCodec,
+            "detail" to detailCodec
+        )
+
+        override fun read(fields: ShapeReader) = HttpStreamEndEvent(
+            stream = fields.field("stream", streamCodec),
+            reason = fields.field("reason", reasonCodec),
+            status = fields.field("status", statusCodec),
+            detail = fields.field("detail", detailCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: HttpStreamEndEvent) {
+            fields.field("stream", value.stream, streamCodec)
+            fields.field("reason", value.reason, reasonCodec)
+            fields.field("status", value.status, statusCodec)
+            fields.field("detail", value.detail, detailCodec)
+        }
+    }
+}
+
+/** A WebSocket opened. */
+data class WebSocketOpenEvent(val socket: LuaHandle.WebSocket, val protocol: String? = null, val headers: Map<String, String>) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<WebSocketOpenEvent>("WebSocketOpenEvent") {
+        val socketCodec = LuaHandle.WebSocket.Codec
+        val protocolCodec = LuaOptional(LuaCodecs.STRING)
+        val headersCodec = LuaMap(LuaCodecs.STRING, LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "socket" to socketCodec,
+            "protocol" to protocolCodec,
+            "headers" to headersCodec
+        )
+
+        override fun read(fields: ShapeReader) = WebSocketOpenEvent(
+            socket = fields.field("socket", socketCodec),
+            protocol = fields.field("protocol", protocolCodec),
+            headers = fields.field("headers", headersCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: WebSocketOpenEvent) {
+            fields.field("socket", value.socket, socketCodec)
+            fields.field("protocol", value.protocol, protocolCodec)
+            fields.field("headers", value.headers, headersCodec)
+        }
+    }
+}
+
+/** A text message arrived on a WebSocket. */
+data class WebSocketMessageEvent(val socket: LuaHandle.WebSocket, val data: String) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<WebSocketMessageEvent>("WebSocketMessageEvent") {
+        val socketCodec = LuaHandle.WebSocket.Codec
+        val dataCodec = LuaCodecs.STRING
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "socket" to socketCodec,
+            "data" to dataCodec
+        )
+
+        override fun read(fields: ShapeReader) = WebSocketMessageEvent(
+            socket = fields.field("socket", socketCodec),
+            data = fields.field("data", dataCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: WebSocketMessageEvent) {
+            fields.field("socket", value.socket, socketCodec)
+            fields.field("data", value.data, dataCodec)
+        }
+    }
+}
+
+/** A WebSocket ended. */
+data class WebSocketEndEvent(val socket: LuaHandle.WebSocket, val reason: String, val code: Long? = null, val detail: String? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<WebSocketEndEvent>("WebSocketEndEvent") {
+        val socketCodec = LuaHandle.WebSocket.Codec
+        val reasonCodec = LuaChoice(listOf("finished", "closed", "failed", "limit", "idle", "unloaded"))
+        val codeCodec = LuaOptional(LuaCodecs.INTEGER)
+        val detailCodec = LuaOptional(LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "socket" to socketCodec,
+            "reason" to reasonCodec,
+            "code" to codeCodec,
+            "detail" to detailCodec
+        )
+
+        override fun read(fields: ShapeReader) = WebSocketEndEvent(
+            socket = fields.field("socket", socketCodec),
+            reason = fields.field("reason", reasonCodec),
+            code = fields.field("code", codeCodec),
+            detail = fields.field("detail", detailCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: WebSocketEndEvent) {
+            fields.field("socket", value.socket, socketCodec)
+            fields.field("reason", value.reason, reasonCodec)
+            fields.field("code", value.code, codeCodec)
+            fields.field("detail", value.detail, detailCodec)
+        }
+    }
+}
+
+/** How `nf.web.verify_signature` checks a signature. */
+data class SignatureOptions(val secret: String, val algorithm: String? = null, val encoding: String? = null, val prefix: String? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<SignatureOptions>("SignatureOptions") {
+        val secretCodec = LuaCodecs.STRING
+        val algorithmCodec = LuaOptional(LuaChoice(listOf("sha256", "sha1", "sha512")))
+        val encodingCodec = LuaOptional(LuaChoice(listOf("hex", "base64")))
+        val prefixCodec = LuaOptional(LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "secret" to secretCodec,
+            "algorithm" to algorithmCodec,
+            "encoding" to encodingCodec,
+            "prefix" to prefixCodec
+        )
+
+        override fun read(fields: ShapeReader) = SignatureOptions(
+            secret = fields.field("secret", secretCodec),
+            algorithm = fields.field("algorithm", algorithmCodec),
+            encoding = fields.field("encoding", encodingCodec),
+            prefix = fields.field("prefix", prefixCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: SignatureOptions) {
+            fields.field("secret", value.secret, secretCodec)
+            fields.field("algorithm", value.algorithm, algorithmCodec)
+            fields.field("encoding", value.encoding, encodingCodec)
+            fields.field("prefix", value.prefix, prefixCodec)
+        }
+    }
+}
+
+/** What `nf.web.oauth` takes. */
+data class OAuthOptions(val name: String, val authorizeUrl: String, val tokenUrl: String, val clientId: String, val clientSecret: String? = null, val scopes: List<String>? = null, val clientAuth: String? = null, val parameters: Map<String, String>? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<OAuthOptions>("OAuthOptions") {
+        val nameCodec = LuaCodecs.STRING
+        val authorizeUrlCodec = LuaCodecs.STRING
+        val tokenUrlCodec = LuaCodecs.STRING
+        val clientIdCodec = LuaCodecs.STRING
+        val clientSecretCodec = LuaOptional(LuaCodecs.STRING)
+        val scopesCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val clientAuthCodec = LuaOptional(LuaChoice(listOf("body", "basic")))
+        val parametersCodec = LuaOptional(LuaMap(LuaCodecs.STRING, LuaCodecs.STRING))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "name" to nameCodec,
+            "authorize_url" to authorizeUrlCodec,
+            "token_url" to tokenUrlCodec,
+            "client_id" to clientIdCodec,
+            "client_secret" to clientSecretCodec,
+            "scopes" to scopesCodec,
+            "client_auth" to clientAuthCodec,
+            "parameters" to parametersCodec
+        )
+
+        override fun read(fields: ShapeReader) = OAuthOptions(
+            name = fields.field("name", nameCodec),
+            authorizeUrl = fields.field("authorize_url", authorizeUrlCodec),
+            tokenUrl = fields.field("token_url", tokenUrlCodec),
+            clientId = fields.field("client_id", clientIdCodec),
+            clientSecret = fields.field("client_secret", clientSecretCodec),
+            scopes = fields.field("scopes", scopesCodec),
+            clientAuth = fields.field("client_auth", clientAuthCodec),
+            parameters = fields.field("parameters", parametersCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: OAuthOptions) {
+            fields.field("name", value.name, nameCodec)
+            fields.field("authorize_url", value.authorizeUrl, authorizeUrlCodec)
+            fields.field("token_url", value.tokenUrl, tokenUrlCodec)
+            fields.field("client_id", value.clientId, clientIdCodec)
+            fields.field("client_secret", value.clientSecret, clientSecretCodec)
+            fields.field("scopes", value.scopes, scopesCodec)
+            fields.field("client_auth", value.clientAuth, clientAuthCodec)
+            fields.field("parameters", value.parameters, parametersCodec)
+        }
+    }
+}
+
+/** A login finished. */
+data class OAuthCompleteEvent(val flow: LuaHandle.OAuthFlow, val player: LuaHandle.Player, val accessToken: String, val tokenType: String? = null, val refreshToken: String? = null, val expiresIn: Long? = null, val scope: String? = null, val idToken: String? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<OAuthCompleteEvent>("OAuthCompleteEvent") {
+        val flowCodec = LuaHandle.OAuthFlow.Codec
+        val playerCodec = LuaHandle.Player.Codec
+        val accessTokenCodec = LuaCodecs.STRING
+        val tokenTypeCodec = LuaOptional(LuaCodecs.STRING)
+        val refreshTokenCodec = LuaOptional(LuaCodecs.STRING)
+        val expiresInCodec = LuaOptional(LuaCodecs.INTEGER)
+        val scopeCodec = LuaOptional(LuaCodecs.STRING)
+        val idTokenCodec = LuaOptional(LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "flow" to flowCodec,
+            "player" to playerCodec,
+            "access_token" to accessTokenCodec,
+            "token_type" to tokenTypeCodec,
+            "refresh_token" to refreshTokenCodec,
+            "expires_in" to expiresInCodec,
+            "scope" to scopeCodec,
+            "id_token" to idTokenCodec
+        )
+
+        override fun read(fields: ShapeReader) = OAuthCompleteEvent(
+            flow = fields.field("flow", flowCodec),
+            player = fields.field("player", playerCodec),
+            accessToken = fields.field("access_token", accessTokenCodec),
+            tokenType = fields.field("token_type", tokenTypeCodec),
+            refreshToken = fields.field("refresh_token", refreshTokenCodec),
+            expiresIn = fields.field("expires_in", expiresInCodec),
+            scope = fields.field("scope", scopeCodec),
+            idToken = fields.field("id_token", idTokenCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: OAuthCompleteEvent) {
+            fields.field("flow", value.flow, flowCodec)
+            fields.field("player", value.player, playerCodec)
+            fields.field("access_token", value.accessToken, accessTokenCodec)
+            fields.field("token_type", value.tokenType, tokenTypeCodec)
+            fields.field("refresh_token", value.refreshToken, refreshTokenCodec)
+            fields.field("expires_in", value.expiresIn, expiresInCodec)
+            fields.field("scope", value.scope, scopeCodec)
+            fields.field("id_token", value.idToken, idTokenCodec)
+        }
+    }
+}
+
+/** A login didn't finish. */
+data class OAuthFailEvent(val flow: LuaHandle.OAuthFlow, val player: LuaHandle.Player, val error: String) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<OAuthFailEvent>("OAuthFailEvent") {
+        val flowCodec = LuaHandle.OAuthFlow.Codec
+        val playerCodec = LuaHandle.Player.Codec
+        val errorCodec = LuaCodecs.STRING
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "flow" to flowCodec,
+            "player" to playerCodec,
+            "error" to errorCodec
+        )
+
+        override fun read(fields: ShapeReader) = OAuthFailEvent(
+            flow = fields.field("flow", flowCodec),
+            player = fields.field("player", playerCodec),
+            error = fields.field("error", errorCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: OAuthFailEvent) {
+            fields.field("flow", value.flow, flowCodec)
+            fields.field("player", value.player, playerCodec)
+            fields.field("error", value.error, errorCodec)
+        }
+    }
+}
+
 /**
  * How `nf.particles.play` plays an effect. Every key is optional; a key that isn't one of these is an
  * error.
@@ -6681,6 +7113,133 @@ data class TestInputKeys(val forward: Boolean? = null, val backward: Boolean? = 
             fields.field("jump", value.jump, jumpCodec)
             fields.field("sneak", value.sneak, sneakCodec)
             fields.field("sprint", value.sprint, sprintCodec)
+        }
+    }
+}
+
+/** How `nf.test.accept` answers. Every key is optional; a key that isn't one of these is an error. */
+data class TestAcceptOptions(val status: Long? = null, val headers: Map<String, String>? = null, val protocol: String? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<TestAcceptOptions>("TestAcceptOptions") {
+        val statusCodec = LuaOptional(LuaCodecs.INTEGER)
+        val headersCodec = LuaOptional(LuaMap(LuaCodecs.STRING, LuaCodecs.STRING))
+        val protocolCodec = LuaOptional(LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "status" to statusCodec,
+            "headers" to headersCodec,
+            "protocol" to protocolCodec
+        )
+
+        override fun read(fields: ShapeReader) = TestAcceptOptions(
+            status = fields.field("status", statusCodec),
+            headers = fields.field("headers", headersCodec),
+            protocol = fields.field("protocol", protocolCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: TestAcceptOptions) {
+            fields.field("status", value.status, statusCodec)
+            fields.field("headers", value.headers, headersCodec)
+            fields.field("protocol", value.protocol, protocolCodec)
+        }
+    }
+}
+
+/**
+ * How `nf.test.disconnect` ends a connection. Every key is optional; a key that isn't one of these is
+ * an error.
+ */
+data class TestDisconnectOptions(val code: Long? = null, val reason: String? = null, val error: String? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<TestDisconnectOptions>("TestDisconnectOptions") {
+        val codeCodec = LuaOptional(LuaCodecs.INTEGER)
+        val reasonCodec = LuaOptional(LuaCodecs.STRING)
+        val errorCodec = LuaOptional(LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "code" to codeCodec,
+            "reason" to reasonCodec,
+            "error" to errorCodec
+        )
+
+        override fun read(fields: ShapeReader) = TestDisconnectOptions(
+            code = fields.field("code", codeCodec),
+            reason = fields.field("reason", reasonCodec),
+            error = fields.field("error", errorCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: TestDisconnectOptions) {
+            fields.field("code", value.code, codeCodec)
+            fields.field("reason", value.reason, reasonCodec)
+            fields.field("error", value.error, errorCodec)
+        }
+    }
+}
+
+/** What `nf.test.request` sends. Every key is optional; a key that isn't one of these is an error. */
+data class TestRequestOptions(val headers: Map<String, String>? = null, val body: String? = null, val ip: String? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<TestRequestOptions>("TestRequestOptions") {
+        val headersCodec = LuaOptional(LuaMap(LuaCodecs.STRING, LuaCodecs.STRING))
+        val bodyCodec = LuaOptional(LuaCodecs.STRING)
+        val ipCodec = LuaOptional(LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "headers" to headersCodec,
+            "body" to bodyCodec,
+            "ip" to ipCodec
+        )
+
+        override fun read(fields: ShapeReader) = TestRequestOptions(
+            headers = fields.field("headers", headersCodec),
+            body = fields.field("body", bodyCodec),
+            ip = fields.field("ip", ipCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: TestRequestOptions) {
+            fields.field("headers", value.headers, headersCodec)
+            fields.field("body", value.body, bodyCodec)
+            fields.field("ip", value.ip, ipCodec)
+        }
+    }
+}
+
+/** What `nf.test.request` gives back: the answer as the client got it. */
+data class TestWebResponse(val status: Long, val headers: Map<String, String>, val body: String) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<TestWebResponse>("TestWebResponse") {
+        val statusCodec = LuaCodecs.INTEGER
+        val headersCodec = LuaMap(LuaCodecs.STRING, LuaCodecs.STRING)
+        val bodyCodec = LuaCodecs.STRING
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "status" to statusCodec,
+            "headers" to headersCodec,
+            "body" to bodyCodec
+        )
+
+        override fun read(fields: ShapeReader) = TestWebResponse(
+            status = fields.field("status", statusCodec),
+            headers = fields.field("headers", headersCodec),
+            body = fields.field("body", bodyCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: TestWebResponse) {
+            fields.field("status", value.status, statusCodec)
+            fields.field("headers", value.headers, headersCodec)
+            fields.field("body", value.body, bodyCodec)
         }
     }
 }

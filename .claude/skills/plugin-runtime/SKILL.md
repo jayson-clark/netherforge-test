@@ -1029,6 +1029,108 @@ redirect's refusal are `nil, err` (`WorkFailed`).
   timeouts, closing), `HttpRequestTest` (from Lua, with `TestServer(http =
 ...)`). HTTPS against a real certificate isn't tested.
 
+## Streams and WebSockets (`nf.http.stream`, `nf.http.websocket`)
+
+`api/NfHttpImpl` checks the call as for `request` (URL scheme, credentials, headers, body, the
+host requirement; `Sec-WebSocket-*` headers and bad subprotocol names refused) and hands it to
+`http/Connections` (a `RuntimeService`, `session.connections`, registered after `http` so it stops
+first), which numbers it, files it under the opening scope and makes the `HttpStream`/`WebSocket`
+handle (key: number and URL, so `url()` answers after the end).
+
+- **The transport only queues.** `ConnectionTransport` is `http/OkHttpConnections` on a server and
+  `http/TestConnections` in a script test run (`HttpClient(testing)`). Either talks to the main
+  thread only through the `Connection.Sink`: `opened`, `message`, `ended` (heard once), all
+  queued on the connection's `inbound`. `Connections.tick(ASYNC)` hands them to scripts in order,
+  at most `messages-per-tick` messages per connection, then checks idle (`idle-seconds`, by ticks)
+  and the first answer (`timeout-seconds`). Nothing the transport does runs Lua.
+- **Backpressure, not dropping.** `Sink.message` takes a permit of the connection's `room`
+  (`max-queued-messages`) and waits for one; the main thread releases one per message delivered.
+  A stream's reader or OkHttp's WebSocket reader thread waiting there stops reading the socket,
+  so TCP slows the far end. The test transport's `tryMessage` doesn't wait: a full queue is an
+  error at the test's line. (This replaced "close on overflow": OkHttp calls `onMessage` on its
+  reader thread, so blocking there is real backpressure for WebSockets too.)
+- **Limits end, they don't error.** Too many open (`max-per-package`, `max-total`) or the request
+  rate (shared with `request`: opening counts) makes the connection anyway and queues
+  `ended(LIMIT)` for the next tick, so a script handles every limit in `end`. A script's own
+  mistake (a message over `max-message-bytes` sent, a bad close code) is an error at its line.
+- **Bytes are counted on the wire.** `bytes-per-minute` is a per-package `ByteRate` (thread-safe
+  sliding window). Received bytes are counted under TLS by `CountingSocketFactory`'s sockets
+  (each connection's client has its own socket factory and a pool that keeps nothing, so a
+  socket is one connection's), which throw `OverByteLimit` once over, after the sink ended it
+  `"limit"`: OkHttp has no WebSocket message limit, and this is what stops a far end making the
+  server buffer an endless frame. Sent bytes are counted in `Connections.send`.
+- **Threads.** A connection holds a thread while it's open, so `OkHttpConnections` has its own
+  cached pool (also its OkHttp `Dispatcher`'s), not the runtime's `Workers` (four held streams
+  would starve every script's work), bounded by `max-total`. Its `close` cancels every WebSocket
+  (an upgraded socket's call is finished, so `Dispatcher.cancelAll` misses it), the dispatcher's
+  calls, and the threads. The `HttpFetcher` guard is reused whole: `connectionClient` is
+  `client.newBuilder()` (the checked `Dns`, no proxy, no redirects), `checkLiteral` for the URL,
+  and a stream follows redirects hop by hop through `redirected` with the bound host check, as
+  `fetch` does. WebSockets don't follow redirects (a 3xx is `"failed"`, saying so).
+- **Splitting.** `StreamSplitter` turns bytes into lines (LF, CRLF or CR), Server-Sent Events
+  (`data:` joined, `event:` → `type`, `id:` kept across events, comments and `retry:` skipped,
+  a half event at the end dropped) or decoded chunks (a UTF-8 character split across reads held
+  for the next). The same splitter reads the test transport's `receive`.
+- **Ending** (`Connections.end`): mark ended, let the far end go (`Link.close`: a WebSocket close
+  frame with the script's code, `1001` for `"unloaded"`, `1008` for `"limit"`; a stream's call
+  cancelled), drop what's queued, emit `end` while the handle still answers, then remove it and
+  `dropTarget`. A script's `close()` hears its own `end` inside the call, as `Effect:stop` does.
+- Tests: `StreamSplitterTest`; `HttpConnectionsTest` (from Lua over OkHttp to MockWebServer on
+  loopback: a chunked `MockResponseBody` the test feeds, `webSocketUpgrade`; the far end's
+  listener must answer a close (`Polite`) or MockWebServer's shutdown gives up waiting); the
+  script test runner's `ScriptTestRunnerTest` for `nf.test.connections`/`accept`/`receive`/
+  `sent`/`disconnect`.
+
+## Web routes (`nf.web`)
+
+Inbound requests, off by default (`web.enabled`; `WebConfig`). Two halves:
+
+- **The listener's, for the plugin's life: `web/WebGate`** (`runtime.web`). It's served on the
+  resource pack's HTTP server (`PackServer`, now four threads; `Packs.listener()` starts it even
+  when packs aren't served): `/<sha1>.zip` is the pack's, anything else goes to `PackServer.web`,
+  set at `enable` when web routes are on. On the listener's thread the gate refuses what it can
+  without the main thread (path over 2048: `414`; `requests-per-minute-per-ip`: `429`,
+  `AddressRate`, swept now and then so it can't grow with every address; `Content-Length` or the
+  read body over `max-body-bytes`: `413`, reading no further than the limit), then queues a
+  `WebCall` in a bounded queue (`max-pending`, else `503`). A `WebCall` is answered once
+  (`AtomicBoolean`) and its answer written back on the listener's threads (`PackServer.execute`),
+  never the main thread, so a slow client holds up nobody. The client's address is the
+  connection's, or `X-Forwarded-For`'s first with `trust-proxy-headers`. No TLS and no slow-client
+  timeout of its own: the docs put a reverse proxy in front.
+- **The session's: `web/WebRoutes`** (`session.web`). `tick(ASYNC)` routes at most 32 queued
+  calls a tick: by the first segment (the namespace), then the most specific matching
+  `RoutePath` (literal > `:param` > `*rest`) of that method (`HEAD` → `GET`); `404`, or `405` with
+  `Allow`. A script's route is called with `callKept(..., "web")`: a plain `Map` for the request
+  (`WebRequest` isn't a crossing shape, only a callback's parameter) and a `WebResponse` handle,
+  keyed by the pending request's number. A failed handler is reported (`handlerFailed`) and
+  answered `500`; `Absent` is `503`. Pending requests time out to `504` by ticks. Routes are
+  scope-owned; `scopeReleased`, `Route:remove` and `stop` answer what waits on them `503`. A route
+  is a script's (a `LuaFunction`) or the runtime's (`internal`, a login flow's callback): one
+  table, so a script's route and a flow's can't take the same method and path. With web routes off
+  routes are still kept (tests reach them), and every package declaring `requires.web` has the
+  warning `runtime.web-disabled`.
+- **Answers** (`api/NfWebImpl`'s `WebResponseImpl`): status 100–599; headers held to tokens and
+  printable ASCII, none the server sets; `max-response-bytes`; every answer gets
+  `X-Content-Type-Options: nosniff` and `Cache-Control: no-store` unless set; `redirect` only to
+  `http(s)://` or a path starting with one `/`, no control characters.
+- **Logins: `web/OAuthFlows`** (`session.oauth`, after `web`). Each flow has an internal route
+  `GET /<ns>/oauth/<name>/callback`. `begin` makes a 32-byte state and verifier (`SecureRandom`),
+  keeps them by state with the player and an expiry (10 minutes, at most 1000 a flow), and gives
+  the authorize URL with `code_challenge` (S256). The callback takes the state out (single use):
+  unknown is `400` with no event (forged or replayed); otherwise the code goes to the token
+  endpoint on a worker through `HttpFetcher` (the flow's `requires.http` host checked when it's
+  made, each redirect held with `requirements.held` bound then), then `complete`/`fail` on the flow
+  and an escaped HTML page. In a test run the endpoint isn't called: `nf.test.oauth_token` (or a
+  default token) answers, synchronously.
+- `nf.web.verify_signature`: HMAC (`javax.crypto.Mac`), compared with `MessageDigest.isEqual`;
+  an unreadable signature is `false`.
+- **Tests**: `RoutePathTest`; `WebRoutesTest` (real HTTP to the listener with the JDK's client,
+  ticking while it waits); the runner's `ScriptTestRunnerTest` for `nf.test.request` (routes
+  through `WebRoutes.request`, the gate's refusals included, then advancing tick by tick while the
+  answer is pending) and a whole login. The real token exchange isn't tested (it needs HTTPS with
+  a trusted certificate), as HTTPS isn't for `nf.http.request`. The conformance harness gets a
+  `WebResponse` from a `/sample` route the test requests once before the calls.
+
 ## Plugin interop (Vault and PlaceholderAPI)
 
 `nf.economy` (`balance`, `deposit`, `withdraw`: Vault, `requires:
@@ -1119,12 +1221,18 @@ sends).
 - **Files**: `nf.files` is one sandboxed folder per server
   (`ScriptFiles`); a production server runs a bundle whose packages are
   hashed (`runtime.bundle-hash`) and never resolves dependencies itself.
-- **The network** (`nf.http.request`, see "HTTP" above): hosts a package
-  declared; every address checked once and connected to as checked, so a
+- **Inbound web requests** (`nf.web`, see "Web routes" above): off unless the owner turns them
+  on; each package only under `/<namespace>/`; refused on the listener's threads before any script
+  (size, per-address rate, how many wait), at most 32 routed a tick, handlers under the budget;
+  login state and verifiers kept by the runtime, single use, expiring; signatures compared in
+  constant time. TLS and slow clients are left to the owner's reverse proxy.
+- **The network** (`nf.http.request`, `stream` and `websocket`, see "HTTP" and "Streams and
+  WebSockets" above): hosts a package declared; every address checked once and connected to as checked, so a
   name a script's author controls can't lead into the owner's network (public
   addresses only, redirects included, unless the owner sets
   `http.allow-private-addresses`); size, time and rate limits from the owner's
-  `http:` section; the owner's proxy settings never used.
+  `http:` section, and for open connections how many, how many bytes a minute on the wire, how
+  large a message and how long idle (`http.connections`); the owner's proxy settings never used.
 - **Not yet here** (later items): remote databases named only by the owner
   (W2.3), plugin interop without a general escape hatch (W2.4).
 - **Plugin interop** (W2.4) has no general escape hatch: only the typed
@@ -2162,6 +2270,19 @@ paperweight-userdev), through `BotProtocol` where versions differ:
   sign packet differs between versions. A new player event or action gets a
   case in these and a step in `BotScenario`.
 
+- **Aiming a click.** `interact`/`attack` naming nothing click what's in the crosshair where the
+  line of sight meets it, without turning (`Bot.aimed`, `FakeBots.aimed`): never re-aim at the
+  middle, or a `look_at` at one spot of a big hitbox (a board's square) is lost. Naming an entity
+  or a centity's node turns to its middle, or to the action's `x`/`y`/`z` when given (over the
+  runtime's `BotAim.at`). `BotActionsContract` holds both servers to it with a wide flat hitbox.
+- **What it looks at** (`BotState.target`, a `BotTarget`): picked as the client's crosshair is, the
+  nearest pickable entity the client knows within entity reach in front of the block within block
+  reach (`Bot.sight`, the same rule as `inSight` for a click; `FakeBots.target` with the fake's
+  ray casts, NetherForge's hitboxes included). Which centity and node a hitbox is, the node chosen
+  as a click there would choose it (`Centities.clickTarget`, the same `pick` as `click`), is filled
+  in by `BotsBridge` on the way out: only the runtime knows. `BotActionsContract` holds both
+  servers to it; `BridgeTest` the node.
+
 Gotcha: Paper's packages are null-marked, so Kotlin trusts annotations like
 `Connection.getPlayer()`'s non-null even where it's null (before the player is
 in the world). Read such things from the listener instead.
@@ -2176,8 +2297,9 @@ Everything runs on the server's main thread. **Folia is unsupported**:
 normally refuses to load it first). Work that mustn't hold the main thread
 goes to the runtime's workers, and comes back through one of two queues;
 nothing else makes a thread or an executor of its own (the bridge's socket
-threads and the resource pack's HTTP server excepted: they block on sockets
-for their whole life, which would starve the pool). All of it is in
+threads, the resource pack's HTTP server (which also reads and answers web
+routes' requests) and open streams and WebSockets (`OkHttpConnections`) excepted: they block on sockets for their whole life,
+which would starve the pool). All of it is in
 `kotlin/.../async/`.
 
 - **The Lua state is single-threaded, and checks.** `LuaHost` remembers the

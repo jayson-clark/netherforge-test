@@ -1134,6 +1134,19 @@ class Centities(
     }
 
     /**
+     * Whose hitbox [entity] is, and the node a click there by [player] along
+     * [sight] would reach (null when none would: an unclickable node, or a
+     * line of sight through a `raycast` node's padding), as [click] picks it.
+     * Null when [entity] isn't one of a centity's hitboxes, or is hidden from [player].
+     */
+    fun clickTarget(entity: UUID, player: UUID, sight: Ray?): Pair<Instance, String?>? {
+        val (instance, name) = owners[entity] ?: return null
+        if (instance.removed || player in instance.hiddenFrom) return null
+        val clicked = instance.indexOf(name) ?: return instance to null
+        return instance to pick(instance, clicked, sight)?.let { instance.definition.nodes[it.index].name }
+    }
+
+    /**
      * Where a player would aim to click [instance]'s node [node] (its first
      * clickable, shown node with a hitbox when null): the node's interaction
      * entity, and the middle of its box in the world. Null when that node

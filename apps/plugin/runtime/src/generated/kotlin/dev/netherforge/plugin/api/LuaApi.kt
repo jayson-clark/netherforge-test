@@ -40,6 +40,7 @@ interface LuaApi {
     val nfLooks: NfLooksApi
     val nfJson: NfJsonApi
     val nfHttp: NfHttpApi
+    val nfWeb: NfWebApi
     val nfTime: NfTimeApi
     val nfRandom: NfRandomApi
     val nfTest: NfTestApi
@@ -68,6 +69,11 @@ interface LuaApi {
     val button: ButtonApi
     val projectItem: ProjectItemApi
     val effect: EffectApi
+    val httpStream: HttpStreamApi
+    val webSocket: WebSocketApi
+    val route: RouteApi
+    val webResponse: WebResponseApi
+    val oAuthFlow: OAuthFlowApi
     val cutscene: CutsceneApi
     val file: FileApi
     val schedule: ScheduleApi
@@ -80,8 +86,8 @@ interface LuaApi {
  * `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`,
  * `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`,
  * `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`,
- * `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and
- * `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
+ * `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.web`, `nf.time`, `nf.random`, `nf.math`
+ * and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
  */
 interface NfApi {
     /**
@@ -808,7 +814,9 @@ interface NfJsonApi {
  * network). Redirects (at most 5) are followed, and each one is held to the same rules, host
  * declaration included. The server's proxy settings are never used. Only `http` and `https` URLs work.
  * The server owner also limits requests in `config.yml`'s `http:` section: how large a request and a
- * response may be, how long a request may take, and how many a package may make a minute.
+ * response may be, how long a request may take, and how many a package may make a minute. Connections
+ * that stay open (`stream`, `websocket`) are held to the same hosts and addresses, count as a request
+ * when they open, and have limits of their own in `http.connections`.
  */
 interface NfHttpApi {
     /**
@@ -824,6 +832,91 @@ interface NfHttpApi {
      * outside a task, it's an error. When it fails, `response` is `nil` and `err` says why.
      */
     fun request(caller: Caller, options: HttpRequestOptions): CompletionStage<HttpResponse>
+
+    /**
+     * Opens a request whose response keeps coming (an NDJSON feed, Server-Sent Events, any chunked stream)
+     * and hands it over piece by piece as the stream's `message` events, on the main thread, as the server
+     * sends it. It returns at once: the connection is made off the main thread, and its `open` event says
+     * when the response has begun (with its status, which may be an error's: check it). It ends once, with
+     * its `end` event saying why: the server finished, `close()` was called, it failed, an owner's limit
+     * was reached, nothing came for too long, or the script that opened it unloaded. Nothing reconnects by
+     * itself: open it again from `end` if you want to, waiting longer each time. Redirects are followed as
+     * for `request`. The hosts, addresses and request rules are `request`'s, and opening counts as a
+     * request against the package's rate; a mistake in the call is an error at the script's line, and a
+     * limit the owner set (too many open, the request rate) ends the stream at the next tick with reason
+     * `"limit"`.
+     */
+    fun stream(caller: Caller, options: HttpStreamOptions): LuaHandle.HttpStream
+
+    /**
+     * Opens a WebSocket (a `ws://` or `wss://` URL): a connection both sides send text messages over, for
+     * as long as it stays open (a chat bridge, a game feed, Discord's gateway). It returns at once: the
+     * connection is made off the main thread, and the socket's `open` event says when it's ready (what
+     * `send` sends before then waits for it). Each text message from the other side is a `message` event
+     * on the main thread, in order. It ends once, with its `end` event saying why. Nothing reconnects by
+     * itself. The host must be one the package declares in `requires.http`, as for `request` (the same
+     * declaration covers both), and the address rules are `request`'s; redirects aren't followed. A
+     * mistake in the call is an error at the script's line, and a limit the owner set (too many open, the
+     * request rate) ends it at the next tick with reason `"limit"`.
+     */
+    fun websocket(caller: Caller, options: WebSocketOptions): LuaHandle.WebSocket
+}
+
+/**
+ * Web requests to the server: webhooks from stores, CI and chat services, "log in with…" callbacks,
+ * small pages and JSON for a companion site. A package declares `"requires": { "web": true }` in its
+ * `netherforge.json`, and its routes live under its own path, `/<namespace>/`, so packages can't
+ * collide. They're served only once the server owner turns web routes on (`web.enabled` in
+ * `config.yml`), on the port the resource pack is served from, usually behind a reverse proxy that
+ * adds HTTPS; until then a package that declares them has a warning (`runtime.web-disabled`). Every
+ * request waits for the main thread: handlers run there, under the script's budget, like any handler,
+ * and the owner limits how large a request may be, how many each address may make a minute and how
+ * many may wait (`web:` in `config.yml`). `/nf requires` lists every route.
+ */
+interface NfWebApi {
+    /**
+     * Answers requests for `method` at `path`, under the package's own `/<namespace>/`:
+     * `nf.web.route("POST", "/hooks/store", …)` in package `shop` answers `POST /shop/hooks/store`. A
+     * segment `:name` matches any one segment and hands it over as `request.params.name`; a last segment
+     * `*name` matches the rest of the path, slashes and all. `handler` is called with the request and a
+     * response to answer it with, now (`response:send`) or later, from a task or a callback (an
+     * `nf.http.request`, a database query); one not answered within `web.handler-timeout-seconds` is
+     * answered `504`. A `GET` route answers `HEAD` too. The route belongs to the script that made it and
+     * goes when it unloads; requests still waiting then are answered `503`. Two routes of one package for
+     * the same method and path, a path that isn't one, and a path a login (`nf.web.oauth`) uses are
+     * errors.
+     */
+    fun route(caller: Caller, method: String, path: String, handler: LuaFunction): LuaHandle.Route
+
+    /**
+     * The address the world reaches the calling package's `path` at: `web.public-url` in `config.yml` (the
+     * server's own address when it's empty), then `/<namespace>`, `path` and the query. For a link to put
+     * in chat, a webhook to register with another service, a login's address. `nil` while the server owner
+     * hasn't turned web routes on.
+     */
+    fun url(caller: Caller, path: String?, query: Map<String, String>?): String?
+
+    /**
+     * Whether `signature` is the HMAC of `body` under `options.secret`, as webhook senders sign what they
+     * send (GitHub's `X-Hub-Signature-256`, Stripe's and Shopify's): compared in constant time, so the
+     * answer leaks nothing about the right one. Check it before acting on a webhook. Keep the secret in a
+     * setting (`nf.config`), not in a script. A signature that isn't in `options.encoding` is `false`, not
+     * an error.
+     */
+    fun verifySignature(caller: Caller, body: String, signature: String, options: SignatureOptions): Boolean
+
+    /**
+     * A "log in with…" flow (OAuth 2 with PKCE, the authorization code grant): `flow:begin(player)` gives
+     * the address to send the player to, the service sends them back to the flow's own route
+     * (`/<namespace>/oauth/<name>/callback`, which you register with the service as its redirect URI:
+     * `nf.web.url("/oauth/<name>/callback")`), and the server trades the code for a token itself and
+     * raises `complete` (or `fail`) on the flow. NetherForge keeps the state and the code verifier, ties
+     * each to the player who began, uses each once and lets it expire after 10 minutes, so a forged or
+     * replayed callback is refused. The token endpoint's host must be one the package declares in
+     * `requires.http`. The flow belongs to the script that made it and goes when it unloads; logins begun
+     * before a reload are forgotten. Two flows of one package with the same `name` are an error.
+     */
+    fun oauth(caller: Caller, options: OAuthOptions): LuaHandle.OAuthFlow
 }
 
 /**
@@ -961,6 +1054,62 @@ interface NfTestApi {
      * empty slot, or one their game hasn't been sent.
      */
     fun shown(caller: Caller, player: LuaHandle.Player, slot: IntegerOrChoice, options: TestShownOptions?): ItemData?
+
+    /**
+     * The connections scripts opened with `nf.http.stream` and `nf.http.websocket` in this test, oldest
+     * first, ended ones included. In a test nothing reaches the network: each connection is held by the
+     * test, which answers it with `nf.test.accept`, talks over it with `nf.test.receive` and
+     * `nf.test.sent`, and ends it with `nf.test.disconnect`. Everything else is as on a server: the
+     * package must declare the host, the owner's limits apply (the defaults, in a test), and what the test
+     * does reaches the scripts at the next tick, so `nf.test.advance(1)` after it.
+     */
+    fun connections(caller: Caller, url: String?): List<LuaHandle>
+
+    /**
+     * Answers a connection that's still connecting, as its server would: its `open` event follows at the
+     * next tick. A stream opens with `options.status` (default `200`). Accepting one that isn't connecting
+     * any more is an error.
+     */
+    fun accept(caller: Caller, connection: LuaHandle, options: TestAcceptOptions?)
+
+    /**
+     * Sends `text` from the far end. A WebSocket hears it as one `message`; a stream reads it as more of
+     * its response, split by its `format` exactly as a server's would be (so `"a\nb\n"` is two lines, and
+     * half a line waits for the rest). It accepts a connection that's still connecting first. An error
+     * when the connection has ended, or when as many messages as `connections.max-queued-messages` are
+     * already waiting for the scripts (advance to let them in).
+     */
+    fun receive(caller: Caller, connection: LuaHandle, text: String)
+
+    /**
+     * Every message scripts sent on a WebSocket so far, in order, whether or not it had opened (a stream
+     * sends nothing: its request body is in its options).
+     */
+    fun sent(caller: Caller, connection: LuaHandle.WebSocket): List<String>
+
+    /**
+     * Makes a web request to the server, as a browser or a webhook sender would, and gives its answer: it
+     * goes through the routes scripts made with `nf.web.route` and the owner's limits (the defaults, in a
+     * test) exactly as a real one does, without a network, whether or not web routes are turned on. When
+     * the handler answers later (from a task, a callback), the server runs forward tick by tick until it
+     * does, as `nf.test.advance` would, up to `web.handler-timeout-seconds` (then it's `504`).
+     */
+    fun request(caller: Caller, method: String, path: String, options: TestRequestOptions?): TestWebResponse
+
+    /**
+     * What a login flow's token endpoint answers in this test: in a test the server doesn't call it, and
+     * trades every code for this instead (by default `{ access_token = "test-token", token_type = "Bearer"
+     * }`). A table without `access_token` makes the login `fail`, with its `error_description` or `error`.
+     */
+    fun oauthToken(caller: Caller, flow: LuaHandle.OAuthFlow, response: LuaValue)
+
+    /**
+     * Ends a connection from the far end, after what it already received: with `options.error` it breaks
+     * (reason `"failed"`, `detail` the error), otherwise the server finishes it (`"finished"`, a WebSocket
+     * with `options.code` and `options.reason`). Its `end` event follows at the next tick. Disconnecting
+     * one that has ended does nothing.
+     */
+    fun disconnect(caller: Caller, connection: LuaHandle, options: TestDisconnectOptions?)
 }
 
 /**
@@ -4264,6 +4413,131 @@ interface EffectApi {
      * `"target_gone"`. Calling it again switches targets; `teleport` stops following.
      */
     fun follow(self: LuaHandle.Effect, target: LuaHandle, offset: Vec3?): Boolean
+}
+
+/**
+ * A streamed HTTP response, from `nf.http.stream`: its `open`, each `message` and its one `end` are
+ * events on it. It belongs to the script that opened it and ends with reason `"unloaded"` when that
+ * script unloads (a reload, the server stopping). Once it has ended its methods answer as an ended
+ * stream does rather than erroring. Ephemeral: it can't be saved in a `data()` table.
+ */
+interface HttpStreamApi {
+    /** The URL it was opened with, even after it has ended. */
+    fun url(self: LuaHandle.HttpStream): String
+
+    /**
+     * `"connecting"` until its `open` event, then `"open"`, and `"ended"` once its `end` event has been
+     * heard.
+     */
+    fun state(self: LuaHandle.HttpStream): String
+
+    /**
+     * The response's status code once it has opened (`200`, `404`); `nil` before, and once it has ended
+     * (its `end` event has it).
+     */
+    fun status(self: LuaHandle.HttpStream): Long?
+
+    /**
+     * Ends it now, with reason `"closed"`: the connection is dropped and messages that arrived but weren't
+     * handed over yet are thrown away.
+     */
+    fun close(self: LuaHandle.HttpStream): Boolean
+}
+
+/**
+ * A WebSocket, from `nf.http.websocket`: `send` text on it, and hear its `open`, each `message` and
+ * its one `end` as events. It belongs to the script that opened it and ends with reason `"unloaded"`
+ * when that script unloads (a reload, the server stopping). Once it has ended its methods answer as an
+ * ended socket does rather than erroring. Ephemeral: it can't be saved in a `data()` table.
+ */
+interface WebSocketApi {
+    /** The URL it was opened with, even after it has ended. */
+    fun url(self: LuaHandle.WebSocket): String
+
+    /**
+     * `"connecting"` until its `open` event, then `"open"`, and `"ended"` once its `end` event has been
+     * heard.
+     */
+    fun state(self: LuaHandle.WebSocket): String
+
+    /**
+     * The subprotocol the other side chose from `options.protocols`, while it's open; `nil` before and
+     * after, or when it chose none.
+     */
+    fun protocol(self: LuaHandle.WebSocket): String?
+
+    /**
+     * Sends a text message. Before the socket opens it waits and goes, in order, once it does. A message
+     * over `connections.max-message-bytes` is an error at the script's line; one past the package's
+     * `connections.bytes-per-minute` ends the socket (reason `"limit"`) instead of going.
+     */
+    fun send(self: LuaHandle.WebSocket, text: String): Boolean
+
+    /**
+     * Ends it now, with reason `"closed"`: the other side is told with `code` and `reason`, and messages
+     * that arrived but weren't handed over yet are thrown away.
+     */
+    fun close(self: LuaHandle.WebSocket, code: Long?, reason: String?): Boolean
+}
+
+/**
+ * A route a script answers, from `nf.web.route`. It goes when its script unloads or `remove` is
+ * called.
+ */
+interface RouteApi {
+    /** Stops answering: later requests to it are `404`, and requests still waiting are answered `503`. */
+    fun remove(self: LuaHandle.Route): Boolean
+
+    /** Whether it still answers. */
+    fun exists(self: LuaHandle.Route): Boolean
+}
+
+/**
+ * How a route's handler answers its request: once, with `send`, `json` or `redirect`, during the
+ * handler or later (from a task, or a callback). Every answer also says `X-Content-Type-Options:
+ * nosniff`, and `Cache-Control: no-store` unless you set one. One not answered within
+ * `web.handler-timeout-seconds` is answered `504`; one whose route's script unloads first, `503`.
+ * Ephemeral: it can't be saved in a `data()` table.
+ */
+interface WebResponseApi {
+    /**
+     * Answers with `status`, `body` and `headers`. The `Content-Type` is `text/plain; charset=utf-8`
+     * unless `headers` sets one (`["content-type"] = "text/html; charset=utf-8"` for a page). A body over
+     * `web.max-response-bytes`, a status that isn't one, or a header that can't be sent (one the server
+     * sets, like `Content-Length`) is an error at the script's line.
+     */
+    fun send(self: LuaHandle.WebResponse, status: Long, body: String?, headers: Map<String, String>?): Boolean
+
+    /**
+     * Answers with `status` and `value` written as JSON (`application/json`), as `nf.json.encode` writes
+     * it.
+     */
+    fun json(self: LuaHandle.WebResponse, status: Long, value: LuaValue): Boolean
+
+    /** Answers with a redirect to `url` (`302`, or `status`: `301`, `303`, `307` or `308`). */
+    fun redirect(self: LuaHandle.WebResponse, url: String, status: Long?): Boolean
+
+    /**
+     * Whether it still waits for an answer: `false` once it's answered, timed out, or its route's script
+     * unloaded.
+     */
+    fun isPending(self: LuaHandle.WebResponse): Boolean
+}
+
+/**
+ * A "log in with…" flow, from `nf.web.oauth`: `begin` a login for a player, and hear its `complete` or
+ * `fail`. It belongs to the script that made it.
+ */
+interface OAuthFlowApi {
+    /**
+     * Begins a login for `player`: the address of the service's page to send them to (as a link in chat),
+     * with a new state and code challenge that only this login's callback can use, for 10 minutes. `nil`
+     * while the server owner hasn't turned web routes on, or once the flow has gone.
+     */
+    fun begin(self: LuaHandle.OAuthFlow, player: LuaHandle.Player): String?
+
+    /** Ends the flow: its callback route goes and logins under way are forgotten. */
+    fun remove(self: LuaHandle.OAuthFlow): Boolean
 }
 
 /**

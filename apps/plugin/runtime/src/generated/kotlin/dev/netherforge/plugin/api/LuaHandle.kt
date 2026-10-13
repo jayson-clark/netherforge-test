@@ -49,6 +49,11 @@ sealed interface LuaHandle {
             "Button" -> Button(keyValues[0] as String, keyValues[1] as String)
             "ProjectItem" -> ProjectItem(keyValues[0] as String)
             "Effect" -> Effect(keyValues[0] as Long, keyValues[1] as String)
+            "HttpStream" -> HttpStream(keyValues[0] as Long, keyValues[1] as String)
+            "WebSocket" -> WebSocket(keyValues[0] as Long, keyValues[1] as String)
+            "Route" -> Route(keyValues[0] as Long)
+            "WebResponse" -> WebResponse(keyValues[0] as Long)
+            "OAuthFlow" -> OAuthFlow(keyValues[0] as Long)
             "Cutscene" -> Cutscene(keyValues[0] as Long, keyValues[1] as String)
             "File" -> File(keyValues[0] as String)
             "Subscription" -> Subscription(keyValues[0] as Long)
@@ -454,6 +459,98 @@ sealed interface LuaHandle {
 
         /** Effect handles. */
         object Codec : HandleCodec<Effect>("Effect", setOf("Effect"))
+    }
+
+    /**
+     * A streamed HTTP response, from `nf.http.stream`: its `open`, each `message` and its one `end` are
+     * events on it.
+     */
+    class HttpStream(val number: Long, val url: String) : LuaHandle {
+        override val luaClass: String get() = "HttpStream"
+
+        override val keyValues: List<Any> get() = listOf(number, url)
+
+        override fun equals(other: Any?): Boolean = other is HttpStream && other.number == number && other.url == url
+
+        override fun hashCode(): Int = 31 * (31 * "HttpStream".hashCode() + number.hashCode()) + url.hashCode()
+
+        override fun toString(): String = "$luaClass($number, $url)"
+
+        /** HttpStream handles. */
+        object Codec : HandleCodec<HttpStream>("HttpStream", setOf("HttpStream"))
+    }
+
+    /**
+     * A WebSocket, from `nf.http.websocket`: `send` text on it, and hear its `open`, each `message` and
+     * its one `end` as events.
+     */
+    class WebSocket(val number: Long, val url: String) : LuaHandle {
+        override val luaClass: String get() = "WebSocket"
+
+        override val keyValues: List<Any> get() = listOf(number, url)
+
+        override fun equals(other: Any?): Boolean = other is WebSocket && other.number == number && other.url == url
+
+        override fun hashCode(): Int = 31 * (31 * "WebSocket".hashCode() + number.hashCode()) + url.hashCode()
+
+        override fun toString(): String = "$luaClass($number, $url)"
+
+        /** WebSocket handles. */
+        object Codec : HandleCodec<WebSocket>("WebSocket", setOf("WebSocket"))
+    }
+
+    /** A route a script answers, from `nf.web.route`. */
+    class Route(val number: Long) : LuaHandle {
+        override val luaClass: String get() = "Route"
+
+        override val keyValues: List<Any> get() = listOf(number)
+
+        override fun equals(other: Any?): Boolean = other is Route && other.number == number
+
+        override fun hashCode(): Int = 31 * "Route".hashCode() + number.hashCode()
+
+        override fun toString(): String = "$luaClass($number)"
+
+        /** Route handles. */
+        object Codec : HandleCodec<Route>("Route", setOf("Route"))
+    }
+
+    /**
+     * How a route's handler answers its request: once, with `send`, `json` or `redirect`, during the
+     * handler or later (from a task, or a callback).
+     */
+    class WebResponse(val number: Long) : LuaHandle {
+        override val luaClass: String get() = "WebResponse"
+
+        override val keyValues: List<Any> get() = listOf(number)
+
+        override fun equals(other: Any?): Boolean = other is WebResponse && other.number == number
+
+        override fun hashCode(): Int = 31 * "WebResponse".hashCode() + number.hashCode()
+
+        override fun toString(): String = "$luaClass($number)"
+
+        /** WebResponse handles. */
+        object Codec : HandleCodec<WebResponse>("WebResponse", setOf("WebResponse"))
+    }
+
+    /**
+     * A "log in with…" flow, from `nf.web.oauth`: `begin` a login for a player, and hear its `complete` or
+     * `fail`.
+     */
+    class OAuthFlow(val number: Long) : LuaHandle {
+        override val luaClass: String get() = "OAuthFlow"
+
+        override val keyValues: List<Any> get() = listOf(number)
+
+        override fun equals(other: Any?): Boolean = other is OAuthFlow && other.number == number
+
+        override fun hashCode(): Int = 31 * "OAuthFlow".hashCode() + number.hashCode()
+
+        override fun toString(): String = "$luaClass($number)"
+
+        /** OAuthFlow handles. */
+        object Codec : HandleCodec<OAuthFlow>("OAuthFlow", setOf("OAuthFlow"))
     }
 
     /** One cutscene playing for one player, from `nf.cutscenes.play`. */

@@ -6,6 +6,7 @@ import dev.netherforge.plugin.lua.SandboxLimits
 import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.script.Scope
 import dev.netherforge.plugin.script.ScopeOwner
+import dev.netherforge.plugin.web.WebCall
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -388,6 +389,13 @@ class ConformanceTest {
         h.ProjectItem = nf.items.get("g")
         h.ProjectBlock = nf.blocks.get("b")
         h.Effect = nf.particles.play("p", vec3(0, 64, 0), { loop = true })
+        -- .invalid never resolves: the connections end "failed" without reaching anyone.
+        h.HttpStream = nf.http.stream({ url = "https://conformance.invalid/feed" })
+        h.WebSocket = nf.http.websocket({ url = "wss://conformance.invalid/socket" })
+        h.Route = nf.web.route("GET", "/smoke", function() end)
+        h.OAuthFlow = nf.web.oauth({ name = "smoke", authorize_url = "https://conformance.invalid/a", token_url = "https://conformance.invalid/t", client_id = "c" })
+        -- A request's response, which only a route's handler is handed: the test makes one request (everything).
+        nf.web.route("GET", "/sample", function(_, response) h.WebResponse = response end)
         h.Cutscene = nf.cutscenes.play(h.Player, "cs")
         h.File = nf.files.get("smoke.txt")
         h.Subscription = nf.on("tick", function() end)
@@ -542,7 +550,8 @@ class ConformanceTest {
                 // Every power, so moderation and grants reach Kotlin rather than stopping at the check.
                 TestServer.MANIFEST to TestServer.manifest(
                     allow = """{ "permissions": ["x"] }""",
-                    requires = """{ "moderation": true, "db": true, "http": ["example.com"], "plugins": ["vault", "placeholderapi"] }"""
+                    requires = """{ "moderation": true, "db": true, "http": ["example.com", "conformance.invalid"], "web": true, """ +
+                        """"plugins": ["vault", "placeholderapi"] }"""
                 ),
                 "centities/c/centity.json" to TestServer.scriptedCentity(),
                 "centities/c/script.lua" to "-- nothing",
@@ -566,6 +575,7 @@ class ConformanceTest {
             server.platform.vault.accounts[server.player("Alex").ref.uuid] = 100.0
             server.write("modules/smoke/init.lua", module)
             server.start()
+            server.runtime.session.web.request(WebCall("GET", "/test/sample", null, emptyMap(), ByteArray(0), "127.0.0.1") { _, _ -> })
             check(server)
         }
     }
@@ -789,6 +799,7 @@ class ConformanceTest {
         assertTrue(crossing.size > 50, "only ${crossing.size} shapes cross")
         val server = TestServer(
             mapOf(
+                TestServer.MANIFEST to TestServer.manifest(requires = """{ "http": ["conformance.invalid"], "web": true }"""),
                 "centities/c/centity.json" to TestServer.scriptedCentity(),
                 "centities/c/script.lua" to "-- nothing",
                 "menus/i/menu.json" to """{ "shared": true }""",
@@ -815,6 +826,10 @@ class ConformanceTest {
                 h.Dialog = nf.dialogs.get("d")
                 h.Button = h.Dialog:button("ok")
                 h.Effect = nf.particles.play("p", vec3(0, 64, 0), { loop = true })
+                h.HttpStream = nf.http.stream({ url = "https://conformance.invalid/feed" })
+                h.WebSocket = nf.http.websocket({ url = "wss://conformance.invalid/socket" })
+                h.Route = nf.web.route("GET", "/smoke", function() end)
+                h.OAuthFlow = nf.web.oauth({ name = "smoke", authorize_url = "https://conformance.invalid/a", token_url = "https://conformance.invalid/t", client_id = "c" })
                 h.Cutscene = nf.cutscenes.play(h.Player, "cs")
                 h.World = nf.worlds.default()
                 h.Block = h.World:block(vec3(0, 64, 0))

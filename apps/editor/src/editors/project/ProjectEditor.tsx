@@ -441,6 +441,16 @@ function Requirements({
         onChange={(on) => onFlag('db', on)}
       />
       <Hint>Lets scripts keep a database of the project&apos;s own.</Hint>
+      <CheckField
+        label="Web routes"
+        dataPath="requires.web"
+        value={requires?.web === true}
+        onChange={(on) => onFlag('web', on)}
+      />
+      <Hint>
+        Lets scripts answer web requests to the server (webhooks, logins, small pages) under the
+        project&apos;s own path, once the server owner has turned web routes on.
+      </Hint>
       <Hint>
         Hosts scripts may make HTTP requests to. <Mono>*.example.com</Mono> covers every host under{' '}
         <Mono>example.com</Mono>, not <Mono>example.com</Mono> itself.

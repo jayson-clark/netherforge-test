@@ -46,6 +46,25 @@ performance:
 schedules:
   time-zone: ''
 
+# Web routes scripts answer (nf.web: webhooks, "log in with..." callbacks, small
+# pages), each package under its own /<namespace>/ path. Off until you turn them
+# on. They're served on the resource pack's port (resource-pack.bind and .port),
+# usually behind a reverse proxy that adds HTTPS: set public-url to the address
+# the world reaches them at (https://play.example.com), which scripts build
+# links with. trust-proxy-headers takes the client's address from
+# X-Forwarded-For: turn it on only behind your own proxy. Requests over the
+# limits are refused before any script sees them (413, 429, 503); a script that
+# doesn't answer in time is 504. Read when the server starts; dev servers read it too.
+web:
+  enabled: false
+  public-url: ''
+  trust-proxy-headers: false
+  max-body-bytes: 65536
+  max-response-bytes: 1048576
+  requests-per-minute-per-ip: 60
+  max-pending: 64
+  handler-timeout-seconds: 10
+
 # What nf.http.request (a script's web requests, to the hosts its package
 # declares in netherforge.json) may reach and do. Requests reach public addresses
 # only: a name that leads to loopback, a private, link-local, shared (CGNAT) or
@@ -59,6 +78,20 @@ http:
   max-response-bytes: 4194304
   timeout-seconds: 15
   requests-per-minute: 60
+  # Streams and WebSockets scripts hold open (nf.http.stream, nf.http.websocket),
+  # to the same hosts and addresses; opening one counts as a request. A connection
+  # past a limit ends with reason "limit". bytes-per-minute counts what a package's
+  # connections send and receive; idle-seconds ends one with nothing moving; while
+  # scripts haven't taken max-queued-messages, the server stops reading (nothing is
+  # dropped), and it hands scripts messages-per-tick a tick per connection.
+  connections:
+    max-per-package: 4
+    max-total: 32
+    max-message-bytes: 1048576
+    bytes-per-minute: 16777216
+    idle-seconds: 300
+    max-queued-messages: 1000
+    messages-per-tick: 100
 
 # MySQL and PostgreSQL servers that scripts may use, each under a name:
 # nf.db("network"). A script names a connection and never sees its host or

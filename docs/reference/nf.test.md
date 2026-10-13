@@ -8,9 +8,12 @@ A table of functions: call them with a dot.
 
 | | Functions |
 | --- | --- |
-| [Functions](#functions) | [`case`](#case) [`advance`](#advance) [`player`](#player) [`raise`](#raise) [`terrain`](#terrain) [`click`](#click) [`release`](#release) [`input`](#input) [`shown`](#shown) |
+| [Tests and time](#tests-and-time) | [`case`](#case) [`advance`](#advance) |
+| [Players and their input](#players-and-their-input) | [`player`](#player) [`raise`](#raise) [`click`](#click) [`release`](#release) [`input`](#input) [`shown`](#shown) |
+| [Worldgen](#worldgen) | [`terrain`](#terrain) |
+| [The network](#the-network) | [`connections`](#connections) [`accept`](#accept) [`receive`](#receive) [`sent`](#sent) [`disconnect`](#disconnect) [`request`](#request) [`oauth_token`](#oauth_token) |
 
-## Functions {#functions}
+## Tests and time {#tests-and-time}
 
 ### `nf.test.case(name, callback)` {#case}
 
@@ -44,6 +47,8 @@ nf.test.advance(60)
 assert(count == 3)
 ```
 
+## Players and their input {#players-and-their-input}
+
 ### `nf.test.player(name)` {#player}
 
 Joins a fake player and returns them: the server raises the join events (`player_join`) as it does for a real one, and the player can then be sent messages, given items, moved and clicked at like any other `Player`. Names are unique: a name already joined gives that player.
@@ -76,24 +81,6 @@ local alex = nf.test.player("Alex")
 local result = nf.test.raise("player_chat", { player = alex, message = "hello", format = "<message>" })
 assert(not result.cancelled)
 assert(result.event.message == "hello")
-```
-
-### `nf.test.terrain(options?)` {#terrain}
-
-A stand-in for a terrain script's `terrain` (what its `...` is), to test worldgen modules on their own: `noise(name):at(...)`, `height`, `area`, `biome`, `seed`, `min_y`, `max_y`, `sea_level` and `plan` as a terrain script has them, each answering what `options` says. `noises` maps a noise's name to its value everywhere, or to a function of the place (`x, y, z`, or `x, z` for a column) giving it; a noise it doesn't name is 0. `height`, `area` and `biome` are a value or a function of the place, `seed`, `min_y`, `max_y` and `sea_level` numbers (defaults 64, `"default"`, `minecraft:plains`, 0, -64, 319 and 63). A plan makes each cell once, with `math.random` seeded for that cell. Chunks, structures and scatters aren't stood in for: `netherforge preview` draws the real thing.
-
-| Parameter | Type | |
-| --- | --- | --- |
-| `options` (optional) | `table` |  |
-
-**Returns** `table`
-
-```lua
-local landforms = require("worldgen.landforms")
-nf.test.case("the spawn is a meadow", function()
-  landforms.init(nf.test.terrain({ noises = { ranges = 0.9 }, height = 70 }))
-  assert(landforms.kind(0, 0) == "plains")
-end)
 ```
 
 ### `nf.test.click(player, button, options?)` {#click}
@@ -162,4 +149,131 @@ alex:set_held_item(nf.items.create("ruby"))
 nf.test.advance(1)
 local shown = assert(nf.test.shown(alex, 0))
 assert(shown.lore ~= nil)
+```
+
+## Worldgen {#worldgen}
+
+### `nf.test.terrain(options?)` {#terrain}
+
+A stand-in for a terrain script's `terrain` (what its `...` is), to test worldgen modules on their own: `noise(name):at(...)`, `height`, `area`, `biome`, `seed`, `min_y`, `max_y`, `sea_level` and `plan` as a terrain script has them, each answering what `options` says. `noises` maps a noise's name to its value everywhere, or to a function of the place (`x, y, z`, or `x, z` for a column) giving it; a noise it doesn't name is 0. `height`, `area` and `biome` are a value or a function of the place, `seed`, `min_y`, `max_y` and `sea_level` numbers (defaults 64, `"default"`, `minecraft:plains`, 0, -64, 319 and 63). A plan makes each cell once, with `math.random` seeded for that cell. Chunks, structures and scatters aren't stood in for: `netherforge preview` draws the real thing.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `options` (optional) | `table` |  |
+
+**Returns** `table`
+
+```lua
+local landforms = require("worldgen.landforms")
+nf.test.case("the spawn is a meadow", function()
+  landforms.init(nf.test.terrain({ noises = { ranges = 0.9 }, height = 70 }))
+  assert(landforms.kind(0, 0) == "plains")
+end)
+```
+
+## The network {#the-network}
+
+### `nf.test.connections(url?)` {#connections}
+
+The connections scripts opened with `nf.http.stream` and `nf.http.websocket` in this test, oldest first, ended ones included. In a test nothing reaches the network: each connection is held by the test, which answers it with `nf.test.accept`, talks over it with `nf.test.receive` and `nf.test.sent`, and ends it with `nf.test.disconnect`. Everything else is as on a server: the package must declare the host, the owner's limits apply (the defaults, in a test), and what the test does reaches the scripts at the next tick, so `nf.test.advance(1)` after it.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `url` (optional) | `string` | Only those whose URL starts with this: `"wss://chat.example.com"`. |
+
+**Returns** `(`[`HttpStream`](httpstream.md)`\|`[`WebSocket`](websocket.md)`)[]`
+
+```lua
+nf.test.case("the bridge says hello", function()
+  require("bridge")
+  local socket = nf.test.connections("wss://chat.example.com")[1] --[[@as WebSocket]]
+  nf.test.accept(socket)
+  nf.test.advance(1)
+  assert(nf.test.sent(socket)[1] == "hello")
+end)
+```
+
+### `nf.test.accept(connection, options?)` {#accept}
+
+Answers a connection that's still connecting, as its server would: its `open` event follows at the next tick. A stream opens with `options.status` (default `200`). Accepting one that isn't connecting any more is an error.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `connection` | [`HttpStream`](httpstream.md)`\|`[`WebSocket`](websocket.md) | One from `nf.test.connections`. |
+| `options` (optional) | [`TestAcceptOptions`](types.md#testacceptoptions) | The status, headers and subprotocol to answer with. |
+
+```lua
+local feed = nf.test.connections("https://feed.example.com")[1]
+nf.test.accept(feed, { status = 200, headers = { ["content-type"] = "application/x-ndjson" } })
+```
+
+### `nf.test.receive(connection, text)` {#receive}
+
+Sends `text` from the far end. A WebSocket hears it as one `message`; a stream reads it as more of its response, split by its `format` exactly as a server's would be (so `"a\nb\n"` is two lines, and half a line waits for the rest). It accepts a connection that's still connecting first. An error when the connection has ended, or when as many messages as `connections.max-queued-messages` are already waiting for the scripts (advance to let them in).
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `connection` | [`HttpStream`](httpstream.md)`\|`[`WebSocket`](websocket.md) | One from `nf.test.connections`. |
+| `text` | `string` | What the far end sends. |
+
+```lua
+nf.test.receive(feed, '{"kind":"goal"}\n')
+nf.test.advance(1)
+```
+
+### `nf.test.sent(connection)` {#sent}
+
+Every message scripts sent on a WebSocket so far, in order, whether or not it had opened (a stream sends nothing: its request body is in its options).
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `connection` | [`WebSocket`](websocket.md) | One from `nf.test.connections`. |
+
+**Returns** `string[]`
+
+### `nf.test.disconnect(connection, options?)` {#disconnect}
+
+Ends a connection from the far end, after what it already received: with `options.error` it breaks (reason `"failed"`, `detail` the error), otherwise the server finishes it (`"finished"`, a WebSocket with `options.code` and `options.reason`). Its `end` event follows at the next tick. Disconnecting one that has ended does nothing.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `connection` | [`HttpStream`](httpstream.md)`\|`[`WebSocket`](websocket.md) | One from `nf.test.connections`. |
+| `options` (optional) | [`TestDisconnectOptions`](types.md#testdisconnectoptions) | How it ends. |
+
+```lua
+nf.test.disconnect(socket, { code = 4000, reason = "resume" })
+nf.test.advance(1)
+```
+
+### `nf.test.request(method, path, options?)` {#request}
+
+Makes a web request to the server, as a browser or a webhook sender would, and gives its answer: it goes through the routes scripts made with `nf.web.route` and the owner's limits (the defaults, in a test) exactly as a real one does, without a network, whether or not web routes are turned on. When the handler answers later (from a task, a callback), the server runs forward tick by tick until it does, as `nf.test.advance` would, up to `web.handler-timeout-seconds` (then it's `504`).
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `method` | `string` | `"GET"`, `"POST"`, … |
+| `path` | `string` | The path, namespace and all, with any query: `"/shop/replays/12?full=1"`. |
+| `options` (optional) | [`TestRequestOptions`](types.md#testrequestoptions) | Its headers, body and the address it comes from. |
+
+**Returns** [`TestWebResponse`](types.md#testwebresponse)
+
+```lua
+local answer = nf.test.request("POST", "/shop/hooks/store", {
+  headers = { ["content-type"] = "application/json" },
+  body = nf.json.encode({ order = 7 }),
+})
+assert(answer.status == 204, answer.body)
+```
+
+### `nf.test.oauth_token(flow, response)` {#oauth_token}
+
+What a login flow's token endpoint answers in this test: in a test the server doesn't call it, and trades every code for this instead (by default `{ access_token = "test-token", token_type = "Bearer" }`). A table without `access_token` makes the login `fail`, with its `error_description` or `error`.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `flow` | [`OAuthFlow`](oauthflow.md) | The flow. |
+| `response` | `table` | The token endpoint's JSON answer, as a table. |
+
+```lua
+nf.test.oauth_token(flow, { access_token = "abc", refresh_token = "def", expires_in = 3600 })
 ```

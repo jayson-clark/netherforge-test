@@ -10,6 +10,7 @@ import { nfItems } from './items.ts'
 import { nfBlocks } from './blocks.ts'
 import { nfRecipes } from './recipes.ts'
 import { nfHttp } from './http.ts'
+import { nfWeb } from './web.ts'
 import { nfLoot } from './loot.ts'
 import { nfTeams } from './teams.ts'
 import { nfSchedule } from './schedule.ts'
@@ -446,6 +447,7 @@ const namespaces = [
   nfLooks,
   nfJson,
   nfHttp,
+  nfWeb,
   nfTime,
   nfRandom,
   nfMath,

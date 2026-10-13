@@ -144,6 +144,7 @@ const guide: DefaultTheme.SidebarItem[] = [
       { text: 'Modules and commands', link: '/guide/modules' },
       { text: 'Players, entities and inventories', link: '/guide/players-and-entities' },
       { text: 'The world', link: '/guide/world' },
+      { text: 'Web services', link: '/guide/web' },
       { text: 'Limits and performance', link: '/guide/performance' },
       { text: 'Testing your scripts', link: '/guide/testing' },
       { text: 'Debugging scripts', link: '/guide/debugging' },

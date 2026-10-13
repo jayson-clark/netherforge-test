@@ -1,10 +1,12 @@
 package dev.netherforge.plugin.bridge
 
 import dev.netherforge.format.bridge.BotAction
+import dev.netherforge.format.bridge.BotState
 import dev.netherforge.format.bridge.BotsExtension
 import dev.netherforge.plugin.NetherForgeRuntime
 import dev.netherforge.plugin.platform.BotAim
 import dev.netherforge.plugin.platform.BotOps
+import java.util.UUID
 
 /**
  * The bridge's bots extension ([BotsExtension], `bots/…`): requests that
@@ -21,8 +23,21 @@ class BotsBridge(private val runtime: NetherForgeRuntime, private val bots: BotO
         service.answer(BotsExtension.leave) { bots.leave(it.name) }
         service.answer(BotsExtension.list) { bots.list() }
         service.handle(BotsExtension.act) { params, reply -> bots.act(params.name, params.action, aimOf(params.action), reply) }
-        service.answer(BotsExtension.state) { bots.state(it.name) }
+        service.answer(BotsExtension.state) { withCentity(bots.state(it.name)) }
         service.answer(BotsExtension.events) { bots.events(it.name, it.since) }
+    }
+
+    /**
+     * [state] with its target's centity and node filled in when it looks at a
+     * centity's hitbox: which node a click there reaches is the runtime's to
+     * say, from the same line of sight a click would be picked by.
+     */
+    private fun withCentity(state: BotState): BotState {
+        val target = state.target ?: return state
+        val entity = target.entity?.let { runCatching { UUID.fromString(it) }.getOrNull() } ?: return state
+        val player = UUID.fromString(state.uuid)
+        val (instance, node) = runtime.session.centities.clickTarget(entity, player, runtime.platform.players.eye(player)) ?: return state
+        return state.copy(target = target.copy(centity = instance.id.toString(), node = node))
     }
 
     /**

@@ -445,6 +445,22 @@ package's script is the caller's. An async function in `ConformanceTest`
 returns nothing when it's given its callback, so its `returns` aren't
 checked there; tests that use it in a task cover those.
 
+## Handles to a connection: `HttpStream`, `WebSocket`
+
+`nf.http.stream` and `nf.http.websocket` aren't `async`: they return a handle at once, and what
+happens later is events on it (`open`, `message`, `end`), so `nf.wait_for(socket, "open")` works
+in a task and a handler needs none. The handle is keyed by number and URL (`url()` answers after
+the end, like `Effect:kind()`); the rest answers as ended (`state()` `"ended"`, `status()` nil,
+`send`/`close` false). An owner's limit is never an error at the call: the connection ends
+`"limit"` at the next tick (plugin-runtime, "Streams and WebSockets"). `nf.test`'s
+`connections`, `accept`, `receive`, `sent` and `disconnect` take these same handles, the far
+end being the test's.
+
+**`bindings.lua`'s top-level locals.** Each handle class's section is a `do … end` block
+(`emit/lua.ts`), its class table a local of the block, so the chunk stays far from Lua's 200
+locals (`PreludeModulesTest` warns past 100); only the `<Class>_is` sets the inline checks read
+are top-level.
+
 ## Checklists
 
 **A function on `nf` or a method on a handle**

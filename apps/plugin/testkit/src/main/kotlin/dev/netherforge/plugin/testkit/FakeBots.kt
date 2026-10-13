@@ -1,5 +1,6 @@
 package dev.netherforge.plugin.testkit
 
+import dev.netherforge.format.Vec3
 import dev.netherforge.format.bridge.BotActResult
 import dev.netherforge.format.bridge.BotAction
 import dev.netherforge.format.bridge.BotBossBar
@@ -19,12 +20,15 @@ import dev.netherforge.format.bridge.BotPackAnswer
 import dev.netherforge.format.bridge.BotPosition
 import dev.netherforge.format.bridge.BotSidebar
 import dev.netherforge.format.bridge.BotState
+import dev.netherforge.format.bridge.BotTarget
+import dev.netherforge.format.bridge.BotTargetKind
 import dev.netherforge.format.dialog.BooleanInput
 import dev.netherforge.format.dialog.DialogInput
 import dev.netherforge.format.dialog.DialogType
 import dev.netherforge.format.dialog.OptionInput
 import dev.netherforge.format.dialog.RangeInput
 import dev.netherforge.format.dialog.TextInput
+import dev.netherforge.format.game.Box
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.game.has
 import dev.netherforge.format.menu.MenuType
@@ -211,7 +215,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
             is BotAction.Interact -> {
                 alive()
                 val (target, at) = target(bot, action.entity, aim)
-                aimAt(bot, target, at)
+                aimed(bot, target, action.entity == null && aim == null, action.at?.let { Triple(it.x, it.y, it.z) } ?: at)
                 val hand = hand(action.hand)
                 if (target in platform.entities.all) {
                     // A centity's: the click goes to it, the main hand's only.
@@ -223,7 +227,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
             is BotAction.Attack -> {
                 alive()
                 val (target, at) = target(bot, action.entity, aim)
-                aimAt(bot, target, at)
+                aimed(bot, target, action.entity == null && aim == null, action.at?.let { Triple(it.x, it.y, it.z) } ?: at)
                 if (target in platform.entities.all) {
                     events!!.entityClicked(target, bot.ref, ClickButton.LEFT, sight(bot))
                 } else {
@@ -399,16 +403,10 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
             runCatching { UUID.fromString(it) }.getOrNull() ?: throw IllegalArgumentException("\"$it\" isn't a UUID")
         }
         if (id == null) {
-            val ray = sight(bot)!!
-            val hit = platform.worldEntities.raycast(
-                ray.world,
-                dev.netherforge.format.Vec3(ray.x, ray.y, ray.z),
-                dev.netherforge.format.Vec3(ray.dx, ray.dy, ray.dz),
-                REACH,
-                setOf(bot.ref.uuid)
-            )
+            // What's in its crosshair, NetherForge's hitboxes included, as the real bots pick it.
+            val hit = crosshair(bot)?.entity?.let(UUID::fromString)
                 ?: throw IllegalStateException("${bot.ref.name} isn't looking at anything it could click within reach")
-            return hit.id to null
+            return hit to null
         }
         val tagged = platform.entities.all[id]
         val body = platform.worldEntities.body(id)
@@ -416,6 +414,11 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
         val hidden = tagged?.hiddenFrom?.contains(bot.ref.uuid) ?: body!!.hiddenFrom.contains(bot.ref.uuid)
         check(!hidden) { "${bot.ref.name}'s client doesn't know entity $id (it's hidden from them, or too far away to be sent)" }
         return id to aim?.at?.let { Triple(it.x, it.y, it.z) }
+    }
+
+    /** As the real bots aim a click: one picked from the crosshair with no point keeps its look; otherwise [aimAt]. */
+    private fun aimed(bot: FakePlayer, target: UUID, inSight: Boolean, at: Triple<Double, Double, Double>?) {
+        if (!inSight || at != null) aimAt(bot, target, at)
     }
 
     /** Looks at [target] ([at], or its middle) and checks it's within reach of the eyes, as the real bots do. */
@@ -695,8 +698,63 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
             resourcePacks = screens[ref.uuid]?.packs?.values?.toList().orEmpty(),
             playerList = playerList(this),
             entities = nearby(this),
+            target = crosshair(this),
             events = screens[ref.uuid]?.next ?: 0
         )
+    }
+
+    /**
+     * What its crosshair is on, as the real bots pick it: the nearest entity within [REACH] (a body, or
+     * one of NetherForge's hitboxes it hasn't been hidden), in front of the nearest block within
+     * [BLOCK_REACH].
+     */
+    private fun crosshair(bot: FakePlayer): BotTarget? {
+        val ray = sight(bot) ?: return null
+        val origin = Vec3(ray.x, ray.y, ray.z)
+        val direction = Vec3(ray.dx, ray.dy, ray.dz)
+        val block = platform.worlds.raycastBlocks(ray.world, origin, direction, BLOCK_REACH, false)
+        val blockDistance = block?.position?.let { length(it - origin) } ?: Double.MAX_VALUE
+        val body = platform.worldEntities.raycast(ray.world, origin, direction, REACH, setOf(bot.ref.uuid))
+            ?.takeIf { hit -> platform.worldEntities.body(hit.id)?.hiddenFrom?.contains(bot.ref.uuid) != true }
+            ?.let { hit -> Triple(hit.id.toString(), platform.worldEntities.body(hit.id)?.kind ?: "minecraft:player", hit.position) }
+        val hitbox = platform.entities.hitboxes
+            .filter { it.location.world == ray.world && bot.ref.uuid !in it.hiddenFrom }
+            .mapNotNull { box ->
+                val half = box.width / 2
+                val l = box.location
+                val bounds = Box(Vec3(l.x - half, l.y, l.z - half), Vec3(l.x + half, l.y + box.height, l.z + half))
+                FakePlatform.slab(bounds, origin, direction, REACH)?.let { (distance, _) -> box to distance }
+            }
+            .minByOrNull { it.second }
+            ?.let { (box, distance) -> Triple(box.id.toString(), "minecraft:interaction", origin + direction * distance) }
+        val entity = listOfNotNull(body, hitbox)
+            .map { it to length(it.third - origin) }
+            .filter { it.second <= blockDistance }
+            .minByOrNull { it.second }
+        if (entity != null) {
+            val (hit, distance) = entity
+            return BotTarget(BotTargetKind.ENTITY, hit.third.x, hit.third.y, hit.third.z, distance, entity = hit.first, type = hit.second)
+        }
+        block ?: return null
+        return BotTarget(
+            BotTargetKind.BLOCK, block.position.x, block.position.y, block.position.z, blockDistance,
+            blockX = block.x,
+            blockY = block.y,
+            blockZ = block.z,
+            face = faceOf(block.normal),
+            state = platform.worlds.state(ray.world, block.x, block.y, block.z)
+        )
+    }
+
+    private fun length(v: Vec3) = sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+
+    private fun faceOf(normal: Vec3) = when {
+        normal.y > 0.5 -> "up"
+        normal.y < -0.5 -> "down"
+        normal.z < -0.5 -> "north"
+        normal.z > 0.5 -> "south"
+        normal.x > 0.5 -> "east"
+        else -> "west"
     }
 
     /**

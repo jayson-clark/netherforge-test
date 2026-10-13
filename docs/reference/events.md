@@ -995,6 +995,53 @@ effect:on("end", function(event)
 end)
 ```
 
+## On HttpStream
+
+What [HttpStream](httpstream.md) listens for.
+
+| Event | Payload | |
+| --- | --- | --- |
+| `open` | [HttpStreamOpenEvent](types.md#httpstreamopenevent) | The response has begun: its status and headers are in. Any status opens it, so check `event.status`: an error's body arrives as messages like any other. Heard at most once, never after `end`. |
+| `message` | [HttpStreamMessageEvent](types.md#httpstreammessageevent) | A piece of the response arrived: a line, a Server-Sent Event or a chunk, as the stream's `format` says. Messages come in order, on the main thread, a limited number a tick per stream (`connections.messages-per-tick`); while scripts haven't taken them, at most `connections.max-queued-messages` wait and the server stops reading from the network, so nothing is ever dropped. |
+| `end` | [HttpStreamEndEvent](types.md#httpstreamendevent) | The stream ended, for any reason (`event.reason` says which): heard once, after every message that arrived before it, while the handle still answers. After it, every handler on the stream is gone. Opening a new stream is how to reconnect. |
+
+#### Example: httpstream end
+
+```lua
+stream:on("end", function(event)
+  if event.reason == "failed" then
+    log("feed failed: " .. event.detail)
+  end
+end)
+```
+
+## On WebSocket
+
+What [WebSocket](websocket.md) listens for.
+
+| Event | Payload | |
+| --- | --- | --- |
+| `open` | [WebSocketOpenEvent](types.md#websocketopenevent) | The connection is made and ready. What `send` sent before it goes now, in order. Heard at most once, never after `end`. |
+| `message` | [WebSocketMessageEvent](types.md#websocketmessageevent) | A text message arrived. Messages come in order, on the main thread, a limited number a tick per socket (`connections.messages-per-tick`); while scripts haven't taken them, at most `connections.max-queued-messages` wait and the server stops reading from the network, so nothing is ever dropped. A binary message isn't taken: the socket is closed (code `1003`) and ends `"failed"`. |
+| `end` | [WebSocketEndEvent](types.md#websocketendevent) | The socket ended, for any reason (`event.reason` says which): heard once, after every message that arrived before it, while the handle still answers. After it, every handler on the socket is gone. Opening a new socket is how to reconnect. |
+
+#### Example: websocket end
+
+```lua
+socket:on("end", function(event)
+  log("socket ended", event.reason, event.code, event.detail)
+end)
+```
+
+## On OAuthFlow
+
+What [OAuthFlow](oauthflow.md) listens for.
+
+| Event | Payload | |
+| --- | --- | --- |
+| `complete` | [OAuthCompleteEvent](types.md#oauthcompleteevent) | A player finished logging in: the service sent them back, and the server traded the code for a token. Their browser is shown a page saying they can go back to the game. |
+| `fail` | [OAuthFailEvent](types.md#oauthfailevent) | A player's login didn't finish: they declined, the service answered with an error, the token couldn't be had, or the login expired (10 minutes after `begin`). Their browser is shown a page saying so. A callback that matches no login of this flow (forged, or used twice) is refused with no event. |
+
 ## On Cutscene
 
 What [Cutscene](cutscene.md) listens for.

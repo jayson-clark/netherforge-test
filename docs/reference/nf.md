@@ -2,7 +2,7 @@
 
 # nf
 
-Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
+Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.web`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
 
 A table of functions: call them with a dot.
 
@@ -41,6 +41,7 @@ A table of functions: call them with a dot.
 | [`nf.looks`](nf.looks.md) | Resource pack looks (item models, glyphs, skins, tooltips, equipment looks, sounds) handed from one package's code to another's. |
 | [`nf.json`](nf.json.md) | JSON text to and from Lua values. |
 | [`nf.http`](nf.http.md) | Requests to web services (a Discord webhook, a status API). |
+| [`nf.web`](nf.web.md) | Web requests to the server: webhooks from stores, CI and chat services, "log in with…" callbacks, small pages and JSON for a companion site. |
 | [`nf.time`](nf.time.md) | Dates and durations as text, in the same unit as `nf.server.unix_time()`: milliseconds. |
 | [`nf.random`](nf.random.md) | Randomness `math.random` doesn't give: generators of your own that repeat for a seed, smooth noise, and random ids. |
 | [`nf.math`](nf.math.md) | Small arithmetic `math` doesn't have, for animating by hand: blending, clamping, rescaling and easing. |
@@ -147,7 +148,7 @@ Pauses the task until `event` next happens on `handle` (or, for `nf`, anywhere o
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `handle` | [`Centity`](centity.md)`\|`[`Node`](node.md)`\|`[`Entity`](entity.md)`\|`[`World`](world.md)`\|`[`ProjectBlock`](projectblock.md)`\|`[`Menu`](menu.md)`\|`[`Slot`](slot.md)`\|`[`MenuTemplate`](menutemplate.md)`\|`[`Dialog`](dialog.md)`\|`[`Button`](button.md)`\|`[`ProjectItem`](projectitem.md)`\|`[`Effect`](effect.md)`\|`[`Cutscene`](cutscene.md)`\|`[`nf`](nf.md) | What the event happens to, as for `handle:on`; `nf` for a server-wide event. |
+| `handle` | [`Centity`](centity.md)`\|`[`Node`](node.md)`\|`[`Entity`](entity.md)`\|`[`World`](world.md)`\|`[`ProjectBlock`](projectblock.md)`\|`[`Menu`](menu.md)`\|`[`Slot`](slot.md)`\|`[`MenuTemplate`](menutemplate.md)`\|`[`Dialog`](dialog.md)`\|`[`Button`](button.md)`\|`[`ProjectItem`](projectitem.md)`\|`[`Effect`](effect.md)`\|`[`HttpStream`](httpstream.md)`\|`[`WebSocket`](websocket.md)`\|`[`OAuthFlow`](oauthflow.md)`\|`[`Cutscene`](cutscene.md)`\|`[`nf`](nf.md) | What the event happens to, as for `handle:on`; `nf` for a server-wide event. |
 | `event` | `string` | The event's name, as `handle:on` takes it. |
 | `filter` (optional) | `fun(event: `[`Event`](types.md#event)`): boolean` | Waits for the first event this returns `true` for; the others pass by. Run as the task's code, so an error in it ends the task. |
 

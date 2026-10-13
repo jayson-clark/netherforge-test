@@ -22,6 +22,9 @@
 ---@alias Button.Event "press"
 ---@alias ProjectItem.Event "use"|"interact"|"interact_entity"|"consume"|"hit"|"break_block"|"drop"|"render"|"view"|"pickup"
 ---@alias Effect.Event "end"
+---@alias HttpStream.Event "open"|"message"|"end"
+---@alias WebSocket.Event "open"|"message"|"end"
+---@alias OAuthFlow.Event "complete"|"fail"
 ---@alias Cutscene.Event "end"|"cue"
 
 ---@alias CentityId string # A project centity's name.
@@ -47,7 +50,7 @@
 --- MiniMessage a player reads, like `"<green>Done!"`: a string. A `<glyph:pack/key>` tag in it names a glyph the way the script's own files would: one of its own package's resource packs bare, or `<glyph:namespace:pack/key>` for one a package it depends on exports. The tag means that glyph wherever and whenever the text is shown, whoever shows it; one naming a glyph the script can't use draws nothing, and the server log says why. Text handed back to a script names its glyphs the same way.
 ---@alias Text string
 
---- Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
+--- Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.web`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
 ---@class nf
 ---@field server nf.server The server itself: its clock, its performance, its version, its settings (players, message of the day, whitelist), and saying or running things as the console.
 ---@field commands nf.commands Slash commands a module adds to the server for as long as it runs, with typed arguments, tab completion and usage messages from their declaration.
@@ -73,7 +76,8 @@
 ---@field text nf.text Helpers for the MiniMessage text players see: escaping what players typed, stripping tags, resource pack glyphs, moving the cursor, and measuring.
 ---@field looks nf.looks Resource pack looks (item models, glyphs, skins, tooltips, equipment looks, sounds) handed from one package's code to another's. A look is a value, not a use: any script can show any look the server has, by its full name `<namespace>:<pack>/<key>`, whether or not its package exports it or is one the script's package depends on. That's how a project hands a package it uses looks of its own to draw with (see [Packages](packages.md#looks-are-values)).
 ---@field json nf.json JSON text to and from Lua values.
----@field http nf.http Requests to web services (a Discord webhook, a status API). A package declares the hosts it talks to in `netherforge.json`'s `requires` (`"http": ["discord.com"]`, or `"*.discord.com"` for every name under it), and the server owner sees every host the project and its packages declare when it starts (`/nf requires`); a request to any other host is an error. Every request is held to the package whose code makes it. The server looks a name up once, checks the addresses it leads to and connects to exactly the address it checked: a loopback, private, link-local, shared (`100.64.0.0/10`), unique-local or IPv4-mapped address is refused even when its name is declared, unless the server owner turned on `http.allow-private-addresses` in `config.yml` (for a service on the same machine or network). Redirects (at most 5) are followed, and each one is held to the same rules, host declaration included. The server's proxy settings are never used. Only `http` and `https` URLs work. The server owner also limits requests in `config.yml`'s `http:` section: how large a request and a response may be, how long a request may take, and how many a package may make a minute.
+---@field http nf.http Requests to web services (a Discord webhook, a status API). A package declares the hosts it talks to in `netherforge.json`'s `requires` (`"http": ["discord.com"]`, or `"*.discord.com"` for every name under it), and the server owner sees every host the project and its packages declare when it starts (`/nf requires`); a request to any other host is an error. Every request is held to the package whose code makes it. The server looks a name up once, checks the addresses it leads to and connects to exactly the address it checked: a loopback, private, link-local, shared (`100.64.0.0/10`), unique-local or IPv4-mapped address is refused even when its name is declared, unless the server owner turned on `http.allow-private-addresses` in `config.yml` (for a service on the same machine or network). Redirects (at most 5) are followed, and each one is held to the same rules, host declaration included. The server's proxy settings are never used. Only `http` and `https` URLs work. The server owner also limits requests in `config.yml`'s `http:` section: how large a request and a response may be, how long a request may take, and how many a package may make a minute. Connections that stay open (`stream`, `websocket`) are held to the same hosts and addresses, count as a request when they open, and have limits of their own in `http.connections`.
+---@field web nf.web Web requests to the server: webhooks from stores, CI and chat services, "log in with…" callbacks, small pages and JSON for a companion site. A package declares `"requires": { "web": true }` in its `netherforge.json`, and its routes live under its own path, `/<namespace>/`, so packages can't collide. They're served only once the server owner turns web routes on (`web.enabled` in `config.yml`), on the port the resource pack is served from, usually behind a reverse proxy that adds HTTPS; until then a package that declares them has a warning (`runtime.web-disabled`). Every request waits for the main thread: handlers run there, under the script's budget, like any handler, and the owner limits how large a request may be, how many each address may make a minute and how many may wait (`web:` in `config.yml`). `/nf requires` lists every route.
 ---@field time nf.time Dates and durations as text, in the same unit as `nf.server.unix_time()`: milliseconds. For timers, use ticks (`nf.after`, `nf.wait`); this is for showing and reading clock times and lengths of time.
 ---@field random nf.random Randomness `math.random` doesn't give: generators of your own that repeat for a seed, smooth noise, and random ids.
 ---@field math nf.math Small arithmetic `math` doesn't have, for animating by hand: blending, clamping, rescaling and easing.
@@ -323,7 +327,7 @@ function nf.wait_until(predicate, timeout) end
 
 --- Pauses the task until `event` next happens on `handle` (or, for `nf`, anywhere on the server) and returns that event. The task carries on straight away, while the event is still being delivered, so until its next wait it can still `cancel()` or `stop()` the event or set its writable fields. If the handle goes first (a removed centity, a closed window, a dialog taken away by a reload), the task ends. An event the handle doesn't have is an error.
 --- Only in a task's own code (`nf.task`): it waits, so calling it anywhere else (an event handler, a timer, a script's body) is an error.
----@param handle Centity|Node|Entity|World|ProjectBlock|Menu|Slot|MenuTemplate|Dialog|Button|ProjectItem|Effect|Cutscene|nf What the event happens to, as for `handle:on`; `nf` for a server-wide event.
+---@param handle Centity|Node|Entity|World|ProjectBlock|Menu|Slot|MenuTemplate|Dialog|Button|ProjectItem|Effect|HttpStream|WebSocket|OAuthFlow|Cutscene|nf What the event happens to, as for `handle:on`; `nf` for a server-wide event.
 ---@param event string The event's name, as `handle:on` takes it.
 ---@param filter? fun(event: CustomEvent): boolean Waits for the first event this returns `true` for; the others pass by. Run as the task's code, so an error in it ends the task.
 ---@return CustomEvent # The event: its payload and its methods.
@@ -556,6 +560,14 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: ProjectItem, event: "view", filter?: fun(event: ItemViewEvent): boolean): ItemViewEvent
 ---@overload fun(handle: ProjectItem, event: "pickup", filter?: fun(event: PlayerPickupItemEvent): boolean): PlayerPickupItemEvent
 ---@overload fun(handle: Effect, event: "end", filter?: fun(event: EffectEndEvent): boolean): EffectEndEvent
+---@overload fun(handle: HttpStream, event: "open", filter?: fun(event: HttpStreamOpenEvent): boolean): HttpStreamOpenEvent
+---@overload fun(handle: HttpStream, event: "message", filter?: fun(event: HttpStreamMessageEvent): boolean): HttpStreamMessageEvent
+---@overload fun(handle: HttpStream, event: "end", filter?: fun(event: HttpStreamEndEvent): boolean): HttpStreamEndEvent
+---@overload fun(handle: WebSocket, event: "open", filter?: fun(event: WebSocketOpenEvent): boolean): WebSocketOpenEvent
+---@overload fun(handle: WebSocket, event: "message", filter?: fun(event: WebSocketMessageEvent): boolean): WebSocketMessageEvent
+---@overload fun(handle: WebSocket, event: "end", filter?: fun(event: WebSocketEndEvent): boolean): WebSocketEndEvent
+---@overload fun(handle: OAuthFlow, event: "complete", filter?: fun(event: OAuthCompleteEvent): boolean): OAuthCompleteEvent
+---@overload fun(handle: OAuthFlow, event: "fail", filter?: fun(event: OAuthFailEvent): boolean): OAuthFailEvent
 ---@overload fun(handle: Cutscene, event: "end", filter?: fun(event: CutsceneEndEvent): boolean): CutsceneEndEvent
 ---@overload fun(handle: Cutscene, event: "cue", filter?: fun(event: CutsceneCueEvent): boolean): CutsceneCueEvent
 function nf.wait_for(handle, event, filter) end
@@ -1069,7 +1081,7 @@ function nf.json.encode(value) end
 ---@return any
 function nf.json.decode(text) end
 
---- Requests to web services (a Discord webhook, a status API). A package declares the hosts it talks to in `netherforge.json`'s `requires` (`"http": ["discord.com"]`, or `"*.discord.com"` for every name under it), and the server owner sees every host the project and its packages declare when it starts (`/nf requires`); a request to any other host is an error. Every request is held to the package whose code makes it. The server looks a name up once, checks the addresses it leads to and connects to exactly the address it checked: a loopback, private, link-local, shared (`100.64.0.0/10`), unique-local or IPv4-mapped address is refused even when its name is declared, unless the server owner turned on `http.allow-private-addresses` in `config.yml` (for a service on the same machine or network). Redirects (at most 5) are followed, and each one is held to the same rules, host declaration included. The server's proxy settings are never used. Only `http` and `https` URLs work. The server owner also limits requests in `config.yml`'s `http:` section: how large a request and a response may be, how long a request may take, and how many a package may make a minute.
+--- Requests to web services (a Discord webhook, a status API). A package declares the hosts it talks to in `netherforge.json`'s `requires` (`"http": ["discord.com"]`, or `"*.discord.com"` for every name under it), and the server owner sees every host the project and its packages declare when it starts (`/nf requires`); a request to any other host is an error. Every request is held to the package whose code makes it. The server looks a name up once, checks the addresses it leads to and connects to exactly the address it checked: a loopback, private, link-local, shared (`100.64.0.0/10`), unique-local or IPv4-mapped address is refused even when its name is declared, unless the server owner turned on `http.allow-private-addresses` in `config.yml` (for a service on the same machine or network). Redirects (at most 5) are followed, and each one is held to the same rules, host declaration included. The server's proxy settings are never used. Only `http` and `https` URLs work. The server owner also limits requests in `config.yml`'s `http:` section: how large a request and a response may be, how long a request may take, and how many a package may make a minute. Connections that stay open (`stream`, `websocket`) are held to the same hosts and addresses, count as a request when they open, and have limits of their own in `http.connections`.
 ---@class nf.http
 nf.http = {}
 
@@ -1082,6 +1094,50 @@ nf.http = {}
 ---@overload async fun(options: HttpRequestOptions): HttpResponse?, string?
 ---@overload fun(options: HttpRequestOptions, callback: fun(response: HttpResponse?, err: string?))
 function nf.http.request(options, callback) end
+
+--- Opens a request whose response keeps coming (an NDJSON feed, Server-Sent Events, any chunked stream) and hands it over piece by piece as the stream's `message` events, on the main thread, as the server sends it. It returns at once: the connection is made off the main thread, and its `open` event says when the response has begun (with its status, which may be an error's: check it). It ends once, with its `end` event saying why: the server finished, `close()` was called, it failed, an owner's limit was reached, nothing came for too long, or the script that opened it unloaded. Nothing reconnects by itself: open it again from `end` if you want to, waiting longer each time. Redirects are followed as for `request`. The hosts, addresses and request rules are `request`'s, and opening counts as a request against the package's rate; a mistake in the call is an error at the script's line, and a limit the owner set (too many open, the request rate) ends the stream at the next tick with reason `"limit"`.
+--- Needs each host it calls in `"requires": { "http": [...] }` in `netherforge.json`: without it, calling it is an error.
+---@param options HttpStreamOptions The request (`url`, and optionally `method`, `headers` and `body`) and how to split what comes back (`format`).
+---@return HttpStream # The stream: listen to its `open`, `message` and `end`.
+function nf.http.stream(options) end
+
+--- Opens a WebSocket (a `ws://` or `wss://` URL): a connection both sides send text messages over, for as long as it stays open (a chat bridge, a game feed, Discord's gateway). It returns at once: the connection is made off the main thread, and the socket's `open` event says when it's ready (what `send` sends before then waits for it). Each text message from the other side is a `message` event on the main thread, in order. It ends once, with its `end` event saying why. Nothing reconnects by itself. The host must be one the package declares in `requires.http`, as for `request` (the same declaration covers both), and the address rules are `request`'s; redirects aren't followed. A mistake in the call is an error at the script's line, and a limit the owner set (too many open, the request rate) ends it at the next tick with reason `"limit"`.
+--- Needs each host it calls in `"requires": { "http": [...] }` in `netherforge.json`: without it, calling it is an error.
+---@param options WebSocketOptions Where to connect (`url`), and optionally `headers` and the `protocols` to offer.
+---@return WebSocket # The socket: listen to its `open`, `message` and `end`, and `send` on it.
+function nf.http.websocket(options) end
+
+--- Web requests to the server: webhooks from stores, CI and chat services, "log in with…" callbacks, small pages and JSON for a companion site. A package declares `"requires": { "web": true }` in its `netherforge.json`, and its routes live under its own path, `/<namespace>/`, so packages can't collide. They're served only once the server owner turns web routes on (`web.enabled` in `config.yml`), on the port the resource pack is served from, usually behind a reverse proxy that adds HTTPS; until then a package that declares them has a warning (`runtime.web-disabled`). Every request waits for the main thread: handlers run there, under the script's budget, like any handler, and the owner limits how large a request may be, how many each address may make a minute and how many may wait (`web:` in `config.yml`). `/nf requires` lists every route.
+---@class nf.web
+nf.web = {}
+
+--- Answers requests for `method` at `path`, under the package's own `/<namespace>/`: `nf.web.route("POST", "/hooks/store", …)` in package `shop` answers `POST /shop/hooks/store`. A segment `:name` matches any one segment and hands it over as `request.params.name`; a last segment `*name` matches the rest of the path, slashes and all. `handler` is called with the request and a response to answer it with, now (`response:send`) or later, from a task or a callback (an `nf.http.request`, a database query); one not answered within `web.handler-timeout-seconds` is answered `504`. A `GET` route answers `HEAD` too. The route belongs to the script that made it and goes when it unloads; requests still waiting then are answered `503`. Two routes of one package for the same method and path, a path that isn't one, and a path a login (`nf.web.oauth`) uses are errors.
+--- Needs `"requires": { "web": true }` in `netherforge.json`: without it, calling it is an error.
+---@param method "GET"|"POST"|"PUT"|"PATCH"|"DELETE" The HTTP method.
+---@param path string Where, under the package's own path: `/` and segments of letters, digits, `-`, `_`, `.` and `~`, `:name` or a last `*name`. `"/"` is the package's own path itself.
+---@param handler fun(request: WebRequest, response: WebResponse) Called on the main thread with the request and the response to answer it with. An error in it answers `500` and is reported as any handler's.
+---@return Route # The route: `route:remove()` stops answering.
+function nf.web.route(method, path, handler) end
+
+--- The address the world reaches the calling package's `path` at: `web.public-url` in `config.yml` (the server's own address when it's empty), then `/<namespace>`, `path` and the query. For a link to put in chat, a webhook to register with another service, a login's address. `nil` while the server owner hasn't turned web routes on.
+--- Needs `"requires": { "web": true }` in `netherforge.json`: without it, calling it is an error.
+---@param path? string A path under the package's own, like a route's: `"/replays/12"`. Default `"/"`.
+---@param query? table<string, string> Query parameters, encoded and sorted by name.
+---@return string?
+function nf.web.url(path, query) end
+
+--- Whether `signature` is the HMAC of `body` under `options.secret`, as webhook senders sign what they send (GitHub's `X-Hub-Signature-256`, Stripe's and Shopify's): compared in constant time, so the answer leaks nothing about the right one. Check it before acting on a webhook. Keep the secret in a setting (`nf.config`), not in a script. A signature that isn't in `options.encoding` is `false`, not an error.
+---@param body string The request's body exactly as it came: `request.body`.
+---@param signature string The signature the sender sent, from its header.
+---@param options SignatureOptions The secret, and how the sender signs.
+---@return boolean
+function nf.web.verify_signature(body, signature, options) end
+
+--- A "log in with…" flow (OAuth 2 with PKCE, the authorization code grant): `flow:begin(player)` gives the address to send the player to, the service sends them back to the flow's own route (`/<namespace>/oauth/<name>/callback`, which you register with the service as its redirect URI: `nf.web.url("/oauth/<name>/callback")`), and the server trades the code for a token itself and raises `complete` (or `fail`) on the flow. NetherForge keeps the state and the code verifier, ties each to the player who began, uses each once and lets it expire after 10 minutes, so a forged or replayed callback is refused. The token endpoint's host must be one the package declares in `requires.http`. The flow belongs to the script that made it and goes when it unloads; logins begun before a reload are forgotten. Two flows of one package with the same `name` are an error.
+--- Needs `"requires": { "web": true }` in `netherforge.json`: without it, calling it is an error.
+---@param options OAuthOptions The service's endpoints, the client's id and secret, and the scopes to ask for.
+---@return OAuthFlow
+function nf.web.oauth(options) end
 
 --- Dates and durations as text, in the same unit as `nf.server.unix_time()`: milliseconds. For timers, use ticks (`nf.after`, `nf.wait`); this is for showing and reading clock times and lengths of time.
 ---@class nf.time
@@ -1224,6 +1280,43 @@ function nf.test.input(player, held) end
 ---@param options? TestShownOptions Leave it out for their own inventory.
 ---@return Item?
 function nf.test.shown(player, slot, options) end
+
+--- The connections scripts opened with `nf.http.stream` and `nf.http.websocket` in this test, oldest first, ended ones included. In a test nothing reaches the network: each connection is held by the test, which answers it with `nf.test.accept`, talks over it with `nf.test.receive` and `nf.test.sent`, and ends it with `nf.test.disconnect`. Everything else is as on a server: the package must declare the host, the owner's limits apply (the defaults, in a test), and what the test does reaches the scripts at the next tick, so `nf.test.advance(1)` after it.
+---@param url? string Only those whose URL starts with this: `"wss://chat.example.com"`.
+---@return (HttpStream|WebSocket)[]
+function nf.test.connections(url) end
+
+--- Answers a connection that's still connecting, as its server would: its `open` event follows at the next tick. A stream opens with `options.status` (default `200`). Accepting one that isn't connecting any more is an error.
+---@param connection HttpStream|WebSocket One from `nf.test.connections`.
+---@param options? TestAcceptOptions The status, headers and subprotocol to answer with.
+function nf.test.accept(connection, options) end
+
+--- Sends `text` from the far end. A WebSocket hears it as one `message`; a stream reads it as more of its response, split by its `format` exactly as a server's would be (so `"a\nb\n"` is two lines, and half a line waits for the rest). It accepts a connection that's still connecting first. An error when the connection has ended, or when as many messages as `connections.max-queued-messages` are already waiting for the scripts (advance to let them in).
+---@param connection HttpStream|WebSocket One from `nf.test.connections`.
+---@param text string What the far end sends.
+function nf.test.receive(connection, text) end
+
+--- Every message scripts sent on a WebSocket so far, in order, whether or not it had opened (a stream sends nothing: its request body is in its options).
+---@param connection WebSocket One from `nf.test.connections`.
+---@return string[]
+function nf.test.sent(connection) end
+
+--- Makes a web request to the server, as a browser or a webhook sender would, and gives its answer: it goes through the routes scripts made with `nf.web.route` and the owner's limits (the defaults, in a test) exactly as a real one does, without a network, whether or not web routes are turned on. When the handler answers later (from a task, a callback), the server runs forward tick by tick until it does, as `nf.test.advance` would, up to `web.handler-timeout-seconds` (then it's `504`).
+---@param method string `"GET"`, `"POST"`, …
+---@param path string The path, namespace and all, with any query: `"/shop/replays/12?full=1"`.
+---@param options? TestRequestOptions Its headers, body and the address it comes from.
+---@return TestWebResponse
+function nf.test.request(method, path, options) end
+
+--- What a login flow's token endpoint answers in this test: in a test the server doesn't call it, and trades every code for this instead (by default `{ access_token = "test-token", token_type = "Bearer" }`). A table without `access_token` makes the login `fail`, with its `error_description` or `error`.
+---@param flow OAuthFlow The flow.
+---@param response table The token endpoint's JSON answer, as a table.
+function nf.test.oauth_token(flow, response) end
+
+--- Ends a connection from the far end, after what it already received: with `options.error` it breaks (reason `"failed"`, `detail` the error), otherwise the server finishes it (`"finished"`, a WebSocket with `options.code` and `options.reason`). Its `end` event follows at the next tick. Disconnecting one that has ended does nothing.
+---@param connection HttpStream|WebSocket One from `nf.test.connections`.
+---@param options? TestDisconnectOptions How it ends.
+function nf.test.disconnect(connection, options) end
 
 --- One spawned centity: `this` in the centity's script, and what `nf.centities.spawn`, `nf.centities.get` and `nf.centities.all` return. A handle stays valid as long as the instance exists; after it's removed its methods return `nil` or `false` rather than erroring.
 --- A `data()` table, `Item.data` and `nf.json` can keep one: it is saved as what identifies it and comes back as a handle.
@@ -4605,6 +4698,160 @@ function Effect:on(event, handler, options) end
 ---@return Subscription # Call `:cancel()` on it to stop waiting before then.
 function Effect:once(event, handler) end
 
+--- A streamed HTTP response, from `nf.http.stream`: its `open`, each `message` and its one `end` are events on it. It belongs to the script that opened it and ends with reason `"unloaded"` when that script unloads (a reload, the server stopping). Once it has ended its methods answer as an ended stream does rather than erroring. Ephemeral: it can't be saved in a `data()` table.
+---@class HttpStream
+local HttpStream = {}
+
+--- The URL it was opened with, even after it has ended.
+---@return string
+function HttpStream:url() end
+
+--- `"connecting"` until its `open` event, then `"open"`, and `"ended"` once its `end` event has been heard.
+---@return "connecting"|"open"|"ended"
+function HttpStream:state() end
+
+--- The response's status code once it has opened (`200`, `404`); `nil` before, and once it has ended (its `end` event has it).
+---@return integer?
+function HttpStream:status() end
+
+--- Ends it now, with reason `"closed"`: the connection is dropped and messages that arrived but weren't handed over yet are thrown away.
+---@return boolean # `false` when it had already ended.
+function HttpStream:close() end
+
+--- Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
+---@param event HttpStream.Event The event's name.
+---@param handler fun(event: Event) Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`.
+---@param options? EventOptions How to listen: `{ every = n }` for `tick`.
+---@return Subscription # Call `:cancel()` on it to stop listening.
+---@overload fun(self: HttpStream, event: "open", handler: fun(event: HttpStreamOpenEvent)): Subscription
+---@overload fun(self: HttpStream, event: "message", handler: fun(event: HttpStreamMessageEvent)): Subscription
+---@overload fun(self: HttpStream, event: "end", handler: fun(event: HttpStreamEndEvent)): Subscription
+function HttpStream:on(event, handler, options) end
+
+--- Like `stream:on`, but the handler runs only the next time the event happens, then stops listening.
+---@param event HttpStream.Event The event's name.
+---@param handler fun(event: Event) Called with the event.
+---@return Subscription # Call `:cancel()` on it to stop waiting before then.
+---@overload fun(self: HttpStream, event: "open", handler: fun(event: HttpStreamOpenEvent)): Subscription
+---@overload fun(self: HttpStream, event: "message", handler: fun(event: HttpStreamMessageEvent)): Subscription
+---@overload fun(self: HttpStream, event: "end", handler: fun(event: HttpStreamEndEvent)): Subscription
+function HttpStream:once(event, handler) end
+
+--- A WebSocket, from `nf.http.websocket`: `send` text on it, and hear its `open`, each `message` and its one `end` as events. It belongs to the script that opened it and ends with reason `"unloaded"` when that script unloads (a reload, the server stopping). Once it has ended its methods answer as an ended socket does rather than erroring. Ephemeral: it can't be saved in a `data()` table.
+---@class WebSocket
+local WebSocket = {}
+
+--- The URL it was opened with, even after it has ended.
+---@return string
+function WebSocket:url() end
+
+--- `"connecting"` until its `open` event, then `"open"`, and `"ended"` once its `end` event has been heard.
+---@return "connecting"|"open"|"ended"
+function WebSocket:state() end
+
+--- The subprotocol the other side chose from `options.protocols`, while it's open; `nil` before and after, or when it chose none.
+---@return string?
+function WebSocket:protocol() end
+
+--- Sends a text message. Before the socket opens it waits and goes, in order, once it does. A message over `connections.max-message-bytes` is an error at the script's line; one past the package's `connections.bytes-per-minute` ends the socket (reason `"limit"`) instead of going.
+---@param text string The message, as text (UTF-8).
+---@return boolean # `false` when the socket has ended (or just ended over the limit), so nothing was sent.
+function WebSocket:send(text) end
+
+--- Ends it now, with reason `"closed"`: the other side is told with `code` and `reason`, and messages that arrived but weren't handed over yet are thrown away.
+---@param code? integer The close code: `1000` (a normal close, the default) or one from `3000` to `4999`, which applications define.
+---@param reason? string Why, for the other side to read: at most 123 bytes.
+---@return boolean # `false` when it had already ended.
+function WebSocket:close(code, reason) end
+
+--- Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
+---@param event WebSocket.Event The event's name.
+---@param handler fun(event: Event) Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`.
+---@param options? EventOptions How to listen: `{ every = n }` for `tick`.
+---@return Subscription # Call `:cancel()` on it to stop listening.
+---@overload fun(self: WebSocket, event: "open", handler: fun(event: WebSocketOpenEvent)): Subscription
+---@overload fun(self: WebSocket, event: "message", handler: fun(event: WebSocketMessageEvent)): Subscription
+---@overload fun(self: WebSocket, event: "end", handler: fun(event: WebSocketEndEvent)): Subscription
+function WebSocket:on(event, handler, options) end
+
+--- Like `socket:on`, but the handler runs only the next time the event happens, then stops listening.
+---@param event WebSocket.Event The event's name.
+---@param handler fun(event: Event) Called with the event.
+---@return Subscription # Call `:cancel()` on it to stop waiting before then.
+---@overload fun(self: WebSocket, event: "open", handler: fun(event: WebSocketOpenEvent)): Subscription
+---@overload fun(self: WebSocket, event: "message", handler: fun(event: WebSocketMessageEvent)): Subscription
+---@overload fun(self: WebSocket, event: "end", handler: fun(event: WebSocketEndEvent)): Subscription
+function WebSocket:once(event, handler) end
+
+--- A route a script answers, from `nf.web.route`. It goes when its script unloads or `remove` is called.
+---@class Route
+local Route = {}
+
+--- Stops answering: later requests to it are `404`, and requests still waiting are answered `503`.
+---@return boolean # `false` when it was already gone.
+function Route:remove() end
+
+--- Whether it still answers.
+---@return boolean
+function Route:exists() end
+
+--- How a route's handler answers its request: once, with `send`, `json` or `redirect`, during the handler or later (from a task, or a callback). Every answer also says `X-Content-Type-Options: nosniff`, and `Cache-Control: no-store` unless you set one. One not answered within `web.handler-timeout-seconds` is answered `504`; one whose route's script unloads first, `503`. Ephemeral: it can't be saved in a `data()` table.
+---@class WebResponse
+local WebResponse = {}
+
+--- Answers with `status`, `body` and `headers`. The `Content-Type` is `text/plain; charset=utf-8` unless `headers` sets one (`["content-type"] = "text/html; charset=utf-8"` for a page). A body over `web.max-response-bytes`, a status that isn't one, or a header that can't be sent (one the server sets, like `Content-Length`) is an error at the script's line.
+---@param status integer The status code, 100 to 599: `200`, `204`, `404`.
+---@param body? string The body, as text (UTF-8). Default empty.
+---@param headers? table<string, string> Response headers by name.
+---@return boolean # `false` when it was already answered (or timed out), so nothing was sent.
+function WebResponse:send(status, body, headers) end
+
+--- Answers with `status` and `value` written as JSON (`application/json`), as `nf.json.encode` writes it.
+---@param status integer The status code, 100 to 599.
+---@param value any What to write: a table, a string, a number, a boolean.
+---@return boolean # `false` when it was already answered.
+function WebResponse:json(status, value) end
+
+--- Answers with a redirect to `url` (`302`, or `status`: `301`, `303`, `307` or `308`).
+---@param url string Where to: an absolute URL, or a path on this server.
+---@param status? integer Default `302`.
+---@return boolean # `false` when it was already answered.
+function WebResponse:redirect(url, status) end
+
+--- Whether it still waits for an answer: `false` once it's answered, timed out, or its route's script unloaded.
+---@return boolean
+function WebResponse:is_pending() end
+
+--- A "log in with…" flow, from `nf.web.oauth`: `begin` a login for a player, and hear its `complete` or `fail`. It belongs to the script that made it.
+---@class OAuthFlow
+local OAuthFlow = {}
+
+--- Begins a login for `player`: the address of the service's page to send them to (as a link in chat), with a new state and code challenge that only this login's callback can use, for 10 minutes. `nil` while the server owner hasn't turned web routes on, or once the flow has gone.
+---@param player Player Who logs in: their `complete` or `fail` names them.
+---@return string?
+function OAuthFlow:begin(player) end
+
+--- Ends the flow: its callback route goes and logins under way are forgotten.
+---@return boolean # `false` when it was already gone.
+function OAuthFlow:remove() end
+
+--- Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
+---@param event OAuthFlow.Event The event's name.
+---@param handler fun(event: Event) Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`.
+---@param options? EventOptions How to listen: `{ every = n }` for `tick`.
+---@return Subscription # Call `:cancel()` on it to stop listening.
+---@overload fun(self: OAuthFlow, event: "complete", handler: fun(event: OAuthCompleteEvent)): Subscription
+---@overload fun(self: OAuthFlow, event: "fail", handler: fun(event: OAuthFailEvent)): Subscription
+function OAuthFlow:on(event, handler, options) end
+
+--- Like `flow:on`, but the handler runs only the next time the event happens, then stops listening.
+---@param event OAuthFlow.Event The event's name.
+---@param handler fun(event: Event) Called with the event.
+---@return Subscription # Call `:cancel()` on it to stop waiting before then.
+---@overload fun(self: OAuthFlow, event: "complete", handler: fun(event: OAuthCompleteEvent)): Subscription
+---@overload fun(self: OAuthFlow, event: "fail", handler: fun(event: OAuthFailEvent)): Subscription
+function OAuthFlow:once(event, handler) end
+
 --- One cutscene playing for one player, from `nf.cutscenes.play`. Once it has ended (it finished, was stopped or skipped, was replaced by another, its player left, or the script that played it unloaded) its methods answer `nil` or `false` rather than erroring, except `kind()` and `length()`. A cutscene is ephemeral: it has no `id()` and can't be saved in a `data()` table.
 ---@class Cutscene
 local Cutscene = {}
@@ -6347,6 +6594,104 @@ function Event:uncancel() end
 ---@field body string The body as text, decoded by the charset the response names (UTF-8 when it names none), so a response that isn't text (an image) doesn't survive. Its size is limited by `http.max-response-bytes` in the server's `config.yml`.
 ---@field url string The URL the response came from: the request's own, or where its redirects ended.
 
+--- What `nf.http.stream` takes: `nf.http.request`'s options, and `format`.
+---@class HttpStreamOptions
+---@field url string An `http://` or `https://` URL, as for `nf.http.request`. Its host must be one the calling package declares in `requires`.
+---@field method "GET"|"POST"|"PUT"|"PATCH"|"DELETE"|"OPTIONS"? The HTTP method; `"GET"` when left out.
+---@field headers table<string, string>? Request headers by name, as for `nf.http.request`. A `format` of `"events"` sends `Accept: text/event-stream` unless you give an `Accept`.
+---@field body string? The request body, as for `nf.http.request` (`http.max-request-bytes`).
+---@field format "lines"|"events"|"chunks"? How the response is split into messages. `"lines"` (the default): one message per line, without its line ending (NDJSON, a log tail). `"events"`: Server-Sent Events (`text/event-stream`), one message per event, with its `type` and `id`; comments and `retry` are skipped. `"chunks"`: the text as it arrives, in pieces of no particular size. A line or event over `connections.max-message-bytes` ends the stream (reason `"limit"`); text is UTF-8.
+
+--- What `nf.http.websocket` takes.
+---@class WebSocketOptions
+---@field url string A `ws://` or `wss://` URL, without a user name or password in it. Its host must be one the calling package declares in `requires.http`.
+---@field headers table<string, string>? Headers for the opening request (an `Authorization`), with `nf.http.request`'s rules. The `Sec-WebSocket-*` headers are the server's to set.
+---@field protocols string[]? Subprotocols to offer (`Sec-WebSocket-Protocol`), in order of preference; `socket:protocol()` says which one the other side chose.
+
+--- A stream's response began.
+---@class HttpStreamOpenEvent: Event
+---@field stream HttpStream The stream.
+---@field status integer The status code: `200`, `404`.
+---@field headers table<string, string> The response headers by name in lowercase, as `nf.http.request` gives them.
+
+--- A piece of a stream arrived.
+---@class HttpStreamMessageEvent: Event
+---@field stream HttpStream The stream.
+---@field data string The line (without its line ending), the event's data (its `data:` lines joined with line breaks), or the chunk.
+---@field type string? For `format = "events"`: the event's type, `"message"` when it names none. `nil` for the other formats.
+---@field id string? For `format = "events"`: the last event id the stream set (`id:`), which a script reconnecting sends back as `Last-Event-ID`. `nil` when none was set, and for the other formats.
+
+--- A stream ended.
+---@class HttpStreamEndEvent: Event
+---@field stream HttpStream The stream.
+---@field reason "finished"|"closed"|"failed"|"limit"|"idle"|"unloaded" Why: the server ended the response; `close()` was called; the connection couldn't be made or broke (a name that doesn't resolve, an address that isn't allowed, a refused connection, a redirect it couldn't follow, no answer within `http.timeout-seconds`); an owner's limit in `config.yml`'s `http:` section was reached (too many connections open, the request rate, a message over `connections.max-message-bytes`, the package's `connections.bytes-per-minute`); nothing arrived for `connections.idle-seconds`; or the script that opened it unloaded.
+---@field status integer? The response's status, when it had opened.
+---@field detail string? What went wrong, in words, for `"failed"` and `"limit"`; `nil` otherwise.
+
+--- A WebSocket opened.
+---@class WebSocketOpenEvent: Event
+---@field socket WebSocket The socket.
+---@field protocol string? The subprotocol the other side chose, or `nil`.
+---@field headers table<string, string> The opening response's headers by name in lowercase.
+
+--- A text message arrived on a WebSocket.
+---@class WebSocketMessageEvent: Event
+---@field socket WebSocket The socket.
+---@field data string The message.
+
+--- A WebSocket ended.
+---@class WebSocketEndEvent: Event
+---@field socket WebSocket The socket.
+---@field reason "finished"|"closed"|"failed"|"limit"|"idle"|"unloaded" Why: the other side closed it (`code` and `detail` say how); `close()` was called; the connection couldn't be made, was refused or broke (as for a stream; a server that doesn't speak WebSocket at that URL, or a binary message); an owner's limit in `config.yml`'s `http:` section was reached (too many connections open, the request rate, a message over `connections.max-message-bytes`, the package's `connections.bytes-per-minute`); nothing was sent or arrived for `connections.idle-seconds`; or the script that opened it unloaded.
+---@field code integer? For `"finished"`: the close code the other side sent (`1000` is a normal close).
+---@field detail string? For `"finished"`: the reason the other side gave, if any. For `"failed"` and `"limit"`: what went wrong, in words. `nil` otherwise.
+
+--- A request a route answers.
+---@class WebRequest
+---@field method string `"GET"`, `"POST"`, … (`"HEAD"` for a `GET` route asked only for headers).
+---@field path string The path asked for, namespace and all: `"/shop/replays/12"`.
+---@field params table<string, string> The route's `:name` and `*name` segments by name, decoded.
+---@field query table<string, string> The query parameters by name, decoded. A name given more than once is its first value.
+---@field headers table<string, string> The request headers by name in lowercase; one sent more than once is its values joined with `, `.
+---@field body string The body as text (UTF-8), at most `web.max-body-bytes`; `""` for none.
+---@field form table<string, string>? The body's fields, decoded, when it's a form (`application/x-www-form-urlencoded`); `nil` otherwise.
+---@field ip string The address it came from. Behind a reverse proxy that's the proxy's, unless the owner set `web.trust-proxy-headers`, which makes it the client's from `X-Forwarded-For`.
+
+--- How `nf.web.verify_signature` checks a signature.
+---@class SignatureOptions
+---@field secret string The secret the sender signs with.
+---@field algorithm "sha256"|"sha1"|"sha512"? The HMAC's hash. Default `"sha256"`.
+---@field encoding "hex"|"base64"? How the signature is written. Default `"hex"` (either case).
+---@field prefix string? Text before the signature to expect and skip, like `"sha256="`.
+
+--- What `nf.web.oauth` takes.
+---@class OAuthOptions
+---@field name string The flow's name, unique in the package: lowercase letters, digits, `-` and `_`. Its callback is `/<namespace>/oauth/<name>/callback`.
+---@field authorize_url string The service's authorization page: an `https://` URL.
+---@field token_url string The service's token endpoint: an `https://` URL whose host the package declares in `requires.http`.
+---@field client_id string The client id the service gave you.
+---@field client_secret string? The client secret, for a service that wants one besides PKCE. Keep it in a setting (`nf.config`).
+---@field scopes string[]? The scopes to ask for, sent separated by spaces.
+---@field client_auth "body"|"basic"? How the secret is sent to the token endpoint: in the form (`"body"`, the default) or as HTTP Basic (`"basic"`).
+---@field parameters table<string, string>? More query parameters for the authorization page, like `{ prompt = "consent" }`.
+
+--- A login finished.
+---@class OAuthCompleteEvent: Event
+---@field flow OAuthFlow The flow.
+---@field player Player Who logged in (perhaps offline by now).
+---@field access_token string The access token, to call the service as them.
+---@field token_type string? Its type, usually `"Bearer"`.
+---@field refresh_token string? A refresh token, if the service gave one.
+---@field expires_in integer? How many seconds the access token lasts, if the service said.
+---@field scope string? The scopes granted, if the service said.
+---@field id_token string? An OpenID Connect ID token, if the service gave one.
+
+--- A login didn't finish.
+---@class OAuthFailEvent: Event
+---@field flow OAuthFlow The flow.
+---@field player Player Who was logging in.
+---@field error string What went wrong, in words.
+
 --- How `nf.particles.play` plays an effect. Every key is optional; a key that isn't one of these is an error.
 ---@class ParticlePlayOptions
 ---@field viewers Player[]? Only these players see it (still only those within range). Players who leave drop out. Default: everyone in range.
@@ -6405,6 +6750,30 @@ function Event:uncancel() end
 ---@field jump boolean? Jump (space).
 ---@field sneak boolean? Sneak (shift).
 ---@field sprint boolean? Sprint (control).
+
+--- How `nf.test.accept` answers. Every key is optional; a key that isn't one of these is an error.
+---@class TestAcceptOptions
+---@field status integer? A stream's status: 100 to 599. Default `200`.
+---@field headers table<string, string>? The response headers (names are lowercased). Default: none.
+---@field protocol string? A WebSocket's chosen subprotocol: one of those it offered. Default: none.
+
+--- How `nf.test.disconnect` ends a connection. Every key is optional; a key that isn't one of these is an error.
+---@class TestDisconnectOptions
+---@field code integer? A WebSocket's close code. Default `1000`.
+---@field reason string? A WebSocket's close reason, its `end` event's `detail`.
+---@field error string? Break it instead: it ends `"failed"`, with this as `detail`.
+
+--- What `nf.test.request` sends. Every key is optional; a key that isn't one of these is an error.
+---@class TestRequestOptions
+---@field headers table<string, string>? Request headers by name.
+---@field body string? The body. Default none.
+---@field ip string? The address it comes from. Default `"127.0.0.1"`.
+
+--- What `nf.test.request` gives back: the answer as the client got it.
+---@class TestWebResponse
+---@field status integer The status code.
+---@field headers table<string, string> The response headers by name in lowercase.
+---@field body string The body (empty for a `HEAD`).
 
 --- What `nf.test.raise` gives back.
 ---@class RaisedEvent

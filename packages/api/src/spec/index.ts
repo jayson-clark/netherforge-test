@@ -27,7 +27,8 @@ import {
 } from './entities.ts'
 import { bossBarClass, inventoryClass, inventoryShapes, sidebarClass } from './inventories.ts'
 import { databaseClass, databaseShapes } from './db.ts'
-import { httpShapes } from './http.ts'
+import { connectionShapes, httpShapes, httpStreamClass, webSocketClass } from './http.ts'
+import { oauthFlowClass, routeClass, webResponseClass, webShapes } from './web.ts'
 import { blockShapes, customBlockClass, projectBlockClass } from './blocks.ts'
 import { lootShapes } from './loot.ts'
 import { hudClass, hudShapes } from './hud.ts'
@@ -107,6 +108,11 @@ const classes = [
   buttonClass,
   projectItemClass,
   effectClass,
+  httpStreamClass,
+  webSocketClass,
+  routeClass,
+  webResponseClass,
+  oauthFlowClass,
   cutsceneClass,
   fileClass,
   subscriptionClass,
@@ -167,6 +173,8 @@ export const api: ApiSpec = {
     ...scheduleShapes,
     ...databaseShapes,
     ...httpShapes,
+    ...connectionShapes,
+    ...webShapes,
     ...particleShapes,
     ...cutsceneShapes,
     ...utilityShapes,

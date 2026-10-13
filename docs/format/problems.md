@@ -1486,6 +1486,10 @@ Error. A server without the editor runs a project that has dependencies: it runs
 
 Error. A package in a bundle isn't what the bundle says it is: a file was changed, added or removed. See [packages](packages.md).
 
+### `runtime.web-disabled` {#runtime-web-disabled}
+
+Warning. A package declares `requires.web`, but the server owner hasn't turned web routes on (`web.enabled`), so its routes aren't served. See [the project format](project.md).
+
 ### `runtime.plugin-missing` {#runtime-plugin-missing}
 
 Error. A package declares a plugin in `requires.plugins` that isn't enabled on the server: what needs it fails until it is. See [the project format](project.md).

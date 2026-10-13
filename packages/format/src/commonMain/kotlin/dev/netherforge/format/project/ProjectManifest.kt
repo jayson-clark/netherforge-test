@@ -186,6 +186,11 @@ data class ProjectRequires(
     /** Whether scripts may keep a database of the package's own (`nf.db`). */
     val db: Boolean? = null,
     /**
+     * Whether scripts may answer web requests to the server (`nf.web`), under
+     * the package's own `/<namespace>/`, when the server owner turned them on.
+     */
+    val web: Boolean? = null,
+    /**
      * The hosts scripts may make HTTP requests to: a host name
      * (`discord.com`), or `*.` and one for any name under it
      * (`*.example.com`, not `example.com` itself). Kept in order.

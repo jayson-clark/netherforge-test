@@ -45,6 +45,7 @@ import dev.netherforge.plugin.store.HikariSources
 import dev.netherforge.plugin.store.PackageDatabases
 import dev.netherforge.plugin.store.RemoteDatabases
 import dev.netherforge.plugin.store.Store
+import dev.netherforge.plugin.web.WebGate
 import dev.netherforge.plugin.world.StartupGenerators
 import javax.sql.DataSource
 import kotlin.math.cos
@@ -82,6 +83,19 @@ class NetherForgeRuntime(val platform: Platform, val config: RuntimeConfig) {
 
     /** The resource pack: the last good build, the server that serves it, and what each player was sent. */
     val packs = Packs(config.pack, config.stateDirectory, log, platform, source::readBytes)
+
+    /** Web routes' door, the listener's half (`nf.web`): served on the pack's listener once [enable] runs, if the owner turned them on. */
+    val web = WebGate(config.web)
+
+    /**
+     * Where the world reaches web routes, without a slash at the end: `web.public-url`, or the
+     * listener's own address; null while they're off. In a test run, `http://localhost`.
+     */
+    fun webBase(): String? = when {
+        config.testing != null -> config.web.publicUrl ?: "http://localhost"
+        !config.web.enabled -> null
+        else -> config.web.publicUrl ?: packs.listener()?.let { "http://${it.host}:${it.port}" }
+    }
 
     /** Whether the server must restart for what it learns only at start (the start-up datapack) to be what the files say. */
     val datapack = StartupDatapackCheck(platform, source, log)
@@ -239,6 +253,13 @@ class NetherForgeRuntime(val platform: Platform, val config: RuntimeConfig) {
         )
         platform.bindText({ px -> if (packs.built != null) PackFonts.offset(px) else null }) { text ->
             current?.layoutText(text) ?: text
+        }
+        if (config.web.enabled && config.testing == null) {
+            val listener = packs.listener()
+            if (listener != null) {
+                listener.web = { exchange -> web.accept(exchange, listener::execute) }
+                log.info("Web routes are on, at ${webBase()}")
+            }
         }
         config.bridge?.let { settings ->
             val connection = BridgeService(this, settings)

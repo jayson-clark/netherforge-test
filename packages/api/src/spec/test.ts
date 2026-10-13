@@ -171,6 +171,112 @@ export const nfTest = (nfEvents: EventSpec[]): LuaClass => ({
       example:
         'local alex = nf.test.player("Alex")\nalex:set_held_item(nf.items.create("ruby"))\nnf.test.advance(1)\nlocal shown = assert(nf.test.shown(alex, 0))\nassert(shown.lore ~= nil)',
     },
+    {
+      name: 'connections',
+      doc: "The connections scripts opened with `nf.http.stream` and `nf.http.websocket` in this test, oldest first, ended ones included. In a test nothing reaches the network: each connection is held by the test, which answers it with `nf.test.accept`, talks over it with `nf.test.receive` and `nf.test.sent`, and ends it with `nf.test.disconnect`. Everything else is as on a server: the package must declare the host, the owner's limits apply (the defaults, in a test), and what the test does reaches the scripts at the next tick, so `nf.test.advance(1)` after it.",
+      params: [
+        {
+          name: 'url',
+          type: 'string',
+          doc: 'Only those whose URL starts with this: `"wss://chat.example.com"`.',
+          optional: true,
+        },
+      ],
+      returns: [{ type: '(HttpStream|WebSocket)[]' }],
+      example:
+        'nf.test.case("the bridge says hello", function()\n  require("bridge")\n  local socket = nf.test.connections("wss://chat.example.com")[1] --[[@as WebSocket]]\n  nf.test.accept(socket)\n  nf.test.advance(1)\n  assert(nf.test.sent(socket)[1] == "hello")\nend)',
+    },
+    {
+      name: 'accept',
+      doc: "Answers a connection that's still connecting, as its server would: its `open` event follows at the next tick. A stream opens with `options.status` (default `200`). Accepting one that isn't connecting any more is an error.",
+      params: [
+        {
+          name: 'connection',
+          type: 'HttpStream|WebSocket',
+          doc: 'One from `nf.test.connections`.',
+        },
+        {
+          name: 'options',
+          type: 'TestAcceptOptions',
+          doc: 'The status, headers and subprotocol to answer with.',
+          optional: true,
+        },
+      ],
+      returns: [],
+      example:
+        'local feed = nf.test.connections("https://feed.example.com")[1]\nnf.test.accept(feed, { status = 200, headers = { ["content-type"] = "application/x-ndjson" } })',
+    },
+    {
+      name: 'receive',
+      doc: 'Sends `text` from the far end. A WebSocket hears it as one `message`; a stream reads it as more of its response, split by its `format` exactly as a server\'s would be (so `"a\\nb\\n"` is two lines, and half a line waits for the rest). It accepts a connection that\'s still connecting first. An error when the connection has ended, or when as many messages as `connections.max-queued-messages` are already waiting for the scripts (advance to let them in).',
+      params: [
+        {
+          name: 'connection',
+          type: 'HttpStream|WebSocket',
+          doc: 'One from `nf.test.connections`.',
+        },
+        { name: 'text', type: 'string', doc: 'What the far end sends.' },
+      ],
+      returns: [],
+      example: 'nf.test.receive(feed, \'{"kind":"goal"}\\n\')\nnf.test.advance(1)',
+    },
+    {
+      name: 'sent',
+      doc: 'Every message scripts sent on a WebSocket so far, in order, whether or not it had opened (a stream sends nothing: its request body is in its options).',
+      params: [{ name: 'connection', type: 'WebSocket', doc: 'One from `nf.test.connections`.' }],
+      returns: [{ type: 'string[]' }],
+    },
+    {
+      name: 'request',
+      doc: "Makes a web request to the server, as a browser or a webhook sender would, and gives its answer: it goes through the routes scripts made with `nf.web.route` and the owner's limits (the defaults, in a test) exactly as a real one does, without a network, whether or not web routes are turned on. When the handler answers later (from a task, a callback), the server runs forward tick by tick until it does, as `nf.test.advance` would, up to `web.handler-timeout-seconds` (then it's `504`).",
+      params: [
+        { name: 'method', type: 'string', doc: '`\"GET\"`, `\"POST\"`, …' },
+        {
+          name: 'path',
+          type: 'string',
+          doc: 'The path, namespace and all, with any query: `\"/shop/replays/12?full=1\"`.',
+        },
+        {
+          name: 'options',
+          type: 'TestRequestOptions',
+          doc: 'Its headers, body and the address it comes from.',
+          optional: true,
+        },
+      ],
+      returns: [{ type: 'TestWebResponse' }],
+      example:
+        'local answer = nf.test.request("POST", "/shop/hooks/store", {\n  headers = { ["content-type"] = "application/json" },\n  body = nf.json.encode({ order = 7 }),\n})\nassert(answer.status == 204, answer.body)',
+    },
+    {
+      name: 'oauth_token',
+      doc: 'What a login flow\'s token endpoint answers in this test: in a test the server doesn\'t call it, and trades every code for this instead (by default `{ access_token = "test-token", token_type = "Bearer" }`). A table without `access_token` makes the login `fail`, with its `error_description` or `error`.',
+      params: [
+        { name: 'flow', type: 'OAuthFlow', doc: 'The flow.' },
+        { name: 'response', type: 'table', doc: "The token endpoint's JSON answer, as a table." },
+      ],
+      returns: [],
+      example:
+        'nf.test.oauth_token(flow, { access_token = "abc", refresh_token = "def", expires_in = 3600 })',
+    },
+    {
+      name: 'disconnect',
+      doc: 'Ends a connection from the far end, after what it already received: with `options.error` it breaks (reason `"failed"`, `detail` the error), otherwise the server finishes it (`"finished"`, a WebSocket with `options.code` and `options.reason`). Its `end` event follows at the next tick. Disconnecting one that has ended does nothing.',
+      params: [
+        {
+          name: 'connection',
+          type: 'HttpStream|WebSocket',
+          doc: 'One from `nf.test.connections`.',
+        },
+        {
+          name: 'options',
+          type: 'TestDisconnectOptions',
+          doc: 'How it ends.',
+          optional: true,
+        },
+      ],
+      returns: [],
+      example: 'nf.test.disconnect(socket, { code = 4000, reason = "resume" })\nnf.test.advance(1)',
+    },
   ],
 })
 
@@ -225,6 +331,70 @@ export const testShapes: LuaClass[] = [
       { name: 'jump', type: 'boolean?', doc: 'Jump (space).' },
       { name: 'sneak', type: 'boolean?', doc: 'Sneak (shift).' },
       { name: 'sprint', type: 'boolean?', doc: 'Sprint (control).' },
+    ],
+  },
+  {
+    name: 'TestAcceptOptions',
+    doc: "How `nf.test.accept` answers. Every key is optional; a key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      { name: 'status', type: 'integer?', doc: "A stream's status: 100 to 599. Default `200`." },
+      {
+        name: 'headers',
+        type: 'table<string, string>?',
+        doc: 'The response headers (names are lowercased). Default: none.',
+      },
+      {
+        name: 'protocol',
+        type: 'string?',
+        doc: "A WebSocket's chosen subprotocol: one of those it offered. Default: none.",
+      },
+    ],
+  },
+  {
+    name: 'TestDisconnectOptions',
+    doc: "How `nf.test.disconnect` ends a connection. Every key is optional; a key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      { name: 'code', type: 'integer?', doc: "A WebSocket's close code. Default `1000`." },
+      {
+        name: 'reason',
+        type: 'string?',
+        doc: "A WebSocket's close reason, its `end` event's `detail`.",
+      },
+      {
+        name: 'error',
+        type: 'string?',
+        doc: 'Break it instead: it ends `"failed"`, with this as `detail`.',
+      },
+    ],
+  },
+  {
+    name: 'TestRequestOptions',
+    doc: "What `nf.test.request` sends. Every key is optional; a key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      { name: 'headers', type: 'table<string, string>?', doc: 'Request headers by name.' },
+      { name: 'body', type: 'string?', doc: 'The body. Default none.' },
+      { name: 'ip', type: 'string?', doc: 'The address it comes from. Default `\"127.0.0.1\"`.' },
+    ],
+  },
+  {
+    name: 'TestWebResponse',
+    doc: 'What `nf.test.request` gives back: the answer as the client got it.',
+    methods: false,
+    functions: [],
+    fields: [
+      { name: 'status', type: 'integer', doc: 'The status code.' },
+      {
+        name: 'headers',
+        type: 'table<string, string>',
+        doc: 'The response headers by name in lowercase.',
+      },
+      { name: 'body', type: 'string', doc: 'The body (empty for a `HEAD`).' },
     ],
   },
   {

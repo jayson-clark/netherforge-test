@@ -2,6 +2,7 @@ package dev.netherforge.plugin.contract
 
 import dev.netherforge.format.bridge.BotAction
 import dev.netherforge.format.bridge.BotClick
+import dev.netherforge.format.bridge.BotTargetKind
 import dev.netherforge.format.dialog.BooleanInput
 import dev.netherforge.format.dialog.DialogButton
 import dev.netherforge.format.dialog.DialogFile
@@ -26,6 +27,7 @@ import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.MenuClick
 import dev.netherforge.plugin.platform.PickAnswer
 import dev.netherforge.plugin.platform.PlayerRef
+import dev.netherforge.plugin.platform.Ray
 import dev.netherforge.plugin.platform.WatchedEvent
 import dev.netherforge.plugin.platform.WindowSpec
 import kotlinx.serialization.json.JsonPrimitive
@@ -391,6 +393,86 @@ abstract class BotActionsContract : PlatformContract() {
         assertEquals(listOf<Any?>(box to ClickButton.RIGHT, box to ClickButton.LEFT), clicks.map { it[0] to it[2] })
         assertTrue(clicks.all { it[1] == player && it[3] != null }, "by them, with where they looked: $clicks")
         assertEquals(emptyList(), calls("playerInteractEntity", player), "not heard as a vanilla entity's")
+    }
+
+    @Test
+    fun `a bot's look is the server's, so where it faces is where its clicks aim`() {
+        val player = join()
+        act(player, BotAction.Look(90.0, 30.0))
+        val turned = assertNotNull(main { platform.players.eye(player.uuid) })
+        // Yaw 90 faces west (-x), pitch 30 looks down.
+        assertTrue(
+            kotlin.math.abs(turned.dx + 0.866) < 0.01 && kotlin.math.abs(turned.dy + 0.5) < 0.01 && kotlin.math.abs(turned.dz) < 0.01,
+            "faced $turned"
+        )
+
+        val point = at(3, 1, 2)
+        act(player, BotAction.LookAt(point.x, point.y, point.z))
+        val ray = assertNotNull(main { platform.players.eye(player.uuid) })
+        val toward = doubleArrayOf(point.x - ray.x, point.y - ray.y, point.z - ray.z)
+        val length = kotlin.math.sqrt(toward.sumOf { it * it })
+        val cos = (toward[0] * ray.dx + toward[1] * ray.dy + toward[2] * ray.dz) / length
+        assertTrue(cos > 0.999, "faced $ray, not toward $point")
+        assertEquals(
+            main {
+                bots.state(player.name).yaw
+            },
+            main { platform.players.eye(player.uuid)!! }.let { Math.toDegrees(kotlin.math.atan2(-it.dx, it.dz)) },
+            0.5
+        )
+    }
+
+    @Test
+    fun `a click aims where the bot looks, or at the point it's given, not at the middle of what it clicks`() {
+        val player = join()
+        // A wide, flat box, like a board on a table: its middle is far from its corners.
+        val board =
+            main { tagged(platform.entities.spawnHitbox(at(2), 2.0, 0.25, EntityTag(UUID.randomUUID(), "board", EntityRole.HITBOX))) }
+        eventually("sent to them") { bots.state(player.name).entities.any { it.uuid == board.toString() } }
+        val middle = at(2)
+        val corner = Triple(middle.x - 0.8, middle.y + 0.25, middle.z + 0.8)
+        fun aimedAt(point: Triple<Double, Double, Double>): Boolean {
+            val sight = events.of("entityClicked").last()[3] as Ray
+            val toward = doubleArrayOf(point.first - sight.x, point.second - sight.y, point.third - sight.z)
+            val length = kotlin.math.sqrt(toward.sumOf { it * it })
+            return (toward[0] * sight.dx + toward[1] * sight.dy + toward[2] * sight.dz) / length > 0.999
+        }
+
+        act(player, BotAction.LookAt(corner.first, corner.second, corner.third))
+        act(player, BotAction.Interact())
+        eventually("the click heard") { events.of("entityClicked").size == 1 }
+        assertTrue(aimedAt(corner), "a click on what it looks at keeps its look: ${events.of("entityClicked").last()}")
+
+        val other = Triple(middle.x + 0.8, middle.y + 0.25, middle.z - 0.8)
+        act(player, BotAction.Interact(entity = board.toString(), x = other.first, y = other.second, z = other.third))
+        eventually("the second click heard") { events.of("entityClicked").size == 2 }
+        assertTrue(aimedAt(other), "a click given a point aims there: ${events.of("entityClicked").last()}")
+    }
+
+    @Test
+    fun `what a bot looks at is its target, the nearest entity in front of the block it faces`() {
+        val player = join()
+        val (x, y, z) = block(at(2, -1))
+        act(player, BotAction.LookAt(x + 0.5, y + 1.0, z + 0.5))
+        val onBlock = assertNotNull(main { bots.state(player.name).target }, "looking at the ground")
+        assertEquals(BotTargetKind.BLOCK, onBlock.kind)
+        assertEquals(Triple(x, y, z), Triple(onBlock.blockX, onBlock.blockY, onBlock.blockZ))
+        assertEquals("up", onBlock.face)
+        assertEquals(main { platform.blocks.get(world, x, y, z)!!.state }, onBlock.state)
+        assertNull(onBlock.entity)
+
+        val box = main { tagged(platform.entities.spawnHitbox(at(2), 1.0, 1.0, EntityTag(UUID.randomUUID(), "box", EntityRole.HITBOX))) }
+        eventually("sent to them") { bots.state(player.name).entities.any { it.uuid == box.toString() } }
+        val where = at(2)
+        act(player, BotAction.LookAt(where.x, where.y + 0.5, where.z))
+        val onBox = assertNotNull(main { bots.state(player.name).target }, "looking at the hitbox")
+        assertEquals(BotTargetKind.ENTITY, onBox.kind)
+        assertEquals(box.toString(), onBox.entity)
+        assertEquals("minecraft:interaction", onBox.type)
+        assertTrue(onBox.distance < onBlock.distance, "the hitbox is in front of the ground: $onBox")
+
+        act(player, BotAction.Look(0.0, -90.0))
+        assertNull(main { bots.state(player.name).target }, "nothing but sky above")
     }
 
     @Test

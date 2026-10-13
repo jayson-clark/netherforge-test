@@ -20,8 +20,8 @@ export function removeManagedWorld(manifest: ProjectManifest, name: string) {
   else delete manifest.managedWorlds
 }
 
-/** A yes-or-no requirement: `moderation` or `db`. */
-export type RequiredFlag = 'moderation' | 'db'
+/** A yes-or-no requirement: `moderation`, `db` or `web`. */
+export type RequiredFlag = 'moderation' | 'db' | 'web'
 
 /** Declares the flag [key] (`requires.moderation`, `requires.db`), or (`false`) takes it out. */
 export function setRequired(manifest: ProjectManifest, key: RequiredFlag, required: boolean) {

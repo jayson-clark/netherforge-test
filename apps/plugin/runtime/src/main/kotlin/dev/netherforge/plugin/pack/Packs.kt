@@ -135,14 +135,21 @@ class Packs(
             }.onFailure { log.error("Couldn't write $file", it) }
             return url
         }
-        val server = server ?: runCatching { PackServer.start(config.bind, config.port) }.getOrElse {
-            log.error("Couldn't start the resource pack server on ${config.bind}:${config.port}", it)
-            return null
-        }.also { server = it }
+        val server = listener() ?: return null
         server.serve(sha1, bytes)
         val base = (config.publicUrl ?: "http://${server.host}:${server.port}").trimEnd('/')
         return "$base/$sha1.zip"
     }
+
+    /**
+     * The plugin's HTTP server (`resource-pack.bind` and `.port`), started if
+     * it isn't yet: the pack's, and web routes' when they're on. Null when it
+     * couldn't start (logged).
+     */
+    fun listener(): PackServer? = server ?: runCatching { PackServer.start(config.bind, config.port) }.getOrElse {
+        log.error("Couldn't start NetherForge's HTTP server on ${config.bind}:${config.port}", it)
+        return null
+    }.also { server = it }
 
     /** Sends the current pack to [player] unless they already have this one. */
     fun send(player: UUID): Boolean {

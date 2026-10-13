@@ -16,6 +16,9 @@ resource-pack:
 http:
   allow-private-addresses: false
 
+web:
+  enabled: false
+
 databases: {}
 
 schedules:
@@ -83,6 +86,14 @@ http:
   max-response-bytes: 4194304
   timeout-seconds: 15
   requests-per-minute: 60
+  connections:
+    max-per-package: 4
+    max-total: 32
+    max-message-bytes: 1048576
+    bytes-per-minute: 16777216
+    idle-seconds: 300
+    max-queued-messages: 1000
+    messages-per-tick: 100
 ```
 
 | Key                       | Meaning                                                                                          | Default |
@@ -99,6 +110,85 @@ network or a cloud provider's internal addresses is refused, redirects
 included. Turn `allow-private-addresses` on only when a package must call a
 service of your own on your network (a webhook receiver on the same machine,
 say). Proxy settings from the environment are never used.
+
+### Streams and WebSockets
+
+Scripts can also hold a connection open: a live feed with
+[`nf.http.stream`](../reference/nf.http.md#stream), or a chat bridge with
+[`nf.http.websocket`](../reference/nf.http.md#websocket). They go only to the
+same declared hosts, under the same address rules, and opening one counts as a
+request against `requests-per-minute`. Every connection belongs to the script
+that opened it and closes when that script reloads or the server stops.
+`connections:` limits what they may hold and move:
+
+| Key                               | Meaning                                                                                                                       | Default |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `connections.max-per-package`     | How many connections each package may hold open at once.                                                                      | `4`     |
+| `connections.max-total`           | How many all packages together may hold open.                                                                                 | `32`    |
+| `connections.max-message-bytes`   | The largest line, event or WebSocket message, either way. A script sending a larger one gets an error; receiving one ends it. | 1 MiB   |
+| `connections.bytes-per-minute`    | How much each package's connections may send and receive in a minute, counted on the wire.                                    | 16 MiB  |
+| `connections.idle-seconds`        | A connection with nothing sent or received for this long is closed.                                                           | `300`   |
+| `connections.max-queued-messages` | Messages that may wait for scripts per connection. Past it the server stops reading that connection until scripts catch up.   | `1000`  |
+| `connections.messages-per-tick`   | Messages handed to scripts per connection each tick, so a busy feed can't take a whole tick.                                  | `100`   |
+
+A connection that would go past a limit isn't an error in the script: it ends
+with the reason `"limit"`, and its `end` event says which limit.
+
+## Web routes
+
+A package that declares `"requires": { "web": true }` can answer web requests
+with [`nf.web`](../reference/nf.web.md): webhooks from a store or CI, "log in
+with…" callbacks, small pages and JSON for a website. They're **off until you
+turn them on**, and a package that declares them has a warning
+(`runtime.web-disabled`) until you do. `/nf requires` lists every route and
+whose it is.
+
+```yaml
+web:
+  enabled: false
+  public-url: ''
+  trust-proxy-headers: false
+  max-body-bytes: 65536
+  max-response-bytes: 1048576
+  requests-per-minute-per-ip: 60
+  max-pending: 64
+  handler-timeout-seconds: 10
+```
+
+| Key                          | Meaning                                                                                                                                      | Default                            |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `enabled`                    | Serve web routes at all.                                                                                                                     | `false`                            |
+| `public-url`                 | The address the world reaches them at, which scripts build links with (`https://play.example.com`).                                          | the resource pack server's address |
+| `trust-proxy-headers`        | Take a request's address from `X-Forwarded-For`. Only behind your own reverse proxy: anyone can send that header.                            | `false`                            |
+| `max-body-bytes`             | The largest request body. A larger one is answered `413` without reaching a script.                                                          | 64 KiB                             |
+| `max-response-bytes`         | The largest answer a script may send.                                                                                                        | 1 MiB                              |
+| `requests-per-minute-per-ip` | How many requests one address may make a minute. Past it: `429`.                                                                             | `60`                               |
+| `max-pending`                | How many requests may wait for the main thread at once. Past it: `503`. At most 32 are handled each tick, so a flood can't take over a tick. | `64`                               |
+| `handler-timeout-seconds`    | How long a script may take to answer. Past it: `504`.                                                                                        | `10`                               |
+
+Routes are served on the resource pack's port (`resource-pack.bind` and
+`port`), each package under its own path (`/shop/...`). NetherForge doesn't do
+HTTPS itself: put a reverse proxy in front for that, and set `public-url` to
+the address it serves. With [Caddy](https://caddyserver.com), for example:
+
+```
+play.example.com {
+  reverse_proxy localhost:8163
+}
+```
+
+```yaml
+resource-pack:
+  bind: 127.0.0.1 # only the proxy reaches the port
+  public-url: https://play.example.com
+web:
+  enabled: true
+  public-url: https://play.example.com
+  trust-proxy-headers: true
+```
+
+A proxy also protects against clients that send a request very slowly, which
+the built-in server doesn't time out.
 
 ## Databases
 

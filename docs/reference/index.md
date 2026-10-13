@@ -111,12 +111,18 @@ Vectors and locations, text, looks, time, randomness and maths.
 
 ## Files, data and the web
 
-Files, databases, web requests and other plugins.
+Files, databases, web requests both ways and other plugins.
 
 - [nf.files](nf.files.md): Files in the one directory scripts may keep things in: the only state a script has that survives a restart
 - [File](file.md): A path in the scripts' data directory (`plugins/NetherForge/data/`, on the editor's dev server too)
 - [Database](database.md): A database, from `nf.db()` or `nf.db('network')`
 - [nf.http](nf.http.md): Requests to web services (a Discord webhook, a status API)
+- [HttpStream](httpstream.md): A streamed HTTP response, from `nf.http.stream`: its `open`, each `message` and its one `end` are events on it
+- [WebSocket](websocket.md): A WebSocket, from `nf.http.websocket`: `send` text on it, and hear its `open`, each `message` and its one `end` as events
+- [nf.web](nf.web.md): Web requests to the server: webhooks from stores, CI and chat services, "log in with…" callbacks, small pages and JSON for a companion site
+- [Route](route.md): A route a script answers, from `nf.web.route`
+- [WebResponse](webresponse.md): How a route's handler answers its request: once, with `send`, `json` or `redirect`, during the handler or later (from a task, or a callback)
+- [OAuthFlow](oauthflow.md): A "log in with…" flow, from `nf.web.oauth`: `begin` a login for a player, and hear its `complete` or `fail`
 - [nf.economy](nf.economy.md): Players' money, as the server's economy plugin keeps it, through [Vault](https://www.spigotmc.org/resources/vault.34315/): whichever economy is registered with it (EssentialsX, CMI, …) answers, so a project never names one
 - [nf.placeholders](nf.placeholders.md): Placeholders, through [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/): fill in the `%player_name%`-style placeholders every plugin offers, and offer your own as `%<namespace>_<key>%` to every plugin that reads them (scoreboards, chat formats, holograms)
 
@@ -170,7 +176,8 @@ Some functions only work once the project has declared that it uses them, so who
 | `moderation` | ban and unban players, change the whitelist and the server settings players see | `"requires": { "moderation": true }` in `netherforge.json` | [`nf.server.set_max_players`](nf.server.md#set_max_players), [`nf.server.set_motd`](nf.server.md#set_motd), [`nf.server.set_whitelist_enabled`](nf.server.md#set_whitelist_enabled), [`player:ban`](player.md#ban), [`player:unban`](player.md#unban), [`player:set_whitelisted`](player.md#set_whitelisted) |
 | `plugin:vault` | use another plugin on the server | `"requires": { "plugins": ["vault"] }` in `netherforge.json` | [`nf.economy.balance`](nf.economy.md#balance), [`nf.economy.deposit`](nf.economy.md#deposit), [`nf.economy.withdraw`](nf.economy.md#withdraw) |
 | `plugin:placeholderapi` | use another plugin on the server | `"requires": { "plugins": ["placeholderapi"] }` in `netherforge.json` | [`nf.placeholders.parse`](nf.placeholders.md#parse), [`nf.placeholders.register`](nf.placeholders.md#register) |
-| `http` | make requests to other servers, only to the hosts the package lists | each host it calls in `"requires": { "http": [...] }` in `netherforge.json` | [`nf.http.request`](nf.http.md#request) |
+| `http` | make requests to other servers, only to the hosts the package lists | each host it calls in `"requires": { "http": [...] }` in `netherforge.json` | [`nf.http.request`](nf.http.md#request), [`nf.http.stream`](nf.http.md#stream), [`nf.http.websocket`](nf.http.md#websocket) |
+| `web` | answer web requests to the server under the package's own path | `"requires": { "web": true }` in `netherforge.json` | [`nf.web.route`](nf.web.md#route), [`nf.web.url`](nf.web.md#url), [`nf.web.oauth`](nf.web.md#oauth) |
 
 ## Editor support
 

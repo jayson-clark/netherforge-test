@@ -618,8 +618,8 @@ const BOT_ACTIONS = [
   'sprint {on}',
   'chat {message}',
   'command {line}: run as this player, with or without the /',
-  'interact {entity? | centity? + node?, hand?}: right-click an entity by UUID, a centity instance (by its UUID; node defaults to its first clickable one), or with neither whatever it looks at. Must be within 3 blocks',
-  'attack {entity? | centity? + node?}: left-click, chosen the same way',
+  'interact {entity? | centity? + node?, hand?, x?, y?, z?}: right-click an entity by UUID or a centity instance (by its UUID; node defaults to its first clickable one), turning to x, y, z first (a point on it: a square of a board) or else its middle; with neither entity nor centity, whatever is in its crosshair, exactly where it looks, without turning (look/look_at, then interact). Must be within 3 blocks',
+  'attack {entity? | centity? + node?, x?, y?, z?}: left-click, chosen and aimed the same way',
   'swing: left-click the air',
   'use_item {hand?}: right-click with the held item',
   'release_item: let go of right-click while using an item (a drawn bow shoots, a shield lowers)',
@@ -757,7 +757,7 @@ function registerBotTools(server: McpServer, ctx: ToolContext) {
     {
       title: "What a bot's screen shows",
       description:
-        "Everything a bot's screen shows now and its state on the server: position, health, game mode, inventory, the open menu (slots and items), the dialog on screen (inputs and buttons), boss bars, the sidebar, title and action bar, resource packs, and the entities its client knows of within 16 blocks (an entity hidden from it isn't there). `events` is the sequence number of its next event.",
+        "Everything a bot's screen shows now and its state on the server: position, health, game mode, inventory, the open menu (slots and items), the dialog on screen (inputs and buttons), boss bars, the sidebar, title and action bar, resource packs, the entities its client knows of within 16 blocks (an entity hidden from it isn't there), and `target`: what its crosshair is on within reach, as the game picks it (the nearest entity in front of the block it faces): a block (`blockX`/`blockY`/`blockZ`, `face`, `state`) or an entity (`entity` UUID, `type`), with `centity` (instance UUID) and `node` (the node a click there reaches, null for none) for a centity's hitbox, or null for nothing. Turn it with bot_act's `look`/`look_at` and read `target` to check what a click would hit. `events` is the sequence number of its next event.",
       inputSchema: { name: botName() },
       annotations: READ_ONLY,
     },

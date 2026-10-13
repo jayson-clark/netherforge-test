@@ -150,6 +150,14 @@ internal class AdminCommand(private val runtime: NetherForgeRuntime) : CommandHa
         }
         sender.reply("<gold>The project and its packages require:")
         for (use in combined) sender.reply("<yellow>${use.requirement} <gray>declared by ${use.packages.joinToString()}")
+        val routes = runtime.session.web.all()
+        if (routes.isEmpty()) return
+        val served = runtime.webBase()?.let { "served at $it" } ?: "not served: web.enabled is off in config.yml"
+        sender.reply("<gold>Web routes <gray>($served):")
+        for (route in routes) {
+            val path = "/${route.namespace}${route.path.text.takeIf { it != "/" }.orEmpty()}"
+            sender.reply("<yellow>${route.method} $path <gray>(${route.namespace}${if (route.internal != null) ", login flow" else ""})")
+        }
     }
 
     /**

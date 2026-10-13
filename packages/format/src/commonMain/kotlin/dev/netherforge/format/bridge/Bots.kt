@@ -190,8 +190,12 @@ sealed interface BotAction {
     /**
      * Right-click an entity: [entity] by UUID, or a centity's node ([centity]
      * is its instance's UUID, [node] defaults to its first clickable one).
-     * The bot looks at it first; it must be within reach (3 blocks). With
-     * neither, whatever the bot is looking at.
+     * The bot turns to [x], [y], [z] (a point in the world, on the entity:
+     * a square of a board) or, without one, to the entity's middle (the
+     * node's hitbox's); it must be within reach (3 blocks). With neither
+     * [entity] nor [centity], it clicks whatever is in its crosshair, where its
+     * line of sight meets it, without turning (`look`/`look_at` first, then
+     * this, clicks exactly where it looks).
      */
     @Serializable
     @SerialName("interact")
@@ -199,13 +203,28 @@ sealed interface BotAction {
         val entity: String? = null,
         val centity: String? = null,
         val node: String? = null,
-        val hand: BotHand = BotHand.MAIN
-    ) : BotAction
+        val hand: BotHand = BotHand.MAIN,
+        val x: Double? = null,
+        val y: Double? = null,
+        val z: Double? = null
+    ) : BotAction {
+        /** The point to aim at, when one was given; all three or none. */
+        val at: BotPoint? get() = BotPoint.of(x, y, z)
+    }
 
-    /** Left-click (attack) an entity, chosen as [Interact] chooses one. */
+    /** Left-click (attack) an entity, chosen and aimed at as [Interact] chooses and aims. */
     @Serializable
     @SerialName("attack")
-    data class Attack(val entity: String? = null, val centity: String? = null, val node: String? = null) : BotAction
+    data class Attack(
+        val entity: String? = null,
+        val centity: String? = null,
+        val node: String? = null,
+        val x: Double? = null,
+        val y: Double? = null,
+        val z: Double? = null
+    ) : BotAction {
+        val at: BotPoint? get() = BotPoint.of(x, y, z)
+    }
 
     /** Left-click the air: an arm swing. */
     @Serializable
@@ -442,6 +461,60 @@ data class BotEntity(
     val distance: Double
 )
 
+/** A point in the world a click aims at. */
+data class BotPoint(val x: Double, val y: Double, val z: Double) {
+    companion object {
+        /** [x], [y] and [z] as a point, null for none; an error for some but not all. */
+        fun of(x: Double?, y: Double?, z: Double?): BotPoint? {
+            if (x == null && y == null && z == null) return null
+            require(x != null && y != null && z != null) { "give all of x, y and z to aim at a point, or none" }
+            return BotPoint(x, y, z)
+        }
+    }
+}
+
+/** What a bot's crosshair is on. */
+@Serializable
+enum class BotTargetKind {
+    @SerialName("block")
+    BLOCK,
+
+    @SerialName("entity")
+    ENTITY
+}
+
+/**
+ * What a bot is looking at, as its client picks it: the nearest entity it could click (within entity reach,
+ * 3 blocks in survival) in front of the nearest block it could use or mine (within block reach, 4.5), so
+ * what `interact` with no target or `use_block` there would reach.
+ */
+@Serializable
+data class BotTarget(
+    val kind: BotTargetKind,
+    /** Where its line of sight meets it, in the world. */
+    val x: Double,
+    val y: Double,
+    val z: Double,
+    /** From its eyes. */
+    val distance: Double,
+    /** A block's position. */
+    val blockX: Int? = null,
+    val blockY: Int? = null,
+    val blockZ: Int? = null,
+    /** The block's face looked at: `up`, `down`, `north`, `south`, `east` or `west`. */
+    val face: String? = null,
+    /** The block's state: `minecraft:oak_log[axis=y]`. */
+    val state: String? = null,
+    /** An entity's UUID. */
+    val entity: String? = null,
+    /** An entity's type: `minecraft:zombie`, or `minecraft:interaction` for a centity's hitbox. */
+    val type: String? = null,
+    /** For a centity's hitbox: its instance's UUID, filled in by the runtime. */
+    val centity: String? = null,
+    /** For a centity's hitbox: the node a click there reaches, by name; null when it would reach none (an unclickable node, a miss of a `raycast` node). */
+    val node: String? = null
+)
+
 /** What a bot's screen shows now, and its state on the server. */
 @Serializable
 data class BotState(
@@ -479,6 +552,8 @@ data class BotState(
     val resourcePacks: List<BotPack> = emptyList(),
     /** Entities the client has been sent within 16 blocks, nearest first (at most 50). Hidden ones aren't sent. */
     val entities: List<BotEntity> = emptyList(),
+    /** What it's looking at within reach, or null for nothing (the sky, or too far). */
+    val target: BotTarget? = null,
     /** The scoreboard teams the client knows, by name. */
     val teams: List<BotTeam> = emptyList(),
     /** The players the client knows (listed or not), by name. */

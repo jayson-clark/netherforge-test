@@ -67,6 +67,22 @@ class RequirementTest {
     }
 
     @Test
+    fun aUrlWhereAHostBelongsSaysWhichHostToWrite() {
+        val text = testManifest(""", "requires": { "http": ["wss://gateway.discord.gg/?v=10", "ftp://"] }""")
+        val problems = Projects.load(MapProjectSource(mapOf("netherforge.json" to text))).problems.filter {
+            it.code ==
+                "project.requires-host"
+        }
+        assertEquals(
+            listOf(
+                "\"ftp://\" isn't a host (${Names.HTTP_HOST_RULE})",
+                "\"wss://gateway.discord.gg/?v=10\" is a URL: list its host alone, \"gateway.discord.gg\", which covers http, https, ws and wss"
+            ),
+            problems.map { it.message }.sorted()
+        )
+    }
+
+    @Test
     fun declarationsAreSetsInTheManifest() {
         val text = testManifest(""", "requires": { "plugins": ["vault", "essentials", "vault"], "http": ["b.com", "a.com"], "db": true }""")
         val parsed = (ManifestKind.parse(text, "netherforge.json") as CanonicalJson.Parsed.Ok).value

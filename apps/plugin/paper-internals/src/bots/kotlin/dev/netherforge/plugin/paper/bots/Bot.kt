@@ -12,6 +12,8 @@ import dev.netherforge.format.bridge.BotInfo
 import dev.netherforge.format.bridge.BotPack
 import dev.netherforge.format.bridge.BotPackAnswer
 import dev.netherforge.format.bridge.BotState
+import dev.netherforge.format.bridge.BotTarget
+import dev.netherforge.format.bridge.BotTargetKind
 import dev.netherforge.plugin.platform.BotAim
 import net.minecraft.commands.arguments.blocks.BlockStateParser
 import net.minecraft.core.BlockPos
@@ -787,7 +789,7 @@ internal class Bot(
             is BotAction.Interact -> {
                 alive()
                 val (target, at) = target(action.entity, aim, game)
-                val hit = point(target, at, game)
+                val hit = aimed(target, action.entity == null && aim == null, action.at?.let { Vec3(it.x, it.y, it.z) } ?: at, game)
                 val hand = hand(action.hand)
                 for (sent in Protocol.interact(target, hand, hit.subtract(target.position()), sneaking)) deliver { sent.handle(game) }
                 finished()
@@ -795,7 +797,7 @@ internal class Bot(
             is BotAction.Attack -> {
                 alive()
                 val (target, at) = target(action.entity, aim, game)
-                point(target, at, game)
+                aimed(target, action.entity == null && aim == null, action.at?.let { Vec3(it.x, it.y, it.z) } ?: at, game)
                 deliver { Protocol.attack(target, sneaking).handle(game) }
                 deliver { Protocol.swing().handle(game) }
                 finished()
@@ -1036,6 +1038,22 @@ internal class Bot(
             ?: throw IllegalStateException("$name isn't looking at anything it could click within reach (${"%.1f".format(reach)} blocks)")
     }
 
+    /**
+     * Where a click on [target] lands: with [at] (a point given, or the
+     * runtime's aim at a node), turned to it; one picked from the
+     * crosshair ([inSight]) with no point, where the line of sight already
+     * meets it, without turning (the bot clicks exactly where it looks);
+     * otherwise turned to its middle.
+     */
+    private fun aimed(target: Entity, inSight: Boolean, at: Vec3?, game: ServerGamePacketListenerImpl): Vec3 {
+        if (!inSight || at != null) return point(target, at, game)
+        val eye = eye(game.player)
+        val reach = game.player.entityInteractionRange()
+        return target.boundingBox.inflate(
+            target.pickRadius.toDouble()
+        ).clip(eye, eye.add(facing().scale(reach + 1))).orElse(target.boundingBox.center)
+    }
+
     /** Looks at [target] ([at], or its middle), checks it's in reach, and gives the point on it the click lands. */
     private fun point(target: Entity, at: Vec3?, game: ServerGamePacketListenerImpl): Vec3 {
         val player = game.player
@@ -1273,7 +1291,51 @@ internal class Bot(
                         distance
                     )
                 },
+            target = sight(player),
             events = events.next
+        )
+    }
+
+    /**
+     * What the crosshair is on, as the client picks it (and [inSight] does for a click): the nearest
+     * entity it could click within entity reach, in front of the nearest block within block reach.
+     */
+    private fun sight(player: ServerPlayer): BotTarget? {
+        val level = player.level()
+        val eye = eye(player)
+        val look = facing()
+        val blockReach = player.blockInteractionRange()
+        val block = level.clip(ClipContext(eye, eye.add(look.scale(blockReach)), ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player))
+        val blockDistance = if (block.type == HitResult.Type.MISS) Double.MAX_VALUE else block.location.distanceTo(eye)
+        val entityEnd = eye.add(look.scale(player.entityInteractionRange()))
+        val entity = screen.entities.keys.mapNotNull { level.getEntity(it) }
+            .filter { it.isPickable && !it.isSpectator }
+            .mapNotNull { e ->
+                e.boundingBox.inflate(e.pickRadius.toDouble()).clip(eye, entityEnd).orElse(null)?.let { Triple(e, it, it.distanceTo(eye)) }
+            }
+            .filter { it.third <= blockDistance }
+            .minByOrNull { it.third }
+        if (entity != null) {
+            val (e, at, distance) = entity
+            return BotTarget(
+                BotTargetKind.ENTITY,
+                at.x,
+                at.y,
+                at.z,
+                distance,
+                entity = e.uuid.toString(),
+                type = BuiltInRegistries.ENTITY_TYPE.getKey(e.type).toString()
+            )
+        }
+        if (block.type == HitResult.Type.MISS) return null
+        val pos = block.blockPos
+        return BotTarget(
+            BotTargetKind.BLOCK, block.location.x, block.location.y, block.location.z, blockDistance,
+            blockX = pos.x,
+            blockY = pos.y,
+            blockZ = pos.z,
+            face = block.direction.serializedName,
+            state = level.world.getBlockAt(pos.x, pos.y, pos.z).blockData.asString
         )
     }
 

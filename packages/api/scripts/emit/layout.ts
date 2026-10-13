@@ -109,8 +109,21 @@ export const CATEGORIES: Category[] = [
   },
   {
     title: 'Files, data and the web',
-    doc: 'Files, databases, web requests and other plugins.',
-    pages: ['nf.files', 'File', 'Database', 'nf.http', 'nf.economy', 'nf.placeholders'],
+    doc: 'Files, databases, web requests both ways and other plugins.',
+    pages: [
+      'nf.files',
+      'File',
+      'Database',
+      'nf.http',
+      'HttpStream',
+      'WebSocket',
+      'nf.web',
+      'Route',
+      'WebResponse',
+      'OAuthFlow',
+      'nf.economy',
+      'nf.placeholders',
+    ],
   },
   {
     title: 'Testing',
@@ -138,6 +151,12 @@ const group = (title: string, names: string): Group => ({ title, names: names.sp
  * `emit` (which go with the class's events) is in exactly one.
  */
 export const FUNCTION_GROUPS: Record<string, Group[]> = {
+  'nf.test': [
+    group('Tests and time', 'case advance'),
+    group('Players and their input', 'player raise click release input shown'),
+    group('Worldgen', 'terrain'),
+    group('The network', 'connections accept receive sent disconnect request oauth_token'),
+  ],
   nf: [
     group('Timers and tasks', 'after every task wait wait_until wait_for instructions_left'),
     group('Data and settings', 'data db config'),

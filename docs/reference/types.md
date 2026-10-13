@@ -2397,6 +2397,172 @@ What `nf.http.request` gives.
 | `body` | `string` | The body as text, decoded by the charset the response names (UTF-8 when it names none), so a response that isn't text (an image) doesn't survive. Its size is limited by `http.max-response-bytes` in the server's `config.yml`. |
 | `url` | `string` | The URL the response came from: the request's own, or where its redirects ended. |
 
+### HttpStreamOptions {#httpstreamoptions}
+
+What `nf.http.stream` takes: `nf.http.request`'s options, and `format`.
+
+| Field | Type | |
+| --- | --- | --- |
+| `url` | `string` | An `http://` or `https://` URL, as for `nf.http.request`. Its host must be one the calling package declares in `requires`. |
+| `method` | `"GET"\|"POST"\|"PUT"\|"PATCH"\|"DELETE"\|"OPTIONS"?` | The HTTP method; `"GET"` when left out. |
+| `headers` | `table<string, string>?` | Request headers by name, as for `nf.http.request`. A `format` of `"events"` sends `Accept: text/event-stream` unless you give an `Accept`. |
+| `body` | `string?` | The request body, as for `nf.http.request` (`http.max-request-bytes`). |
+| `format` | `"lines"\|"events"\|"chunks"?` | How the response is split into messages. `"lines"` (the default): one message per line, without its line ending (NDJSON, a log tail). `"events"`: Server-Sent Events (`text/event-stream`), one message per event, with its `type` and `id`; comments and `retry` are skipped. `"chunks"`: the text as it arrives, in pieces of no particular size. A line or event over `connections.max-message-bytes` ends the stream (reason `"limit"`); text is UTF-8. |
+
+### WebSocketOptions {#websocketoptions}
+
+What `nf.http.websocket` takes.
+
+| Field | Type | |
+| --- | --- | --- |
+| `url` | `string` | A `ws://` or `wss://` URL, without a user name or password in it. Its host must be one the calling package declares in `requires.http`. |
+| `headers` | `table<string, string>?` | Headers for the opening request (an `Authorization`), with `nf.http.request`'s rules. The `Sec-WebSocket-*` headers are the server's to set. |
+| `protocols` | `string[]?` | Subprotocols to offer (`Sec-WebSocket-Protocol`), in order of preference; `socket:protocol()` says which one the other side chose. |
+
+### HttpStreamOpenEvent {#httpstreamopenevent}
+
+A stream's response began.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `stream` | [`HttpStream`](httpstream.md) | The stream. |
+| `status` | `integer` | The status code: `200`, `404`. |
+| `headers` | `table<string, string>` | The response headers by name in lowercase, as `nf.http.request` gives them. |
+
+### HttpStreamMessageEvent {#httpstreammessageevent}
+
+A piece of a stream arrived.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `stream` | [`HttpStream`](httpstream.md) | The stream. |
+| `data` | `string` | The line (without its line ending), the event's data (its `data:` lines joined with line breaks), or the chunk. |
+| `type` | `string?` | For `format = "events"`: the event's type, `"message"` when it names none. `nil` for the other formats. |
+| `id` | `string?` | For `format = "events"`: the last event id the stream set (`id:`), which a script reconnecting sends back as `Last-Event-ID`. `nil` when none was set, and for the other formats. |
+
+### HttpStreamEndEvent {#httpstreamendevent}
+
+A stream ended.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `stream` | [`HttpStream`](httpstream.md) | The stream. |
+| `reason` | `"finished"\|"closed"\|"failed"\|"limit"\|"idle"\|"unloaded"` | Why: the server ended the response; `close()` was called; the connection couldn't be made or broke (a name that doesn't resolve, an address that isn't allowed, a refused connection, a redirect it couldn't follow, no answer within `http.timeout-seconds`); an owner's limit in `config.yml`'s `http:` section was reached (too many connections open, the request rate, a message over `connections.max-message-bytes`, the package's `connections.bytes-per-minute`); nothing arrived for `connections.idle-seconds`; or the script that opened it unloaded. |
+| `status` | `integer?` | The response's status, when it had opened. |
+| `detail` | `string?` | What went wrong, in words, for `"failed"` and `"limit"`; `nil` otherwise. |
+
+### WebSocketOpenEvent {#websocketopenevent}
+
+A WebSocket opened.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `socket` | [`WebSocket`](websocket.md) | The socket. |
+| `protocol` | `string?` | The subprotocol the other side chose, or `nil`. |
+| `headers` | `table<string, string>` | The opening response's headers by name in lowercase. |
+
+### WebSocketMessageEvent {#websocketmessageevent}
+
+A text message arrived on a WebSocket.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `socket` | [`WebSocket`](websocket.md) | The socket. |
+| `data` | `string` | The message. |
+
+### WebSocketEndEvent {#websocketendevent}
+
+A WebSocket ended.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `socket` | [`WebSocket`](websocket.md) | The socket. |
+| `reason` | `"finished"\|"closed"\|"failed"\|"limit"\|"idle"\|"unloaded"` | Why: the other side closed it (`code` and `detail` say how); `close()` was called; the connection couldn't be made, was refused or broke (as for a stream; a server that doesn't speak WebSocket at that URL, or a binary message); an owner's limit in `config.yml`'s `http:` section was reached (too many connections open, the request rate, a message over `connections.max-message-bytes`, the package's `connections.bytes-per-minute`); nothing was sent or arrived for `connections.idle-seconds`; or the script that opened it unloaded. |
+| `code` | `integer?` | For `"finished"`: the close code the other side sent (`1000` is a normal close). |
+| `detail` | `string?` | For `"finished"`: the reason the other side gave, if any. For `"failed"` and `"limit"`: what went wrong, in words. `nil` otherwise. |
+
+### WebRequest {#webrequest}
+
+A request a route answers.
+
+| Field | Type | |
+| --- | --- | --- |
+| `method` | `string` | `"GET"`, `"POST"`, … (`"HEAD"` for a `GET` route asked only for headers). |
+| `path` | `string` | The path asked for, namespace and all: `"/shop/replays/12"`. |
+| `params` | `table<string, string>` | The route's `:name` and `*name` segments by name, decoded. |
+| `query` | `table<string, string>` | The query parameters by name, decoded. A name given more than once is its first value. |
+| `headers` | `table<string, string>` | The request headers by name in lowercase; one sent more than once is its values joined with `, `. |
+| `body` | `string` | The body as text (UTF-8), at most `web.max-body-bytes`; `""` for none. |
+| `form` | `table<string, string>?` | The body's fields, decoded, when it's a form (`application/x-www-form-urlencoded`); `nil` otherwise. |
+| `ip` | `string` | The address it came from. Behind a reverse proxy that's the proxy's, unless the owner set `web.trust-proxy-headers`, which makes it the client's from `X-Forwarded-For`. |
+
+### SignatureOptions {#signatureoptions}
+
+How `nf.web.verify_signature` checks a signature.
+
+| Field | Type | |
+| --- | --- | --- |
+| `secret` | `string` | The secret the sender signs with. |
+| `algorithm` | `"sha256"\|"sha1"\|"sha512"?` | The HMAC's hash. Default `"sha256"`. |
+| `encoding` | `"hex"\|"base64"?` | How the signature is written. Default `"hex"` (either case). |
+| `prefix` | `string?` | Text before the signature to expect and skip, like `"sha256="`. |
+
+### OAuthOptions {#oauthoptions}
+
+What `nf.web.oauth` takes.
+
+| Field | Type | |
+| --- | --- | --- |
+| `name` | `string` | The flow's name, unique in the package: lowercase letters, digits, `-` and `_`. Its callback is `/<namespace>/oauth/<name>/callback`. |
+| `authorize_url` | `string` | The service's authorization page: an `https://` URL. |
+| `token_url` | `string` | The service's token endpoint: an `https://` URL whose host the package declares in `requires.http`. |
+| `client_id` | `string` | The client id the service gave you. |
+| `client_secret` | `string?` | The client secret, for a service that wants one besides PKCE. Keep it in a setting (`nf.config`). |
+| `scopes` | `string[]?` | The scopes to ask for, sent separated by spaces. |
+| `client_auth` | `"body"\|"basic"?` | How the secret is sent to the token endpoint: in the form (`"body"`, the default) or as HTTP Basic (`"basic"`). |
+| `parameters` | `table<string, string>?` | More query parameters for the authorization page, like `{ prompt = "consent" }`. |
+
+### OAuthCompleteEvent {#oauthcompleteevent}
+
+A login finished.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `flow` | [`OAuthFlow`](oauthflow.md) | The flow. |
+| `player` | [`Player`](player.md) | Who logged in (perhaps offline by now). |
+| `access_token` | `string` | The access token, to call the service as them. |
+| `token_type` | `string?` | Its type, usually `"Bearer"`. |
+| `refresh_token` | `string?` | A refresh token, if the service gave one. |
+| `expires_in` | `integer?` | How many seconds the access token lasts, if the service said. |
+| `scope` | `string?` | The scopes granted, if the service said. |
+| `id_token` | `string?` | An OpenID Connect ID token, if the service gave one. |
+
+### OAuthFailEvent {#oauthfailevent}
+
+A login didn't finish.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `flow` | [`OAuthFlow`](oauthflow.md) | The flow. |
+| `player` | [`Player`](player.md) | Who was logging in. |
+| `error` | `string` | What went wrong, in words. |
+
 ## Testing
 
 ### TestShownOptions {#testshownoptions}
@@ -2430,6 +2596,46 @@ The keys `nf.test.input` holds down: each `true` is held, and one left out (or `
 | `jump` | `boolean?` | Jump (space). |
 | `sneak` | `boolean?` | Sneak (shift). |
 | `sprint` | `boolean?` | Sprint (control). |
+
+### TestAcceptOptions {#testacceptoptions}
+
+How `nf.test.accept` answers. Every key is optional; a key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `status` | `integer?` | A stream's status: 100 to 599. Default `200`. |
+| `headers` | `table<string, string>?` | The response headers (names are lowercased). Default: none. |
+| `protocol` | `string?` | A WebSocket's chosen subprotocol: one of those it offered. Default: none. |
+
+### TestDisconnectOptions {#testdisconnectoptions}
+
+How `nf.test.disconnect` ends a connection. Every key is optional; a key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `code` | `integer?` | A WebSocket's close code. Default `1000`. |
+| `reason` | `string?` | A WebSocket's close reason, its `end` event's `detail`. |
+| `error` | `string?` | Break it instead: it ends `"failed"`, with this as `detail`. |
+
+### TestRequestOptions {#testrequestoptions}
+
+What `nf.test.request` sends. Every key is optional; a key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `headers` | `table<string, string>?` | Request headers by name. |
+| `body` | `string?` | The body. Default none. |
+| `ip` | `string?` | The address it comes from. Default `"127.0.0.1"`. |
+
+### TestWebResponse {#testwebresponse}
+
+What `nf.test.request` gives back: the answer as the client got it.
+
+| Field | Type | |
+| --- | --- | --- |
+| `status` | `integer` | The status code. |
+| `headers` | `table<string, string>` | The response headers by name in lowercase. |
+| `body` | `string` | The body (empty for a `HEAD`). |
 
 ### RaisedEvent {#raisedevent}
 

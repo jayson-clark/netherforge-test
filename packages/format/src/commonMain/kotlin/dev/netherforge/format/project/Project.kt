@@ -906,11 +906,14 @@ object Projects {
         }
         manifest.requires?.http?.forEachIndexed { index, host ->
             if (!Names.isHttpHost(host)) {
-                sink.report(
-                    ProblemCodes.PROJECT_REQUIRES_HOST,
-                    "\"$host\" isn't a host (${Names.HTTP_HOST_RULE})",
-                    "$.requires.http[$index]"
-                )
+                // A URL where a host belongs is the usual mistake (a WebSocket's `wss://…` above all): name the host to write.
+                val bare = host.substringAfter("://", "").substringBefore('/').substringBefore('?').substringBefore(':').lowercase()
+                val message = if (bare.isNotEmpty() && Names.isHttpHost(bare)) {
+                    "\"$host\" is a URL: list its host alone, \"$bare\", which covers http, https, ws and wss"
+                } else {
+                    "\"$host\" isn't a host (${Names.HTTP_HOST_RULE})"
+                }
+                sink.report(ProblemCodes.PROJECT_REQUIRES_HOST, message, "$.requires.http[$index]")
             }
         }
         manifest.requires?.plugins?.forEachIndexed { index, name ->

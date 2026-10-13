@@ -27,8 +27,8 @@ class ScriptTestRunnerTest {
 
     private fun project(files: Map<String, String>): Path {
         val root = Files.createTempDirectory("netherforge-runner")
-        root.resolve("netherforge.json").writeText(manifest + "\n")
-        for ((path, text) in files) {
+        root.resolve("netherforge.json").writeText((files["netherforge.json"] ?: manifest) + "\n")
+        for ((path, text) in files - "netherforge.json") {
             val file = root.resolve(path)
             file.parent.createDirectories()
             file.writeText(text.trimIndent() + "\n")
@@ -677,5 +677,146 @@ class ScriptTestRunnerTest {
     private companion object {
         /** A resource pack model with one element and no textures. */
         const val MODEL = """{ "elements": [{ "from": [6, 0, 6], "to": [10, 12, 10], "faces": {} }] }"""
+    }
+
+    @Test
+    fun `a test plays the far end of the streams and WebSockets scripts open, with nothing on the network`() {
+        val (events, _) = run(
+            mapOf(
+                "netherforge.json" to
+                    manifest.replace(
+                        "\"minecraft\": \"26.3\"",
+                        "\"minecraft\": \"26.3\",\n  \"requires\": { \"http\": [\"chat.example.com\", \"feed.example.com\"] }"
+                    ),
+                "modules/bridge/init.lua" to """
+                    local M = { heard = {}, ended = {} }
+                    M.socket = nf.http.websocket({ url = "wss://chat.example.com/live", protocols = { "v2" } })
+                    M.socket:send("hello")
+                    M.socket:on("open", function(event) M.protocol = event.protocol end)
+                    M.socket:on("message", function(event)
+                      table.insert(M.heard, event.data)
+                      M.socket:send("got " .. event.data)
+                    end)
+                    M.socket:on("end", function(event) table.insert(M.ended, event.reason .. " " .. tostring(event.code) .. " " .. tostring(event.detail)) end)
+                    M.feed = nf.http.stream({ url = "https://feed.example.com/live", format = "events" })
+                    M.feed:on("open", function(event) M.status = event.status end)
+                    M.feed:on("message", function(event) table.insert(M.heard, event.type .. ":" .. event.data) end)
+                    M.feed:on("end", function(event) table.insert(M.ended, event.reason .. " " .. tostring(event.detail)) end)
+                    return M
+                """,
+                "tests/bridge_test.lua" to """
+                    local bridge = require("bridge")
+
+                    nf.test.case("the far end is the test's", function()
+                      assert(#nf.test.connections() == 2)
+                      local socket = nf.test.connections("wss://chat.example.com")[1]
+                      assert(socket == bridge.socket)
+                      assert(socket:state() == "connecting")
+                      nf.test.accept(socket, { protocol = "v2" })
+                      nf.test.receive(socket, "hi")
+                      nf.test.advance(1)
+                      assert(socket:state() == "open" and bridge.protocol == "v2")
+                      assert(bridge.heard[1] == "hi")
+                      local sent = nf.test.sent(socket)
+                      assert(sent[1] == "hello" and sent[2] == "got hi", table.concat(sent, ","))
+
+                      local feed = nf.test.connections("https://feed.example.com")[1]
+                      nf.test.accept(feed, { status = 201 })
+                      nf.test.receive(feed, "event: goal\ndata: red")
+                      nf.test.receive(feed, "\n\n")
+                      nf.test.advance(1)
+                      assert(bridge.status == 201 and feed:status() == 201)
+                      assert(bridge.heard[2] == "goal:red", tostring(bridge.heard[2]))
+
+                      nf.test.disconnect(socket, { code = 4000, reason = "resume" })
+                      nf.test.disconnect(feed, { error = "reset" })
+                      nf.test.advance(1)
+                      assert(bridge.ended[1] == "finished 4000 resume", bridge.ended[1])
+                      assert(bridge.ended[2] == "failed reset", bridge.ended[2])
+                      assert(socket:state() == "ended")
+                      assert(not pcall(nf.test.receive, socket, "late"))
+                    end)
+
+                    nf.test.case("mistakes are errors", function()
+                      local socket = nf.test.connections("wss://")[1]
+                      assert(not pcall(nf.test.accept, socket, { protocol = "v9" }))
+                      assert(not pcall(nf.test.accept, socket, { status = 200 }))
+                      nf.test.accept(socket)
+                      assert(not pcall(nf.test.accept, socket))
+                    end)
+                """
+            )
+        )
+        expectStatuses(events, Status.PASSED, Status.PASSED)
+    }
+
+    @Test
+    fun `a test makes web requests through the routes, and plays a login through its callback`() {
+        val (events, _) = run(
+            mapOf(
+                "netherforge.json" to manifest.replace(
+                    "\"minecraft\": \"26.3\"",
+                    "\"minecraft\": \"26.3\",\n  \"requires\": { \"web\": true, \"http\": [\"auth.example.com\"] }"
+                ),
+                "modules/site/init.lua" to """
+                    local M = { linked = {}, failed = {} }
+                    nf.web.route("POST", "/hooks/:kind", function(request, response)
+                      nf.after(3, function() response:json(202, { kind = request.params.kind, got = request.body }) end)
+                    end)
+                    M.flow = nf.web.oauth({
+                      name = "example",
+                      authorize_url = "https://auth.example.com/authorize",
+                      token_url = "https://auth.example.com/token",
+                      client_id = "abc",
+                      scopes = { "identify", "email" },
+                    })
+                    M.flow:on("complete", function(event) M.linked[event.player:name()] = event.access_token .. "/" .. tostring(event.expires_in) end)
+                    M.flow:on("fail", function(event) table.insert(M.failed, event.error) end)
+                    return M
+                """,
+                "tests/site_test.lua" to """
+                    local site = require("site")
+
+                    nf.test.case("a hook answered later is waited for", function()
+                      local answer = nf.test.request("POST", "/test/hooks/store", { body = "order 7" })
+                      assert(answer.status == 202, answer.status .. " " .. answer.body)
+                      assert(answer.body == '{"got":"order 7","kind":"store"}', answer.body)
+                      assert(answer.headers["content-type"] == "application/json")
+                      assert(nf.test.request("GET", "/test/hooks/store").status == 405)
+                      assert(nf.test.request("GET", "/test/nope").status == 404)
+                    end)
+
+                    nf.test.case("a login completes once, through its callback", function()
+                      local alex = nf.test.player("Alex")
+                      local url = assert(site.flow:begin(alex))
+                      assert(url:find("^https://auth.example.com/authorize%?"), url)
+                      assert(url:find("code_challenge_method=S256", 1, true), url)
+                      assert(url:find("redirect_uri=http%3A%2F%2Flocalhost%2Ftest%2Foauth%2Fexample%2Fcallback", 1, true), url)
+                      assert(url:find("scope=identify%20email", 1, true), url)
+                      local state = url:match("state=([^&]+)")
+                      nf.test.oauth_token(site.flow, { access_token = "tok", expires_in = 3600 })
+                      local forged = nf.test.request("GET", "/test/oauth/example/callback?code=c&state=forged")
+                      assert(forged.status == 400)
+                      local back = nf.test.request("GET", "/test/oauth/example/callback?code=c&state=" .. state)
+                      assert(back.status == 200, back.body)
+                      assert(back.body:find("Signed in"), back.body)
+                      assert(site.linked.Alex == "tok/3600", tostring(site.linked.Alex))
+                      local again = nf.test.request("GET", "/test/oauth/example/callback?code=c&state=" .. state)
+                      assert(again.status == 400, "a state is used once")
+                    end)
+
+                    nf.test.case("a declined login fails, and a route can't take a flow's path", function()
+                      local alex = nf.test.player("Alex")
+                      local state = site.flow:begin(alex):match("state=([^&]+)")
+                      local back = nf.test.request("GET", "/test/oauth/example/callback?error=access_denied&state=" .. state)
+                      assert(back.status == 400)
+                      assert(site.failed[1] == "the service said access_denied", tostring(site.failed[1]))
+                      assert(not pcall(nf.web.route, "GET", "/oauth/example/callback", function() end))
+                      assert(not pcall(nf.web.oauth, { name = "x", authorize_url = "https://a.b/", token_url = "https://undeclared.example/t", client_id = "c" }))
+                    end)
+                """
+            )
+        )
+        expectStatuses(events, Status.PASSED, Status.PASSED, Status.PASSED)
     }
 }

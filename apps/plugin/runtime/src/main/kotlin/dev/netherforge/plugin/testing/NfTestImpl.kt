@@ -11,10 +11,16 @@ import dev.netherforge.plugin.api.NoPayload
 import dev.netherforge.plugin.api.Raisable
 import dev.netherforge.plugin.api.RaisableEvents
 import dev.netherforge.plugin.api.RaisedEvent
+import dev.netherforge.plugin.api.TestAcceptOptions
 import dev.netherforge.plugin.api.TestClickOptions
+import dev.netherforge.plugin.api.TestDisconnectOptions
 import dev.netherforge.plugin.api.TestInputKeys
+import dev.netherforge.plugin.api.TestRequestOptions
 import dev.netherforge.plugin.api.TestShownOptions
+import dev.netherforge.plugin.api.TestWebResponse
 import dev.netherforge.plugin.api.uuidOrNull
+import dev.netherforge.plugin.http.Connection
+import dev.netherforge.plugin.http.TestConnections
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaFunction
 import dev.netherforge.plugin.lua.LuaValue
@@ -25,6 +31,10 @@ import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.session.ProjectSession
 import dev.netherforge.plugin.session.handle
+import dev.netherforge.plugin.web.WebAnswer
+import dev.netherforge.plugin.web.WebCall
+import kotlinx.serialization.json.JsonObject
+import java.nio.charset.StandardCharsets
 
 /**
  * `nf.test`: what a test file runs on. The prelude leaves the namespace out
@@ -125,6 +135,66 @@ internal class NfTestImpl(private val session: ProjectSession) : NfTestApi {
     }
 
     /** [player] as the server knows them: one online, or an error (a test clicks only for someone there). */
+    override fun connections(caller: Caller, url: String?): List<LuaHandle> = session.connections.history(url).map { it.handle }
+
+    override fun accept(caller: Caller, connection: LuaHandle, options: TestAcceptOptions?) {
+        far(connection).accept(options?.status?.let { Math.toIntExact(it) }, options?.headers.orEmpty(), options?.protocol)
+    }
+
+    override fun receive(caller: Caller, connection: LuaHandle, text: String) = far(connection).receive(text)
+
+    override fun sent(caller: Caller, connection: LuaHandle.WebSocket): List<String> = recorded(connection).sent.toList()
+
+    override fun disconnect(caller: Caller, connection: LuaHandle, options: TestDisconnectOptions?) {
+        val code = options?.code?.let { Math.toIntExact(it) }
+        if (code != null && code !in CLOSE_CODES) throw LuaApiException("bad argument 'options.code' (1000 to 4999 expected, got $code)")
+        far(connection).disconnect(code, options?.reason, options?.error)
+    }
+
+    override fun request(caller: Caller, method: String, path: String, options: TestRequestOptions?): TestWebResponse {
+        val verb = method.uppercase()
+        if (!VERB.matches(verb)) throw LuaApiException("bad argument 'method' (an HTTP method expected, got \"$method\")")
+        if (!path.startsWith("/")) throw LuaApiException("bad argument 'path' (a path starting with / expected, got \"$path\")")
+        val headers = options?.headers.orEmpty().mapKeys { it.key.lowercase() }
+        var answer: WebAnswer? = null
+        var head = false
+        val call = WebCall(
+            verb,
+            path.substringBefore('?'),
+            path.substringAfter('?', "").takeIf { '?' in path },
+            headers,
+            options?.body.orEmpty().toByteArray(StandardCharsets.UTF_8),
+            options?.ip ?: "127.0.0.1"
+        ) { given, isHead ->
+            answer = given
+            head = isHead
+        }
+        session.web.request(call)
+        // Answered later: the server runs on, as a client would wait, until the handler answers or times out.
+        val limit = session.config.web.handlerTimeoutSeconds * TICKS_PER_SECOND + 1
+        var waited = 0
+        while (!call.isAnswered && waited++ < limit) session.scripts.host!!.detached { harness.advance(1) }
+        val got = answer ?: WebAnswer.text(504, "never answered")
+        return TestWebResponse(got.status.toLong(), got.headers, if (head) "" else String(got.body, StandardCharsets.UTF_8))
+    }
+
+    override fun oauthToken(caller: Caller, flow: LuaHandle.OAuthFlow, response: LuaValue) {
+        val found = session.oauth.find(flow.number) ?: throw LuaApiException("bad argument 'flow' (it has gone)")
+        found.testToken = response.json() as? JsonObject ?: throw LuaApiException("bad argument 'response' (a table of fields expected)")
+    }
+
+    /** The connection [handle] names, from `nf.test.connections`. */
+    private fun recorded(handle: LuaHandle): Connection = session.connections.recorded(handle)
+        ?: throw LuaApiException("bad argument 'connection' (a connection scripts opened in this test expected)")
+
+    /** Its far end, which the test plays. */
+    private fun far(handle: LuaHandle): TestConnections.Far {
+        val connection = recorded(handle)
+        val transport = session.http.connections as? TestConnections ?: throw LuaApiException("nf.test is only there in a test run")
+        // One the owner's limits refused never reached the transport: it's already ending.
+        return transport.far(connection.sink) ?: throw LuaApiException("bad argument 'connection' (it never connected: it ended \"limit\")")
+    }
+
     private fun online(player: LuaHandle.Player): PlayerRef {
         val uuid = player.uuidOrNull() ?: throw LuaApiException("bad argument 'player' (${player.id} isn't a player's id)")
         return session.platform.players.get(uuid) ?: throw LuaApiException("bad argument 'player' (they aren't online)")
@@ -141,6 +211,9 @@ internal class NfTestImpl(private val session: ProjectSession) : NfTestApi {
     private fun fields(raisable: Raisable<*>) = raisable.event.payload?.fields?.keys?.sorted()?.joinToString(", ").orEmpty()
 
     private companion object {
+        val CLOSE_CODES = 1000..4999
+        val VERB = Regex("^[A-Z]{1,16}$")
+        const val TICKS_PER_SECOND = 20
         val NAME = Regex("[A-Za-z0-9_]{3,16}")
     }
 }

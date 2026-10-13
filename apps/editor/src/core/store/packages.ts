@@ -95,6 +95,7 @@ export function mergeRequires(
 ) {
   if (extra.moderation) into.moderation = true
   if (extra.db) into.db = true
+  if (extra.web) into.web = true
   for (const key of ['http', 'plugins'] as const) {
     const more = (extra[key] ?? []).filter((it) => !into[key]?.includes(it))
     if (more.length) into[key] = [...(into[key] ?? []), ...more]

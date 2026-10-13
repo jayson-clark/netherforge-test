@@ -56,6 +56,11 @@ local Dialog_is = accepts.Dialog
 local Button_is = accepts.Button
 local ProjectItem_is = accepts.ProjectItem
 local Effect_is = accepts.Effect
+local HttpStream_is = accepts.HttpStream
+local WebSocket_is = accepts.WebSocket
+local Route_is = accepts.Route
+local WebResponse_is = accepts.WebResponse
+local OAuthFlow_is = accepts.OAuthFlow
 local Cutscene_is = accepts.Cutscene
 local File_is = accepts.File
 local Subscription_is = accepts.Subscription
@@ -69,6276 +74,6645 @@ local nf_math_ease_easing = choice.set({ "linear", "step", "ease_in", "ease_out"
 
 -- Centity -------------------------------------------------------------------
 
-local Centity = class("Centity")
+do
+  local Centity = class("Centity")
 
-function new.Centity(id)
-  return prim["handles.new"]("Centity", id)
-end
+  function new.Centity(id)
+    return prim["handles.new"]("Centity", id)
+  end
 
----@param handle table
----@return string id
-function keys.Centity(handle)
-  return prim["handles.key"](handle)
-end
+  ---@param handle table
+  ---@return string id
+  function keys.Centity(handle)
+    return prim["handles.key"](handle)
+  end
 
-function Centity.id(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.id"](self_key)
-end
-
-function Centity.kind(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.kind"](self_key)
-end
-
-function Centity.exists(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.exists"](self_key)
-end
-
-function Centity.is_natural(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.is_natural"](self_key)
-end
-
-function Centity.is_temporary(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.is_temporary"](self_key)
-end
-
-function Centity.lifetime(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.lifetime"](self_key)
-end
-
-function Centity.set_lifetime(self, ticks)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.set_lifetime"](self_key, ticks)
-end
-
-function Centity.keep(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.keep"](self_key)
-end
-
-function Centity.node(self, name)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.node"](self_key, name)
-end
-
-function Centity.nodes(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.nodes"](self_key)
-end
-
-function Centity.roots(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.roots"](self_key)
-end
-
-function Centity.add_node(self, name, definition)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.add_node"](self_key, name, definition)
-end
-
-function Centity.properties(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.properties"](self_key)
-end
-
-function Centity.bounds(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.bounds"](self_key)
-end
-
-function Centity.location(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.location"](self_key)
-end
-
-function Centity.position(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  local result_x, result_y, result_z = prim["Centity.position"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
-
-function Centity.world(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.world"](self_key)
-end
-
-function Centity.yaw(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.yaw"](self_key)
-end
-
-function Centity.set_yaw(self, degrees)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  prim["Centity.set_yaw"](self_key, degrees)
-end
-
-function Centity.look_at(self, point)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  if genuine_mt(point) ~= Vec3_mt then
-    want_vec3(point, "point")
-  end
-  return prim["Centity.look_at"](self_key, point[1], point[2], point[3])
-end
-
-function Centity.to_local(self, point)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  if genuine_mt(point) ~= Vec3_mt then
-    want_vec3(point, "point")
-  end
-  local result_x, result_y, result_z = prim["Centity.to_local"](self_key, point[1], point[2], point[3])
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
-
-function Centity.to_world(self, point)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  if genuine_mt(point) ~= Vec3_mt then
-    want_vec3(point, "point")
-  end
-  local result_x, result_y, result_z = prim["Centity.to_world"](self_key, point[1], point[2], point[3])
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
-
-function Centity.teleport(self, location_or_position)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.teleport"](self_key, location_or_position)
-end
-
-function Centity.follow(self, player)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.follow"](self_key, player)
-end
-
-function Centity.stop_following(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.stop_following"](self_key)
-end
-
-function Centity.stat(self, name)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.stat"](self_key, name)
-end
-
-function Centity.stats(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.stats"](self_key)
-end
-
-function Centity.modifiers(self, source)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.modifiers"](self_key, source)
-end
-
-function Centity.set_modifiers(self, source, modifiers)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.set_modifiers"](self_key, source, modifiers)
-end
-
-function Centity.add_buff(self, buff, ticks)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.add_buff"](self_key, buff, ticks)
-end
-
-function Centity.remove_buff(self, buff)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.remove_buff"](self_key, buff)
-end
-
-function Centity.has_buff(self, buff)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.has_buff"](self_key, buff)
-end
-
-function Centity.buff_ticks(self, buff)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.buff_ticks"](self_key, buff)
-end
-
-function Centity.buffs(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.buffs"](self_key)
-end
-
-function Centity.health(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.health"](self_key)
-end
-
-function Centity.max_health(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.max_health"](self_key)
-end
-
-function Centity.set_health(self, health)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.set_health"](self_key, health)
-end
-
-function Centity.set_max_health(self, max_health)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.set_max_health"](self_key, max_health)
-end
-
-function Centity.damage(self, amount, options)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.damage"](self_key, amount, options)
-end
-
-function Centity.heal(self, amount)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.heal"](self_key, amount)
-end
-
-function Centity.is_dead(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.is_dead"](self_key)
-end
-
-function Centity.has_body(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.has_body"](self_key)
-end
-
-function Centity.body(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.body"](self_key)
-end
-
-function Centity.set_body(self, settings)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  return prim["Centity.set_body"](self_key, settings)
-end
-
-function Centity.velocity(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  local result_x, result_y, result_z = prim["Centity.velocity"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
-
-function Centity.set_velocity(self, velocity)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  if genuine_mt(velocity) ~= Vec3_mt then
-    want_vec3(velocity, "velocity")
-  end
-  return prim["Centity.set_velocity"](self_key, velocity[1], velocity[2], velocity[3])
-end
-
-function Centity.add_velocity(self, velocity)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  if genuine_mt(velocity) ~= Vec3_mt then
-    want_vec3(velocity, "velocity")
-  end
-  return prim["Centity.add_velocity"](self_key, velocity[1], velocity[2], velocity[3])
-end
-
-function Centity.walk_velocity(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  local result_x, result_y, result_z = prim["Centity.walk_velocity"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
-
-function Centity.set_walk_velocity(self, velocity)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
-  end
-  local velocity_x, velocity_y, velocity_z
-  if velocity ~= nil then
-    if genuine_mt(velocity) ~= Vec3_mt then
-      want_vec3_opt(velocity, "velocity")
+  function Centity.id(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
     end
-    velocity_x, velocity_y, velocity_z = velocity[1], velocity[2], velocity[3]
+    return prim["Centity.id"](self_key)
   end
-  return prim["Centity.set_walk_velocity"](self_key, velocity_x, velocity_y, velocity_z)
-end
 
-function Centity.jump(self, height)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.kind(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.kind"](self_key)
   end
-  return prim["Centity.jump"](self_key, height)
-end
 
-function Centity.is_on_ground(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.exists(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.exists"](self_key)
   end
-  return prim["Centity.is_on_ground"](self_key)
-end
 
-function Centity.is_in_liquid(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.is_natural(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.is_natural"](self_key)
   end
-  return prim["Centity.is_in_liquid"](self_key)
-end
 
-function Centity.wall(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.is_temporary(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.is_temporary"](self_key)
   end
-  local result_x, result_y, result_z = prim["Centity.wall"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
 
-function Centity.launch(self, options)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.lifetime(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.lifetime"](self_key)
   end
-  return prim["Centity.launch"](self_key, options)
-end
 
-function Centity.is_launched(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.set_lifetime(self, ticks)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.set_lifetime"](self_key, ticks)
   end
-  return prim["Centity.is_launched"](self_key)
-end
 
-function Centity.stop_flight(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.keep(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.keep"](self_key)
   end
-  return prim["Centity.stop_flight"](self_key)
-end
 
-function Centity.move_to(self, target, options)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.node(self, name)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.node"](self_key, name)
   end
-  return prim["Centity.move_to"](self_key, target, options)
-end
 
-function Centity.stop_pathing(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.nodes(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.nodes"](self_key)
   end
-  return prim["Centity.stop_pathing"](self_key)
-end
 
-function Centity.has_path(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.roots(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.roots"](self_key)
   end
-  return prim["Centity.has_path"](self_key)
-end
 
-function Centity.path_target(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.add_node(self, name, definition)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.add_node"](self_key, name, definition)
   end
-  local result_x, result_y, result_z = prim["Centity.path_target"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
 
-function Centity.data(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.properties(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.properties"](self_key)
   end
-  return prim["Centity.data"](self_key)
-end
 
-function Centity.remove(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.bounds(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.bounds"](self_key)
   end
-  prim["Centity.remove"](self_key)
-end
 
-function Centity.play_animation(self, name, options)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.location(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.location"](self_key)
   end
-  return prim["Centity.play_animation"](self_key, name, options)
-end
 
-function Centity.stop_animation(self, name)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.position(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    local result_x, result_y, result_z = prim["Centity.position"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
   end
-  prim["Centity.stop_animation"](self_key, name)
-end
 
-function Centity.pause_animation(self, name)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.world(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.world"](self_key)
   end
-  return prim["Centity.pause_animation"](self_key, name)
-end
 
-function Centity.resume_animation(self, name)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.yaw(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.yaw"](self_key)
   end
-  return prim["Centity.resume_animation"](self_key, name)
-end
 
-function Centity.is_animation_playing(self, name)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.set_yaw(self, degrees)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    prim["Centity.set_yaw"](self_key, degrees)
   end
-  return prim["Centity.is_animation_playing"](self_key, name)
-end
 
-function Centity.playing_animations(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.look_at(self, point)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    if genuine_mt(point) ~= Vec3_mt then
+      want_vec3(point, "point")
+    end
+    return prim["Centity.look_at"](self_key, point[1], point[2], point[3])
   end
-  return prim["Centity.playing_animations"](self_key)
-end
 
-function Centity.animations(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.to_local(self, point)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    if genuine_mt(point) ~= Vec3_mt then
+      want_vec3(point, "point")
+    end
+    local result_x, result_y, result_z = prim["Centity.to_local"](self_key, point[1], point[2], point[3])
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
   end
-  return prim["Centity.animations"](self_key)
-end
 
-function Centity.animation_tick(self, name)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.to_world(self, point)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    if genuine_mt(point) ~= Vec3_mt then
+      want_vec3(point, "point")
+    end
+    local result_x, result_y, result_z = prim["Centity.to_world"](self_key, point[1], point[2], point[3])
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
   end
-  return prim["Centity.animation_tick"](self_key, name)
-end
 
-function Centity.seek_animation(self, name, tick)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.teleport(self, location_or_position)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.teleport"](self_key, location_or_position)
   end
-  return prim["Centity.seek_animation"](self_key, name, tick)
-end
 
-function Centity.animation_speed(self, name)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.follow(self, player)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.follow"](self_key, player)
   end
-  return prim["Centity.animation_speed"](self_key, name)
-end
 
-function Centity.set_animation_speed(self, name, multiplier)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.stop_following(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.stop_following"](self_key)
   end
-  return prim["Centity.set_animation_speed"](self_key, name, multiplier)
-end
 
-function Centity.is_glowing(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.stat(self, name)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.stat"](self_key, name)
   end
-  return prim["Centity.is_glowing"](self_key)
-end
 
-function Centity.set_glowing(self, glowing)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.stats(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.stats"](self_key)
   end
-  return prim["Centity.set_glowing"](self_key, glowing)
-end
 
-function Centity.glow_color(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.modifiers(self, source)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.modifiers"](self_key, source)
   end
-  return prim["Centity.glow_color"](self_key)
-end
 
-function Centity.set_glow_color(self, color)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.set_modifiers(self, source, modifiers)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.set_modifiers"](self_key, source, modifiers)
   end
-  return prim["Centity.set_glow_color"](self_key, color)
-end
 
-function Centity.hide_from(self, player)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.add_buff(self, buff, ticks)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.add_buff"](self_key, buff, ticks)
   end
-  return prim["Centity.hide_from"](self_key, player)
-end
 
-function Centity.show_to(self, player)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.remove_buff(self, buff)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.remove_buff"](self_key, buff)
   end
-  return prim["Centity.show_to"](self_key, player)
-end
 
-function Centity.is_hidden_from(self, player)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.has_buff(self, buff)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.has_buff"](self_key, buff)
   end
-  return prim["Centity.is_hidden_from"](self_key, player)
-end
 
-function Centity.view_range(self)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.buff_ticks(self, buff)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.buff_ticks"](self_key, buff)
   end
-  return prim["Centity.view_range"](self_key)
-end
 
-function Centity.set_view_range(self, blocks)
-  local self_key = ids[self]
-  if self_key == nil or not Centity_is[class_of(self)] then
-    self_key = self_of(self, "Centity")
+  function Centity.buffs(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.buffs"](self_key)
   end
-  return prim["Centity.set_view_range"](self_key, blocks)
-end
 
-function Centity.on(self, event, handler, options)
-  if ids[self] == nil or not Centity_is[class_of(self)] then
-    self_of(self, "Centity")
+  function Centity.health(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.health"](self_key)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  if options ~= nil then
-    check_shape(options, "options", "EventOptions")
-  end
-  return hand.Centity.on(self, event, handler, options)
-end
 
-function Centity.once(self, event, handler)
-  if ids[self] == nil or not Centity_is[class_of(self)] then
-    self_of(self, "Centity")
+  function Centity.max_health(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.max_health"](self_key)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  return hand.Centity.once(self, event, handler)
-end
 
-function Centity.emit(self, event, payload)
-  if ids[self] == nil or not Centity_is[class_of(self)] then
-    self_of(self, "Centity")
+  function Centity.set_health(self, health)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.set_health"](self_key, health)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
+
+  function Centity.set_max_health(self, max_health)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.set_max_health"](self_key, max_health)
   end
-  if payload ~= nil and type_of(payload) ~= "table" then
-    want_opt(payload, "table", "payload")
+
+  function Centity.damage(self, amount, options)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.damage"](self_key, amount, options)
   end
-  return hand.Centity.emit(self, event, payload)
+
+  function Centity.heal(self, amount)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.heal"](self_key, amount)
+  end
+
+  function Centity.is_dead(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.is_dead"](self_key)
+  end
+
+  function Centity.has_body(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.has_body"](self_key)
+  end
+
+  function Centity.body(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.body"](self_key)
+  end
+
+  function Centity.set_body(self, settings)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.set_body"](self_key, settings)
+  end
+
+  function Centity.velocity(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    local result_x, result_y, result_z = prim["Centity.velocity"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+  end
+
+  function Centity.set_velocity(self, velocity)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    if genuine_mt(velocity) ~= Vec3_mt then
+      want_vec3(velocity, "velocity")
+    end
+    return prim["Centity.set_velocity"](self_key, velocity[1], velocity[2], velocity[3])
+  end
+
+  function Centity.add_velocity(self, velocity)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    if genuine_mt(velocity) ~= Vec3_mt then
+      want_vec3(velocity, "velocity")
+    end
+    return prim["Centity.add_velocity"](self_key, velocity[1], velocity[2], velocity[3])
+  end
+
+  function Centity.walk_velocity(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    local result_x, result_y, result_z = prim["Centity.walk_velocity"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+  end
+
+  function Centity.set_walk_velocity(self, velocity)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    local velocity_x, velocity_y, velocity_z
+    if velocity ~= nil then
+      if genuine_mt(velocity) ~= Vec3_mt then
+        want_vec3_opt(velocity, "velocity")
+      end
+      velocity_x, velocity_y, velocity_z = velocity[1], velocity[2], velocity[3]
+    end
+    return prim["Centity.set_walk_velocity"](self_key, velocity_x, velocity_y, velocity_z)
+  end
+
+  function Centity.jump(self, height)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.jump"](self_key, height)
+  end
+
+  function Centity.is_on_ground(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.is_on_ground"](self_key)
+  end
+
+  function Centity.is_in_liquid(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.is_in_liquid"](self_key)
+  end
+
+  function Centity.wall(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    local result_x, result_y, result_z = prim["Centity.wall"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+  end
+
+  function Centity.launch(self, options)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.launch"](self_key, options)
+  end
+
+  function Centity.is_launched(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.is_launched"](self_key)
+  end
+
+  function Centity.stop_flight(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.stop_flight"](self_key)
+  end
+
+  function Centity.move_to(self, target, options)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.move_to"](self_key, target, options)
+  end
+
+  function Centity.stop_pathing(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.stop_pathing"](self_key)
+  end
+
+  function Centity.has_path(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.has_path"](self_key)
+  end
+
+  function Centity.path_target(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    local result_x, result_y, result_z = prim["Centity.path_target"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+  end
+
+  function Centity.data(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.data"](self_key)
+  end
+
+  function Centity.remove(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    prim["Centity.remove"](self_key)
+  end
+
+  function Centity.play_animation(self, name, options)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.play_animation"](self_key, name, options)
+  end
+
+  function Centity.stop_animation(self, name)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    prim["Centity.stop_animation"](self_key, name)
+  end
+
+  function Centity.pause_animation(self, name)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.pause_animation"](self_key, name)
+  end
+
+  function Centity.resume_animation(self, name)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.resume_animation"](self_key, name)
+  end
+
+  function Centity.is_animation_playing(self, name)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.is_animation_playing"](self_key, name)
+  end
+
+  function Centity.playing_animations(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.playing_animations"](self_key)
+  end
+
+  function Centity.animations(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.animations"](self_key)
+  end
+
+  function Centity.animation_tick(self, name)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.animation_tick"](self_key, name)
+  end
+
+  function Centity.seek_animation(self, name, tick)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.seek_animation"](self_key, name, tick)
+  end
+
+  function Centity.animation_speed(self, name)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.animation_speed"](self_key, name)
+  end
+
+  function Centity.set_animation_speed(self, name, multiplier)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.set_animation_speed"](self_key, name, multiplier)
+  end
+
+  function Centity.is_glowing(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.is_glowing"](self_key)
+  end
+
+  function Centity.set_glowing(self, glowing)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.set_glowing"](self_key, glowing)
+  end
+
+  function Centity.glow_color(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.glow_color"](self_key)
+  end
+
+  function Centity.set_glow_color(self, color)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.set_glow_color"](self_key, color)
+  end
+
+  function Centity.hide_from(self, player)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.hide_from"](self_key, player)
+  end
+
+  function Centity.show_to(self, player)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.show_to"](self_key, player)
+  end
+
+  function Centity.is_hidden_from(self, player)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.is_hidden_from"](self_key, player)
+  end
+
+  function Centity.view_range(self)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.view_range"](self_key)
+  end
+
+  function Centity.set_view_range(self, blocks)
+    local self_key = ids[self]
+    if self_key == nil or not Centity_is[class_of(self)] then
+      self_key = self_of(self, "Centity")
+    end
+    return prim["Centity.set_view_range"](self_key, blocks)
+  end
+
+  function Centity.on(self, event, handler, options)
+    if ids[self] == nil or not Centity_is[class_of(self)] then
+      self_of(self, "Centity")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.Centity.on(self, event, handler, options)
+  end
+
+  function Centity.once(self, event, handler)
+    if ids[self] == nil or not Centity_is[class_of(self)] then
+      self_of(self, "Centity")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.Centity.once(self, event, handler)
+  end
+
+  function Centity.emit(self, event, payload)
+    if ids[self] == nil or not Centity_is[class_of(self)] then
+      self_of(self, "Centity")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if payload ~= nil and type_of(payload) ~= "table" then
+      want_opt(payload, "table", "payload")
+    end
+    return hand.Centity.emit(self, event, payload)
+  end
 end
 
 -- Node ----------------------------------------------------------------------
 
-local Node = class("Node")
-
-function new.Node(centity, name)
-  return prim["handles.new"]("Node", centity, name)
-end
-
----@param handle table
----@return string centity
----@return string name
-function keys.Node(handle)
-  return prim["handles.key"](handle)
-end
-
-function Node.name(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.name"](self_key)
-end
-
-function Node.centity(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.centity"](self_key)
-end
-
-function Node.parent(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.parent"](self_key)
-end
-
-function Node.children(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.children"](self_key)
-end
-
-function Node.add_child(self, name, definition)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.add_child"](self_key, name, definition)
-end
-
-function Node.remove(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.remove"](self_key)
-end
-
-function Node.translation(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  local result_x, result_y, result_z = prim["Node.translation"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
-
-function Node.rotation(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  local result_x, result_y, result_z = prim["Node.rotation"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
-
-function Node.scale(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  local result_x, result_y, result_z = prim["Node.scale"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
-
-function Node.set_translation(self, translation)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  if genuine_mt(translation) ~= Vec3_mt then
-    want_vec3(translation, "translation")
-  end
-  prim["Node.set_translation"](self_key, translation[1], translation[2], translation[3])
-end
-
-function Node.set_rotation(self, rotation)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  if genuine_mt(rotation) ~= Vec3_mt then
-    want_vec3(rotation, "rotation")
-  end
-  prim["Node.set_rotation"](self_key, rotation[1], rotation[2], rotation[3])
-end
-
-function Node.set_scale(self, scale)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  if genuine_mt(scale) ~= Vec3_mt then
-    want_vec3(scale, "scale")
-  end
-  prim["Node.set_scale"](self_key, scale[1], scale[2], scale[3])
-end
-
-function Node.stretch_between(self, from, to, options)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  if genuine_mt(from) ~= Vec3_mt then
-    want_vec3(from, "from")
-  end
-  if genuine_mt(to) ~= Vec3_mt then
-    want_vec3(to, "to")
-  end
-  return prim["Node.stretch_between"](self_key, from[1], from[2], from[3], to[1], to[2], to[3], options)
-end
-
-function Node.is_rope(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.is_rope"](self_key)
-end
-
-function Node.rope_between(self, from, to, options)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.rope_between"](self_key, from, to, options)
-end
-
-function Node.release_rope(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  prim["Node.release_rope"](self_key)
-end
-
-function Node.tween(self, options)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.tween"](self_key, options)
-end
-
-function Node.is_tweening(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.is_tweening"](self_key)
-end
-
-function Node.stop_tween(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.stop_tween"](self_key)
-end
-
-function Node.world_position(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  local result_x, result_y, result_z = prim["Node.world_position"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
-
-function Node.world_rotation(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  local result_x, result_y, result_z = prim["Node.world_rotation"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
-
-function Node.to_local(self, point)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  if genuine_mt(point) ~= Vec3_mt then
-    want_vec3(point, "point")
-  end
-  local result_x, result_y, result_z = prim["Node.to_local"](self_key, point[1], point[2], point[3])
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
-
-function Node.to_world(self, point)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  if genuine_mt(point) ~= Vec3_mt then
-    want_vec3(point, "point")
-  end
-  local result_x, result_y, result_z = prim["Node.to_world"](self_key, point[1], point[2], point[3])
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
-
-function Node.world_direction(self, direction)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  if genuine_mt(direction) ~= Vec3_mt then
-    want_vec3(direction, "direction")
-  end
-  local result_x, result_y, result_z = prim["Node.world_direction"](self_key, direction[1], direction[2], direction[3])
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
-
-function Node.look_at(self, point)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  if genuine_mt(point) ~= Vec3_mt then
-    want_vec3(point, "point")
-  end
-  return prim["Node.look_at"](self_key, point[1], point[2], point[3])
-end
-
-function Node.rotate(self, axis, degrees)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  if genuine_mt(axis) ~= Vec3_mt then
-    want_vec3(axis, "axis")
-  end
-  return prim["Node.rotate"](self_key, axis[1], axis[2], axis[3], degrees)
-end
-
-function Node.is_visible(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.is_visible"](self_key)
-end
-
-function Node.set_visible(self, visible)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  prim["Node.set_visible"](self_key, visible)
-end
-
-function Node.is_clickable(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.is_clickable"](self_key)
-end
-
-function Node.set_clickable(self, clickable)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  prim["Node.set_clickable"](self_key, clickable)
-end
-
-function Node.display_kind(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.display_kind"](self_key)
-end
-
-function Node.display_block(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.display_block"](self_key)
-end
-
-function Node.set_display_block(self, block)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.set_display_block"](self_key, block)
-end
-
-function Node.display_text(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.display_text"](self_key)
-end
-
-function Node.set_display_text(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.set_display_text"](self_key, text)
-end
-
-function Node.display_item(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.display_item"](self_key)
-end
-
-function Node.set_display_item(self, item)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.set_display_item"](self_key, item)
-end
-
-function Node.model(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.model"](self_key)
-end
-
-function Node.set_model(self, model)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.set_model"](self_key, model)
-end
-
-function Node.display_text_style(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.display_text_style"](self_key)
-end
-
-function Node.set_display_text_style(self, style)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.set_display_text_style"](self_key, style)
-end
-
-function Node.is_glowing(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.is_glowing"](self_key)
-end
-
-function Node.set_glowing(self, glowing)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.set_glowing"](self_key, glowing)
-end
-
-function Node.glow_color(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.glow_color"](self_key)
-end
-
-function Node.set_glow_color(self, color)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.set_glow_color"](self_key, color)
-end
-
-function Node.brightness(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.brightness"](self_key)
-end
-
-function Node.set_brightness(self, brightness)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.set_brightness"](self_key, brightness)
-end
-
-function Node.billboard(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.billboard"](self_key)
-end
-
-function Node.set_billboard(self, billboard)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.set_billboard"](self_key, billboard)
-end
-
-function Node.interpolation_ticks(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.interpolation_ticks"](self_key)
-end
-
-function Node.set_interpolation_ticks(self, ticks)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.set_interpolation_ticks"](self_key, ticks)
-end
-
-function Node.velocity(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  local result_x, result_y, result_z = prim["Node.velocity"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
-
-function Node.set_velocity(self, velocity)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  if genuine_mt(velocity) ~= Vec3_mt then
-    want_vec3(velocity, "velocity")
-  end
-  return prim["Node.set_velocity"](self_key, velocity[1], velocity[2], velocity[3])
-end
-
-function Node.add_velocity(self, velocity)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  if genuine_mt(velocity) ~= Vec3_mt then
-    want_vec3(velocity, "velocity")
-  end
-  return prim["Node.add_velocity"](self_key, velocity[1], velocity[2], velocity[3])
-end
-
-function Node.angular_velocity(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  local result_x, result_y, result_z = prim["Node.angular_velocity"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
-
-function Node.set_angular_velocity(self, angular_velocity)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  if genuine_mt(angular_velocity) ~= Vec3_mt then
-    want_vec3(angular_velocity, "angular_velocity")
-  end
-  return prim["Node.set_angular_velocity"](self_key, angular_velocity[1], angular_velocity[2], angular_velocity[3])
-end
-
-function Node.mass(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.mass"](self_key)
-end
-
-function Node.apply_impulse(self, impulse)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  if genuine_mt(impulse) ~= Vec3_mt then
-    want_vec3(impulse, "impulse")
-  end
-  return prim["Node.apply_impulse"](self_key, impulse[1], impulse[2], impulse[3])
-end
-
-function Node.apply_impulse_at(self, impulse, point)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  if genuine_mt(impulse) ~= Vec3_mt then
-    want_vec3(impulse, "impulse")
-  end
-  if genuine_mt(point) ~= Vec3_mt then
-    want_vec3(point, "point")
-  end
-  return prim["Node.apply_impulse_at"](self_key, impulse[1], impulse[2], impulse[3], point[1], point[2], point[3])
-end
-
-function Node.is_on_ground(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.is_on_ground"](self_key)
-end
-
-function Node.is_asleep(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.is_asleep"](self_key)
-end
-
-function Node.wake(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  prim["Node.wake"](self_key)
-end
-
-function Node.apply_force(self, force)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  if genuine_mt(force) ~= Vec3_mt then
-    want_vec3(force, "force")
-  end
-  return prim["Node.apply_force"](self_key, force[1], force[2], force[3])
-end
-
-function Node.has_gravity(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.has_gravity"](self_key)
-end
-
-function Node.set_gravity(self, gravity)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.set_gravity"](self_key, gravity)
-end
-
-function Node.is_kinematic(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.is_kinematic"](self_key)
-end
-
-function Node.set_kinematic(self, kinematic)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.set_kinematic"](self_key, kinematic)
-end
-
-function Node.is_physics_enabled(self)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.is_physics_enabled"](self_key)
-end
-
-function Node.set_physics_enabled(self, enabled)
-  local self_key = ids[self]
-  if self_key == nil or not Node_is[class_of(self)] then
-    self_key = self_of(self, "Node")
-  end
-  return prim["Node.set_physics_enabled"](self_key, enabled)
-end
-
-function Node.on(self, event, handler, options)
-  if ids[self] == nil or not Node_is[class_of(self)] then
-    self_of(self, "Node")
-  end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  if options ~= nil then
-    check_shape(options, "options", "EventOptions")
-  end
-  return hand.Node.on(self, event, handler, options)
-end
-
-function Node.once(self, event, handler)
-  if ids[self] == nil or not Node_is[class_of(self)] then
-    self_of(self, "Node")
-  end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
+do
+  local Node = class("Node")
+
+  function new.Node(centity, name)
+    return prim["handles.new"]("Node", centity, name)
+  end
+
+  ---@param handle table
+  ---@return string centity
+  ---@return string name
+  function keys.Node(handle)
+    return prim["handles.key"](handle)
+  end
+
+  function Node.name(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.name"](self_key)
+  end
+
+  function Node.centity(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.centity"](self_key)
+  end
+
+  function Node.parent(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.parent"](self_key)
+  end
+
+  function Node.children(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.children"](self_key)
+  end
+
+  function Node.add_child(self, name, definition)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.add_child"](self_key, name, definition)
+  end
+
+  function Node.remove(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.remove"](self_key)
+  end
+
+  function Node.translation(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    local result_x, result_y, result_z = prim["Node.translation"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+  end
+
+  function Node.rotation(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    local result_x, result_y, result_z = prim["Node.rotation"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+  end
+
+  function Node.scale(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    local result_x, result_y, result_z = prim["Node.scale"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+  end
+
+  function Node.set_translation(self, translation)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    if genuine_mt(translation) ~= Vec3_mt then
+      want_vec3(translation, "translation")
+    end
+    prim["Node.set_translation"](self_key, translation[1], translation[2], translation[3])
+  end
+
+  function Node.set_rotation(self, rotation)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    if genuine_mt(rotation) ~= Vec3_mt then
+      want_vec3(rotation, "rotation")
+    end
+    prim["Node.set_rotation"](self_key, rotation[1], rotation[2], rotation[3])
+  end
+
+  function Node.set_scale(self, scale)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    if genuine_mt(scale) ~= Vec3_mt then
+      want_vec3(scale, "scale")
+    end
+    prim["Node.set_scale"](self_key, scale[1], scale[2], scale[3])
+  end
+
+  function Node.stretch_between(self, from, to, options)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    if genuine_mt(from) ~= Vec3_mt then
+      want_vec3(from, "from")
+    end
+    if genuine_mt(to) ~= Vec3_mt then
+      want_vec3(to, "to")
+    end
+    return prim["Node.stretch_between"](self_key, from[1], from[2], from[3], to[1], to[2], to[3], options)
+  end
+
+  function Node.is_rope(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.is_rope"](self_key)
+  end
+
+  function Node.rope_between(self, from, to, options)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.rope_between"](self_key, from, to, options)
+  end
+
+  function Node.release_rope(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    prim["Node.release_rope"](self_key)
+  end
+
+  function Node.tween(self, options)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.tween"](self_key, options)
+  end
+
+  function Node.is_tweening(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.is_tweening"](self_key)
+  end
+
+  function Node.stop_tween(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.stop_tween"](self_key)
+  end
+
+  function Node.world_position(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    local result_x, result_y, result_z = prim["Node.world_position"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+  end
+
+  function Node.world_rotation(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    local result_x, result_y, result_z = prim["Node.world_rotation"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+  end
+
+  function Node.to_local(self, point)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    if genuine_mt(point) ~= Vec3_mt then
+      want_vec3(point, "point")
+    end
+    local result_x, result_y, result_z = prim["Node.to_local"](self_key, point[1], point[2], point[3])
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+  end
+
+  function Node.to_world(self, point)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    if genuine_mt(point) ~= Vec3_mt then
+      want_vec3(point, "point")
+    end
+    local result_x, result_y, result_z = prim["Node.to_world"](self_key, point[1], point[2], point[3])
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+  end
+
+  function Node.world_direction(self, direction)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    if genuine_mt(direction) ~= Vec3_mt then
+      want_vec3(direction, "direction")
+    end
+    local result_x, result_y, result_z = prim["Node.world_direction"](self_key, direction[1], direction[2], direction[3])
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+  end
+
+  function Node.look_at(self, point)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    if genuine_mt(point) ~= Vec3_mt then
+      want_vec3(point, "point")
+    end
+    return prim["Node.look_at"](self_key, point[1], point[2], point[3])
+  end
+
+  function Node.rotate(self, axis, degrees)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    if genuine_mt(axis) ~= Vec3_mt then
+      want_vec3(axis, "axis")
+    end
+    return prim["Node.rotate"](self_key, axis[1], axis[2], axis[3], degrees)
+  end
+
+  function Node.is_visible(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.is_visible"](self_key)
+  end
+
+  function Node.set_visible(self, visible)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    prim["Node.set_visible"](self_key, visible)
+  end
+
+  function Node.is_clickable(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.is_clickable"](self_key)
+  end
+
+  function Node.set_clickable(self, clickable)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    prim["Node.set_clickable"](self_key, clickable)
+  end
+
+  function Node.display_kind(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.display_kind"](self_key)
+  end
+
+  function Node.display_block(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.display_block"](self_key)
+  end
+
+  function Node.set_display_block(self, block)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.set_display_block"](self_key, block)
+  end
+
+  function Node.display_text(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.display_text"](self_key)
+  end
+
+  function Node.set_display_text(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.set_display_text"](self_key, text)
+  end
+
+  function Node.display_item(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.display_item"](self_key)
+  end
+
+  function Node.set_display_item(self, item)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.set_display_item"](self_key, item)
+  end
+
+  function Node.model(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.model"](self_key)
+  end
+
+  function Node.set_model(self, model)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.set_model"](self_key, model)
+  end
+
+  function Node.display_text_style(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.display_text_style"](self_key)
+  end
+
+  function Node.set_display_text_style(self, style)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.set_display_text_style"](self_key, style)
+  end
+
+  function Node.is_glowing(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.is_glowing"](self_key)
+  end
+
+  function Node.set_glowing(self, glowing)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.set_glowing"](self_key, glowing)
+  end
+
+  function Node.glow_color(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.glow_color"](self_key)
+  end
+
+  function Node.set_glow_color(self, color)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.set_glow_color"](self_key, color)
+  end
+
+  function Node.brightness(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.brightness"](self_key)
+  end
+
+  function Node.set_brightness(self, brightness)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.set_brightness"](self_key, brightness)
+  end
+
+  function Node.billboard(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.billboard"](self_key)
+  end
+
+  function Node.set_billboard(self, billboard)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.set_billboard"](self_key, billboard)
+  end
+
+  function Node.interpolation_ticks(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.interpolation_ticks"](self_key)
+  end
+
+  function Node.set_interpolation_ticks(self, ticks)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.set_interpolation_ticks"](self_key, ticks)
+  end
+
+  function Node.velocity(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    local result_x, result_y, result_z = prim["Node.velocity"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+  end
+
+  function Node.set_velocity(self, velocity)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    if genuine_mt(velocity) ~= Vec3_mt then
+      want_vec3(velocity, "velocity")
+    end
+    return prim["Node.set_velocity"](self_key, velocity[1], velocity[2], velocity[3])
+  end
+
+  function Node.add_velocity(self, velocity)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    if genuine_mt(velocity) ~= Vec3_mt then
+      want_vec3(velocity, "velocity")
+    end
+    return prim["Node.add_velocity"](self_key, velocity[1], velocity[2], velocity[3])
+  end
+
+  function Node.angular_velocity(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    local result_x, result_y, result_z = prim["Node.angular_velocity"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
+  end
+
+  function Node.set_angular_velocity(self, angular_velocity)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    if genuine_mt(angular_velocity) ~= Vec3_mt then
+      want_vec3(angular_velocity, "angular_velocity")
+    end
+    return prim["Node.set_angular_velocity"](self_key, angular_velocity[1], angular_velocity[2], angular_velocity[3])
+  end
+
+  function Node.mass(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.mass"](self_key)
+  end
+
+  function Node.apply_impulse(self, impulse)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    if genuine_mt(impulse) ~= Vec3_mt then
+      want_vec3(impulse, "impulse")
+    end
+    return prim["Node.apply_impulse"](self_key, impulse[1], impulse[2], impulse[3])
+  end
+
+  function Node.apply_impulse_at(self, impulse, point)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    if genuine_mt(impulse) ~= Vec3_mt then
+      want_vec3(impulse, "impulse")
+    end
+    if genuine_mt(point) ~= Vec3_mt then
+      want_vec3(point, "point")
+    end
+    return prim["Node.apply_impulse_at"](self_key, impulse[1], impulse[2], impulse[3], point[1], point[2], point[3])
+  end
+
+  function Node.is_on_ground(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.is_on_ground"](self_key)
+  end
+
+  function Node.is_asleep(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.is_asleep"](self_key)
+  end
+
+  function Node.wake(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    prim["Node.wake"](self_key)
+  end
+
+  function Node.apply_force(self, force)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    if genuine_mt(force) ~= Vec3_mt then
+      want_vec3(force, "force")
+    end
+    return prim["Node.apply_force"](self_key, force[1], force[2], force[3])
+  end
+
+  function Node.has_gravity(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.has_gravity"](self_key)
+  end
+
+  function Node.set_gravity(self, gravity)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.set_gravity"](self_key, gravity)
+  end
+
+  function Node.is_kinematic(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.is_kinematic"](self_key)
+  end
+
+  function Node.set_kinematic(self, kinematic)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.set_kinematic"](self_key, kinematic)
+  end
+
+  function Node.is_physics_enabled(self)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.is_physics_enabled"](self_key)
+  end
+
+  function Node.set_physics_enabled(self, enabled)
+    local self_key = ids[self]
+    if self_key == nil or not Node_is[class_of(self)] then
+      self_key = self_of(self, "Node")
+    end
+    return prim["Node.set_physics_enabled"](self_key, enabled)
+  end
+
+  function Node.on(self, event, handler, options)
+    if ids[self] == nil or not Node_is[class_of(self)] then
+      self_of(self, "Node")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.Node.on(self, event, handler, options)
+  end
+
+  function Node.once(self, event, handler)
+    if ids[self] == nil or not Node_is[class_of(self)] then
+      self_of(self, "Node")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.Node.once(self, event, handler)
   end
-  return hand.Node.once(self, event, handler)
 end
 
 -- Entity --------------------------------------------------------------------
 
-local Entity = class("Entity")
+do
+  local Entity = class("Entity")
 
-function new.Entity(id)
-  return prim["handles.new"]("Entity", id)
-end
+  function new.Entity(id)
+    return prim["handles.new"]("Entity", id)
+  end
 
----@param handle table
----@return string id
-function keys.Entity(handle)
-  return prim["handles.key"](handle)
-end
+  ---@param handle table
+  ---@return string id
+  function keys.Entity(handle)
+    return prim["handles.key"](handle)
+  end
 
-function Entity.id(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.id(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.id"](self_key)
   end
-  return prim["Entity.id"](self_key)
-end
 
-function Entity.kind(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.kind(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.kind"](self_key)
   end
-  return prim["Entity.kind"](self_key)
-end
 
-function Entity.exists(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.exists(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.exists"](self_key)
   end
-  return prim["Entity.exists"](self_key)
-end
 
-function Entity.location(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.location(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.location"](self_key)
   end
-  return prim["Entity.location"](self_key)
-end
 
-function Entity.position(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.position(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    local result_x, result_y, result_z = prim["Entity.position"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
   end
-  local result_x, result_y, result_z = prim["Entity.position"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
 
-function Entity.world(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.world(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.world"](self_key)
   end
-  return prim["Entity.world"](self_key)
-end
 
-function Entity.eye_position(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.eye_position(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    local result_x, result_y, result_z = prim["Entity.eye_position"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
   end
-  local result_x, result_y, result_z = prim["Entity.eye_position"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
 
-function Entity.yaw(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.yaw(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.yaw"](self_key)
   end
-  return prim["Entity.yaw"](self_key)
-end
 
-function Entity.pitch(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.pitch(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.pitch"](self_key)
   end
-  return prim["Entity.pitch"](self_key)
-end
 
-function Entity.direction(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.direction(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    local result_x, result_y, result_z = prim["Entity.direction"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
   end
-  local result_x, result_y, result_z = prim["Entity.direction"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
 
-function Entity.set_yaw(self, degrees)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.set_yaw(self, degrees)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.set_yaw"](self_key, degrees)
   end
-  return prim["Entity.set_yaw"](self_key, degrees)
-end
 
-function Entity.set_pitch(self, degrees)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.set_pitch(self, degrees)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.set_pitch"](self_key, degrees)
   end
-  return prim["Entity.set_pitch"](self_key, degrees)
-end
 
-function Entity.look_at(self, point)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.look_at(self, point)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    if genuine_mt(point) ~= Vec3_mt then
+      want_vec3(point, "point")
+    end
+    return prim["Entity.look_at"](self_key, point[1], point[2], point[3])
   end
-  if genuine_mt(point) ~= Vec3_mt then
-    want_vec3(point, "point")
-  end
-  return prim["Entity.look_at"](self_key, point[1], point[2], point[3])
-end
 
-function Entity.teleport(self, location_or_position)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.teleport(self, location_or_position)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.teleport"](self_key, location_or_position)
   end
-  return prim["Entity.teleport"](self_key, location_or_position)
-end
 
-function Entity.velocity(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.velocity(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    local result_x, result_y, result_z = prim["Entity.velocity"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
   end
-  local result_x, result_y, result_z = prim["Entity.velocity"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
 
-function Entity.set_velocity(self, velocity)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.set_velocity(self, velocity)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    if genuine_mt(velocity) ~= Vec3_mt then
+      want_vec3(velocity, "velocity")
+    end
+    return prim["Entity.set_velocity"](self_key, velocity[1], velocity[2], velocity[3])
   end
-  if genuine_mt(velocity) ~= Vec3_mt then
-    want_vec3(velocity, "velocity")
-  end
-  return prim["Entity.set_velocity"](self_key, velocity[1], velocity[2], velocity[3])
-end
 
-function Entity.add_velocity(self, velocity)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.add_velocity(self, velocity)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    if genuine_mt(velocity) ~= Vec3_mt then
+      want_vec3(velocity, "velocity")
+    end
+    return prim["Entity.add_velocity"](self_key, velocity[1], velocity[2], velocity[3])
   end
-  if genuine_mt(velocity) ~= Vec3_mt then
-    want_vec3(velocity, "velocity")
-  end
-  return prim["Entity.add_velocity"](self_key, velocity[1], velocity[2], velocity[3])
-end
 
-function Entity.is_on_ground(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.is_on_ground(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.is_on_ground"](self_key)
   end
-  return prim["Entity.is_on_ground"](self_key)
-end
 
-function Entity.remove(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.remove(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.remove"](self_key)
   end
-  return prim["Entity.remove"](self_key)
-end
 
-function Entity.name(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.name(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.name"](self_key)
   end
-  return prim["Entity.name"](self_key)
-end
 
-function Entity.custom_name(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.custom_name(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.custom_name"](self_key)
   end
-  return prim["Entity.custom_name"](self_key)
-end
 
-function Entity.set_custom_name(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.set_custom_name(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.set_custom_name"](self_key, text)
   end
-  return prim["Entity.set_custom_name"](self_key, text)
-end
 
-function Entity.is_custom_name_visible(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.is_custom_name_visible(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.is_custom_name_visible"](self_key)
   end
-  return prim["Entity.is_custom_name_visible"](self_key)
-end
 
-function Entity.set_custom_name_visible(self, visible)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.set_custom_name_visible(self, visible)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.set_custom_name_visible"](self_key, visible)
   end
-  return prim["Entity.set_custom_name_visible"](self_key, visible)
-end
 
-function Entity.tags(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.tags(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.tags"](self_key)
   end
-  return prim["Entity.tags"](self_key)
-end
 
-function Entity.has_tag(self, tag)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.has_tag(self, tag)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.has_tag"](self_key, tag)
   end
-  return prim["Entity.has_tag"](self_key, tag)
-end
 
-function Entity.add_tag(self, tag)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.add_tag(self, tag)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.add_tag"](self_key, tag)
   end
-  return prim["Entity.add_tag"](self_key, tag)
-end
 
-function Entity.remove_tag(self, tag)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.remove_tag(self, tag)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.remove_tag"](self_key, tag)
   end
-  return prim["Entity.remove_tag"](self_key, tag)
-end
 
-function Entity.data(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.data(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.data"](self_key)
   end
-  return prim["Entity.data"](self_key)
-end
 
-function Entity.is_glowing(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.is_glowing(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.is_glowing"](self_key)
   end
-  return prim["Entity.is_glowing"](self_key)
-end
 
-function Entity.set_glowing(self, glowing)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.set_glowing(self, glowing)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.set_glowing"](self_key, glowing)
   end
-  return prim["Entity.set_glowing"](self_key, glowing)
-end
 
-function Entity.is_visible(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.is_visible(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.is_visible"](self_key)
   end
-  return prim["Entity.is_visible"](self_key)
-end
 
-function Entity.set_visible(self, visible)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.set_visible(self, visible)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.set_visible"](self_key, visible)
   end
-  return prim["Entity.set_visible"](self_key, visible)
-end
 
-function Entity.hide_from(self, player)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.hide_from(self, player)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.hide_from"](self_key, player)
   end
-  return prim["Entity.hide_from"](self_key, player)
-end
 
-function Entity.show_to(self, player)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.show_to(self, player)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.show_to"](self_key, player)
   end
-  return prim["Entity.show_to"](self_key, player)
-end
 
-function Entity.is_hidden_from(self, player)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.is_hidden_from(self, player)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.is_hidden_from"](self_key, player)
   end
-  return prim["Entity.is_hidden_from"](self_key, player)
-end
 
-function Entity.team(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.team(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.team"](self_key)
   end
-  return prim["Entity.team"](self_key)
-end
 
-function Entity.is_silent(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.is_silent(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.is_silent"](self_key)
   end
-  return prim["Entity.is_silent"](self_key)
-end
 
-function Entity.set_silent(self, silent)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.set_silent(self, silent)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.set_silent"](self_key, silent)
   end
-  return prim["Entity.set_silent"](self_key, silent)
-end
 
-function Entity.has_gravity(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.has_gravity(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.has_gravity"](self_key)
   end
-  return prim["Entity.has_gravity"](self_key)
-end
 
-function Entity.set_gravity(self, gravity)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.set_gravity(self, gravity)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.set_gravity"](self_key, gravity)
   end
-  return prim["Entity.set_gravity"](self_key, gravity)
-end
 
-function Entity.is_invulnerable(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.is_invulnerable(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.is_invulnerable"](self_key)
   end
-  return prim["Entity.is_invulnerable"](self_key)
-end
 
-function Entity.set_invulnerable(self, invulnerable)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.set_invulnerable(self, invulnerable)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.set_invulnerable"](self_key, invulnerable)
   end
-  return prim["Entity.set_invulnerable"](self_key, invulnerable)
-end
 
-function Entity.passengers(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.passengers(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.passengers"](self_key)
   end
-  return prim["Entity.passengers"](self_key)
-end
 
-function Entity.add_passenger(self, entity)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.add_passenger(self, entity)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.add_passenger"](self_key, entity)
   end
-  return prim["Entity.add_passenger"](self_key, entity)
-end
 
-function Entity.remove_passenger(self, entity)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.remove_passenger(self, entity)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.remove_passenger"](self_key, entity)
   end
-  return prim["Entity.remove_passenger"](self_key, entity)
-end
 
-function Entity.vehicle(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.vehicle(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.vehicle"](self_key)
   end
-  return prim["Entity.vehicle"](self_key)
-end
 
-function Entity.inventory(self)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.inventory(self)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.inventory"](self_key)
   end
-  return prim["Entity.inventory"](self_key)
-end
 
-function Entity.target_block(self, max_distance)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.target_block(self, max_distance)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.target_block"](self_key, max_distance)
   end
-  return prim["Entity.target_block"](self_key, max_distance)
-end
 
-function Entity.target_entity(self, max_distance)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.target_entity(self, max_distance)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.target_entity"](self_key, max_distance)
   end
-  return prim["Entity.target_entity"](self_key, max_distance)
-end
 
-function Entity.target_centity(self, max_distance)
-  local self_key = ids[self]
-  if self_key == nil or not Entity_is[class_of(self)] then
-    self_key = self_of(self, "Entity")
+  function Entity.target_centity(self, max_distance)
+    local self_key = ids[self]
+    if self_key == nil or not Entity_is[class_of(self)] then
+      self_key = self_of(self, "Entity")
+    end
+    return prim["Entity.target_centity"](self_key, max_distance)
   end
-  return prim["Entity.target_centity"](self_key, max_distance)
-end
 
-function Entity.is_player(self)
-  if ids[self] == nil or not Entity_is[class_of(self)] then
-    self_of(self, "Entity")
+  function Entity.is_player(self)
+    if ids[self] == nil or not Entity_is[class_of(self)] then
+      self_of(self, "Entity")
+    end
+    return hand.Entity.is_player(self)
   end
-  return hand.Entity.is_player(self)
-end
 
-function Entity.is_living(self)
-  if ids[self] == nil or not Entity_is[class_of(self)] then
-    self_of(self, "Entity")
+  function Entity.is_living(self)
+    if ids[self] == nil or not Entity_is[class_of(self)] then
+      self_of(self, "Entity")
+    end
+    return hand.Entity.is_living(self)
   end
-  return hand.Entity.is_living(self)
-end
 
-function Entity.is_mob(self)
-  if ids[self] == nil or not Entity_is[class_of(self)] then
-    self_of(self, "Entity")
+  function Entity.is_mob(self)
+    if ids[self] == nil or not Entity_is[class_of(self)] then
+      self_of(self, "Entity")
+    end
+    return hand.Entity.is_mob(self)
   end
-  return hand.Entity.is_mob(self)
-end
 
-function Entity.on(self, event, handler, options)
-  if ids[self] == nil or not Entity_is[class_of(self)] then
-    self_of(self, "Entity")
+  function Entity.on(self, event, handler, options)
+    if ids[self] == nil or not Entity_is[class_of(self)] then
+      self_of(self, "Entity")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.Entity.on(self, event, handler, options)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  if options ~= nil then
-    check_shape(options, "options", "EventOptions")
-  end
-  return hand.Entity.on(self, event, handler, options)
-end
 
-function Entity.once(self, event, handler)
-  if ids[self] == nil or not Entity_is[class_of(self)] then
-    self_of(self, "Entity")
+  function Entity.once(self, event, handler)
+    if ids[self] == nil or not Entity_is[class_of(self)] then
+      self_of(self, "Entity")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.Entity.once(self, event, handler)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  return hand.Entity.once(self, event, handler)
 end
 
 -- Living --------------------------------------------------------------------
 
-local Living = class("Living", "Entity")
+do
+  local Living = class("Living", "Entity")
 
-function Living.health(self)
-  local self_key = ids[self]
-  if self_key == nil or not Living_is[class_of(self)] then
-    self_key = self_of(self, "Living")
+  function Living.health(self)
+    local self_key = ids[self]
+    if self_key == nil or not Living_is[class_of(self)] then
+      self_key = self_of(self, "Living")
+    end
+    return prim["Living.health"](self_key)
   end
-  return prim["Living.health"](self_key)
-end
 
-function Living.set_health(self, health)
-  local self_key = ids[self]
-  if self_key == nil or not Living_is[class_of(self)] then
-    self_key = self_of(self, "Living")
+  function Living.set_health(self, health)
+    local self_key = ids[self]
+    if self_key == nil or not Living_is[class_of(self)] then
+      self_key = self_of(self, "Living")
+    end
+    return prim["Living.set_health"](self_key, health)
   end
-  return prim["Living.set_health"](self_key, health)
-end
 
-function Living.max_health(self)
-  local self_key = ids[self]
-  if self_key == nil or not Living_is[class_of(self)] then
-    self_key = self_of(self, "Living")
+  function Living.max_health(self)
+    local self_key = ids[self]
+    if self_key == nil or not Living_is[class_of(self)] then
+      self_key = self_of(self, "Living")
+    end
+    return prim["Living.max_health"](self_key)
   end
-  return prim["Living.max_health"](self_key)
-end
 
-function Living.damage(self, amount, source)
-  local self_key = ids[self]
-  if self_key == nil or not Living_is[class_of(self)] then
-    self_key = self_of(self, "Living")
+  function Living.damage(self, amount, source)
+    local self_key = ids[self]
+    if self_key == nil or not Living_is[class_of(self)] then
+      self_key = self_of(self, "Living")
+    end
+    return prim["Living.damage"](self_key, amount, source)
   end
-  return prim["Living.damage"](self_key, amount, source)
-end
 
-function Living.heal(self, amount)
-  local self_key = ids[self]
-  if self_key == nil or not Living_is[class_of(self)] then
-    self_key = self_of(self, "Living")
+  function Living.heal(self, amount)
+    local self_key = ids[self]
+    if self_key == nil or not Living_is[class_of(self)] then
+      self_key = self_of(self, "Living")
+    end
+    return prim["Living.heal"](self_key, amount)
   end
-  return prim["Living.heal"](self_key, amount)
-end
 
-function Living.attribute(self, attribute)
-  local self_key = ids[self]
-  if self_key == nil or not Living_is[class_of(self)] then
-    self_key = self_of(self, "Living")
+  function Living.attribute(self, attribute)
+    local self_key = ids[self]
+    if self_key == nil or not Living_is[class_of(self)] then
+      self_key = self_of(self, "Living")
+    end
+    return prim["Living.attribute"](self_key, attribute)
   end
-  return prim["Living.attribute"](self_key, attribute)
-end
 
-function Living.attribute_base(self, attribute)
-  local self_key = ids[self]
-  if self_key == nil or not Living_is[class_of(self)] then
-    self_key = self_of(self, "Living")
+  function Living.attribute_base(self, attribute)
+    local self_key = ids[self]
+    if self_key == nil or not Living_is[class_of(self)] then
+      self_key = self_of(self, "Living")
+    end
+    return prim["Living.attribute_base"](self_key, attribute)
   end
-  return prim["Living.attribute_base"](self_key, attribute)
-end
 
-function Living.set_attribute_base(self, attribute, value)
-  local self_key = ids[self]
-  if self_key == nil or not Living_is[class_of(self)] then
-    self_key = self_of(self, "Living")
+  function Living.set_attribute_base(self, attribute, value)
+    local self_key = ids[self]
+    if self_key == nil or not Living_is[class_of(self)] then
+      self_key = self_of(self, "Living")
+    end
+    return prim["Living.set_attribute_base"](self_key, attribute, value)
   end
-  return prim["Living.set_attribute_base"](self_key, attribute, value)
-end
 
-function Living.attribute_modifiers(self, attribute)
-  local self_key = ids[self]
-  if self_key == nil or not Living_is[class_of(self)] then
-    self_key = self_of(self, "Living")
+  function Living.attribute_modifiers(self, attribute)
+    local self_key = ids[self]
+    if self_key == nil or not Living_is[class_of(self)] then
+      self_key = self_of(self, "Living")
+    end
+    return prim["Living.attribute_modifiers"](self_key, attribute)
   end
-  return prim["Living.attribute_modifiers"](self_key, attribute)
-end
 
-function Living.add_attribute_modifier(self, attribute, id, amount, operation, saved)
-  local self_key = ids[self]
-  if self_key == nil or not Living_is[class_of(self)] then
-    self_key = self_of(self, "Living")
+  function Living.add_attribute_modifier(self, attribute, id, amount, operation, saved)
+    local self_key = ids[self]
+    if self_key == nil or not Living_is[class_of(self)] then
+      self_key = self_of(self, "Living")
+    end
+    return prim["Living.add_attribute_modifier"](self_key, attribute, id, amount, operation, saved)
   end
-  return prim["Living.add_attribute_modifier"](self_key, attribute, id, amount, operation, saved)
-end
 
-function Living.remove_attribute_modifier(self, attribute, id)
-  local self_key = ids[self]
-  if self_key == nil or not Living_is[class_of(self)] then
-    self_key = self_of(self, "Living")
+  function Living.remove_attribute_modifier(self, attribute, id)
+    local self_key = ids[self]
+    if self_key == nil or not Living_is[class_of(self)] then
+      self_key = self_of(self, "Living")
+    end
+    return prim["Living.remove_attribute_modifier"](self_key, attribute, id)
   end
-  return prim["Living.remove_attribute_modifier"](self_key, attribute, id)
-end
 
-function Living.effects(self)
-  local self_key = ids[self]
-  if self_key == nil or not Living_is[class_of(self)] then
-    self_key = self_of(self, "Living")
+  function Living.effects(self)
+    local self_key = ids[self]
+    if self_key == nil or not Living_is[class_of(self)] then
+      self_key = self_of(self, "Living")
+    end
+    return prim["Living.effects"](self_key)
   end
-  return prim["Living.effects"](self_key)
-end
 
-function Living.has_effect(self, effect)
-  local self_key = ids[self]
-  if self_key == nil or not Living_is[class_of(self)] then
-    self_key = self_of(self, "Living")
+  function Living.has_effect(self, effect)
+    local self_key = ids[self]
+    if self_key == nil or not Living_is[class_of(self)] then
+      self_key = self_of(self, "Living")
+    end
+    return prim["Living.has_effect"](self_key, effect)
   end
-  return prim["Living.has_effect"](self_key, effect)
-end
 
-function Living.add_effect(self, effect, ticks, options)
-  local self_key = ids[self]
-  if self_key == nil or not Living_is[class_of(self)] then
-    self_key = self_of(self, "Living")
+  function Living.add_effect(self, effect, ticks, options)
+    local self_key = ids[self]
+    if self_key == nil or not Living_is[class_of(self)] then
+      self_key = self_of(self, "Living")
+    end
+    return prim["Living.add_effect"](self_key, effect, ticks, options)
   end
-  return prim["Living.add_effect"](self_key, effect, ticks, options)
-end
 
-function Living.remove_effect(self, effect)
-  local self_key = ids[self]
-  if self_key == nil or not Living_is[class_of(self)] then
-    self_key = self_of(self, "Living")
+  function Living.remove_effect(self, effect)
+    local self_key = ids[self]
+    if self_key == nil or not Living_is[class_of(self)] then
+      self_key = self_of(self, "Living")
+    end
+    return prim["Living.remove_effect"](self_key, effect)
   end
-  return prim["Living.remove_effect"](self_key, effect)
-end
 
-function Living.equipment(self, slot)
-  local self_key = ids[self]
-  if self_key == nil or not Living_is[class_of(self)] then
-    self_key = self_of(self, "Living")
+  function Living.equipment(self, slot)
+    local self_key = ids[self]
+    if self_key == nil or not Living_is[class_of(self)] then
+      self_key = self_of(self, "Living")
+    end
+    return prim["Living.equipment"](self_key, slot)
   end
-  return prim["Living.equipment"](self_key, slot)
-end
 
-function Living.set_equipment(self, slot, item)
-  local self_key = ids[self]
-  if self_key == nil or not Living_is[class_of(self)] then
-    self_key = self_of(self, "Living")
+  function Living.set_equipment(self, slot, item)
+    local self_key = ids[self]
+    if self_key == nil or not Living_is[class_of(self)] then
+      self_key = self_of(self, "Living")
+    end
+    return prim["Living.set_equipment"](self_key, slot, item)
   end
-  return prim["Living.set_equipment"](self_key, slot, item)
-end
 
-function Living.on(self, event, handler, options)
-  if ids[self] == nil or not Living_is[class_of(self)] then
-    self_of(self, "Living")
+  function Living.on(self, event, handler, options)
+    if ids[self] == nil or not Living_is[class_of(self)] then
+      self_of(self, "Living")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.Living.on(self, event, handler, options)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  if options ~= nil then
-    check_shape(options, "options", "EventOptions")
-  end
-  return hand.Living.on(self, event, handler, options)
-end
 
-function Living.once(self, event, handler)
-  if ids[self] == nil or not Living_is[class_of(self)] then
-    self_of(self, "Living")
+  function Living.once(self, event, handler)
+    if ids[self] == nil or not Living_is[class_of(self)] then
+      self_of(self, "Living")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.Living.once(self, event, handler)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  return hand.Living.once(self, event, handler)
 end
 
 -- Mob -----------------------------------------------------------------------
 
-local Mob = class("Mob", "Living")
+do
+  local Mob = class("Mob", "Living")
 
-function Mob.target(self)
-  local self_key = ids[self]
-  if self_key == nil or not Mob_is[class_of(self)] then
-    self_key = self_of(self, "Mob")
+  function Mob.target(self)
+    local self_key = ids[self]
+    if self_key == nil or not Mob_is[class_of(self)] then
+      self_key = self_of(self, "Mob")
+    end
+    return prim["Mob.target"](self_key)
   end
-  return prim["Mob.target"](self_key)
-end
 
-function Mob.set_target(self, entity)
-  local self_key = ids[self]
-  if self_key == nil or not Mob_is[class_of(self)] then
-    self_key = self_of(self, "Mob")
+  function Mob.set_target(self, entity)
+    local self_key = ids[self]
+    if self_key == nil or not Mob_is[class_of(self)] then
+      self_key = self_of(self, "Mob")
+    end
+    return prim["Mob.set_target"](self_key, entity)
   end
-  return prim["Mob.set_target"](self_key, entity)
-end
 
-function Mob.has_ai(self)
-  local self_key = ids[self]
-  if self_key == nil or not Mob_is[class_of(self)] then
-    self_key = self_of(self, "Mob")
+  function Mob.has_ai(self)
+    local self_key = ids[self]
+    if self_key == nil or not Mob_is[class_of(self)] then
+      self_key = self_of(self, "Mob")
+    end
+    return prim["Mob.has_ai"](self_key)
   end
-  return prim["Mob.has_ai"](self_key)
-end
 
-function Mob.set_ai(self, ai)
-  local self_key = ids[self]
-  if self_key == nil or not Mob_is[class_of(self)] then
-    self_key = self_of(self, "Mob")
+  function Mob.set_ai(self, ai)
+    local self_key = ids[self]
+    if self_key == nil or not Mob_is[class_of(self)] then
+      self_key = self_of(self, "Mob")
+    end
+    return prim["Mob.set_ai"](self_key, ai)
   end
-  return prim["Mob.set_ai"](self_key, ai)
-end
 
-function Mob.move_to(self, target, options)
-  local self_key = ids[self]
-  if self_key == nil or not Mob_is[class_of(self)] then
-    self_key = self_of(self, "Mob")
+  function Mob.move_to(self, target, options)
+    local self_key = ids[self]
+    if self_key == nil or not Mob_is[class_of(self)] then
+      self_key = self_of(self, "Mob")
+    end
+    return prim["Mob.move_to"](self_key, target, options)
   end
-  return prim["Mob.move_to"](self_key, target, options)
-end
 
-function Mob.stop_pathing(self)
-  local self_key = ids[self]
-  if self_key == nil or not Mob_is[class_of(self)] then
-    self_key = self_of(self, "Mob")
+  function Mob.stop_pathing(self)
+    local self_key = ids[self]
+    if self_key == nil or not Mob_is[class_of(self)] then
+      self_key = self_of(self, "Mob")
+    end
+    return prim["Mob.stop_pathing"](self_key)
   end
-  return prim["Mob.stop_pathing"](self_key)
-end
 
-function Mob.has_path(self)
-  local self_key = ids[self]
-  if self_key == nil or not Mob_is[class_of(self)] then
-    self_key = self_of(self, "Mob")
+  function Mob.has_path(self)
+    local self_key = ids[self]
+    if self_key == nil or not Mob_is[class_of(self)] then
+      self_key = self_of(self, "Mob")
+    end
+    return prim["Mob.has_path"](self_key)
   end
-  return prim["Mob.has_path"](self_key)
-end
 
-function Mob.path_target(self)
-  local self_key = ids[self]
-  if self_key == nil or not Mob_is[class_of(self)] then
-    self_key = self_of(self, "Mob")
+  function Mob.path_target(self)
+    local self_key = ids[self]
+    if self_key == nil or not Mob_is[class_of(self)] then
+      self_key = self_of(self, "Mob")
+    end
+    local result_x, result_y, result_z = prim["Mob.path_target"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
   end
-  local result_x, result_y, result_z = prim["Mob.path_target"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
 
-function Mob.goals(self)
-  local self_key = ids[self]
-  if self_key == nil or not Mob_is[class_of(self)] then
-    self_key = self_of(self, "Mob")
+  function Mob.goals(self)
+    local self_key = ids[self]
+    if self_key == nil or not Mob_is[class_of(self)] then
+      self_key = self_of(self, "Mob")
+    end
+    return prim["Mob.goals"](self_key)
   end
-  return prim["Mob.goals"](self_key)
-end
 
-function Mob.remove_goal(self, key)
-  local self_key = ids[self]
-  if self_key == nil or not Mob_is[class_of(self)] then
-    self_key = self_of(self, "Mob")
+  function Mob.remove_goal(self, key)
+    local self_key = ids[self]
+    if self_key == nil or not Mob_is[class_of(self)] then
+      self_key = self_of(self, "Mob")
+    end
+    return prim["Mob.remove_goal"](self_key, key)
   end
-  return prim["Mob.remove_goal"](self_key, key)
-end
 
-function Mob.clear_goals(self, options)
-  local self_key = ids[self]
-  if self_key == nil or not Mob_is[class_of(self)] then
-    self_key = self_of(self, "Mob")
+  function Mob.clear_goals(self, options)
+    local self_key = ids[self]
+    if self_key == nil or not Mob_is[class_of(self)] then
+      self_key = self_of(self, "Mob")
+    end
+    return prim["Mob.clear_goals"](self_key, options)
   end
-  return prim["Mob.clear_goals"](self_key, options)
-end
 
-function Mob.add_goal(self, id, definition)
-  if ids[self] == nil or not Mob_is[class_of(self)] then
-    self_of(self, "Mob")
+  function Mob.add_goal(self, id, definition)
+    if ids[self] == nil or not Mob_is[class_of(self)] then
+      self_of(self, "Mob")
+    end
+    if type_of(id) ~= "string" then
+      want(id, "string", "id")
+    end
+    check_shape(definition, "definition", "GoalDefinition")
+    return hand.Mob.add_goal(self, id, definition)
   end
-  if type_of(id) ~= "string" then
-    want(id, "string", "id")
-  end
-  check_shape(definition, "definition", "GoalDefinition")
-  return hand.Mob.add_goal(self, id, definition)
-end
 
-function Mob.on(self, event, handler, options)
-  if ids[self] == nil or not Mob_is[class_of(self)] then
-    self_of(self, "Mob")
+  function Mob.on(self, event, handler, options)
+    if ids[self] == nil or not Mob_is[class_of(self)] then
+      self_of(self, "Mob")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.Mob.on(self, event, handler, options)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  if options ~= nil then
-    check_shape(options, "options", "EventOptions")
-  end
-  return hand.Mob.on(self, event, handler, options)
-end
 
-function Mob.once(self, event, handler)
-  if ids[self] == nil or not Mob_is[class_of(self)] then
-    self_of(self, "Mob")
+  function Mob.once(self, event, handler)
+    if ids[self] == nil or not Mob_is[class_of(self)] then
+      self_of(self, "Mob")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.Mob.once(self, event, handler)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  return hand.Mob.once(self, event, handler)
 end
 
 -- DroppedItem ---------------------------------------------------------------
 
-local DroppedItem = class("DroppedItem", "Entity")
+do
+  local DroppedItem = class("DroppedItem", "Entity")
 
-function DroppedItem.item(self)
-  local self_key = ids[self]
-  if self_key == nil or not DroppedItem_is[class_of(self)] then
-    self_key = self_of(self, "DroppedItem")
+  function DroppedItem.item(self)
+    local self_key = ids[self]
+    if self_key == nil or not DroppedItem_is[class_of(self)] then
+      self_key = self_of(self, "DroppedItem")
+    end
+    return prim["DroppedItem.item"](self_key)
   end
-  return prim["DroppedItem.item"](self_key)
-end
 
-function DroppedItem.set_item(self, item)
-  local self_key = ids[self]
-  if self_key == nil or not DroppedItem_is[class_of(self)] then
-    self_key = self_of(self, "DroppedItem")
+  function DroppedItem.set_item(self, item)
+    local self_key = ids[self]
+    if self_key == nil or not DroppedItem_is[class_of(self)] then
+      self_key = self_of(self, "DroppedItem")
+    end
+    return prim["DroppedItem.set_item"](self_key, item)
   end
-  return prim["DroppedItem.set_item"](self_key, item)
-end
 
-function DroppedItem.pickup_delay(self)
-  local self_key = ids[self]
-  if self_key == nil or not DroppedItem_is[class_of(self)] then
-    self_key = self_of(self, "DroppedItem")
+  function DroppedItem.pickup_delay(self)
+    local self_key = ids[self]
+    if self_key == nil or not DroppedItem_is[class_of(self)] then
+      self_key = self_of(self, "DroppedItem")
+    end
+    return prim["DroppedItem.pickup_delay"](self_key)
   end
-  return prim["DroppedItem.pickup_delay"](self_key)
-end
 
-function DroppedItem.set_pickup_delay(self, ticks)
-  local self_key = ids[self]
-  if self_key == nil or not DroppedItem_is[class_of(self)] then
-    self_key = self_of(self, "DroppedItem")
+  function DroppedItem.set_pickup_delay(self, ticks)
+    local self_key = ids[self]
+    if self_key == nil or not DroppedItem_is[class_of(self)] then
+      self_key = self_of(self, "DroppedItem")
+    end
+    return prim["DroppedItem.set_pickup_delay"](self_key, ticks)
   end
-  return prim["DroppedItem.set_pickup_delay"](self_key, ticks)
 end
 
 -- Player --------------------------------------------------------------------
 
-local Player = class("Player", "Living")
-
-function Player.stat(self, name)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
+do
+  local Player = class("Player", "Living")
+
+  function Player.stat(self, name)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.stat"](self_key, name)
+  end
+
+  function Player.stats(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.stats"](self_key)
+  end
+
+  function Player.modifiers(self, source)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.modifiers"](self_key, source)
+  end
+
+  function Player.set_modifiers(self, source, modifiers)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_modifiers"](self_key, source, modifiers)
+  end
+
+  function Player.add_buff(self, buff, ticks)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.add_buff"](self_key, buff, ticks)
+  end
+
+  function Player.remove_buff(self, buff)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.remove_buff"](self_key, buff)
+  end
+
+  function Player.has_buff(self, buff)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.has_buff"](self_key, buff)
+  end
+
+  function Player.buff_ticks(self, buff)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.buff_ticks"](self_key, buff)
+  end
+
+  function Player.buffs(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.buffs"](self_key)
+  end
+
+  function Player.name(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.name"](self_key)
+  end
+
+  function Player.display_name(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.display_name"](self_key)
+  end
+
+  function Player.set_display_name(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_display_name"](self_key, text)
+  end
+
+  function Player.send_message(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.send_message"](self_key, text)
+  end
+
+  function Player.send_actionbar(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.send_actionbar"](self_key, text)
+  end
+
+  function Player.send_title(self, title, subtitle, options)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.send_title"](self_key, title, subtitle, options)
+  end
+
+  function Player.clear_title(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.clear_title"](self_key)
+  end
+
+  function Player.play_sound(self, sound, options)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.play_sound"](self_key, sound, options)
+  end
+
+  function Player.stop_sound(self, sound)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.stop_sound"](self_key, sound)
+  end
+
+  function Player.spawn_particle(self, particle, position, options)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      want_vec3(position, "position")
+    end
+    return prim["Player.spawn_particle"](self_key, particle, position[1], position[2], position[3], options)
+  end
+
+  function Player.run(self, command)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.run"](self_key, command)
+  end
+
+  function Player.has_permission(self, permission)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.has_permission"](self_key, permission)
+  end
+
+  function Player.set_permission(self, permission, value)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    prim["Player.set_permission"](self_key, permission, value)
+  end
+
+  function Player.unset_permission(self, permission)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.unset_permission"](self_key, permission)
+  end
+
+  function Player.permissions(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.permissions"](self_key)
+  end
+
+  function Player.is_operator(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.is_operator"](self_key)
+  end
+
+  function Player.game_mode(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.game_mode"](self_key)
+  end
+
+  function Player.set_game_mode(self, game_mode)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_game_mode"](self_key, game_mode)
+  end
+
+  function Player.food(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.food"](self_key)
+  end
+
+  function Player.set_food(self, food)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_food"](self_key, food)
+  end
+
+  function Player.saturation(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.saturation"](self_key)
+  end
+
+  function Player.set_saturation(self, saturation)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_saturation"](self_key, saturation)
+  end
+
+  function Player.level(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.level"](self_key)
+  end
+
+  function Player.set_level(self, level)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_level"](self_key, level)
+  end
+
+  function Player.experience_progress(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.experience_progress"](self_key)
+  end
+
+  function Player.set_experience_progress(self, progress)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_experience_progress"](self_key, progress)
+  end
+
+  function Player.give_experience(self, points)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.give_experience"](self_key, points)
+  end
+
+  function Player.is_flying(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.is_flying"](self_key)
+  end
+
+  function Player.set_flying(self, flying)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_flying"](self_key, flying)
+  end
+
+  function Player.can_fly(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.can_fly"](self_key)
+  end
+
+  function Player.set_can_fly(self, can_fly)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_can_fly"](self_key, can_fly)
+  end
+
+  function Player.walk_speed(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.walk_speed"](self_key)
+  end
+
+  function Player.set_walk_speed(self, speed)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_walk_speed"](self_key, speed)
+  end
+
+  function Player.fly_speed(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.fly_speed"](self_key)
+  end
+
+  function Player.set_fly_speed(self, speed)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_fly_speed"](self_key, speed)
+  end
+
+  function Player.is_sneaking(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.is_sneaking"](self_key)
+  end
+
+  function Player.is_sprinting(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.is_sprinting"](self_key)
+  end
+
+  function Player.locale(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.locale"](self_key)
+  end
+
+  function Player.ping(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.ping"](self_key)
+  end
+
+  function Player.kick(self, reason)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.kick"](self_key, reason)
+  end
+
+  function Player.first_played(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.first_played"](self_key)
+  end
+
+  function Player.last_seen(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.last_seen"](self_key)
+  end
+
+  function Player.is_banned(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.is_banned"](self_key)
+  end
+
+  function Player.ban(self, options)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    prim["Player.ban"](self_key, options)
+  end
+
+  function Player.unban(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.unban"](self_key)
+  end
+
+  function Player.is_whitelisted(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.is_whitelisted"](self_key)
+  end
+
+  function Player.set_whitelisted(self, whitelisted)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    prim["Player.set_whitelisted"](self_key, whitelisted)
+  end
+
+  function Player.ender_chest(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.ender_chest"](self_key)
+  end
+
+  function Player.sky(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.sky"](self_key)
+  end
+
+  function Player.set_sky(self, sky, options)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    prim["Player.set_sky"](self_key, sky, options)
+  end
+
+  function Player.clear_sky(self, options)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    prim["Player.clear_sky"](self_key, options)
+  end
+
+  function Player.storage(self, name, size)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.storage"](self_key, name, size)
+  end
+
+  function Player.hud(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.hud"](self_key)
+  end
+
+  function Player.held_item(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.held_item"](self_key)
+  end
+
+  function Player.set_held_item(self, item)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_held_item"](self_key, item)
+  end
+
+  function Player.off_hand_item(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.off_hand_item"](self_key)
+  end
+
+  function Player.set_off_hand_item(self, item)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_off_hand_item"](self_key, item)
+  end
+
+  function Player.held_slot(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.held_slot"](self_key)
+  end
+
+  function Player.set_held_slot(self, index)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_held_slot"](self_key, index)
+  end
+
+  function Player.give_item(self, item)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.give_item"](self_key, item)
+  end
+
+  function Player.discover_recipe(self, recipe)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.discover_recipe"](self_key, recipe)
+  end
+
+  function Player.undiscover_recipe(self, recipe)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.undiscover_recipe"](self_key, recipe)
+  end
+
+  function Player.has_discovered_recipe(self, recipe)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.has_discovered_recipe"](self_key, recipe)
+  end
+
+  function Player.grant_advancement(self, advancement, criterion)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.grant_advancement"](self_key, advancement, criterion)
+  end
+
+  function Player.revoke_advancement(self, advancement, criterion)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.revoke_advancement"](self_key, advancement, criterion)
+  end
+
+  function Player.has_advancement(self, advancement)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.has_advancement"](self_key, advancement)
+  end
+
+  function Player.advancement_progress(self, advancement)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.advancement_progress"](self_key, advancement)
+  end
+
+  function Player.item_cooldown(self, key)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.item_cooldown"](self_key, key)
+  end
+
+  function Player.set_item_cooldown(self, key, ticks)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_item_cooldown"](self_key, key, ticks)
+  end
+
+  function Player.open_menu(self, menu, options)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.open_menu"](self_key, menu, options)
+  end
+
+  function Player.menu(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.menu"](self_key)
+  end
+
+  function Player.refresh_items(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.refresh_items"](self_key)
+  end
+
+  function Player.close_menu(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.close_menu"](self_key)
+  end
+
+  function Player.open_inventory(self, inventory)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.open_inventory"](self_key, inventory)
+  end
+
+  function Player.close_inventory(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.close_inventory"](self_key)
+  end
+
+  function Player.open_dialog(self, dialog, options)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.open_dialog"](self_key, dialog, options)
+  end
+
+  function Player.close_dialog(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.close_dialog"](self_key)
+  end
+
+  function Player.sidebar(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.sidebar"](self_key)
+  end
+
+  function Player.border(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.border"](self_key)
+  end
+
+  function Player.has_own_border(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.has_own_border"](self_key)
+  end
+
+  function Player.reset_border(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.reset_border"](self_key)
+  end
+
+  function Player.tab_header(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.tab_header"](self_key)
+  end
+
+  function Player.set_tab_header(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_tab_header"](self_key, text)
+  end
+
+  function Player.tab_footer(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.tab_footer"](self_key)
+  end
+
+  function Player.set_tab_footer(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_tab_footer"](self_key, text)
+  end
+
+  function Player.tab_name(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.tab_name"](self_key)
+  end
+
+  function Player.set_tab_name(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_tab_name"](self_key, text)
+  end
+
+  function Player.tab_order(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.tab_order"](self_key)
+  end
+
+  function Player.set_tab_order(self, order)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_tab_order"](self_key, order)
+  end
+
+  function Player.is_listed_for(self, viewer)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.is_listed_for"](self_key, viewer)
+  end
+
+  function Player.set_listed_for(self, viewer, listed)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_listed_for"](self_key, viewer, listed)
+  end
+
+  function Player.below_name(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.below_name"](self_key)
+  end
+
+  function Player.set_below_name(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_below_name"](self_key, text)
+  end
+
+  function Player.bossbars(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.bossbars"](self_key)
+  end
+
+  function Player.resource_pack_status(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.resource_pack_status"](self_key)
+  end
+
+  function Player.send_block_change(self, location_or_position, state)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.send_block_change"](self_key, location_or_position, state)
+  end
+
+  function Player.reset_block(self, location_or_position)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.reset_block"](self_key, location_or_position)
+  end
+
+  function Player.send_equipment_change(self, entity, slot, item)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.send_equipment_change"](self_key, entity, slot, item)
+  end
+
+  function Player.camera(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.camera"](self_key)
+  end
+
+  function Player.set_camera(self, entity)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_camera"](self_key, entity)
+  end
+
+  function Player.compass_target(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.compass_target"](self_key)
+  end
+
+  function Player.set_compass_target(self, location)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_compass_target"](self_key, location)
+  end
+
+  function Player.open_book(self, pages)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.open_book"](self_key, pages)
+  end
+
+  function Player.view_distance(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.view_distance"](self_key)
+  end
+
+  function Player.set_view_distance(self, distance)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_view_distance"](self_key, distance)
+  end
+
+  function Player.data(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.data"](self_key)
+  end
+
+  function Player.session(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.session"](self_key)
+  end
+
+  function Player.on(self, event, handler, options)
+    if ids[self] == nil or not Player_is[class_of(self)] then
+      self_of(self, "Player")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.Player.on(self, event, handler, options)
+  end
+
+  function Player.once(self, event, handler)
+    if ids[self] == nil or not Player_is[class_of(self)] then
+      self_of(self, "Player")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.Player.once(self, event, handler)
   end
-  return prim["Player.stat"](self_key, name)
-end
-
-function Player.stats(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.stats"](self_key)
-end
-
-function Player.modifiers(self, source)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.modifiers"](self_key, source)
-end
-
-function Player.set_modifiers(self, source, modifiers)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_modifiers"](self_key, source, modifiers)
-end
-
-function Player.add_buff(self, buff, ticks)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.add_buff"](self_key, buff, ticks)
-end
-
-function Player.remove_buff(self, buff)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.remove_buff"](self_key, buff)
-end
-
-function Player.has_buff(self, buff)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.has_buff"](self_key, buff)
-end
-
-function Player.buff_ticks(self, buff)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.buff_ticks"](self_key, buff)
-end
-
-function Player.buffs(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.buffs"](self_key)
-end
-
-function Player.name(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.name"](self_key)
-end
-
-function Player.display_name(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.display_name"](self_key)
-end
-
-function Player.set_display_name(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_display_name"](self_key, text)
-end
-
-function Player.send_message(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.send_message"](self_key, text)
-end
-
-function Player.send_actionbar(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.send_actionbar"](self_key, text)
-end
-
-function Player.send_title(self, title, subtitle, options)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.send_title"](self_key, title, subtitle, options)
-end
-
-function Player.clear_title(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.clear_title"](self_key)
-end
-
-function Player.play_sound(self, sound, options)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.play_sound"](self_key, sound, options)
-end
-
-function Player.stop_sound(self, sound)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.stop_sound"](self_key, sound)
-end
-
-function Player.spawn_particle(self, particle, position, options)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  if genuine_mt(position) ~= Vec3_mt then
-    want_vec3(position, "position")
-  end
-  return prim["Player.spawn_particle"](self_key, particle, position[1], position[2], position[3], options)
-end
-
-function Player.run(self, command)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.run"](self_key, command)
-end
-
-function Player.has_permission(self, permission)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.has_permission"](self_key, permission)
-end
-
-function Player.set_permission(self, permission, value)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  prim["Player.set_permission"](self_key, permission, value)
-end
-
-function Player.unset_permission(self, permission)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.unset_permission"](self_key, permission)
-end
-
-function Player.permissions(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.permissions"](self_key)
-end
-
-function Player.is_operator(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.is_operator"](self_key)
-end
-
-function Player.game_mode(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.game_mode"](self_key)
-end
-
-function Player.set_game_mode(self, game_mode)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_game_mode"](self_key, game_mode)
-end
-
-function Player.food(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.food"](self_key)
-end
-
-function Player.set_food(self, food)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_food"](self_key, food)
-end
-
-function Player.saturation(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.saturation"](self_key)
-end
-
-function Player.set_saturation(self, saturation)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_saturation"](self_key, saturation)
-end
-
-function Player.level(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.level"](self_key)
-end
-
-function Player.set_level(self, level)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_level"](self_key, level)
-end
-
-function Player.experience_progress(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.experience_progress"](self_key)
-end
-
-function Player.set_experience_progress(self, progress)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_experience_progress"](self_key, progress)
-end
-
-function Player.give_experience(self, points)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.give_experience"](self_key, points)
-end
-
-function Player.is_flying(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.is_flying"](self_key)
-end
-
-function Player.set_flying(self, flying)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_flying"](self_key, flying)
-end
-
-function Player.can_fly(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.can_fly"](self_key)
-end
-
-function Player.set_can_fly(self, can_fly)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_can_fly"](self_key, can_fly)
-end
-
-function Player.walk_speed(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.walk_speed"](self_key)
-end
-
-function Player.set_walk_speed(self, speed)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_walk_speed"](self_key, speed)
-end
-
-function Player.fly_speed(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.fly_speed"](self_key)
-end
-
-function Player.set_fly_speed(self, speed)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_fly_speed"](self_key, speed)
-end
-
-function Player.is_sneaking(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.is_sneaking"](self_key)
-end
-
-function Player.is_sprinting(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.is_sprinting"](self_key)
-end
-
-function Player.locale(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.locale"](self_key)
-end
-
-function Player.ping(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.ping"](self_key)
-end
-
-function Player.kick(self, reason)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.kick"](self_key, reason)
-end
-
-function Player.first_played(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.first_played"](self_key)
-end
-
-function Player.last_seen(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.last_seen"](self_key)
-end
-
-function Player.is_banned(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.is_banned"](self_key)
-end
-
-function Player.ban(self, options)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  prim["Player.ban"](self_key, options)
-end
-
-function Player.unban(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.unban"](self_key)
-end
-
-function Player.is_whitelisted(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.is_whitelisted"](self_key)
-end
-
-function Player.set_whitelisted(self, whitelisted)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  prim["Player.set_whitelisted"](self_key, whitelisted)
-end
-
-function Player.ender_chest(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.ender_chest"](self_key)
-end
-
-function Player.sky(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.sky"](self_key)
-end
-
-function Player.set_sky(self, sky, options)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  prim["Player.set_sky"](self_key, sky, options)
-end
-
-function Player.clear_sky(self, options)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  prim["Player.clear_sky"](self_key, options)
-end
-
-function Player.storage(self, name, size)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.storage"](self_key, name, size)
-end
-
-function Player.hud(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.hud"](self_key)
-end
-
-function Player.held_item(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.held_item"](self_key)
-end
-
-function Player.set_held_item(self, item)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_held_item"](self_key, item)
-end
-
-function Player.off_hand_item(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.off_hand_item"](self_key)
-end
-
-function Player.set_off_hand_item(self, item)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_off_hand_item"](self_key, item)
-end
-
-function Player.held_slot(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.held_slot"](self_key)
-end
-
-function Player.set_held_slot(self, index)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_held_slot"](self_key, index)
-end
-
-function Player.give_item(self, item)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.give_item"](self_key, item)
-end
-
-function Player.discover_recipe(self, recipe)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.discover_recipe"](self_key, recipe)
-end
-
-function Player.undiscover_recipe(self, recipe)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.undiscover_recipe"](self_key, recipe)
-end
-
-function Player.has_discovered_recipe(self, recipe)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.has_discovered_recipe"](self_key, recipe)
-end
-
-function Player.grant_advancement(self, advancement, criterion)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.grant_advancement"](self_key, advancement, criterion)
-end
-
-function Player.revoke_advancement(self, advancement, criterion)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.revoke_advancement"](self_key, advancement, criterion)
-end
-
-function Player.has_advancement(self, advancement)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.has_advancement"](self_key, advancement)
-end
-
-function Player.advancement_progress(self, advancement)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.advancement_progress"](self_key, advancement)
-end
-
-function Player.item_cooldown(self, key)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.item_cooldown"](self_key, key)
-end
-
-function Player.set_item_cooldown(self, key, ticks)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_item_cooldown"](self_key, key, ticks)
-end
-
-function Player.open_menu(self, menu, options)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.open_menu"](self_key, menu, options)
-end
-
-function Player.menu(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.menu"](self_key)
-end
-
-function Player.refresh_items(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.refresh_items"](self_key)
-end
-
-function Player.close_menu(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.close_menu"](self_key)
-end
-
-function Player.open_inventory(self, inventory)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.open_inventory"](self_key, inventory)
-end
-
-function Player.close_inventory(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.close_inventory"](self_key)
-end
-
-function Player.open_dialog(self, dialog, options)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.open_dialog"](self_key, dialog, options)
-end
-
-function Player.close_dialog(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.close_dialog"](self_key)
-end
-
-function Player.sidebar(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.sidebar"](self_key)
-end
-
-function Player.border(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.border"](self_key)
-end
-
-function Player.has_own_border(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.has_own_border"](self_key)
-end
-
-function Player.reset_border(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.reset_border"](self_key)
-end
-
-function Player.tab_header(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.tab_header"](self_key)
-end
-
-function Player.set_tab_header(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_tab_header"](self_key, text)
-end
-
-function Player.tab_footer(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.tab_footer"](self_key)
-end
-
-function Player.set_tab_footer(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_tab_footer"](self_key, text)
-end
-
-function Player.tab_name(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.tab_name"](self_key)
-end
-
-function Player.set_tab_name(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_tab_name"](self_key, text)
-end
-
-function Player.tab_order(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.tab_order"](self_key)
-end
-
-function Player.set_tab_order(self, order)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_tab_order"](self_key, order)
-end
-
-function Player.is_listed_for(self, viewer)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.is_listed_for"](self_key, viewer)
-end
-
-function Player.set_listed_for(self, viewer, listed)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_listed_for"](self_key, viewer, listed)
-end
-
-function Player.below_name(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.below_name"](self_key)
-end
-
-function Player.set_below_name(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_below_name"](self_key, text)
-end
-
-function Player.bossbars(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.bossbars"](self_key)
-end
-
-function Player.resource_pack_status(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.resource_pack_status"](self_key)
-end
-
-function Player.send_block_change(self, location_or_position, state)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.send_block_change"](self_key, location_or_position, state)
-end
-
-function Player.reset_block(self, location_or_position)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.reset_block"](self_key, location_or_position)
-end
-
-function Player.send_equipment_change(self, entity, slot, item)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.send_equipment_change"](self_key, entity, slot, item)
-end
-
-function Player.camera(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.camera"](self_key)
-end
-
-function Player.set_camera(self, entity)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_camera"](self_key, entity)
-end
-
-function Player.compass_target(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.compass_target"](self_key)
-end
-
-function Player.set_compass_target(self, location)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_compass_target"](self_key, location)
-end
-
-function Player.open_book(self, pages)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.open_book"](self_key, pages)
-end
-
-function Player.view_distance(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.view_distance"](self_key)
-end
-
-function Player.set_view_distance(self, distance)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.set_view_distance"](self_key, distance)
-end
-
-function Player.data(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.data"](self_key)
-end
-
-function Player.session(self)
-  local self_key = ids[self]
-  if self_key == nil or not Player_is[class_of(self)] then
-    self_key = self_of(self, "Player")
-  end
-  return prim["Player.session"](self_key)
-end
-
-function Player.on(self, event, handler, options)
-  if ids[self] == nil or not Player_is[class_of(self)] then
-    self_of(self, "Player")
-  end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  if options ~= nil then
-    check_shape(options, "options", "EventOptions")
-  end
-  return hand.Player.on(self, event, handler, options)
-end
-
-function Player.once(self, event, handler)
-  if ids[self] == nil or not Player_is[class_of(self)] then
-    self_of(self, "Player")
-  end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  return hand.Player.once(self, event, handler)
 end
 
 -- Sender --------------------------------------------------------------------
 
-local Sender = class("Sender")
+do
+  local Sender = class("Sender")
 
-function new.Sender(id)
-  return prim["handles.new"]("Sender", id)
-end
-
----@param handle table
----@return string id
-function keys.Sender(handle)
-  return prim["handles.key"](handle)
-end
-
-function Sender.name(self)
-  local self_key = ids[self]
-  if self_key == nil or not Sender_is[class_of(self)] then
-    self_key = self_of(self, "Sender")
+  function new.Sender(id)
+    return prim["handles.new"]("Sender", id)
   end
-  return prim["Sender.name"](self_key)
-end
 
-function Sender.send_message(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not Sender_is[class_of(self)] then
-    self_key = self_of(self, "Sender")
+  ---@param handle table
+  ---@return string id
+  function keys.Sender(handle)
+    return prim["handles.key"](handle)
   end
-  return prim["Sender.send_message"](self_key, text)
-end
 
-function Sender.has_permission(self, permission)
-  local self_key = ids[self]
-  if self_key == nil or not Sender_is[class_of(self)] then
-    self_key = self_of(self, "Sender")
+  function Sender.name(self)
+    local self_key = ids[self]
+    if self_key == nil or not Sender_is[class_of(self)] then
+      self_key = self_of(self, "Sender")
+    end
+    return prim["Sender.name"](self_key)
   end
-  return prim["Sender.has_permission"](self_key, permission)
-end
 
-function Sender.is_player(self)
-  local self_key = ids[self]
-  if self_key == nil or not Sender_is[class_of(self)] then
-    self_key = self_of(self, "Sender")
+  function Sender.send_message(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not Sender_is[class_of(self)] then
+      self_key = self_of(self, "Sender")
+    end
+    return prim["Sender.send_message"](self_key, text)
   end
-  return prim["Sender.is_player"](self_key)
-end
 
-function Sender.is_console(self)
-  local self_key = ids[self]
-  if self_key == nil or not Sender_is[class_of(self)] then
-    self_key = self_of(self, "Sender")
+  function Sender.has_permission(self, permission)
+    local self_key = ids[self]
+    if self_key == nil or not Sender_is[class_of(self)] then
+      self_key = self_of(self, "Sender")
+    end
+    return prim["Sender.has_permission"](self_key, permission)
   end
-  return prim["Sender.is_console"](self_key)
+
+  function Sender.is_player(self)
+    local self_key = ids[self]
+    if self_key == nil or not Sender_is[class_of(self)] then
+      self_key = self_of(self, "Sender")
+    end
+    return prim["Sender.is_player"](self_key)
+  end
+
+  function Sender.is_console(self)
+    local self_key = ids[self]
+    if self_key == nil or not Sender_is[class_of(self)] then
+      self_key = self_of(self, "Sender")
+    end
+    return prim["Sender.is_console"](self_key)
+  end
 end
 
 -- World ---------------------------------------------------------------------
 
-local World = class("World")
+do
+  local World = class("World")
 
-function new.World(name)
-  return prim["handles.new"]("World", name)
-end
+  function new.World(name)
+    return prim["handles.new"]("World", name)
+  end
 
----@param handle table
----@return string name
-function keys.World(handle)
-  return prim["handles.key"](handle)
-end
+  ---@param handle table
+  ---@return string name
+  function keys.World(handle)
+    return prim["handles.key"](handle)
+  end
 
-function World.name(self)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.name(self)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.name"](self_key)
   end
-  return prim["World.name"](self_key)
-end
 
-function World.exists(self)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.exists(self)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.exists"](self_key)
   end
-  return prim["World.exists"](self_key)
-end
 
-function World.environment(self)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.environment(self)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.environment"](self_key)
   end
-  return prim["World.environment"](self_key)
-end
 
-function World.time_of_day(self)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.time_of_day(self)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.time_of_day"](self_key)
   end
-  return prim["World.time_of_day"](self_key)
-end
 
-function World.set_time_of_day(self, ticks)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.set_time_of_day(self, ticks)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.set_time_of_day"](self_key, ticks)
   end
-  return prim["World.set_time_of_day"](self_key, ticks)
-end
 
-function World.is_night(self)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.is_night(self)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.is_night"](self_key)
   end
-  return prim["World.is_night"](self_key)
-end
 
-function World.is_day(self)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.is_day(self)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.is_day"](self_key)
   end
-  return prim["World.is_day"](self_key)
-end
 
-function World.day_count(self)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.day_count(self)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.day_count"](self_key)
   end
-  return prim["World.day_count"](self_key)
-end
 
-function World.moon_phase(self)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.moon_phase(self)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.moon_phase"](self_key)
   end
-  return prim["World.moon_phase"](self_key)
-end
 
-function World.weather(self)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.weather(self)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.weather"](self_key)
   end
-  return prim["World.weather"](self_key)
-end
 
-function World.set_weather(self, weather, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.set_weather(self, weather, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.set_weather"](self_key, weather, options)
   end
-  return prim["World.set_weather"](self_key, weather, options)
-end
 
-function World.sky(self)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.sky(self)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.sky"](self_key)
   end
-  return prim["World.sky"](self_key)
-end
 
-function World.set_sky(self, sky, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.set_sky(self, sky, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.set_sky"](self_key, sky, options)
   end
-  return prim["World.set_sky"](self_key, sky, options)
-end
 
-function World.clear_sky(self, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.clear_sky(self, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    prim["World.clear_sky"](self_key, options)
   end
-  prim["World.clear_sky"](self_key, options)
-end
 
-function World.spawn_location(self)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.spawn_location(self)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.spawn_location"](self_key)
   end
-  return prim["World.spawn_location"](self_key)
-end
 
-function World.set_spawn_location(self, location_or_position)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.set_spawn_location(self, location_or_position)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.set_spawn_location"](self_key, location_or_position)
   end
-  return prim["World.set_spawn_location"](self_key, location_or_position)
-end
 
-function World.min_height(self)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.min_height(self)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.min_height"](self_key)
   end
-  return prim["World.min_height"](self_key)
-end
 
-function World.max_height(self)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.max_height(self)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.max_height"](self_key)
   end
-  return prim["World.max_height"](self_key)
-end
 
-function World.block(self, position)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.block(self, position)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      want_vec3(position, "position")
+    end
+    return prim["World.block"](self_key, position[1], position[2], position[3])
   end
-  if genuine_mt(position) ~= Vec3_mt then
-    want_vec3(position, "position")
-  end
-  return prim["World.block"](self_key, position[1], position[2], position[3])
-end
 
-function World.blocks(self, from, to, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.blocks(self, from, to, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(from) ~= Vec3_mt then
+      want_vec3(from, "from")
+    end
+    if genuine_mt(to) ~= Vec3_mt then
+      want_vec3(to, "to")
+    end
+    return prim["World.blocks"](self_key, from[1], from[2], from[3], to[1], to[2], to[3], options)
   end
-  if genuine_mt(from) ~= Vec3_mt then
-    want_vec3(from, "from")
-  end
-  if genuine_mt(to) ~= Vec3_mt then
-    want_vec3(to, "to")
-  end
-  return prim["World.blocks"](self_key, from[1], from[2], from[3], to[1], to[2], to[3], options)
-end
 
-function World.flood(self, start, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.flood(self, start, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(start) ~= Vec3_mt then
+      want_vec3(start, "start")
+    end
+    return prim["World.flood"](self_key, start[1], start[2], start[3], options)
   end
-  if genuine_mt(start) ~= Vec3_mt then
-    want_vec3(start, "start")
-  end
-  return prim["World.flood"](self_key, start[1], start[2], start[3], options)
-end
 
-function World.set_block(self, position, state, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.set_block(self, position, state, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      want_vec3(position, "position")
+    end
+    return prim["World.set_block"](self_key, position[1], position[2], position[3], state, options)
   end
-  if genuine_mt(position) ~= Vec3_mt then
-    want_vec3(position, "position")
-  end
-  return prim["World.set_block"](self_key, position[1], position[2], position[3], state, options)
-end
 
-function World.fill_blocks(self, from, to, state, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.fill_blocks(self, from, to, state, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(from) ~= Vec3_mt then
+      want_vec3(from, "from")
+    end
+    if genuine_mt(to) ~= Vec3_mt then
+      want_vec3(to, "to")
+    end
+    return prim["World.fill_blocks"](self_key, from[1], from[2], from[3], to[1], to[2], to[3], state, options)
   end
-  if genuine_mt(from) ~= Vec3_mt then
-    want_vec3(from, "from")
-  end
-  if genuine_mt(to) ~= Vec3_mt then
-    want_vec3(to, "to")
-  end
-  return prim["World.fill_blocks"](self_key, from[1], from[2], from[3], to[1], to[2], to[3], state, options)
-end
 
-function World.highest_block(self, position)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.highest_block(self, position)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      want_vec3(position, "position")
+    end
+    return prim["World.highest_block"](self_key, position[1], position[2], position[3])
   end
-  if genuine_mt(position) ~= Vec3_mt then
-    want_vec3(position, "position")
-  end
-  return prim["World.highest_block"](self_key, position[1], position[2], position[3])
-end
 
-function World.is_chunk_loaded(self, position)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.is_chunk_loaded(self, position)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      want_vec3(position, "position")
+    end
+    return prim["World.is_chunk_loaded"](self_key, position[1], position[2], position[3])
   end
-  if genuine_mt(position) ~= Vec3_mt then
-    want_vec3(position, "position")
-  end
-  return prim["World.is_chunk_loaded"](self_key, position[1], position[2], position[3])
-end
 
-function World.load_chunk(self, position)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.load_chunk(self, position)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      want_vec3(position, "position")
+    end
+    return prim["World.load_chunk"](self_key, position[1], position[2], position[3])
   end
-  if genuine_mt(position) ~= Vec3_mt then
-    want_vec3(position, "position")
-  end
-  return prim["World.load_chunk"](self_key, position[1], position[2], position[3])
-end
 
-function World.locate_biome(self, id, options, callback)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.locate_biome(self, id, options, callback)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    local waker, task, token, scope = async.begin("World:locate_biome", callback)
+    local wait_id = prim["World.locate_biome"](self_key, id, options, scope, waker)
+    if task ~= nil then
+      local value, err = async.wait(task, token, wait_id)
+      return value, err
+    end
   end
-  local waker, task, token, scope = async.begin("World:locate_biome", callback)
-  local wait_id = prim["World.locate_biome"](self_key, id, options, scope, waker)
-  if task ~= nil then
-    local value, err = async.wait(task, token, wait_id)
-    return value, err
-  end
-end
 
-function World.players(self)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.players(self)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.players"](self_key)
   end
-  return prim["World.players"](self_key)
-end
 
-function World.centities(self, filter)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.centities(self, filter)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.centities"](self_key, filter)
   end
-  return prim["World.centities"](self_key, filter)
-end
 
-function World.entities(self, filter)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.entities(self, filter)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.entities"](self_key, filter)
   end
-  return prim["World.entities"](self_key, filter)
-end
 
-function World.spawn_entity(self, kind, location_or_position, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.spawn_entity(self, kind, location_or_position, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.spawn_entity"](self_key, kind, location_or_position, options)
   end
-  return prim["World.spawn_entity"](self_key, kind, location_or_position, options)
-end
 
-function World.spawn_item(self, position, item)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.spawn_item(self, position, item)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      want_vec3(position, "position")
+    end
+    return prim["World.spawn_item"](self_key, position[1], position[2], position[3], item)
   end
-  if genuine_mt(position) ~= Vec3_mt then
-    want_vec3(position, "position")
-  end
-  return prim["World.spawn_item"](self_key, position[1], position[2], position[3], item)
-end
 
-function World.spawn_particle(self, particle, position, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.spawn_particle(self, particle, position, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      want_vec3(position, "position")
+    end
+    return prim["World.spawn_particle"](self_key, particle, position[1], position[2], position[3], options)
   end
-  if genuine_mt(position) ~= Vec3_mt then
-    want_vec3(position, "position")
-  end
-  return prim["World.spawn_particle"](self_key, particle, position[1], position[2], position[3], options)
-end
 
-function World.play_sound(self, sound, position, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.play_sound(self, sound, position, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      want_vec3(position, "position")
+    end
+    return prim["World.play_sound"](self_key, sound, position[1], position[2], position[3], options)
   end
-  if genuine_mt(position) ~= Vec3_mt then
-    want_vec3(position, "position")
-  end
-  return prim["World.play_sound"](self_key, sound, position[1], position[2], position[3], options)
-end
 
-function World.explode(self, position, power, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.explode(self, position, power, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      want_vec3(position, "position")
+    end
+    return prim["World.explode"](self_key, position[1], position[2], position[3], power, options)
   end
-  if genuine_mt(position) ~= Vec3_mt then
-    want_vec3(position, "position")
-  end
-  return prim["World.explode"](self_key, position[1], position[2], position[3], power, options)
-end
 
-function World.strike_lightning(self, position, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.strike_lightning(self, position, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      want_vec3(position, "position")
+    end
+    return prim["World.strike_lightning"](self_key, position[1], position[2], position[3], options)
   end
-  if genuine_mt(position) ~= Vec3_mt then
-    want_vec3(position, "position")
-  end
-  return prim["World.strike_lightning"](self_key, position[1], position[2], position[3], options)
-end
 
-function World.raycast(self, from, direction, max_distance, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.raycast(self, from, direction, max_distance, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(from) ~= Vec3_mt then
+      want_vec3(from, "from")
+    end
+    if genuine_mt(direction) ~= Vec3_mt then
+      want_vec3(direction, "direction")
+    end
+    return prim["World.raycast"](self_key, from[1], from[2], from[3], direction[1], direction[2], direction[3], max_distance, options)
   end
-  if genuine_mt(from) ~= Vec3_mt then
-    want_vec3(from, "from")
-  end
-  if genuine_mt(direction) ~= Vec3_mt then
-    want_vec3(direction, "direction")
-  end
-  return prim["World.raycast"](self_key, from[1], from[2], from[3], direction[1], direction[2], direction[3], max_distance, options)
-end
 
-function World.overlap_box(self, min, max, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.overlap_box(self, min, max, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(min) ~= Vec3_mt then
+      want_vec3(min, "min")
+    end
+    if genuine_mt(max) ~= Vec3_mt then
+      want_vec3(max, "max")
+    end
+    return prim["World.overlap_box"](self_key, min[1], min[2], min[3], max[1], max[2], max[3], options)
   end
-  if genuine_mt(min) ~= Vec3_mt then
-    want_vec3(min, "min")
-  end
-  if genuine_mt(max) ~= Vec3_mt then
-    want_vec3(max, "max")
-  end
-  return prim["World.overlap_box"](self_key, min[1], min[2], min[3], max[1], max[2], max[3], options)
-end
 
-function World.overlap_sphere(self, center, radius, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.overlap_sphere(self, center, radius, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(center) ~= Vec3_mt then
+      want_vec3(center, "center")
+    end
+    return prim["World.overlap_sphere"](self_key, center[1], center[2], center[3], radius, options)
   end
-  if genuine_mt(center) ~= Vec3_mt then
-    want_vec3(center, "center")
-  end
-  return prim["World.overlap_sphere"](self_key, center[1], center[2], center[3], radius, options)
-end
 
-function World.overlap_cone(self, origin, direction, length, angle, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.overlap_cone(self, origin, direction, length, angle, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(origin) ~= Vec3_mt then
+      want_vec3(origin, "origin")
+    end
+    if genuine_mt(direction) ~= Vec3_mt then
+      want_vec3(direction, "direction")
+    end
+    return prim["World.overlap_cone"](self_key, origin[1], origin[2], origin[3], direction[1], direction[2], direction[3], length, angle, options)
   end
-  if genuine_mt(origin) ~= Vec3_mt then
-    want_vec3(origin, "origin")
-  end
-  if genuine_mt(direction) ~= Vec3_mt then
-    want_vec3(direction, "direction")
-  end
-  return prim["World.overlap_cone"](self_key, origin[1], origin[2], origin[3], direction[1], direction[2], direction[3], length, angle, options)
-end
 
-function World.sweep(self, from, to, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.sweep(self, from, to, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(from) ~= Vec3_mt then
+      want_vec3(from, "from")
+    end
+    if genuine_mt(to) ~= Vec3_mt then
+      want_vec3(to, "to")
+    end
+    return prim["World.sweep"](self_key, from[1], from[2], from[3], to[1], to[2], to[3], options)
   end
-  if genuine_mt(from) ~= Vec3_mt then
-    want_vec3(from, "from")
-  end
-  if genuine_mt(to) ~= Vec3_mt then
-    want_vec3(to, "to")
-  end
-  return prim["World.sweep"](self_key, from[1], from[2], from[3], to[1], to[2], to[3], options)
-end
 
-function World.nearest(self, position, radius, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.nearest(self, position, radius, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      want_vec3(position, "position")
+    end
+    return prim["World.nearest"](self_key, position[1], position[2], position[3], radius, options)
   end
-  if genuine_mt(position) ~= Vec3_mt then
-    want_vec3(position, "position")
-  end
-  return prim["World.nearest"](self_key, position[1], position[2], position[3], radius, options)
-end
 
-function World.game_rule(self, rule)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.game_rule(self, rule)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.game_rule"](self_key, rule)
   end
-  return prim["World.game_rule"](self_key, rule)
-end
 
-function World.set_game_rule(self, rule, value)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.set_game_rule(self, rule, value)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.set_game_rule"](self_key, rule, value)
   end
-  return prim["World.set_game_rule"](self_key, rule, value)
-end
 
-function World.spawn_limit(self, category)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.spawn_limit(self, category)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.spawn_limit"](self_key, category)
   end
-  return prim["World.spawn_limit"](self_key, category)
-end
 
-function World.set_spawn_limit(self, category, limit)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.set_spawn_limit(self, category, limit)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.set_spawn_limit"](self_key, category, limit)
   end
-  return prim["World.set_spawn_limit"](self_key, category, limit)
-end
 
-function World.spawn_interval(self, category)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.spawn_interval(self, category)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.spawn_interval"](self_key, category)
   end
-  return prim["World.spawn_interval"](self_key, category)
-end
 
-function World.set_spawn_interval(self, category, ticks)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.set_spawn_interval(self, category, ticks)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.set_spawn_interval"](self_key, category, ticks)
   end
-  return prim["World.set_spawn_interval"](self_key, category, ticks)
-end
 
-function World.is_managed(self)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.is_managed(self)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.is_managed"](self_key)
   end
-  return prim["World.is_managed"](self_key)
-end
 
-function World.unload(self, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.unload(self, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.unload"](self_key, options)
   end
-  return prim["World.unload"](self_key, options)
-end
 
-function World.border(self)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.border(self)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    return prim["World.border"](self_key)
   end
-  return prim["World.border"](self_key)
-end
 
-function World.save_structure(self, id, from, to, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.save_structure(self, id, from, to, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(from) ~= Vec3_mt then
+      want_vec3(from, "from")
+    end
+    if genuine_mt(to) ~= Vec3_mt then
+      want_vec3(to, "to")
+    end
+    return prim["World.save_structure"](self_key, id, from[1], from[2], from[3], to[1], to[2], to[3], options)
   end
-  if genuine_mt(from) ~= Vec3_mt then
-    want_vec3(from, "from")
-  end
-  if genuine_mt(to) ~= Vec3_mt then
-    want_vec3(to, "to")
-  end
-  return prim["World.save_structure"](self_key, id, from[1], from[2], from[3], to[1], to[2], to[3], options)
-end
 
-function World.place_structure(self, id, position, options)
-  local self_key = ids[self]
-  if self_key == nil or not World_is[class_of(self)] then
-    self_key = self_of(self, "World")
+  function World.place_structure(self, id, position, options)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      want_vec3(position, "position")
+    end
+    return prim["World.place_structure"](self_key, id, position[1], position[2], position[3], options)
   end
-  if genuine_mt(position) ~= Vec3_mt then
-    want_vec3(position, "position")
-  end
-  return prim["World.place_structure"](self_key, id, position[1], position[2], position[3], options)
-end
 
-function World.location(self, position, yaw, pitch)
-  if ids[self] == nil or not World_is[class_of(self)] then
-    self_of(self, "World")
+  function World.location(self, position, yaw, pitch)
+    if ids[self] == nil or not World_is[class_of(self)] then
+      self_of(self, "World")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      vector_arg(position, "position", 2)
+    end
+    if yaw ~= nil and type_of(yaw) ~= "number" then
+      want_opt(yaw, "number", "yaw")
+    end
+    if pitch ~= nil and type_of(pitch) ~= "number" then
+      want_opt(pitch, "number", "pitch")
+    end
+    return hand.World.location(self, position, yaw, pitch)
   end
-  if genuine_mt(position) ~= Vec3_mt then
-    vector_arg(position, "position", 2)
-  end
-  if yaw ~= nil and type_of(yaw) ~= "number" then
-    want_opt(yaw, "number", "yaw")
-  end
-  if pitch ~= nil and type_of(pitch) ~= "number" then
-    want_opt(pitch, "number", "pitch")
-  end
-  return hand.World.location(self, position, yaw, pitch)
-end
 
-function World.on(self, event, handler, options)
-  if ids[self] == nil or not World_is[class_of(self)] then
-    self_of(self, "World")
+  function World.on(self, event, handler, options)
+    if ids[self] == nil or not World_is[class_of(self)] then
+      self_of(self, "World")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.World.on(self, event, handler, options)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  if options ~= nil then
-    check_shape(options, "options", "EventOptions")
-  end
-  return hand.World.on(self, event, handler, options)
-end
 
-function World.once(self, event, handler)
-  if ids[self] == nil or not World_is[class_of(self)] then
-    self_of(self, "World")
+  function World.once(self, event, handler)
+    if ids[self] == nil or not World_is[class_of(self)] then
+      self_of(self, "World")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.World.once(self, event, handler)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  return hand.World.once(self, event, handler)
 end
 
 -- WorldBorder ---------------------------------------------------------------
 
-local WorldBorder = class("WorldBorder")
+do
+  local WorldBorder = class("WorldBorder")
 
-function new.WorldBorder(owner, id)
-  return prim["handles.new"]("WorldBorder", owner, id)
-end
+  function new.WorldBorder(owner, id)
+    return prim["handles.new"]("WorldBorder", owner, id)
+  end
 
----@param handle table
----@return string owner
----@return string id
-function keys.WorldBorder(handle)
-  return prim["handles.key"](handle)
-end
+  ---@param handle table
+  ---@return string owner
+  ---@return string id
+  function keys.WorldBorder(handle)
+    return prim["handles.key"](handle)
+  end
 
-function WorldBorder.center(self)
-  local self_key = ids[self]
-  if self_key == nil or not WorldBorder_is[class_of(self)] then
-    self_key = self_of(self, "WorldBorder")
+  function WorldBorder.center(self)
+    local self_key = ids[self]
+    if self_key == nil or not WorldBorder_is[class_of(self)] then
+      self_key = self_of(self, "WorldBorder")
+    end
+    local result_x, result_y, result_z = prim["WorldBorder.center"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
   end
-  local result_x, result_y, result_z = prim["WorldBorder.center"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
 
-function WorldBorder.set_center(self, center)
-  local self_key = ids[self]
-  if self_key == nil or not WorldBorder_is[class_of(self)] then
-    self_key = self_of(self, "WorldBorder")
+  function WorldBorder.set_center(self, center)
+    local self_key = ids[self]
+    if self_key == nil or not WorldBorder_is[class_of(self)] then
+      self_key = self_of(self, "WorldBorder")
+    end
+    if genuine_mt(center) ~= Vec3_mt then
+      want_vec3(center, "center")
+    end
+    return prim["WorldBorder.set_center"](self_key, center[1], center[2], center[3])
   end
-  if genuine_mt(center) ~= Vec3_mt then
-    want_vec3(center, "center")
-  end
-  return prim["WorldBorder.set_center"](self_key, center[1], center[2], center[3])
-end
 
-function WorldBorder.size(self)
-  local self_key = ids[self]
-  if self_key == nil or not WorldBorder_is[class_of(self)] then
-    self_key = self_of(self, "WorldBorder")
+  function WorldBorder.size(self)
+    local self_key = ids[self]
+    if self_key == nil or not WorldBorder_is[class_of(self)] then
+      self_key = self_of(self, "WorldBorder")
+    end
+    return prim["WorldBorder.size"](self_key)
   end
-  return prim["WorldBorder.size"](self_key)
-end
 
-function WorldBorder.set_size(self, size, options)
-  local self_key = ids[self]
-  if self_key == nil or not WorldBorder_is[class_of(self)] then
-    self_key = self_of(self, "WorldBorder")
+  function WorldBorder.set_size(self, size, options)
+    local self_key = ids[self]
+    if self_key == nil or not WorldBorder_is[class_of(self)] then
+      self_key = self_of(self, "WorldBorder")
+    end
+    return prim["WorldBorder.set_size"](self_key, size, options)
   end
-  return prim["WorldBorder.set_size"](self_key, size, options)
-end
 
-function WorldBorder.damage(self)
-  local self_key = ids[self]
-  if self_key == nil or not WorldBorder_is[class_of(self)] then
-    self_key = self_of(self, "WorldBorder")
+  function WorldBorder.damage(self)
+    local self_key = ids[self]
+    if self_key == nil or not WorldBorder_is[class_of(self)] then
+      self_key = self_of(self, "WorldBorder")
+    end
+    return prim["WorldBorder.damage"](self_key)
   end
-  return prim["WorldBorder.damage"](self_key)
-end
 
-function WorldBorder.set_damage(self, damage)
-  local self_key = ids[self]
-  if self_key == nil or not WorldBorder_is[class_of(self)] then
-    self_key = self_of(self, "WorldBorder")
+  function WorldBorder.set_damage(self, damage)
+    local self_key = ids[self]
+    if self_key == nil or not WorldBorder_is[class_of(self)] then
+      self_key = self_of(self, "WorldBorder")
+    end
+    return prim["WorldBorder.set_damage"](self_key, damage)
   end
-  return prim["WorldBorder.set_damage"](self_key, damage)
-end
 
-function WorldBorder.warning(self)
-  local self_key = ids[self]
-  if self_key == nil or not WorldBorder_is[class_of(self)] then
-    self_key = self_of(self, "WorldBorder")
+  function WorldBorder.warning(self)
+    local self_key = ids[self]
+    if self_key == nil or not WorldBorder_is[class_of(self)] then
+      self_key = self_of(self, "WorldBorder")
+    end
+    return prim["WorldBorder.warning"](self_key)
   end
-  return prim["WorldBorder.warning"](self_key)
-end
 
-function WorldBorder.set_warning(self, warning)
-  local self_key = ids[self]
-  if self_key == nil or not WorldBorder_is[class_of(self)] then
-    self_key = self_of(self, "WorldBorder")
+  function WorldBorder.set_warning(self, warning)
+    local self_key = ids[self]
+    if self_key == nil or not WorldBorder_is[class_of(self)] then
+      self_key = self_of(self, "WorldBorder")
+    end
+    return prim["WorldBorder.set_warning"](self_key, warning)
   end
-  return prim["WorldBorder.set_warning"](self_key, warning)
-end
 
-function WorldBorder.contains(self, location_or_position)
-  local self_key = ids[self]
-  if self_key == nil or not WorldBorder_is[class_of(self)] then
-    self_key = self_of(self, "WorldBorder")
+  function WorldBorder.contains(self, location_or_position)
+    local self_key = ids[self]
+    if self_key == nil or not WorldBorder_is[class_of(self)] then
+      self_key = self_of(self, "WorldBorder")
+    end
+    return prim["WorldBorder.contains"](self_key, location_or_position)
   end
-  return prim["WorldBorder.contains"](self_key, location_or_position)
 end
 
 -- Block ---------------------------------------------------------------------
 
-local Block = class("Block")
+do
+  local Block = class("Block")
 
-function new.Block(world, position)
-  return prim["handles.new"]("Block", world, position)
-end
-
----@param handle table
----@return string world
----@return integer position
-function keys.Block(handle)
-  return prim["handles.key"](handle)
-end
-
-function Block.world(self)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function new.Block(world, position)
+    return prim["handles.new"]("Block", world, position)
   end
-  return prim["Block.world"](self_key)
-end
 
-function Block.position(self)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  ---@param handle table
+  ---@return string world
+  ---@return integer position
+  function keys.Block(handle)
+    return prim["handles.key"](handle)
   end
-  local result_x, result_y, result_z = prim["Block.position"](self_key)
-  if result_x == nil then
-    return nil
-  end
-  return with_mt({ result_x, result_y, result_z }, Vec3_mt)
-end
 
-function Block.location(self)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.world(self)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.world"](self_key)
   end
-  return prim["Block.location"](self_key)
-end
 
-function Block.kind(self)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.position(self)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    local result_x, result_y, result_z = prim["Block.position"](self_key)
+    if result_x == nil then
+      return nil
+    end
+    return with_mt({ result_x, result_y, result_z }, Vec3_mt)
   end
-  return prim["Block.kind"](self_key)
-end
 
-function Block.state(self)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.location(self)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.location"](self_key)
   end
-  return prim["Block.state"](self_key)
-end
 
-function Block.property(self, name)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.kind(self)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.kind"](self_key)
   end
-  return prim["Block.property"](self_key, name)
-end
 
-function Block.properties(self)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.state(self)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.state"](self_key)
   end
-  return prim["Block.properties"](self_key)
-end
 
-function Block.is_air(self)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.property(self, name)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.property"](self_key, name)
   end
-  return prim["Block.is_air"](self_key)
-end
 
-function Block.is_solid(self)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.properties(self)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.properties"](self_key)
   end
-  return prim["Block.is_solid"](self_key)
-end
 
-function Block.is_liquid(self)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.is_air(self)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.is_air"](self_key)
   end
-  return prim["Block.is_liquid"](self_key)
-end
 
-function Block.set_state(self, state, options)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.is_solid(self)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.is_solid"](self_key)
   end
-  return prim["Block.set_state"](self_key, state, options)
-end
 
-function Block.set_property(self, name, value)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.is_liquid(self)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.is_liquid"](self_key)
   end
-  return prim["Block.set_property"](self_key, name, value)
-end
 
-function Block.break_naturally(self, tool)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.set_state(self, state, options)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.set_state"](self_key, state, options)
   end
-  return prim["Block.break_naturally"](self_key, tool)
-end
 
-function Block.relative(self, offset)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.set_property(self, name, value)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.set_property"](self_key, name, value)
   end
-  return prim["Block.relative"](self_key, offset)
-end
 
-function Block.inventory(self)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.break_naturally(self, tool)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.break_naturally"](self_key, tool)
   end
-  return prim["Block.inventory"](self_key)
-end
 
-function Block.custom(self)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.relative(self, offset)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.relative"](self_key, offset)
   end
-  return prim["Block.custom"](self_key)
-end
 
-function Block.light_level(self)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.inventory(self)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.inventory"](self_key)
   end
-  return prim["Block.light_level"](self_key)
-end
 
-function Block.sky_light_level(self)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.custom(self)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.custom"](self_key)
   end
-  return prim["Block.sky_light_level"](self_key)
-end
 
-function Block.biome(self)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.light_level(self)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.light_level"](self_key)
   end
-  return prim["Block.biome"](self_key)
-end
 
-function Block.data(self)
-  local self_key = ids[self]
-  if self_key == nil or not Block_is[class_of(self)] then
-    self_key = self_of(self, "Block")
+  function Block.sky_light_level(self)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.sky_light_level"](self_key)
   end
-  return prim["Block.data"](self_key)
+
+  function Block.biome(self)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.biome"](self_key)
+  end
+
+  function Block.data(self)
+    local self_key = ids[self]
+    if self_key == nil or not Block_is[class_of(self)] then
+      self_key = self_of(self, "Block")
+    end
+    return prim["Block.data"](self_key)
+  end
 end
 
 -- CustomBlock ---------------------------------------------------------------
 
-local CustomBlock = class("CustomBlock", "Block")
+do
+  local CustomBlock = class("CustomBlock", "Block")
 
-function CustomBlock.id(self)
-  local self_key = ids[self]
-  if self_key == nil or not CustomBlock_is[class_of(self)] then
-    self_key = self_of(self, "CustomBlock")
+  function CustomBlock.id(self)
+    local self_key = ids[self]
+    if self_key == nil or not CustomBlock_is[class_of(self)] then
+      self_key = self_of(self, "CustomBlock")
+    end
+    return prim["CustomBlock.id"](self_key)
   end
-  return prim["CustomBlock.id"](self_key)
-end
 
-function CustomBlock.project(self)
-  local self_key = ids[self]
-  if self_key == nil or not CustomBlock_is[class_of(self)] then
-    self_key = self_of(self, "CustomBlock")
+  function CustomBlock.project(self)
+    local self_key = ids[self]
+    if self_key == nil or not CustomBlock_is[class_of(self)] then
+      self_key = self_of(self, "CustomBlock")
+    end
+    return prim["CustomBlock.project"](self_key)
   end
-  return prim["CustomBlock.project"](self_key)
-end
 
-function CustomBlock.facing(self)
-  local self_key = ids[self]
-  if self_key == nil or not CustomBlock_is[class_of(self)] then
-    self_key = self_of(self, "CustomBlock")
+  function CustomBlock.facing(self)
+    local self_key = ids[self]
+    if self_key == nil or not CustomBlock_is[class_of(self)] then
+      self_key = self_of(self, "CustomBlock")
+    end
+    return prim["CustomBlock.facing"](self_key)
   end
-  return prim["CustomBlock.facing"](self_key)
-end
 
-function CustomBlock.set_facing(self, facing)
-  local self_key = ids[self]
-  if self_key == nil or not CustomBlock_is[class_of(self)] then
-    self_key = self_of(self, "CustomBlock")
+  function CustomBlock.set_facing(self, facing)
+    local self_key = ids[self]
+    if self_key == nil or not CustomBlock_is[class_of(self)] then
+      self_key = self_of(self, "CustomBlock")
+    end
+    return prim["CustomBlock.set_facing"](self_key, facing)
   end
-  return prim["CustomBlock.set_facing"](self_key, facing)
 end
 
 -- ProjectBlock --------------------------------------------------------------
 
-local ProjectBlock = class("ProjectBlock")
+do
+  local ProjectBlock = class("ProjectBlock")
 
-function new.ProjectBlock(id)
-  return prim["handles.new"]("ProjectBlock", id)
-end
+  function new.ProjectBlock(id)
+    return prim["handles.new"]("ProjectBlock", id)
+  end
 
----@param handle table
----@return string id
-function keys.ProjectBlock(handle)
-  return prim["handles.key"](handle)
-end
+  ---@param handle table
+  ---@return string id
+  function keys.ProjectBlock(handle)
+    return prim["handles.key"](handle)
+  end
 
-function ProjectBlock.id(self)
-  local self_key = ids[self]
-  if self_key == nil or not ProjectBlock_is[class_of(self)] then
-    self_key = self_of(self, "ProjectBlock")
+  function ProjectBlock.id(self)
+    local self_key = ids[self]
+    if self_key == nil or not ProjectBlock_is[class_of(self)] then
+      self_key = self_of(self, "ProjectBlock")
+    end
+    return prim["ProjectBlock.id"](self_key)
   end
-  return prim["ProjectBlock.id"](self_key)
-end
 
-function ProjectBlock.properties(self)
-  local self_key = ids[self]
-  if self_key == nil or not ProjectBlock_is[class_of(self)] then
-    self_key = self_of(self, "ProjectBlock")
+  function ProjectBlock.properties(self)
+    local self_key = ids[self]
+    if self_key == nil or not ProjectBlock_is[class_of(self)] then
+      self_key = self_of(self, "ProjectBlock")
+    end
+    return prim["ProjectBlock.properties"](self_key)
   end
-  return prim["ProjectBlock.properties"](self_key)
-end
 
-function ProjectBlock.exists(self)
-  local self_key = ids[self]
-  if self_key == nil or not ProjectBlock_is[class_of(self)] then
-    self_key = self_of(self, "ProjectBlock")
+  function ProjectBlock.exists(self)
+    local self_key = ids[self]
+    if self_key == nil or not ProjectBlock_is[class_of(self)] then
+      self_key = self_of(self, "ProjectBlock")
+    end
+    return prim["ProjectBlock.exists"](self_key)
   end
-  return prim["ProjectBlock.exists"](self_key)
-end
 
-function ProjectBlock.place(self, location, options)
-  local self_key = ids[self]
-  if self_key == nil or not ProjectBlock_is[class_of(self)] then
-    self_key = self_of(self, "ProjectBlock")
+  function ProjectBlock.place(self, location, options)
+    local self_key = ids[self]
+    if self_key == nil or not ProjectBlock_is[class_of(self)] then
+      self_key = self_of(self, "ProjectBlock")
+    end
+    return prim["ProjectBlock.place"](self_key, location, options)
   end
-  return prim["ProjectBlock.place"](self_key, location, options)
-end
 
-function ProjectBlock.on(self, event, handler, options)
-  if ids[self] == nil or not ProjectBlock_is[class_of(self)] then
-    self_of(self, "ProjectBlock")
+  function ProjectBlock.on(self, event, handler, options)
+    if ids[self] == nil or not ProjectBlock_is[class_of(self)] then
+      self_of(self, "ProjectBlock")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.ProjectBlock.on(self, event, handler, options)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  if options ~= nil then
-    check_shape(options, "options", "EventOptions")
-  end
-  return hand.ProjectBlock.on(self, event, handler, options)
-end
 
-function ProjectBlock.once(self, event, handler)
-  if ids[self] == nil or not ProjectBlock_is[class_of(self)] then
-    self_of(self, "ProjectBlock")
+  function ProjectBlock.once(self, event, handler)
+    if ids[self] == nil or not ProjectBlock_is[class_of(self)] then
+      self_of(self, "ProjectBlock")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.ProjectBlock.once(self, event, handler)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  return hand.ProjectBlock.once(self, event, handler)
 end
 
 -- Inventory -----------------------------------------------------------------
 
-local Inventory = class("Inventory")
+do
+  local Inventory = class("Inventory")
 
-function new.Inventory(holder)
-  return prim["handles.new"]("Inventory", holder)
-end
-
----@param handle table
----@return string holder
-function keys.Inventory(handle)
-  return prim["handles.key"](handle)
-end
-
-function Inventory.exists(self)
-  local self_key = ids[self]
-  if self_key == nil or not Inventory_is[class_of(self)] then
-    self_key = self_of(self, "Inventory")
+  function new.Inventory(holder)
+    return prim["handles.new"]("Inventory", holder)
   end
-  return prim["Inventory.exists"](self_key)
-end
 
-function Inventory.kind(self)
-  local self_key = ids[self]
-  if self_key == nil or not Inventory_is[class_of(self)] then
-    self_key = self_of(self, "Inventory")
+  ---@param handle table
+  ---@return string holder
+  function keys.Inventory(handle)
+    return prim["handles.key"](handle)
   end
-  return prim["Inventory.kind"](self_key)
-end
 
-function Inventory.size(self)
-  local self_key = ids[self]
-  if self_key == nil or not Inventory_is[class_of(self)] then
-    self_key = self_of(self, "Inventory")
+  function Inventory.exists(self)
+    local self_key = ids[self]
+    if self_key == nil or not Inventory_is[class_of(self)] then
+      self_key = self_of(self, "Inventory")
+    end
+    return prim["Inventory.exists"](self_key)
   end
-  return prim["Inventory.size"](self_key)
-end
 
-function Inventory.holder(self)
-  local self_key = ids[self]
-  if self_key == nil or not Inventory_is[class_of(self)] then
-    self_key = self_of(self, "Inventory")
+  function Inventory.kind(self)
+    local self_key = ids[self]
+    if self_key == nil or not Inventory_is[class_of(self)] then
+      self_key = self_of(self, "Inventory")
+    end
+    return prim["Inventory.kind"](self_key)
   end
-  return prim["Inventory.holder"](self_key)
-end
 
-function Inventory.item(self, index)
-  local self_key = ids[self]
-  if self_key == nil or not Inventory_is[class_of(self)] then
-    self_key = self_of(self, "Inventory")
+  function Inventory.size(self)
+    local self_key = ids[self]
+    if self_key == nil or not Inventory_is[class_of(self)] then
+      self_key = self_of(self, "Inventory")
+    end
+    return prim["Inventory.size"](self_key)
   end
-  return prim["Inventory.item"](self_key, index)
-end
 
-function Inventory.set_item(self, index, item)
-  local self_key = ids[self]
-  if self_key == nil or not Inventory_is[class_of(self)] then
-    self_key = self_of(self, "Inventory")
+  function Inventory.holder(self)
+    local self_key = ids[self]
+    if self_key == nil or not Inventory_is[class_of(self)] then
+      self_key = self_of(self, "Inventory")
+    end
+    return prim["Inventory.holder"](self_key)
   end
-  return prim["Inventory.set_item"](self_key, index, item)
-end
 
-function Inventory.items(self)
-  local self_key = ids[self]
-  if self_key == nil or not Inventory_is[class_of(self)] then
-    self_key = self_of(self, "Inventory")
+  function Inventory.item(self, index)
+    local self_key = ids[self]
+    if self_key == nil or not Inventory_is[class_of(self)] then
+      self_key = self_of(self, "Inventory")
+    end
+    return prim["Inventory.item"](self_key, index)
   end
-  return prim["Inventory.items"](self_key)
-end
 
-function Inventory.add_item(self, item)
-  local self_key = ids[self]
-  if self_key == nil or not Inventory_is[class_of(self)] then
-    self_key = self_of(self, "Inventory")
+  function Inventory.set_item(self, index, item)
+    local self_key = ids[self]
+    if self_key == nil or not Inventory_is[class_of(self)] then
+      self_key = self_of(self, "Inventory")
+    end
+    return prim["Inventory.set_item"](self_key, index, item)
   end
-  return prim["Inventory.add_item"](self_key, item)
-end
 
-function Inventory.remove_item(self, match, count)
-  local self_key = ids[self]
-  if self_key == nil or not Inventory_is[class_of(self)] then
-    self_key = self_of(self, "Inventory")
+  function Inventory.items(self)
+    local self_key = ids[self]
+    if self_key == nil or not Inventory_is[class_of(self)] then
+      self_key = self_of(self, "Inventory")
+    end
+    return prim["Inventory.items"](self_key)
   end
-  return prim["Inventory.remove_item"](self_key, match, count)
-end
 
-function Inventory.count_item(self, match)
-  local self_key = ids[self]
-  if self_key == nil or not Inventory_is[class_of(self)] then
-    self_key = self_of(self, "Inventory")
+  function Inventory.add_item(self, item)
+    local self_key = ids[self]
+    if self_key == nil or not Inventory_is[class_of(self)] then
+      self_key = self_of(self, "Inventory")
+    end
+    return prim["Inventory.add_item"](self_key, item)
   end
-  return prim["Inventory.count_item"](self_key, match)
-end
 
-function Inventory.has_item(self, match, count)
-  local self_key = ids[self]
-  if self_key == nil or not Inventory_is[class_of(self)] then
-    self_key = self_of(self, "Inventory")
+  function Inventory.remove_item(self, match, count)
+    local self_key = ids[self]
+    if self_key == nil or not Inventory_is[class_of(self)] then
+      self_key = self_of(self, "Inventory")
+    end
+    return prim["Inventory.remove_item"](self_key, match, count)
   end
-  return prim["Inventory.has_item"](self_key, match, count)
-end
 
-function Inventory.first_slot(self, match)
-  local self_key = ids[self]
-  if self_key == nil or not Inventory_is[class_of(self)] then
-    self_key = self_of(self, "Inventory")
+  function Inventory.count_item(self, match)
+    local self_key = ids[self]
+    if self_key == nil or not Inventory_is[class_of(self)] then
+      self_key = self_of(self, "Inventory")
+    end
+    return prim["Inventory.count_item"](self_key, match)
   end
-  return prim["Inventory.first_slot"](self_key, match)
-end
 
-function Inventory.clear(self)
-  local self_key = ids[self]
-  if self_key == nil or not Inventory_is[class_of(self)] then
-    self_key = self_of(self, "Inventory")
+  function Inventory.has_item(self, match, count)
+    local self_key = ids[self]
+    if self_key == nil or not Inventory_is[class_of(self)] then
+      self_key = self_of(self, "Inventory")
+    end
+    return prim["Inventory.has_item"](self_key, match, count)
   end
-  return prim["Inventory.clear"](self_key)
-end
 
-function Inventory.viewers(self)
-  local self_key = ids[self]
-  if self_key == nil or not Inventory_is[class_of(self)] then
-    self_key = self_of(self, "Inventory")
+  function Inventory.first_slot(self, match)
+    local self_key = ids[self]
+    if self_key == nil or not Inventory_is[class_of(self)] then
+      self_key = self_of(self, "Inventory")
+    end
+    return prim["Inventory.first_slot"](self_key, match)
   end
-  return prim["Inventory.viewers"](self_key)
+
+  function Inventory.clear(self)
+    local self_key = ids[self]
+    if self_key == nil or not Inventory_is[class_of(self)] then
+      self_key = self_of(self, "Inventory")
+    end
+    return prim["Inventory.clear"](self_key)
+  end
+
+  function Inventory.viewers(self)
+    local self_key = ids[self]
+    if self_key == nil or not Inventory_is[class_of(self)] then
+      self_key = self_of(self, "Inventory")
+    end
+    return prim["Inventory.viewers"](self_key)
+  end
 end
 
 -- BossBar -------------------------------------------------------------------
 
-local BossBar = class("BossBar")
+do
+  local BossBar = class("BossBar")
 
-function new.BossBar(id)
-  return prim["handles.new"]("BossBar", id)
-end
-
----@param handle table
----@return integer id
-function keys.BossBar(handle)
-  return prim["handles.key"](handle)
-end
-
-function BossBar.exists(self)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  function new.BossBar(id)
+    return prim["handles.new"]("BossBar", id)
   end
-  return prim["BossBar.exists"](self_key)
-end
 
-function BossBar.show_to(self, player)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  ---@param handle table
+  ---@return integer id
+  function keys.BossBar(handle)
+    return prim["handles.key"](handle)
   end
-  return prim["BossBar.show_to"](self_key, player)
-end
 
-function BossBar.hide_from(self, player)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  function BossBar.exists(self)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    return prim["BossBar.exists"](self_key)
   end
-  return prim["BossBar.hide_from"](self_key, player)
-end
 
-function BossBar.viewers(self)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  function BossBar.show_to(self, player)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    return prim["BossBar.show_to"](self_key, player)
   end
-  return prim["BossBar.viewers"](self_key)
-end
 
-function BossBar.text(self)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  function BossBar.hide_from(self, player)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    return prim["BossBar.hide_from"](self_key, player)
   end
-  return prim["BossBar.text"](self_key)
-end
 
-function BossBar.set_text(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  function BossBar.viewers(self)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    return prim["BossBar.viewers"](self_key)
   end
-  return prim["BossBar.set_text"](self_key, text)
-end
 
-function BossBar.icon(self)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  function BossBar.text(self)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    return prim["BossBar.text"](self_key)
   end
-  return prim["BossBar.icon"](self_key)
-end
 
-function BossBar.set_icon(self, icon)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  function BossBar.set_text(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    return prim["BossBar.set_text"](self_key, text)
   end
-  return prim["BossBar.set_icon"](self_key, icon)
-end
 
-function BossBar.progress(self)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  function BossBar.icon(self)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    return prim["BossBar.icon"](self_key)
   end
-  return prim["BossBar.progress"](self_key)
-end
 
-function BossBar.set_progress(self, progress)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  function BossBar.set_icon(self, icon)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    return prim["BossBar.set_icon"](self_key, icon)
   end
-  return prim["BossBar.set_progress"](self_key, progress)
-end
 
-function BossBar.color(self)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  function BossBar.progress(self)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    return prim["BossBar.progress"](self_key)
   end
-  return prim["BossBar.color"](self_key)
-end
 
-function BossBar.set_color(self, color)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  function BossBar.set_progress(self, progress)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    return prim["BossBar.set_progress"](self_key, progress)
   end
-  return prim["BossBar.set_color"](self_key, color)
-end
 
-function BossBar.style(self)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  function BossBar.color(self)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    return prim["BossBar.color"](self_key)
   end
-  return prim["BossBar.style"](self_key)
-end
 
-function BossBar.set_style(self, style)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  function BossBar.set_color(self, color)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    return prim["BossBar.set_color"](self_key, color)
   end
-  return prim["BossBar.set_style"](self_key, style)
-end
 
-function BossBar.attach(self, centity, options)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  function BossBar.style(self)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    return prim["BossBar.style"](self_key)
   end
-  return prim["BossBar.attach"](self_key, centity, options)
-end
 
-function BossBar.detach(self)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  function BossBar.set_style(self, style)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    return prim["BossBar.set_style"](self_key, style)
   end
-  prim["BossBar.detach"](self_key)
-end
 
-function BossBar.attached(self)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  function BossBar.attach(self, centity, options)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    return prim["BossBar.attach"](self_key, centity, options)
   end
-  return prim["BossBar.attached"](self_key)
-end
 
-function BossBar.remove(self)
-  local self_key = ids[self]
-  if self_key == nil or not BossBar_is[class_of(self)] then
-    self_key = self_of(self, "BossBar")
+  function BossBar.detach(self)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    prim["BossBar.detach"](self_key)
   end
-  return prim["BossBar.remove"](self_key)
+
+  function BossBar.attached(self)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    return prim["BossBar.attached"](self_key)
+  end
+
+  function BossBar.remove(self)
+    local self_key = ids[self]
+    if self_key == nil or not BossBar_is[class_of(self)] then
+      self_key = self_of(self, "BossBar")
+    end
+    return prim["BossBar.remove"](self_key)
+  end
 end
 
 -- Sidebar -------------------------------------------------------------------
 
-local Sidebar = class("Sidebar")
+do
+  local Sidebar = class("Sidebar")
 
-function new.Sidebar(player)
-  return prim["handles.new"]("Sidebar", player)
-end
-
----@param handle table
----@return string player
-function keys.Sidebar(handle)
-  return prim["handles.key"](handle)
-end
-
-function Sidebar.title(self)
-  local self_key = ids[self]
-  if self_key == nil or not Sidebar_is[class_of(self)] then
-    self_key = self_of(self, "Sidebar")
+  function new.Sidebar(player)
+    return prim["handles.new"]("Sidebar", player)
   end
-  return prim["Sidebar.title"](self_key)
-end
 
-function Sidebar.set_title(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not Sidebar_is[class_of(self)] then
-    self_key = self_of(self, "Sidebar")
+  ---@param handle table
+  ---@return string player
+  function keys.Sidebar(handle)
+    return prim["handles.key"](handle)
   end
-  return prim["Sidebar.set_title"](self_key, text)
-end
 
-function Sidebar.lines(self)
-  local self_key = ids[self]
-  if self_key == nil or not Sidebar_is[class_of(self)] then
-    self_key = self_of(self, "Sidebar")
+  function Sidebar.title(self)
+    local self_key = ids[self]
+    if self_key == nil or not Sidebar_is[class_of(self)] then
+      self_key = self_of(self, "Sidebar")
+    end
+    return prim["Sidebar.title"](self_key)
   end
-  return prim["Sidebar.lines"](self_key)
-end
 
-function Sidebar.set_lines(self, lines)
-  local self_key = ids[self]
-  if self_key == nil or not Sidebar_is[class_of(self)] then
-    self_key = self_of(self, "Sidebar")
+  function Sidebar.set_title(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not Sidebar_is[class_of(self)] then
+      self_key = self_of(self, "Sidebar")
+    end
+    return prim["Sidebar.set_title"](self_key, text)
   end
-  return prim["Sidebar.set_lines"](self_key, lines)
-end
 
-function Sidebar.is_visible(self)
-  local self_key = ids[self]
-  if self_key == nil or not Sidebar_is[class_of(self)] then
-    self_key = self_of(self, "Sidebar")
+  function Sidebar.lines(self)
+    local self_key = ids[self]
+    if self_key == nil or not Sidebar_is[class_of(self)] then
+      self_key = self_of(self, "Sidebar")
+    end
+    return prim["Sidebar.lines"](self_key)
   end
-  return prim["Sidebar.is_visible"](self_key)
-end
 
-function Sidebar.set_visible(self, visible)
-  local self_key = ids[self]
-  if self_key == nil or not Sidebar_is[class_of(self)] then
-    self_key = self_of(self, "Sidebar")
+  function Sidebar.set_lines(self, lines)
+    local self_key = ids[self]
+    if self_key == nil or not Sidebar_is[class_of(self)] then
+      self_key = self_of(self, "Sidebar")
+    end
+    return prim["Sidebar.set_lines"](self_key, lines)
   end
-  return prim["Sidebar.set_visible"](self_key, visible)
-end
 
-function Sidebar.clear(self)
-  local self_key = ids[self]
-  if self_key == nil or not Sidebar_is[class_of(self)] then
-    self_key = self_of(self, "Sidebar")
+  function Sidebar.is_visible(self)
+    local self_key = ids[self]
+    if self_key == nil or not Sidebar_is[class_of(self)] then
+      self_key = self_of(self, "Sidebar")
+    end
+    return prim["Sidebar.is_visible"](self_key)
   end
-  return prim["Sidebar.clear"](self_key)
+
+  function Sidebar.set_visible(self, visible)
+    local self_key = ids[self]
+    if self_key == nil or not Sidebar_is[class_of(self)] then
+      self_key = self_of(self, "Sidebar")
+    end
+    return prim["Sidebar.set_visible"](self_key, visible)
+  end
+
+  function Sidebar.clear(self)
+    local self_key = ids[self]
+    if self_key == nil or not Sidebar_is[class_of(self)] then
+      self_key = self_of(self, "Sidebar")
+    end
+    return prim["Sidebar.clear"](self_key)
+  end
 end
 
 -- Team ----------------------------------------------------------------------
 
-local Team = class("Team")
+do
+  local Team = class("Team")
 
-function new.Team(name)
-  return prim["handles.new"]("Team", name)
-end
-
----@param handle table
----@return string name
-function keys.Team(handle)
-  return prim["handles.key"](handle)
-end
-
-function Team.name(self)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function new.Team(name)
+    return prim["handles.new"]("Team", name)
   end
-  return prim["Team.name"](self_key)
-end
 
-function Team.exists(self)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  ---@param handle table
+  ---@return string name
+  function keys.Team(handle)
+    return prim["handles.key"](handle)
   end
-  return prim["Team.exists"](self_key)
-end
 
-function Team.add_member(self, member)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.name(self)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.name"](self_key)
   end
-  return prim["Team.add_member"](self_key, member)
-end
 
-function Team.remove_member(self, member)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.exists(self)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.exists"](self_key)
   end
-  return prim["Team.remove_member"](self_key, member)
-end
 
-function Team.has_member(self, member)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.add_member(self, member)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.add_member"](self_key, member)
   end
-  return prim["Team.has_member"](self_key, member)
-end
 
-function Team.members(self)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.remove_member(self, member)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.remove_member"](self_key, member)
   end
-  return prim["Team.members"](self_key)
-end
 
-function Team.display_name(self)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.has_member(self, member)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.has_member"](self_key, member)
   end
-  return prim["Team.display_name"](self_key)
-end
 
-function Team.set_display_name(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.members(self)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.members"](self_key)
   end
-  return prim["Team.set_display_name"](self_key, text)
-end
 
-function Team.prefix(self)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.display_name(self)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.display_name"](self_key)
   end
-  return prim["Team.prefix"](self_key)
-end
 
-function Team.set_prefix(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.set_display_name(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.set_display_name"](self_key, text)
   end
-  return prim["Team.set_prefix"](self_key, text)
-end
 
-function Team.suffix(self)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.prefix(self)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.prefix"](self_key)
   end
-  return prim["Team.suffix"](self_key)
-end
 
-function Team.set_suffix(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.set_prefix(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.set_prefix"](self_key, text)
   end
-  return prim["Team.set_suffix"](self_key, text)
-end
 
-function Team.color(self)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.suffix(self)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.suffix"](self_key)
   end
-  return prim["Team.color"](self_key)
-end
 
-function Team.set_color(self, color)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.set_suffix(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.set_suffix"](self_key, text)
   end
-  return prim["Team.set_color"](self_key, color)
-end
 
-function Team.has_friendly_fire(self)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.color(self)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.color"](self_key)
   end
-  return prim["Team.has_friendly_fire"](self_key)
-end
 
-function Team.set_friendly_fire(self, enabled)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.set_color(self, color)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.set_color"](self_key, color)
   end
-  return prim["Team.set_friendly_fire"](self_key, enabled)
-end
 
-function Team.can_see_invisible_teammates(self)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.has_friendly_fire(self)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.has_friendly_fire"](self_key)
   end
-  return prim["Team.can_see_invisible_teammates"](self_key)
-end
 
-function Team.set_can_see_invisible_teammates(self, enabled)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.set_friendly_fire(self, enabled)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.set_friendly_fire"](self_key, enabled)
   end
-  return prim["Team.set_can_see_invisible_teammates"](self_key, enabled)
-end
 
-function Team.nametags(self)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.can_see_invisible_teammates(self)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.can_see_invisible_teammates"](self_key)
   end
-  return prim["Team.nametags"](self_key)
-end
 
-function Team.set_nametags(self, visibility)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.set_can_see_invisible_teammates(self, enabled)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.set_can_see_invisible_teammates"](self_key, enabled)
   end
-  return prim["Team.set_nametags"](self_key, visibility)
-end
 
-function Team.collision(self)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.nametags(self)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.nametags"](self_key)
   end
-  return prim["Team.collision"](self_key)
-end
 
-function Team.set_collision(self, rule)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.set_nametags(self, visibility)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.set_nametags"](self_key, visibility)
   end
-  return prim["Team.set_collision"](self_key, rule)
-end
 
-function Team.remove(self)
-  local self_key = ids[self]
-  if self_key == nil or not Team_is[class_of(self)] then
-    self_key = self_of(self, "Team")
+  function Team.collision(self)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.collision"](self_key)
   end
-  return prim["Team.remove"](self_key)
+
+  function Team.set_collision(self, rule)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.set_collision"](self_key, rule)
+  end
+
+  function Team.remove(self)
+    local self_key = ids[self]
+    if self_key == nil or not Team_is[class_of(self)] then
+      self_key = self_of(self, "Team")
+    end
+    return prim["Team.remove"](self_key)
+  end
 end
 
 -- Database ------------------------------------------------------------------
 
-local Database = class("Database")
+do
+  local Database = class("Database")
 
-function new.Database(namespace, connection)
-  return prim["handles.new"]("Database", namespace, connection)
-end
+  function new.Database(namespace, connection)
+    return prim["handles.new"]("Database", namespace, connection)
+  end
 
----@param handle table
----@return string namespace
----@return string connection
-function keys.Database(handle)
-  return prim["handles.key"](handle)
-end
+  ---@param handle table
+  ---@return string namespace
+  ---@return string connection
+  function keys.Database(handle)
+    return prim["handles.key"](handle)
+  end
 
-function Database.query(self, sql, params, callback)
-  local self_key = ids[self]
-  if self_key == nil or not Database_is[class_of(self)] then
-    self_key = self_of(self, "Database")
+  function Database.query(self, sql, params, callback)
+    local self_key = ids[self]
+    if self_key == nil or not Database_is[class_of(self)] then
+      self_key = self_of(self, "Database")
+    end
+    local waker, task, token, scope = async.begin("Database:query", callback)
+    local wait_id = prim["Database.query"](self_key, sql, params, scope, waker)
+    if task ~= nil then
+      local value, err = async.wait(task, token, wait_id)
+      return value, err
+    end
   end
-  local waker, task, token, scope = async.begin("Database:query", callback)
-  local wait_id = prim["Database.query"](self_key, sql, params, scope, waker)
-  if task ~= nil then
-    local value, err = async.wait(task, token, wait_id)
-    return value, err
-  end
-end
 
-function Database.execute(self, sql, params, callback)
-  local self_key = ids[self]
-  if self_key == nil or not Database_is[class_of(self)] then
-    self_key = self_of(self, "Database")
+  function Database.execute(self, sql, params, callback)
+    local self_key = ids[self]
+    if self_key == nil or not Database_is[class_of(self)] then
+      self_key = self_of(self, "Database")
+    end
+    local waker, task, token, scope = async.begin("Database:execute", callback)
+    local wait_id = prim["Database.execute"](self_key, sql, params, scope, waker)
+    if task ~= nil then
+      local value, err = async.wait(task, token, wait_id)
+      return value, err
+    end
   end
-  local waker, task, token, scope = async.begin("Database:execute", callback)
-  local wait_id = prim["Database.execute"](self_key, sql, params, scope, waker)
-  if task ~= nil then
-    local value, err = async.wait(task, token, wait_id)
-    return value, err
-  end
-end
 
-function Database.transaction(self, statements, callback)
-  local self_key = ids[self]
-  if self_key == nil or not Database_is[class_of(self)] then
-    self_key = self_of(self, "Database")
-  end
-  local waker, task, token, scope = async.begin("Database:transaction", callback)
-  local wait_id = prim["Database.transaction"](self_key, statements, scope, waker)
-  if task ~= nil then
-    local value, err = async.wait(task, token, wait_id)
-    return value, err
+  function Database.transaction(self, statements, callback)
+    local self_key = ids[self]
+    if self_key == nil or not Database_is[class_of(self)] then
+      self_key = self_of(self, "Database")
+    end
+    local waker, task, token, scope = async.begin("Database:transaction", callback)
+    local wait_id = prim["Database.transaction"](self_key, statements, scope, waker)
+    if task ~= nil then
+      local value, err = async.wait(task, token, wait_id)
+      return value, err
+    end
   end
 end
 
 -- Menu ----------------------------------------------------------------------
 
-local Menu = class("Menu")
+do
+  local Menu = class("Menu")
 
-function new.Menu(id)
-  return prim["handles.new"]("Menu", id)
-end
+  function new.Menu(id)
+    return prim["handles.new"]("Menu", id)
+  end
 
----@param handle table
----@return string id
-function keys.Menu(handle)
-  return prim["handles.key"](handle)
-end
+  ---@param handle table
+  ---@return string id
+  function keys.Menu(handle)
+    return prim["handles.key"](handle)
+  end
 
-function Menu.id(self)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.id(self)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.id"](self_key)
   end
-  return prim["Menu.id"](self_key)
-end
 
-function Menu.kind(self)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.kind(self)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.kind"](self_key)
   end
-  return prim["Menu.kind"](self_key)
-end
 
-function Menu.template(self)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.template(self)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.template"](self_key)
   end
-  return prim["Menu.template"](self_key)
-end
 
-function Menu.exists(self)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.exists(self)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.exists"](self_key)
   end
-  return prim["Menu.exists"](self_key)
-end
 
-function Menu.is_shared(self)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.is_shared(self)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.is_shared"](self_key)
   end
-  return prim["Menu.is_shared"](self_key)
-end
 
-function Menu.context(self)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.context(self)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.context"](self_key)
   end
-  return prim["Menu.context"](self_key)
-end
 
-function Menu.size(self)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.size(self)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.size"](self_key)
   end
-  return prim["Menu.size"](self_key)
-end
 
-function Menu.rows(self)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.rows(self)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.rows"](self_key)
   end
-  return prim["Menu.rows"](self_key)
-end
 
-function Menu.title(self)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.title(self)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.title"](self_key)
   end
-  return prim["Menu.title"](self_key)
-end
 
-function Menu.set_title(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.set_title(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.set_title"](self_key, text)
   end
-  return prim["Menu.set_title"](self_key, text)
-end
 
-function Menu.skin(self)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.skin(self)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.skin"](self_key)
   end
-  return prim["Menu.skin"](self_key)
-end
 
-function Menu.set_skin(self, skin)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.set_skin(self, skin)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.set_skin"](self_key, skin)
   end
-  return prim["Menu.set_skin"](self_key, skin)
-end
 
-function Menu.is_locked(self)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.is_locked(self)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.is_locked"](self_key)
   end
-  return prim["Menu.is_locked"](self_key)
-end
 
-function Menu.set_locked(self, locked)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.set_locked(self, locked)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    prim["Menu.set_locked"](self_key, locked)
   end
-  prim["Menu.set_locked"](self_key, locked)
-end
 
-function Menu.shift_into(self, storage, first, last)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.shift_into(self, storage, first, last)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.shift_into"](self_key, storage, first, last)
   end
-  return prim["Menu.shift_into"](self_key, storage, first, last)
-end
 
-function Menu.slot(self, index)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.slot(self, index)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.slot"](self_key, index)
   end
-  return prim["Menu.slot"](self_key, index)
-end
 
-function Menu.item(self, index)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.item(self, index)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.item"](self_key, index)
   end
-  return prim["Menu.item"](self_key, index)
-end
 
-function Menu.set_item(self, index, item)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.set_item(self, index, item)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.set_item"](self_key, index, item)
   end
-  return prim["Menu.set_item"](self_key, index, item)
-end
 
-function Menu.add_item(self, item)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.add_item(self, item)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.add_item"](self_key, item)
   end
-  return prim["Menu.add_item"](self_key, item)
-end
 
-function Menu.items(self)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.items(self)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.items"](self_key)
   end
-  return prim["Menu.items"](self_key)
-end
 
-function Menu.set_items(self, items)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.set_items(self, items)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.set_items"](self_key, items)
   end
-  return prim["Menu.set_items"](self_key, items)
-end
 
-function Menu.fill(self, item, indices)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.fill(self, item, indices)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.fill"](self_key, item, indices)
   end
-  return prim["Menu.fill"](self_key, item, indices)
-end
 
-function Menu.clear(self)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.clear(self)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.clear"](self_key)
   end
-  return prim["Menu.clear"](self_key)
-end
 
-function Menu.viewers(self)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.viewers(self)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.viewers"](self_key)
   end
-  return prim["Menu.viewers"](self_key)
-end
 
-function Menu.cursor_item(self, player)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.cursor_item(self, player)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.cursor_item"](self_key, player)
   end
-  return prim["Menu.cursor_item"](self_key, player)
-end
 
-function Menu.set_cursor_item(self, player, item)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.set_cursor_item(self, player, item)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.set_cursor_item"](self_key, player, item)
   end
-  return prim["Menu.set_cursor_item"](self_key, player, item)
-end
 
-function Menu.refresh(self)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.refresh(self)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.refresh"](self_key)
   end
-  return prim["Menu.refresh"](self_key)
-end
 
-function Menu.open_for(self, player)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.open_for(self, player)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.open_for"](self_key, player)
   end
-  return prim["Menu.open_for"](self_key, player)
-end
 
-function Menu.close_for(self, player)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.close_for(self, player)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.close_for"](self_key, player)
   end
-  return prim["Menu.close_for"](self_key, player)
-end
 
-function Menu.close_all(self)
-  local self_key = ids[self]
-  if self_key == nil or not Menu_is[class_of(self)] then
-    self_key = self_of(self, "Menu")
+  function Menu.close_all(self)
+    local self_key = ids[self]
+    if self_key == nil or not Menu_is[class_of(self)] then
+      self_key = self_of(self, "Menu")
+    end
+    return prim["Menu.close_all"](self_key)
   end
-  return prim["Menu.close_all"](self_key)
-end
 
-function Menu.on(self, event, handler, options)
-  if ids[self] == nil or not Menu_is[class_of(self)] then
-    self_of(self, "Menu")
+  function Menu.on(self, event, handler, options)
+    if ids[self] == nil or not Menu_is[class_of(self)] then
+      self_of(self, "Menu")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.Menu.on(self, event, handler, options)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  if options ~= nil then
-    check_shape(options, "options", "EventOptions")
-  end
-  return hand.Menu.on(self, event, handler, options)
-end
 
-function Menu.once(self, event, handler)
-  if ids[self] == nil or not Menu_is[class_of(self)] then
-    self_of(self, "Menu")
+  function Menu.once(self, event, handler)
+    if ids[self] == nil or not Menu_is[class_of(self)] then
+      self_of(self, "Menu")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.Menu.once(self, event, handler)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  return hand.Menu.once(self, event, handler)
 end
 
 -- Slot ----------------------------------------------------------------------
 
-local Slot = class("Slot")
+do
+  local Slot = class("Slot")
 
-function new.Slot(menu, index)
-  return prim["handles.new"]("Slot", menu, index)
-end
+  function new.Slot(menu, index)
+    return prim["handles.new"]("Slot", menu, index)
+  end
 
----@param handle table
----@return string menu
----@return integer index
-function keys.Slot(handle)
-  return prim["handles.key"](handle)
-end
+  ---@param handle table
+  ---@return string menu
+  ---@return integer index
+  function keys.Slot(handle)
+    return prim["handles.key"](handle)
+  end
 
-function Slot.index(self)
-  local self_key = ids[self]
-  if self_key == nil or not Slot_is[class_of(self)] then
-    self_key = self_of(self, "Slot")
+  function Slot.index(self)
+    local self_key = ids[self]
+    if self_key == nil or not Slot_is[class_of(self)] then
+      self_key = self_of(self, "Slot")
+    end
+    return prim["Slot.index"](self_key)
   end
-  return prim["Slot.index"](self_key)
-end
 
-function Slot.menu(self)
-  local self_key = ids[self]
-  if self_key == nil or not Slot_is[class_of(self)] then
-    self_key = self_of(self, "Slot")
+  function Slot.menu(self)
+    local self_key = ids[self]
+    if self_key == nil or not Slot_is[class_of(self)] then
+      self_key = self_of(self, "Slot")
+    end
+    return prim["Slot.menu"](self_key)
   end
-  return prim["Slot.menu"](self_key)
-end
 
-function Slot.item(self)
-  local self_key = ids[self]
-  if self_key == nil or not Slot_is[class_of(self)] then
-    self_key = self_of(self, "Slot")
+  function Slot.item(self)
+    local self_key = ids[self]
+    if self_key == nil or not Slot_is[class_of(self)] then
+      self_key = self_of(self, "Slot")
+    end
+    return prim["Slot.item"](self_key)
   end
-  return prim["Slot.item"](self_key)
-end
 
-function Slot.set_item(self, item)
-  local self_key = ids[self]
-  if self_key == nil or not Slot_is[class_of(self)] then
-    self_key = self_of(self, "Slot")
+  function Slot.set_item(self, item)
+    local self_key = ids[self]
+    if self_key == nil or not Slot_is[class_of(self)] then
+      self_key = self_of(self, "Slot")
+    end
+    return prim["Slot.set_item"](self_key, item)
   end
-  return prim["Slot.set_item"](self_key, item)
-end
 
-function Slot.bind(self, storage, index)
-  local self_key = ids[self]
-  if self_key == nil or not Slot_is[class_of(self)] then
-    self_key = self_of(self, "Slot")
+  function Slot.bind(self, storage, index)
+    local self_key = ids[self]
+    if self_key == nil or not Slot_is[class_of(self)] then
+      self_key = self_of(self, "Slot")
+    end
+    return prim["Slot.bind"](self_key, storage, index)
   end
-  return prim["Slot.bind"](self_key, storage, index)
-end
 
-function Slot.bind_equipment(self, player, equipment)
-  local self_key = ids[self]
-  if self_key == nil or not Slot_is[class_of(self)] then
-    self_key = self_of(self, "Slot")
+  function Slot.bind_equipment(self, player, equipment)
+    local self_key = ids[self]
+    if self_key == nil or not Slot_is[class_of(self)] then
+      self_key = self_of(self, "Slot")
+    end
+    return prim["Slot.bind_equipment"](self_key, player, equipment)
   end
-  return prim["Slot.bind_equipment"](self_key, player, equipment)
-end
 
-function Slot.set_rule(self, rule)
-  local self_key = ids[self]
-  if self_key == nil or not Slot_is[class_of(self)] then
-    self_key = self_of(self, "Slot")
+  function Slot.set_rule(self, rule)
+    local self_key = ids[self]
+    if self_key == nil or not Slot_is[class_of(self)] then
+      self_key = self_of(self, "Slot")
+    end
+    return prim["Slot.set_rule"](self_key, rule)
   end
-  return prim["Slot.set_rule"](self_key, rule)
-end
 
-function Slot.rule(self)
-  local self_key = ids[self]
-  if self_key == nil or not Slot_is[class_of(self)] then
-    self_key = self_of(self, "Slot")
+  function Slot.rule(self)
+    local self_key = ids[self]
+    if self_key == nil or not Slot_is[class_of(self)] then
+      self_key = self_of(self, "Slot")
+    end
+    return prim["Slot.rule"](self_key)
   end
-  return prim["Slot.rule"](self_key)
-end
 
-function Slot.accepts(self, item)
-  local self_key = ids[self]
-  if self_key == nil or not Slot_is[class_of(self)] then
-    self_key = self_of(self, "Slot")
+  function Slot.accepts(self, item)
+    local self_key = ids[self]
+    if self_key == nil or not Slot_is[class_of(self)] then
+      self_key = self_of(self, "Slot")
+    end
+    return prim["Slot.accepts"](self_key, item)
   end
-  return prim["Slot.accepts"](self_key, item)
-end
 
-function Slot.unbind(self)
-  local self_key = ids[self]
-  if self_key == nil or not Slot_is[class_of(self)] then
-    self_key = self_of(self, "Slot")
+  function Slot.unbind(self)
+    local self_key = ids[self]
+    if self_key == nil or not Slot_is[class_of(self)] then
+      self_key = self_of(self, "Slot")
+    end
+    return prim["Slot.unbind"](self_key)
   end
-  return prim["Slot.unbind"](self_key)
-end
 
-function Slot.binding(self)
-  local self_key = ids[self]
-  if self_key == nil or not Slot_is[class_of(self)] then
-    self_key = self_of(self, "Slot")
+  function Slot.binding(self)
+    local self_key = ids[self]
+    if self_key == nil or not Slot_is[class_of(self)] then
+      self_key = self_of(self, "Slot")
+    end
+    return prim["Slot.binding"](self_key)
   end
-  return prim["Slot.binding"](self_key)
-end
 
-function Slot.on(self, event, handler, options)
-  if ids[self] == nil or not Slot_is[class_of(self)] then
-    self_of(self, "Slot")
+  function Slot.on(self, event, handler, options)
+    if ids[self] == nil or not Slot_is[class_of(self)] then
+      self_of(self, "Slot")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.Slot.on(self, event, handler, options)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  if options ~= nil then
-    check_shape(options, "options", "EventOptions")
-  end
-  return hand.Slot.on(self, event, handler, options)
-end
 
-function Slot.once(self, event, handler)
-  if ids[self] == nil or not Slot_is[class_of(self)] then
-    self_of(self, "Slot")
+  function Slot.once(self, event, handler)
+    if ids[self] == nil or not Slot_is[class_of(self)] then
+      self_of(self, "Slot")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.Slot.once(self, event, handler)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  return hand.Slot.once(self, event, handler)
 end
 
 -- MenuTemplate --------------------------------------------------------------
 
-local MenuTemplate = class("MenuTemplate")
+do
+  local MenuTemplate = class("MenuTemplate")
 
-function new.MenuTemplate(id)
-  return prim["handles.new"]("MenuTemplate", id)
-end
+  function new.MenuTemplate(id)
+    return prim["handles.new"]("MenuTemplate", id)
+  end
 
----@param handle table
----@return string id
-function keys.MenuTemplate(handle)
-  return prim["handles.key"](handle)
-end
+  ---@param handle table
+  ---@return string id
+  function keys.MenuTemplate(handle)
+    return prim["handles.key"](handle)
+  end
 
-function MenuTemplate.id(self)
-  local self_key = ids[self]
-  if self_key == nil or not MenuTemplate_is[class_of(self)] then
-    self_key = self_of(self, "MenuTemplate")
+  function MenuTemplate.id(self)
+    local self_key = ids[self]
+    if self_key == nil or not MenuTemplate_is[class_of(self)] then
+      self_key = self_of(self, "MenuTemplate")
+    end
+    return prim["MenuTemplate.id"](self_key)
   end
-  return prim["MenuTemplate.id"](self_key)
-end
 
-function MenuTemplate.exists(self)
-  local self_key = ids[self]
-  if self_key == nil or not MenuTemplate_is[class_of(self)] then
-    self_key = self_of(self, "MenuTemplate")
+  function MenuTemplate.exists(self)
+    local self_key = ids[self]
+    if self_key == nil or not MenuTemplate_is[class_of(self)] then
+      self_key = self_of(self, "MenuTemplate")
+    end
+    return prim["MenuTemplate.exists"](self_key)
   end
-  return prim["MenuTemplate.exists"](self_key)
-end
 
-function MenuTemplate.size(self)
-  local self_key = ids[self]
-  if self_key == nil or not MenuTemplate_is[class_of(self)] then
-    self_key = self_of(self, "MenuTemplate")
+  function MenuTemplate.size(self)
+    local self_key = ids[self]
+    if self_key == nil or not MenuTemplate_is[class_of(self)] then
+      self_key = self_of(self, "MenuTemplate")
+    end
+    return prim["MenuTemplate.size"](self_key)
   end
-  return prim["MenuTemplate.size"](self_key)
-end
 
-function MenuTemplate.rows(self)
-  local self_key = ids[self]
-  if self_key == nil or not MenuTemplate_is[class_of(self)] then
-    self_key = self_of(self, "MenuTemplate")
+  function MenuTemplate.rows(self)
+    local self_key = ids[self]
+    if self_key == nil or not MenuTemplate_is[class_of(self)] then
+      self_key = self_of(self, "MenuTemplate")
+    end
+    return prim["MenuTemplate.rows"](self_key)
   end
-  return prim["MenuTemplate.rows"](self_key)
-end
 
-function MenuTemplate.title(self)
-  local self_key = ids[self]
-  if self_key == nil or not MenuTemplate_is[class_of(self)] then
-    self_key = self_of(self, "MenuTemplate")
+  function MenuTemplate.title(self)
+    local self_key = ids[self]
+    if self_key == nil or not MenuTemplate_is[class_of(self)] then
+      self_key = self_of(self, "MenuTemplate")
+    end
+    return prim["MenuTemplate.title"](self_key)
   end
-  return prim["MenuTemplate.title"](self_key)
-end
 
-function MenuTemplate.skin(self)
-  local self_key = ids[self]
-  if self_key == nil or not MenuTemplate_is[class_of(self)] then
-    self_key = self_of(self, "MenuTemplate")
+  function MenuTemplate.skin(self)
+    local self_key = ids[self]
+    if self_key == nil or not MenuTemplate_is[class_of(self)] then
+      self_key = self_of(self, "MenuTemplate")
+    end
+    return prim["MenuTemplate.skin"](self_key)
   end
-  return prim["MenuTemplate.skin"](self_key)
-end
 
-function MenuTemplate.is_locked(self)
-  local self_key = ids[self]
-  if self_key == nil or not MenuTemplate_is[class_of(self)] then
-    self_key = self_of(self, "MenuTemplate")
+  function MenuTemplate.is_locked(self)
+    local self_key = ids[self]
+    if self_key == nil or not MenuTemplate_is[class_of(self)] then
+      self_key = self_of(self, "MenuTemplate")
+    end
+    return prim["MenuTemplate.is_locked"](self_key)
   end
-  return prim["MenuTemplate.is_locked"](self_key)
-end
 
-function MenuTemplate.item(self, index)
-  local self_key = ids[self]
-  if self_key == nil or not MenuTemplate_is[class_of(self)] then
-    self_key = self_of(self, "MenuTemplate")
+  function MenuTemplate.item(self, index)
+    local self_key = ids[self]
+    if self_key == nil or not MenuTemplate_is[class_of(self)] then
+      self_key = self_of(self, "MenuTemplate")
+    end
+    return prim["MenuTemplate.item"](self_key, index)
   end
-  return prim["MenuTemplate.item"](self_key, index)
-end
 
-function MenuTemplate.windows(self)
-  local self_key = ids[self]
-  if self_key == nil or not MenuTemplate_is[class_of(self)] then
-    self_key = self_of(self, "MenuTemplate")
+  function MenuTemplate.windows(self)
+    local self_key = ids[self]
+    if self_key == nil or not MenuTemplate_is[class_of(self)] then
+      self_key = self_of(self, "MenuTemplate")
+    end
+    return prim["MenuTemplate.windows"](self_key)
   end
-  return prim["MenuTemplate.windows"](self_key)
-end
 
-function MenuTemplate.remove(self)
-  local self_key = ids[self]
-  if self_key == nil or not MenuTemplate_is[class_of(self)] then
-    self_key = self_of(self, "MenuTemplate")
+  function MenuTemplate.remove(self)
+    local self_key = ids[self]
+    if self_key == nil or not MenuTemplate_is[class_of(self)] then
+      self_key = self_of(self, "MenuTemplate")
+    end
+    return prim["MenuTemplate.remove"](self_key)
   end
-  return prim["MenuTemplate.remove"](self_key)
-end
 
-function MenuTemplate.on(self, event, handler, options)
-  if ids[self] == nil or not MenuTemplate_is[class_of(self)] then
-    self_of(self, "MenuTemplate")
+  function MenuTemplate.on(self, event, handler, options)
+    if ids[self] == nil or not MenuTemplate_is[class_of(self)] then
+      self_of(self, "MenuTemplate")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.MenuTemplate.on(self, event, handler, options)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  if options ~= nil then
-    check_shape(options, "options", "EventOptions")
-  end
-  return hand.MenuTemplate.on(self, event, handler, options)
-end
 
-function MenuTemplate.once(self, event, handler)
-  if ids[self] == nil or not MenuTemplate_is[class_of(self)] then
-    self_of(self, "MenuTemplate")
+  function MenuTemplate.once(self, event, handler)
+    if ids[self] == nil or not MenuTemplate_is[class_of(self)] then
+      self_of(self, "MenuTemplate")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.MenuTemplate.once(self, event, handler)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  return hand.MenuTemplate.once(self, event, handler)
 end
 
 -- Dialog --------------------------------------------------------------------
 
-local Dialog = class("Dialog")
+do
+  local Dialog = class("Dialog")
 
-function new.Dialog(id)
-  return prim["handles.new"]("Dialog", id)
-end
+  function new.Dialog(id)
+    return prim["handles.new"]("Dialog", id)
+  end
 
----@param handle table
----@return string id
-function keys.Dialog(handle)
-  return prim["handles.key"](handle)
-end
+  ---@param handle table
+  ---@return string id
+  function keys.Dialog(handle)
+    return prim["handles.key"](handle)
+  end
 
-function Dialog.id(self)
-  local self_key = ids[self]
-  if self_key == nil or not Dialog_is[class_of(self)] then
-    self_key = self_of(self, "Dialog")
+  function Dialog.id(self)
+    local self_key = ids[self]
+    if self_key == nil or not Dialog_is[class_of(self)] then
+      self_key = self_of(self, "Dialog")
+    end
+    return prim["Dialog.id"](self_key)
   end
-  return prim["Dialog.id"](self_key)
-end
 
-function Dialog.exists(self)
-  local self_key = ids[self]
-  if self_key == nil or not Dialog_is[class_of(self)] then
-    self_key = self_of(self, "Dialog")
+  function Dialog.exists(self)
+    local self_key = ids[self]
+    if self_key == nil or not Dialog_is[class_of(self)] then
+      self_key = self_of(self, "Dialog")
+    end
+    return prim["Dialog.exists"](self_key)
   end
-  return prim["Dialog.exists"](self_key)
-end
 
-function Dialog.title(self)
-  local self_key = ids[self]
-  if self_key == nil or not Dialog_is[class_of(self)] then
-    self_key = self_of(self, "Dialog")
+  function Dialog.title(self)
+    local self_key = ids[self]
+    if self_key == nil or not Dialog_is[class_of(self)] then
+      self_key = self_of(self, "Dialog")
+    end
+    return prim["Dialog.title"](self_key)
   end
-  return prim["Dialog.title"](self_key)
-end
 
-function Dialog.buttons(self)
-  local self_key = ids[self]
-  if self_key == nil or not Dialog_is[class_of(self)] then
-    self_key = self_of(self, "Dialog")
+  function Dialog.buttons(self)
+    local self_key = ids[self]
+    if self_key == nil or not Dialog_is[class_of(self)] then
+      self_key = self_of(self, "Dialog")
+    end
+    return prim["Dialog.buttons"](self_key)
   end
-  return prim["Dialog.buttons"](self_key)
-end
 
-function Dialog.inputs(self)
-  local self_key = ids[self]
-  if self_key == nil or not Dialog_is[class_of(self)] then
-    self_key = self_of(self, "Dialog")
+  function Dialog.inputs(self)
+    local self_key = ids[self]
+    if self_key == nil or not Dialog_is[class_of(self)] then
+      self_key = self_of(self, "Dialog")
+    end
+    return prim["Dialog.inputs"](self_key)
   end
-  return prim["Dialog.inputs"](self_key)
-end
 
-function Dialog.button(self, key)
-  local self_key = ids[self]
-  if self_key == nil or not Dialog_is[class_of(self)] then
-    self_key = self_of(self, "Dialog")
+  function Dialog.button(self, key)
+    local self_key = ids[self]
+    if self_key == nil or not Dialog_is[class_of(self)] then
+      self_key = self_of(self, "Dialog")
+    end
+    return prim["Dialog.button"](self_key, key)
   end
-  return prim["Dialog.button"](self_key, key)
-end
 
-function Dialog.open_for(self, player, options)
-  local self_key = ids[self]
-  if self_key == nil or not Dialog_is[class_of(self)] then
-    self_key = self_of(self, "Dialog")
+  function Dialog.open_for(self, player, options)
+    local self_key = ids[self]
+    if self_key == nil or not Dialog_is[class_of(self)] then
+      self_key = self_of(self, "Dialog")
+    end
+    return prim["Dialog.open_for"](self_key, player, options)
   end
-  return prim["Dialog.open_for"](self_key, player, options)
-end
 
-function Dialog.ask(self, player, options)
-  if ids[self] == nil or not Dialog_is[class_of(self)] then
-    self_of(self, "Dialog")
+  function Dialog.ask(self, player, options)
+    if ids[self] == nil or not Dialog_is[class_of(self)] then
+      self_of(self, "Dialog")
+    end
+    if (ids[player] == nil or not Player_is[class_of(player)]) then
+      want_handle(player, "Player", "player")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "DialogOpenOptions")
+    end
+    return hand.Dialog.ask(self, player, options)
   end
-  if (ids[player] == nil or not Player_is[class_of(player)]) then
-    want_handle(player, "Player", "player")
-  end
-  if options ~= nil then
-    check_shape(options, "options", "DialogOpenOptions")
-  end
-  return hand.Dialog.ask(self, player, options)
-end
 
-function Dialog.on(self, event, handler, options)
-  if ids[self] == nil or not Dialog_is[class_of(self)] then
-    self_of(self, "Dialog")
+  function Dialog.on(self, event, handler, options)
+    if ids[self] == nil or not Dialog_is[class_of(self)] then
+      self_of(self, "Dialog")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.Dialog.on(self, event, handler, options)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  if options ~= nil then
-    check_shape(options, "options", "EventOptions")
-  end
-  return hand.Dialog.on(self, event, handler, options)
-end
 
-function Dialog.once(self, event, handler)
-  if ids[self] == nil or not Dialog_is[class_of(self)] then
-    self_of(self, "Dialog")
+  function Dialog.once(self, event, handler)
+    if ids[self] == nil or not Dialog_is[class_of(self)] then
+      self_of(self, "Dialog")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.Dialog.once(self, event, handler)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  return hand.Dialog.once(self, event, handler)
 end
 
 -- Button --------------------------------------------------------------------
 
-local Button = class("Button")
+do
+  local Button = class("Button")
 
-function new.Button(dialog, key)
-  return prim["handles.new"]("Button", dialog, key)
-end
+  function new.Button(dialog, key)
+    return prim["handles.new"]("Button", dialog, key)
+  end
 
----@param handle table
----@return string dialog
----@return string key
-function keys.Button(handle)
-  return prim["handles.key"](handle)
-end
+  ---@param handle table
+  ---@return string dialog
+  ---@return string key
+  function keys.Button(handle)
+    return prim["handles.key"](handle)
+  end
 
-function Button.key(self)
-  local self_key = ids[self]
-  if self_key == nil or not Button_is[class_of(self)] then
-    self_key = self_of(self, "Button")
+  function Button.key(self)
+    local self_key = ids[self]
+    if self_key == nil or not Button_is[class_of(self)] then
+      self_key = self_of(self, "Button")
+    end
+    return prim["Button.key"](self_key)
   end
-  return prim["Button.key"](self_key)
-end
 
-function Button.dialog(self)
-  local self_key = ids[self]
-  if self_key == nil or not Button_is[class_of(self)] then
-    self_key = self_of(self, "Button")
+  function Button.dialog(self)
+    local self_key = ids[self]
+    if self_key == nil or not Button_is[class_of(self)] then
+      self_key = self_of(self, "Button")
+    end
+    return prim["Button.dialog"](self_key)
   end
-  return prim["Button.dialog"](self_key)
-end
 
-function Button.label(self)
-  local self_key = ids[self]
-  if self_key == nil or not Button_is[class_of(self)] then
-    self_key = self_of(self, "Button")
+  function Button.label(self)
+    local self_key = ids[self]
+    if self_key == nil or not Button_is[class_of(self)] then
+      self_key = self_of(self, "Button")
+    end
+    return prim["Button.label"](self_key)
   end
-  return prim["Button.label"](self_key)
-end
 
-function Button.on(self, event, handler, options)
-  if ids[self] == nil or not Button_is[class_of(self)] then
-    self_of(self, "Button")
+  function Button.on(self, event, handler, options)
+    if ids[self] == nil or not Button_is[class_of(self)] then
+      self_of(self, "Button")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.Button.on(self, event, handler, options)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  if options ~= nil then
-    check_shape(options, "options", "EventOptions")
-  end
-  return hand.Button.on(self, event, handler, options)
-end
 
-function Button.once(self, event, handler)
-  if ids[self] == nil or not Button_is[class_of(self)] then
-    self_of(self, "Button")
+  function Button.once(self, event, handler)
+    if ids[self] == nil or not Button_is[class_of(self)] then
+      self_of(self, "Button")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.Button.once(self, event, handler)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  return hand.Button.once(self, event, handler)
 end
 
 -- ProjectItem ---------------------------------------------------------------
 
-local ProjectItem = class("ProjectItem")
+do
+  local ProjectItem = class("ProjectItem")
 
-function new.ProjectItem(id)
-  return prim["handles.new"]("ProjectItem", id)
-end
+  function new.ProjectItem(id)
+    return prim["handles.new"]("ProjectItem", id)
+  end
 
----@param handle table
----@return string id
-function keys.ProjectItem(handle)
-  return prim["handles.key"](handle)
-end
+  ---@param handle table
+  ---@return string id
+  function keys.ProjectItem(handle)
+    return prim["handles.key"](handle)
+  end
 
-function ProjectItem.id(self)
-  local self_key = ids[self]
-  if self_key == nil or not ProjectItem_is[class_of(self)] then
-    self_key = self_of(self, "ProjectItem")
+  function ProjectItem.id(self)
+    local self_key = ids[self]
+    if self_key == nil or not ProjectItem_is[class_of(self)] then
+      self_key = self_of(self, "ProjectItem")
+    end
+    return prim["ProjectItem.id"](self_key)
   end
-  return prim["ProjectItem.id"](self_key)
-end
 
-function ProjectItem.exists(self)
-  local self_key = ids[self]
-  if self_key == nil or not ProjectItem_is[class_of(self)] then
-    self_key = self_of(self, "ProjectItem")
+  function ProjectItem.exists(self)
+    local self_key = ids[self]
+    if self_key == nil or not ProjectItem_is[class_of(self)] then
+      self_key = self_of(self, "ProjectItem")
+    end
+    return prim["ProjectItem.exists"](self_key)
   end
-  return prim["ProjectItem.exists"](self_key)
-end
 
-function ProjectItem.create(self, overrides)
-  local self_key = ids[self]
-  if self_key == nil or not ProjectItem_is[class_of(self)] then
-    self_key = self_of(self, "ProjectItem")
+  function ProjectItem.create(self, overrides)
+    local self_key = ids[self]
+    if self_key == nil or not ProjectItem_is[class_of(self)] then
+      self_key = self_of(self, "ProjectItem")
+    end
+    return prim["ProjectItem.create"](self_key, overrides)
   end
-  return prim["ProjectItem.create"](self_key, overrides)
-end
 
-function ProjectItem.properties(self)
-  local self_key = ids[self]
-  if self_key == nil or not ProjectItem_is[class_of(self)] then
-    self_key = self_of(self, "ProjectItem")
+  function ProjectItem.properties(self)
+    local self_key = ids[self]
+    if self_key == nil or not ProjectItem_is[class_of(self)] then
+      self_key = self_of(self, "ProjectItem")
+    end
+    return prim["ProjectItem.properties"](self_key)
   end
-  return prim["ProjectItem.properties"](self_key)
-end
 
-function ProjectItem.on(self, event, handler, options)
-  if ids[self] == nil or not ProjectItem_is[class_of(self)] then
-    self_of(self, "ProjectItem")
+  function ProjectItem.on(self, event, handler, options)
+    if ids[self] == nil or not ProjectItem_is[class_of(self)] then
+      self_of(self, "ProjectItem")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.ProjectItem.on(self, event, handler, options)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  if options ~= nil then
-    check_shape(options, "options", "EventOptions")
-  end
-  return hand.ProjectItem.on(self, event, handler, options)
-end
 
-function ProjectItem.once(self, event, handler)
-  if ids[self] == nil or not ProjectItem_is[class_of(self)] then
-    self_of(self, "ProjectItem")
+  function ProjectItem.once(self, event, handler)
+    if ids[self] == nil or not ProjectItem_is[class_of(self)] then
+      self_of(self, "ProjectItem")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.ProjectItem.once(self, event, handler)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  return hand.ProjectItem.once(self, event, handler)
 end
 
 -- Effect --------------------------------------------------------------------
 
-local Effect = class("Effect")
+do
+  local Effect = class("Effect")
 
-function new.Effect(number, kind)
-  return prim["handles.new"]("Effect", number, kind)
-end
-
----@param handle table
----@return integer number
----@return string kind
-function keys.Effect(handle)
-  return prim["handles.key"](handle)
-end
-
-function Effect.kind(self)
-  local self_key = ids[self]
-  if self_key == nil or not Effect_is[class_of(self)] then
-    self_key = self_of(self, "Effect")
+  function new.Effect(number, kind)
+    return prim["handles.new"]("Effect", number, kind)
   end
-  return prim["Effect.kind"](self_key)
-end
 
-function Effect.is_active(self)
-  local self_key = ids[self]
-  if self_key == nil or not Effect_is[class_of(self)] then
-    self_key = self_of(self, "Effect")
+  ---@param handle table
+  ---@return integer number
+  ---@return string kind
+  function keys.Effect(handle)
+    return prim["handles.key"](handle)
   end
-  return prim["Effect.is_active"](self_key)
-end
 
-function Effect.stop(self)
-  local self_key = ids[self]
-  if self_key == nil or not Effect_is[class_of(self)] then
-    self_key = self_of(self, "Effect")
-  end
-  return prim["Effect.stop"](self_key)
-end
-
-function Effect.location(self)
-  local self_key = ids[self]
-  if self_key == nil or not Effect_is[class_of(self)] then
-    self_key = self_of(self, "Effect")
-  end
-  return prim["Effect.location"](self_key)
-end
-
-function Effect.teleport(self, location_or_position)
-  local self_key = ids[self]
-  if self_key == nil or not Effect_is[class_of(self)] then
-    self_key = self_of(self, "Effect")
-  end
-  return prim["Effect.teleport"](self_key, location_or_position)
-end
-
-function Effect.follow(self, target, offset)
-  local self_key = ids[self]
-  if self_key == nil or not Effect_is[class_of(self)] then
-    self_key = self_of(self, "Effect")
-  end
-  local offset_x, offset_y, offset_z
-  if offset ~= nil then
-    if genuine_mt(offset) ~= Vec3_mt then
-      want_vec3_opt(offset, "offset")
+  function Effect.kind(self)
+    local self_key = ids[self]
+    if self_key == nil or not Effect_is[class_of(self)] then
+      self_key = self_of(self, "Effect")
     end
-    offset_x, offset_y, offset_z = offset[1], offset[2], offset[3]
+    return prim["Effect.kind"](self_key)
   end
-  return prim["Effect.follow"](self_key, target, offset_x, offset_y, offset_z)
+
+  function Effect.is_active(self)
+    local self_key = ids[self]
+    if self_key == nil or not Effect_is[class_of(self)] then
+      self_key = self_of(self, "Effect")
+    end
+    return prim["Effect.is_active"](self_key)
+  end
+
+  function Effect.stop(self)
+    local self_key = ids[self]
+    if self_key == nil or not Effect_is[class_of(self)] then
+      self_key = self_of(self, "Effect")
+    end
+    return prim["Effect.stop"](self_key)
+  end
+
+  function Effect.location(self)
+    local self_key = ids[self]
+    if self_key == nil or not Effect_is[class_of(self)] then
+      self_key = self_of(self, "Effect")
+    end
+    return prim["Effect.location"](self_key)
+  end
+
+  function Effect.teleport(self, location_or_position)
+    local self_key = ids[self]
+    if self_key == nil or not Effect_is[class_of(self)] then
+      self_key = self_of(self, "Effect")
+    end
+    return prim["Effect.teleport"](self_key, location_or_position)
+  end
+
+  function Effect.follow(self, target, offset)
+    local self_key = ids[self]
+    if self_key == nil or not Effect_is[class_of(self)] then
+      self_key = self_of(self, "Effect")
+    end
+    local offset_x, offset_y, offset_z
+    if offset ~= nil then
+      if genuine_mt(offset) ~= Vec3_mt then
+        want_vec3_opt(offset, "offset")
+      end
+      offset_x, offset_y, offset_z = offset[1], offset[2], offset[3]
+    end
+    return prim["Effect.follow"](self_key, target, offset_x, offset_y, offset_z)
+  end
+
+  function Effect.on(self, event, handler, options)
+    if ids[self] == nil or not Effect_is[class_of(self)] then
+      self_of(self, "Effect")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.Effect.on(self, event, handler, options)
+  end
+
+  function Effect.once(self, event, handler)
+    if ids[self] == nil or not Effect_is[class_of(self)] then
+      self_of(self, "Effect")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.Effect.once(self, event, handler)
+  end
 end
 
-function Effect.on(self, event, handler, options)
-  if ids[self] == nil or not Effect_is[class_of(self)] then
-    self_of(self, "Effect")
+-- HttpStream ----------------------------------------------------------------
+
+do
+  local HttpStream = class("HttpStream")
+
+  function new.HttpStream(number, url)
+    return prim["handles.new"]("HttpStream", number, url)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
+
+  ---@param handle table
+  ---@return integer number
+  ---@return string url
+  function keys.HttpStream(handle)
+    return prim["handles.key"](handle)
   end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
+
+  function HttpStream.url(self)
+    local self_key = ids[self]
+    if self_key == nil or not HttpStream_is[class_of(self)] then
+      self_key = self_of(self, "HttpStream")
+    end
+    return prim["HttpStream.url"](self_key)
   end
-  if options ~= nil then
-    check_shape(options, "options", "EventOptions")
+
+  function HttpStream.state(self)
+    local self_key = ids[self]
+    if self_key == nil or not HttpStream_is[class_of(self)] then
+      self_key = self_of(self, "HttpStream")
+    end
+    return prim["HttpStream.state"](self_key)
   end
-  return hand.Effect.on(self, event, handler, options)
+
+  function HttpStream.status(self)
+    local self_key = ids[self]
+    if self_key == nil or not HttpStream_is[class_of(self)] then
+      self_key = self_of(self, "HttpStream")
+    end
+    return prim["HttpStream.status"](self_key)
+  end
+
+  function HttpStream.close(self)
+    local self_key = ids[self]
+    if self_key == nil or not HttpStream_is[class_of(self)] then
+      self_key = self_of(self, "HttpStream")
+    end
+    return prim["HttpStream.close"](self_key)
+  end
+
+  function HttpStream.on(self, event, handler, options)
+    if ids[self] == nil or not HttpStream_is[class_of(self)] then
+      self_of(self, "HttpStream")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.HttpStream.on(self, event, handler, options)
+  end
+
+  function HttpStream.once(self, event, handler)
+    if ids[self] == nil or not HttpStream_is[class_of(self)] then
+      self_of(self, "HttpStream")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.HttpStream.once(self, event, handler)
+  end
 end
 
-function Effect.once(self, event, handler)
-  if ids[self] == nil or not Effect_is[class_of(self)] then
-    self_of(self, "Effect")
+-- WebSocket -----------------------------------------------------------------
+
+do
+  local WebSocket = class("WebSocket")
+
+  function new.WebSocket(number, url)
+    return prim["handles.new"]("WebSocket", number, url)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
+
+  ---@param handle table
+  ---@return integer number
+  ---@return string url
+  function keys.WebSocket(handle)
+    return prim["handles.key"](handle)
   end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
+
+  function WebSocket.url(self)
+    local self_key = ids[self]
+    if self_key == nil or not WebSocket_is[class_of(self)] then
+      self_key = self_of(self, "WebSocket")
+    end
+    return prim["WebSocket.url"](self_key)
   end
-  return hand.Effect.once(self, event, handler)
+
+  function WebSocket.state(self)
+    local self_key = ids[self]
+    if self_key == nil or not WebSocket_is[class_of(self)] then
+      self_key = self_of(self, "WebSocket")
+    end
+    return prim["WebSocket.state"](self_key)
+  end
+
+  function WebSocket.protocol(self)
+    local self_key = ids[self]
+    if self_key == nil or not WebSocket_is[class_of(self)] then
+      self_key = self_of(self, "WebSocket")
+    end
+    return prim["WebSocket.protocol"](self_key)
+  end
+
+  function WebSocket.send(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not WebSocket_is[class_of(self)] then
+      self_key = self_of(self, "WebSocket")
+    end
+    return prim["WebSocket.send"](self_key, text)
+  end
+
+  function WebSocket.close(self, code, reason)
+    local self_key = ids[self]
+    if self_key == nil or not WebSocket_is[class_of(self)] then
+      self_key = self_of(self, "WebSocket")
+    end
+    return prim["WebSocket.close"](self_key, code, reason)
+  end
+
+  function WebSocket.on(self, event, handler, options)
+    if ids[self] == nil or not WebSocket_is[class_of(self)] then
+      self_of(self, "WebSocket")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.WebSocket.on(self, event, handler, options)
+  end
+
+  function WebSocket.once(self, event, handler)
+    if ids[self] == nil or not WebSocket_is[class_of(self)] then
+      self_of(self, "WebSocket")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.WebSocket.once(self, event, handler)
+  end
+end
+
+-- Route ---------------------------------------------------------------------
+
+do
+  local Route = class("Route")
+
+  function new.Route(number)
+    return prim["handles.new"]("Route", number)
+  end
+
+  ---@param handle table
+  ---@return integer number
+  function keys.Route(handle)
+    return prim["handles.key"](handle)
+  end
+
+  function Route.remove(self)
+    local self_key = ids[self]
+    if self_key == nil or not Route_is[class_of(self)] then
+      self_key = self_of(self, "Route")
+    end
+    return prim["Route.remove"](self_key)
+  end
+
+  function Route.exists(self)
+    local self_key = ids[self]
+    if self_key == nil or not Route_is[class_of(self)] then
+      self_key = self_of(self, "Route")
+    end
+    return prim["Route.exists"](self_key)
+  end
+end
+
+-- WebResponse ---------------------------------------------------------------
+
+do
+  local WebResponse = class("WebResponse")
+
+  function new.WebResponse(number)
+    return prim["handles.new"]("WebResponse", number)
+  end
+
+  ---@param handle table
+  ---@return integer number
+  function keys.WebResponse(handle)
+    return prim["handles.key"](handle)
+  end
+
+  function WebResponse.send(self, status, body, headers)
+    local self_key = ids[self]
+    if self_key == nil or not WebResponse_is[class_of(self)] then
+      self_key = self_of(self, "WebResponse")
+    end
+    return prim["WebResponse.send"](self_key, status, body, headers)
+  end
+
+  function WebResponse.json(self, status, value)
+    local self_key = ids[self]
+    if self_key == nil or not WebResponse_is[class_of(self)] then
+      self_key = self_of(self, "WebResponse")
+    end
+    return prim["WebResponse.json"](self_key, status, value)
+  end
+
+  function WebResponse.redirect(self, url, status)
+    local self_key = ids[self]
+    if self_key == nil or not WebResponse_is[class_of(self)] then
+      self_key = self_of(self, "WebResponse")
+    end
+    return prim["WebResponse.redirect"](self_key, url, status)
+  end
+
+  function WebResponse.is_pending(self)
+    local self_key = ids[self]
+    if self_key == nil or not WebResponse_is[class_of(self)] then
+      self_key = self_of(self, "WebResponse")
+    end
+    return prim["WebResponse.is_pending"](self_key)
+  end
+end
+
+-- OAuthFlow -----------------------------------------------------------------
+
+do
+  local OAuthFlow = class("OAuthFlow")
+
+  function new.OAuthFlow(number)
+    return prim["handles.new"]("OAuthFlow", number)
+  end
+
+  ---@param handle table
+  ---@return integer number
+  function keys.OAuthFlow(handle)
+    return prim["handles.key"](handle)
+  end
+
+  function OAuthFlow.begin(self, player)
+    local self_key = ids[self]
+    if self_key == nil or not OAuthFlow_is[class_of(self)] then
+      self_key = self_of(self, "OAuthFlow")
+    end
+    return prim["OAuthFlow.begin"](self_key, player)
+  end
+
+  function OAuthFlow.remove(self)
+    local self_key = ids[self]
+    if self_key == nil or not OAuthFlow_is[class_of(self)] then
+      self_key = self_of(self, "OAuthFlow")
+    end
+    return prim["OAuthFlow.remove"](self_key)
+  end
+
+  function OAuthFlow.on(self, event, handler, options)
+    if ids[self] == nil or not OAuthFlow_is[class_of(self)] then
+      self_of(self, "OAuthFlow")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.OAuthFlow.on(self, event, handler, options)
+  end
+
+  function OAuthFlow.once(self, event, handler)
+    if ids[self] == nil or not OAuthFlow_is[class_of(self)] then
+      self_of(self, "OAuthFlow")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.OAuthFlow.once(self, event, handler)
+  end
 end
 
 -- Cutscene ------------------------------------------------------------------
 
-local Cutscene = class("Cutscene")
+do
+  local Cutscene = class("Cutscene")
 
-function new.Cutscene(number, kind)
-  return prim["handles.new"]("Cutscene", number, kind)
-end
+  function new.Cutscene(number, kind)
+    return prim["handles.new"]("Cutscene", number, kind)
+  end
 
----@param handle table
----@return integer number
----@return string kind
-function keys.Cutscene(handle)
-  return prim["handles.key"](handle)
-end
+  ---@param handle table
+  ---@return integer number
+  ---@return string kind
+  function keys.Cutscene(handle)
+    return prim["handles.key"](handle)
+  end
 
-function Cutscene.kind(self)
-  local self_key = ids[self]
-  if self_key == nil or not Cutscene_is[class_of(self)] then
-    self_key = self_of(self, "Cutscene")
+  function Cutscene.kind(self)
+    local self_key = ids[self]
+    if self_key == nil or not Cutscene_is[class_of(self)] then
+      self_key = self_of(self, "Cutscene")
+    end
+    return prim["Cutscene.kind"](self_key)
   end
-  return prim["Cutscene.kind"](self_key)
-end
 
-function Cutscene.length(self)
-  local self_key = ids[self]
-  if self_key == nil or not Cutscene_is[class_of(self)] then
-    self_key = self_of(self, "Cutscene")
+  function Cutscene.length(self)
+    local self_key = ids[self]
+    if self_key == nil or not Cutscene_is[class_of(self)] then
+      self_key = self_of(self, "Cutscene")
+    end
+    return prim["Cutscene.length"](self_key)
   end
-  return prim["Cutscene.length"](self_key)
-end
 
-function Cutscene.player(self)
-  local self_key = ids[self]
-  if self_key == nil or not Cutscene_is[class_of(self)] then
-    self_key = self_of(self, "Cutscene")
+  function Cutscene.player(self)
+    local self_key = ids[self]
+    if self_key == nil or not Cutscene_is[class_of(self)] then
+      self_key = self_of(self, "Cutscene")
+    end
+    return prim["Cutscene.player"](self_key)
   end
-  return prim["Cutscene.player"](self_key)
-end
 
-function Cutscene.is_active(self)
-  local self_key = ids[self]
-  if self_key == nil or not Cutscene_is[class_of(self)] then
-    self_key = self_of(self, "Cutscene")
+  function Cutscene.is_active(self)
+    local self_key = ids[self]
+    if self_key == nil or not Cutscene_is[class_of(self)] then
+      self_key = self_of(self, "Cutscene")
+    end
+    return prim["Cutscene.is_active"](self_key)
   end
-  return prim["Cutscene.is_active"](self_key)
-end
 
-function Cutscene.time(self)
-  local self_key = ids[self]
-  if self_key == nil or not Cutscene_is[class_of(self)] then
-    self_key = self_of(self, "Cutscene")
+  function Cutscene.time(self)
+    local self_key = ids[self]
+    if self_key == nil or not Cutscene_is[class_of(self)] then
+      self_key = self_of(self, "Cutscene")
+    end
+    return prim["Cutscene.time"](self_key)
   end
-  return prim["Cutscene.time"](self_key)
-end
 
-function Cutscene.stop(self)
-  local self_key = ids[self]
-  if self_key == nil or not Cutscene_is[class_of(self)] then
-    self_key = self_of(self, "Cutscene")
+  function Cutscene.stop(self)
+    local self_key = ids[self]
+    if self_key == nil or not Cutscene_is[class_of(self)] then
+      self_key = self_of(self, "Cutscene")
+    end
+    return prim["Cutscene.stop"](self_key)
   end
-  return prim["Cutscene.stop"](self_key)
-end
 
-function Cutscene.on(self, event, handler, options)
-  if ids[self] == nil or not Cutscene_is[class_of(self)] then
-    self_of(self, "Cutscene")
+  function Cutscene.on(self, event, handler, options)
+    if ids[self] == nil or not Cutscene_is[class_of(self)] then
+      self_of(self, "Cutscene")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.Cutscene.on(self, event, handler, options)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  if options ~= nil then
-    check_shape(options, "options", "EventOptions")
-  end
-  return hand.Cutscene.on(self, event, handler, options)
-end
 
-function Cutscene.once(self, event, handler)
-  if ids[self] == nil or not Cutscene_is[class_of(self)] then
-    self_of(self, "Cutscene")
+  function Cutscene.once(self, event, handler)
+    if ids[self] == nil or not Cutscene_is[class_of(self)] then
+      self_of(self, "Cutscene")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.Cutscene.once(self, event, handler)
   end
-  if type_of(event) ~= "string" then
-    want(event, "string", "event")
-  end
-  if type_of(handler) ~= "function" then
-    want(handler, "function", "handler")
-  end
-  return hand.Cutscene.once(self, event, handler)
 end
 
 -- File ----------------------------------------------------------------------
 
-local File = class("File")
+do
+  local File = class("File")
 
-function new.File(path)
-  return prim["handles.new"]("File", path)
-end
-
----@param handle table
----@return string path
-function keys.File(handle)
-  return prim["handles.key"](handle)
-end
-
-function File.path(self)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  function new.File(path)
+    return prim["handles.new"]("File", path)
   end
-  return prim["File.path"](self_key)
-end
 
-function File.name(self)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  ---@param handle table
+  ---@return string path
+  function keys.File(handle)
+    return prim["handles.key"](handle)
   end
-  return prim["File.name"](self_key)
-end
 
-function File.parent(self)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  function File.path(self)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.path"](self_key)
   end
-  return prim["File.parent"](self_key)
-end
 
-function File.child(self, name)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  function File.name(self)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.name"](self_key)
   end
-  return prim["File.child"](self_key, name)
-end
 
-function File.exists(self)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  function File.parent(self)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.parent"](self_key)
   end
-  return prim["File.exists"](self_key)
-end
 
-function File.is_folder(self)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  function File.child(self, name)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.child"](self_key, name)
   end
-  return prim["File.is_folder"](self_key)
-end
 
-function File.size(self)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  function File.exists(self)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.exists"](self_key)
   end
-  return prim["File.size"](self_key)
-end
 
-function File.children(self)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  function File.is_folder(self)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.is_folder"](self_key)
   end
-  return prim["File.children"](self_key)
-end
 
-function File.read(self)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  function File.size(self)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.size"](self_key)
   end
-  return prim["File.read"](self_key)
-end
 
-function File.write(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  function File.children(self)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.children"](self_key)
   end
-  return prim["File.write"](self_key, text)
-end
 
-function File.append(self, text)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  function File.read(self)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.read"](self_key)
   end
-  return prim["File.append"](self_key, text)
-end
 
-function File.read_json(self)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  function File.write(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.write"](self_key, text)
   end
-  return prim["File.read_json"](self_key)
-end
 
-function File.write_json(self, value)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  function File.append(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.append"](self_key, text)
   end
-  return prim["File.write_json"](self_key, value)
-end
 
-function File.modified_time(self)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  function File.read_json(self)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.read_json"](self_key)
   end
-  return prim["File.modified_time"](self_key)
-end
 
-function File.rename(self, path)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  function File.write_json(self, value)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.write_json"](self_key, value)
   end
-  return prim["File.rename"](self_key, path)
-end
 
-function File.copy_to(self, path)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  function File.modified_time(self)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.modified_time"](self_key)
   end
-  return prim["File.copy_to"](self_key, path)
-end
 
-function File.create_folder(self)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  function File.rename(self, path)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.rename"](self_key, path)
   end
-  return prim["File.create_folder"](self_key)
-end
 
-function File.delete(self)
-  local self_key = ids[self]
-  if self_key == nil or not File_is[class_of(self)] then
-    self_key = self_of(self, "File")
+  function File.copy_to(self, path)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.copy_to"](self_key, path)
   end
-  return prim["File.delete"](self_key)
-end
 
-function File.lines(self)
-  if ids[self] == nil or not File_is[class_of(self)] then
-    self_of(self, "File")
+  function File.create_folder(self)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.create_folder"](self_key)
   end
-  return hand.File.lines(self)
+
+  function File.delete(self)
+    local self_key = ids[self]
+    if self_key == nil or not File_is[class_of(self)] then
+      self_key = self_of(self, "File")
+    end
+    return prim["File.delete"](self_key)
+  end
+
+  function File.lines(self)
+    if ids[self] == nil or not File_is[class_of(self)] then
+      self_of(self, "File")
+    end
+    return hand.File.lines(self)
+  end
 end
 
 -- Subscription --------------------------------------------------------------
 
-local Subscription = class("Subscription")
+do
+  local Subscription = class("Subscription")
 
-function new.Subscription(id)
-  return prim["handles.new"]("Subscription", id)
-end
-
----@param handle table
----@return integer id
-function keys.Subscription(handle)
-  return prim["handles.key"](handle)
-end
-
-function Subscription.cancel(self)
-  if ids[self] == nil or not Subscription_is[class_of(self)] then
-    self_of(self, "Subscription")
+  function new.Subscription(id)
+    return prim["handles.new"]("Subscription", id)
   end
-  return hand.Subscription.cancel(self)
-end
 
-function Subscription.is_active(self)
-  if ids[self] == nil or not Subscription_is[class_of(self)] then
-    self_of(self, "Subscription")
+  ---@param handle table
+  ---@return integer id
+  function keys.Subscription(handle)
+    return prim["handles.key"](handle)
   end
-  return hand.Subscription.is_active(self)
+
+  function Subscription.cancel(self)
+    if ids[self] == nil or not Subscription_is[class_of(self)] then
+      self_of(self, "Subscription")
+    end
+    return hand.Subscription.cancel(self)
+  end
+
+  function Subscription.is_active(self)
+    if ids[self] == nil or not Subscription_is[class_of(self)] then
+      self_of(self, "Subscription")
+    end
+    return hand.Subscription.is_active(self)
+  end
 end
 
 -- Task ----------------------------------------------------------------------
 
-local Task = class("Task")
+do
+  local Task = class("Task")
 
-function new.Task(id)
-  return prim["handles.new"]("Task", id)
-end
-
----@param handle table
----@return integer id
-function keys.Task(handle)
-  return prim["handles.key"](handle)
-end
-
-function Task.cancel(self)
-  if ids[self] == nil or not Task_is[class_of(self)] then
-    self_of(self, "Task")
+  function new.Task(id)
+    return prim["handles.new"]("Task", id)
   end
-  return hand.Task.cancel(self)
-end
 
-function Task.is_active(self)
-  if ids[self] == nil or not Task_is[class_of(self)] then
-    self_of(self, "Task")
+  ---@param handle table
+  ---@return integer id
+  function keys.Task(handle)
+    return prim["handles.key"](handle)
   end
-  return hand.Task.is_active(self)
+
+  function Task.cancel(self)
+    if ids[self] == nil or not Task_is[class_of(self)] then
+      self_of(self, "Task")
+    end
+    return hand.Task.cancel(self)
+  end
+
+  function Task.is_active(self)
+    if ids[self] == nil or not Task_is[class_of(self)] then
+      self_of(self, "Task")
+    end
+    return hand.Task.is_active(self)
+  end
 end
 
 -- Schedule ------------------------------------------------------------------
 
-local Schedule = class("Schedule")
+do
+  local Schedule = class("Schedule")
 
-function new.Schedule(number)
-  return prim["handles.new"]("Schedule", number)
-end
-
----@param handle table
----@return integer number
-function keys.Schedule(handle)
-  return prim["handles.key"](handle)
-end
-
-function Schedule.cancel(self)
-  local self_key = ids[self]
-  if self_key == nil or not Schedule_is[class_of(self)] then
-    self_key = self_of(self, "Schedule")
+  function new.Schedule(number)
+    return prim["handles.new"]("Schedule", number)
   end
-  prim["Schedule.cancel"](self_key)
-end
 
-function Schedule.is_active(self)
-  local self_key = ids[self]
-  if self_key == nil or not Schedule_is[class_of(self)] then
-    self_key = self_of(self, "Schedule")
+  ---@param handle table
+  ---@return integer number
+  function keys.Schedule(handle)
+    return prim["handles.key"](handle)
   end
-  return prim["Schedule.is_active"](self_key)
-end
 
-function Schedule.next_run(self)
-  local self_key = ids[self]
-  if self_key == nil or not Schedule_is[class_of(self)] then
-    self_key = self_of(self, "Schedule")
+  function Schedule.cancel(self)
+    local self_key = ids[self]
+    if self_key == nil or not Schedule_is[class_of(self)] then
+      self_key = self_of(self, "Schedule")
+    end
+    prim["Schedule.cancel"](self_key)
   end
-  return prim["Schedule.next_run"](self_key)
+
+  function Schedule.is_active(self)
+    local self_key = ids[self]
+    if self_key == nil or not Schedule_is[class_of(self)] then
+      self_key = self_of(self, "Schedule")
+    end
+    return prim["Schedule.is_active"](self_key)
+  end
+
+  function Schedule.next_run(self)
+    local self_key = ids[self]
+    if self_key == nil or not Schedule_is[class_of(self)] then
+      self_key = self_of(self, "Schedule")
+    end
+    return prim["Schedule.next_run"](self_key)
+  end
 end
 
 -- Random --------------------------------------------------------------------
 
-local Random = class("Random")
+do
+  local Random = class("Random")
 
-function new.Random(id)
-  return prim["handles.new"]("Random", id)
-end
+  function new.Random(id)
+    return prim["handles.new"]("Random", id)
+  end
 
----@param handle table
----@return integer id
-function keys.Random(handle)
-  return prim["handles.key"](handle)
-end
+  ---@param handle table
+  ---@return integer id
+  function keys.Random(handle)
+    return prim["handles.key"](handle)
+  end
 
-function Random.integer(self, min, max)
-  if ids[self] == nil or not Random_is[class_of(self)] then
-    self_of(self, "Random")
+  function Random.integer(self, min, max)
+    if ids[self] == nil or not Random_is[class_of(self)] then
+      self_of(self, "Random")
+    end
+    if number_kind(min) ~= "integer" then
+      min = want_integer(min, "min")
+    end
+    if number_kind(max) ~= "integer" then
+      max = want_integer(max, "max")
+    end
+    return hand.Random.integer(self, min, max)
   end
-  if number_kind(min) ~= "integer" then
-    min = want_integer(min, "min")
-  end
-  if number_kind(max) ~= "integer" then
-    max = want_integer(max, "max")
-  end
-  return hand.Random.integer(self, min, max)
-end
 
-function Random.number(self, min, max)
-  if ids[self] == nil or not Random_is[class_of(self)] then
-    self_of(self, "Random")
+  function Random.number(self, min, max)
+    if ids[self] == nil or not Random_is[class_of(self)] then
+      self_of(self, "Random")
+    end
+    if min ~= nil and type_of(min) ~= "number" then
+      want_opt(min, "number", "min")
+    end
+    if max ~= nil and type_of(max) ~= "number" then
+      want_opt(max, "number", "max")
+    end
+    return hand.Random.number(self, min, max)
   end
-  if min ~= nil and type_of(min) ~= "number" then
-    want_opt(min, "number", "min")
-  end
-  if max ~= nil and type_of(max) ~= "number" then
-    want_opt(max, "number", "max")
-  end
-  return hand.Random.number(self, min, max)
-end
 
-function Random.pick(self, list)
-  if ids[self] == nil or not Random_is[class_of(self)] then
-    self_of(self, "Random")
+  function Random.pick(self, list)
+    if ids[self] == nil or not Random_is[class_of(self)] then
+      self_of(self, "Random")
+    end
+    if type_of(list) ~= "table" then
+      want(list, "table", "list")
+    end
+    return hand.Random.pick(self, list)
   end
-  if type_of(list) ~= "table" then
-    want(list, "table", "list")
-  end
-  return hand.Random.pick(self, list)
-end
 
-function Random.shuffle(self, list)
-  if ids[self] == nil or not Random_is[class_of(self)] then
-    self_of(self, "Random")
+  function Random.shuffle(self, list)
+    if ids[self] == nil or not Random_is[class_of(self)] then
+      self_of(self, "Random")
+    end
+    if type_of(list) ~= "table" then
+      want(list, "table", "list")
+    end
+    return hand.Random.shuffle(self, list)
   end
-  if type_of(list) ~= "table" then
-    want(list, "table", "list")
-  end
-  return hand.Random.shuffle(self, list)
-end
 
-function Random.weighted(self, weights)
-  if ids[self] == nil or not Random_is[class_of(self)] then
-    self_of(self, "Random")
+  function Random.weighted(self, weights)
+    if ids[self] == nil or not Random_is[class_of(self)] then
+      self_of(self, "Random")
+    end
+    if type_of(weights) ~= "table" then
+      want(weights, "table", "weights")
+    end
+    return hand.Random.weighted(self, weights)
   end
-  if type_of(weights) ~= "table" then
-    want(weights, "table", "weights")
-  end
-  return hand.Random.weighted(self, weights)
 end
 
 -- Hud -----------------------------------------------------------------------
 
-local Hud = class("Hud")
+do
+  local Hud = class("Hud")
 
-function new.Hud(player)
-  return prim["handles.new"]("Hud", player)
-end
-
----@param handle table
----@return string player
-function keys.Hud(handle)
-  return prim["handles.key"](handle)
-end
-
-function Hud.player(self)
-  local self_key = ids[self]
-  if self_key == nil or not Hud_is[class_of(self)] then
-    self_key = self_of(self, "Hud")
+  function new.Hud(player)
+    return prim["handles.new"]("Hud", player)
   end
-  return prim["Hud.player"](self_key)
-end
 
-function Hud.fill_bar(self, name, value, max, options)
-  local self_key = ids[self]
-  if self_key == nil or not Hud_is[class_of(self)] then
-    self_key = self_of(self, "Hud")
+  ---@param handle table
+  ---@return string player
+  function keys.Hud(handle)
+    return prim["handles.key"](handle)
   end
-  return prim["Hud.fill_bar"](self_key, name, value, max, options)
-end
 
-function Hud.fill_bars(self, names, value, max, per_segment)
-  local self_key = ids[self]
-  if self_key == nil or not Hud_is[class_of(self)] then
-    self_key = self_of(self, "Hud")
+  function Hud.player(self)
+    local self_key = ids[self]
+    if self_key == nil or not Hud_is[class_of(self)] then
+      self_key = self_of(self, "Hud")
+    end
+    return prim["Hud.player"](self_key)
   end
-  return prim["Hud.fill_bars"](self_key, names, value, max, per_segment)
-end
 
-function Hud.bar(self, name)
-  local self_key = ids[self]
-  if self_key == nil or not Hud_is[class_of(self)] then
-    self_key = self_of(self, "Hud")
+  function Hud.fill_bar(self, name, value, max, options)
+    local self_key = ids[self]
+    if self_key == nil or not Hud_is[class_of(self)] then
+      self_key = self_of(self, "Hud")
+    end
+    return prim["Hud.fill_bar"](self_key, name, value, max, options)
   end
-  return prim["Hud.bar"](self_key, name)
-end
 
-function Hud.set_icons(self, name, icons)
-  local self_key = ids[self]
-  if self_key == nil or not Hud_is[class_of(self)] then
-    self_key = self_of(self, "Hud")
+  function Hud.fill_bars(self, names, value, max, per_segment)
+    local self_key = ids[self]
+    if self_key == nil or not Hud_is[class_of(self)] then
+      self_key = self_of(self, "Hud")
+    end
+    return prim["Hud.fill_bars"](self_key, names, value, max, per_segment)
   end
-  return prim["Hud.set_icons"](self_key, name, icons)
-end
 
-function Hud.icons(self, name)
-  local self_key = ids[self]
-  if self_key == nil or not Hud_is[class_of(self)] then
-    self_key = self_of(self, "Hud")
+  function Hud.bar(self, name)
+    local self_key = ids[self]
+    if self_key == nil or not Hud_is[class_of(self)] then
+      self_key = self_of(self, "Hud")
+    end
+    return prim["Hud.bar"](self_key, name)
   end
-  return prim["Hud.icons"](self_key, name)
-end
 
-function Hud.set_text(self, name, text)
-  local self_key = ids[self]
-  if self_key == nil or not Hud_is[class_of(self)] then
-    self_key = self_of(self, "Hud")
+  function Hud.set_icons(self, name, icons)
+    local self_key = ids[self]
+    if self_key == nil or not Hud_is[class_of(self)] then
+      self_key = self_of(self, "Hud")
+    end
+    return prim["Hud.set_icons"](self_key, name, icons)
   end
-  return prim["Hud.set_text"](self_key, name, text)
-end
 
-function Hud.text(self, name)
-  local self_key = ids[self]
-  if self_key == nil or not Hud_is[class_of(self)] then
-    self_key = self_of(self, "Hud")
+  function Hud.icons(self, name)
+    local self_key = ids[self]
+    if self_key == nil or not Hud_is[class_of(self)] then
+      self_key = self_of(self, "Hud")
+    end
+    return prim["Hud.icons"](self_key, name)
   end
-  return prim["Hud.text"](self_key, name)
-end
 
-function Hud.remove(self, name)
-  local self_key = ids[self]
-  if self_key == nil or not Hud_is[class_of(self)] then
-    self_key = self_of(self, "Hud")
+  function Hud.set_text(self, name, text)
+    local self_key = ids[self]
+    if self_key == nil or not Hud_is[class_of(self)] then
+      self_key = self_of(self, "Hud")
+    end
+    return prim["Hud.set_text"](self_key, name, text)
   end
-  return prim["Hud.remove"](self_key, name)
-end
 
-function Hud.clear(self)
-  local self_key = ids[self]
-  if self_key == nil or not Hud_is[class_of(self)] then
-    self_key = self_of(self, "Hud")
+  function Hud.text(self, name)
+    local self_key = ids[self]
+    if self_key == nil or not Hud_is[class_of(self)] then
+      self_key = self_of(self, "Hud")
+    end
+    return prim["Hud.text"](self_key, name)
   end
-  prim["Hud.clear"](self_key)
+
+  function Hud.remove(self, name)
+    local self_key = ids[self]
+    if self_key == nil or not Hud_is[class_of(self)] then
+      self_key = self_of(self, "Hud")
+    end
+    return prim["Hud.remove"](self_key, name)
+  end
+
+  function Hud.clear(self)
+    local self_key = ids[self]
+    if self_key == nil or not Hud_is[class_of(self)] then
+      self_key = self_of(self, "Hud")
+    end
+    prim["Hud.clear"](self_key)
+  end
 end
 
 -- Vec3 ----------------------------------------------------------------------
@@ -7043,6 +7417,32 @@ namespaces["nf.http"] = function(scope, ns)
       return value, err
     end
   end
+
+  function ns.stream(options)
+    return prim["nf.http.stream"](scope, options)
+  end
+
+  function ns.websocket(options)
+    return prim["nf.http.websocket"](scope, options)
+  end
+end
+
+namespaces["nf.web"] = function(scope, ns)
+  function ns.route(method, path, handler)
+    return prim["nf.web.route"](scope, method, path, handler)
+  end
+
+  function ns.url(path, query)
+    return prim["nf.web.url"](scope, path, query)
+  end
+
+  function ns.verify_signature(body, signature, options)
+    return prim["nf.web.verify_signature"](scope, body, signature, options)
+  end
+
+  function ns.oauth(options)
+    return prim["nf.web.oauth"](scope, options)
+  end
 end
 
 namespaces["nf.time"] = function(scope, ns)
@@ -7172,6 +7572,34 @@ namespaces["nf.test"] = function(scope, ns)
 
   function ns.shown(player, slot, options)
     return prim["nf.test.shown"](scope, player, slot, options)
+  end
+
+  function ns.connections(url)
+    return prim["nf.test.connections"](scope, url)
+  end
+
+  function ns.accept(connection, options)
+    prim["nf.test.accept"](scope, connection, options)
+  end
+
+  function ns.receive(connection, text)
+    prim["nf.test.receive"](scope, connection, text)
+  end
+
+  function ns.sent(connection)
+    return prim["nf.test.sent"](scope, connection)
+  end
+
+  function ns.request(method, path, options)
+    return prim["nf.test.request"](scope, method, path, options)
+  end
+
+  function ns.oauth_token(flow, response)
+    prim["nf.test.oauth_token"](scope, flow, response)
+  end
+
+  function ns.disconnect(connection, options)
+    prim["nf.test.disconnect"](scope, connection, options)
   end
 
   function ns.terrain(options)

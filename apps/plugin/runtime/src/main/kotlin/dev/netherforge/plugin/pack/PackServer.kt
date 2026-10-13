@@ -7,8 +7,9 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
- * The plugin's own HTTP server for the resource pack: the JDK's, on its own
- * daemon threads, serving `GET /<sha1>.zip` and nothing else.
+ * The plugin's own HTTP server: the JDK's, on its own daemon threads,
+ * serving the resource pack at `GET /<sha1>.zip`, and, when the server owner
+ * turned web routes on, handing every other request to [web] (`nf.web`).
  *
  * It keeps the current build and the one before it, so a player who started
  * downloading just before a rebuild still gets their bytes. The hash in the
@@ -19,7 +20,14 @@ class PackServer private constructor(private val server: HttpServer, private val
     @Volatile
     private var packs: List<Pair<String, ByteArray>> = emptyList()
 
+    /** Where requests that aren't for a pack go; null (`404`) while web routes are off. */
+    @Volatile
+    var web: ((HttpExchange) -> Unit)? = null
+
     val port: Int get() = server.address.port
+
+    /** Runs [work] on the server's threads: a web answer is written there, never on the main thread. */
+    fun execute(work: Runnable) = executor.execute(work)
 
     /** The host to put in a URL: the bound address, or loopback when bound to every interface. */
     val host: String get() = server.address.address.let { if (it.isAnyLocalAddress) "127.0.0.1" else it.hostAddress }
@@ -34,6 +42,12 @@ class PackServer private constructor(private val server: HttpServer, private val
     }
 
     private fun handle(exchange: HttpExchange) {
+        val web = web
+        if (web != null && !PACK.matches(exchange.requestURI.rawPath)) {
+            // The gate closes the exchange once it's answered, maybe later and from another thread.
+            web(exchange)
+            return
+        }
         exchange.use {
             val name = exchange.requestURI.path.removePrefix("/").removeSuffix(".zip")
             val bytes = packs.firstOrNull { it.first == name }?.second
@@ -56,10 +70,16 @@ class PackServer private constructor(private val server: HttpServer, private val
     }
 
     companion object {
+        /** A pack's path: `/` and a SHA-1 in hex, `.zip`. */
+        private val PACK = Regex("^/[0-9a-f]{40}\\.zip$")
+
+        /** Its threads: the pack's downloads and web requests (read, refused or queued for the main thread, and answered). */
+        private const val THREADS = 4
+
         fun start(bind: String, port: Int): PackServer {
             val server = HttpServer.create(InetSocketAddress(bind, port), 0)
-            val executor = Executors.newFixedThreadPool(2) { task ->
-                Thread(task, "NetherForge resource pack server").apply { isDaemon = true }
+            val executor = Executors.newFixedThreadPool(THREADS) { task ->
+                Thread(task, "NetherForge HTTP server").apply { isDaemon = true }
             }
             server.executor = executor
             val pack = PackServer(server, executor)

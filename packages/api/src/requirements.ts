@@ -11,7 +11,7 @@
 import type { Requirement } from './types.ts'
 
 /** A requirement's kind: the word before any `:` (`plugin` for `plugin:vault`). */
-export type RequirementKind = 'moderation' | 'http' | 'db' | 'plugin'
+export type RequirementKind = 'moderation' | 'http' | 'db' | 'web' | 'plugin'
 
 export interface RequirementSpec {
   /** What it lets scripts do, as a phrase: `ban players and change the server's settings`. */
@@ -32,6 +32,10 @@ export const REQUIREMENTS: Record<RequirementKind, RequirementSpec> = {
   db: {
     what: "keep a database of the package's own",
     declared: () => '`"requires": { "db": true }` in `netherforge.json`',
+  },
+  web: {
+    what: "answer web requests to the server under the package's own path",
+    declared: () => '`"requires": { "web": true }` in `netherforge.json`',
   },
   plugin: {
     what: 'use another plugin on the server',
@@ -66,6 +70,7 @@ export interface DeclaringManifest {
   requires?: {
     moderation?: boolean | null
     db?: boolean | null
+    web?: boolean | null
     http?: string[] | null
     plugins?: string[] | null
   } | null
@@ -82,6 +87,7 @@ export function granted(manifest: DeclaringManifest | null | undefined): Set<Req
   if (!requires) return out
   if (requires.moderation === true) out.add('moderation')
   if (requires.db === true) out.add('db')
+  if (requires.web === true) out.add('web')
   if ((requires.http ?? []).length > 0) out.add('http')
   for (const name of requires.plugins ?? []) out.add(`plugin:${name}`)
   return out
