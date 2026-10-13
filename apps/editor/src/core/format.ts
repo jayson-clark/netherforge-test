@@ -505,8 +505,8 @@ export async function packageHash(digests: Record<string, string>): Promise<stri
   return nf.packageHash(await sha256Hex(nf.packageListing(JSON.stringify(digests))))
 }
 
-/** Whether [path], inside a package, is part of what it is (hashed, bundled). */
-export const isPackageContent = (path: string): boolean => nf.isPackageContent(path)
+/** Whether [path], inside a package, is one of its files: what it is (hashed) and its default font (read, never hashed). */
+export const isPackageFile = (path: string): boolean => nf.isPackageBundled(path)
 
 /**
  * Document [text] (the file [path] of the resource [target] of package

@@ -1,5 +1,6 @@
 package dev.netherforge.format.project
 
+import dev.netherforge.format.text.DefaultFontFile
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -81,9 +82,12 @@ data class BundledPackage(val version: String, val hash: String)
  * A package's content hash: what `netherforge.lock` pins and a bundle is
  * checked against.
  *
- * It covers what a package _is_ ([isContent]): `netherforge.json`, the
- * default font and every file of every resource, not READMEs, agent notes or
- * the package's own lock. The [listing] has one line per such file, in path
+ * It covers what a package _is_ ([isContent]): `netherforge.json` and every
+ * file of every resource, not READMEs, agent notes or the package's own lock,
+ * and not `fonts/default.json`: the editor writes that from whichever client
+ * is imported on the computer it runs on, and only the project's own is ever
+ * read, so a package's mustn't move its pin. A bundle carries it all the same
+ * ([isBundled]). The [listing] has one line per such file, in path
  * order: the hex SHA-256 of its bytes, two spaces, its path (Go's `dirhash`
  * layout); the hash is [PREFIX] and the hex SHA-256 of the listing's UTF-8.
  * Each host hashes with its own platform's SHA-256 (the JVM's, Node's, the
@@ -96,8 +100,11 @@ object PackageHash {
     fun isContent(path: String): Boolean {
         if (path.split('/').any { it.startsWith(".") }) return false
         val at = Kinds.classify(path) ?: return false
-        return at.kind != null || at.document == ManifestKind.id || at.document == DefaultFontKind.id || at.document == VanillaKind.id
+        return at.kind != null || at.document == ManifestKind.id || at.document == VanillaKind.id
     }
+
+    /** Whether `netherforge build` copies [path] into a bundle: the [content][isContent], and the default font the server measures text with. */
+    fun isBundled(path: String): Boolean = isContent(path) || path == DefaultFontFile.FILE
 
     /** The text whose SHA-256 is the hash, from every file's hex SHA-256 by path (files that aren't content are left out). */
     fun listing(digests: Map<String, String>): String = buildString {

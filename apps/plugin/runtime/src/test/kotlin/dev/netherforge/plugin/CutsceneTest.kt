@@ -384,6 +384,24 @@ class CutsceneTest {
     }
 
     @Test
+    fun `the camera's chunk is held while it's there, wherever that is, and let go when it ends`() = server(
+        """nf.commands.register("go", function() nf.cutscenes.play(nf.players.get("Alex"), "intro", { origin = vec3(1000, 10, -50) }) end)"""
+    ).use { server ->
+        val worlds = server.platform.worlds
+        // The path starts at 1000, 74, -50 (chunk 62, -4), far from Alex: nothing else has it loaded.
+        worlds.unloaded += Triple("world", 62, -4)
+        server.run("go")
+        assertTrue(worlds.isChunkLoaded("world", 62, -4), "a camera in an unloaded chunk couldn't be reached")
+        assertEquals(mapOf(Triple("world", 62, -4) to 1), worlds.held)
+        assertEquals(server.camera!!.id, server.platform.playerViews.cameras[server.alex.ref.uuid])
+        // Moving 10 blocks along x over the second, it crosses into chunk 63 and the hold goes with it.
+        server.tick(10)
+        assertEquals(mapOf(Triple("world", 63, -4) to 1), worlds.held)
+        server.tick(21)
+        assertEquals(emptyMap(), worlds.held, "nothing held once it's over")
+    }
+
+    @Test
     fun `a player who was riding is dismounted for the camera`() = server(
         """
         nf.commands.register("go", function()

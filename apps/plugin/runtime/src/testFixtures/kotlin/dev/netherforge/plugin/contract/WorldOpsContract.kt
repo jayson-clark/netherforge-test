@@ -147,6 +147,33 @@ abstract class WorldOpsContract : PlatformContract() {
     }
 
     @Test
+    fun `a held chunk stays loaded, its entities too, until it's released as often as it was held`() {
+        // Beside the far chunk, which other suites need unloaded: nobody is near this one either.
+        val (x, z) = server.unloadedChunk().let { (farX, farZ) -> (farX + 4) to farZ }
+        val at = Location(world, x * 16.0 + 8, origin.y, z * 16.0 + 8)
+        main {
+            assertTrue(worlds.holdChunk(world, x, z))
+            assertTrue(worlds.holdChunk(world, x, z))
+            assertTrue(worlds.isChunkLoaded(world, x, z), "held is loaded at once")
+        }
+        ticks(20)
+        main {
+            assertTrue(worlds.isChunkLoaded(world, x, z), "a chunk loaded only for a call would be gone by now")
+            worlds.releaseChunk(world, x, z)
+        }
+        ticks(20)
+        main { assertTrue(worlds.isChunkLoaded(world, x, z), "held twice, released once") }
+        eventually("the held chunk's entities loaded") { worlds.entitiesLoaded(at) }
+        main {
+            worlds.releaseChunk(world, x, z)
+            // Released more often than held: nothing to let go of.
+            worlds.releaseChunk(world, x, z)
+            assertFalse(worlds.holdChunk(MISSING_WORLD, x, z))
+            worlds.releaseChunk(MISSING_WORLD, x, z)
+        }
+    }
+
+    @Test
     fun `the highest block of a column is the top one that isn't air`() {
         main {
             val top = at(-3, 6, 2)

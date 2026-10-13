@@ -87,10 +87,13 @@ class PackagesTest {
             "fonts/default.json" to "11"
         )
         assertEquals(
-            "11  fonts/default.json\nbb  items/gem/item.json\ncc  items/gem/script.lua\naa  netherforge.json\n",
+            "bb  items/gem/item.json\ncc  items/gem/script.lua\naa  netherforge.json\n",
             PackageHash.listing(digests)
         )
         assertEquals("sha256:abc", PackageHash.of("ABC"))
+        // The editor writes the default font from this computer's client: bundled for the server, never hashed.
+        assertTrue(PackageHash.isBundled("fonts/default.json") && !PackageHash.isContent("fonts/default.json"))
+        assertTrue(PackageHash.isBundled("netherforge.json") && !PackageHash.isBundled("README.md"))
     }
 
     /**

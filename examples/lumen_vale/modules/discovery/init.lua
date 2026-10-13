@@ -21,9 +21,7 @@ discovery.NAMES = {
 -- How far from a player the cutscene looks for a shrine to fly to.
 local SHRINE_SEARCH = 160
 
--- Ticks between the first steps into the grove and the awakening: a moment to look round, and
--- for the chunks round them to load (a camera that starts in a chunk the server hasn't loaded
--- yet lets go of the player at once).
+-- Ticks between the first steps into the grove and the awakening: a moment to look round.
 local AWAKENING_DELAY = 40
 
 -- netherforge.json's `grove_cutscene` setting, kept up to date.
@@ -58,7 +56,6 @@ function discovery.awaken(player)
   if keepers[1] then
     origin = keepers[1]:position() or origin
   end
-  location.world:load_chunk(origin)
   local scene =
     nf.cutscenes.play(player, "grove_awakening", { origin = location.world:location(origin) })
   if not scene then

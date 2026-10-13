@@ -379,6 +379,16 @@ interface WorldOps {
     /** Loads (generating if need be) a chunk, now. */
     fun loadChunk(world: String, chunkX: Int, chunkZ: Int): Boolean
 
+    /**
+     * Keeps a chunk loaded, its entities too, until it's released as many times as it was held: loaded (generated
+     * if need be) now if it isn't. [loadChunk] alone lasts the tick: the server unloads a chunk nothing holds. False
+     * when the world doesn't exist, and nothing is held then.
+     */
+    fun holdChunk(world: String, chunkX: Int, chunkZ: Int): Boolean
+
+    /** Lets go of one [holdChunk] of the chunk; the server unloads it as any other once nothing holds it. */
+    fun releaseChunk(world: String, chunkX: Int, chunkZ: Int)
+
     /** The y of the highest block in a column that isn't air, or null when its chunk isn't loaded. */
     fun highestBlockY(world: String, x: Int, z: Int): Int?
 

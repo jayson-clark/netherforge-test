@@ -198,6 +198,7 @@ class ExportsTest {
         assertEquals("sha256:" + "0".repeat(64), packageHash("0".repeat(64)))
         assertTrue(isPackageContent("netherforge.json"))
         assertTrue(!isPackageContent(".netherforge/cache.json"))
+        assertTrue(isPackageBundled("fonts/default.json") && !isPackageContent("fonts/default.json"))
         assertEquals("git/checkouts/" + "a".repeat(40), gitCheckout("git:" + "a".repeat(40)))
         assertNull(gitCheckout("../lib"))
     }

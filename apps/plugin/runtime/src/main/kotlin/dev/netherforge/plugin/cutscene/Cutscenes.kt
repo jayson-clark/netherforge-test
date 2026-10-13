@@ -41,6 +41,7 @@ import dev.netherforge.plugin.session.liveness
 import dev.netherforge.plugin.store.Store
 import java.util.UUID
 import kotlin.math.ceil
+import kotlin.math.floor
 
 /**
  * The project's cutscenes and every one playing.
@@ -198,6 +199,10 @@ class Cutscenes(
         val saved = previous?.saved ?: capture(player, here) ?: return null
         val pose = definition.poseAt(0.0)
         val start = locationOf(world, pose, options.origin)
+        // The camera's chunk is held while it's there: one nothing holds unloads at the end of the tick, before the
+        // player carried to it has their own chunks round it, and a camera that can't be reached lets them go.
+        val held = chunkOf(start)
+        platform.worlds.holdChunk(world, held.first, held.second)
         val id = UUID.randomUUID()
 
         // Whatever else they were doing: windows closed, a ride left, then the camera made and looked through.
@@ -218,6 +223,7 @@ class Cutscenes(
         }
         if (camera == null || !look(player, camera)) {
             camera?.let { platform.entities.remove(it) }
+            platform.worlds.releaseChunk(world, held.first, held.second)
             // The cutscene they were in (if any) is gone too, so the state is theirs to have back.
             restore(player, saved)
             previous?.let { announce(it, EndReason.REPLACED) }
@@ -236,6 +242,7 @@ class Cutscenes(
             camera = camera,
             id = id
         )
+        cutscene.held = held
         active[cutscene.number] = cutscene
         byPlayer[player] = cutscene
         // Kept (a run of cutscenes keeps the first) until they're put back, in case the server goes down meanwhile.
@@ -318,6 +325,8 @@ class Cutscenes(
         if (byPlayer[cutscene.player] === cutscene) byPlayer.remove(cutscene.player)
         if (cutscene.textUntil >= 0) platform.players.clearTitle(cutscene.player)
         attempt("remove the camera") { platform.entities.remove(cutscene.camera) }
+        cutscene.held?.let { (x, z) -> platform.worlds.releaseChunk(cutscene.world, x, z) }
+        cutscene.held = null
     }
 
     /**
@@ -382,7 +391,15 @@ class Cutscenes(
         // One tick past the last pose, so the client has drawn the camera arriving.
         if (cutscene.tick > ticks) return end(cutscene, EndReason.FINISHED)
         val pose = cutscene.definition.poseAt(cutscene.time)
-        platform.entities.teleport(cutscene.camera, locationOf(cutscene.world, pose, cutscene.origin))
+        val to = locationOf(cutscene.world, pose, cutscene.origin)
+        // The next chunk is held before the camera goes into it, then the last let go.
+        val chunk = chunkOf(to)
+        if (chunk != cutscene.held) {
+            platform.worlds.holdChunk(cutscene.world, chunk.first, chunk.second)
+            cutscene.held?.let { (x, z) -> platform.worlds.releaseChunk(cutscene.world, x, z) }
+            cutscene.held = chunk
+        }
+        platform.entities.teleport(cutscene.camera, to)
         cues(cutscene)
         if (!cutscene.ended && cutscene.textUntil in 0..cutscene.tick) {
             cutscene.textUntil = -1
@@ -411,6 +428,9 @@ class Cutscenes(
             }
         }
     }
+
+    /** The chunk (x, z) a location is in. */
+    private fun chunkOf(at: Location) = (floor(at.x).toInt() shr 4) to (floor(at.z).toInt() shr 4)
 
     private fun locationOf(world: String, pose: CameraPose, origin: Vec3) = Location(
         world,

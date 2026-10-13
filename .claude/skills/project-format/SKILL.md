@@ -198,12 +198,14 @@ another field) and `exports` (kind folder → ids).
   the same beside the project's; `compiledResourcePacks` holds every resource pack in the
   tree (a package's keyed `ns:id`, built in its namespace, `CompiledResourcePack.key`
   saying where its files are). `lock()` is the lock the packages make.
-- **The hash.** `PackageHash.isContent` (manifest, default font, resource
-  files; nothing hidden) and `listing(digests)` are format's; each host
+- **The hash.** `PackageHash.isContent` (manifest, `client/vanilla.json`, resource
+  files; nothing hidden, and not `fonts/default.json`, which the editor writes per
+  computer from its client import: `isBundled` adds it for `netherforge build`) and
+  `listing(digests)` are format's; each host
   supplies per-file SHA-256s and hashes the listing with its own SHA-256
   (the JVM's, Node's, the webview's), so format needs no crypto library.
-  `GoldenTest.examplesAreLocked` hashes `examples/library` on JVM and JS and
-  checks `examples/basic/netherforge.lock`.
+  `GoldenTest.examplesAreLocked` hashes each example's packages on JVM and JS and
+  checks its `netherforge.lock` (`basic` on `library`, `lumen_vale` on `vale_lore`).
 - **Copying.** `ReferenceIndex.move` (JS `moveRefs`) rewrites a document of
   a package's resource for its copy in the project: the package's things
   become `ns:…`, the resource itself the copy.

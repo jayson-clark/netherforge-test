@@ -176,6 +176,21 @@ describe('build', () => {
     expect(readFileSync(path.join(other, 'keep.txt'), 'utf8')).toBe('mine')
   })
 
+  it("bundles each default font, which the editor writes on this computer, without moving the lock's hashes", async () => {
+    const font = '{ "minecraft": "26.3", "advances": { "65": 6 } }\n'
+    for (const dir of [project, library]) {
+      mkdirSync(path.join(dir, 'fonts'), { recursive: true })
+      writeFileSync(path.join(dir, 'fonts/default.json'), font)
+    }
+    const out = path.join(project, '..', 'bundle')
+    expect(await run(['build', project, '--out', out], env)).toMatchObject({ code: 0 })
+    const bundle = JSON.parse(readFileSync(path.join(out, 'netherforge-bundle.json'), 'utf8'))
+    const lock = JSON.parse(readFileSync(path.join(project, 'netherforge.lock'), 'utf8'))
+    expect(bundle.packages.library.hash).toBe(lock.packages.library.hash)
+    for (const name of ['basic', 'library'])
+      expect(readFileSync(path.join(out, name, 'fonts/default.json'), 'utf8')).toBe(font)
+  })
+
   it('builds into build/<namespace>-<version> by default', async () => {
     expect((await run(['build', project], env)).code).toBe(0)
     expect(existsSync(path.join(project, 'build/basic-0.1.0/netherforge-bundle.json'))).toBe(true)

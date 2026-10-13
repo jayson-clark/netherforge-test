@@ -331,6 +331,9 @@ fun packageHash(listingSha256: String): String = PackageHash.of(listingSha256)
 /** Whether [path] (relative to a package's folder) is part of what the package is: hashed, and copied into a bundle. */
 fun isPackageContent(path: String): Boolean = PackageHash.isContent(path)
 
+/** Whether [path] (relative to a package's folder) is copied into a bundle: its content and its default font ([PackageHash.isBundled]). */
+fun isPackageBundled(path: String): Boolean = PackageHash.isBundled(path)
+
 /**
  * Where the files a package location names are in the package cache: for
  * `git:<commit>`, its checkout relative to the cache (`git/checkouts/<commit>`,

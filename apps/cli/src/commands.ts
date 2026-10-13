@@ -199,7 +199,8 @@ export function lock(
 
 /**
  * Writes a bundle: the project and every package it depends on, each in a
- * folder named after its namespace with only what its content hash covers,
+ * folder named after its namespace with only what its content hash covers
+ * (and the default font, which the server measures text with),
  * and `netherforge-bundle.json` listing them with their hashes, for a
  * production server to run as it is. Refuses a project with errors, or whose
  * `netherforge.lock` isn't what its dependencies resolve to.
@@ -238,7 +239,7 @@ export function build(
     folders[name] = packageDir(root, packageCache(env), pkg.location)
   const packages: Record<string, { version: string; hash: string }> = {}
   for (const [name, dir] of Object.entries(folders).sort(([a], [b]) => a.localeCompare(b))) {
-    for (const file of listFiles(dir).filter(nf.isPackageContent)) {
+    for (const file of listFiles(dir).filter(nf.isPackageBundled)) {
       const target = path.join(out, name, file)
       mkdirSync(path.dirname(target), { recursive: true })
       copyFileSync(path.join(dir, file), target)

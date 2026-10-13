@@ -61,6 +61,9 @@ class ActiveCutscene internal constructor(
     /** The tick a cue's text stops showing, or -1 when none is up. */
     internal var textUntil = -1
 
+    /** The chunk (x, z) of [world] held for the camera, where it is now, until it ends. */
+    internal var held: Pair<Int, Int>? = null
+
     /** Set once it has ended, for any reason. */
     var ended = false
         internal set

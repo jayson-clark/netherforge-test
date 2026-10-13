@@ -178,6 +178,21 @@ class FakeWorlds(private val platform: FakePlatform) : WorldOps {
         return true
     }
 
+    /** How many times each chunk is held now ([holdChunk]), as (world, chunk x, chunk z). */
+    val held = mutableMapOf<Triple<String, Int, Int>, Int>()
+
+    override fun holdChunk(world: String, chunkX: Int, chunkZ: Int): Boolean {
+        if (!loadChunk(world, chunkX, chunkZ)) return false
+        held.merge(Triple(world, chunkX, chunkZ), 1, Int::plus)
+        return true
+    }
+
+    override fun releaseChunk(world: String, chunkX: Int, chunkZ: Int) {
+        val key = Triple(world, chunkX, chunkZ)
+        val left = (held[key] ?: return) - 1
+        if (left > 0) held[key] = left else held.remove(key)
+    }
+
     override fun highestBlockY(world: String, x: Int, z: Int): Int? {
         if (!isChunkLoaded(world, x shr 4, z shr 4)) return null
         return (319 downTo -64).firstOrNull { state(world, x, it, z) != "minecraft:air" } ?: -64

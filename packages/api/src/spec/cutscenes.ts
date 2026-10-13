@@ -2,7 +2,7 @@ import type { EventSpec, LuaClass } from '../types.ts'
 import { eventFunctions } from './events.ts'
 
 const behaviour =
-  "While it plays, the player spectates a camera that follows the cutscene's path, and can't move or interact. Their game mode, position, flying state and anything riding are put back when it ends, however it ends (including when they leave, a reload or the server stopping); someone who was riding something is dismounted and isn't put back on it."
+  "While it plays, the player spectates a camera that follows the cutscene's path, and can't move or interact. Their game mode, position, flying state and anything riding are put back when it ends, however it ends (including when they leave, a reload or the server stopping); someone who was riding something is dismounted and isn't put back on it. The camera's chunk is kept loaded while it's there, so a path may start and go anywhere in the world, however far from the player."
 
 /** `nf.cutscenes`: playing the project's cutscenes. */
 export const nfCutscenes: LuaClass = {

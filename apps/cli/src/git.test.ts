@@ -12,13 +12,15 @@ import {
 import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { checkoutDir, fetchGit } from './git.ts'
 import { run } from './main.ts'
 import { hashPackage, listFiles } from './project.ts'
 
 const examples = path.resolve(import.meta.dirname, '../../../examples')
 
+/** examples/library published to a bare repository (`library.git`) from a work tree (`work`), made once and copied for each test. */
+let template: string
 let tmp: string
 let project: string
 let work: string
@@ -51,19 +53,16 @@ const dependOnGit = (rev?: string) => {
   writeFileSync(manifestPath(), JSON.stringify(json))
 }
 
-beforeEach(() => {
-  tmp = mkdtempSync(path.join(os.tmpdir(), 'netherforge-git-'))
-  project = path.join(tmp, 'project')
-  cpSync(path.join(examples, 'basic'), project, {
-    recursive: true,
-    filter: (source) => !source.includes(`${path.sep}.netherforge`),
-  })
-  // examples/library, published to a bare repository the project fetches from by file:// URL.
-  const bare = path.join(tmp, 'library.git')
-  git(tmp, 'init', '--quiet', '--bare', bare)
-  work = path.join(tmp, 'work')
-  git(tmp, 'init', '--quiet', '--initial-branch=main', work)
-  git(work, 'remote', 'add', 'origin', bare)
+// examples/library, published to a bare repository the project fetches from by file:// URL. Made once: each git
+// process is slow to start on Windows, and a test's own copy needs none.
+beforeAll(() => {
+  template = mkdtempSync(path.join(os.tmpdir(), 'netherforge-git-template-'))
+  const bare = path.join(template, 'library.git')
+  git(template, 'init', '--quiet', '--bare', bare)
+  work = path.join(template, 'work')
+  git(template, 'init', '--quiet', '--initial-branch=main', work)
+  // Beside the work tree wherever it's copied, so each test's copy pushes to its own.
+  git(work, 'remote', 'add', 'origin', '../library.git')
   cpSync(path.join(examples, 'library'), work, {
     recursive: true,
     filter: (source) => !source.includes(`${path.sep}.netherforge`),
@@ -72,11 +71,23 @@ beforeEach(() => {
   git(work, 'tag', 'v1')
   git(work, 'push', '--quiet', 'origin', 'v1')
   git(bare, 'symbolic-ref', 'HEAD', 'refs/heads/main')
-  url = pathToFileURL(bare).href
+}, 60_000)
+afterAll(() => rmSync(template, { recursive: true, force: true }))
+
+beforeEach(() => {
+  tmp = mkdtempSync(path.join(os.tmpdir(), 'netherforge-git-'))
+  cpSync(template, tmp, { recursive: true })
+  work = path.join(tmp, 'work')
+  url = pathToFileURL(path.join(tmp, 'library.git')).href
+  project = path.join(tmp, 'project')
+  cpSync(path.join(examples, 'basic'), project, {
+    recursive: true,
+    filter: (source) => !source.includes(`${path.sep}.netherforge`),
+  })
   cache = path.join(tmp, 'data', 'packages')
   env = { NETHERFORGE_DATA_DIR: path.join(tmp, 'data') }
 })
-// The repositories and the project are changed by the tests, so each test makes its own, gone when it ends.
+// The repositories and the project are changed by the tests, so each test has its own copy, gone when it ends.
 afterEach(() => rmSync(tmp, { recursive: true, force: true }))
 
 describe('git packages', () => {

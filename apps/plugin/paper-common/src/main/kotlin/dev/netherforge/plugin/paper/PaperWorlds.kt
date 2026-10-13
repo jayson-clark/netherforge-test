@@ -49,6 +49,7 @@ import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
+import org.bukkit.plugin.Plugin
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.util.Vector
 import java.util.Optional
@@ -60,7 +61,7 @@ import org.bukkit.block.data.BlockData as BukkitBlockData
 import org.bukkit.entity.SpawnCategory as BukkitSpawnCategory
 
 /** [WorldOps] with the Paper API. Nothing here loads a chunk except [loadChunk]. */
-class PaperWorlds : WorldOps {
+class PaperWorlds(private val plugin: Plugin) : WorldOps {
     private fun world(name: String): World? = Bukkit.getWorld(name)
 
     override fun names(): List<String> = Bukkit.getWorlds().map { it.name }
@@ -217,6 +218,29 @@ class PaperWorlds : WorldOps {
     override fun loadChunk(world: String, chunkX: Int, chunkZ: Int): Boolean {
         val w = world(world) ?: return false
         return w.getChunkAt(chunkX, chunkZ, true).isLoaded
+    }
+
+    /** How many times each chunk is held: the server keeps one ticket per plugin and chunk, however many ask. */
+    private val holds = HashMap<Triple<String, Int, Int>, Int>()
+
+    override fun holdChunk(world: String, chunkX: Int, chunkZ: Int): Boolean {
+        val w = world(world) ?: return false
+        val key = Triple(world, chunkX, chunkZ)
+        // The ticket loads the chunk now if it isn't (false only when this plugin's is already there).
+        if (key !in holds) w.addPluginChunkTicket(chunkX, chunkZ, plugin)
+        holds.merge(key, 1, Int::plus)
+        return true
+    }
+
+    override fun releaseChunk(world: String, chunkX: Int, chunkZ: Int) {
+        val key = Triple(world, chunkX, chunkZ)
+        val left = (holds[key] ?: return) - 1
+        if (left > 0) {
+            holds[key] = left
+            return
+        }
+        holds.remove(key)
+        world(world)?.removePluginChunkTicket(chunkX, chunkZ, plugin)
     }
 
     override fun highestBlockY(world: String, x: Int, z: Int): Int? {

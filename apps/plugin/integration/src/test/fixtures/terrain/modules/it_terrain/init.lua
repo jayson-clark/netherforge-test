@@ -14,16 +14,6 @@ function steps.make(seed)
   log("made", made:name(), tostring(made:is_managed()))
 end
 
--- load <chunk x> <chunk z> <radius>: the chunks within `radius` of a chunk along x, in one row (each is generated as it
--- loads, and a call that takes a second is stopped: the scenario loads an area row by row).
-function steps.load(cx, cz, radius)
-  local w = world(0)
-  for x = cx - radius, cx + radius do
-    w:load_chunk(vec3(x * 16, 64, cz * 16))
-  end
-  log("loaded", w:name(), radius)
-end
-
 -- column <x> <z>: the top block of a column, and what it is.
 function steps.column(x, z)
   local w = world(0)

@@ -56,7 +56,7 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
         override fun error(message: String, cause: Throwable?) = plugin.logger.log(Level.SEVERE, message, cause)
     }
 
-    override val worlds = PaperWorlds()
+    override val worlds = PaperWorlds(plugin)
 
     /** The vanilla note blocks' part, taken over once the project has blocks that are held as note block states. */
     private val noteBlocks = PaperNoteBlocks(plugin, version)

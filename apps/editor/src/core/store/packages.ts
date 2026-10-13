@@ -8,7 +8,7 @@
  */
 import {
   documentKindOf,
-  isPackageContent,
+  isPackageFile,
   loadProject,
   NO_PACKAGES,
   KINDS,
@@ -204,7 +204,7 @@ export function packagesSlice({ backend, get, set }: SliceArgs): PackagesState &
     const files: Record<string, string | null> = {}
     for (const { path } of listed.files) {
       files[path] =
-        readsText(path) && isPackageContent(path)
+        readsText(path) && isPackageFile(path)
           ? await backend.packageReadText(location, path).catch(() => null)
           : null
     }

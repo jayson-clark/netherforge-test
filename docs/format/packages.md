@@ -148,9 +148,11 @@ can't be fetched (it's gone, the network is down, the `rev` isn't there) is
 ### Content hash
 
 A package's `hash` in the lock is a fingerprint of what the package _is_: its
-`netherforge.json`, `fonts/default.json`, and every file of every resource,
-but no hidden file, README, agent notes or lock. If any of those files
-changes, the hash does too. (It's the SHA-256 of a listing of each file's
+`netherforge.json` and every file of every resource, but no hidden file,
+README, agent notes or lock. If any of those files changes, the hash does too.
+`fonts/default.json` isn't in it either: the editor writes that file from the
+Minecraft client imported on the computer it runs on, and only the project's
+own is ever read, so opening a package in the editor never changes its hash. (It's the SHA-256 of a listing of each file's
 SHA-256 and path, in path order, the layout Go's `dirhash` uses.)
 
 ## Bundles
@@ -180,7 +182,8 @@ build/shop-1.0.0/
 }
 ```
 
-A bundle holds only what the [content hash](#content-hash) covers, and the
+A bundle holds only what the [content hash](#content-hash) covers, plus each
+`fonts/default.json` (the server measures text with the project's), and the
 hashes it lists, the project's own included, are checked when the server
 starts: a package whose files don't hash to its entry isn't run
 (`runtime.bundle-hash`). Point the plugin's `project` setting (or
