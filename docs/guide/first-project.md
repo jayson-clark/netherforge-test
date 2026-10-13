@@ -75,9 +75,11 @@ are good ones to explore: `examples/basic` has a little of everything, and
   rename, drag around and delete from; a centity lists them above its nodes,
   so they stay close at hand. A script's tab shows its resource's outline too.
 - The **Inspector**, on the right, edits whatever is selected.
-- The bottom dock has the Project explorer on the left and, on the right, a
-  tab for each of the other panels: **Problems**, the **Console**,
-  **Instances**, **Tests**, the **Profiler** and **Debug**.
+- **Instances** (the centities alive on the dev server) sits under the
+  Outline.
+- The bottom dock shows the Project explorer, **Problems** and the
+  **Console** side by side, with **Tests**, the **Profiler** and **Debug** as
+  tabs behind the Console.
 - Every panel, the Outline and the Inspector included, is a tab you can
   drag: onto another panel's tabs to join them, onto the edge of a panel to
   split it there (side by side or one above the other), or while dragging

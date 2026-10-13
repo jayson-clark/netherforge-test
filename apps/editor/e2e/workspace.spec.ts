@@ -378,7 +378,7 @@ test('dock panels drag between docks, split a group, and the layout resets', asy
   await openCentity(page, 'tower')
   const bottom = page.getByRole('region', { name: 'Bottom dock' })
   const right = page.getByRole('region', { name: 'Right dock' })
-  await expect(bottom.getByRole('tablist')).toHaveCount(2)
+  await expect(bottom.getByRole('tablist')).toHaveCount(3)
 
   // Onto the inspector's tab: into the right dock's group.
   await bottom

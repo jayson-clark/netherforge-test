@@ -133,9 +133,9 @@ centity's nodes and a dialog's buttons).
 - **Docks.** Three areas, left, right and bottom (the flags keep their
   first names: `outlineOpen`, `inspectorOpen`, `bottomOpen`, `OPEN[area]`),
   each empty or a tree (`core/store/docks.ts`) of splits (`row`/`column`,
-  shares adding up to 1) with tab groups at the leaves. By default: the
-  outline left, the inspector right, the project explorer beside a group of
-  every other panel at the bottom. `workbench/docks/DockArea.tsx` draws one:
+  shares adding up to 1) with tab groups at the leaves. By default: the outline over Instances on the left, the inspector on the
+  right, and Project, Problems and the Console (Tests, Profiler and Debug
+  behind it) side by side at the bottom. `workbench/docks/DockArea.tsx` draws one:
   splits as nested `Group`s (keyed by their children, so another set lays
   out afresh), groups as react-aria tabs with native drag events through
   `Tab`'s `render` prop. A tab dropped in a tab row joins it at that gap;

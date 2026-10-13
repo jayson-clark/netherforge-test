@@ -6,7 +6,9 @@ test('the profiler shows where the dev server’s ticks go and opens a handler a
 }) => {
   const errors = await openExample(page)
   await showPanel(page, 'Profiler')
-  await expect(page.getByText(/Start the dev server/)).toBeVisible()
+  await expect(
+    page.getByRole('tabpanel', { name: 'Profiler' }).getByText(/Start the dev server/),
+  ).toBeVisible()
 
   // The bridge comes up: the editor subscribes, and the (fake) plugin streams a batch a second.
   await outside(page, (backend) => backend.testConnect(), null)
