@@ -1,6 +1,6 @@
 # Instructions what scripts do all the time costs them (ApiCostTest). UPDATE_GOLDEN=1 rewrites it.
 6 × 6 × 6 blocks, each world:block():is_solid()	20518
-a tick handler, before its first line	12
+a tick handler, before its first line	6
 block:kind()	19
 centity:data().hp	16
 centity:emit, nobody listening	55

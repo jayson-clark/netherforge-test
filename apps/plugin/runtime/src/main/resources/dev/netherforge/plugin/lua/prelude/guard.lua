@@ -151,6 +151,7 @@ local timing = {
 ---@class nf.Frame
 ---@field left number Instructions still to run; a frame that goes below 0 is stopped.
 ---@field budget integer
+---@field outer nf.Frame? The frame it's nested in.
 ---@field overran string|false Why it was stopped, once it has been.
 ---@field scope integer? Whose code it runs.
 ---@field nested number Nanoseconds the frames nested in it took.
@@ -179,6 +180,8 @@ function guard.frame(budget, scope, outer)
   return {
     left = budget,
     budget = budget,
+    -- The frame it's nested in, which is charged what this one runs when it returns.
+    outer = outer,
     overran = false,
     scope = scope,
     nested = 0,

@@ -741,6 +741,16 @@ remove_with })` shows the bar to every player near the centity and hides it
 
 ### Fixed
 
+- The sandbox no longer refuses patterns like `^%[%s*([%w_]+)%s*"` on a few
+  hundred bytes. Its worst-case model now sees that when a quantified item
+  gives characters back to an item that can't match them (`%s*` before
+  `[%w_]`), each of those tries fails at once. Patterns that really do
+  backtrack (`^a*a*b`) are still refused. When the pattern is already
+  anchored, the refusal no longer tells you to anchor it.
+- `nf.instructions_left()` in a nested call (a task started by a handler, a
+  centity spawned by one) now reports what its caller has left when that is
+  less, since the nested call's work is charged to the caller.
+
 - The Profiler panel's Functions and Scopes tables were always empty in the
   editor (the data arrived; the panel read it once and React's dev checks
   draw twice).

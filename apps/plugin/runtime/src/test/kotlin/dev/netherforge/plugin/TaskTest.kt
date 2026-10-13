@@ -287,6 +287,29 @@ class TaskTest {
     }
 
     @Test
+    fun `a task started by a call with little left says it has only that left`() {
+        // Its resume is charged to the timer that started it, so the timer's budget is the task's limit too.
+        TestServer(
+            module(
+                """
+                nf.after(1, function()
+                  while nf.instructions_left() > 30000 do end
+                  local outer = nf.instructions_left()
+                  nf.task(function()
+                    local left = nf.instructions_left()
+                    log(left <= outer, left > outer - 2000)
+                  end)
+                end)
+                """
+            )
+        ).use { server ->
+            server.tick(2)
+            assertEquals(emptyList(), server.errors.map { it.message })
+            assertEquals(listOf("true\ttrue"), server.logs)
+        }
+    }
+
+    @Test
     fun `each resume gets the whole budget, and one resume can't run past it`() {
         TestServer(
             module(

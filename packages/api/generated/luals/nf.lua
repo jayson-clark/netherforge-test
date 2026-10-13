@@ -576,7 +576,7 @@ function nf.db(name) end
 ---@return any
 function nf.config(name) end
 
---- Lua instructions this call may still run before it's stopped. A loop over a lot of work can check it and leave the rest for the next tick. Coarse: it's updated every hundred instructions or so.
+--- Lua instructions this call may still run before it's stopped. A loop over a lot of work can check it and leave the rest for the next tick. In a call nested in another (a task started by a handler, a centity spawned by one) it's the least of its own budget and what its caller has left, since what it runs is charged to the caller when it returns. Coarse: it's updated every thousand instructions.
 ---@return integer
 function nf.instructions_left() end
 

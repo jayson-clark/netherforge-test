@@ -690,7 +690,7 @@ nf.emit	49
 nf.every	56
 nf.files.get	8
 nf.http.request	37
-nf.instructions_left	15
+nf.instructions_left	19
 nf.items.all	6
 nf.items.create	10
 nf.items.get	8
@@ -745,7 +745,7 @@ nf.server.unix_time	6
 nf.spawning.condition	10
 nf.structures.exists	8
 nf.structures.size	11
-nf.task	222
+nf.task	223
 nf.teams.all	6
 nf.teams.create	18
 nf.teams.get	8

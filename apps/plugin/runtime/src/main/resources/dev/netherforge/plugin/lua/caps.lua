@@ -35,8 +35,8 @@ local raw, limits, spend, refuse = ...
 
 local type, tostring, tonumber, select, rawget, setmetatable, pcall =
   type, tostring, tonumber, select, rawget, setmetatable, pcall
-local byte, sub = string.byte, string.sub
-local format, find, gsub, gmatch = raw.format, raw.find, raw.gsub, raw.gmatch
+local byte, sub, char = string.byte, string.sub, string.char
+local format, find, gsub, gmatch, concat = raw.format, raw.find, raw.gsub, raw.gmatch, raw.concat
 local pack, unpack = table.pack, table.unpack
 local tointeger, log, max, floor = math.tointeger, math.log, math.max, math.floor
 
@@ -133,13 +133,21 @@ end
 -- before a rest that matches nothing at the end can't fail either (`trim`'s
 -- `^%s*(.-)%s*$`). That keeps the common patterns linear or quadratic in L
 -- where they really are, and `.-.-.-.-b` at L^5, where it really is.
+--
+-- A quantified item gives back (or, lazy, steps over) only characters its own
+-- class matched, so every try of the rest but one starts at such a character.
+-- When the rest can only start with a character outside that class (`%s*` before
+-- `[%w_]`, `[^"]*` before `"`), each of those tries fails at its first item:
+-- a constant (`cheap`, the cost of reaching that item), not F. Such an item adds
+-- L times that constant rather than multiplying F by L, which keeps patterns
+-- like `^%[%s*([%w_]+)%s*"` linear.
 
 local ONE, OPT, STAR, PLUS, LAZY, CAP, END, BAL, FRONT, REF = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 local ANY = 16 -- added to a quantifier's kind when its class is `.`, which matches anything
 
 local compiled, compiled_count = {}, 0
 local PATTERNS_KEPT = 256
-local bounds
+local bounds, cheap_tries
 
 -- The index just past the single-character class at `i`, or nil when it's malformed.
 local function class_end(p, i, n)
@@ -180,8 +188,8 @@ end
 -- `c.every_*` for every match (`gmatch`, `gsub`).
 function bounds(c, m)
   local F, W, dF, dW, fails, empty, widest = 0, 1, 0, 0, false, true, 1
-  for k = #c - 1, 1, -2 do
-    local kind, n = c[k], c[k + 1]
+  for i = #c - 1, 1, -2 do
+    local kind, n = c[i], c[i + 1]
     local any = kind >= ANY
     if any then
       kind = kind - ANY
@@ -200,23 +208,33 @@ function bounds(c, m)
       F, W, fails, empty = fails and 1 + F or 1, 1 + W, true, false
       dF, dW = max(1, dF), max(1, dW)
     elseif kind == OPT then
-      if fails then
+      local k = c.cheap[i]
+      if fails and k then
+        F, W = n + F + k, n + W + k
+      elseif fails then
         F, W, dW = n + 2 * F, n + F + W, max(dF, dW)
       else
         W = n + W
       end
     elseif kind == STAR or kind == PLUS then
       local first = kind == PLUS and n or 0
+      local k = c.cheap[i]
       if not fails or (any and empty) then
         F, W, dF, fails = first, first + W, 0, kind == PLUS
+      elseif k then
+        F, W = first + n + F + k, first + n + k + W
+        dF, dW = max(dF, 1), max(dW, 1)
       else
         F, W = first + n + F, first + n + F + W
         dF, dW = dF + 1, max(dF + 1, dW)
       end
       empty = kind == STAR and empty
     elseif fails then
+      local k = c.cheap[i]
       if any and empty then
         F, W, dF, dW, fails = 0, F + n + W, 0, max(dF + 1, dW), false
+      elseif k then
+        F, W, dF, dW = F + n + k, n + k + W, max(dF, 1), max(dW, 1)
       else
         F, W, dF, dW = F + n, F + n + W, dF + 1, max(dF + 1, dW)
       end
@@ -245,6 +263,85 @@ function bounds(c, m)
   end
 end
 
+-- Every byte, for listing the bytes a class matches.
+local EVERY_BYTE
+do
+  local all = {}
+  for b = 0, 255 do
+    all[b + 1] = char(b)
+  end
+  EVERY_BYTE = concat(all)
+end
+
+-- The bytes single-character class `class` matches, as a string; nil when it can't be worked out.
+local function members(class)
+  local ok, found = pcall(function()
+    local list = {}
+    for m in gmatch(EVERY_BYTE, class) do
+      list[#list + 1] = m
+    end
+    return concat(list)
+  end)
+  return ok and found or nil
+end
+
+-- Whether no byte class `class` matches is matched by any of the classes in `lead`.
+local function disjoint(class, lead)
+  local matched = members(class)
+  if matched == nil then
+    return false
+  end
+  for k = 1, #lead do
+    local ok, at = pcall(find, matched, lead[k])
+    if not ok or at ~= nil then
+      return false
+    end
+  end
+  return true
+end
+
+-- For each quantified item whose rest can only start with a character the item
+-- can't match, what a try of the rest costs at one it can: the items it gets
+-- through before it fails. By the item's kind's index; the rest are left out.
+-- Read from the last item back, `lead` is the classes the rest could start
+-- with: the optional items up to the first it must match (none for `$`,
+-- which fails anywhere but the end), and `lead` false when one of them could
+-- start with anything (`.`, `%1`, `%b`, a mistake).
+function cheap_tries(c, classes)
+  local cheap = {}
+  ---@type string[]|false
+  local lead
+  local cost, closed = 0, false
+  lead = {}
+  for i = #c - 1, 1, -2 do
+    local kind, n = c[i], c[i + 1]
+    local class = classes[i]
+    if kind == STAR or kind == PLUS or kind == LAZY or kind == OPT then
+      if closed and lead and class and disjoint(class, lead) then
+        cheap[i] = cost
+      end
+    end
+    local base = kind >= ANY and kind - ANY or kind
+    if base == CAP or base == FRONT then
+      cost = cost + n
+    elseif base == STAR or base == LAZY or base == OPT then
+      if lead and class then
+        lead[#lead + 1] = class
+      else
+        lead = false
+      end
+      cost = cost + n
+    elseif base == END then
+      lead, cost, closed = {}, 1, true
+    elseif base == ONE or base == PLUS then
+      lead, cost, closed = class and { class } or false, n, true
+    else -- %b, %1, a quantified `.`: could start with anything
+      lead, cost, closed = false, n, true
+    end
+  end
+  return cheap
+end
+
 -- `p` as the cost model reads it: { kind, length, kind, length, ... } with
 -- `anchored` (a leading "^") and `plain` (no special characters: `find` then
 -- searches for the bytes). A malformed pattern is the library's to report,
@@ -259,12 +356,15 @@ local function compile(p)
   local n = #p
   c = { anchored = byte(p, 1) == 94, plain = find(p, "[%^%$%*%+%?%.%(%[%%%-]") == nil }
   local i = c.anchored and 2 or 1
-  local function item(kind, length)
+  -- Each item's class as pattern text (nil: it could be any character), by its kind's index.
+  local classes = {}
+  local function item(kind, length, class)
     local last = #c
     if kind == ONE and last > 0 and c[last - 1] == ONE then
       c[last] = c[last] + length
     else
       c[last + 1], c[last + 2] = kind, length
+      classes[last + 1] = class
     end
   end
   while i <= n do
@@ -304,24 +404,26 @@ local function compile(p)
       end
       local q = byte(p, j)
       local any = (ch == 46 and j == i + 1) and ANY or 0
+      local class = any == 0 and sub(p, i, j - 1) or nil
       if q == 63 then
-        item(OPT + any, j - i + 1)
+        item(OPT + any, j - i + 1, class)
         i = j + 1
       elseif q == 42 then
-        item(STAR + any, j - i + 1)
+        item(STAR + any, j - i + 1, class)
         i = j + 1
       elseif q == 43 then
-        item(PLUS + any, j - i + 1)
+        item(PLUS + any, j - i + 1, class)
         i = j + 1
       elseif q == 45 then
-        item(LAZY + any, j - i + 1)
+        item(LAZY + any, j - i + 1, class)
         i = j + 1
       else
-        item(ONE, j - i)
+        item(ONE, j - i, class)
         i = j
       end
     end
   end
+  c.cheap = cheap_tries(c, classes)
   bounds(c, n)
   if compiled_count >= PATTERNS_KEPT then
     compiled, compiled_count = {}, 0
@@ -337,8 +439,8 @@ end
 local function steps(c, L, every)
   L = L + 0.0 -- floats: a bound past 2^63 must not wrap around
   local F, W, fails, empty, widest = 0, 1, false, true, 1
-  for k = #c - 1, 1, -2 do
-    local kind, n = c[k], c[k + 1]
+  for i = #c - 1, 1, -2 do
+    local kind, n = c[i], c[i + 1]
     local any = kind >= ANY
     if any then
       kind = kind - ANY
@@ -355,23 +457,34 @@ local function steps(c, L, every)
     elseif kind == BAL or kind == REF then
       F, W, fails, empty = fails and L + F or L, L + W, true, false
     elseif kind == OPT then
-      if fails then
+      local k = c.cheap[i]
+      if fails and k then
+        -- Without the item, the rest starts at a character the item matched.
+        F, W = n + F + k, n + W + k
+      elseif fails then
         F, W = n + 2 * F, n + F + W
       else
         W = n + W
       end
     elseif kind == STAR or kind == PLUS then
       local first = kind == PLUS and n or 0
+      local k = c.cheap[i]
       if not fails or (any and empty) then
         -- The rest matches wherever the run ends: the run is all taken.
         F, W, fails = first, first + W, kind == PLUS
+      elseif k then
+        -- Only the try after the whole run can get past the rest's first item.
+        F, W = first + n * L + F + L * k, first + n * L + L * k + W
       else
         F, W = first + n * L + (L + 1) * F, first + n * L + L * F + W
       end
       empty = kind == STAR and empty
     elseif fails then -- LAZY, before a rest that can fail
+      local k = c.cheap[i]
       if any and empty then
         F, W, fails = 0, L * (F + n) + W, false
+      elseif k then
+        F, W = F + L * (k + n), L * (k + n) + W
       else
         F, W = (L + 1) * (F + n), L * (F + n) + W
       end
@@ -406,12 +519,13 @@ local function matching(what, c, p, L, every)
     refuse(
       format(
         "%s: the pattern %s could take up to %.2g steps on %d bytes, over the limit of %.2g "
-          .. "(match a shorter string, or anchor or simplify the pattern)",
+          .. "(match a shorter string, or %s the pattern)",
         what,
         shown(p),
         work,
         L,
-        MAX_WORK
+        MAX_WORK,
+        c.anchored and "simplify" or "anchor or simplify"
       )
     )
   end

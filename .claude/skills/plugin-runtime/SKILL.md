@@ -406,7 +406,11 @@ script's line; `SandboxLimitsTest` covers the rest.
   and a successful try of the rest can cost, whether the rest can fail, and
   whether it matches nothing at the end), so it's linear for `[^,]+`,
   quadratic for `%w+=` unanchored or `^%s*(.-)%s*$` (trim: 4,000 bytes
-  allowed, 6,000 refused), and L⁵ for `.-.-.-.-b`. It overestimates: a
+  allowed, 6,000 refused), and L⁵ for `.-.-.-.-b`. An item whose rest can
+  only start with a character outside its own class (`%s*` before `[%w_]`,
+  `[^"]*` before `"`: `cheap_tries`, by matching the classes against every
+  byte) costs its backtracking as L constant-cost tries, not L full tries
+  of the rest, so `^%[%s*([%w_]+)%s*"` is linear. It overestimates: a
   pattern that only backtracks on unlucky input is refused on a long string
   even when this one would have been quick, which the message says. Each
   compiled pattern also keeps `scale * (L+1)^degree`, an upper bound for

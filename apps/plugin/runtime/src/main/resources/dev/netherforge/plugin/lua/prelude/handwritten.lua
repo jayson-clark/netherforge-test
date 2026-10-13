@@ -324,12 +324,27 @@ do
     return ev
   end
 
+  -- A nested call in (a task started by a handler, a centity spawned by one)
+  -- has its own budget, but what it runs is charged to its caller when it
+  -- returns: what's left is the least of its own and each caller's, less what
+  -- the calls inside that caller have run so far.
   function nf.instructions_left()
     local f = current()
-    if f == nil or f.left < 0 then
+    if f == nil then
       return 0
     end
-    return f.left
+    local left, used, outer = f.left, f.budget - f.left, f.outer
+    while outer ~= nil do
+      local outer_left = outer.left - used
+      if outer_left < left then
+        left = outer_left
+      end
+      used, outer = outer.budget - outer_left, outer.outer
+    end
+    if left < 0 then
+      return 0
+    end
+    return left
   end
 end
 

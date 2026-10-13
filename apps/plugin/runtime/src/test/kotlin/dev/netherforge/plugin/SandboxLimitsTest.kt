@@ -275,4 +275,32 @@ class SandboxLimitsTest {
             )
         }
     }
+
+    @Test
+    fun `backtracking that fails at once isn't counted as a full try`() {
+        // A run of `%s` given back one character at a time is tried against `[%w_]`, which can't
+        // match a space: each try fails at its first item, so the tag reader below is linear,
+        // while an item followed by one that can match what it gave back (`a*a*b`) still
+        // backtracks quadratically and is refused.
+        TestServer(
+            mapOf(
+                "modules/t/init.lua" to """
+                    local tag = '^%[%s*([%w_]+)%s*"()'
+                    local pgn = ('[Site "' .. ("x"):rep(20000) .. '"]\n'):rep(4)
+                    log(("[" .. (" "):rep(100000)):match(tag) == nil, pgn:match(tag, 1))
+                    log(("key = value\n"):rep(10000):match("^%s*([%w_]+)%s*=%s*"))
+                    log(pcall(string.match, ("a"):rep(100000), "^a*a*b"))
+                """.trimIndent()
+            )
+        ).use { server ->
+            assertEquals(emptyList(), server.errors.map { it.message })
+            assertEquals("true\tSite\t8", server.logs[0])
+            assertEquals("key", server.logs[1])
+            assertTrue(
+                server.logs[2].startsWith("false\tmodules/t/init.lua:5: string.match: the pattern \"^a*a*b\" could take up to"),
+                server.logs[2]
+            )
+            assertTrue(server.logs[2].endsWith("(match a shorter string, or simplify the pattern)"), server.logs[2])
+        }
+    }
 }
