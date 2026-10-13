@@ -43,6 +43,6 @@ your project (a folder, in git)
 2. [Create a project and join its dev server](first-project.md).
 3. [Make your first centity](first-centity.md) and [give it a script](first-script.md).
 
-After that, the guides cover each part in depth, the [file format](../format/project.md)
+After that, the guides cover each part in depth, the [file format](../format/index.md)
 is the full specification of what a project contains, and the
 [Lua API reference](../reference/index.md) lists everything scripts can call.

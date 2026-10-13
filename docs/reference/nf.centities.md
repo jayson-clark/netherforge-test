@@ -6,10 +6,9 @@ Centity instances: spawning new ones and finding live ones.
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.centities.properties(kind)`
+### `nf.centities.properties(kind)` {#properties}
 
 A centity's `properties` from its `centity.json`, without one spawned: what `centity:properties()` answers for every instance of it. An empty table when the file has none; a centity the project doesn't have is an error. A new table each call.
 
@@ -24,23 +23,23 @@ local stats = nf.centities.properties("green_slime")
 log(stats.hp)
 ```
 
-## `nf.centities.spawn(kind, location_or_position, options?)`
+### `nf.centities.spawn(kind, location_or_position, options?)` {#spawn}
 
 Puts a new instance of a centity into the world. Its entities exist, its script's body has run and its `spawn` handlers have heard it by the time this returns. A centity the project doesn't have is an error.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `kind` | `string` | Which centity: its folder name under `centities/`. |
-| `location_or_position` | `Location\|Vec3` | Where its position (the anchor) goes: a `Location` (it faces the location's `yaw`, when it has one), or a position in the calling centity's world (the server's first world, in a module). Without a yaw it faces south (yaw 0). |
-| `options` (optional) | `CentitySpawnOptions` |  |
+| `location_or_position` | [`Location`](location.md)`\|`[`Vec3`](vec3.md) | Where its position (the anchor) goes: a `Location` (it faces the location's `yaw`, when it has one), or a position in the calling centity's world (the server's first world, in a module). Without a yaw it faces south (yaw 0). |
+| `options` (optional) | [`CentitySpawnOptions`](types.md#centityspawnoptions) |  |
 
-**Returns** `Centity?`: The new instance, or `nil` when the world doesn't exist.
+**Returns** [`Centity`](centity.md)`?`: The new instance, or `nil` when the world doesn't exist.
 
 ```lua
 local tower = nf.centities.spawn("tower", player:location():offset(vec3(2, 0, 0)))
 ```
 
-## `nf.centities.get(id)`
+### `nf.centities.get(id)` {#get}
 
 The live centity instance with this id, or `nil` once it's gone. Ids come from `centity:id()` and are fine to keep.
 
@@ -48,17 +47,17 @@ The live centity instance with this id, or `nil` once it's gone. Ids come from `
 | --- | --- | --- |
 | `id` | `string` | An instance id. |
 
-**Returns** `Centity?`
+**Returns** [`Centity`](centity.md)`?`
 
-## `nf.centities.all(filter?)`
+### `nf.centities.all(filter?)` {#all}
 
 Every live centity instance, or those the filter picks. Includes the caller's own instance. A filter key that isn't one of `CentityFilter`'s is an error.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `filter` (optional) | `CentityFilter` | Only instances of one kind, in one world, or near a point. |
+| `filter` (optional) | [`CentityFilter`](types.md#centityfilter) | Only instances of one kind, in one world, or near a point. |
 
-**Returns** `Centity[]`
+**Returns** [`Centity`](centity.md)`[]`
 
 ```lua
 for _, crate in ipairs(nf.centities.all({ kind = "crate", world = nf.worlds.default() })) do

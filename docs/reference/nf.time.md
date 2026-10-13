@@ -6,10 +6,9 @@ Dates and durations as text, in the same unit as `nf.server.unix_time()`: millis
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.time.format(time, pattern, options?)`
+### `nf.time.format(time, pattern, options?)` {#format}
 
 A moment as clock time, in English, written the way a pattern says.
 
@@ -17,7 +16,7 @@ A moment as clock time, in English, written the way a pattern says.
 | --- | --- | --- |
 | `time` | `integer` | Milliseconds since 1970-01-01 UTC, like `nf.server.unix_time()` returns. |
 | `pattern` | `string` | Letters stand for parts of the date: `yyyy` the year, `MM` the month as a number (`MMM` `Oct`, `MMMM` `October`), `dd` the day, `EEE` the weekday (`Sat`; `EEEE` `Saturday`), `HH` the hour from 00 to 23 (`hh` 01 to 12, with `a` for AM or PM), `mm` minutes, `ss` seconds, `XXX` the zone's offset (`+01:00`, or `Z`). Text in single quotes is kept as it is (`'at'`); punctuation and spaces needn't be. A letter that isn't a pattern letter is an error. |
-| `options` (optional) | `TimeOptions` |  |
+| `options` (optional) | [`TimeOptions`](types.md#timeoptions) |  |
 
 **Returns** `string`
 
@@ -26,7 +25,7 @@ local now = nf.server.unix_time()
 player:send_message("It's " .. nf.time.format(now, "EEEE, d MMMM 'at' HH:mm", { zone = "UTC" }) .. " UTC")
 ```
 
-## `nf.time.parse(text, pattern, options?)`
+### `nf.time.parse(text, pattern, options?)` {#parse}
 
 Reads a clock time written the way a pattern says, as milliseconds since 1970-01-01 UTC. A pattern with no time of day reads as midnight; one with an offset (`XXX`) in it uses the offset it reads rather than `zone`. `nil` when the text doesn't match the pattern (it may come from a player); a pattern without a year, month and day, or with a letter that isn't a pattern letter, is an error.
 
@@ -34,7 +33,7 @@ Reads a clock time written the way a pattern says, as milliseconds since 1970-01
 | --- | --- | --- |
 | `text` | `string` | Like `"2026-10-03 18:00"`. |
 | `pattern` | `string` | As for `nf.time.format`. |
-| `options` (optional) | `TimeOptions` |  |
+| `options` (optional) | [`TimeOptions`](types.md#timeoptions) |  |
 
 **Returns** `integer?`
 
@@ -45,7 +44,7 @@ if start and nf.server.unix_time() >= start then
 end
 ```
 
-## `nf.time.duration(milliseconds)`
+### `nf.time.duration(milliseconds)` {#duration}
 
 A length of time as short text, largest unit first and units that are 0 left out: `"1h 2m 5s"`, `"3d 4h"`, `"45s"`. Less than a second is `"0s"`; a negative length starts with `-`.
 
@@ -60,7 +59,7 @@ local left = saved.ends_at - nf.server.unix_time()
 player:send_message("Ends in " .. nf.time.duration(left))
 ```
 
-## `nf.time.parse_duration(text)`
+### `nf.time.parse_duration(text)` {#parse_duration}
 
 Reads a length of time written as numbers with units, as milliseconds: `"1h30m"`, `"1h 30m"`, `"90s"`, `"2d"`, `"1.5h"`, `"250ms"`. The units are `d`, `h`, `m`, `s` and `ms`, in any order, each at most once; spaces between them are fine. `nil` for text that isn't a duration (it may come from a player).
 

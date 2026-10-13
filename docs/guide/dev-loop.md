@@ -19,30 +19,29 @@ project back in restricted mode.
 
 ## What happens when you save
 
-1. The editor writes the file in its canonical form.
-2. If the hot reload light in the toolbar is on, it tells the plugin which
-   file changed.
-3. The plugin works out which **resource** owns that file, reloads just that
-   resource, and answers with the result, which appears in the Console
-   ("Reloaded centity:tower (2 live)").
-4. It re-checks the whole project and sends back the current **problems**,
-   which appear in the Problems panel alongside the editor's own.
+When you save, the editor tells the dev server which file changed. The server
+reloads just the resource that file belongs to, and the Console says what it
+did ("Reloaded centity:tower (2 live)"). Then the whole project is checked
+again, and anything wrong shows in the Problems panel.
 
 ## What a reload does
 
-A centity, a menu and a dialog each have one script, so saving anything in
-its folder (its JSON, its script, or a `.lua` file beside the script that it
-requires) reloads that resource and reruns its one script. Adding or deleting
-a file there from the editor does too.
+| You saved                                                             | What happens                                                                                                                                                                                                           |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| anything in `centities/<id>/`                                         | That centity. Spawned instances stay where they are and take the new definition (added nodes appear, removed ones go), and the script starts again on each: its `unload` handlers run, then its body, without `spawn`. |
+| anything in `menus/<id>/`                                             | That menu. Open windows stay open when their size didn't change (their contents too, except slots whose item you changed in the file), and the script restarts on each window.                                         |
+| anything in `dialogs/<id>/`                                           | That dialog's script restarts; the next time it's shown, it's drawn from the new file.                                                                                                                                 |
+| anything in `items/<id>/` or `blocks/<id>/`                           | That item or block: its script restarts, and existing stacks of an item take its new look.                                                                                                                             |
+| anything in `modules/<id>/`                                           | That module: its `unload` handlers run, its handlers, timers and commands go, and `init.lua` runs again. Every script that required it restarts too.                                                                   |
+| anything in `resource_packs/`                                         | The resource pack is rebuilt and sent to everyone online.                                                                                                                                                              |
+| a recipe, loot table, particle effect or cutscene                     | Used from the next time it's needed. Recipes are sent to everyone online; a playing particle effect takes the change at once.                                                                                          |
+| advancements, biomes, dimensions, datapacks, structures that generate | The game only reads these as it starts, so the editor **restarts the dev server** for you.                                                                                                                             |
+| a terrain                                                             | Chunks generated from then on use it; chunks already made stay as they are.                                                                                                                                            |
+| `netherforge.json`                                                    | Everything restarts. Spawned centities stay.                                                                                                                                                                           |
 
-| You saved                     | What reloads                                                                                                                                                                                                                                        |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| anything in `centities/<id>/` | That centity. Live instances' script unloads (its `unload` handlers run), the instances move onto the new definition (entities kept and updated by node name, added, removed), and the script starts again on each: its body runs, without `spawn`. |
-| anything in `menus/<id>/`     | That menu. Open windows stay open when their shape didn't change (their contents too, except slots whose item you changed in the file), and the script restarts on each window.                                                                     |
-| anything in `dialogs/<id>/`   | That dialog's script restarts; the next time it's shown, it's drawn from the new file.                                                                                                                                                              |
-| anything in `modules/<id>/`   | That module: its `unload` handlers run, its handlers, timers and commands go, and `init.lua` runs again. Every module, centity, menu and dialog script that required it reloads too.                                                                |
-| `netherforge.json`            | Everything, on a fresh Lua state. Spawned centities reattach.                                                                                                                                                                                       |
-| anything else                 | Nothing on the server.                                                                                                                                                                                                                              |
+Each centity, menu, dialog, item and block has one script, so saving anything
+in its folder (its JSON, its script, or a `.lua` file beside the script)
+restarts that one script.
 
 **A broken save doesn't break the world.** If a centity file has errors, the
 last good definition keeps running and the reload reports why it didn't take.
@@ -82,25 +81,24 @@ from the game or the Console:
 
 A script that's slowing the server down shows up here too: a warning naming
 the file and line of its slowest handler (see
-[Performance](scripting.md#performance)), and `/nf scripts` lists what every
+[Performance](performance.md)), and `/nf scripts` lists what every
 script costs.
 
 The **Profiler** panel (beside the Console) shows where the dev server's
-ticks go, measured exactly on every tick while the dev server runs: a
-timeline of the last six seconds, each tick a bar split into the steps of
-NetherForge's tick (timers, finished background work, events, the world,
-effects, upkeep, accounts, saving; hover a tick for each step and the scripts that cost the most), and
-a table of every function your scripts ran (each handler, timer, task, command
-and script body) with its total, calls, mean and worst call, or, under
-**Scopes**, every script by what it cost. Sort by any column; click a
-function's place to open the script at that line. **Reset** starts the totals
-again.
+ticks go: a timeline of the last six seconds, each tick a bar split into what
+it was spent on (hover a tick for the details and the scripts that cost the
+most), and a table of every function your scripts ran (each handler, timer,
+task, command and script body) with its total time, calls, average and worst
+call, or, under **Scopes**, every script by what it cost. Click a function to
+open it at that line. **Reset** starts the totals again. See
+[Limits and performance](performance.md).
 
 To see what a script is doing line by line, set a breakpoint and step through
 it: see [Debugging scripts](debugging.md).
 
-The editor validates as you type. The server validates on every reload, using
-the real game's data.
+The editor checks files as you type, and the server checks them again on every
+reload against the real game, so a block or item name that doesn't exist in
+your Minecraft version is caught too.
 
 ## Spawning and inspecting
 

@@ -1,9 +1,9 @@
 # Your first centity
 
 A **centity** is a composed, scripted entity: a tree of **nodes**, each of
-which can show a block, an item or some text, be clicked, and run Lua. On the
-server every node with a display becomes a Minecraft display entity, and every
-node with a hitbox becomes an interaction entity, all moving together.
+which can show a block, an item or some text, and be clicked, all moving
+together. A script brings it to life. Players need no mods or resource pack
+to see one: it's made of Minecraft's own display entities.
 
 ## Create it
 

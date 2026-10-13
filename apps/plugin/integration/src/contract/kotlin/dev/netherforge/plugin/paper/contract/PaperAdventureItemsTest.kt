@@ -27,8 +27,9 @@ import kotlin.test.assertTrue
 class PaperAdventureItemsTest : PlatformContract() {
     override fun connect() = PaperContractServer.current
 
+    /** The stack's components as the game writes them, without the spaces its SNBT puts after `:` and `,`. */
     private fun components(player: java.util.UUID, slot: Int): String =
-        main { Bukkit.getPlayer(player)!!.inventory.getItem(slot)!!.itemMeta.asComponentString }
+        main { Bukkit.getPlayer(player)!!.inventory.getItem(slot)!!.itemMeta.asComponentString.filterNot { it.isWhitespace() } }
 
     @Test
     fun `a project block is its state, beside the game's blocks and tags and any block, and reads back as written`() {

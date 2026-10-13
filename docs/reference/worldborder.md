@@ -7,38 +7,42 @@ A border: the wall at the edge of a square area, which players can't walk throug
 A handle: call its methods with a colon, `worldborder:method()`.
 
 
+| | Methods |
+| --- | --- |
+| [Methods](#methods) | [`center`](#center) [`set_center`](#set_center) [`size`](#size) [`set_size`](#set_size) [`damage`](#damage) [`set_damage`](#set_damage) [`warning`](#warning) [`set_warning`](#set_warning) [`contains`](#contains) |
 
+## Methods {#methods}
 
-## `worldborder:center()`
+### `worldborder:center()` {#center}
 
 Its centre, with `y` 0, or `nil` once it has gone.
 
-**Returns** `Vec3?`
+**Returns** [`Vec3`](vec3.md)`?`
 
-## `worldborder:set_center(center)`
+### `worldborder:set_center(center)` {#set_center}
 
 Moves its centre. `y` is ignored. More than 29,999,984 blocks out is an error.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `center` | `Vec3` | Where. |
+| `center` | [`Vec3`](vec3.md) | Where. |
 
 **Returns** `boolean`: `false` once it has gone.
 
-## `worldborder:size()`
+### `worldborder:size()` {#size}
 
 How wide it is, side to side, in blocks: while it's growing or shrinking, how wide it is now. `nil` once it has gone.
 
 **Returns** `number?`
 
-## `worldborder:set_size(size, options?)`
+### `worldborder:set_size(size, options?)` {#set_size}
 
 Changes how wide it is: at once, or moving steadily there over `options.ticks`. A size below 1 or over 59,999,968, or negative `ticks`, is an error.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `size` | `number` | Side to side, in blocks. |
-| `options` (optional) | `BorderSizeOptions` |  |
+| `options` (optional) | [`BorderSizeOptions`](types.md#bordersizeoptions) |  |
 
 **Returns** `boolean`: `false` once it has gone.
 
@@ -46,19 +50,19 @@ Changes how wide it is: at once, or moving steadily there over `options.ticks`. 
 border:set_size(50, { ticks = 20 * 30 }) -- shrinks to 50 over 30 seconds
 ```
 
-## `worldborder:damage()`
+### `worldborder:damage()` {#damage}
 
 How it hurts players outside it, or `nil` once it has gone.
 
-**Returns** `BorderDamage?`
+**Returns** [`BorderDamage`](types.md#borderdamage)`?`
 
-## `worldborder:set_damage(damage)`
+### `worldborder:set_damage(damage)` {#set_damage}
 
 Changes how it hurts players outside it; what `damage` leaves out stays as it was. A negative value is an error. A player's own border is only drawn, so this changes nothing for them.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `damage` | `BorderDamage` |  |
+| `damage` | [`BorderDamage`](types.md#borderdamage) |  |
 
 **Returns** `boolean`: `false` once it has gone.
 
@@ -66,19 +70,19 @@ Changes how it hurts players outside it; what `damage` leaves out stays as it wa
 border:set_damage({ amount = 0.5, buffer = 2 })
 ```
 
-## `worldborder:warning()`
+### `worldborder:warning()` {#warning}
 
 When players' screens turn red as it comes near, or `nil` once it has gone.
 
-**Returns** `BorderWarning?`
+**Returns** [`BorderWarning`](types.md#borderwarning)`?`
 
-## `worldborder:set_warning(warning)`
+### `worldborder:set_warning(warning)` {#set_warning}
 
 Changes when players' screens turn red; what `warning` leaves out stays as it was. A negative value is an error.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `warning` | `BorderWarning` |  |
+| `warning` | [`BorderWarning`](types.md#borderwarning) |  |
 
 **Returns** `boolean`: `false` once it has gone.
 
@@ -86,13 +90,13 @@ Changes when players' screens turn red; what `warning` leaves out stays as it wa
 border:set_warning({ distance = 5, ticks = 20 * 15 })
 ```
 
-## `worldborder:contains(location_or_position)`
+### `worldborder:contains(location_or_position)` {#contains}
 
 Whether a place is inside it. A `Location` in another world is outside a world's border; a player's own border has no world, so only the position counts. `false` once it has gone.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `location_or_position` | `Location\|Vec3` | Where: a `Location`, or a position. |
+| `location_or_position` | [`Location`](location.md)`\|`[`Vec3`](vec3.md) | Where: a `Location`, or a position. |
 
 **Returns** `boolean`
 

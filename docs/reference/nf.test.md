@@ -6,10 +6,13 @@ What a test file runs on. A project's tests are the `*_test.lua` files anywhere 
 
 A table of functions: call them with a dot.
 
+| | Functions |
+| --- | --- |
+| [Functions](#functions) | [`case`](#case) [`advance`](#advance) [`player`](#player) [`raise`](#raise) [`terrain`](#terrain) [`click`](#click) [`release`](#release) [`input`](#input) [`shown`](#shown) |
 
+## Functions {#functions}
 
-
-## `nf.test.case(name, callback)`
+### `nf.test.case(name, callback)` {#case}
 
 Registers a test. It passes when `callback` returns, and fails at the line where an `assert` or `error` in it (or in something it calls) went wrong. A script of the project that errors while the test runs fails it too, naming that script and line. Two tests in one file can't have the same name.
 
@@ -26,7 +29,7 @@ nf.test.case("a player joining is greeted", function()
 end)
 ```
 
-## `nf.test.advance(ticks)`
+### `nf.test.advance(ticks)` {#advance}
 
 Runs the server forward `ticks` ticks (20 are a second), whole ticks at a time: timers fall due, `tick` handlers run, centities tick and mobs think, exactly as on a server, and everything scripts started on other threads finishes first. When it returns, the last tick is done. Each call in those ticks (a handler, a timer, a centity's tick) has its own budget and time limit, as on a server: none of it counts against the test's own, which is for the test's code. One that runs out is reported as on a server, at its file and line. Script errors during it are collected and fail the test when it ends.
 
@@ -41,7 +44,7 @@ nf.test.advance(60)
 assert(count == 3)
 ```
 
-## `nf.test.player(name)`
+### `nf.test.player(name)` {#player}
 
 Joins a fake player and returns them: the server raises the join events (`player_join`) as it does for a real one, and the player can then be sent messages, given items, moved and clicked at like any other `Player`. Names are unique: a name already joined gives that player.
 
@@ -49,7 +52,7 @@ Joins a fake player and returns them: the server raises the join events (`player
 | --- | --- | --- |
 | `name` | `string` | Their name, 3 to 16 letters, digits and `_`: `"Alex"`. |
 
-**Returns** `Player`
+**Returns** [`Player`](player.md)
 
 ```lua
 local alex = nf.test.player("Alex")
@@ -57,7 +60,7 @@ alex:send_message("<green>hi")
 assert(alex:name() == "Alex")
 ```
 
-## `nf.test.raise(event, payload?)`
+### `nf.test.raise(event, payload?)` {#raise}
 
 Raises a server-wide event as the server would, to the scripts: whoever listens to `event` with `nf.on` hears it, and, for an event the server raises about a player, an entity or a world, the handlers on that handle (`player:on("chat")`) hear it first, in the order the server uses. Each can `stop()` or `cancel()` it or set its writable fields. The few events the runtime stages itself (a death, damage, a click on a centity) reach `nf.on` handlers only. `payload` is what the event carries, the same table its handlers read (`event.player`, `event.message`): a field the event does not have is an error naming the fields. What the server would then do with a cancelled event is not simulated: read the result.
 
@@ -66,7 +69,7 @@ Raises a server-wide event as the server would, to the scripts: whoever listens 
 | `event` | `"tick"\|"player_join"\|"player_quit"\|"player_chat"\|"player_interact"\|"player_interact_entity"\|"player_move"\|"player_teleport"\|"player_change_world"\|"player_death"\|"player_respawn"\|"player_drop_item"\|"player_pickup_item"\|"player_use_item"\|"player_consume_item"\|"player_swap_hands"\|"player_sneak"\|"player_command"\|"block_break"\|"block_place"\|"entity_damage"\|"entity_death"\|"entity_spawn"\|"world_dusk"\|"world_dawn"\|"player_input"\|"player_change_slot"\|"player_swing"\|"player_sprint"\|"player_fly"\|"player_jump"\|"player_change_game_mode"\|"player_change_food"\|"player_gain_experience"\|"player_change_level"\|"player_kick"\|"player_complete_advancement"\|"player_stop_using_item"\|"player_break_item"\|"entity_heal"\|"projectile_launch"\|"projectile_hit"\|"entity_shoot_bow"\|"entity_target"\|"entity_explode"\|"block_explode"\|"entity_combust"\|"entity_change_effect"\|"block_ignite"\|"block_burn"\|"block_spread"\|"block_flow"\|"block_grow"\|"block_fade"\|"block_form"\|"leaves_decay"\|"piston_extend"\|"piston_retract"\|"block_redstone"\|"sign_change"\|"block_start_break"\|"block_drop_item"\|"weather_change"\|"thunder_change"\|"lightning_strike"\|"chunk_load"\|"chunk_generated"\|"chunk_unload"\|"world_load"\|"world_unload"\|"entity_mount"\|"entity_dismount"\|"vehicle_move"\|"vehicle_damage"\|"vehicle_destroy"\|"player_open_inventory"\|"player_close_inventory"\|"player_craft"\|"player_prepare_craft"\|"player_prepare_anvil"\|"player_prepare_smithing"\|"player_prepare_grindstone"\|"player_enchant_item"\|"furnace_smelt"\|"server_list_ping"\|"centity_click"\|"recipe_craft"\|"item_view"\|"centity_natural_spawn"\|"menu_open"\|"menu_close"\|"menu_click"\|"dialog_press"\|"setting_changed"` | The event's name, as `nf.on` takes it. |
 | `payload` (optional) | `table` | The payload: its fields by name. Leave it out for an event that has none. |
 
-**Returns** `RaisedEvent`: Whether a handler cancelled it, and the event as the handlers left it.
+**Returns** [`RaisedEvent`](types.md#raisedevent): Whether a handler cancelled it, and the event as the handlers left it.
 
 ```lua
 local alex = nf.test.player("Alex")
@@ -75,7 +78,7 @@ assert(not result.cancelled)
 assert(result.event.message == "hello")
 ```
 
-## `nf.test.terrain(options?)`
+### `nf.test.terrain(options?)` {#terrain}
 
 A stand-in for a terrain script's `terrain` (what its `...` is), to test worldgen modules on their own: `noise(name):at(...)`, `height`, `area`, `biome`, `seed`, `min_y`, `max_y`, `sea_level` and `plan` as a terrain script has them, each answering what `options` says. `noises` maps a noise's name to its value everywhere, or to a function of the place (`x, y, z`, or `x, z` for a column) giving it; a noise it doesn't name is 0. `height`, `area` and `biome` are a value or a function of the place, `seed`, `min_y`, `max_y` and `sea_level` numbers (defaults 64, `"default"`, `minecraft:plains`, 0, -64, 319 and 63). A plan makes each cell once, with `math.random` seeded for that cell. Chunks, structures and scatters aren't stood in for: `netherforge preview` draws the real thing.
 
@@ -93,15 +96,15 @@ nf.test.case("the spawn is a meadow", function()
 end)
 ```
 
-## `nf.test.click(player, button, options?)`
+### `nf.test.click(player, button, options?)` {#click}
 
 Clicks for a player as their client would, with what they hold filled in, and raises what the server would for it: `player_interact` (the held project item's `interact` first, and a click on one of the project's blocks reaches it), then, for a right click with an item that nothing cancelled, `player_use_item` (the project item's `use` first). A left click is the attack button at a block or the air: it doesn't break the block (`world:break_block` does that). A click on an entity is `nf.test.raise("player_interact_entity", ...)`. Nothing the game would then do (an item thrown, a door opened) is simulated: read what the handlers did.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `player` | `Player` | Who clicks: one online, from `nf.test.player`. |
+| `player` | [`Player`](player.md) | Who clicks: one online, from `nf.test.player`. |
 | `button` | `"left"\|"right"` | Which button: `"right"` uses what they hold. |
-| `options` (optional) | `TestClickOptions` | Which hand, and the block clicked. Leave it out for the main hand at the air. |
+| `options` (optional) | [`TestClickOptions`](types.md#testclickoptions) | Which hand, and the block clicked. Leave it out for the main hand at the air. |
 
 **Returns** `boolean`: `true` when it went through, `false` when a handler cancelled it.
 
@@ -111,13 +114,13 @@ alex:set_held_item({ kind = "minecraft:ender_pearl" })
 assert(nf.test.click(alex, "right"))
 ```
 
-## `nf.test.release(player, ticks)`
+### `nf.test.release(player, ticks)` {#release}
 
 Lets go of the right button for a player who was using an item (drawing a bow, raising a shield, eating) before it finished, as their client would: raises `player_stop_using_item` with the item in their main hand, or in their off hand when the main one is empty. Like the server, it is heard by the player before `nf.on`. An error when both hands are empty.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `player` | `Player` | Who lets go: one online. |
+| `player` | [`Player`](player.md) | Who lets go: one online. |
 | `ticks` | `integer` | How long they held it, in ticks: a bow drawn for 20 is fully drawn. 0 or more. |
 
 ```lua
@@ -127,31 +130,31 @@ nf.test.click(alex, "right")
 nf.test.release(alex, 20)
 ```
 
-## `nf.test.input(player, held)`
+### `nf.test.input(player, held)` {#input}
 
 The movement keys a player holds now, as their client says when they change: raises `player_input` (the player's `input` first, then `nf.on`). A key left out is not held, so `nf.test.input(player, {})` lets go of every key. It only raises the event: the player doesn't move, sneak or sprint for it.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `player` | `Player` | Whose keys: one online. |
-| `held` | `TestInputKeys` | The keys held down, each `true`. |
+| `player` | [`Player`](player.md) | Whose keys: one online. |
+| `held` | [`TestInputKeys`](types.md#testinputkeys) | The keys held down, each `true`. |
 
 ```lua
 local alex = nf.test.player("Alex")
 nf.test.input(alex, { forward = true, jump = true })
 ```
 
-## `nf.test.shown(player, slot, options?)`
+### `nf.test.shown(player, slot, options?)` {#shown}
 
 A stack as a player's game was last sent it, after the `view` handlers: what their tooltip says, where the server keeps the real stack (read that from `player:inventory()` or `menu:item`). The fake server sends what changed at the end of each tick, as a real one does, and what `player:refresh_items` finds looks different, so `nf.test.advance(1)` after a change. `nil` for an empty slot, or one their game hasn't been sent.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `player` | `Player` | Whose game: one online. |
+| `player` | [`Player`](player.md) | Whose game: one online. |
 | `slot` | `integer\|"cursor"` | A slot of their inventory, numbered as `player:inventory()` numbers them; with `menu`, of the window they have open. `"cursor"` for the stack on their cursor. |
-| `options` (optional) | `TestShownOptions` | Leave it out for their own inventory. |
+| `options` (optional) | [`TestShownOptions`](types.md#testshownoptions) | Leave it out for their own inventory. |
 
-**Returns** `Item?`
+**Returns** [`Item`](types.md#item)`?`
 
 ```lua
 local alex = nf.test.player("Alex")

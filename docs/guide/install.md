@@ -50,9 +50,10 @@ Nothing goes into your project except the files you create and the
 | Java, Paper jars, Minecraft cache             | `~/Library/Application Support/NetherForge/` | `%LOCALAPPDATA%\NetherForge\`  | `~/.local/share/NetherForge/`  |
 | Dev servers and their worlds, one per project | the same folder, in `servers/`               | the same folder, in `servers\` | the same folder, in `servers/` |
 
-Each project's dev server has a folder in `servers/` named by a hash of the
-project's path; `netherforge-project.txt` in it says which project it's for.
-It's kept out of the project on purpose: a project you download can't slip a
-server or a plugin of its own into it.
+Each project's dev server has its own folder in `servers/`;
+`netherforge-project.txt` in it says which project it's for. Delete a
+project's folder there for a fresh dev world. It's kept out of the project on
+purpose: a project you download can't slip a server or a plugin of its own
+into it.
 
 Next: [create your first project](first-project.md).

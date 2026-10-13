@@ -29,8 +29,12 @@ blocks/
 A block's `model` is a look from a [resource pack](./resource-packs.md#block-looks): the
 resource pack's `blocks` names a cube's textures (one for every face, or a top, a bottom
 and sides). The editor's block screen shows the cube as the game will draw it.
-Without a `model` a block is drawn as the plain note block it's held as, which is
-what you want while you're still drawing it.
+Without a `model` a block is drawn as the plain game block it's held as (a
+note block, by default), which is fine while you're still drawing it.
+
+A block can also be a [model](../format/resource-pack.md#models) of any shape
+(a crystal, a pot, a flower) on a `tripwire` or `leaves` carrier; see
+[What it's held as](#what-it-s-held-as).
 
 ## Mining and drops
 
@@ -63,27 +67,36 @@ world and goes when the block does.
 `this:on("tick", ...)` once every `tick` ticks (set it in `block.json`) for each
 one placed in a loaded chunk. A block with neither costs nothing while it stands.
 
-## Shapes that aren't cubes
+## Shapes that move
 
 A block with a `centity` is drawn by it: the centity is spawned over the block
-when it's placed and removed with it. The block stays a solid cube to walk into
-and mine; make the centity's displays the size you want to see.
+when it's placed and removed with it, so it can animate and have hitboxes of
+its own. The block stays a solid cube to walk into and mine; make the
+centity's displays the size you want to see.
 
-## How it works, and what that means
+## What it's held as
 
-The game can't add blocks, so each custom block is held as a **note block
-state** that the resource pack draws as your block. That means a few things
-worth knowing:
+Minecraft can't add new blocks, so each custom block is one of the game's
+blocks in a state the game rarely uses (its **carrier**), which your resource
+pack draws as your block. The carrier decides how it behaves physically, so
+pick the one that fits (`carrier` in `block.json`):
 
-- Players need the resource pack: it's sent when they join, and rebuilt when you change a
-  block or its pictures.
-- NetherForge asks Paper to stop working note blocks out itself (its
-  `disable-noteblock-updates` setting) and plays the ordinary note blocks'
-  part itself, so tuning, hitting, redstone and the instrument you get from
-  the block under it all keep working.
-- Walking over and hitting a block sound like a note block (wood); `sounds` gives
-  the sounds of placing and breaking it.
+| Carrier                | Behaves like                                             | Good for                             |
+| ---------------------- | -------------------------------------------------------- | ------------------------------------ |
+| `note_block` (default) | A solid, opaque cube.                                    | Ores, machines, anything cube-shaped |
+| `leaves`               | A solid cube you can see through, letting light past.    | Glass, crystals, pots, leafy blocks  |
+| `tripwire`             | Nothing: players walk through it, and it breaks at once. | Flowers, plants, flat decorations    |
+
+Things worth knowing:
+
+- Players need the resource pack: it's sent when they join, and again when
+  you change a block or its pictures.
+- A world's ordinary note blocks keep working: tuning, playing and the
+  instrument from the block under them all behave as usual. While the project
+  has a tripwire block, tripwire hooks don't trip.
+- Walking on and hitting a block sound like its carrier (a note block's
+  wood); `sounds` gives the sounds of placing and breaking it.
 - Pistons won't push one.
 
-Use a world of your own for the first blocks: a world that already has
-note blocks in odd states (made by commands) could meet a block's state.
+The [block format](../format/block.md#carriers) has the details of each
+carrier.

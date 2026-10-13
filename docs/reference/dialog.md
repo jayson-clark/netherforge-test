@@ -7,47 +7,44 @@ A dialog from `dialogs/<id>/`: `this` in the dialog's script, and what `nf.dialo
 A handle: call its methods with a colon, `dialog:method()`.
 
 
+| | Methods |
+| --- | --- |
+| [Methods](#methods) | [`id`](#id) [`exists`](#exists) [`title`](#title) [`buttons`](#buttons) [`inputs`](#inputs) [`button`](#button) [`open_for`](#open_for) [`ask`](#ask) |
+| [Events](#events) | [`on`](#on) [`once`](#once) and 2 events |
 
-## Events
+## Methods {#methods}
 
-What `dialog:on(event, handler)` listens for. See [Events](events.md) for how events work.
-
-| Event | Payload | Cancellable | |
-| --- | --- | --- | --- |
-| `press` | [DialogPressEvent](events.md#dialogpressevent) |  | Someone pressed one of its buttons, with every input's answer in `event.values`: heard by the button first, then the dialog, then `nf.on("dialog_press")`. Escape on a notice is a press of its button, and on a confirmation a press of its second ("no") button. Bubbles. |
-| `close` | [DialogEvent](events.md#dialogevent) |  | Someone left it without pressing one of its buttons: escape, or the exit button NetherForge gives a dialog (a `multi_action` dialog's "Back", a `dialog_list`'s own button, or the one standing in for a notice's or confirmation's missing button); or a script closed it (`player:close_dialog()`) or opened another dialog over it. Not when they leave the server (`player_quit` covers that), and not for escape on a notice or confirmation that has the button escape presses. |
-
-## `dialog:id()`
+### `dialog:id()` {#id}
 
 Its folder name under `dialogs/`, or for one from `nf.dialogs.create`, an id made up for it.
 
 **Returns** `string`
 
-## `dialog:exists()`
+### `dialog:exists()` {#exists}
 
 Whether the project still has this dialog (a reload can take it away), or, for one from `nf.dialogs.create`, whether the script that made it is still running.
 
 **Returns** `boolean`
 
-## `dialog:title()`
+### `dialog:title()` {#title}
 
 Its title, as MiniMessage.
 
-**Returns** `Text?`
+**Returns** [`Text`](index.md#types)`?`
 
-## `dialog:buttons()`
+### `dialog:buttons()` {#buttons}
 
 The button keys, in the order they are drawn: what `event.key` can be.
 
 **Returns** `string[]`
 
-## `dialog:inputs()`
+### `dialog:inputs()` {#inputs}
 
 The input keys, in the order they are asked: the keys of `event.values`.
 
 **Returns** `string[]`
 
-## `dialog:button(key)`
+### `dialog:button(key)` {#button}
 
 One of its buttons, as a handle. A key the dialog has no button for is an error.
 
@@ -55,16 +52,16 @@ One of its buttons, as a handle. A key the dialog has no button for is an error.
 | --- | --- | --- |
 | `key` | `string` | The button's `key` in `dialog.json`. |
 
-**Returns** `Button`
+**Returns** [`Button`](button.md)
 
-## `dialog:open_for(player, options?)`
+### `dialog:open_for(player, options?)` {#open_for}
 
 Puts it on someone's screen. It's built fresh each time, so what they see is the dialog as it is now, with whatever `options` change for this opening. A project dialog already on their screen is closed (its `close` handlers hear it).
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `player` | `Player` |  |
-| `options` (optional) | `DialogOpenOptions` | What to open it with, for this opening only. A key it doesn't take, an input or body element the dialog doesn't have, or a value of the wrong kind for its input is an error. |
+| `player` | [`Player`](player.md) |  |
+| `options` (optional) | [`DialogOpenOptions`](types.md#dialogopenoptions) | What to open it with, for this opening only. A key it doesn't take, an input or body element the dialog doesn't have, or a value of the wrong kind for its input is an error. |
 
 **Returns** `boolean`: `false` when they're offline or the dialog is gone.
 
@@ -77,7 +74,7 @@ assert(this:node("sign")):on("click", function(event)
 end)
 ```
 
-## `dialog:ask(player, options?)`
+### `dialog:ask(player, options?)` {#ask}
 
 Opens it for `player` and pauses the task until they answer: returns their press, or `nil` if they close it (see the `close` event: escape through NetherForge's exit button, or a script closing it or opening another dialog over it), leave the server, or it couldn't be opened (they're offline, or the dialog is gone). The press still goes to the dialog's handlers and `nf.on("dialog_press")` as usual; `ask` hears it at the dialog, so a button handler that calls `event:stop()` hides it from `ask` too.
 
@@ -85,10 +82,10 @@ Opens it for `player` and pauses the task until they answer: returns their press
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `player` | `Player` |  |
-| `options` (optional) | `DialogOpenOptions` | What to open it with, as for `open_for`. |
+| `player` | [`Player`](player.md) |  |
+| `options` (optional) | [`DialogOpenOptions`](types.md#dialogopenoptions) | What to open it with, as for `open_for`. |
 
-**Returns** `DialogPressEvent?`
+**Returns** [`DialogPressEvent`](types.md#dialogpressevent)`?`
 
 ```lua
 nf.task(function()
@@ -99,17 +96,26 @@ nf.task(function()
 end)
 ```
 
-## `dialog:on(event, handler, options?)`
+## Events
+
+What `dialog:on(event, handler)` listens for. See [Events](events.md) for how events work.
+
+| Event | Payload | |
+| --- | --- | --- |
+| `press` | [DialogPressEvent](types.md#dialogpressevent) | Someone pressed one of its buttons, with every input's answer in `event.values`: heard by the button first, then the dialog, then `nf.on("dialog_press")`. Escape on a notice is a press of its button, and on a confirmation a press of its second ("no") button. Bubbles. |
+| `close` | [DialogEvent](types.md#dialogevent) | Someone left it without pressing one of its buttons: escape, or the exit button NetherForge gives a dialog (a `multi_action` dialog's "Back", a `dialog_list`'s own button, or the one standing in for a notice's or confirmation's missing button); or a script closed it (`player:close_dialog()`) or opened another dialog over it. Not when they leave the server (`player_quit` covers that), and not for escape on a notice or confirmation that has the button escape presses. |
+
+### `dialog:on(event, handler, options?)` {#on}
 
 Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `event` | `Dialog.Event` | The event's name. |
-| `handler` | `fun(event: Event)` | Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`. |
-| `options` (optional) | `EventOptions` | How to listen: `{ every = n }` for `tick`. |
+| `handler` | `fun(event: `[`Event`](types.md#event)`)` | Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`. |
+| `options` (optional) | [`EventOptions`](types.md#eventoptions) | How to listen: `{ every = n }` for `tick`. |
 
-**Returns** `Subscription`: Call `:cancel()` on it to stop listening.
+**Returns** [`Subscription`](subscription.md): Call `:cancel()` on it to stop listening.
 
 ```lua
 this:on("press", function(event)
@@ -117,13 +123,13 @@ this:on("press", function(event)
 end)
 ```
 
-## `dialog:once(event, handler)`
+### `dialog:once(event, handler)` {#once}
 
 Like `dialog:on`, but the handler runs only the next time the event happens, then stops listening.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `event` | `Dialog.Event` | The event's name. |
-| `handler` | `fun(event: Event)` | Called with the event. |
+| `handler` | `fun(event: `[`Event`](types.md#event)`)` | Called with the event. |
 
-**Returns** `Subscription`: Call `:cancel()` on it to stop waiting before then.
+**Returns** [`Subscription`](subscription.md): Call `:cancel()` on it to stop waiting before then.

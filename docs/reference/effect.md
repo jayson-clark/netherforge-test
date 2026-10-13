@@ -7,57 +7,55 @@ One playing particle effect, from `nf.particles.play`. Once it has ended (it fin
 A handle: call its methods with a colon, `effect:method()`.
 
 
+| | Methods |
+| --- | --- |
+| [Methods](#methods) | [`kind`](#kind) [`is_active`](#is_active) [`stop`](#stop) [`location`](#location) [`teleport`](#teleport) [`follow`](#follow) |
+| [Events](#events) | [`on`](#on) [`once`](#once) and 1 events |
 
-## Events
+## Methods {#methods}
 
-What `effect:on(event, handler)` listens for. See [Events](events.md) for how events work.
-
-| Event | Payload | Cancellable | |
-| --- | --- | --- | --- |
-| `end` | [EffectEndEvent](events.md#effectendevent) |  | The effect ended, for any reason (`event.reason` says which): heard once, while the handle still answers (`is_active()` is still true and `location()` says where it was; `stop()` is `false`, as it's already ending), so `nf.wait_for(effect, "end")` hands back the event. After it, the effect is gone and so is every handler on it. A looping effect never ends `"finished"`. |
-
-## `effect:kind()`
+### `effect:kind()` {#kind}
 
 Which effect it is: its folder name under `particles/`, even after it has ended.
 
 **Returns** `string`
 
-## `effect:is_active()`
+### `effect:is_active()` {#is_active}
 
 Whether it's still playing. `false` once it has ended, for any reason (its `end` handlers still see `true`).
 
 **Returns** `boolean`
 
-## `effect:stop()`
+### `effect:stop()` {#stop}
 
 Ends it now, with reason `"stopped"`. Particles already spawned live out their short lives on the players' screens.
 
 **Returns** `boolean`: `false` when it had already ended.
 
-## `effect:location()`
+### `effect:location()` {#location}
 
 Where it is now, facing the way it faces: in world space. `nil` once it has ended.
 
-**Returns** `Location?`
+**Returns** [`Location`](location.md)`?`
 
-## `effect:teleport(location_or_position)`
+### `effect:teleport(location_or_position)` {#teleport}
 
 Moves it, and stops it following anything. A `Location`'s `yaw` and `pitch` become its facing (nil is 0); a `Vec3` keeps its world and its facing.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `location_or_position` | `Location\|Vec3` | Where to, in world space. |
+| `location_or_position` | [`Location`](location.md)`\|`[`Vec3`](vec3.md) | Where to, in world space. |
 
 **Returns** `boolean`: `false` once it has ended.
 
-## `effect:follow(target, offset?)`
+### `effect:follow(target, offset?)` {#follow}
 
 Makes it follow something, from the next tick on. Each tick, before it spawns anything, the effect moves to the target: its position (a node's `world_position()`), facing the target's yaw (a node's centity's), pitch 0. When the target stops existing (a removed centity, a player who left, an entity that died or was removed, a centity or entity whose chunk unloaded) the effect ends with reason `"target_gone"`. Calling it again switches targets; `teleport` stops following.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `target` | `Centity\|Node\|Player\|Entity` | What to follow. |
-| `offset` (optional) | `Vec3` | Where the effect sits from the target, in the effect's own space (turned with the target's yaw): `vec3(0, 2, 0)` is above its head, `vec3(0, 0, 1)` in front. Default `vec3.zero`. |
+| `target` | [`Centity`](centity.md)`\|`[`Node`](node.md)`\|`[`Player`](player.md)`\|`[`Entity`](entity.md) | What to follow. |
+| `offset` (optional) | [`Vec3`](vec3.md) | Where the effect sits from the target, in the effect's own space (turned with the target's yaw): `vec3(0, 2, 0)` is above its head, `vec3(0, 0, 1)` in front. Default `vec3.zero`. |
 
 **Returns** `boolean`: `false` once it has ended.
 
@@ -69,17 +67,25 @@ if halo then
 end
 ```
 
-## `effect:on(event, handler, options?)`
+## Events
+
+What `effect:on(event, handler)` listens for. See [Events](events.md) for how events work.
+
+| Event | Payload | |
+| --- | --- | --- |
+| `end` | [EffectEndEvent](types.md#effectendevent) | The effect ended, for any reason (`event.reason` says which): heard once, while the handle still answers (`is_active()` is still true and `location()` says where it was; `stop()` is `false`, as it's already ending), so `nf.wait_for(effect, "end")` hands back the event. After it, the effect is gone and so is every handler on it. A looping effect never ends `"finished"`. |
+
+### `effect:on(event, handler, options?)` {#on}
 
 Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `event` | `Effect.Event` | The event's name. |
-| `handler` | `fun(event: Event)` | Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`. |
-| `options` (optional) | `EventOptions` | How to listen: `{ every = n }` for `tick`. |
+| `handler` | `fun(event: `[`Event`](types.md#event)`)` | Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`. |
+| `options` (optional) | [`EventOptions`](types.md#eventoptions) | How to listen: `{ every = n }` for `tick`. |
 
-**Returns** `Subscription`: Call `:cancel()` on it to stop listening.
+**Returns** [`Subscription`](subscription.md): Call `:cancel()` on it to stop listening.
 
 ```lua
 local here = this:location()
@@ -91,13 +97,13 @@ if effect then
 end
 ```
 
-## `effect:once(event, handler)`
+### `effect:once(event, handler)` {#once}
 
 Like `effect:on`, but the handler runs only the next time the event happens, then stops listening.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `event` | `Effect.Event` | The event's name. |
-| `handler` | `fun(event: Event)` | Called with the event. |
+| `handler` | `fun(event: `[`Event`](types.md#event)`)` | Called with the event. |
 
-**Returns** `Subscription`: Call `:cancel()` on it to stop waiting before then.
+**Returns** [`Subscription`](subscription.md): Call `:cancel()` on it to stop waiting before then.

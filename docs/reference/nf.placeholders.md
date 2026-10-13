@@ -6,10 +6,9 @@ Placeholders, through [PlaceholderAPI](https://www.spigotmc.org/resources/placeh
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.placeholders.parse(text, player?)`
+### `nf.placeholders.parse(text, player?)` {#parse}
 
 Replaces every placeholder in the text with its value, as PlaceholderAPI does: `"Hello %player_name%"` becomes `"Hello Alex"`. A placeholder nobody answers is left as written. Placeholders registered with `nf.placeholders.register` are answered too. A value is plain text, not MiniMessage: if it comes from players, `nf.text.escape` the result before sending it as MiniMessage.
 
@@ -18,7 +17,7 @@ Replaces every placeholder in the text with its value, as PlaceholderAPI does: `
 | Parameter | Type | |
 | --- | --- | --- |
 | `text` | `string` | Text with `%placeholders%` in it. |
-| `player` (optional) | `Player` | Whom the placeholders are about (`%player_name%`); without one, only placeholders that don't need a player have a value. |
+| `player` (optional) | [`Player`](player.md) | Whom the placeholders are about (`%player_name%`); without one, only placeholders that don't need a player have a value. |
 
 **Returns** `string`
 
@@ -27,7 +26,7 @@ local line = nf.placeholders.parse("Welcome, %player_name%! Rank: %vault_rank%",
 player:send_message(nf.text.escape(line))
 ```
 
-## `nf.placeholders.register(namespace, callback)`
+### `nf.placeholders.register(namespace, callback)` {#register}
 
 Makes `%<namespace>_<key>%` a placeholder for the whole server: PlaceholderAPI asks `callback` for the value whenever any plugin parses it. `callback` is called with the `key` (everything after the first `_`, so `%shop_price_apple%` is `"price_apple"`) and the player it's for, if there is one, and returns the text (or a number) to put there, or `nil` when it has no value for that key (the placeholder is then left as written). It runs on the main thread when the server asks from the main thread; PlaceholderAPI is also asked from other threads (async chat, scoreboard plugins), where scripts can't run: there the placeholder answers the value `callback` last gave for that same key and player, and `nil` before it ever has. The placeholder belongs to the script that registered it and goes when that script unloads (a reload, the server stopping). A namespace another script or plugin already uses is an error.
 
@@ -36,7 +35,7 @@ Makes `%<namespace>_<key>%` a placeholder for the whole server: PlaceholderAPI a
 | Parameter | Type | |
 | --- | --- | --- |
 | `namespace` | `string` | What comes before the first `_`: lowercase letters and digits, starting with a letter, at most 32 characters, like `"shop"`. |
-| `callback` | `fun(key: string, player: Player?): string\|number\|nil` | Gives the value. An error in it is logged with its file and line, and the placeholder is left as written for that request. |
+| `callback` | `fun(key: string, player: `[`Player`](player.md)`?): string\|number\|nil` | Gives the value. An error in it is logged with its file and line, and the placeholder is left as written for that request. |
 
 ```lua
 nf.placeholders.register("shop", function(key, player)

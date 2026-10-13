@@ -47,7 +47,7 @@ a migration is SQLite's dialect, and a shared server's tables may belong to
 other packages or tools. A package that keeps tables on a shared connection
 creates them itself (`CREATE TABLE IF NOT EXISTS shop_scores (...)` through
 `db:execute`, in that server's dialect), or leaves the schema to whoever runs
-the server. See [Databases for scripts](../guide/deploying.md#databases-for-scripts).
+the server. See [Databases](../guide/server-config.md#databases).
 
 ## What the server does with them
 

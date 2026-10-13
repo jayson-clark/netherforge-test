@@ -6,33 +6,33 @@ An item lying on the ground, which players pick up by walking over it: an `Entit
 
 A handle: call its methods with a colon, `droppeditem:method()`.
 
-It is an [Entity](entity.md): it has every method and event of that class too (its own replace any of the same name), and goes wherever an `Entity` is taken.
+It is an [Entity](entity.md), so it has every method and event of that class too, and you can pass it wherever an `Entity` is expected.
 
+## Methods {#methods}
 
-
-## `droppeditem:item()`
+### `droppeditem:item()` {#item}
 
 The stack it is, or `nil` once it has gone (or while its chunk is unloaded).
 
-**Returns** `Item?`
+**Returns** [`Item`](types.md#item)`?`
 
-## `droppeditem:set_item(item)`
+### `droppeditem:set_item(item)` {#set_item}
 
 Changes the stack it is. An item table with a misspelled field, or an item the server doesn't have, is an error.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `item` | `Item` |  |
+| `item` | [`Item`](types.md#item) |  |
 
 **Returns** `boolean`: `false` once it has gone (or while its chunk is unloaded).
 
-## `droppeditem:pickup_delay()`
+### `droppeditem:pickup_delay()` {#pickup_delay}
 
 How many ticks until it can be picked up, or `nil` once it has gone (or while its chunk is unloaded).
 
 **Returns** `integer?`
 
-## `droppeditem:set_pickup_delay(ticks)`
+### `droppeditem:set_pickup_delay(ticks)` {#set_pickup_delay}
 
 Sets how many ticks until it can be picked up.
 

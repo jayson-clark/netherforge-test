@@ -6,10 +6,9 @@ The project's items (`items/<id>/`): item kinds of its own, whose stacks the ser
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.items.create(item, overrides?)`
+### `nf.items.create(item, overrides?)` {#create}
 
 A stack of a project item, as an `Item` table with every field its file sets, `item` naming it, and `count` 1: hand it to `player:give_item`, `menu:set_item` or anything else that takes an item. `overrides` sets fields of this stack: its `count`, its own `data`, or any other field. A field the file sets too is the stack's only until the file changes: then the stack takes the file's look again, keeping its count, damage and `data` (see the item format). A project item the project doesn't have is an error.
 
@@ -18,19 +17,19 @@ A stack of a project item, as an `Item` table with every field its file sets, `i
 | `item` | `string` | Its folder name under `items/`, or `namespace:id` for one a package it depends on exports (see [Names across packages](packages.md)). |
 | `overrides` (optional) | `table` | `Item` fields for this stack, like `{ count = 3 }`. Any `Item` field but `kind` and `item`. |
 
-**Returns** `Item`
+**Returns** [`Item`](types.md#item)
 
 ```lua
 event.player:give_item(nf.items.create("ruby", { count = 3, data = { found = "cave" } }))
 ```
 
-## `nf.items.id(stack)`
+### `nf.items.id(stack)` {#id}
 
 Which project item a stack is (its `item` field), or `nil` for a stack that isn't one. A stack carries its project item wherever it goes, so this tells a ruby from any other paper.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `stack` | `Item` | An item table, as any event or inventory hands out. |
+| `stack` | [`Item`](types.md#item) | An item table, as any event or inventory hands out. |
 
 **Returns** `string?`
 
@@ -42,7 +41,7 @@ nf.on("player_drop_item", function(event)
 end)
 ```
 
-## `nf.items.get(item)`
+### `nf.items.get(item)` {#get}
 
 A project item by id, to listen to what players do with it (`nf.items.get("ruby"):on("use", ...)`), or `nil` when the project has no such item.
 
@@ -50,10 +49,10 @@ A project item by id, to listen to what players do with it (`nf.items.get("ruby"
 | --- | --- | --- |
 | `item` | `string` | Its folder name under `items/`, or `namespace:id` for one a package it depends on exports (see [Names across packages](packages.md)). |
 
-**Returns** `ProjectItem?`
+**Returns** [`ProjectItem`](projectitem.md)`?`
 
-## `nf.items.all()`
+### `nf.items.all()` {#all}
 
 Every item the calling script can use: its own package's, and those the packages it depends on export.
 
-**Returns** `ProjectItem[]`
+**Returns** [`ProjectItem`](projectitem.md)`[]`

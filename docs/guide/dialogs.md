@@ -152,7 +152,7 @@ A `dialog_list` dialog does the simplest case for you: a button per listed
 dialog, built by the game.
 
 See the [Dialog reference](../reference/dialog.md) and
-[DialogPressEvent](../reference/events.md#dialogpressevent).
+[DialogPressEvent](../reference/types.md#dialogpressevent).
 
 ## On the pause screen and the quick actions key
 

@@ -6,157 +6,48 @@ Everything outside the script itself. The core verbs (events, timers, tasks and 
 
 A table of functions: call them with a dot.
 
+| | Functions |
+| --- | --- |
+| [Timers and tasks](#timers-and-tasks) | [`after`](#after) [`every`](#every) [`task`](#task) [`wait`](#wait) [`wait_until`](#wait_until) [`wait_for`](#wait_for) [`instructions_left`](#instructions_left) |
+| [Data and settings](#data-and-settings) | [`data`](#data) [`db`](#db) [`config`](#config) |
+| [Events](#events) | [`on`](#on) [`once`](#once) [`emit`](#emit) and 95 events |
 
+## Namespaces
 
-## Events
+| Namespace | |
+| --- | --- |
+| [`nf.server`](nf.server.md) | The server itself: its clock, its performance, its version, its settings (players, message of the day, whitelist), and saying or running things as the console. |
+| [`nf.commands`](nf.commands.md) | Slash commands a module adds to the server for as long as it runs, with typed arguments, tab completion and usage messages from their declaration. |
+| [`nf.players`](nf.players.md) | Players: everyone online, or anyone who has ever joined. |
+| [`nf.worlds`](nf.worlds.md) | The server's worlds: finding them, and making, loading and copying them. |
+| [`nf.structures`](nf.structures.md) | Structures: saved boxes of blocks that `world:place_structure` places. |
+| [`nf.centities`](nf.centities.md) | Centity instances: spawning new ones and finding live ones. |
+| [`nf.spawning`](nf.spawning.md) | Natural spawning (a centity's `spawning` block in `centity.json`): conditions a script decides, which a `spawning` block names with `when`. |
+| [`nf.menus`](nf.menus.md) | The project's menus (`menus/<id>/`), and menus scripts make. |
+| [`nf.dialogs`](nf.dialogs.md) | The project's dialogs (`dialogs/<id>/`), and dialogs scripts make. |
+| [`nf.items`](nf.items.md) | The project's items (`items/<id>/`): item kinds of its own, whose stacks the server can always tell apart from any other stack of the same Minecraft kind. |
+| [`nf.blocks`](nf.blocks.md) | The project's blocks (`blocks/<id>/`): blocks of its own, drawn by its resource pack, with their own hardness, drops and sounds, held in the world as states of the game's blocks (their carriers: note blocks, tripwire, leaves). |
+| [`nf.recipes`](nf.recipes.md) | The project's recipes: those in `recipes/<id>.json`, and those scripts register. |
+| [`nf.loot`](nf.loot.md) | Loot tables: the project's own (`loot/<id>.json`) and the game's. |
+| [`nf.bossbars`](nf.bossbars.md) | Boss bars: bars across the top of players' screens. |
+| [`nf.teams`](nf.teams.md) | The project's scoreboard teams: prefixes and suffixes on names, name colours and glow colours, friendly fire, name tags and collision. |
+| [`nf.schedule`](nf.schedule.md) | Runs a function at a time of day, every day or week, or by a cron expression: real time, as opposed to ticks (`nf.after`, `nf.every`). |
+| [`nf.economy`](nf.economy.md) | Players' money, as the server's economy plugin keeps it, through [Vault](https://www.spigotmc.org/resources/vault.34315/): whichever economy is registered with it (EssentialsX, CMI, …) answers, so a project never names one. |
+| [`nf.placeholders`](nf.placeholders.md) | Placeholders, through [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/): fill in the `%player_name%`-style placeholders every plugin offers, and offer your own as `%<namespace>_<key>%` to every plugin that reads them (scoreboards, chat formats, holograms). |
+| [`nf.particles`](nf.particles.md) | The project's particle effects (`particles/<id>/effect.json`): timelines of particles authored in the editor, played at a place by scripts. |
+| [`nf.cutscenes`](nf.cutscenes.md) | The project's cutscenes (`cutscenes/<id>.json`): camera paths keyed in the editor, played for one player at a time. |
+| [`nf.files`](nf.files.md) | Files in the one directory scripts may keep things in: the only state a script has that survives a restart. |
+| [`nf.text`](nf.text.md) | Helpers for the MiniMessage text players see: escaping what players typed, stripping tags, resource pack glyphs, moving the cursor, and measuring. |
+| [`nf.json`](nf.json.md) | JSON text to and from Lua values. |
+| [`nf.http`](nf.http.md) | Requests to web services (a Discord webhook, a status API). |
+| [`nf.time`](nf.time.md) | Dates and durations as text, in the same unit as `nf.server.unix_time()`: milliseconds. |
+| [`nf.random`](nf.random.md) | Randomness `math.random` doesn't give: generators of your own that repeat for a seed, smooth noise, and random ids. |
+| [`nf.math`](nf.math.md) | Small arithmetic `math` doesn't have, for animating by hand: blending, clamping, rescaling and easing. |
+| [`nf.test`](nf.test.md) | What a test file runs on. |
 
-What `nf.on(event, handler)` listens for. See [Events](events.md) for how events work. Any name with a `:` in it is a custom event, raised with `emit`.
+## Timers and tasks {#timers-and-tasks}
 
-| Event | Payload | Cancellable | |
-| --- | --- | --- | --- |
-| `tick` | [TickEvent](events.md#tickevent) |  | Every server tick, twenty times a second. Keep handlers cheap, or listen less often with `{ every = n }`. Options: `every`. |
-| `unload` | [Event](events.md#event) |  | This script is about to stop: a reload, the server stopping, its centity being removed, or its menu window going. Delivered only to the script that registered it, last of all. Put back anything it changed outside itself. Only the registering script hears it. |
-| `player_join` | [PlayerJoinEvent](events.md#playerjoinevent) |  | A player joined the server. Assign `event.message` to change what everyone is told, or `nil` to say nothing. Writable: `message`. |
-| `player_quit` | [PlayerQuitEvent](events.md#playerquitevent) |  | A player left. Assign `event.message` to change what everyone is told, or `nil` to say nothing. Writable: `message`. |
-| `player_chat` | [PlayerChatEvent](events.md#playerchatevent) | yes | A player is saying something in chat. `event:cancel()` stops anyone seeing it; assign `event.message` to change what they said, or `event.format` to change how the line looks. Handlers run on the main thread while the chat waits for them, so keep them quick. Writable: `message`, `format`. |
-| `player_interact` | [PlayerInteractEvent](events.md#playerinteractevent) | yes | A player clicked a block or the air (not an entity), once for each hand the game asks about. `event:cancel()` stops it: no door opens, nothing is placed or used. A right click with an item goes on to `player_use_item` unless it was cancelled. |
-| `player_interact_entity` | [PlayerInteractEntityEvent](events.md#playerinteractentityevent) | yes | A player right-clicked an entity that isn't part of a centity (those are `centity_click`): after the entity's `interact` and the player's `interact_entity`. `event:cancel()` stops what the click would do. |
-| `player_move` | [PlayerMoveEvent](events.md#playermoveevent) | yes | A player moved into another block: walking, swimming, flying, falling, riding. Only moves that change block are heard, not every step or turn of the head, and teleports are `player_teleport` instead. `event:cancel()` puts them back where they were. The server only watches moves while something listens, so it costs nothing otherwise. |
-| `player_teleport` | [PlayerTeleportEvent](events.md#playerteleportevent) | yes | A player is being teleported: a command, a script, an ender pearl, a portal. `event:cancel()` keeps them where they are; assign `event.to` to send them somewhere else. Writable: `to`. |
-| `player_change_world` | [PlayerChangeWorldEvent](events.md#playerchangeworldevent) |  | A player arrived in another world: through a portal, or teleported there. |
-| `player_death` | [PlayerDeathEvent](events.md#playerdeathevent) |  | A player died: before `nf.on("entity_death")` hears the same death. Assign `event.message` to change what everyone is told (or `nil` for nothing), `event.keep_inventory` to let them keep what they carry, and `event.drops` to change what falls. Writable: `message`, `keep_inventory`, `drops`. |
-| `player_respawn` | [PlayerRespawnEvent](events.md#playerrespawnevent) |  | A player is coming back after dying, or after leaving the end. Assign `event.location` to bring them back somewhere else. Writable: `location`. |
-| `player_drop_item` | [PlayerItemEvent](events.md#playeritemevent) | yes | A player is dropping an item from their inventory. `event:cancel()` keeps it in their inventory. |
-| `player_pickup_item` | [PlayerPickupItemEvent](events.md#playerpickupitemevent) | yes | A player is picking up a dropped item. `event:cancel()` leaves it lying there (it is asked again while they stand on it). |
-| `player_use_item` | [PlayerUseItemEvent](events.md#playeruseitemevent) | yes | A player right-clicked with an item, on a block or the air, after `player_interact`: starting to eat or drink, drawing a bow, throwing a pearl, emptying a bucket, placing a block. `event:cancel()` stops the item being used, but not what the click does to the block (a door still opens). |
-| `player_consume_item` | [PlayerItemEvent](events.md#playeritemevent) | yes | A player finished eating or drinking something. `event:cancel()` stops it: the item stays and does nothing. |
-| `player_swap_hands` | [PlayerEvent](events.md#playerevent) | yes | A player pressed the key that swaps the items in their hands. `event:cancel()` leaves them where they are, so the key can be used for something else. |
-| `player_sneak` | [PlayerSneakEvent](events.md#playersneakevent) |  | A player started or stopped sneaking. |
-| `player_command` | [PlayerCommandEvent](events.md#playercommandevent) | yes | A player typed a command (any command: Minecraft's, a plugin's or a script's), before it runs. `event:cancel()` stops it running. |
-| `block_break` | [BlockBreakEvent](events.md#blockbreakevent) | yes | A player is breaking a block: after the world's own `block_break` handlers. `event:cancel()` stops it; assign `event.drops` and `event.experience` to change what it drops. Writable: `drops`, `experience`. |
-| `block_place` | [BlockPlaceEvent](events.md#blockplaceevent) | yes | A player is placing a block: after the world's own `block_place` handlers. `event:cancel()` stops it. |
-| `entity_damage` | [EntityDamageEvent](events.md#entitydamageevent) | yes | Something is hurting an entity (a player included): after the entity's own `damage` handlers. `event:cancel()` stops it; assign `event.amount` to change how much it takes. Writable: `amount`. |
-| `entity_death` | [EntityDeathEvent](events.md#entitydeathevent) |  | An entity died (a player included): after the entity's own `death` handlers, and for a player after `player_death`. Assign `event.drops` and `event.experience` to change what it drops. Writable: `drops`, `experience`. |
-| `entity_spawn` | [EntitySpawnEvent](events.md#entityspawnevent) | yes | An entity is coming into a world (not a player joining, and never the entities centities are drawn with): after the world's own `entity_spawn` handlers. `event:cancel()` stops it. |
-| `world_dusk` | [DaylightEvent](events.md#daylightevent) |  | Night fell in a world: its time of day went from day (23000 to 12999) into night (13000 to 22999), by the clock or by `/time set`. After the world's own `dusk` handlers. |
-| `world_dawn` | [DaylightEvent](events.md#daylightevent) |  | Day broke in a world: its time of day went from night (13000 to 22999) into day (23000 to 12999), by the clock or by `/time set`. After the world's own `dawn` handlers. |
-| `player_input` | [PlayerInputEvent](events.md#playerinputevent) |  | A player's movement keys changed: what they hold down now, as their game sends it (forward, back, left, right, jump, sneak, sprint), whether or not they can move. For steering something they ride or controlling a centity. The server only watches input while something listens, so it costs nothing otherwise. |
-| `player_change_slot` | [PlayerChangeSlotEvent](events.md#playerchangeslotevent) | yes | A player picked another hotbar slot: a number key or the scroll wheel. `event:cancel()` keeps the slot they had. |
-| `player_swing` | [PlayerSwingEvent](events.md#playerswingevent) | yes | A player swung an arm: every left click, on a block, an entity or the air, and some right clicks. The one way to hear a left click on the air. `event:cancel()` stops others seeing the swing, but not what the click does. |
-| `player_sprint` | [PlayerSprintEvent](events.md#playersprintevent) |  | A player started or stopped sprinting. |
-| `player_fly` | [PlayerFlyEvent](events.md#playerflyevent) | yes | A player started or stopped flying (in creative, or where `set_can_fly` lets them). `event:cancel()` keeps them as they were. |
-| `player_jump` | [PlayerJumpEvent](events.md#playerjumpevent) | yes | A player jumped. `event:cancel()` puts them back where they jumped from. |
-| `player_change_game_mode` | [PlayerChangeGameModeEvent](events.md#playerchangegamemodeevent) | yes | A player's game mode is changing: a command, a script, or the server. `event:cancel()` keeps the one they have. |
-| `player_change_food` | [PlayerChangeFoodEvent](events.md#playerchangefoodevent) | yes | A player's food level is changing: going down as they get hungry, up as they eat. `event:cancel()` keeps it as it is; assign `event.food` to set it to another level. Writable: `food`. |
-| `player_gain_experience` | [PlayerGainExperienceEvent](events.md#playergainexperienceevent) |  | A player is getting experience points: picking up orbs, or from a script or command. Assign `event.amount` to give another amount (0 for none). Writable: `amount`. |
-| `player_change_level` | [PlayerChangeLevelEvent](events.md#playerchangelevelevent) |  | A player's experience level changed, up or down. |
-| `player_kick` | [PlayerKickEvent](events.md#playerkickevent) | yes | A player is being kicked: by a command, a plugin or a script, or by the server (flying, timing out, a bad packet). `event:cancel()` keeps them on the server; assign `event.text` to change what their screen says, or `event.message` to change what everyone is told (`nil` for nothing). Leaving then goes on to `player_quit`. Writable: `text`, `message`. |
-| `player_complete_advancement` | [PlayerAdvancementEvent](events.md#playeradvancementevent) |  | A player completed an advancement (or a recipe was unlocked for them: those are advancements too, under `minecraft:recipes/`). Assign `event.message` to change what everyone is told, or `nil` to say nothing. Writable: `message`. |
-| `player_stop_using_item` | [PlayerStopUsingItemEvent](events.md#playerstopusingitemevent) |  | A player let go of an item they were using before it finished: a bow or crossbow drawn, a shield raised, a spyglass, food or a potion part-eaten. `event.ticks` says how long they held it. |
-| `player_break_item` | [PlayerItemEvent](events.md#playeritemevent) |  | A tool, weapon or piece of armour a player was using wore out and broke. `event.item` is what it was, before it went. |
-| `entity_heal` | [EntityHealEvent](events.md#entityhealevent) | yes | It is getting health back: eating, regenerating, a potion, a beacon. `event:cancel()` stops it; assign `event.amount` to change how much. After the entity's own `heal` handlers. Writable: `amount`. |
-| `projectile_launch` | [ProjectileLaunchEvent](events.md#projectilelaunchevent) | yes | It launched a projectile: an arrow, a trident, a snowball, an egg, an ender pearl, a potion, a fireball. `event:cancel()` stops the projectile coming into the world. A dispenser's projectile has no shooter, so only `nf` hears it. After the entity's own `launch_projectile` handlers. |
-| `projectile_hit` | [ProjectileHitEvent](events.md#projectilehitevent) | yes | This projectile hit an entity or a block. `event:cancel()` lets it pass through as if nothing were there (an arrow flies on; a snowball doesn't break). After the entity's own `hit` handlers. |
-| `entity_shoot_bow` | [EntityShootBowEvent](events.md#entityshootbowevent) | yes | It shot a bow or a crossbow (a skeleton, a pillager, a player). `event:cancel()` stops the shot: nothing is fired or used up. After the entity's own `shoot_bow` handlers. |
-| `entity_target` | [EntityTargetEvent](events.md#entitytargetevent) | yes | This mob is picking a target to go after, or forgetting the one it had (`event.target` is `nil`). `event:cancel()` keeps the target it had. The server only reports targets while something listens, so it costs nothing otherwise. After the entity's own `target` handlers. |
-| `entity_explode` | [ExplodeEvent](events.md#explodeevent) | yes | It exploded: a creeper, TNT, a fireball, an end crystal, a wither skull. `event:cancel()` stops the explosion breaking anything; assign `event.breaks_blocks = false` to keep every block standing but still hurt what is near, or `event.yield` to change how much of what breaks drops. After the entity's own `explode` handlers. Writable: `breaks_blocks`, `yield`. |
-| `block_explode` | [ExplodeEvent](events.md#explodeevent) | yes | A block exploded: a bed in the nether or the end, a respawn anchor charged away from the overworld. `event:cancel()` stops the explosion breaking anything; assign `event.breaks_blocks = false` to keep every block standing but still hurt what is near, or `event.yield` to change how much of what breaks drops. After the world's own `block_explode` handlers. Writable: `breaks_blocks`, `yield`. |
-| `entity_combust` | [EntityCombustEvent](events.md#entitycombustevent) | yes | It is catching fire: from lava or fire, sunlight (a zombie, a skeleton), a flaming arrow or a fire aspect sword. `event:cancel()` keeps it from burning; assign `event.ticks` to make it burn for that long instead. After the entity's own `combust` handlers. Writable: `ticks`. |
-| `entity_change_effect` | [EntityChangeEffectEvent](events.md#entitychangeeffectevent) | yes | One of its status effects is being added, changed, run out or taken away: a potion, a beacon, milk, a command or a script. `event:cancel()` stops the change. After the entity's own `change_effect` handlers. |
-| `block_ignite` | [BlockIgniteEvent](events.md#blockigniteevent) | yes | A block is catching fire: flint and steel, a fire charge, lava, lightning, fire spreading, an explosion. `event:cancel()` keeps it from burning. After the world's own `block_ignite` handlers. |
-| `block_burn` | [BlockBurnEvent](events.md#blockburnevent) | yes | A block is burning away in a fire. `event:cancel()` keeps it there (it may still catch fire again). After the world's own `block_burn` handlers. |
-| `block_spread` | [BlockChangeEvent](events.md#blockchangeevent) | yes | A block is spreading to another: grass, mycelium, moss, vines, mushrooms, fire, sculk. `event.block` is where it spreads to, `event.source` where from. `event:cancel()` stops it. The server only reports these while something listens, so it costs nothing otherwise. After the world's own `block_spread` handlers. |
-| `block_flow` | [BlockFlowEvent](events.md#blockflowevent) | yes | Water or lava is flowing into another block (or a dragon egg teleporting there). `event:cancel()` stops it. The server only reports these while something listens, so it costs nothing otherwise. After the world's own `block_flow` handlers. |
-| `block_grow` | [BlockChangeEvent](events.md#blockchangeevent) | yes | A crop, sapling stage, sugar cane, cactus, bamboo, pumpkin or melon is growing by itself (bone meal included). `event:cancel()` stops it. The server only reports these while something listens, so it costs nothing otherwise. After the world's own `block_grow` handlers. |
-| `block_fade` | [BlockChangeEvent](events.md#blockchangeevent) | yes | A block is fading by itself: ice or snow melting, coral dying, fire burning out, farmland drying. `event:cancel()` keeps it as it is. The server only reports these while something listens, so it costs nothing otherwise. After the world's own `block_fade` handlers. |
-| `block_form` | [BlockChangeEvent](events.md#blockchangeevent) | yes | A block is forming by itself: snow falling, ice freezing, concrete setting, obsidian or cobblestone from lava, frost walker ice or a snow golem's trail (`event.entity` says which). `event:cancel()` stops it. The server only reports these while something listens, so it costs nothing otherwise. After the world's own `block_form` handlers. |
-| `leaves_decay` | [BlockEvent](events.md#blockevent) | yes | Leaves are decaying, far from any log. `event:cancel()` keeps them. The server only reports these while something listens, so it costs nothing otherwise. After the world's own `leaves_decay` handlers. |
-| `piston_extend` | [PistonEvent](events.md#pistonevent) | yes | A piston is pushing out. `event:cancel()` keeps it in, and everything it would push where it is. After the world's own `piston_extend` handlers. |
-| `piston_retract` | [PistonEvent](events.md#pistonevent) | yes | A piston is pulling back. `event:cancel()` keeps it out, and (for a sticky one) the block it would pull where it is. After the world's own `piston_retract` handlers. |
-| `block_redstone` | [BlockRedstoneEvent](events.md#blockredstoneevent) |  | A block's redstone power is changing: a lever, a button, a pressure plate, a redstone lamp or wire. Assign `event.to` to give it another power. The server only reports these while something listens, so it costs nothing otherwise. After the world's own `block_redstone` handlers. Writable: `to`. |
-| `sign_change` | [SignChangeEvent](events.md#signchangeevent) | yes | A player finished writing on a sign. `event:cancel()` keeps the sign as it was. After the world's own `sign_change` handlers. |
-| `block_start_break` | [BlockStartBreakEvent](events.md#blockstartbreakevent) | yes | A player started hitting a block to break it. `event:cancel()` stops them breaking it; assign `event.instant = true` to break it at once, or `false` to make them wait for it. After the world's own `block_start_break` handlers. Writable: `instant`. |
-| `block_drop_item` | [BlockDropItemEvent](events.md#blockdropitemevent) | yes | A block a player broke is dropping its items, its contents included (a chest's, a furnace's): after `block_break`, once it has gone. `event:cancel()` drops nothing. After the world's own `block_drop_item` handlers. |
-| `weather_change` | [WeatherChangeEvent](events.md#weatherchangeevent) | yes | It is starting or stopping raining (or snowing) in a world. `event:cancel()` keeps the weather it has. After the world's own `weather_change` handlers. |
-| `thunder_change` | [ThunderChangeEvent](events.md#thunderchangeevent) | yes | A thunderstorm is starting or stopping in a world. `event:cancel()` keeps the weather it has. After the world's own `thunder_change` handlers. |
-| `lightning_strike` | [LightningStrikeEvent](events.md#lightningstrikeevent) | yes | Lightning is striking: a storm, a trident with channeling, a command or a script. `event:cancel()` stops it. After the world's own `lightning_strike` handlers. |
-| `chunk_load` | [ChunkLoadEvent](events.md#chunkloadevent) |  | A chunk came into memory: someone came near, or it was generated for the first time (`event.generated`). The server only reports these while something listens, so it costs nothing otherwise. After the world's own `chunk_load` handlers. |
-| `chunk_generated` | [ChunkEvent](events.md#chunkevent) |  | A chunk was generated, the first time it was loaded: its terrain, structures and the game's decorations are in place, so a script can add its own (a centity in a grove, a shrine on a hill). Its blocks are `event.x * 16` to `event.x * 16 + 15` across, the same along `z`, and can be read and changed in the handler; the chunks beside it may not be generated yet, so keep what you place inside it. Once per chunk, ever: one generated while no script listened isn't heard later. It happens for every new chunk a player explores, so keep handlers quick and leave most chunks alone. The server only reports these while something listens, so it costs nothing otherwise. After the world's own `chunk_generated` handlers. |
-| `chunk_unload` | [ChunkEvent](events.md#chunkevent) |  | A chunk is leaving memory, as everyone has gone away. Its blocks can still be read and changed in the handler. After the world's own `chunk_unload` handlers. |
-| `world_load` | [WorldEvent](events.md#worldevent) |  | A world was loaded: at startup, or by a plugin or a script later. |
-| `world_unload` | [WorldEvent](events.md#worldevent) |  | A world is being unloaded. Its handle answers `nil` or `false` afterwards; handlers on it stay, for when it's loaded again. |
-| `entity_mount` | [MountEvent](events.md#mountevent) | yes | It is getting on something to ride it: a horse, a pig with a saddle, a boat, a minecart, another mob (a spider jockey). `event:cancel()` keeps it off. After the entity's own `mount` handlers. |
-| `entity_dismount` | [MountEvent](events.md#mountevent) | yes | It is getting off what it rides: sneaking, the vehicle breaking, a teleport, dying. `event:cancel()` keeps it on, except where it can't stay (it died, or what it rode has gone). After the entity's own `dismount` handlers. |
-| `vehicle_move` | [VehicleMoveEvent](events.md#vehiclemoveevent) |  | A boat or minecart moved into another block, with or without a rider. Only moves that change block are heard. The server only reports these while something listens, so it costs nothing otherwise. |
-| `vehicle_damage` | [VehicleDamageEvent](events.md#vehicledamageevent) | yes | Something is hitting a boat or minecart. `event:cancel()` stops it; assign `event.amount` to change how much it takes. Writable: `amount`. |
-| `vehicle_destroy` | [VehicleDestroyEvent](events.md#vehicledestroyevent) | yes | A boat or minecart is being broken: it will drop as an item. `event:cancel()` keeps it there. |
-| `player_open_inventory` | [PlayerInventoryEvent](events.md#playerinventoryevent) | yes | A player is opening a vanilla inventory: a chest, a furnace, a crafting table, a villager's trades, a horse's. Not one of the project's menus: those are `menu_open`. `event:cancel()` keeps it closed. |
-| `player_close_inventory` | [PlayerInventoryEvent](events.md#playerinventoryevent) |  | A player closed a vanilla inventory (not one of the project's menus: those are `menu_close`), or left the server with it open. |
-| `player_craft` | [PlayerCraftEvent](events.md#playercraftevent) | yes | A player is taking what they crafted out of the result slot (with shift, as many as they can make). `event:cancel()` leaves it there and keeps the ingredients. |
-| `player_prepare_craft` | [PlayerPrepareCraftEvent](events.md#playerpreparecraftevent) |  | What's in a crafting grid changed (a crafting table's, or the 2×2 in a player's inventory), and the game is working out what it makes. Assign `event.result` to make something else, or `nil` for nothing: a recipe of your own. Writable: `result`. |
-| `player_prepare_anvil` | [PlayerPrepareAnvilEvent](events.md#playerprepareanvilevent) |  | What is in an anvil changed (or the name typed into it), and the game is working out the result. Assign `event.result` to make something else (or `nil` for nothing), and `event.cost` to change how many levels it takes. Writable: `result`, `cost`. |
-| `player_prepare_smithing` | [PlayerPrepareSmithingEvent](events.md#playerpreparesmithingevent) |  | What is in a smithing table changed, and the game is working out the result. Assign `event.result` to make something else, or `nil` for nothing. Writable: `result`. |
-| `player_prepare_grindstone` | [PlayerPrepareGrindstoneEvent](events.md#playerpreparegrindstoneevent) |  | What is in a grindstone changed, and the game is working out the result. Assign `event.result` to make something else, or `nil` for nothing. Writable: `result`. |
-| `player_enchant_item` | [PlayerEnchantItemEvent](events.md#playerenchantitemevent) | yes | A player is enchanting an item at an enchanting table. `event:cancel()` stops it: nothing is enchanted or spent. Assign `event.cost` to change how many levels it takes. Writable: `cost`. |
-| `furnace_smelt` | [FurnaceSmeltEvent](events.md#furnacesmeltevent) | yes | A furnace, smoker or blast furnace finished smelting one item. `event:cancel()` stops it: the item stays unsmelted. Assign `event.result` to make something else. After the world's own `furnace_smelt` handlers. Writable: `result`. |
-| `server_list_ping` | [ServerListPingEvent](events.md#serverlistpingevent) | yes | Someone's server list is asking about the server: what it says, how many are on and how many fit. `event:cancel()` doesn't answer, so the server shows as offline to them. The ping waits on the main thread for the handlers (at most two seconds, then it's answered as it was), so keep them quick. The server only waits while something listens. Writable: `description`, `online`, `max_players`, `hide_players`. |
-| `centity_click` | [ClickEvent](events.md#clickevent) |  | A player clicked any centity: the end of a click's path, after the clicked node, the nodes above it and the centity itself, unless one of them called `event:stop()`. |
-| `recipe_craft` | [RecipeCraftEvent](events.md#recipecraftevent) |  | `nf.recipes.craft` is making a `station` recipe once: its materials are taken, and `event.result` is about to be given. Assign `event.result` to give something else (the same item with a rolled prefix, a stack of a different size). Heard once for each making, so each gets its own; while nobody listens, the makings are given in stacks. Writable: `result`. |
-| `item_view` | [ItemViewEvent](events.md#itemviewevent) |  | Any stack is being sent to one player's game (their inventory, a window they have open, their cursor): after its project item's own `view` handlers, for a stack of one, and for every other stack too. Assign `event.display_name` and `event.lore` to change how it looks to `event.player` alone; nothing the server keeps changes. While nobody listens, stacks are sent as they are; while someone does, every stack sent is worked out here first, so prefer an item's own `view` when only some items change. Writable: `display_name`, `lore`. |
-| `centity_natural_spawn` | [CentityNaturalSpawnEvent](events.md#centitynaturalspawnevent) | yes | A centity is about to appear by itself, from the `spawning` block of its `centity.json`: once for each one of a group, before it exists. `event:cancel()` refuses it (it doesn't count against anything, and the spawner tries again later); assign `event.location` to move it. It is asked after the spawner has checked the place against the centity's rules, and before the centity's own `spawn`. Writable: `location`. |
-| `menu_open` | [MenuEvent](events.md#menuevent) |  | Someone opened any menu window: after that window's own `open` handlers. |
-| `menu_close` | [MenuEvent](events.md#menuevent) |  | Someone closed any menu window: after that window's own `close` handlers. |
-| `menu_click` | [MenuClickEvent](events.md#menuclickevent) | yes | Someone clicked in any menu window: the end of a click's path, after the slot's and the menu's handlers, unless one of them called `event:stop()`. `event:cancel()` stops the click moving anything. |
-| `dialog_press` | [DialogPressEvent](events.md#dialogpressevent) |  | Someone pressed any dialog's button: the end of a press's path, after the button's and the dialog's handlers, unless one of them called `event:stop()`. |
-| `setting_changed` | [SettingChangedEvent](events.md#settingchangedevent) |  | Whoever runs the server changed one of this package's settings (see `nf.config`): from the editor, with `/nf settings` or its dialog, or by editing the settings file and running `/nf settings reload`. Only the package's own scripts hear it. A script that listens keeps running and takes the new value from here; one that read a setting without listening is restarted instead, so what it set up with the old value is set up again. |
-
-## `nf.on(event, handler, options?)`
-
-Calls `handler` every time `event` happens, until the subscription is cancelled or its script unloads. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this table doesn't have is an error, so a typo is caught where it was made.
-
-| Parameter | Type | |
-| --- | --- | --- |
-| `event` | `nf.Event` | A built-in event's name, or a custom event's: any name with a `:` in it, like `"shop:purchased"`. |
-| `handler` | `fun(event: Event)` | Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`. |
-| `options` (optional) | `EventOptions` | How to listen: `{ every = n }` for `tick`. |
-
-**Returns** `Subscription`: Call `:cancel()` on it to stop listening.
-
-```lua
-nf.on("player_join", function(event)
-  event.player:send_message("<green>Welcome!")
-end)
-```
-
-## `nf.once(event, handler)`
-
-Like `nf.on`, but the handler runs only the next time the event happens, then stops listening.
-
-| Parameter | Type | |
-| --- | --- | --- |
-| `event` | `nf.Event` | A built-in event's name, or a custom event's: any name with a `:` in it, like `"shop:purchased"`. |
-| `handler` | `fun(event: Event)` | Called with the event. |
-
-**Returns** `Subscription`: Call `:cancel()` on it to stop waiting before then.
-
-## `nf.emit(event, payload?)`
-
-Raises a custom event for every script: every `nf.on(event)` handler hears it now, in the order they were registered, before this returns. The payload is handed to them as it is, not copied, so a field a handler assigns is there for the caller to read afterwards. A name without a `:` is an error: built-in events are the server's to raise.
-
-| Parameter | Type | |
-| --- | --- | --- |
-| `event` | `string` | A custom event's name, with a `:`: `"shop:purchased"`. |
-| `payload` (optional) | `table` | The event's fields. Leave it out for none. |
-
-**Returns** `boolean`: Whether a handler cancelled it (`event:cancel()`), so a custom event can be vetoed.
-
-```lua
-if not nf.emit("shop:purchased", { player = player, item = "ruby" }) then
-  player:send_message("<green>Bought!")
-end
-```
-
-## `nf.after(ticks, callback)`
+### `nf.after(ticks, callback)` {#after}
 
 Calls `callback` once, `ticks` server ticks from now (20 ticks are a second). Timers stop when the script unloads. One that errors is logged. To do several things with pauses in between, start a task (`nf.task`) and `nf.wait` in it.
 
@@ -165,9 +56,9 @@ Calls `callback` once, `ticks` server ticks from now (20 ticks are a second). Ti
 | `ticks` | `integer` | How long to wait. 0 runs on the next tick. |
 | `callback` | `fun()` |  |
 
-**Returns** `Task`: Call `:cancel()` on it to stop it first.
+**Returns** [`Task`](task.md): Call `:cancel()` on it to stop it first.
 
-## `nf.every(ticks, callback)`
+### `nf.every(ticks, callback)` {#every}
 
 Calls `callback` every `ticks` server ticks, starting `ticks` from now, until cancelled or the script unloads. One that errors is logged, and stops after 20 errors in a row.
 
@@ -176,7 +67,7 @@ Calls `callback` every `ticks` server ticks, starting `ticks` from now, until ca
 | `ticks` | `integer` | At least 1. |
 | `callback` | `fun()` |  |
 
-**Returns** `Task`
+**Returns** [`Task`](task.md)
 
 ```lua
 nf.every(20, function()
@@ -184,7 +75,7 @@ nf.every(20, function()
 end)
 ```
 
-## `nf.task(callback, ...)`
+### `nf.task(callback, ...)` {#task}
 
 Starts a task: `callback` runs now, with the extra arguments, until it first waits (`nf.wait`, `nf.wait_until`, `nf.wait_for`, `dialog:ask` or an asynchronous function like `nf.worlds.copy`, `nf.http.request`, `world:locate_biome`, `database:query`, `database:execute` or `database:transaction` called without its callback), and carries on from there when the wait is over. Only a task can wait; event handlers can't, because whether an event is cancelled or stopped has to be known when it returns, so a handler that needs to wait starts a task. Each time a task carries on it gets the script's whole instruction budget again. A task belongs to the script that started it and ends when that script unloads, when `cancel()` is called, or when the handle it waits on goes. One that errors is logged with its file and line and ends; the code that started it carries on either way.
 
@@ -193,7 +84,7 @@ Starts a task: `callback` runs now, with the extra arguments, until it first wai
 | `callback` | `async fun(...: any)` | The task: plain Lua that may wait. |
 | `...` | `any` | Passed to `callback`. |
 
-**Returns** `Task`: Call `:cancel()` on it to end it early.
+**Returns** [`Task`](task.md): Call `:cancel()` on it to end it early.
 
 ```lua
 this:on("click", function(event)
@@ -206,7 +97,7 @@ this:on("click", function(event)
 end)
 ```
 
-## `nf.wait(ticks)`
+### `nf.wait(ticks)` {#wait}
 
 Pauses the task for `ticks` server ticks (20 are a second). It can't wait inside a function the server or Lua itself calls back (a `complete` function, `table.sort`'s comparator), nor inside a coroutine of your own; inside `pcall` is fine.
 
@@ -226,7 +117,7 @@ nf.task(function()
 end)
 ```
 
-## `nf.wait_until(predicate, timeout?)`
+### `nf.wait_until(predicate, timeout?)` {#wait_until}
 
 Pauses the task until `predicate()` returns something other than `false` or `nil`. It's called once straight away and then once every tick, as the task's code.
 
@@ -247,7 +138,7 @@ nf.task(function()
 end)
 ```
 
-## `nf.wait_for(handle, event, filter?)`
+### `nf.wait_for(handle, event, filter?)` {#wait_for}
 
 Pauses the task until `event` next happens on `handle` (or, for `nf`, anywhere on the server) and returns that event. The task carries on straight away, while the event is still being delivered, so until its next wait it can still `cancel()` or `stop()` the event or set its writable fields. If the handle goes first (a removed centity, a closed window, a dialog taken away by a reload), the task ends. An event the handle doesn't have is an error.
 
@@ -255,11 +146,11 @@ Pauses the task until `event` next happens on `handle` (or, for `nf`, anywhere o
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `handle` | `Centity\|Node\|Entity\|World\|ProjectBlock\|Menu\|Slot\|MenuTemplate\|Dialog\|Button\|ProjectItem\|Effect\|Cutscene\|nf` | What the event happens to, as for `handle:on`; `nf` for a server-wide event. |
+| `handle` | [`Centity`](centity.md)`\|`[`Node`](node.md)`\|`[`Entity`](entity.md)`\|`[`World`](world.md)`\|`[`ProjectBlock`](projectblock.md)`\|`[`Menu`](menu.md)`\|`[`Slot`](slot.md)`\|`[`MenuTemplate`](menutemplate.md)`\|`[`Dialog`](dialog.md)`\|`[`Button`](button.md)`\|`[`ProjectItem`](projectitem.md)`\|`[`Effect`](effect.md)`\|`[`Cutscene`](cutscene.md)`\|`[`nf`](nf.md) | What the event happens to, as for `handle:on`; `nf` for a server-wide event. |
 | `event` | `string` | The event's name, as `handle:on` takes it. |
-| `filter` (optional) | `fun(event: Event): boolean` | Waits for the first event this returns `true` for; the others pass by. Run as the task's code, so an error in it ends the task. |
+| `filter` (optional) | `fun(event: `[`Event`](types.md#event)`): boolean` | Waits for the first event this returns `true` for; the others pass by. Run as the task's code, so an error in it ends the task. |
 
-**Returns** `Event`: The event: its payload and its methods.
+**Returns** [`Event`](types.md#event): The event: its payload and its methods.
 
 ```lua
 nf.task(function()
@@ -268,7 +159,15 @@ nf.task(function()
 end)
 ```
 
-## `nf.data(name)`
+### `nf.instructions_left()` {#instructions_left}
+
+Lua instructions this call may still run before it's stopped. A loop over a lot of work can check it and leave the rest for the next tick. Coarse: it's updated every hundred instructions or so.
+
+**Returns** `integer`
+
+## Data and settings {#data-and-settings}
+
+### `nf.data(name)` {#data}
 
 A saved table for the whole project, by name: `nf.data("shop")` is the same table in every script, so a module keeps its own under its own name and two modules never collide. Each name is its own file in the data directory, kept across restarts. It may hold strings, numbers, booleans, tables of them (keyed by strings, or a list numbered from 1), and the API's own values: `Vec3`s, `Location`s, `Item` tables, and `Player`, `Entity`, `Centity` and `World` handles, which come back as the same types (a handle to something gone answers `nil` or `false`, as handles do). Anything else (a function, a `Menu` window, a `Subscription`) is skipped when it's saved, with a line in the log naming where it was (`data.inventory[3]: a function can't be saved`). The table is live: change it and the change is saved, at the next autosave (every five minutes), when the project reloads and when the server stops. It stays in memory across hot reloads rather than being read again, so a script that reloads finds it as it left it. A table that would take more than 1 MiB isn't saved (the last save stands), and the log says so. A name that isn't lowercase letters, digits and `_` (starting with a letter or digit, at most 64 characters) is an error.
 
@@ -284,7 +183,7 @@ shop.sales = (shop.sales or 0) + 1
 shop.last_buyer = event.player
 ```
 
-## `nf.db(name?)`
+### `nf.db(name?)` {#db}
 
 A database. With no name it is this package's own: a SQLite file that belongs to it alone (each package, a dependency included, has its own, under the server's `plugins/NetherForge/databases/`), whose tables come from the package's `migrations/NNN_name.sql`, run in order when the project loads. With a name it is one of the MySQL or PostgreSQL connections the server's owner set up under `databases:` in the plugin's `config.yml`: the script names it and never sees a host, a user or a password, and the connection opens only to the packages the owner lists for it. Either way it's the same `Database`, so the same calls work (the SQL is the server's own dialect; see `Database` for what differs). A name that isn't set up, or isn't open to this package, is an error.
 
@@ -294,7 +193,7 @@ A database. With no name it is this package's own: a SQLite file that belongs to
 | --- | --- | --- |
 | `name` (optional) | `string` | The connection, as the server owner named it in `config.yml`, like `"network"`. Leave it out for the package's own SQLite database. |
 
-**Returns** `Database`
+**Returns** [`Database`](database.md)
 
 ```lua
 local db = nf.db()
@@ -311,7 +210,7 @@ end)
 local network = nf.db("network")
 ```
 
-## `nf.config(name)`
+### `nf.config(name)` {#config}
 
 One of this package's settings: what whoever runs the server set it to, or its default when they haven't. Settings are declared in `netherforge.json`'s `settings` (each with a type, a default and a description) and changed by the server's owner, never by scripts; a package reads only its own. The value is a `boolean`, an `integer`, a `number` or a `string`, by the setting's type. A script that reads a setting and doesn't listen for `setting_changed` is restarted when that setting changes; one that listens hears the change instead. A name the package doesn't declare is an error.
 
@@ -325,8 +224,207 @@ One of this package's settings: what whoever runs the server set it to, or its d
 local rolls = nf.config("treasure_rolls")
 ```
 
-## `nf.instructions_left()`
+## Events
 
-Lua instructions this call may still run before it's stopped. A loop over a lot of work can check it and leave the rest for the next tick. Coarse: it's updated every hundred instructions or so.
+What `nf.on(event, handler)` listens for. See [Events](events.md) for how events work. Any name with a `:` in it is a custom event, raised with `emit`.
 
-**Returns** `integer`
+### Server and scripts
+
+| Event | Payload | |
+| --- | --- | --- |
+| `tick` | [TickEvent](types.md#tickevent) | Every server tick, twenty times a second. Keep handlers cheap, or listen less often with `{ every = n }`. Options: `every`. |
+| `unload` | [Event](types.md#event) | This script is about to stop: a reload, the server stopping, its centity being removed, or its menu window going. Delivered only to the script that registered it, last of all. Put back anything it changed outside itself. Only the registering script hears it. |
+| `setting_changed` | [SettingChangedEvent](types.md#settingchangedevent) | Whoever runs the server changed one of this package's settings (see `nf.config`): from the editor, with `/nf settings` or its dialog, or by editing the settings file and running `/nf settings reload`. Only the package's own scripts hear it. A script that listens keeps running and takes the new value from here; one that read a setting without listening is restarted instead, so what it set up with the old value is set up again. |
+| `server_list_ping` | [ServerListPingEvent](types.md#serverlistpingevent) | Someone's server list is asking about the server: what it says, how many are on and how many fit. `event:cancel()` doesn't answer, so the server shows as offline to them. The ping waits on the main thread for the handlers (at most two seconds, then it's answered as it was), so keep them quick. The server only waits while something listens. **Cancellable.** Writable: `description`, `online`, `max_players`, `hide_players`. |
+
+### Players joining and leaving
+
+| Event | Payload | |
+| --- | --- | --- |
+| `player_join` | [PlayerJoinEvent](types.md#playerjoinevent) | A player joined the server. Assign `event.message` to change what everyone is told, or `nil` to say nothing. Writable: `message`. |
+| `player_quit` | [PlayerQuitEvent](types.md#playerquitevent) | A player left. Assign `event.message` to change what everyone is told, or `nil` to say nothing. Writable: `message`. |
+| `player_kick` | [PlayerKickEvent](types.md#playerkickevent) | A player is being kicked: by a command, a plugin or a script, or by the server (flying, timing out, a bad packet). `event:cancel()` keeps them on the server; assign `event.text` to change what their screen says, or `event.message` to change what everyone is told (`nil` for nothing). Leaving then goes on to `player_quit`. **Cancellable.** Writable: `text`, `message`. |
+
+### Players: chat and commands
+
+| Event | Payload | |
+| --- | --- | --- |
+| `player_chat` | [PlayerChatEvent](types.md#playerchatevent) | A player is saying something in chat. `event:cancel()` stops anyone seeing it; assign `event.message` to change what they said, or `event.format` to change how the line looks. Handlers run on the main thread while the chat waits for them, so keep them quick. **Cancellable.** Writable: `message`, `format`. |
+| `player_command` | [PlayerCommandEvent](types.md#playercommandevent) | A player typed a command (any command: Minecraft's, a plugin's or a script's), before it runs. `event:cancel()` stops it running. **Cancellable.** |
+
+### Players: moving
+
+| Event | Payload | |
+| --- | --- | --- |
+| `player_move` | [PlayerMoveEvent](types.md#playermoveevent) | A player moved into another block: walking, swimming, flying, falling, riding. Only moves that change block are heard, not every step or turn of the head, and teleports are `player_teleport` instead. `event:cancel()` puts them back where they were. The server only watches moves while something listens, so it costs nothing otherwise. **Cancellable.** |
+| `player_teleport` | [PlayerTeleportEvent](types.md#playerteleportevent) | A player is being teleported: a command, a script, an ender pearl, a portal. `event:cancel()` keeps them where they are; assign `event.to` to send them somewhere else. **Cancellable.** Writable: `to`. |
+| `player_change_world` | [PlayerChangeWorldEvent](types.md#playerchangeworldevent) | A player arrived in another world: through a portal, or teleported there. |
+| `player_input` | [PlayerInputEvent](types.md#playerinputevent) | A player's movement keys changed: what they hold down now, as their game sends it (forward, back, left, right, jump, sneak, sprint), whether or not they can move. For steering something they ride or controlling a centity. The server only watches input while something listens, so it costs nothing otherwise. |
+| `player_sneak` | [PlayerSneakEvent](types.md#playersneakevent) | A player started or stopped sneaking. |
+| `player_sprint` | [PlayerSprintEvent](types.md#playersprintevent) | A player started or stopped sprinting. |
+| `player_fly` | [PlayerFlyEvent](types.md#playerflyevent) | A player started or stopped flying (in creative, or where `set_can_fly` lets them). `event:cancel()` keeps them as they were. **Cancellable.** |
+| `player_jump` | [PlayerJumpEvent](types.md#playerjumpevent) | A player jumped. `event:cancel()` puts them back where they jumped from. **Cancellable.** |
+| `player_swing` | [PlayerSwingEvent](types.md#playerswingevent) | A player swung an arm: every left click, on a block, an entity or the air, and some right clicks. The one way to hear a left click on the air. `event:cancel()` stops others seeing the swing, but not what the click does. **Cancellable.** |
+
+### Players: clicking and items
+
+| Event | Payload | |
+| --- | --- | --- |
+| `player_interact` | [PlayerInteractEvent](types.md#playerinteractevent) | A player clicked a block or the air (not an entity), once for each hand the game asks about. `event:cancel()` stops it: no door opens, nothing is placed or used. A right click with an item goes on to `player_use_item` unless it was cancelled. **Cancellable.** |
+| `player_interact_entity` | [PlayerInteractEntityEvent](types.md#playerinteractentityevent) | A player right-clicked an entity that isn't part of a centity (those are `centity_click`): after the entity's `interact` and the player's `interact_entity`. `event:cancel()` stops what the click would do. **Cancellable.** |
+| `player_use_item` | [PlayerUseItemEvent](types.md#playeruseitemevent) | A player right-clicked with an item, on a block or the air, after `player_interact`: starting to eat or drink, drawing a bow, throwing a pearl, emptying a bucket, placing a block. `event:cancel()` stops the item being used, but not what the click does to the block (a door still opens). **Cancellable.** |
+| `player_stop_using_item` | [PlayerStopUsingItemEvent](types.md#playerstopusingitemevent) | A player let go of an item they were using before it finished: a bow or crossbow drawn, a shield raised, a spyglass, food or a potion part-eaten. `event.ticks` says how long they held it. |
+| `player_consume_item` | [PlayerItemEvent](types.md#playeritemevent) | A player finished eating or drinking something. `event:cancel()` stops it: the item stays and does nothing. **Cancellable.** |
+| `player_break_item` | [PlayerItemEvent](types.md#playeritemevent) | A tool, weapon or piece of armour a player was using wore out and broke. `event.item` is what it was, before it went. |
+| `player_drop_item` | [PlayerItemEvent](types.md#playeritemevent) | A player is dropping an item from their inventory. `event:cancel()` keeps it in their inventory. **Cancellable.** |
+| `player_pickup_item` | [PlayerPickupItemEvent](types.md#playerpickupitemevent) | A player is picking up a dropped item. `event:cancel()` leaves it lying there (it is asked again while they stand on it). **Cancellable.** |
+| `player_swap_hands` | [PlayerEvent](types.md#playerevent) | A player pressed the key that swaps the items in their hands. `event:cancel()` leaves them where they are, so the key can be used for something else. **Cancellable.** |
+| `player_change_slot` | [PlayerChangeSlotEvent](types.md#playerchangeslotevent) | A player picked another hotbar slot: a number key or the scroll wheel. `event:cancel()` keeps the slot they had. **Cancellable.** |
+| `item_view` | [ItemViewEvent](types.md#itemviewevent) | Any stack is being sent to one player's game (their inventory, a window they have open, their cursor): after its project item's own `view` handlers, for a stack of one, and for every other stack too. Assign `event.display_name` and `event.lore` to change how it looks to `event.player` alone; nothing the server keeps changes. While nobody listens, stacks are sent as they are; while someone does, every stack sent is worked out here first, so prefer an item's own `view` when only some items change. Writable: `display_name`, `lore`. |
+
+### Players: life and progress
+
+| Event | Payload | |
+| --- | --- | --- |
+| `player_death` | [PlayerDeathEvent](types.md#playerdeathevent) | A player died: before `nf.on("entity_death")` hears the same death. Assign `event.message` to change what everyone is told (or `nil` for nothing), `event.keep_inventory` to let them keep what they carry, and `event.drops` to change what falls. Writable: `message`, `keep_inventory`, `drops`. |
+| `player_respawn` | [PlayerRespawnEvent](types.md#playerrespawnevent) | A player is coming back after dying, or after leaving the end. Assign `event.location` to bring them back somewhere else. Writable: `location`. |
+| `player_change_game_mode` | [PlayerChangeGameModeEvent](types.md#playerchangegamemodeevent) | A player's game mode is changing: a command, a script, or the server. `event:cancel()` keeps the one they have. **Cancellable.** |
+| `player_change_food` | [PlayerChangeFoodEvent](types.md#playerchangefoodevent) | A player's food level is changing: going down as they get hungry, up as they eat. `event:cancel()` keeps it as it is; assign `event.food` to set it to another level. **Cancellable.** Writable: `food`. |
+| `player_gain_experience` | [PlayerGainExperienceEvent](types.md#playergainexperienceevent) | A player is getting experience points: picking up orbs, or from a script or command. Assign `event.amount` to give another amount (0 for none). Writable: `amount`. |
+| `player_change_level` | [PlayerChangeLevelEvent](types.md#playerchangelevelevent) | A player's experience level changed, up or down. |
+| `player_complete_advancement` | [PlayerAdvancementEvent](types.md#playeradvancementevent) | A player completed an advancement (or a recipe was unlocked for them: those are advancements too, under `minecraft:recipes/`). Assign `event.message` to change what everyone is told, or `nil` to say nothing. Writable: `message`. |
+
+### Players: crafting and containers
+
+| Event | Payload | |
+| --- | --- | --- |
+| `player_open_inventory` | [PlayerInventoryEvent](types.md#playerinventoryevent) | A player is opening a vanilla inventory: a chest, a furnace, a crafting table, a villager's trades, a horse's. Not one of the project's menus: those are `menu_open`. `event:cancel()` keeps it closed. **Cancellable.** |
+| `player_close_inventory` | [PlayerInventoryEvent](types.md#playerinventoryevent) | A player closed a vanilla inventory (not one of the project's menus: those are `menu_close`), or left the server with it open. |
+| `player_craft` | [PlayerCraftEvent](types.md#playercraftevent) | A player is taking what they crafted out of the result slot (with shift, as many as they can make). `event:cancel()` leaves it there and keeps the ingredients. **Cancellable.** |
+| `player_prepare_craft` | [PlayerPrepareCraftEvent](types.md#playerpreparecraftevent) | What's in a crafting grid changed (a crafting table's, or the 2×2 in a player's inventory), and the game is working out what it makes. Assign `event.result` to make something else, or `nil` for nothing: a recipe of your own. Writable: `result`. |
+| `player_prepare_anvil` | [PlayerPrepareAnvilEvent](types.md#playerprepareanvilevent) | What is in an anvil changed (or the name typed into it), and the game is working out the result. Assign `event.result` to make something else (or `nil` for nothing), and `event.cost` to change how many levels it takes. Writable: `result`, `cost`. |
+| `player_prepare_smithing` | [PlayerPrepareSmithingEvent](types.md#playerpreparesmithingevent) | What is in a smithing table changed, and the game is working out the result. Assign `event.result` to make something else, or `nil` for nothing. Writable: `result`. |
+| `player_prepare_grindstone` | [PlayerPrepareGrindstoneEvent](types.md#playerpreparegrindstoneevent) | What is in a grindstone changed, and the game is working out the result. Assign `event.result` to make something else, or `nil` for nothing. Writable: `result`. |
+| `player_enchant_item` | [PlayerEnchantItemEvent](types.md#playerenchantitemevent) | A player is enchanting an item at an enchanting table. `event:cancel()` stops it: nothing is enchanted or spent. Assign `event.cost` to change how many levels it takes. **Cancellable.** Writable: `cost`. |
+| `recipe_craft` | [RecipeCraftEvent](types.md#recipecraftevent) | `nf.recipes.craft` is making a `station` recipe once: its materials are taken, and `event.result` is about to be given. Assign `event.result` to give something else (the same item with a rolled prefix, a stack of a different size). Heard once for each making, so each gets its own; while nobody listens, the makings are given in stacks. Writable: `result`. |
+| `furnace_smelt` | [FurnaceSmeltEvent](types.md#furnacesmeltevent) | A furnace, smoker or blast furnace finished smelting one item. `event:cancel()` stops it: the item stays unsmelted. Assign `event.result` to make something else. After the world's own `furnace_smelt` handlers. **Cancellable.** Writable: `result`. |
+
+### Entities
+
+| Event | Payload | |
+| --- | --- | --- |
+| `entity_spawn` | [EntitySpawnEvent](types.md#entityspawnevent) | An entity is coming into a world (not a player joining, and never the entities centities are drawn with): after the world's own `entity_spawn` handlers. `event:cancel()` stops it. **Cancellable.** |
+| `entity_damage` | [EntityDamageEvent](types.md#entitydamageevent) | Something is hurting an entity (a player included): after the entity's own `damage` handlers. `event:cancel()` stops it; assign `event.amount` to change how much it takes. **Cancellable.** Writable: `amount`. |
+| `entity_heal` | [EntityHealEvent](types.md#entityhealevent) | It is getting health back: eating, regenerating, a potion, a beacon. `event:cancel()` stops it; assign `event.amount` to change how much. After the entity's own `heal` handlers. **Cancellable.** Writable: `amount`. |
+| `entity_death` | [EntityDeathEvent](types.md#entitydeathevent) | An entity died (a player included): after the entity's own `death` handlers, and for a player after `player_death`. Assign `event.drops` and `event.experience` to change what it drops. Writable: `drops`, `experience`. |
+| `entity_combust` | [EntityCombustEvent](types.md#entitycombustevent) | It is catching fire: from lava or fire, sunlight (a zombie, a skeleton), a flaming arrow or a fire aspect sword. `event:cancel()` keeps it from burning; assign `event.ticks` to make it burn for that long instead. After the entity's own `combust` handlers. **Cancellable.** Writable: `ticks`. |
+| `entity_change_effect` | [EntityChangeEffectEvent](types.md#entitychangeeffectevent) | One of its status effects is being added, changed, run out or taken away: a potion, a beacon, milk, a command or a script. `event:cancel()` stops the change. After the entity's own `change_effect` handlers. **Cancellable.** |
+| `entity_target` | [EntityTargetEvent](types.md#entitytargetevent) | This mob is picking a target to go after, or forgetting the one it had (`event.target` is `nil`). `event:cancel()` keeps the target it had. The server only reports targets while something listens, so it costs nothing otherwise. After the entity's own `target` handlers. **Cancellable.** |
+| `entity_explode` | [ExplodeEvent](types.md#explodeevent) | It exploded: a creeper, TNT, a fireball, an end crystal, a wither skull. `event:cancel()` stops the explosion breaking anything; assign `event.breaks_blocks = false` to keep every block standing but still hurt what is near, or `event.yield` to change how much of what breaks drops. After the entity's own `explode` handlers. **Cancellable.** Writable: `breaks_blocks`, `yield`. |
+| `entity_shoot_bow` | [EntityShootBowEvent](types.md#entityshootbowevent) | It shot a bow or a crossbow (a skeleton, a pillager, a player). `event:cancel()` stops the shot: nothing is fired or used up. After the entity's own `shoot_bow` handlers. **Cancellable.** |
+| `projectile_launch` | [ProjectileLaunchEvent](types.md#projectilelaunchevent) | It launched a projectile: an arrow, a trident, a snowball, an egg, an ender pearl, a potion, a fireball. `event:cancel()` stops the projectile coming into the world. A dispenser's projectile has no shooter, so only `nf` hears it. After the entity's own `launch_projectile` handlers. **Cancellable.** |
+| `projectile_hit` | [ProjectileHitEvent](types.md#projectilehitevent) | This projectile hit an entity or a block. `event:cancel()` lets it pass through as if nothing were there (an arrow flies on; a snowball doesn't break). After the entity's own `hit` handlers. **Cancellable.** |
+| `entity_mount` | [MountEvent](types.md#mountevent) | It is getting on something to ride it: a horse, a pig with a saddle, a boat, a minecart, another mob (a spider jockey). `event:cancel()` keeps it off. After the entity's own `mount` handlers. **Cancellable.** |
+| `entity_dismount` | [MountEvent](types.md#mountevent) | It is getting off what it rides: sneaking, the vehicle breaking, a teleport, dying. `event:cancel()` keeps it on, except where it can't stay (it died, or what it rode has gone). After the entity's own `dismount` handlers. **Cancellable.** |
+
+### Vehicles
+
+| Event | Payload | |
+| --- | --- | --- |
+| `vehicle_move` | [VehicleMoveEvent](types.md#vehiclemoveevent) | A boat or minecart moved into another block, with or without a rider. Only moves that change block are heard. The server only reports these while something listens, so it costs nothing otherwise. |
+| `vehicle_damage` | [VehicleDamageEvent](types.md#vehicledamageevent) | Something is hitting a boat or minecart. `event:cancel()` stops it; assign `event.amount` to change how much it takes. **Cancellable.** Writable: `amount`. |
+| `vehicle_destroy` | [VehicleDestroyEvent](types.md#vehicledestroyevent) | A boat or minecart is being broken: it will drop as an item. `event:cancel()` keeps it there. **Cancellable.** |
+
+### Blocks
+
+| Event | Payload | |
+| --- | --- | --- |
+| `block_break` | [BlockBreakEvent](types.md#blockbreakevent) | A player is breaking a block: after the world's own `block_break` handlers. `event:cancel()` stops it; assign `event.drops` and `event.experience` to change what it drops. **Cancellable.** Writable: `drops`, `experience`. |
+| `block_start_break` | [BlockStartBreakEvent](types.md#blockstartbreakevent) | A player started hitting a block to break it. `event:cancel()` stops them breaking it; assign `event.instant = true` to break it at once, or `false` to make them wait for it. After the world's own `block_start_break` handlers. **Cancellable.** Writable: `instant`. |
+| `block_drop_item` | [BlockDropItemEvent](types.md#blockdropitemevent) | A block a player broke is dropping its items, its contents included (a chest's, a furnace's): after `block_break`, once it has gone. `event:cancel()` drops nothing. After the world's own `block_drop_item` handlers. **Cancellable.** |
+| `block_place` | [BlockPlaceEvent](types.md#blockplaceevent) | A player is placing a block: after the world's own `block_place` handlers. `event:cancel()` stops it. **Cancellable.** |
+| `block_explode` | [ExplodeEvent](types.md#explodeevent) | A block exploded: a bed in the nether or the end, a respawn anchor charged away from the overworld. `event:cancel()` stops the explosion breaking anything; assign `event.breaks_blocks = false` to keep every block standing but still hurt what is near, or `event.yield` to change how much of what breaks drops. After the world's own `block_explode` handlers. **Cancellable.** Writable: `breaks_blocks`, `yield`. |
+| `block_ignite` | [BlockIgniteEvent](types.md#blockigniteevent) | A block is catching fire: flint and steel, a fire charge, lava, lightning, fire spreading, an explosion. `event:cancel()` keeps it from burning. After the world's own `block_ignite` handlers. **Cancellable.** |
+| `block_burn` | [BlockBurnEvent](types.md#blockburnevent) | A block is burning away in a fire. `event:cancel()` keeps it there (it may still catch fire again). After the world's own `block_burn` handlers. **Cancellable.** |
+| `block_spread` | [BlockChangeEvent](types.md#blockchangeevent) | A block is spreading to another: grass, mycelium, moss, vines, mushrooms, fire, sculk. `event.block` is where it spreads to, `event.source` where from. `event:cancel()` stops it. The server only reports these while something listens, so it costs nothing otherwise. After the world's own `block_spread` handlers. **Cancellable.** |
+| `block_flow` | [BlockFlowEvent](types.md#blockflowevent) | Water or lava is flowing into another block (or a dragon egg teleporting there). `event:cancel()` stops it. The server only reports these while something listens, so it costs nothing otherwise. After the world's own `block_flow` handlers. **Cancellable.** |
+| `block_grow` | [BlockChangeEvent](types.md#blockchangeevent) | A crop, sapling stage, sugar cane, cactus, bamboo, pumpkin or melon is growing by itself (bone meal included). `event:cancel()` stops it. The server only reports these while something listens, so it costs nothing otherwise. After the world's own `block_grow` handlers. **Cancellable.** |
+| `block_fade` | [BlockChangeEvent](types.md#blockchangeevent) | A block is fading by itself: ice or snow melting, coral dying, fire burning out, farmland drying. `event:cancel()` keeps it as it is. The server only reports these while something listens, so it costs nothing otherwise. After the world's own `block_fade` handlers. **Cancellable.** |
+| `block_form` | [BlockChangeEvent](types.md#blockchangeevent) | A block is forming by itself: snow falling, ice freezing, concrete setting, obsidian or cobblestone from lava, frost walker ice or a snow golem's trail (`event.entity` says which). `event:cancel()` stops it. The server only reports these while something listens, so it costs nothing otherwise. After the world's own `block_form` handlers. **Cancellable.** |
+| `leaves_decay` | [BlockEvent](types.md#blockevent) | Leaves are decaying, far from any log. `event:cancel()` keeps them. The server only reports these while something listens, so it costs nothing otherwise. After the world's own `leaves_decay` handlers. **Cancellable.** |
+| `piston_extend` | [PistonEvent](types.md#pistonevent) | A piston is pushing out. `event:cancel()` keeps it in, and everything it would push where it is. After the world's own `piston_extend` handlers. **Cancellable.** |
+| `piston_retract` | [PistonEvent](types.md#pistonevent) | A piston is pulling back. `event:cancel()` keeps it out, and (for a sticky one) the block it would pull where it is. After the world's own `piston_retract` handlers. **Cancellable.** |
+| `block_redstone` | [BlockRedstoneEvent](types.md#blockredstoneevent) | A block's redstone power is changing: a lever, a button, a pressure plate, a redstone lamp or wire. Assign `event.to` to give it another power. The server only reports these while something listens, so it costs nothing otherwise. After the world's own `block_redstone` handlers. Writable: `to`. |
+| `sign_change` | [SignChangeEvent](types.md#signchangeevent) | A player finished writing on a sign. `event:cancel()` keeps the sign as it was. After the world's own `sign_change` handlers. **Cancellable.** |
+
+### Worlds, weather and chunks
+
+| Event | Payload | |
+| --- | --- | --- |
+| `world_dusk` | [DaylightEvent](types.md#daylightevent) | Night fell in a world: its time of day went from day (23000 to 12999) into night (13000 to 22999), by the clock or by `/time set`. After the world's own `dusk` handlers. |
+| `world_dawn` | [DaylightEvent](types.md#daylightevent) | Day broke in a world: its time of day went from night (13000 to 22999) into day (23000 to 12999), by the clock or by `/time set`. After the world's own `dawn` handlers. |
+| `weather_change` | [WeatherChangeEvent](types.md#weatherchangeevent) | It is starting or stopping raining (or snowing) in a world. `event:cancel()` keeps the weather it has. After the world's own `weather_change` handlers. **Cancellable.** |
+| `thunder_change` | [ThunderChangeEvent](types.md#thunderchangeevent) | A thunderstorm is starting or stopping in a world. `event:cancel()` keeps the weather it has. After the world's own `thunder_change` handlers. **Cancellable.** |
+| `lightning_strike` | [LightningStrikeEvent](types.md#lightningstrikeevent) | Lightning is striking: a storm, a trident with channeling, a command or a script. `event:cancel()` stops it. After the world's own `lightning_strike` handlers. **Cancellable.** |
+| `world_load` | [WorldEvent](types.md#worldevent) | A world was loaded: at startup, or by a plugin or a script later. |
+| `world_unload` | [WorldEvent](types.md#worldevent) | A world is being unloaded. Its handle answers `nil` or `false` afterwards; handlers on it stay, for when it's loaded again. |
+| `chunk_load` | [ChunkLoadEvent](types.md#chunkloadevent) | A chunk came into memory: someone came near, or it was generated for the first time (`event.generated`). The server only reports these while something listens, so it costs nothing otherwise. After the world's own `chunk_load` handlers. |
+| `chunk_generated` | [ChunkEvent](types.md#chunkevent) | A chunk was generated, the first time it was loaded: its terrain, structures and the game's decorations are in place, so a script can add its own (a centity in a grove, a shrine on a hill). Its blocks are `event.x * 16` to `event.x * 16 + 15` across, the same along `z`, and can be read and changed in the handler; the chunks beside it may not be generated yet, so keep what you place inside it. Once per chunk, ever: one generated while no script listened isn't heard later. It happens for every new chunk a player explores, so keep handlers quick and leave most chunks alone. The server only reports these while something listens, so it costs nothing otherwise. After the world's own `chunk_generated` handlers. |
+| `chunk_unload` | [ChunkEvent](types.md#chunkevent) | A chunk is leaving memory, as everyone has gone away. Its blocks can still be read and changed in the handler. After the world's own `chunk_unload` handlers. |
+
+### Centities, menus and dialogs
+
+| Event | Payload | |
+| --- | --- | --- |
+| `centity_click` | [ClickEvent](types.md#clickevent) | A player clicked any centity: the end of a click's path, after the clicked node, the nodes above it and the centity itself, unless one of them called `event:stop()`. |
+| `centity_natural_spawn` | [CentityNaturalSpawnEvent](types.md#centitynaturalspawnevent) | A centity is about to appear by itself, from the `spawning` block of its `centity.json`: once for each one of a group, before it exists. `event:cancel()` refuses it (it doesn't count against anything, and the spawner tries again later); assign `event.location` to move it. It is asked after the spawner has checked the place against the centity's rules, and before the centity's own `spawn`. **Cancellable.** Writable: `location`. |
+| `menu_open` | [MenuEvent](types.md#menuevent) | Someone opened any menu window: after that window's own `open` handlers. |
+| `menu_close` | [MenuEvent](types.md#menuevent) | Someone closed any menu window: after that window's own `close` handlers. |
+| `menu_click` | [MenuClickEvent](types.md#menuclickevent) | Someone clicked in any menu window: the end of a click's path, after the slot's and the menu's handlers, unless one of them called `event:stop()`. `event:cancel()` stops the click moving anything. **Cancellable.** |
+| `dialog_press` | [DialogPressEvent](types.md#dialogpressevent) | Someone pressed any dialog's button: the end of a press's path, after the button's and the dialog's handlers, unless one of them called `event:stop()`. |
+
+### `nf.on(event, handler, options?)` {#on}
+
+Calls `handler` every time `event` happens, until the subscription is cancelled or its script unloads. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this table doesn't have is an error, so a typo is caught where it was made.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `event` | `nf.Event` | A built-in event's name, or a custom event's: any name with a `:` in it, like `"shop:purchased"`. |
+| `handler` | `fun(event: `[`Event`](types.md#event)`)` | Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`. |
+| `options` (optional) | [`EventOptions`](types.md#eventoptions) | How to listen: `{ every = n }` for `tick`. |
+
+**Returns** [`Subscription`](subscription.md): Call `:cancel()` on it to stop listening.
+
+```lua
+nf.on("player_join", function(event)
+  event.player:send_message("<green>Welcome!")
+end)
+```
+
+### `nf.once(event, handler)` {#once}
+
+Like `nf.on`, but the handler runs only the next time the event happens, then stops listening.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `event` | `nf.Event` | A built-in event's name, or a custom event's: any name with a `:` in it, like `"shop:purchased"`. |
+| `handler` | `fun(event: `[`Event`](types.md#event)`)` | Called with the event. |
+
+**Returns** [`Subscription`](subscription.md): Call `:cancel()` on it to stop waiting before then.
+
+### `nf.emit(event, payload?)` {#emit}
+
+Raises a custom event for every script: every `nf.on(event)` handler hears it now, in the order they were registered, before this returns. The payload is handed to them as it is, not copied, so a field a handler assigns is there for the caller to read afterwards. A name without a `:` is an error: built-in events are the server's to raise.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `event` | `string` | A custom event's name, with a `:`: `"shop:purchased"`. |
+| `payload` (optional) | `table` | The event's fields. Leave it out for none. |
+
+**Returns** `boolean`: Whether a handler cancelled it (`event:cancel()`), so a custom event can be vetoed.
+
+```lua
+if not nf.emit("shop:purchased", { player = player, item = "ruby" }) then
+  player:send_message("<green>Bought!")
+end
+```

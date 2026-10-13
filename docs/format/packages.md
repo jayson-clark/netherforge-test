@@ -7,8 +7,7 @@ is, read-only, and gets its updates) or **copies** something out of one into
 itself (it becomes the project's own, to change as it likes).
 
 Dependencies are found by path, as folders next to the project, or fetched
-from git repositories. A package registry comes later, in the place the lock
-file already keeps for it.
+from git repositories.
 
 ## Depending on a package
 
@@ -132,38 +131,27 @@ explorer, or `netherforge lock --update`), which resolves every git
 dependency's `rev` afresh and rewrites the lock. Change a dependency's `rev`
 and it's resolved again the next time the project loads.
 
-The editor and `netherforge` fetch with your own `git` (so your credentials
-and SSH keys work as they do for everything else) into the editor's package
-cache, shared by every project: `packages/git/` in the editor's data folder.
-A package from git is someone else's code, so nothing of its repository runs
-or is obeyed while it's fetched: no hook, no `.gitattributes` filter, no
-submodule and no link. A package is its commit's regular files; links and
-submodules are left out, and a commit with a path that could reach outside
-its folder isn't used at all. A dev server never fetches: it runs the commit
-the lock pins from the cache, where the editor put it.
+The editor and `netherforge` fetch with your own `git`, so your credentials
+and SSH keys work as they do for everything else. Fetched packages are kept in
+the editor's data folder (`packages/git/`), shared by every project. A package
+from git is someone else's code, so nothing in its repository runs while it's
+fetched (no hooks, no filters), and links and submodules are left out.
 
-Every load hashes the package's files and checks them against the lock: a
-package from git that isn't what the lock pins for its commit isn't loaded
-(`package.hash`), and the lock isn't rewritten to match. If the lock is
-right, its copy in the cache was changed: delete
-`packages/git/checkouts/<commit>` and it's fetched again. A repository that
+Every load checks the package's files against the lock: a package from git
+that isn't what the lock pins isn't loaded (`package.hash`). If the lock is
+right, the downloaded copy was changed: delete
+`packages/git/checkouts/<commit>` in the editor's data folder and it's
+fetched again. A repository that
 can't be fetched (it's gone, the network is down, the `rev` isn't there) is
 `package.git`, with git's own words.
 
 ### Content hash
 
-A package's hash covers what the package _is_: its `netherforge.json`,
-`fonts/default.json`, and every file of every resource (everything under a
-kind's folder that belongs to a resource), but no hidden file, README, agent
-notes or lock. Listing those files in path order, one line each, as the hex
-SHA-256 of the file's bytes, two spaces and its path (Go's `dirhash` layout):
-
-```
-3a7bd3e2360a3d29eea436fcfb7e44c735d117c42d1c1835420b6b9942dd4f1b  items/coin/item.json
-…
-```
-
-the hash is `sha256:` and the hex SHA-256 of that listing.
+A package's `hash` in the lock is a fingerprint of what the package _is_: its
+`netherforge.json`, `fonts/default.json`, and every file of every resource,
+but no hidden file, README, agent notes or lock. If any of those files
+changes, the hash does too. (It's the SHA-256 of a listing of each file's
+SHA-256 and path, in path order, the layout Go's `dirhash` uses.)
 
 ## Bundles
 

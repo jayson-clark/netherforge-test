@@ -7,44 +7,45 @@ One button of a dialog, from `dialog:button(key)` (`this:button(key)` in the dia
 A handle: call its methods with a colon, `button:method()`.
 
 
+## Methods {#methods}
 
-## Events
-
-What `button:on(event, handler)` listens for. See [Events](events.md) for how events work.
-
-| Event | Payload | Cancellable | |
-| --- | --- | --- | --- |
-| `press` | [DialogPressEvent](events.md#dialogpressevent) |  | Someone pressed this button. Then the dialog hears it, then `nf.on("dialog_press")`, unless a handler calls `event:stop()`. Bubbles. |
-
-## `button:key()`
+### `button:key()` {#key}
 
 Its `key` in `dialog.json`: what `event.key` is when it's pressed.
 
 **Returns** `string`
 
-## `button:dialog()`
+### `button:dialog()` {#dialog}
 
 The dialog it belongs to.
 
-**Returns** `Dialog`
+**Returns** [`Dialog`](dialog.md)
 
-## `button:label()`
+### `button:label()` {#label}
 
 What it says, as MiniMessage, or `nil` once the dialog no longer has it.
 
-**Returns** `Text?`
+**Returns** [`Text`](index.md#types)`?`
 
-## `button:on(event, handler, options?)`
+## Events
+
+What `button:on(event, handler)` listens for. See [Events](events.md) for how events work.
+
+| Event | Payload | |
+| --- | --- | --- |
+| `press` | [DialogPressEvent](types.md#dialogpressevent) | Someone pressed this button. Then the dialog hears it, then `nf.on("dialog_press")`, unless a handler calls `event:stop()`. Bubbles. |
+
+### `button:on(event, handler, options?)` {#on}
 
 Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `event` | `Button.Event` | The event's name. |
-| `handler` | `fun(event: Event)` | Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`. |
-| `options` (optional) | `EventOptions` | How to listen: `{ every = n }` for `tick`. |
+| `handler` | `fun(event: `[`Event`](types.md#event)`)` | Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`. |
+| `options` (optional) | [`EventOptions`](types.md#eventoptions) | How to listen: `{ every = n }` for `tick`. |
 
-**Returns** `Subscription`: Call `:cancel()` on it to stop listening.
+**Returns** [`Subscription`](subscription.md): Call `:cancel()` on it to stop listening.
 
 ```lua
 this:button("done"):on("press", function(event)
@@ -52,13 +53,13 @@ this:button("done"):on("press", function(event)
 end)
 ```
 
-## `button:once(event, handler)`
+### `button:once(event, handler)` {#once}
 
 Like `button:on`, but the handler runs only the next time the event happens, then stops listening.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `event` | `Button.Event` | The event's name. |
-| `handler` | `fun(event: Event)` | Called with the event. |
+| `handler` | `fun(event: `[`Event`](types.md#event)`)` | Called with the event. |
 
-**Returns** `Subscription`: Call `:cancel()` on it to stop waiting before then.
+**Returns** [`Subscription`](subscription.md): Call `:cancel()` on it to stop waiting before then.

@@ -638,7 +638,7 @@ describe('version gates', () => {
     const pages = referencePages(gated)
     expect(pages.get('thing.md')).toContain('Since Minecraft 27.1')
     expect(pages.get('events.md')).toContain('Since Minecraft 27.2')
-    expect(pages.get('events.md')).toContain('Since Minecraft 27.3')
+    expect(pages.get('types.md')).toContain('Since Minecraft 27.3')
     expect(luals(gated)).toContain('Since Minecraft 27.3')
   })
 })

@@ -213,13 +213,12 @@ which is how a block is held; nothing else changes.
 
 ## How resource packs reach players
 
-The plugin builds the resource pack when the project loads and again whenever a resource pack
-changes, and sends it to players as they join, with its SHA-1, so clients
-download it again only when it actually changed. A change while players are
-online is sent to all of them, and open menu windows redraw their
-titles. The pack format number is the one the server's Minecraft version uses.
+All of the project's resource packs are combined into one Minecraft resource
+pack, which players are sent as they join. They only download it again when
+it has changed. Save a change while players are online and it's sent to all
+of them straight away, and open menus redraw.
 
-If a resource pack has errors, the plugin keeps running the last resource pack that built.
+If a resource pack has errors, players keep the last one that worked.
 
-The plugin can serve the resource pack itself, or you can host it at a URL of your own;
-see [Deploying to a server](deploying.md#resource-packs).
+NetherForge can serve the resource pack itself, or you can host it at a URL of your own;
+see [Server configuration](server-config.md#resource-packs).

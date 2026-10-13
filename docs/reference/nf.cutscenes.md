@@ -6,20 +6,19 @@ The project's cutscenes (`cutscenes/<id>.json`): camera paths keyed in the edito
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.cutscenes.play(player, cutscene, options?)`
+### `nf.cutscenes.play(player, cutscene, options?)` {#play}
 
 Starts a cutscene for a player, from its first moment. While it plays, the player spectates a camera that follows the cutscene's path, and can't move or interact. Their game mode, position, flying state and anything riding are put back when it ends, however it ends (including when they leave, a reload or the server stopping); someone who was riding something is dismounted and isn't put back on it. It belongs to the script that played it: when that script unloads, it ends (reason `"unloaded"`). A player who is already watching one has it end (reason `"replaced"`) and the new one start without putting them back first, so cutscenes chain without a flash of the world they were in. A cutscene the project doesn't have, a key `options` doesn't take, or one whose file has errors and never had a good version (one that did plays its last good version) is an error. A player who is offline, or a dead one, gets `nil`.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `player` | `Player` | Who watches. |
+| `player` | [`Player`](player.md) | Who watches. |
 | `cutscene` | `string` | Which cutscene: its file name under `cutscenes/`, without `.json`. |
-| `options` (optional) | `CutscenePlayOptions` | Where the path is, and whether the player may skip it. |
+| `options` (optional) | [`CutscenePlayOptions`](types.md#cutsceneplayoptions) | Where the path is, and whether the player may skip it. |
 
-**Returns** `Cutscene?`: The playing cutscene, or `nil` when the player can't watch one.
+**Returns** [`Cutscene`](cutscene.md)`?`: The playing cutscene, or `nil` when the player can't watch one.
 
 ```lua
 nf.commands.register("intro", { players_only = true }, function(event)
@@ -33,22 +32,22 @@ nf.commands.register("intro", { players_only = true }, function(event)
 end)
 ```
 
-## `nf.cutscenes.stop(player)`
+### `nf.cutscenes.stop(player)` {#stop}
 
 Ends the cutscene a player is watching now, with reason `"stopped"`, and puts them back.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `player` | `Player` | Whose cutscene to end. |
+| `player` | [`Player`](player.md) | Whose cutscene to end. |
 
 **Returns** `boolean`: `false` when they were not watching one.
 
-## `nf.cutscenes.current(player)`
+### `nf.cutscenes.current(player)` {#current}
 
 The cutscene a player is watching now.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `player` | `Player` | Who. |
+| `player` | [`Player`](player.md) | Who. |
 
-**Returns** `Cutscene?`: `nil` when they are not watching one.
+**Returns** [`Cutscene`](cutscene.md)`?`: `nil` when they are not watching one.

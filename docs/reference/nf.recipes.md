@@ -6,10 +6,13 @@ The project's recipes: those in `recipes/<id>.json`, and those scripts register.
 
 A table of functions: call them with a dot.
 
+| | Functions |
+| --- | --- |
+| [Functions](#functions) | [`register`](#register) [`remove`](#remove) [`get`](#get) [`available`](#available) [`craft`](#craft) [`all`](#all) |
 
+## Functions {#functions}
 
-
-## `nf.recipes.register(id, definition)`
+### `nf.recipes.register(id, definition)` {#register}
 
 Adds a recipe the server learns at once, sent to everyone online. `definition` says what `recipes/<id>.json` would, in Lua spelling: `type` (`"shaped"`, `"shapeless"`, `"furnace"`, `"blasting"`, `"smoking"`, `"campfire_cooking"`, `"smithing_transform"`, `"stonecutting"` or `"station"`), then what that type takes: `pattern` and `key`, `ingredients`, `ingredient`, `template`, `base` and `addition`, or `materials` (each `{ ingredient = ..., count = n }`), `stations` and `station_range`; `result` (an `Item`), and `experience`, `cooking_time`, `group` and `category`. An ingredient is an item id (`"minecraft:stick"`), a tag (`"#minecraft:planks"`) or a project item (`{ item = "ruby" }`). Registering an id again replaces the recipe. It lasts as long as the script that registered it (so a reloaded script registers it again in its body). An id a `recipes/` file has, or anything that file would have an error for, is an error.
 
@@ -27,7 +30,7 @@ nf.recipes.register("ruby_block", {
 })
 ```
 
-## `nf.recipes.remove(id)`
+### `nf.recipes.remove(id)` {#remove}
 
 Takes away a recipe a script registered, from the server and from everyone's recipe book. `false` when there's no such recipe; one from `recipes/` is the file's, so removing it is an error (delete the file instead).
 
@@ -37,7 +40,7 @@ Takes away a recipe a script registered, from the server and from everyone's rec
 
 **Returns** `boolean`
 
-## `nf.recipes.get(id)`
+### `nf.recipes.get(id)` {#get}
 
 A `station` recipe, as `StationRecipe` (its `times` left out), or `nil` when there's no such recipe or it isn't a station recipe. A recipe the game makes (a crafting table's) isn't one: the game crafts those itself.
 
@@ -45,18 +48,18 @@ A `station` recipe, as `StationRecipe` (its `times` left out), or `nil` when the
 | --- | --- | --- |
 | `id` | `string` | Its id. |
 
-**Returns** `StationRecipe?`
+**Returns** [`StationRecipe`](types.md#stationrecipe)`?`
 
-## `nf.recipes.available(player, options?)`
+### `nf.recipes.available(player, options?)` {#available}
 
 The `station` recipes a player can make now: every station each needs is within its `station_range` of them (or of `options.near`), and their inventory holds its materials, with `times` how many times over. A material matches as a recipe's ingredient does: an item id or a `#tag` takes any stack of that kind but a project item's, and a project item only its own stacks. A station is a block id, a `#tag` of blocks or a project block, near when it's within the recipe's `station_range` (4 by default) on every axis.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `player` | `Player` | Who makes them: their inventory, and where they stand. |
-| `options` (optional) | `RecipeAvailableOptions` |  |
+| `player` | [`Player`](player.md) | Who makes them: their inventory, and where they stand. |
+| `options` (optional) | [`RecipeAvailableOptions`](types.md#recipeavailableoptions) |  |
 
-**Returns** `StationRecipe[]`: In id order. Empty for a player who is offline.
+**Returns** [`StationRecipe`](types.md#stationrecipe)`[]`: In id order. Empty for a player who is offline.
 
 ```lua
 for _, recipe in ipairs(nf.recipes.available(player)) do
@@ -64,15 +67,15 @@ for _, recipe in ipairs(nf.recipes.available(player)) do
 end
 ```
 
-## `nf.recipes.craft(player, id, options?)`
+### `nf.recipes.craft(player, id, options?)` {#craft}
 
 Makes a `station` recipe for a player: takes its materials from their inventory and gives them its result (what doesn't fit drops at their feet), `times` over, or as many times as they can when that's fewer. A station it needs that isn't near makes nothing. A material matches as a recipe's ingredient does: an item id or a `#tag` takes any stack of that kind but a project item's, and a project item only its own stacks. A station is a block id, a `#tag` of blocks or a project block, near when it's within the recipe's `station_range` (4 by default) on every axis. A recipe that isn't a station one is an error.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `player` | `Player` |  |
+| `player` | [`Player`](player.md) |  |
 | `id` | `string` | The recipe's id. |
-| `options` (optional) | `RecipeCraftOptions` |  |
+| `options` (optional) | [`RecipeCraftOptions`](types.md#recipecraftoptions) |  |
 
 **Returns** `integer`: How many times it was made: 0 when it couldn't be, or the player is offline.
 
@@ -83,7 +86,7 @@ if made == 0 then
 end
 ```
 
-## `nf.recipes.all()`
+### `nf.recipes.all()` {#all}
 
 Every recipe's id: the project's files', then those scripts registered.
 

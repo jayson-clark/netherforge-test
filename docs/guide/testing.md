@@ -5,10 +5,10 @@ the project on a **fake server**, runs every `*_test.lua` file in it and tells
 you which tests passed, which failed and on which line. The editor does the
 same from **Run → Run Tests**, in its **Tests** panel.
 
-The fake server is the one NetherForge's own tests run the plugin against: your
-modules, centities, menus and dialogs start as they do on a real server, their
-timers and events work, and players and the world exist, but there's no game
-(no real chunks, no client, no network).
+On the fake server your modules, centities, menus and dialogs start as they
+do on a real server, their timers and events work, and players and the world
+exist, but there's no game: no real terrain, no game client, no network. It
+starts in a moment, so tests are fast enough to run on every save.
 
 ## Writing a test
 
@@ -76,9 +76,9 @@ nf.test.case("the reminder fires every second", function()
 end)
 ```
 
-Work that scripts start on other threads (`nf.db()`, `nf.worlds.copy`) is
-finished before each tick, so it lands at a known tick. A task that awaits
-the database needs a tick or two:
+Work that finishes later (a database query, `nf.worlds.copy`) is done by the
+next tick, so a test knows when it lands. A task that waits for the database
+needs a tick or two:
 
 ```lua
 local joins
@@ -109,8 +109,8 @@ The handlers run in the order the server runs them (for an event about a
 player, an entity or a world, the handlers on that handle first, like
 `alex:on("chat", ...)`, then `nf.on`), and can `stop()` or `cancel()` the event
 or set its writable fields; `result.event` holds the payload as they left it.
-The few events the runtime stages itself (a death, damage, a click on a
-centity) reach `nf.on` handlers only. A field the event doesn't have
+A few events (a death, damage, a click on a centity) reach only `nf.on`
+handlers when raised this way. A field the event doesn't have
 is an error that lists the ones it does.
 
 `raise` doesn't do what the server would after the event: a cancelled

@@ -5,6 +5,7 @@ import dev.netherforge.format.bridge.BotAction
 import dev.netherforge.format.bridge.BotClick
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.plugin.contract.PlatformContract
+import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.EntityNumber
 import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.GameEvents
@@ -752,6 +753,52 @@ class PaperGameEventsTest : PlatformContract() {
         val found = (heard[0] as List<*>).map { it as StructureMarker }.first { it.id == marker }
         assertEquals("contract", found.centity)
         assertEquals(world, found.at.world)
+    }
+
+    @Test
+    @Order(25)
+    fun `a bow that needs no ammo is drawn and shoots with none`() {
+        restoring()
+        val player = join(spot(1, 6))
+        main { assertTrue(platform.players.setGameMode(player.uuid, "survival")) }
+        events.ammoFree = true
+        afterwards { events.ammoFree = false }
+        give(player, 0, stack("minecraft:bow"))
+        act(player, BotAction.Look(-90.0, 30.0))
+        act(player, BotAction.UseItem())
+        expectCall("drawsWithoutAmmo") { (it[0] as ItemData).def.kind == "minecraft:bow" }
+        ticks(25)
+        act(player, BotAction.ReleaseItem)
+        val shot = expect<GameEvent.EntityShootBow>("entityShootBow") { it.entity == player.uuid }
+        assertEquals("minecraft:bow", shot.bow?.def?.kind)
+    }
+
+    @Test
+    @Order(26)
+    fun `the world breaking a watched block is heard, and a watched falling block's neighbour changing and its landing`() {
+        restoring()
+        rule(GameRules.BLOCK_DROPS, true)
+        main { platform.blocks.watch(setOf("minecraft:torch"), setOf("minecraft:sand")) }
+        afterwards { platform.blocks.watch(emptySet(), emptySet()) }
+        val torch = x0 + 2
+        val sand = x0 + 6
+        val z = z0 + 2
+        main {
+            set(torch, ground + 1, z, "minecraft:stone", false)
+            set(torch, ground + 2, z, "minecraft:torch", false)
+            set(sand, ground + 1, z, "minecraft:stone", false)
+            set(sand, ground + 2, z, "minecraft:sand", false)
+        }
+        // What holds each up goes: the torch is broken by the world, and the sand falls onto the grass.
+        main {
+            set(torch, ground + 1, z, "minecraft:air")
+            set(sand, ground + 1, z, "minecraft:air")
+        }
+        val broke = expectCall("worldBroke") { (it[0] as BlockRef).let { b -> b.x == torch && b.z == z } }[0] as BlockRef
+        assertEquals("minecraft:torch" to ground + 2, broke.state to broke.y)
+        expectCall("blockUpdated") { (it[0] as BlockRef).let { b -> b.x == sand && b.y == ground + 2 && b.z == z } }
+        val landed = expectCall("fallingLanded") { (it[1] as BlockRef).let { b -> b.x == sand && b.z == z } }[1] as BlockRef
+        assertEquals("minecraft:sand" to ground + 1, landed.state to landed.y)
     }
 
     // ---- between them, the suites heard everything ------------------------------------------------------

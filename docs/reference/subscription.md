@@ -7,13 +7,13 @@ What `:on` and `:once` return: one handler listening for one event on one handle
 A handle: call its methods with a colon, `subscription:method()`.
 
 
+## Methods {#methods}
 
-
-## `subscription:cancel()`
+### `subscription:cancel()` {#cancel}
 
 Stops the handler being called. Cancelling one already cancelled does nothing.
 
-## `subscription:is_active()`
+### `subscription:is_active()` {#is_active}
 
 Whether the handler is still listening: `false` once it's cancelled (by `cancel()`, after a `once` handler ran, or after 20 errors in a row), its script has unloaded, or the handle it's on has gone.
 

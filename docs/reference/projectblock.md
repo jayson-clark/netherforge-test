@@ -7,25 +7,15 @@ A project block from `blocks/<id>/block.json`: `this` in the block's script, and
 A handle: call its methods with a colon, `projectblock:method()`.
 
 
+## Methods {#methods}
 
-## Events
-
-What `projectblock:on(event, handler)` listens for. See [Events](events.md) for how events work.
-
-| Event | Payload | Cancellable | |
-| --- | --- | --- | --- |
-| `place` | [ProjectBlockPlaceEvent](events.md#projectblockplaceevent) | yes | A block of this kind is about to be placed: by a player right-clicking with an item that places it (`event.player`, `event.item`), or by a script (`project_block:place`, neither set). `event:cancel()` stops it. It is heard before the world's own `block_place`, which a player's placing also raises (with the state of the game block it's held as, its carrier's, as `state`). |
-| `break` | [BlockBreakEvent](events.md#blockbreakevent) | yes | A player is breaking a block of this kind: before the world's own `block_break`, then `nf.on("block_break")`, with the same event, so `event:cancel()` here stops it. `event.drops` is what its loot table rolled for the tool they hold (none when `requiresTool` and it isn't the right one); assign it, and `event.experience`, to change what drops. Breaking it by a script (`break_naturally`) or an explosion rolls the same drops without this event. Writable: `drops`, `experience`. |
-| `click` | [ProjectBlockClickEvent](events.md#projectblockclickevent) | yes | A player clicked a block of this kind: `event.click` is `"left"` (hitting it, which also starts breaking it) or `"right"`. It is heard after the player's own `interact` and `nf.on("player_interact")`, so one of them cancelling the click keeps it from here. `event:cancel()` stops what the click would do, which for a right click is placing something against it. |
-| `tick` | [ProjectBlockTickEvent](events.md#projectblocktickevent) |  | Every `tick` ticks (the block's `tick` in `block.json`; without it nothing ticks) for each block of this kind in a loaded chunk. Blocks in chunks that aren't loaded are not ticked, and a block placed or loaded is first ticked a full interval later. Keep per-block state in `event.block:data()`. |
-
-## `projectblock:id()`
+### `projectblock:id()` {#id}
 
 Its id: its folder name under `blocks/`.
 
 **Returns** `string`
 
-## `projectblock:properties()`
+### `projectblock:properties()` {#properties}
 
 Its `properties` from its `block.json`: the project's own facts about it, any JSON (`{ damage = 12, class = "melee" }`), as a table. A new table each call, so keep it rather than ask in a loop. An empty table when the file has none, `nil` once the block is gone.
 
@@ -36,22 +26,22 @@ local stats = assert(this:properties())
 log(stats.damage)
 ```
 
-## `projectblock:exists()`
+### `projectblock:exists()` {#exists}
 
 Whether the project still has it.
 
 **Returns** `boolean`
 
-## `projectblock:place(location, options?)`
+### `projectblock:place(location, options?)` {#place}
 
 Places one at the block position a location is in, as `world:set_block` would: whatever is there is replaced, and nothing drops. Its `place` handlers are not asked (a script placing a block isn't a player placing one), and it isn't a `block_place` either. If the block has a centity, it's spawned over the block. `nil` when the chunk isn't loaded, or when the game has no state of its carrier left to hold the block in (the project has more blocks of that carrier than that).
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `location` | `Location` | Where. |
-| `options` (optional) | `BlockPlaceOptions` |  |
+| `location` | [`Location`](location.md) | Where. |
+| `options` (optional) | [`BlockPlaceOptions`](types.md#blockplaceoptions) |  |
 
-**Returns** `CustomBlock?`
+**Returns** [`CustomBlock`](customblock.md)`?`
 
 ```lua
 local ore = nf.blocks.get("ruby_ore")
@@ -60,17 +50,28 @@ if ore then
 end
 ```
 
-## `projectblock:on(event, handler, options?)`
+## Events
+
+What `projectblock:on(event, handler)` listens for. See [Events](events.md) for how events work.
+
+| Event | Payload | |
+| --- | --- | --- |
+| `place` | [ProjectBlockPlaceEvent](types.md#projectblockplaceevent) | A block of this kind is about to be placed: by a player right-clicking with an item that places it (`event.player`, `event.item`), or by a script (`project_block:place`, neither set). `event:cancel()` stops it. It is heard before the world's own `block_place`, which a player's placing also raises (with the state of the game block it's held as, its carrier's, as `state`). **Cancellable.** |
+| `break` | [BlockBreakEvent](types.md#blockbreakevent) | A player is breaking a block of this kind: before the world's own `block_break`, then `nf.on("block_break")`, with the same event, so `event:cancel()` here stops it. `event.drops` is what its loot table rolled for the tool they hold (none when `requiresTool` and it isn't the right one); assign it, and `event.experience`, to change what drops. Breaking it by a script (`break_naturally`) or an explosion rolls the same drops without this event. **Cancellable.** Writable: `drops`, `experience`. |
+| `click` | [ProjectBlockClickEvent](types.md#projectblockclickevent) | A player clicked a block of this kind: `event.click` is `"left"` (hitting it, which also starts breaking it) or `"right"`. It is heard after the player's own `interact` and `nf.on("player_interact")`, so one of them cancelling the click keeps it from here. `event:cancel()` stops what the click would do, which for a right click is placing something against it. **Cancellable.** |
+| `tick` | [ProjectBlockTickEvent](types.md#projectblocktickevent) | Every `tick` ticks (the block's `tick` in `block.json`; without it nothing ticks) for each block of this kind in a loaded chunk. Blocks in chunks that aren't loaded are not ticked, and a block placed or loaded is first ticked a full interval later. Keep per-block state in `event.block:data()`. |
+
+### `projectblock:on(event, handler, options?)` {#on}
 
 Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `event` | `ProjectBlock.Event` | The event's name. |
-| `handler` | `fun(event: Event)` | Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`. |
-| `options` (optional) | `EventOptions` | How to listen: `{ every = n }` for `tick`. |
+| `handler` | `fun(event: `[`Event`](types.md#event)`)` | Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`. |
+| `options` (optional) | [`EventOptions`](types.md#eventoptions) | How to listen: `{ every = n }` for `tick`. |
 
-**Returns** `Subscription`: Call `:cancel()` on it to stop listening.
+**Returns** [`Subscription`](subscription.md): Call `:cancel()` on it to stop listening.
 
 ```lua
 this:on("click", function(event)
@@ -78,13 +79,13 @@ this:on("click", function(event)
 end)
 ```
 
-## `projectblock:once(event, handler)`
+### `projectblock:once(event, handler)` {#once}
 
 Like `block:on`, but the handler runs only the next time the event happens, then stops listening.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `event` | `ProjectBlock.Event` | The event's name. |
-| `handler` | `fun(event: Event)` | Called with the event. |
+| `handler` | `fun(event: `[`Event`](types.md#event)`)` | Called with the event. |
 
-**Returns** `Subscription`: Call `:cancel()` on it to stop waiting before then.
+**Returns** [`Subscription`](subscription.md): Call `:cancel()` on it to stop waiting before then.

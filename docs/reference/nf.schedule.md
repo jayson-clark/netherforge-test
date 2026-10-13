@@ -6,10 +6,9 @@ Runs a function at a time of day, every day or week, or by a cron expression: re
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.schedule.daily(time, callback, options?)`
+### `nf.schedule.daily(time, callback, options?)` {#daily}
 
 Calls `callback` every day at a time of day. Runs on the main thread, in the tick that finds the time has come, like an `nf.every` callback. One that errors is logged with its file and line; the schedule carries on.
 
@@ -17,9 +16,9 @@ Calls `callback` every day at a time of day. Runs on the main thread, in the tic
 | --- | --- | --- |
 | `time` | `string` | The time of day on a 24-hour clock, `"HH:mm"`: `"18:00"`, `"06:30"`. |
 | `callback` | `fun()` |  |
-| `options` (optional) | `ScheduleOptions` | A table: `id` (a name that survives restarts, which `catch_up` needs) and `catch_up` (run once on start if a run was missed). |
+| `options` (optional) | [`ScheduleOptions`](types.md#scheduleoptions) | A table: `id` (a name that survives restarts, which `catch_up` needs) and `catch_up` (run once on start if a run was missed). |
 
-**Returns** `Schedule`
+**Returns** [`Schedule`](schedule.md)
 
 ```lua
 nf.schedule.daily("18:00", function()
@@ -27,7 +26,7 @@ nf.schedule.daily("18:00", function()
 end, { id = "daily_reward", catch_up = true })
 ```
 
-## `nf.schedule.weekly(day, time, callback, options?)`
+### `nf.schedule.weekly(day, time, callback, options?)` {#weekly}
 
 Calls `callback` once a week, on a day at a time of day. Runs on the main thread, in the tick that finds the time has come, like an `nf.every` callback. One that errors is logged with its file and line; the schedule carries on.
 
@@ -36,9 +35,9 @@ Calls `callback` once a week, on a day at a time of day. Runs on the main thread
 | `day` | `string` | The weekday: `"mon"`, `"tue"`, `"wed"`, `"thu"`, `"fri"`, `"sat"` or `"sun"` (or written out, `"saturday"`), in any case. |
 | `time` | `string` | The time of day, as for `nf.schedule.daily`. |
 | `callback` | `fun()` |  |
-| `options` (optional) | `ScheduleOptions` | A table: `id` (a name that survives restarts, which `catch_up` needs) and `catch_up` (run once on start if a run was missed). |
+| `options` (optional) | [`ScheduleOptions`](types.md#scheduleoptions) | A table: `id` (a name that survives restarts, which `catch_up` needs) and `catch_up` (run once on start if a run was missed). |
 
-**Returns** `Schedule`
+**Returns** [`Schedule`](schedule.md)
 
 ```lua
 nf.schedule.weekly("sat", "18:00", function()
@@ -46,7 +45,7 @@ nf.schedule.weekly("sat", "18:00", function()
 end)
 ```
 
-## `nf.schedule.cron(expression, callback, options?)`
+### `nf.schedule.cron(expression, callback, options?)` {#cron}
 
 Calls `callback` whenever a cron expression matches. Runs on the main thread, in the tick that finds the time has come, like an `nf.every` callback. One that errors is logged with its file and line; the schedule carries on.
 
@@ -54,9 +53,9 @@ Calls `callback` whenever a cron expression matches. Runs on the main thread, in
 | --- | --- | --- |
 | `expression` | `string` | Five fields, as Unix cron has them: minute, hour, day of month, month and day of week (`0` or `7` is Sunday; `MON`-`SUN` and `JAN`-`DEC` work), each `*`, a number, a list (`1,15`), a range (`9-17`) or a step (`*/10`, `0-30/5`). `"*/30 * * * *"` is every half hour; `"0 4 * * 1-5"` is 04:00 on weekdays. An expression that isn't valid is an error. |
 | `callback` | `fun()` |  |
-| `options` (optional) | `ScheduleOptions` | A table: `id` (a name that survives restarts, which `catch_up` needs) and `catch_up` (run once on start if a run was missed). |
+| `options` (optional) | [`ScheduleOptions`](types.md#scheduleoptions) | A table: `id` (a name that survives restarts, which `catch_up` needs) and `catch_up` (run once on start if a run was missed). |
 
-**Returns** `Schedule`
+**Returns** [`Schedule`](schedule.md)
 
 ```lua
 nf.schedule.cron("*/30 * * * *", function()

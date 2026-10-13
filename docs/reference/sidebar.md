@@ -7,37 +7,41 @@ The panel of lines at the right of one player's screen, from `player:sidebar()`:
 A handle: call its methods with a colon, `sidebar:method()`.
 
 
+| | Methods |
+| --- | --- |
+| [Methods](#methods) | [`title`](#title) [`set_title`](#set_title) [`lines`](#lines) [`set_lines`](#set_lines) [`is_visible`](#is_visible) [`set_visible`](#set_visible) [`clear`](#clear) |
 
+## Methods {#methods}
 
-## `sidebar:title()`
+### `sidebar:title()` {#title}
 
 Its title, as MiniMessage, or `nil` when it has none (or they're offline).
 
-**Returns** `Text?`
+**Returns** [`Text`](index.md#types)`?`
 
-## `sidebar:set_title(text)`
+### `sidebar:set_title(text)` {#set_title}
 
 Changes its title, and shows it.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `text` | `Text` | MiniMessage. |
+| `text` | [`Text`](index.md#types) | MiniMessage. |
 
 **Returns** `boolean`: `false` when they're offline.
 
-## `sidebar:lines()`
+### `sidebar:lines()` {#lines}
 
 Its lines, top first, as MiniMessage. Empty when it has none (or they're offline).
 
-**Returns** `Text[]`
+**Returns** [`Text`](index.md#types)`[]`
 
-## `sidebar:set_lines(lines)`
+### `sidebar:set_lines(lines)` {#set_lines}
 
 Replaces its lines, and shows it. More than 15 is an error.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `lines` | `Text[]` | MiniMessage, top first. Lines may repeat; an empty string is a blank line. |
+| `lines` | [`Text`](index.md#types)`[]` | MiniMessage, top first. Lines may repeat; an empty string is a blank line. |
 
 **Returns** `boolean`: `false` when they're offline.
 
@@ -46,13 +50,13 @@ player:sidebar():set_title("<gold><b>Arena")
 player:sidebar():set_lines({ "Kills: " .. kills, "", "<gray>play.example.net" })
 ```
 
-## `sidebar:is_visible()`
+### `sidebar:is_visible()` {#is_visible}
 
 Whether they see it now. `false` when they're offline.
 
 **Returns** `boolean`
 
-## `sidebar:set_visible(visible)`
+### `sidebar:set_visible(visible)` {#set_visible}
 
 Shows it, or hides it and gives them the server's scoreboard back, keeping its title and lines for next time.
 
@@ -62,7 +66,7 @@ Shows it, or hides it and gives them the server's scoreboard back, keeping its t
 
 **Returns** `boolean`: `false` when they're offline.
 
-## `sidebar:clear()`
+### `sidebar:clear()` {#clear}
 
 Takes its title and lines away and hides it, giving them the server's scoreboard back.
 

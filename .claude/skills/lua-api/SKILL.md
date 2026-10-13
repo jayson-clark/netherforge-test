@@ -455,7 +455,10 @@ checked there; tests that use it in a task cover those.
    completes them inside the quotes (project-wide: LuaLS can't tell one
    centity's script from another's). Mark it
    `impl: "lua"` only if it's logic rather than a call into the server.
-2. `pnpm generate`. The runtime stops compiling until step 3.
+2. `pnpm generate`. The runtime stops compiling until step 3. A class with many
+   functions or events has its reference page in sections
+   (`scripts/emit/layout.ts`: `FUNCTION_GROUPS`, `EVENT_GROUPS`, and `CATEGORIES`
+   for a new page); generate fails naming the function, event or page to place.
 3. Implement the new interface method in `apps/plugin/runtime/.../api/`
    (or, for `impl: "lua"`, the body in the prelude's `handwritten` module: the
    generated wrapper already checks its arguments).

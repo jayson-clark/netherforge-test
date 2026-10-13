@@ -6,10 +6,9 @@ The project's blocks (`blocks/<id>/`): blocks of its own, drawn by its resource 
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.blocks.get(block)`
+### `nf.blocks.get(block)` {#get}
 
 A project block by id, to listen to what players do with it (`nf.blocks.get("ruby_ore"):on("break", ...)`) or to place one, or `nil` when the project has no such block.
 
@@ -17,10 +16,10 @@ A project block by id, to listen to what players do with it (`nf.blocks.get("rub
 | --- | --- | --- |
 | `block` | `string` | Its folder name under `blocks/`, or `namespace:id` for one a package it depends on exports (see [Names across packages](packages.md)). |
 
-**Returns** `ProjectBlock?`
+**Returns** [`ProjectBlock`](projectblock.md)`?`
 
-## `nf.blocks.all()`
+### `nf.blocks.all()` {#all}
 
 Every block the calling script can use: its own package's, and those the packages it depends on export.
 
-**Returns** `ProjectBlock[]`
+**Returns** [`ProjectBlock`](projectblock.md)`[]`

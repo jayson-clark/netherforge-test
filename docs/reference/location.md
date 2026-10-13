@@ -6,41 +6,43 @@ A position in a particular world, with an optional facing. Immutable, like `Vec3
 
 A value: read its fields with a dot (`location.world`), call its methods with a colon (`location:method()`). Its fields can't be assigned.
 
+## Fields
+
 | Field | Type | |
 | --- | --- | --- |
-| `world` | `World` | Which world. |
-| `position` | `Vec3` | Where in the world. |
+| `world` | [`World`](world.md) | Which world. |
+| `position` | [`Vec3`](vec3.md) | Where in the world. |
 | `yaw` | `number?` | Which way it faces horizontally, in degrees (0 south, 90 west), or `nil` for a location with no facing. |
 | `pitch` | `number?` | How far up or down it faces, in degrees (−90 up, 90 down), or `nil` for a location with no facing. |
 
 ## Methods
 
-### `location:with_position(position)`
+### `location:with_position(position)` {#with_position}
 
 A copy somewhere else in the same world, keeping the facing.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `position` | `Vec3` |  |
+| `position` | [`Vec3`](vec3.md) |  |
 
-**Returns** `Location`
+**Returns** [`Location`](location.md)
 
-### `location:offset(offset)`
+### `location:offset(offset)` {#offset}
 
 A copy moved by an offset, keeping the facing.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `offset` | `Vec3` |  |
+| `offset` | [`Vec3`](vec3.md) |  |
 
-**Returns** `Location`
+**Returns** [`Location`](location.md)
 
 ```lua
 player:teleport(player:location():offset(vec3(0, 10, 0)))
 ```
 
-### `location:direction()`
+### `location:direction()` {#direction}
 
 The unit direction it faces (`vec3.from_yaw_pitch`, a missing pitch counting as level), or `nil` when it has no facing.
 
-**Returns** `Vec3?`
+**Returns** [`Vec3`](vec3.md)`?`

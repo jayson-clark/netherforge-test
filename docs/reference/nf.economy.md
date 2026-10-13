@@ -6,10 +6,9 @@ Players' money, as the server's economy plugin keeps it, through [Vault](https:/
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.economy.balance(player)`
+### `nf.economy.balance(player)` {#balance}
 
 How much money the player has: `0` for someone the economy has no account for.
 
@@ -17,7 +16,7 @@ How much money the player has: `0` for someone the economy has no account for.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `player` | `Player` | Online or not. |
+| `player` | [`Player`](player.md) | Online or not. |
 
 **Returns** `number`
 
@@ -25,7 +24,7 @@ How much money the player has: `0` for someone the economy has no account for.
 player:send_message("You have " .. nf.economy.balance(player) .. " coins")
 ```
 
-## `nf.economy.deposit(player, amount)`
+### `nf.economy.deposit(player, amount)` {#deposit}
 
 Gives the player money. Returns their new balance, or `nil` when the economy refused (it has no account for them, or can't hold that much). An amount that isn't positive and finite is an error.
 
@@ -33,7 +32,7 @@ Gives the player money. Returns their new balance, or `nil` when the economy ref
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `player` | `Player` | Online or not. |
+| `player` | [`Player`](player.md) | Online or not. |
 | `amount` | `number` | More than 0. |
 
 **Returns** `number?`: their balance afterwards
@@ -45,7 +44,7 @@ if balance then
 end
 ```
 
-## `nf.economy.withdraw(player, amount)`
+### `nf.economy.withdraw(player, amount)` {#withdraw}
 
 Takes money from the player. Returns their new balance, or `nil` when the economy refused, usually because they don't have that much (nothing is taken then). An amount that isn't positive and finite is an error.
 
@@ -53,7 +52,7 @@ Takes money from the player. Returns their new balance, or `nil` when the econom
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `player` | `Player` | Online or not. |
+| `player` | [`Player`](player.md) | Online or not. |
 | `amount` | `number` | More than 0. |
 
 **Returns** `number?`: their balance afterwards

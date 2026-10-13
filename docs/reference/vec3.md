@@ -6,6 +6,8 @@ Three numbers: a position, an offset, a velocity, a direction or a scale. Every 
 
 A value: read its fields with a dot (`a.x`), call its methods with a colon (`a:method()`). Its fields can't be assigned.
 
+## Fields
+
 | Field | Type | |
 | --- | --- | --- |
 | `x` | `number` | East (+) and west (−). |
@@ -16,14 +18,14 @@ A value: read its fields with a dot (`a.x`), call its methods with a colon (`a:m
 
 | Expression | Result | |
 | --- | --- | --- |
-| `a + Vec3` | `Vec3` | `a + b`, component by component. |
-| `a - Vec3` | `Vec3` | `a - b`, component by component. |
-| `-a` | `Vec3` | `-a`, every component negated. |
-| `a * number` | `Vec3` | `a * n` (or `n * a`): scaled. |
-| `a * Vec3` | `Vec3` | `a * b`: component by component, for scales. |
-| `a / number` | `Vec3` | `a / n`: scaled down. |
+| `a + Vec3` | [`Vec3`](vec3.md) | `a + b`, component by component. |
+| `a - Vec3` | [`Vec3`](vec3.md) | `a - b`, component by component. |
+| `-a` | [`Vec3`](vec3.md) | `-a`, every component negated. |
+| `a * number` | [`Vec3`](vec3.md) | `a * n` (or `n * a`): scaled. |
+| `a * Vec3` | [`Vec3`](vec3.md) | `a * b`: component by component, for scales. |
+| `a / number` | [`Vec3`](vec3.md) | `a / n`: scaled down. |
 
-## `vec3`
+## Making one: `vec3`
 
 Builds vectors (`vec3(x, y, z)`), and holds the common ones and `vec3.from_yaw_pitch`.
 
@@ -37,7 +39,7 @@ A new vector.
 | `y` | `number` |  |
 | `z` | `number` |  |
 
-**Returns** `Vec3`
+**Returns** [`Vec3`](vec3.md)
 
 ```lua
 local up_two = this:position() + vec3(0, 2, 0)
@@ -47,16 +49,16 @@ local up_two = this:position() + vec3(0, 2, 0)
 
 | Field | Type | |
 | --- | --- | --- |
-| `zero` | `Vec3` | `vec3(0, 0, 0)`. |
-| `one` | `Vec3` | `vec3(1, 1, 1)`. |
-| `up` | `Vec3` | `vec3(0, 1, 0)`. |
-| `down` | `Vec3` | `vec3(0, -1, 0)`. |
-| `north` | `Vec3` | `vec3(0, 0, -1)`. |
-| `south` | `Vec3` | `vec3(0, 0, 1)`. |
-| `east` | `Vec3` | `vec3(1, 0, 0)`. |
-| `west` | `Vec3` | `vec3(-1, 0, 0)`. |
+| `zero` | [`Vec3`](vec3.md) | `vec3(0, 0, 0)`. |
+| `one` | [`Vec3`](vec3.md) | `vec3(1, 1, 1)`. |
+| `up` | [`Vec3`](vec3.md) | `vec3(0, 1, 0)`. |
+| `down` | [`Vec3`](vec3.md) | `vec3(0, -1, 0)`. |
+| `north` | [`Vec3`](vec3.md) | `vec3(0, 0, -1)`. |
+| `south` | [`Vec3`](vec3.md) | `vec3(0, 0, 1)`. |
+| `east` | [`Vec3`](vec3.md) | `vec3(1, 0, 0)`. |
+| `west` | [`Vec3`](vec3.md) | `vec3(-1, 0, 0)`. |
 
-### `vec3.from_yaw_pitch(yaw, pitch)`
+### `vec3.from_yaw_pitch(yaw, pitch)` {#vec3-from_yaw_pitch}
 
 The unit direction a yaw and pitch face, in Minecraft's convention: yaw 0 faces south (+z), 90 west (−x), 180 north, −90 east; pitch −90 is straight up, 90 straight down.
 
@@ -65,7 +67,7 @@ The unit direction a yaw and pitch face, in Minecraft's convention: yaw 0 faces 
 | `yaw` | `number` | Degrees. |
 | `pitch` | `number` | Degrees. |
 
-**Returns** `Vec3`
+**Returns** [`Vec3`](vec3.md)
 
 ```lua
 local ahead = vec3.from_yaw_pitch(player:yaw() or 0, 0) * 2
@@ -73,76 +75,76 @@ local ahead = vec3.from_yaw_pitch(player:yaw() or 0, 0) * 2
 
 ## Methods
 
-### `a:length()`
+### `a:length()` {#length}
 
 How long it is.
 
 **Returns** `number`
 
-### `a:length_squared()`
+### `a:length_squared()` {#length_squared}
 
 Its length squared: cheaper than `length()`, and enough for comparing distances.
 
 **Returns** `number`
 
-### `a:normalized()`
+### `a:normalized()` {#normalized}
 
 The same direction with length 1. The zero vector stays zero rather than becoming NaN.
 
-**Returns** `Vec3`
+**Returns** [`Vec3`](vec3.md)
 
-### `a:dot(other)`
+### `a:dot(other)` {#dot}
 
 The dot product.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `other` | `Vec3` |  |
+| `other` | [`Vec3`](vec3.md) |  |
 
 **Returns** `number`
 
-### `a:cross(other)`
+### `a:cross(other)` {#cross}
 
 The cross product: a vector at right angles to both, by the right-hand rule.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `other` | `Vec3` |  |
+| `other` | [`Vec3`](vec3.md) |  |
 
-**Returns** `Vec3`
+**Returns** [`Vec3`](vec3.md)
 
-### `a:distance(other)`
+### `a:distance(other)` {#distance}
 
 How far it is to another point.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `other` | `Vec3` |  |
+| `other` | [`Vec3`](vec3.md) |  |
 
 **Returns** `number`
 
-### `a:distance_squared(other)`
+### `a:distance_squared(other)` {#distance_squared}
 
 The distance squared: cheaper than `distance()`, and enough for comparing.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `other` | `Vec3` |  |
+| `other` | [`Vec3`](vec3.md) |  |
 
 **Returns** `number`
 
-### `a:lerp(other, fraction)`
+### `a:lerp(other, fraction)` {#lerp}
 
 The point `fraction` of the way to `other`: 0 is this vector, 1 is `other`.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `other` | `Vec3` |  |
+| `other` | [`Vec3`](vec3.md) |  |
 | `fraction` | `number` | Usually 0 to 1; outside that it carries on past either end. |
 
-**Returns** `Vec3`
+**Returns** [`Vec3`](vec3.md)
 
-### `a:clamp_length(max_length)`
+### `a:clamp_length(max_length)` {#clamp_length}
 
 The same direction, scaled down to at most `max_length` long: a copy if it is no longer than that already. Keeps a velocity under a top speed.
 
@@ -150,52 +152,52 @@ The same direction, scaled down to at most `max_length` long: a copy if it is no
 | --- | --- | --- |
 | `max_length` | `number` | The longest it may be, 0 or more. |
 
-**Returns** `Vec3`
+**Returns** [`Vec3`](vec3.md)
 
 ```lua
 local velocity = vec3(3, 0, 4):clamp_length(2.5)
 ```
 
-### `a:reflect(normal)`
+### `a:reflect(normal)` {#reflect}
 
 Mirrored off a surface: `v - 2 * v:dot(n) * n` for the surface's unit normal `n`, so the part into the surface turns back out and the part along it carries on. How a shot bounces off a wall, with a sweep's `normal`.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `normal` | `Vec3` | Which way the surface faces. Any length but zero: it is normalized first. |
+| `normal` | [`Vec3`](vec3.md) | Which way the surface faces. Any length but zero: it is normalized first. |
 
-**Returns** `Vec3`
+**Returns** [`Vec3`](vec3.md)
 
 ```lua
 local bounced = vec3(1, -2, 0):reflect(vec3.up)
 ```
 
-### `a:closest_on_segment(start, finish)`
+### `a:closest_on_segment(start, finish)` {#closest_on_segment}
 
 The point on the line segment from `start` to `finish` nearest to this point: its foot on the segment, or the nearer end when that falls past one. `start` when the two are the same point. With `distance`, how far a point is from a beam or a path.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `start` | `Vec3` | One end. |
-| `finish` | `Vec3` | The other end. |
+| `start` | [`Vec3`](vec3.md) | One end. |
+| `finish` | [`Vec3`](vec3.md) | The other end. |
 
-**Returns** `Vec3`
+**Returns** [`Vec3`](vec3.md)
 
 ```lua
 local nearest = player:position():closest_on_segment(vec3(0, 64, 0), vec3(10, 64, 0))
 ```
 
-### `a:flat()`
+### `a:flat()` {#flat}
 
 A copy with `y` set to 0: the horizontal part.
 
-**Returns** `Vec3`
+**Returns** [`Vec3`](vec3.md)
 
 ```lua
 local toward = (target - player:position()):flat():normalized()
 ```
 
-### `a:with_x(x)`
+### `a:with_x(x)` {#with_x}
 
 A copy with `x` replaced.
 
@@ -203,9 +205,9 @@ A copy with `x` replaced.
 | --- | --- | --- |
 | `x` | `number` |  |
 
-**Returns** `Vec3`
+**Returns** [`Vec3`](vec3.md)
 
-### `a:with_y(y)`
+### `a:with_y(y)` {#with_y}
 
 A copy with `y` replaced.
 
@@ -213,9 +215,9 @@ A copy with `y` replaced.
 | --- | --- | --- |
 | `y` | `number` |  |
 
-**Returns** `Vec3`
+**Returns** [`Vec3`](vec3.md)
 
-### `a:with_z(z)`
+### `a:with_z(z)` {#with_z}
 
 A copy with `z` replaced.
 
@@ -223,36 +225,36 @@ A copy with `z` replaced.
 | --- | --- | --- |
 | `z` | `number` |  |
 
-**Returns** `Vec3`
+**Returns** [`Vec3`](vec3.md)
 
-### `a:floor()`
+### `a:floor()` {#floor}
 
 Each component rounded down: the block a position is in.
 
-**Returns** `Vec3`
+**Returns** [`Vec3`](vec3.md)
 
-### `a:round()`
+### `a:round()` {#round}
 
 Each component rounded to the nearest whole number, halves up.
 
-**Returns** `Vec3`
+**Returns** [`Vec3`](vec3.md)
 
-### `a:rotated(axis, degrees)`
+### `a:rotated(axis, degrees)` {#rotated}
 
 Turned about an axis through the origin, by the right-hand rule: with your right thumb along the axis, positive degrees turn the way your fingers curl. About `vec3.up`, 90 degrees turns east into north.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `axis` | `Vec3` | Any length but zero. |
+| `axis` | [`Vec3`](vec3.md) | Any length but zero. |
 | `degrees` | `number` |  |
 
-**Returns** `Vec3`
+**Returns** [`Vec3`](vec3.md)
 
 ```lua
 local left = forward:rotated(vec3.up, 90)
 ```
 
-### `a:unpack()`
+### `a:unpack()` {#unpack}
 
 The three numbers, for code that wants them separately.
 

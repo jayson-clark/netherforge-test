@@ -6,28 +6,26 @@ A living entity: a mob, an animal, an armour stand, a player. An `Entity` with h
 
 A handle: call its methods with a colon, `living:method()`.
 
-It is an [Entity](entity.md): it has every method and event of that class too (its own replace any of the same name), and goes wherever an `Entity` is taken. Its kinds, each with more methods: [Mob](mob.md), [Player](player.md). A handle is the most specific kind the server knows it to be.
+It is an [Entity](entity.md), so it has every method and event of that class too, and you can pass it wherever an `Entity` is expected. More specific kinds: [Mob](mob.md), [Player](player.md). You always get the most specific kind the server knows it to be.
 
+| | Methods |
+| --- | --- |
+| [Health](#health-section) | [`health`](#health) [`set_health`](#set_health) [`max_health`](#max_health) [`damage`](#damage) [`heal`](#heal) |
+| [Attributes](#attributes) | [`attribute`](#attribute) [`attribute_base`](#attribute_base) [`set_attribute_base`](#set_attribute_base) [`attribute_modifiers`](#attribute_modifiers) [`add_attribute_modifier`](#add_attribute_modifier) [`remove_attribute_modifier`](#remove_attribute_modifier) |
+| [Potion effects](#potion-effects) | [`effects`](#effects) [`has_effect`](#has_effect) [`add_effect`](#add_effect) [`remove_effect`](#remove_effect) |
+| [Equipment](#equipment-section) | [`equipment`](#equipment) [`set_equipment`](#set_equipment) |
+| [Events](#events) | [`on`](#on) [`once`](#once) and 5 events |
+| From [Entity](entity.md) | [`id`](entity.md#id) [`kind`](entity.md#kind) [`exists`](entity.md#exists) [`is_player`](entity.md#is_player) [`is_living`](entity.md#is_living) [`is_mob`](entity.md#is_mob) [`location`](entity.md#location) [`position`](entity.md#position) [`world`](entity.md#world) [`eye_position`](entity.md#eye_position) [`yaw`](entity.md#yaw) [`pitch`](entity.md#pitch) [`direction`](entity.md#direction) [`set_yaw`](entity.md#set_yaw) [`set_pitch`](entity.md#set_pitch) [`look_at`](entity.md#look_at) [`teleport`](entity.md#teleport) [`velocity`](entity.md#velocity) [`set_velocity`](entity.md#set_velocity) [`add_velocity`](entity.md#add_velocity) [`is_on_ground`](entity.md#is_on_ground) [`remove`](entity.md#remove) [`name`](entity.md#name) [`custom_name`](entity.md#custom_name) [`set_custom_name`](entity.md#set_custom_name) [`is_custom_name_visible`](entity.md#is_custom_name_visible) [`set_custom_name_visible`](entity.md#set_custom_name_visible) [`tags`](entity.md#tags) [`has_tag`](entity.md#has_tag) [`add_tag`](entity.md#add_tag) [`remove_tag`](entity.md#remove_tag) [`data`](entity.md#data) [`is_glowing`](entity.md#is_glowing) [`set_glowing`](entity.md#set_glowing) [`is_visible`](entity.md#is_visible) [`set_visible`](entity.md#set_visible) [`hide_from`](entity.md#hide_from) [`show_to`](entity.md#show_to) [`is_hidden_from`](entity.md#is_hidden_from) [`team`](entity.md#team) [`is_silent`](entity.md#is_silent) [`set_silent`](entity.md#set_silent) [`has_gravity`](entity.md#has_gravity) [`set_gravity`](entity.md#set_gravity) [`is_invulnerable`](entity.md#is_invulnerable) [`set_invulnerable`](entity.md#set_invulnerable) [`passengers`](entity.md#passengers) [`add_passenger`](entity.md#add_passenger) [`remove_passenger`](entity.md#remove_passenger) [`vehicle`](entity.md#vehicle) [`inventory`](entity.md#inventory) [`target_block`](entity.md#target_block) [`target_entity`](entity.md#target_entity) [`target_centity`](entity.md#target_centity) |
 
-## Events
+## Health {#health-section}
 
-What `living:on(event, handler)` listens for. See [Events](events.md) for how events work.
-
-| Event | Payload | Cancellable | |
-| --- | --- | --- | --- |
-| `death` | [EntityDeathEvent](events.md#entitydeathevent) |  | It died: before `nf.on("entity_death")`, with the same event. Its handlers go with it afterwards. A `Player`'s own `death` is `player_death` instead, then `nf.on("entity_death")`. Bubbles. Writable: `drops`, `experience`. |
-| `heal` | [EntityHealEvent](events.md#entityhealevent) | yes | It is getting health back: eating, regenerating, a potion, a beacon. `event:cancel()` stops it; assign `event.amount` to change how much. Heard by the entity before `nf.on("entity_heal")`, with the same event, so `event:stop()` keeps it from there. Bubbles. Writable: `amount`. |
-| `launch_projectile` | [ProjectileLaunchEvent](events.md#projectilelaunchevent) | yes | It launched a projectile: an arrow, a trident, a snowball, an egg, an ender pearl, a potion, a fireball. `event:cancel()` stops the projectile coming into the world. A dispenser's projectile has no shooter, so only `nf` hears it. Heard by the entity before `nf.on("projectile_launch")`, with the same event, so `event:stop()` keeps it from there. Bubbles. |
-| `shoot_bow` | [EntityShootBowEvent](events.md#entityshootbowevent) | yes | It shot a bow or a crossbow (a skeleton, a pillager, a player). `event:cancel()` stops the shot: nothing is fired or used up. Heard by the entity before `nf.on("entity_shoot_bow")`, with the same event, so `event:stop()` keeps it from there. Bubbles. |
-| `change_effect` | [EntityChangeEffectEvent](events.md#entitychangeeffectevent) | yes | One of its status effects is being added, changed, run out or taken away: a potion, a beacon, milk, a command or a script. `event:cancel()` stops the change. Heard by the entity before `nf.on("entity_change_effect")`, with the same event, so `event:stop()` keeps it from there. Bubbles. |
-
-## `living:health()`
+### `living:health()` {#health}
 
 How much health it has, from 0 to `max_health()` (2 is one heart), or `nil` once it has gone (or while its chunk is unloaded).
 
 **Returns** `number?`
 
-## `living:set_health(health)`
+### `living:set_health(health)` {#set_health}
 
 Sets its health, up to `max_health()`. 0 kills it.
 
@@ -37,24 +35,24 @@ Sets its health, up to `max_health()`. 0 kills it.
 
 **Returns** `boolean`: `false` once it has gone (or while its chunk is unloaded).
 
-## `living:max_health()`
+### `living:max_health()` {#max_health}
 
 The most health it can have, or `nil` once it has gone (or while its chunk is unloaded).
 
 **Returns** `number?`
 
-## `living:damage(amount, source?)`
+### `living:damage(amount, source?)` {#damage}
 
 Hurts it, as an attack would: armour and effects count, it flinches, and its `damage` handlers hear it.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `amount` | `number` | How much, before armour: 2 is one heart. |
-| `source` (optional) | `Entity` | Who did it, for knockback, kill credit and angering a mob. |
+| `source` (optional) | [`Entity`](entity.md) | Who did it, for knockback, kill credit and angering a mob. |
 
 **Returns** `boolean`: `false` once it has gone (or while its chunk is unloaded).
 
-## `living:heal(amount)`
+### `living:heal(amount)` {#heal}
 
 Gives it health back, up to `max_health()`.
 
@@ -64,7 +62,9 @@ Gives it health back, up to `max_health()`.
 
 **Returns** `boolean`: `false` once it has gone (or while its chunk is unloaded).
 
-## `living:attribute(attribute)`
+## Attributes {#attributes}
+
+### `living:attribute(attribute)` {#attribute}
 
 The value of one of its attributes now: its base with every modifier applied (its equipment's, its effects', scripts'), within the attribute's range. `nil` for an attribute it doesn't have (`scale` on a dropped item), or once it has gone (or while its chunk is unloaded). An attribute the server doesn't have is an error.
 
@@ -78,7 +78,7 @@ The value of one of its attributes now: its base with every modifier applied (it
 local speed = zombie:attribute("movement_speed")
 ```
 
-## `living:attribute_base(attribute)`
+### `living:attribute_base(attribute)` {#attribute_base}
 
 One of its attributes' base value, before modifiers. `nil` for an attribute it doesn't have, or once it has gone (or while its chunk is unloaded). An attribute the server doesn't have is an error.
 
@@ -88,7 +88,7 @@ One of its attributes' base value, before modifiers. `nil` for an attribute it d
 
 **Returns** `number?`
 
-## `living:set_attribute_base(attribute, value)`
+### `living:set_attribute_base(attribute, value)` {#set_attribute_base}
 
 Sets one of its attributes' base value. It's saved with the entity. An attribute the server doesn't have is an error.
 
@@ -103,7 +103,7 @@ Sets one of its attributes' base value. It's saved with the entity. An attribute
 player:set_attribute_base("scale", 2)
 ```
 
-## `living:attribute_modifiers(attribute)`
+### `living:attribute_modifiers(attribute)` {#attribute_modifiers}
 
 Everything changing one of its attributes: the modifiers scripts added, and those from its equipment, effects and the game itself (sprinting), each with its full id. `nil` for an attribute it doesn't have, or once it has gone (or while its chunk is unloaded). An attribute the server doesn't have is an error.
 
@@ -111,9 +111,9 @@ Everything changing one of its attributes: the modifiers scripts added, and thos
 | --- | --- | --- |
 | `attribute` | `string` | Its id: `"minecraft:scale"`, or `"scale"` for short. |
 
-**Returns** `AttributeModifier[]?`
+**Returns** [`AttributeModifier`](types.md#attributemodifier)`[]?`
 
-## `living:add_attribute_modifier(attribute, id, amount, operation?, saved?)`
+### `living:add_attribute_modifier(attribute, id, amount, operation?, saved?)` {#add_attribute_modifier}
 
 Adds a modifier to one of its attributes, replacing the project's modifier of the same id. Modifiers are saved with the entity unless `saved` is `false`, so give each a fixed id and remove it when it's done, rather than making new ones. The id is in the project's namespace (`netherforge.json`'s `namespace`): `"slow_zone"` is `"<namespace>:slow_zone"`, so nothing else's modifiers can be replaced or removed. An attribute the server doesn't have is an error.
 
@@ -131,7 +131,7 @@ Adds a modifier to one of its attributes, replacing the project's modifier of th
 player:add_attribute_modifier("gravity", "space", -0.06, "add_value", false)
 ```
 
-## `living:remove_attribute_modifier(attribute, id)`
+### `living:remove_attribute_modifier(attribute, id)` {#remove_attribute_modifier}
 
 Takes one of the project's modifiers off one of its attributes. An attribute the server doesn't have is an error.
 
@@ -142,13 +142,15 @@ Takes one of the project's modifiers off one of its attributes. An attribute the
 
 **Returns** `boolean`: Whether it had it: `false` when it didn't, for an attribute it doesn't have, once it has gone (or while its chunk is unloaded).
 
-## `living:effects()`
+## Potion effects {#potion-effects}
+
+### `living:effects()` {#effects}
 
 Its status effects, like speed or poison. Empty once it has gone.
 
-**Returns** `StatusEffect[]`
+**Returns** [`StatusEffect`](types.md#statuseffect)`[]`
 
-## `living:has_effect(effect)`
+### `living:has_effect(effect)` {#has_effect}
 
 Whether it has a status effect. An effect the server doesn't have is an error. `false` once it has gone (or while its chunk is unloaded).
 
@@ -158,7 +160,7 @@ Whether it has a status effect. An effect the server doesn't have is an error. `
 
 **Returns** `boolean`
 
-## `living:add_effect(effect, ticks, options?)`
+### `living:add_effect(effect, ticks, options?)` {#add_effect}
 
 Gives it a status effect, replacing one of the same kind it has. An effect the server doesn't have is an error.
 
@@ -166,7 +168,7 @@ Gives it a status effect, replacing one of the same kind it has. An effect the s
 | --- | --- | --- |
 | `effect` | `string` | Its id: `"minecraft:speed"`. |
 | `ticks` | `integer` | How long it lasts. -1 is for ever. |
-| `options` (optional) | `EffectOptions` |  |
+| `options` (optional) | [`EffectOptions`](types.md#effectoptions) |  |
 
 **Returns** `boolean`: `false` once it has gone (or while its chunk is unloaded).
 
@@ -174,7 +176,7 @@ Gives it a status effect, replacing one of the same kind it has. An effect the s
 player:add_effect("minecraft:speed", 20 * 10, { amplifier = 1 })
 ```
 
-## `living:remove_effect(effect)`
+### `living:remove_effect(effect)` {#remove_effect}
 
 Takes a status effect away. An effect the server doesn't have is an error.
 
@@ -184,7 +186,9 @@ Takes a status effect away. An effect the server doesn't have is an error.
 
 **Returns** `boolean`: Whether it had it.
 
-## `living:equipment(slot)`
+## Equipment {#equipment-section}
+
+### `living:equipment(slot)` {#equipment}
 
 What it holds or wears in a slot, or `nil` for nothing, and once it has gone (or while its chunk is unloaded).
 
@@ -192,30 +196,42 @@ What it holds or wears in a slot, or `nil` for nothing, and once it has gone (or
 | --- | --- | --- |
 | `slot` | `"main_hand"\|"off_hand"\|"head"\|"chest"\|"legs"\|"feet"\|"body"` | `"body"` is a horse's or a wolf's armour. |
 
-**Returns** `Item?`
+**Returns** [`Item`](types.md#item)`?`
 
-## `living:set_equipment(slot, item?)`
+### `living:set_equipment(slot, item?)` {#set_equipment}
 
 Puts an item in one of its slots, or empties it. An item table with a misspelled field, or an item the server doesn't have, is an error.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `slot` | `"main_hand"\|"off_hand"\|"head"\|"chest"\|"legs"\|"feet"\|"body"` |  |
-| `item` (optional) | `Item` | Leave it out (or `nil`) to empty the slot. |
+| `item` (optional) | [`Item`](types.md#item) | Leave it out (or `nil`) to empty the slot. |
 
 **Returns** `boolean`: `false` once it has gone (or while its chunk is unloaded).
 
-## `living:on(event, handler, options?)`
+## Events
+
+What `living:on(event, handler)` listens for. See [Events](events.md) for how events work.
+
+| Event | Payload | |
+| --- | --- | --- |
+| `death` | [EntityDeathEvent](types.md#entitydeathevent) | It died: before `nf.on("entity_death")`, with the same event. Its handlers go with it afterwards. A `Player`'s own `death` is `player_death` instead, then `nf.on("entity_death")`. Bubbles. Writable: `drops`, `experience`. |
+| `heal` | [EntityHealEvent](types.md#entityhealevent) | It is getting health back: eating, regenerating, a potion, a beacon. `event:cancel()` stops it; assign `event.amount` to change how much. Heard by the entity before `nf.on("entity_heal")`, with the same event, so `event:stop()` keeps it from there. **Cancellable.** Bubbles. Writable: `amount`. |
+| `launch_projectile` | [ProjectileLaunchEvent](types.md#projectilelaunchevent) | It launched a projectile: an arrow, a trident, a snowball, an egg, an ender pearl, a potion, a fireball. `event:cancel()` stops the projectile coming into the world. A dispenser's projectile has no shooter, so only `nf` hears it. Heard by the entity before `nf.on("projectile_launch")`, with the same event, so `event:stop()` keeps it from there. **Cancellable.** Bubbles. |
+| `shoot_bow` | [EntityShootBowEvent](types.md#entityshootbowevent) | It shot a bow or a crossbow (a skeleton, a pillager, a player). `event:cancel()` stops the shot: nothing is fired or used up. Heard by the entity before `nf.on("entity_shoot_bow")`, with the same event, so `event:stop()` keeps it from there. **Cancellable.** Bubbles. |
+| `change_effect` | [EntityChangeEffectEvent](types.md#entitychangeeffectevent) | One of its status effects is being added, changed, run out or taken away: a potion, a beacon, milk, a command or a script. `event:cancel()` stops the change. Heard by the entity before `nf.on("entity_change_effect")`, with the same event, so `event:stop()` keeps it from there. **Cancellable.** Bubbles. |
+
+### `living:on(event, handler, options?)` {#on}
 
 Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `event` | `Living.Event` | The event's name. |
-| `handler` | `fun(event: Event)` | Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`. |
-| `options` (optional) | `EventOptions` | How to listen: `{ every = n }` for `tick`. |
+| `handler` | `fun(event: `[`Event`](types.md#event)`)` | Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`. |
+| `options` (optional) | [`EventOptions`](types.md#eventoptions) | How to listen: `{ every = n }` for `tick`. |
 
-**Returns** `Subscription`: Call `:cancel()` on it to stop listening.
+**Returns** [`Subscription`](subscription.md): Call `:cancel()` on it to stop listening.
 
 ```lua
 local stand = world:spawn_entity("minecraft:armor_stand", vec3(0, 64, 0)) --[[@as Living?]]
@@ -226,13 +242,13 @@ if stand then
 end
 ```
 
-## `living:once(event, handler)`
+### `living:once(event, handler)` {#once}
 
 Like `living:on`, but the handler runs only the next time the event happens, then stops listening.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `event` | `Living.Event` | The event's name. |
-| `handler` | `fun(event: Event)` | Called with the event. |
+| `handler` | `fun(event: `[`Event`](types.md#event)`)` | Called with the event. |
 
-**Returns** `Subscription`: Call `:cancel()` on it to stop waiting before then.
+**Returns** [`Subscription`](subscription.md): Call `:cancel()` on it to stop waiting before then.

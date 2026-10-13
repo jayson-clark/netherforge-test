@@ -6,17 +6,16 @@ Natural spawning (a centity's `spawning` block in `centity.json`): conditions a 
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.spawning.condition(name, callback)`
+### `nf.spawning.condition(name, callback)` {#condition}
 
 Registers a condition a centity's `spawning.when` can name: the spawner asks `callback` about each place where every other `spawning` rule of that centity fits, and the centity appears there only when it answers `true`. Anything else (`false`, `nil`, an error) is no. It belongs to the script that registered it and goes when that script unloads (a reload, the server stopping), so register it in a module's body. A centity names it bare when it's in the same package as the registering script, `ns:name` from another. A name another live script already registered is an error, and so is one that isn't an id.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `name` | `string` | What `spawning.when` names: lowercase letters, digits and `_`, like `"blood_moon"`. |
-| `callback` | `fun(check: SpawnCheck): boolean` | Answers whether the centity may appear at `check.location`. Keep it quick: it runs on the main thread, for every place the spawner tries. An error in it is logged with its file and line and counts as `false`. |
+| `callback` | `fun(check: `[`SpawnCheck`](types.md#spawncheck)`): boolean` | Answers whether the centity may appear at `check.location`. Keep it quick: it runs on the main thread, for every place the spawner tries. An error in it is logged with its file and line and counts as `false`. |
 
 ```lua
 local raid = false

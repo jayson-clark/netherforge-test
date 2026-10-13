@@ -143,13 +143,9 @@ things are beyond what LuaLS can express:
   Where you know it's there, `assert(this:node("box"))` says so.
 - **Files beside a resource's script.** On the server, `require("helpers")`
   in `centities/tower/script.lua` loads `centities/tower/helpers.lua` before
-  any module. LuaLS has one search path for the whole project
-  (`runtime.path`) and no notion of the folder the requiring script is in, so
-  it can't follow that; such a `require` is untyped there. A pattern like
-  `"?.lua"` would match a `helpers.lua` in any folder, often the wrong one, so
-  the `.luarc.json` doesn't try. The NetherForge editor's own
-  lua-language-server resolves them as the server does, with a plugin of
-  its own.
+  any module. lua-language-server can't follow that kind of `require` in
+  other editors, so there it's untyped. The NetherForge editor resolves them
+  as the server does.
 
 ### Checking from the command line
 
@@ -164,8 +160,7 @@ It reads the project's `.luarc.json`, and prints each problem with its file
 and line.
 
 Each release also attaches one stub per kind of script, `nf-centity.lua`,
-`nf-menu.lua` and `nf-dialog.lua` (generated into
-`packages/api/generated/luals/surfaces/`), describing exactly what that kind
+`nf-menu.lua` and `nf-dialog.lua`, describing exactly what that kind
 of script sees. LuaLS merges them with `nf.lua`'s union rather than replacing
 it, so they don't replace the first line. Modules have no `this` at all.
 

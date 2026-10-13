@@ -103,20 +103,17 @@ completes on `found` or `given`; `[["a"], ["b", "c"]]` on `a` and either of
 `b` or `c`. Every name must be one of `criteria`, and every criterion must be
 in some group, or the game refuses the advancement (`advancement.requirements`).
 
-## On the server
+## Changing advancements
 
-The game learns advancements only while it starts, so NetherForge generates
-a datapack from the project's advancements (and its packages') before the
-worlds load: `data/<namespace>/advancement/<id>.json` in the game's own
-format, with text from MiniMessage, glyphs drawn from the project's resource packs,
-and a criterion without a trigger as one only a grant meets. An advancement
-with errors is left out of it.
+The game only reads advancements as it starts, so a change needs a server
+restart. On the editor's dev server, saving an advancement restarts the
+server for you. On a server of your own, `/nf reload` says a restart is
+needed (`runtime.restart`, a warning), and until then the server keeps the
+advancements it started with. An advancement with errors is left out.
 
-So a change needs a restart. On the editor's dev server, saving an
-advancement restarts the server once the reload sees what the server
-started with is out of date; on a server of your own, `/nf reload` says the
-server must restart, and until it does it runs the advancements it started
-with (`runtime.restart`, a warning).
+On the server, an advancement's id is `<namespace>:<id>`
+(`basic:treasure_hunter`): that's what `event.advancement` says, and what the
+game's `/advancement` command takes.
 
 ## In packages
 

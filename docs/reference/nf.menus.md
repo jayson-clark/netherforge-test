@@ -6,10 +6,9 @@ The project's menus (`menus/<id>/`), and menus scripts make.
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.menus.shared(menu)`
+### `nf.menus.shared(menu)` {#shared}
 
 The window of a menu whose file says `"shared": true`: the one every player sees. A menu that isn't shared has a window per player and no one to hand back, so this is `nil`; open one with `player:open_menu`. A menu the project doesn't have is an error.
 
@@ -17,7 +16,7 @@ The window of a menu whose file says `"shared": true`: the one every player sees
 | --- | --- | --- |
 | `menu` | `string` | Its folder name under `menus/`. |
 
-**Returns** `Menu?`
+**Returns** [`Menu`](menu.md)`?`
 
 ```lua
 local stock = nf.menus.shared("bank")
@@ -26,7 +25,7 @@ if stock then
 end
 ```
 
-## `nf.menus.create(definition)`
+### `nf.menus.create(definition)` {#create}
 
 Makes a menu from a table instead of a file: a `MenuTemplate`, which `player:open_menu(template)` opens a new window of, as often as you like. The table says what `menu.json` would, in Lua spelling: `type` (`"chest"`, the default, `"barrel"`, `"shulker_box"`, `"hopper"`, `"dispenser"`, `"dropper"` or `"crafter"`), `rows` (a chest's 1 to 6, default 3), `title` (MiniMessage), `skin` (`<pack>/<key>`), `locked` (default `true`) and `slots`, items by slot number from 0. A template has no script of its own: put handlers on it (`template:on("click", ...)`), and they hear every window made from it. It lasts as long as the script that created it. A key it doesn't take, a value of the wrong type, a slot outside the window, an item the server doesn't have or a skin the project's resource packs don't have is an error, checked by the same rules as `menu.json`.
 
@@ -34,7 +33,7 @@ Makes a menu from a table instead of a file: a `MenuTemplate`, which `player:ope
 | --- | --- | --- |
 | `definition` | `table` | `{ type?, rows?, title?, skin?, locked?, slots? }`: what the menu is, as `menu.json` would say it, with `slots` as `{ [index] = item }`. |
 
-**Returns** `MenuTemplate`
+**Returns** [`MenuTemplate`](menutemplate.md)
 
 ```lua
 local confirm = nf.menus.create({

@@ -6,10 +6,9 @@ Files in the one directory scripts may keep things in: the only state a script h
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.files.get(path?)`
+### `nf.files.get(path?)` {#get}
 
 A file or folder in the data directory, which survives restarts and reloads. A handle is a path, not an open file: nothing is read until you ask. Paths that would leave that directory (`..`, backslashes, names starting with a dot) give `nil` rather than an error. No argument is the directory itself.
 
@@ -17,7 +16,7 @@ A file or folder in the data directory, which survives restarts and reloads. A h
 | --- | --- | --- |
 | `path` (optional) | `string` | Relative, with `/` between folders. |
 
-**Returns** `File?`
+**Returns** [`File`](file.md)`?`
 
 ```lua
 local save = assert(nf.files.get("scores.json"))

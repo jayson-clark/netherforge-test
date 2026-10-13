@@ -7,25 +7,25 @@ Whoever ran a command: a player or the console. What `event.sender` is in a comm
 A handle: call its methods with a colon, `sender:method()`.
 
 
+## Methods {#methods}
 
-
-## `sender:name()`
+### `sender:name()` {#name}
 
 Their name: a player's name, or `"CONSOLE"`.
 
 **Returns** `string`
 
-## `sender:send_message(text)`
+### `sender:send_message(text)` {#send_message}
 
 Sends them a line: a chat line for a player, a log line for the console.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `text` | `Text` | MiniMessage, like `"<green>Done!"`. |
+| `text` | [`Text`](index.md#types) | MiniMessage, like `"<green>Done!"`. |
 
 **Returns** `boolean`: `false` for a player who has gone offline.
 
-## `sender:has_permission(permission)`
+### `sender:has_permission(permission)` {#has_permission}
 
 Whether they have a permission node. The console has every one.
 
@@ -35,13 +35,13 @@ Whether they have a permission node. The console has every one.
 
 **Returns** `boolean`
 
-## `sender:is_player()`
+### `sender:is_player()` {#is_player}
 
 Whether a player ran it.
 
 **Returns** `boolean`
 
-## `sender:is_console()`
+### `sender:is_console()` {#is_console}
 
 Whether the console ran it.
 

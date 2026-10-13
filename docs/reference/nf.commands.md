@@ -6,18 +6,17 @@ Slash commands a module adds to the server for as long as it runs, with typed ar
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.commands.register(name, definition?, handler?)`
+### `nf.commands.register(name, definition?, handler?)` {#register}
 
 Adds `/name` to the server for as long as the module runs. Only modules can register commands, because a command outlives any one centity. The definition declares its arguments and subcommands; NetherForge checks what's typed against them, answers mistakes with a usage message, completes them as players type, and hands the handler typed values. Returns `false` when the name is already a command, the server's or another module's. A handler that errors is logged and whoever typed the command is told; the command stays. A name that isn't usable, or a definition with a mistake in it (an unknown key, an unknown argument type, an optional argument before a required one), is an error.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `name` | `string` | Lowercase letters, digits, `_` and `-`, starting with a letter. Without the slash. |
-| `definition` (optional) | `CommandDefinition\|fun(event: CommandEvent)` | Description, permission, aliases, arguments and subcommands. Can be left out, with the handler in its place: `nf.commands.register(name, handler)`. |
-| `handler` (optional) | `fun(event: CommandEvent)` | Runs when someone types the command (with no subcommand). Can be left out when the definition has subcommands: typing the bare command then shows its usage. |
+| `definition` (optional) | [`CommandDefinition`](types.md#commanddefinition)`\|fun(event: `[`CommandEvent`](types.md#commandevent)`)` | Description, permission, aliases, arguments and subcommands. Can be left out, with the handler in its place: `nf.commands.register(name, handler)`. |
+| `handler` (optional) | `fun(event: `[`CommandEvent`](types.md#commandevent)`)` | Runs when someone types the command (with no subcommand). Can be left out when the definition has subcommands: typing the bare command then shows its usage. |
 
 **Returns** `boolean`: `true` once the command is registered.
 

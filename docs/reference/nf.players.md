@@ -6,16 +6,15 @@ Players: everyone online, or anyone who has ever joined.
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.players.online()`
+### `nf.players.online()` {#online}
 
 Everyone online.
 
-**Returns** `Player[]`
+**Returns** [`Player`](player.md)`[]`
 
-## `nf.players.get(name_or_id)`
+### `nf.players.get(name_or_id)` {#get}
 
 A player by name (any case) or UUID: anyone who has ever joined this server, online or not, or `nil` for someone who never has. For someone offline, `exists()` is `false` and what needs them in the world (`position()`, `send_message`) answers `nil` or `false` until they come back.
 
@@ -23,7 +22,7 @@ A player by name (any case) or UUID: anyone who has ever joined this server, onl
 | --- | --- | --- |
 | `name_or_id` | `string` | A name, or a UUID like `player:id()`. |
 
-**Returns** `Player?`
+**Returns** [`Player`](player.md)`?`
 
 ```lua
 local owner = nf.players.get(saved.owner)
@@ -32,11 +31,11 @@ if owner and owner:exists() then
 end
 ```
 
-## `nf.players.known()`
+### `nf.players.known()` {#known}
 
 Everyone who has ever joined this server, online or not, in no particular order. On a server that's been running a long time that's a lot of players, so call it when you need it (building a leaderboard) rather than every tick.
 
-**Returns** `Player[]`
+**Returns** [`Player`](player.md)`[]`
 
 ```lua
 local players = nf.players.known()
@@ -45,14 +44,14 @@ table.sort(players, function(a, b)
 end)
 ```
 
-## `nf.players.banned()`
+### `nf.players.banned()` {#banned}
 
 Everyone who's banned, whose ban hasn't run out.
 
-**Returns** `Player[]`
+**Returns** [`Player`](player.md)`[]`
 
-## `nf.players.whitelisted()`
+### `nf.players.whitelisted()` {#whitelisted}
 
 Everyone on the server's whitelist, whether it's on or not.
 
-**Returns** `Player[]`
+**Returns** [`Player`](player.md)`[]`

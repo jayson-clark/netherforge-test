@@ -37,7 +37,7 @@ nf.task(function()
 end)
 ```
 
-The copy is made off the main thread (a map can be big), so `nf.worlds.copy`
+Copying a map takes a while (a map can be big), so `nf.worlds.copy`
 either takes a callback, called with `world, err`, or waits inside a task and
 returns `world, err`; `world` is `nil` and `err` says why when it couldn't be made. The live world keeps its own
 name and lives with the server's other worlds; changing the map later

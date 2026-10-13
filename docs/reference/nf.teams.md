@@ -6,19 +6,18 @@ The project's scoreboard teams: prefixes and suffixes on names, name colours and
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.teams.create(name, options?)`
+### `nf.teams.create(name, options?)` {#create}
 
 Makes a team on the server's scoreboard, with no members yet (`team:add_member`). It belongs to this script and goes when the script unloads, so make it in the script's body. A name that isn't letters, digits and `_`, `-`, `.` or `+`, a name one of the project's teams already has, or a key the options don't have is an error; to share a team between scripts, find it with `nf.teams.get` in the others.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `name` | `string` | What the project calls it: `"red"`. |
-| `options` (optional) | `TeamOptions` |  |
+| `options` (optional) | [`TeamOptions`](types.md#teamoptions) |  |
 
-**Returns** `Team`
+**Returns** [`Team`](team.md)
 
 ```lua
 local red = nf.teams.create("red", {
@@ -32,7 +31,7 @@ nf.on("player_join", function(event)
 end)
 ```
 
-## `nf.teams.get(name)`
+### `nf.teams.get(name)` {#get}
 
 One of the project's teams by name, or `nil` when it has none by that name.
 
@@ -40,10 +39,10 @@ One of the project's teams by name, or `nil` when it has none by that name.
 | --- | --- | --- |
 | `name` | `string` |  |
 
-**Returns** `Team?`
+**Returns** [`Team`](team.md)`?`
 
-## `nf.teams.all()`
+### `nf.teams.all()` {#all}
 
 Every team the project has now, in the order they were made. Teams made with `/team` or by other plugins aren't among them.
 
-**Returns** `Team[]`
+**Returns** [`Team`](team.md)`[]`

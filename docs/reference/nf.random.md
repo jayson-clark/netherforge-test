@@ -6,10 +6,9 @@ Randomness `math.random` doesn't give: generators of your own that repeat for a 
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.random.new(seed?)`
+### `nf.random.new(seed?)` {#new}
 
 A random generator of its own, apart from `math.random` and every other generator. Two made with the same seed give the same numbers in the same order, on every server, so a seed can stand for a whole dungeon layout or loot roll. One the script lets go of is collected like any table.
 
@@ -17,7 +16,7 @@ A random generator of its own, apart from `math.random` and every other generato
 | --- | --- | --- |
 | `seed` (optional) | `integer` | Leave it out for a generator seeded at random. |
 
-**Returns** `Random`
+**Returns** [`Random`](random.md)
 
 ```lua
 local rng = nf.random.new(42)
@@ -25,7 +24,7 @@ local roll = rng:integer(1, 6)
 local prize = rng:weighted({ diamond = 1, iron_ingot = 5, bread = 20 })
 ```
 
-## `nf.random.noise2(x, z, options?)`
+### `nf.random.noise2(x, z, options?)` {#noise2}
 
 Smooth 2D noise (simplex): a number from -1 to 1 that changes gradually as `x` and `z` do, the same every time for the same arguments. For terrain heights, patches of blocks, wobble over time.
 
@@ -33,7 +32,7 @@ Smooth 2D noise (simplex): a number from -1 to 1 that changes gradually as `x` a
 | --- | --- | --- |
 | `x` | `number` |  |
 | `z` | `number` |  |
-| `options` (optional) | `NoiseOptions` |  |
+| `options` (optional) | [`NoiseOptions`](types.md#noiseoptions) |  |
 
 **Returns** `number`
 
@@ -46,7 +45,7 @@ for x = 0, 31 do
 end
 ```
 
-## `nf.random.noise3(x, y, z, options?)`
+### `nf.random.noise3(x, y, z, options?)` {#noise3}
 
 Smooth 3D noise (simplex), like `noise2` with a third coordinate: caves, clouds, or 2D noise that drifts over time (`y` as the tick).
 
@@ -55,11 +54,11 @@ Smooth 3D noise (simplex), like `noise2` with a third coordinate: caves, clouds,
 | `x` | `number` |  |
 | `y` | `number` |  |
 | `z` | `number` |  |
-| `options` (optional) | `NoiseOptions` |  |
+| `options` (optional) | [`NoiseOptions`](types.md#noiseoptions) |  |
 
 **Returns** `number`
 
-## `nf.random.uuid()`
+### `nf.random.uuid()` {#uuid}
 
 A new random UUID, like `"3f2b8c1e-7a4d-4e0b-9c55-0e8a6f1d2b7c"`: an id no one else will make.
 

@@ -73,9 +73,9 @@ block's model as explicit `boxes` and records what it fitted to in
 `fittedTo`. If you later change the
 display, the Problems panel warns that the fit is stale; fit again.
 
-Minecraft's interaction entities are axis-aligned with a square footprint, so
-one entity covers all of a node's boxes. When a node has more than one box,
-clicks that land inside that entity but outside the real boxes are ignored
+Minecraft's clickable areas are upright boxes with a square footprint, so a
+node with several boxes is clickable within one box around all of them.
+Clicks that land in that box but outside the real boxes are ignored
 (`raycast`, on by default for several boxes).
 
 ## Animations
@@ -115,9 +115,9 @@ keyframes:
   key at least every 180°.
 
 Several clips can play at once. Where two drive the same channel of the same
-node, the one started most recently wins. In the editor, choose a clip in the **Timeline** to preview it in the viewport;
-the preview is computed by the same code the server uses, so what you see is
-what plays.
+node, the one started most recently wins. In the editor, choose a clip in the
+**Timeline** to preview it in the viewport; what you see is exactly what
+plays.
 
 ### From a script
 
@@ -271,7 +271,7 @@ it's a body that falls and collides. Clips can't drive it, because they name
 the file's nodes. A name that's taken, or a definition the file would be
 refused for, is an error at the call.
 
-Added nodes are runtime state, like a rest pose: **they aren't saved**. A
+Like a rest pose, added nodes **aren't saved**. A
 restart or a reload of the centity (its script or `centity.json`) drops them,
 and the script's body, which runs again, adds what it wants. Only nodes a
 script added can be removed (`node:remove()` takes the node and everything

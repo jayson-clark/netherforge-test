@@ -235,7 +235,7 @@ The click event says who clicked (`player`), where (`index`, and `in_menu`:
 `true` in the window, `false` in the player's own inventory below it; `target`
 is the window's [Slot](../reference/slot.md), or `nil` below), how (`click`:
 `left`, `right`, `shift_left`, `number_key`, …) and what was there (`item`,
-`cursor_item`). `hotbar_index` is the hotbar slot for a `number_key` click. See [MenuClickEvent](../reference/events.md#menuclickevent).
+`cursor_item`). `hotbar_index` is the hotbar slot for a `number_key` click. See [MenuClickEvent](../reference/types.md#menuclickevent).
 
 Behaviour several menus share (a price list, a "back" button) goes in a
 [module](modules.md) that each script requires.

@@ -6,29 +6,29 @@ A block of the project's own at a position, which is a `Block` like any other: i
 
 A handle: call its methods with a colon, `customblock:method()`.
 
-It is a [Block](block.md): it has every method and event of that class too (its own replace any of the same name), and goes wherever a `Block` is taken.
+It is a [Block](block.md), so it has every method and event of that class too, and you can pass it wherever a `Block` is expected.
 
+## Methods {#methods}
 
-
-## `customblock:id()`
+### `customblock:id()` {#id}
 
 Its id: its project block's folder name under `blocks/`, or `namespace:id` for one a package it depends on exports, as the calling script names it. `nil` once what's here isn't a block of the project's.
 
 **Returns** `string?`
 
-## `customblock:project()`
+### `customblock:project()` {#project}
 
 The project block it's one of, or `nil` once what's here isn't one.
 
-**Returns** `ProjectBlock?`
+**Returns** [`ProjectBlock`](projectblock.md)`?`
 
-## `customblock:facing()`
+### `customblock:facing()` {#facing}
 
 The way its front faces, for a block that turns (`rotation` in its `block.json`): what it was placed facing, or turned to since. `nil` for a block that doesn't turn, or once what's here isn't one.
 
 **Returns** `"north"\|"east"\|"south"\|"west"\|"up"\|"down"?`
 
-## `customblock:set_facing(facing)`
+### `customblock:set_facing(facing)` {#set_facing}
 
 Turns it to face another way, keeping everything else about it: its table, its centity (turned with it). `false` when it doesn't turn that way (it doesn't turn, or turns only `horizontal` and this is up or down), or once what's here isn't one of the project's blocks.
 

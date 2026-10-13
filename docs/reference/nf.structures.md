@@ -6,10 +6,9 @@ Structures: saved boxes of blocks that `world:place_structure` places. The proje
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.structures.exists(id)`
+### `nf.structures.exists(id)` {#exists}
 
 Whether there's a structure by that id: one of the project's, or one a script saved.
 
@@ -19,7 +18,7 @@ Whether there's a structure by that id: one of the project's, or one a script sa
 
 **Returns** `boolean`
 
-## `nf.structures.size(id)`
+### `nf.structures.size(id)` {#size}
 
 How big a structure is, in blocks along x, y and z (before it's turned), or `nil` when there's none by that id. One whose file can't be read is an error.
 
@@ -27,7 +26,7 @@ How big a structure is, in blocks along x, y and z (before it's turned), or `nil
 | --- | --- | --- |
 | `id` | `string` |  |
 
-**Returns** `Vec3?`
+**Returns** [`Vec3`](vec3.md)`?`
 
 ```lua
 local size = nf.structures.size("house")

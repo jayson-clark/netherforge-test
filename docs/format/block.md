@@ -111,8 +111,8 @@ keeps some of each carrier's states for the game's own use: those are what a
 player's note blocks, string and leaves are in. Only the carriers the project
 has blocks in are held:
 
-- **Note blocks** (Paper's `disable-noteblock-updates`): see below.
-- **Tripwire** (Paper's `disable-tripwire-updates`): string still goes down
+- **Note blocks**: see [below](#held-as-a-note-block).
+- **Tripwire**: string still goes down
   and breaks, but always in its plain state, not joined to the string beside
   it or attached to hooks, and **tripwire hooks don't trip** while the
   project has a tripwire block. Blocks take the powered and disarmed states,
@@ -136,39 +136,31 @@ A carrier the server can't hold still leaves its blocks unplaceable
 
 ### Held as a note block
 
-A note block has 1150 states (23 instruments, 25 notes, powered or not), and
-the project's blocks take them in the order of their ids. The server (the
-plugin's adapter) sets Paper's `disable-noteblock-updates` for this, so a state
-stays what it was set to: the game doesn't change the instrument when a block
-is placed above or below, or `powered` with redstone. **A world's ordinary note
-blocks keep working** all the same, because the plugin plays their part
-itself: every player's note block lives in the default instrument's column
-(`harp`, any note, powered or not), so right-clicking one tunes it, hitting it
-or a redstone signal plays it, and the instrument is worked out from the blocks
-above and below each time it sounds, as it is in the game. Every other state is
-a custom block's. The blocks are given the rarest states first (the instruments
-the game lists last, which only a mob head above a note block gives), so a world
-that already has odd note blocks is unlikely to meet one.
+The project's blocks use the note block states the game rarely uses, so a
+world that already has note blocks is unlikely to meet one. **A world's
+ordinary note blocks keep working**: they can still be tuned by
+right-clicking, played by hitting them or with redstone, and sound with the
+instrument the blocks around them give, as they do in the game.
 
-Each chunk keeps a small legend of which state each of its blocks was placed as
-(one entry per kind of block in it, however many there are), and the server
-puts the states right when the chunk loads, so adding, removing or renaming a
-project's blocks moves their states without turning a placed block into
-another. A block is otherwise known by its state alone, so a chunk full of one
-costs no more to keep than a chunk with one. Only a block drawn by a centity
-(which names its instance), a block a script gave a `data()` table, and a block
-the project no longer has keep a record of their own. A block
-that has no state left (the project has more blocks of a carrier than the game has states of it for) is an error
-(`block.carriers`) and can't be placed. The legend works the same for every carrier. A block's state found
-in a chunk nobody recorded is taken up as that block (a generated world's, a paste), except a leaves
-state, which is only taken up in a chunk the server has just generated or in a world the project
-generates itself: elsewhere it may be a player's leaves from before the project had leaves blocks.
+### Adding and removing blocks later
+
+You can add, remove and rename the project's blocks at any time, even in a
+world players have built in: blocks already placed stay what they were. A
+project can have about 1100 note block blocks, 96 tripwire blocks and 6 of
+each kind of leaves; one more than its carrier has room for is an error
+(`block.carriers`) and can't be placed.
+
+A custom block that appears without being placed (a terrain's ore, a pasted
+structure) is picked up as that block when its chunk loads, with its drops,
+handlers and ticks. The one exception is a leaves block in a world the
+project didn't generate, which might be a player's leaves from before the
+project had leaves blocks, so it's left as leaves.
 
 Because it's the game's block to the server, a few things follow:
 
 - Its **step, hit and fall sounds** are the carrier's own (a note block's
-  wood, string's, leaves' grass). Placing and breaking it the plugin sounds
-  itself, for everyone nearby: its `sounds`, else the game's sounds of its
+  wood, string's, leaves' grass). Placing and breaking it sound as the block
+  says, for everyone nearby: its `sounds`, else the game's sounds of its
   `sound` (`stone`, `wood`, …), which without one follows its `tool`: a pickaxe's
   blocks sound like `stone`, an axe's `wood`, a shovel's `gravel`, a hoe's
   `grass`, and a block without a tool like `stone`.
@@ -179,15 +171,11 @@ Because it's the game's block to the server, a few things follow:
 
 ### The game's own looks
 
-The built resource pack replaces the carrier's blockstate file, so it says how
-every state is drawn: a block's states as its look, the rest as the game draws
-them. A note block and a leaves block draw every state the same, so that's
-known. Tripwire draws each shape of string with its own model, which only the
-game client knows, so the editor reads it from your Minecraft (Settings →
-Minecraft) and writes it into **`client/vanilla.json`**, as it writes
-`fonts/default.json`. It's committed and deployed with the project: the server
-can't read your client. Until it's there, the pack leaves tripwire's file
-alone, so tripwire blocks look like string (`block.vanilla-looks`, a warning
+The resource pack has to say how every state of a carrier is drawn, the
+game's own included. For tripwire, how the game draws each shape of string is
+something only your copy of Minecraft knows, so the editor reads it from your
+Minecraft (Settings → Minecraft) and writes it into **`client/vanilla.json`**.
+Commit it with the project. Until it's there, tripwire blocks look like string (`block.vanilla-looks`, a warning
 at each tripwire block); a file read from another Minecraft version is the
 same warning at the file, until the editor writes it again.
 
@@ -202,12 +190,9 @@ nothing, with the block's `model` (if it has one) only supplying the texture
 its breaking particles take.
 
 The block keeps its carrier's **collision and selection**: on a note block or
-leaves, it's solid and the size of a block whatever the centity looks like.
-That's what those carriers give, and it's why the standard technique was chosen: an invisible solid
-block is the server's own collision (so mobs, players, pistons and
-pathfinding agree, with no entity to lag behind), where a barrier would need its
-own break handling and a shulker's box can't be stood on without jitter. A shape
-that has to be walked through can't be a block: make it a centity.
+leaves, it's solid and the size of a block whatever the centity looks like,
+and players and mobs collide with it as with any block. A shape that has to
+be walked through can't be a block: make it a centity.
 
 The centity's own hitboxes (the `lamp` example's) take clicks before the block does.
 
@@ -219,12 +204,8 @@ player holds, as the game counts it for any block: a faster tool is quicker
 every block), and `requiresTool` makes the wrong one drop nothing and take
 longer, like stone without a pickaxe. The server does the mining: it counts
 each tick of it, shows the cracks to everyone nearby, and breaks the block when
-it's done, as the player's (protection plugins can still refuse it). While a
-player looks at or mines one of these, their `block_break_speed` is turned
-right down so their own game never finishes first: it would take the block
-away early, and redraw the note blocks above and below it, until the server
-put them back. A player far away from the server sees a block go a moment
-after the cracks finish. A block with `hardness` 0 breaks on the first hit, and
+it's done, as the player's (protection plugins can still refuse it). A player
+with a slow connection sees a block go a moment after the cracks finish. A block with `hardness` 0 breaks on the first hit, and
 creative players break blocks at once, as always.
 
 ## Falling
@@ -297,8 +278,7 @@ Other `.lua` files in the block's folder belong to it, as an item's do (see
 ## In a generated world
 
 A [terrain](terrain.md#custom-blocks-as-ores) can scatter a block as an ore (`"customBlock": "ruby_ore"`), and
-a decoration can place one (a `tripwire` flower on grass). The terrain writes the block's state into the chunk
-and the plugin adopts it as the block when the chunk loads (a leaves block too: the chunk was just generated), so a generated block has its drops, its `break` handlers and its ticks like a placed one. A block drawn
+a decoration can place one (a `tripwire` flower on grass). A generated block has its drops, its `break` handlers and its ticks like a placed one. A block drawn
 by a `centity` can't be an ore.
 
 ## Checks

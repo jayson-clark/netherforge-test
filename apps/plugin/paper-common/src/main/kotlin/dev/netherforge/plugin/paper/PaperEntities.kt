@@ -250,6 +250,8 @@ class PaperEntities(private val plugin: Plugin) : EntityOps {
 
     override fun teleport(id: UUID, to: Location) {
         val entity = Bukkit.getEntity(id) ?: return
+        // A rider stays on: Paper would take it off its vehicle to move it.
+        if (entity.vehicle != null) return
         val location = bukkit(to) ?: return
         val riders = entity.passengers
         if (riders.isEmpty()) {

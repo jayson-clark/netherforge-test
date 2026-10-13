@@ -6,11 +6,15 @@ import { writeLlms, type LlmsSection } from './llms'
 
 // The NetherForge docs site. Three kinds of page live here:
 //
-// - guide/      hand-written, about behaviour that exists
-// - format/     the file-format spec (also read on GitHub, so plain relative links)
+// - guide/      hand-written, about behaviour that exists, for people making projects
+// - format/     the file-format spec (also read on GitHub, so plain relative links); a new
+//               page goes in a section of formatSidebar
 // - reference/  generated from packages/api/src/spec by `pnpm generate`; never edited here.
-//               Its sidebar is read from the folder, so a new API page shows up
-//               without touching this file.
+//               Its sidebar's sections are read from its own index (the generator's
+//               layout.ts), so a new API page shows up without touching this file.
+//
+// All of it is written for people using NetherForge, not working on it: how the engine
+// does something belongs in the skills and the code, not here.
 //
 // Dead links fail the build (VitePress's default); keep it that way.
 
@@ -36,8 +40,8 @@ function link(file: string): string {
 }
 
 /**
- * The generated API reference, in the order its own index lists it
- * (`- [Title](file.md): …`), then anything the index doesn't mention.
+ * The generated API reference, in the sections and order its own index lists it
+ * (`## Section`, then `- [Title](file.md): …`), then anything the index doesn't mention.
  */
 function referenceSidebar(): DefaultTheme.SidebarItem[] {
   const folder = path.join(docs, 'reference')
@@ -45,46 +49,66 @@ function referenceSidebar(): DefaultTheme.SidebarItem[] {
   const files = readdirSync(folder)
     .filter((f) => f.endsWith('.md'))
     .sort()
-  const listed: { file: string; text: string }[] = []
+  const sections: DefaultTheme.SidebarItem[] = []
+  const listed = new Set<string>()
   if (files.includes('index.md')) {
-    const index = readFileSync(path.join(folder, 'index.md'), 'utf8')
-    for (const [, text, file] of index.matchAll(/^- \[([^\]]+)\]\(([\w-]+\.md)\)/gm)) {
-      if (files.includes(file)) listed.push({ file, text })
+    let section: DefaultTheme.SidebarItem | null = null
+    for (const line of readFileSync(path.join(folder, 'index.md'), 'utf8').split('\n')) {
+      const heading = /^## (.+)$/.exec(line)
+      if (heading) {
+        section = { text: heading[1].trim(), collapsed: false, items: [] }
+        continue
+      }
+      const entry = /^- \[([^\]]+)\]\(([\w.-]+\.md)\)/.exec(line)
+      if (entry && section && files.includes(entry[2])) {
+        if (!section.items!.length) sections.push(section)
+        section.items!.push({ text: entry[1], link: link(`reference/${entry[2]}`) })
+        listed.add(entry[2])
+      }
     }
   }
   const rest = files
-    .filter((f) => f !== 'index.md' && !listed.some((l) => l.file === f))
-    .map((file) => ({ file, text: titleOf(`reference/${file}`) }))
+    .filter((f) => f !== 'index.md' && !listed.has(f))
+    .map((file) => ({ text: titleOf(`reference/${file}`), link: link(`reference/${file}`) }))
   return [
     ...(files.includes('index.md') ? [{ text: 'Overview', link: '/reference/' }] : []),
-    ...[...listed, ...rest].map(({ file, text }) => ({ text, link: link(`reference/${file}`) })),
+    ...sections,
+    ...(rest.length ? [{ text: 'Other', items: rest }] : []),
   ]
 }
 
-/** The format spec: the project page first, then the resource kinds in the order a project lists them. */
+/** The format spec, in sections: the project first, then the kinds of file by what they're for. */
 function formatSidebar(): DefaultTheme.SidebarItem[] {
-  const order = [
-    'project.md',
-    'references.md',
-    'packages.md',
-    'settings.md',
-    'centity.md',
-    'menu.md',
-    'dialog.md',
-    'particle-effect.md',
-    'cutscene.md',
-    'terrain.md',
-    'biome.md',
-    'sky.md',
-    'datapack.md',
-    'dimension-type.md',
-    'resource-pack.md',
+  const sections: [string, string[]][] = [
+    [
+      'The project',
+      ['project.md', 'references.md', 'packages.md', 'settings.md', 'migrations.md', 'problems.md'],
+    ],
+    ['Centities and effects', ['centity.md', 'particle-effect.md', 'cutscene.md']],
+    ['Menus, dialogs and looks', ['menu.md', 'dialog.md', 'resource-pack.md']],
+    [
+      'Items and gameplay',
+      ['item.md', 'block.md', 'game-block.md', 'recipe.md', 'loot.md', 'buff.md', 'advancement.md'],
+    ],
+    [
+      'Worlds',
+      ['worlds.md', 'terrain.md', 'biome.md', 'sky.md', 'dimension-type.md', 'datapack.md'],
+    ],
   ]
-  const files = readdirSync(path.join(docs, 'format')).filter((f) => f.endsWith('.md'))
-  const rank = (f: string) => (order.includes(f) ? order.indexOf(f) : order.length)
-  return files
-    .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
-    .map((file) => ({ text: titleOf(`format/${file}`), link: link(`format/${file}`) }))
+  const files = readdirSync(path.join(docs, 'format')).filter(
+    (f) => f.endsWith('.md') && f !== 'index.md',
+  )
+  const listed = sections.flatMap(([, pages]) => pages)
+  const rest = files.filter((f) => !listed.includes(f)).sort()
+  const item = (file: string) => ({ text: titleOf(`format/${file}`), link: link(`format/${file}`) })
+  return [
+    { text: 'Overview', link: '/format/' },
+    ...sections.map(([text, pages]) => ({
+      text,
+      items: pages.filter((f) => files.includes(f)).map(item),
+    })),
+    ...(rest.length ? [{ text: 'Other', items: rest.map(item) }] : []),
+  ]
 }
 
 const guide: DefaultTheme.SidebarItem[] = [
@@ -99,31 +123,52 @@ const guide: DefaultTheme.SidebarItem[] = [
     ],
   },
   {
-    text: 'Guides',
+    text: 'Building things',
     items: [
       { text: 'Centities and animation', link: '/guide/centities' },
-      { text: 'Scripting basics', link: '/guide/scripting' },
-      { text: 'Modules and commands', link: '/guide/modules' },
-      { text: 'Menus', link: '/guide/menus' },
-      { text: 'Dialogs', link: '/guide/dialogs' },
-      { text: 'The world', link: '/guide/world' },
-      { text: 'Players, entities and inventories', link: '/guide/players-and-entities' },
+      { text: 'Physics', link: '/guide/physics' },
       { text: 'Particle effects', link: '/guide/particles' },
       { text: 'Cutscenes', link: '/guide/cutscenes' },
-      { text: 'Resource packs', link: '/guide/resource-packs' },
+      { text: 'Menus', link: '/guide/menus' },
+      { text: 'Dialogs', link: '/guide/dialogs' },
+      { text: 'Items, recipes and loot', link: '/guide/items' },
       { text: 'Custom blocks', link: '/guide/blocks' },
+      { text: 'Resource packs', link: '/guide/resource-packs' },
       { text: 'World generation', link: '/guide/world-generation' },
-      { text: 'Physics', link: '/guide/physics' },
+    ],
+  },
+  {
+    text: 'Scripting',
+    items: [
+      { text: 'Scripting basics', link: '/guide/scripting' },
+      { text: 'Modules and commands', link: '/guide/modules' },
+      { text: 'Players, entities and inventories', link: '/guide/players-and-entities' },
+      { text: 'The world', link: '/guide/world' },
+      { text: 'Limits and performance', link: '/guide/performance' },
       { text: 'Testing your scripts', link: '/guide/testing' },
-      { text: 'Starting from a template', link: '/guide/templates' },
-      { text: 'A whole game: Lumen Vale', link: '/guide/showcase' },
-      { text: 'Hot reload and the dev loop', link: '/guide/dev-loop' },
       { text: 'Debugging scripts', link: '/guide/debugging' },
+    ],
+  },
+  {
+    text: 'Working on a project',
+    items: [
+      { text: 'Hot reload and the dev loop', link: '/guide/dev-loop' },
+      { text: 'Starting from a template', link: '/guide/templates' },
       { text: 'Using git with a project', link: '/guide/git' },
-      { text: 'Deploying to a server', link: '/guide/deploying' },
       { text: 'Editing outside the editor', link: '/guide/external-editors' },
       { text: 'Using coding agents', link: '/guide/agents' },
     ],
+  },
+  {
+    text: 'Running a server',
+    items: [
+      { text: 'Deploying to a server', link: '/guide/deploying' },
+      { text: 'Server configuration', link: '/guide/server-config' },
+    ],
+  },
+  {
+    text: 'Examples',
+    items: [{ text: 'A whole game: Lumen Vale', link: '/guide/showcase' }],
   },
 ]
 
@@ -158,15 +203,15 @@ export default defineConfig({
     logo: '/logo.svg',
     nav: [
       { text: 'Guide', link: '/guide/', activeMatch: '^/guide/' },
-      { text: 'File format', link: '/format/project', activeMatch: '^/format/' },
+      { text: 'File format', link: '/format/', activeMatch: '^/format/' },
       { text: 'Lua API', link: '/reference/', activeMatch: '^/reference/' },
       { text: 'Contributing', link: '/contributing' },
       { text: 'Download', link: `${github}/releases/latest` },
     ],
     sidebar: {
       '/guide/': guide,
-      '/format/': [{ text: 'File format', items: formatSidebar() }],
-      '/reference/': [{ text: 'Lua API reference', items: referenceSidebar() }],
+      '/format/': formatSidebar(),
+      '/reference/': referenceSidebar(),
       '/contributing': guide,
     },
     outline: [2, 3],

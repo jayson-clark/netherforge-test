@@ -25,7 +25,8 @@ import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 import { api } from '../src/spec/index.ts'
 import { bindings } from './emit/bindings.ts'
-import { referencePages } from './emit/docs.ts'
+import { REFERENCE_OWN_PAGES, referencePages } from './emit/docs.ts'
+import { checkLayout } from './emit/layout.ts'
 import {
   apiKotlin,
   argumentCodecsKotlin,
@@ -71,6 +72,7 @@ write('packages/api/generated/luals/gates.json', lualsGates(api))
 writeDir('packages/api/generated/luals/surfaces', lualsSurfaces(api), '.lua')
 write('packages/api/generated/terrain.json', JSON.stringify(terrainApi, null, 2))
 write('packages/api/generated/luals/terrain.lua', terrainStubs(terrainApi))
+checkLayout(api, REFERENCE_OWN_PAGES)
 writeDir(
   'docs/reference',
   new Map([...referencePages(api), ['terrain-scripts.md', terrainReference(terrainApi)]]),

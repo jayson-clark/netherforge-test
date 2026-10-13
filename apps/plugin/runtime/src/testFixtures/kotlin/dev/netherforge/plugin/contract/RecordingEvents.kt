@@ -88,7 +88,10 @@ class RecordingEvents : PlatformEvents {
 
     override fun playerUseItem(player: PlayerRef, item: ItemData, hand: String) = hear("playerUseItem", player, item, hand)
 
-    override fun drawsWithoutAmmo(item: ItemData): Boolean = false
+    /** Whether a bow draws with no ammo, as a suite says: it doesn't, until one sets this. */
+    @Volatile var ammoFree = false
+
+    override fun drawsWithoutAmmo(item: ItemData): Boolean = ammoFree.also { hear("drawsWithoutAmmo", item) }
 
     override fun generatedLoot(table: String, player: UUID?, location: Location): List<ItemData>? {
         hear("generatedLoot", table, player, location)

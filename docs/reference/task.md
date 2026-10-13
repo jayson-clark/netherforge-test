@@ -7,13 +7,13 @@ What `nf.task`, `nf.after` and `nf.every` return: a task that may be waiting, or
 A handle: call its methods with a colon, `task:method()`.
 
 
+## Methods {#methods}
 
-
-## `task:cancel()`
+### `task:cancel()` {#cancel}
 
 Ends it: a task stops where it's waiting and never carries on; a callback doesn't run (again). A task that cancels itself stops at its next wait. Cancelling one that has ended does nothing.
 
-## `task:is_active()`
+### `task:is_active()` {#is_active}
 
 Whether it will still run: `false` once it's cancelled, once a task has finished, errored or lost the handle it was waiting on, once an `nf.after` callback has run, after an `nf.every` callback's 20th error in a row, or once its script has unloaded.
 

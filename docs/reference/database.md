@@ -7,9 +7,9 @@ A database, from `nf.db()` or `nf.db('network')`. `nf.db()` is this package's ow
 A handle: call its methods with a colon, `database:method()`.
 
 
+## Methods {#methods}
 
-
-## `database:query(sql, params?, callback?)`
+### `database:query(sql, params?, callback?)` {#query}
 
 Runs a statement that reads rows and gives them all. Each row is a table keyed by column name; a `NULL` column is left out of its row (so `row.nickname` is `nil`), integers come as `integer`s, reals as `number`s and text as `string`s; what a MySQL or PostgreSQL server has beyond those arrives as one of them (a boolean as `1` or `0`, a `DECIMAL` as a `number`, a date or time as its text, an integer too big for an `integer` as text; `CAST(column AS CHAR)` keeps a decimal exact). A column that holds a blob is an error: `hex(column)` it in the SQL (`encode(column, 'hex')` on PostgreSQL). One SQL statement in the database's own dialect (SQLite's for the package's own database; MySQL's or PostgreSQL's for a connection the server owner set up), with `?` where a value goes: the values come in `params`, never inside the text, so a name a player typed can't become SQL. A second statement after a `;` is an error: use `db:transaction` for several. On PostgreSQL a literal `?` (the JSON operators) is written `??`. It works off the main thread, so its rows arrives later: give `callback`, which is called with `rows, err` once it's done, or call it inside a task (`nf.task`) without one, and it waits and returns `rows, err`. Without a callback outside a task, it's an error. When it fails, `rows` is `nil` and `err` says why.
 
@@ -35,7 +35,7 @@ nf.task(function()
 end)
 ```
 
-## `database:execute(sql, params?, callback?)`
+### `database:execute(sql, params?, callback?)` {#execute}
 
 Runs a statement that changes data (`INSERT`, `UPDATE`, `DELETE`) and says what it changed. It's committed on its own. One SQL statement in the database's own dialect (SQLite's for the package's own database; MySQL's or PostgreSQL's for a connection the server owner set up), with `?` where a value goes: the values come in `params`, never inside the text, so a name a player typed can't become SQL. A second statement after a `;` is an error: use `db:transaction` for several. On PostgreSQL a literal `?` (the JSON operators) is written `??`. It works off the main thread, so its result arrives later: give `callback`, which is called with `result, err` once it's done, or call it inside a task (`nf.task`) without one, and it waits and returns `result, err`. Without a callback outside a task, it's an error. When it fails, `result` is `nil` and `err` says why.
 
@@ -43,9 +43,9 @@ Runs a statement that changes data (`INSERT`, `UPDATE`, `DELETE`) and says what 
 | --- | --- | --- |
 | `sql` | `string` | The statement: `"INSERT INTO scores (name, score) VALUES (?, ?)"`. |
 | `params` (optional) | `table` | The values for the `?`s, in order: `{ player_name, 5 }`. Each is a `string`, `number`, `integer` or `boolean` (stored as 1 or 0); a hole in the list (`{ 1, nil, 3 }`) is SQL `NULL`, and so are the last `?`s when the list is shorter (Lua can't tell `{ name, nil }` from `{ name }`). Any other kind of value is an error, and more values than `?`s fails the statement. |
-| `callback` (optional) | `fun(result: DatabaseResult?, err: string?)` | Called on the main thread once it's done, as this script's code, with how many rows it changed and the last row it inserted (or `nil` and why not). Not called if the script has stopped by then. |
+| `callback` (optional) | `fun(result: `[`DatabaseResult`](types.md#databaseresult)`?, err: string?)` | Called on the main thread once it's done, as this script's code, with how many rows it changed and the last row it inserted (or `nil` and why not). Not called if the script has stopped by then. |
 
-**Returns** `DatabaseResult?`: Only without a callback, in a task: how many rows it changed and the last row it inserted, or `nil`., `string?`: Why it failed, when it did; `nil` when it worked.
+**Returns** [`DatabaseResult`](types.md#databaseresult)`?`: Only without a callback, in a task: how many rows it changed and the last row it inserted, or `nil`., `string?`: Why it failed, when it did; `nil` when it worked.
 
 ```lua
 nf.task(function()
@@ -56,16 +56,16 @@ nf.task(function()
 end)
 ```
 
-## `database:transaction(statements, callback?)`
+### `database:transaction(statements, callback?)` {#transaction}
 
 Runs several statements as one: all of them happen, or, when one fails, none do (the ones before it are undone) and the error says which failed. Other work on the database waits until it is done, so nothing sees it half-way. It works off the main thread, so its results arrives later: give `callback`, which is called with `results, err` once it's done, or call it inside a task (`nf.task`) without one, and it waits and returns `results, err`. Without a callback outside a task, it's an error. When it fails, `results` is `nil` and `err` says why.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `statements` | `DatabaseStatement[]` | The statements, run in order. Rows they would give are ignored: a transaction changes data. |
-| `callback` (optional) | `fun(results: DatabaseResult[]?, err: string?)` | Called on the main thread once it's done, as this script's code, with what each statement changed, in the same order (or `nil` and why not). Not called if the script has stopped by then. |
+| `statements` | [`DatabaseStatement`](types.md#databasestatement)`[]` | The statements, run in order. Rows they would give are ignored: a transaction changes data. |
+| `callback` (optional) | `fun(results: `[`DatabaseResult`](types.md#databaseresult)`[]?, err: string?)` | Called on the main thread once it's done, as this script's code, with what each statement changed, in the same order (or `nil` and why not). Not called if the script has stopped by then. |
 
-**Returns** `DatabaseResult[]?`: Only without a callback, in a task: what each statement changed, in the same order, or `nil`., `string?`: Why it failed, when it did; `nil` when it worked.
+**Returns** [`DatabaseResult`](types.md#databaseresult)`[]?`: Only without a callback, in a task: what each statement changed, in the same order, or `nil`., `string?`: Why it failed, when it did; `nil` when it worked.
 
 ```lua
 nf.task(function()

@@ -7,27 +7,33 @@ A path in the scripts' data directory (`plugins/NetherForge/data/`, on the edito
 A handle: call its methods with a colon, `file:method()`.
 
 
+| | Methods |
+| --- | --- |
+| [Paths](#paths) | [`path`](#path) [`name`](#name) [`parent`](#parent) [`child`](#child) [`exists`](#exists) [`is_folder`](#is_folder) |
+| [Reading and writing](#reading-and-writing) | [`read`](#read) [`write`](#write) [`append`](#append) [`lines`](#lines) [`read_json`](#read_json) [`write_json`](#write_json) |
+| [Files and folders](#files-and-folders) | [`size`](#size) [`modified_time`](#modified_time) [`children`](#children) [`rename`](#rename) [`copy_to`](#copy_to) [`create_folder`](#create_folder) [`delete`](#delete) |
 
+## Paths {#paths}
 
-## `file:path()`
+### `file:path()` {#path}
 
 The path from the data directory; `""` for the directory itself.
 
 **Returns** `string`
 
-## `file:name()`
+### `file:name()` {#name}
 
 The last part of the path.
 
 **Returns** `string`
 
-## `file:parent()`
+### `file:parent()` {#parent}
 
 The folder it's in, or `nil` for the data directory itself.
 
-**Returns** `File?`
+**Returns** [`File`](file.md)`?`
 
-## `file:child(name)`
+### `file:child(name)` {#child}
 
 Something inside this folder, whether or not it exists yet. `nil` for a name that isn't allowed.
 
@@ -35,39 +41,29 @@ Something inside this folder, whether or not it exists yet. `nil` for a name tha
 | --- | --- | --- |
 | `name` | `string` | One name, no `/`. |
 
-**Returns** `File?`
+**Returns** [`File`](file.md)`?`
 
-## `file:exists()`
+### `file:exists()` {#exists}
 
 Whether anything is there.
 
 **Returns** `boolean`
 
-## `file:is_folder()`
+### `file:is_folder()` {#is_folder}
 
 Whether it's a folder.
 
 **Returns** `boolean`
 
-## `file:size()`
+## Reading and writing {#reading-and-writing}
 
-Its size in bytes, or `nil` when it isn't a file.
-
-**Returns** `integer?`
-
-## `file:children()`
-
-What's directly inside, sorted by name; empty for a file or nothing.
-
-**Returns** `File[]`
-
-## `file:read()`
+### `file:read()` {#read}
 
 The contents, or `nil` when there's no file.
 
 **Returns** `string?`
 
-## `file:write(text)`
+### `file:write(text)` {#write}
 
 Replaces the contents, creating folders above it as needed.
 
@@ -77,7 +73,7 @@ Replaces the contents, creating folders above it as needed.
 
 **Returns** `boolean`: `false` for a folder, past the size cap, or on a disk error.
 
-## `file:append(text)`
+### `file:append(text)` {#append}
 
 Adds to the end.
 
@@ -87,29 +83,7 @@ Adds to the end.
 
 **Returns** `boolean`
 
-## `file:read_json()`
-
-The contents parsed as JSON, as `nf.json.decode` does, or `nil` when there's no file or it isn't JSON.
-
-**Returns** `any`
-
-## `file:write_json(value)`
-
-Writes a value as JSON, as `nf.json.encode` does.
-
-| Parameter | Type | |
-| --- | --- | --- |
-| `value` | `any` |  |
-
-**Returns** `boolean`: `false` for something JSON can't hold (a function, a table inside itself) or a failed write.
-
-## `file:modified_time()`
-
-When it last changed, as Unix time in milliseconds (like `nf.server.unix_time()`), or `nil` when there's nothing there.
-
-**Returns** `integer?`
-
-## `file:lines()`
+### `file:lines()` {#lines}
 
 An iterator over its lines, for a `for` loop: each without its line ending (`\n` or `\r\n`). Nothing for a file that isn't there.
 
@@ -121,7 +95,43 @@ for line in nf.files.get("motd.txt"):lines() do
 end
 ```
 
-## `file:rename(path)`
+### `file:read_json()` {#read_json}
+
+The contents parsed as JSON, as `nf.json.decode` does, or `nil` when there's no file or it isn't JSON.
+
+**Returns** `any`
+
+### `file:write_json(value)` {#write_json}
+
+Writes a value as JSON, as `nf.json.encode` does.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `value` | `any` |  |
+
+**Returns** `boolean`: `false` for something JSON can't hold (a function, a table inside itself) or a failed write.
+
+## Files and folders {#files-and-folders}
+
+### `file:size()` {#size}
+
+Its size in bytes, or `nil` when it isn't a file.
+
+**Returns** `integer?`
+
+### `file:modified_time()` {#modified_time}
+
+When it last changed, as Unix time in milliseconds (like `nf.server.unix_time()`), or `nil` when there's nothing there.
+
+**Returns** `integer?`
+
+### `file:children()` {#children}
+
+What's directly inside, sorted by name; empty for a file or nothing.
+
+**Returns** [`File`](file.md)`[]`
+
+### `file:rename(path)` {#rename}
 
 Moves it (a file, or a folder and everything in it) to another path in the data directory, creating folders above it as needed. Nothing already there is overwritten.
 
@@ -129,13 +139,13 @@ Moves it (a file, or a folder and everything in it) to another path in the data 
 | --- | --- | --- |
 | `path` | `string` | From the data directory, as `nf.files.get` takes it. |
 
-**Returns** `File?`: It at its new path; `nil` when there's nothing to move, the path isn't allowed or is taken, or the move failed.
+**Returns** [`File`](file.md)`?`: It at its new path; `nil` when there's nothing to move, the path isn't allowed or is taken, or the move failed.
 
 ```lua
 assert(nf.files.get("scores.json")):rename("backups/scores-1.json")
 ```
 
-## `file:copy_to(path)`
+### `file:copy_to(path)` {#copy_to}
 
 Copies a file to another path in the data directory, creating folders above it as needed. Nothing already there is overwritten. Folders can't be copied.
 
@@ -143,15 +153,15 @@ Copies a file to another path in the data directory, creating folders above it a
 | --- | --- | --- |
 | `path` | `string` | From the data directory, as `nf.files.get` takes it. |
 
-**Returns** `File?`: The copy; `nil` when it isn't a file, the path isn't allowed or is taken, or the copy failed.
+**Returns** [`File`](file.md)`?`: The copy; `nil` when it isn't a file, the path isn't allowed or is taken, or the copy failed.
 
-## `file:create_folder()`
+### `file:create_folder()` {#create_folder}
 
 Creates the folder, and any above it.
 
 **Returns** `boolean`
 
-## `file:delete()`
+### `file:delete()` {#delete}
 
 Deletes a file or an empty folder.
 

@@ -6,18 +6,17 @@ Boss bars: bars across the top of players' screens.
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.bossbars.create(options?)`
+### `nf.bossbars.create(options?)` {#create}
 
 Makes a boss bar, shown to no one yet (`bar:show_to(player)`). It belongs to this script and goes when it unloads. A key the options don't have is an error.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `options` (optional) | `BossBarOptions` |  |
+| `options` (optional) | [`BossBarOptions`](types.md#bossbaroptions) |  |
 
-**Returns** `BossBar`
+**Returns** [`BossBar`](bossbar.md)
 
 ```lua
 local bar = nf.bossbars.create({ text = "<red>The Warden", color = "red", progress = 1 })

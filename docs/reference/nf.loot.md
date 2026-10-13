@@ -6,19 +6,18 @@ Loot tables: the project's own (`loot/<id>.json`) and the game's. A roll picks f
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.loot.roll(table, context?)`
+### `nf.loot.roll(table, context?)` {#roll}
 
 Rolls a loot table and gives the items it picked, in the order it picked them: a stack each, more than one when a pick gives more than a stack holds. Nothing is put anywhere: give them to a player, drop them or fill a chest with them. A game table is rolled by the server where the context says (`location`, else its player's or looted entity's place), and needs one of them.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `table` | `string` | A loot table of the project's (`"treasure"`, `loot/treasure.json`; a bare id is the calling package's own), one a package exports (`"acme:treasure"`), or one of the game's by its id (`"minecraft:chests/simple_dungeon"`). |
-| `context` (optional) | `LootContext` | Who and what the roll is for: its player, tool, luck and seed. Leave it out for a roll with none of them. |
+| `context` (optional) | [`LootContext`](types.md#lootcontext) | Who and what the roll is for: its player, tool, luck and seed. Leave it out for a roll with none of them. |
 
-**Returns** `Item[]`
+**Returns** [`Item`](types.md#item)`[]`
 
 ```lua
 local items = nf.loot.roll("treasure", { player = player, tool = player:equipment("main_hand") })
@@ -27,15 +26,15 @@ for _, item in ipairs(items) do
 end
 ```
 
-## `nf.loot.fill(table, inventory, context?)`
+### `nf.loot.fill(table, inventory, context?)` {#fill}
 
 Rolls a loot table into an inventory the way the game fills a chest: each stack into an empty slot picked at random (from the roll's seed), leaving what's there. In a player's inventory only the hotbar and main inventory take loot. What finds no empty slot is left out. A game table is rolled where the inventory is, unless the context says otherwise.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `table` | `string` | A loot table of the project's (`"treasure"`, `loot/treasure.json`; a bare id is the calling package's own), one a package exports (`"acme:treasure"`), or one of the game's by its id (`"minecraft:chests/simple_dungeon"`). |
-| `inventory` | `Inventory` |  |
-| `context` (optional) | `LootContext` | Who and what the roll is for: its player, tool, luck and seed. Leave it out for a roll with none of them. |
+| `inventory` | [`Inventory`](inventory.md) |  |
+| `context` (optional) | [`LootContext`](types.md#lootcontext) | Who and what the roll is for: its player, tool, luck and seed. Leave it out for a roll with none of them. |
 
 **Returns** `integer?`: How many items didn't fit: 0 when all of it went in. `nil` once the inventory's gone, and then nothing is rolled.
 

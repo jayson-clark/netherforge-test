@@ -142,14 +142,13 @@ It returns up to four stages: `height` (a column's top, from the file's),
 the Script section (`ridges` above). A block it writes whole as a string
 (`"minecraft:cobblestone"`, or one of your own blocks' ids) it may place; list
 under the Script section only the ones it puts together from pieces.
-The preview runs the script as you save it, or as you type in it: the same
-Lua, with the same noise, as the server, so the picture is still the world.
+The preview runs the script as you save it, or as you type in it, and shows
+exactly what the server will generate.
 The [reference](../reference/terrain-scripts.md) has everything a script can
 call; the editor's completions know it too.
 
-It isn't like your other scripts: it runs while chunks are made, off the
-server's main thread, so there's no `nf`, no events and no players, only the
-world it's shaping. It may `require` your modules (ones that don't use `nf`).
+It isn't like your other scripts: it runs while chunks are being made, so
+there's no `nf`, no events and no players, only the world it's shaping. It may `require` your modules (ones that don't use `nf`).
 Everything it does depends on the seed and the place (`math.random` included),
 so a seed is still one world.
 
@@ -378,7 +377,7 @@ the file it named. [Datapacks](../format/datapack.md) has the details.
 
 Scripts can ask where they are and decorate what the terrain made. A block
 knows its biome (`block:biome()`), and `world:locate_biome` finds the nearest
-place of one, as `/locate biome` does, off the main thread. Both name a biome as
+place of one, as `/locate biome` does, without holding up the server. Both name a biome as
 your files do: your own by its id (`"ruby_grove"`), a package's as
 `"acme:grove"`, the game's in full (`"minecraft:dark_forest"`); a plain id that
 isn't one of your biomes is an error. Call `locate_biome` in a task, or give it a callback. The

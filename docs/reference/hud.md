@@ -7,15 +7,19 @@ One player's HUD: the elements of the project's resource packs (`hud` in `pack.j
 A handle: call its methods with a colon, `hud:method()`.
 
 
+| | Methods |
+| --- | --- |
+| [Methods](#methods) | [`player`](#player) [`fill_bar`](#fill_bar) [`fill_bars`](#fill_bars) [`bar`](#bar) [`set_icons`](#set_icons) [`icons`](#icons) [`set_text`](#set_text) [`text`](#text) [`remove`](#remove) [`clear`](#clear) |
 
+## Methods {#methods}
 
-## `hud:player()`
+### `hud:player()` {#player}
 
 Whose HUD it is.
 
-**Returns** `Player`
+**Returns** [`Player`](player.md)
 
-## `hud:fill_bar(name, value, max, options?)`
+### `hud:fill_bar(name, value, max, options?)` {#fill_bar}
 
 Fills a bar: `value` out of `max`, shown as that much of its segments (to the nearest half segment, for a bar with a half picture). A `value` past `max` or below 0 is shown full or empty; a `max` of 0 or less is an error. With `segments`, only that many of the bar's segments are drawn (1 to the bar's own), placed by the bar's `align`.
 
@@ -24,7 +28,7 @@ Fills a bar: `value` out of `max`, shown as that much of its segments (to the ne
 | `name` | `string` | The bar, as `<pack>/<key>`: a key of a resource pack's `hud.bars` (a package's as `ns:<pack>/<key>`). |
 | `value` | `number` |  |
 | `max` | `number` |  |
-| `options` (optional) | `HudFillOptions` |  |
+| `options` (optional) | [`HudFillOptions`](types.md#hudfilloptions) |  |
 
 **Returns** `boolean`: `false` when they're offline.
 
@@ -34,7 +38,7 @@ hud:fill_bar("ui/health", player:health() or 0, player:max_health() or 20)
 hud:fill_bar("ui/mana", 40, 100)
 ```
 
-## `hud:fill_bars(names, value, max, per_segment)`
+### `hud:fill_bars(names, value, max, per_segment)` {#fill_bars}
 
 Fills several bars as one long bar, each `per_segment` of `max` a segment: as many segments are drawn as `max` needs, filling the first bar's, then the next's (rows of hearts, ten to a row). A bar no segment reaches is removed. Every name must be a bar; `per_segment` and `max` more than 0.
 
@@ -53,7 +57,7 @@ local hud = player:hud()
 hud:fill_bars({ "ui/life1", "ui/life2", "ui/life3" }, 230, 400, 20)
 ```
 
-## `hud:bar(name)`
+### `hud:bar(name)` {#bar}
 
 What a bar shows, or `nil` when nothing set it (or they're offline).
 
@@ -61,9 +65,9 @@ What a bar shows, or `nil` when nothing set it (or they're offline).
 | --- | --- | --- |
 | `name` | `string` | The bar, as `<pack>/<key>`: a key of a resource pack's `hud.bars` (a package's as `ns:<pack>/<key>`). |
 
-**Returns** `HudBar?`
+**Returns** [`HudBar`](types.md#hudbar)`?`
 
-## `hud:set_icons(name, icons)`
+### `hud:set_icons(name, icons)` {#set_icons}
 
 Shows these of a row's icons, in this order: status effects, buffs, keys held. An empty list shows none. An icon the row doesn't have is an error.
 
@@ -78,7 +82,7 @@ Shows these of a row's icons, in this order: status effects, buffs, keys held. A
 player:hud():set_icons("ui/effects", { "poison", "regeneration" })
 ```
 
-## `hud:icons(name)`
+### `hud:icons(name)` {#icons}
 
 The icons a row shows, in order, or `nil` when nothing set it (or they're offline).
 
@@ -88,14 +92,14 @@ The icons a row shows, in order, or `nil` when nothing set it (or they're offlin
 
 **Returns** `string[]?`
 
-## `hud:set_text(name, text)`
+### `hud:set_text(name, text)` {#set_text}
 
 Sets a line of text, on the action bar's own line where the line's `x` and `align` put it. The server measures it with the game's font (`fonts/default.json`) to put it there; one it can't measure isn't drawn.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `name` | `string` | The line of text, as `<pack>/<key>`: a key of a resource pack's `hud.texts` (a package's as `ns:<pack>/<key>`). |
-| `text` | `Text` | MiniMessage; glyphs are fine. |
+| `text` | [`Text`](index.md#types) | MiniMessage; glyphs are fine. |
 
 **Returns** `boolean`: `false` when they're offline.
 
@@ -104,7 +108,7 @@ local mana = 40
 player:hud():set_text("ui/mana_label", "<aqua>" .. mana .. "/100")
 ```
 
-## `hud:text(name)`
+### `hud:text(name)` {#text}
 
 A line's text, or `nil` when nothing set it (or they're offline).
 
@@ -112,9 +116,9 @@ A line's text, or `nil` when nothing set it (or they're offline).
 | --- | --- | --- |
 | `name` | `string` | The line of text, as `<pack>/<key>`: a key of a resource pack's `hud.texts` (a package's as `ns:<pack>/<key>`). |
 
-**Returns** `Text?`
+**Returns** [`Text`](index.md#types)`?`
 
-## `hud:remove(name)`
+### `hud:remove(name)` {#remove}
 
 Stops drawing one element (any kind), until something sets it again.
 
@@ -124,6 +128,6 @@ Stops drawing one element (any kind), until something sets it again.
 
 **Returns** `boolean`: `false` when they're offline, or nothing was drawn for it.
 
-## `hud:clear()`
+### `hud:clear()` {#clear}
 
 Stops drawing every element: their action bar is the game's again.

@@ -111,12 +111,11 @@ Choose **Start server** in the toolbar.
    project in its own data folder (not in the project), with the NetherForge
    plugin installed.
 3. Paper starts. The status reads **running** when it's ready, and the hot
-   reload light turns on when the plugin has connected to the editor.
+   reload light turns on when the server is ready to take your changes.
 
 The **Console** panel shows the server's output, and you can type server
-commands into it. The first start for a Minecraft version also asks the
-server for its block and item lists, which the editor caches for validation
-and pickers.
+commands into it. The first start for a Minecraft version also learns that version's blocks and
+items, so the editor can check names and offer them in pickers.
 
 The server's port (25565 by default), memory and extra JVM arguments are in
 **Settings → Server**. The editor only accepts the arguments a server owner

@@ -2,9 +2,9 @@
 
 # Scripts
 
-Where a script runs decides what it can see. Every script also gets the [globals](index.md#globals). A centity, a menu, a dialog and an item each have at most one script, and its own handle is `this`; a slot or a button is `this:slot(index)` or `this:button(key)`. A script can `require` more `.lua` files beside it, which run as part of it, with the same `this`. A script's body runs every time it starts, and that's where it registers its handlers: see [Events](events.md).
+Where a script runs decides what it can see. Every script also gets the [globals](index.md#globals). A centity, a menu, a dialog, an item and a block each have at most one script, and its own handle is `this`; a slot or a button is `this:slot(index)` or `this:button(key)`. A script can `require` more `.lua` files beside it, which run as part of it, with the same `this`. A script's body runs every time it starts, and that's where it registers its handlers: see [Events](events.md).
 
-A script the editor creates starts with `local this = this --[[@as Centity]]` (or `Menu`, or `Dialog`), so lua-language-server knows which `this` it is: on its own it only knows `Centity|Menu|Dialog`.
+A script the editor creates starts with a line like `local this = this --[[@as Centity]]`, which tells the editor (and lua-language-server) which kind of `this` it is, so completions are right.
 
 ## Centity scripts
 
@@ -12,7 +12,7 @@ A centity's script (`centities/<id>/*.lua`, named by `script` in `centity.json`)
 
 | Global | Type | |
 | --- | --- | --- |
-| `this` | `Centity` | The centity instance this script runs on. |
+| `this` | [`Centity`](centity.md) | The centity instance this script runs on. |
 
 ## Module scripts
 
@@ -24,7 +24,7 @@ A menu's script (`menus/<id>/*.lua`, named by `script` in `menu.json`). Every wi
 
 | Global | Type | |
 | --- | --- | --- |
-| `this` | `Menu` | The window this script runs for. |
+| `this` | [`Menu`](menu.md) | The window this script runs for. |
 
 ## Dialog scripts
 
@@ -32,7 +32,7 @@ A dialog's script (`dialogs/<id>/*.lua`, named by `script` in `dialog.json`). Th
 
 | Global | Type | |
 | --- | --- | --- |
-| `this` | `Dialog` | The dialog this script belongs to. |
+| `this` | [`Dialog`](dialog.md) | The dialog this script belongs to. |
 
 ## Item scripts
 
@@ -40,7 +40,7 @@ A project item's script (`items/<id>/*.lua`, named by `script` in `item.json`). 
 
 | Global | Type | |
 | --- | --- | --- |
-| `this` | `ProjectItem` | The project item this script belongs to. |
+| `this` | [`ProjectItem`](projectitem.md) | The project item this script belongs to. |
 
 ## Block scripts
 
@@ -48,4 +48,4 @@ A project block's script (`blocks/<id>/*.lua`, named by `script` in `block.json`
 
 | Global | Type | |
 | --- | --- | --- |
-| `this` | `ProjectBlock` | The project block this script belongs to. |
+| `this` | [`ProjectBlock`](projectblock.md) | The project block this script belongs to. |

@@ -7,19 +7,19 @@ What `nf.schedule.daily`, `weekly` and `cron` return: a schedule that will run a
 A handle: call its methods with a colon, `schedule:method()`.
 
 
+## Methods {#methods}
 
-
-## `schedule:cancel()`
+### `schedule:cancel()` {#cancel}
 
 Ends it: it doesn't run again. What it last ran is kept, so a schedule made again with the same `id` doesn't catch up a run it already made. Cancelling one that has ended does nothing.
 
-## `schedule:is_active()`
+### `schedule:is_active()` {#is_active}
 
 Whether it will still run: `false` once it's cancelled or its script has unloaded.
 
 **Returns** `boolean`
 
-## `schedule:next_run()`
+### `schedule:next_run()` {#next_run}
 
 When it runs next, as Unix time in milliseconds (like `nf.server.unix_time()`; `nf.time.format` writes it as a date). `nil` once it has ended.
 

@@ -379,7 +379,7 @@ condition (the server logs that once), and a condition that errors counts as
 `false`. It's cheaper and clearer than refusing spawns in
 `centity_natural_spawn`, which only hears a spawn after the place was chosen.
 
-The spawner runs every second or so on the server's main thread. Around each
+About once a second, around each
 player it picks places 24 to 48 blocks away in loaded chunks, finds the
 centities whose rules fit the place, picks one by `weight`, and spawns a
 `group` of them near each other. The caps are the project's own: they count

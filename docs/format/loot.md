@@ -2,8 +2,8 @@
 
 A loot table says what a roll gives: a chest's contents, a mob's or a
 block's drops, a reward. Each is one file, `loot/<id>.json`, with nothing
-beside it. The format is NetherForge's own, shaped like Minecraft's loot
-tables but cut down to what people write by hand, and the plugin rolls it.
+beside it. It's shaped like Minecraft's loot tables, cut down to what people
+write by hand.
 
 ```json
 {
@@ -109,16 +109,10 @@ takes `"invert": true`, which turns it around: "unless".
 Item and tag ids the game doesn't have are errors once the editor has the
 game's data (`loot.unknown-tool`, `loot.unknown-enchantment`).
 
-### Why these conditions
-
-Minecraft has dozens of loot conditions and functions; most exist for the
-game's own tables (a block's state, the weather, a score) and a script can
-decide those before it rolls, or pick another table. These four are what
-hand-written tables use most: a chance, "only when a player did it" (so
-farms that kill mobs without a player get less), and the tool and its
-enchantments (silk touch, fortune and looting tables for blocks and mobs).
-Everything else a table needs, a script says when it rolls: its luck, and
-which table to roll.
+Minecraft's own loot tables have many more conditions and functions. Most of
+them depend on things a script can check before it rolls (the weather, a
+score, a block's state), so here a script decides those and picks the table
+or the luck to roll with.
 
 ## Rolling
 
@@ -126,8 +120,8 @@ Scripts roll a table with `nf.loot.roll(id, context)`, which gives back the
 items, and fill a chest with `nf.loot.fill(id, inventory, context)`; see
 [`nf.loot`](../reference/nf.loot.md). The context says who and what the roll
 is for: `player`, `tool`, `luck`, `looted`, `location`, and a `seed` that
-makes it give the same thing every time (the editor and the server roll it
-with the same code, so a seed means the same on both). The same rules as
+makes it give the same thing every time (the editor's roll preview gives the
+same for a seed as the server does). The same rules as
 Minecraft's: each pool whose conditions pass makes `rolls + bonusRolls ×
 luck` picks; a table entry rolls that table with the same draws.
 

@@ -99,14 +99,11 @@ only where it names it: a Minecraft item or a tag never takes a project
 item's stack, in the project's recipes and in Minecraft's own, so a ruby
 built on paper never crafts as paper.
 
-How the server does it: it matches every ingredient by item type (a project
-item by its kind), and the plugin checks each project item's place before
-anything is made, refusing a mismatch. A crafting grid shows no result, a
-crafter doesn't craft, a furnace, smoker, blast furnace or campfire doesn't
-cook it (the item stays in), a smithing table shows no result, and a
-stonecutter won't select the recipe. One consequence: a project recipe with
-the same item types and shape as one of Minecraft's can hide it, since the
-server offers one recipe per grid.
+When a project item is in the wrong place, nothing is made: a crafting grid
+shows no result, a furnace doesn't cook it (the item stays in), a smithing
+table shows no result, and a stonecutter won't select the recipe. One thing
+to watch for: a project recipe with the same Minecraft items and shape as one
+of Minecraft's own can hide it, since a crafting grid offers one recipe.
 
 ## Reloading
 

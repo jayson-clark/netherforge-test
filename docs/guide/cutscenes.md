@@ -30,9 +30,8 @@ Move the playhead (drag the ruler, the arrow keys, or **Play**) and click **Key
 position** or **Key rotation**: the camera is keyed where it is at that moment,
 so a first key makes a point and later keys bend the path. Drag a key to retime
 it, select it to change its value and easing beside the timeline, **Delete**
-removes it. **Add cue** puts a cue at the playhead. The preview is format's own
-camera path, the one the server follows, so what you see is what the player
-sees.
+removes it. **Add cue** puts a cue at the playhead. The preview follows exactly the
+path the player's camera will, so what you see is what they see.
 
 The path's coordinates are the world's by default. Key a cutscene around the
 origin and play it with an `origin` to use it anywhere (the example's `flyby`

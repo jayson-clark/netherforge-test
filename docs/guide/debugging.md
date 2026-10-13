@@ -63,7 +63,7 @@ the task wakes, twenty ticks later.
 - **Saves.** Hot reload can't happen in the middle of a script: files you save
   while the server is stopped are reloaded as soon as it runs again.
 - **Time limits and costs.** The time a script spends stopped isn't counted
-  against its [time limit](scripting.md#performance), its cost in
+  against its [time limit](performance.md#other-limits), its cost in
   `/nf scripts`, or the Profiler.
 - **The rest of the editor's requests** (spawning, the instance list, the
   server's settings) are refused with a note that the server is paused.

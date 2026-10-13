@@ -7,49 +7,47 @@ A live menu window from `menus/<id>/`: `this` in the menu's script, and what `pl
 A handle: call its methods with a colon, `menu:method()`.
 
 
+| | Methods |
+| --- | --- |
+| [The window](#the-window) | [`id`](#id) [`kind`](#kind) [`template`](#template) [`exists`](#exists) [`is_shared`](#is_shared) [`context`](#context) [`size`](#size) [`rows`](#rows) |
+| [Title and look](#title-and-look) | [`title`](#title) [`set_title`](#set_title) [`skin`](#skin) [`set_skin`](#set_skin) [`is_locked`](#is_locked) [`set_locked`](#set_locked) |
+| [Items](#items-section) | [`slot`](#slot) [`item`](#item) [`set_item`](#set_item) [`add_item`](#add_item) [`items`](#items) [`set_items`](#set_items) [`fill`](#fill) [`clear`](#clear) [`shift_into`](#shift_into) [`refresh`](#refresh) |
+| [Viewers](#viewers-section) | [`viewers`](#viewers) [`open_for`](#open_for) [`close_for`](#close_for) [`close_all`](#close_all) [`cursor_item`](#cursor_item) [`set_cursor_item`](#set_cursor_item) |
+| [Events](#events) | [`on`](#on) [`once`](#once) and 4 events |
 
-## Events
+## The window {#the-window}
 
-What `menu:on(event, handler)` listens for. See [Events](events.md) for how events work.
-
-| Event | Payload | Cancellable | |
-| --- | --- | --- | --- |
-| `open` | [MenuEvent](events.md#menuevent) |  | Someone opened this window: `player:open_menu`, or `menu:open_for`. Then the `MenuTemplate` it was made from (if it was) hears it, then `nf.on("menu_open")`. Bubbles. |
-| `close` | [MenuEvent](events.md#menuevent) |  | Someone closed this window, or left the server with it open. Then the `MenuTemplate` it was made from (if it was) hears it, then `nf.on("menu_close")`. When the last viewer of a window that isn't shared closes it, the window goes, and with it every handler on it. Bubbles. |
-| `click` | [MenuClickEvent](events.md#menuclickevent) | yes | Someone clicked while this window was open, in it or in their own inventory below it. A click on one of its slots is heard by that slot first; then the menu; then the `MenuTemplate` it was made from, if it was; then `nf.on("menu_click")`. `event:cancel()` keeps it from moving anything. A locked window starts every click that would move items in or out already cancelled; `event:uncancel()` lets one through. Bubbles. |
-| `drag` | [MenuDragEvent](events.md#menudragevent) | yes | Someone dragged a stack across slots of this window (spreading it out, or dropping one in each). Then the `MenuTemplate` it was made from (if it was) hears it. A locked window starts it already cancelled. Bubbles. |
-
-## `menu:id()`
+### `menu:id()` {#id}
 
 This window's id: the menu's own id for a shared one, a fresh one for each window of a menu that isn't.
 
 **Returns** `string`
 
-## `menu:kind()`
+### `menu:kind()` {#kind}
 
 Which menu it is: its folder name under `menus/`. Nil once the window is gone, and for a window made from a `MenuTemplate` (see `template()`).
 
 **Returns** `string?`
 
-## `menu:template()`
+### `menu:template()` {#template}
 
 The `MenuTemplate` this window was made from (`player:open_menu(template)`), or `nil` for a window of a menu file, and once the window or the template is gone.
 
-**Returns** `MenuTemplate?`
+**Returns** [`MenuTemplate`](menutemplate.md)`?`
 
-## `menu:exists()`
+### `menu:exists()` {#exists}
 
 Whether the window is still there. One that isn't shared goes when its last viewer closes it.
 
 **Returns** `boolean`
 
-## `menu:is_shared()`
+### `menu:is_shared()` {#is_shared}
 
 Whether this is the one window the whole server shares.
 
 **Returns** `boolean`
 
-## `menu:context()`
+### `menu:context()` {#context}
 
 What the script that opened this window passed along: `player:open_menu(menu, { context = value })`. The very value, not a copy, so a table can carry anything (the item being bought, a callback, the centity that was clicked). Every event on the window carries it too, as `event.context`. `nil` when nothing was passed, and always for a shared window, which nobody opens with a context.
 
@@ -60,41 +58,43 @@ What the script that opened this window passed along: `player:open_menu(menu, { 
 local discount = (this:context() or {}).discount or 0
 ```
 
-## `menu:size()`
+### `menu:size()` {#size}
 
 How many slots it has. Slots are numbered from 0, left to right, then down.
 
 **Returns** `integer`
 
-## `menu:rows()`
+### `menu:rows()` {#rows}
 
 How many rows of slots it has: a chest's 1 to 6, a hopper's 1, a dispenser's 3. `size() / rows()` is how many are in a row.
 
 **Returns** `integer`
 
-## `menu:title()`
+## Title and look {#title-and-look}
+
+### `menu:title()` {#title}
 
 The title, as MiniMessage, without the skin drawn in front of it.
 
-**Returns** `Text?`
+**Returns** [`Text`](index.md#types)`?`
 
-## `menu:set_title(text)`
+### `menu:set_title(text)` {#set_title}
 
 Renames the window. Minecraft can't rename a window that's open, so everyone looking sees it close and open again: fine between clicks, wrong every tick.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `text` | `Text` | MiniMessage. |
+| `text` | [`Text`](index.md#types) | MiniMessage. |
 
 **Returns** `boolean`: `false` once the window is gone.
 
-## `menu:skin()`
+### `menu:skin()` {#skin}
 
 The resource pack skin drawn behind it, as `<pack>/<key>`, or `nil` for the vanilla look.
 
 **Returns** `string?`
 
-## `menu:set_skin(skin?)`
+### `menu:set_skin(skin?)` {#set_skin}
 
 Changes the background. A skin is drawn in the title, so this costs the same close-and-open `set_title` does. A skin the project's resource packs don't have is an error.
 
@@ -108,13 +108,13 @@ Changes the background. A skin is drawn in the title, so this costs the same clo
 this:set_skin("ui/shop_night")
 ```
 
-## `menu:is_locked()`
+### `menu:is_locked()` {#is_locked}
 
 Whether clicks are kept from moving items into or out of it: such a click reaches handlers already cancelled. Scripts hear the clicks either way.
 
 **Returns** `boolean`
 
-## `menu:set_locked(locked)`
+### `menu:set_locked(locked)` {#set_locked}
 
 Locks or unlocks this window. Not saved: a reload goes back to what the file says.
 
@@ -122,13 +122,119 @@ Locks or unlocks this window. Not saved: a reload goes back to what the file say
 | --- | --- | --- |
 | `locked` | `boolean` |  |
 
-## `menu:shift_into(storage, first?, last?)`
+## Items {#items-section}
+
+### `menu:slot(index)` {#slot}
+
+One of its slots, as a handle. A slot outside the window is an error. A handle is the window's id and the index, so it's fine to keep while the window lasts.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `index` | `integer` | From 0. |
+
+**Returns** [`Slot`](slot.md)
+
+```lua
+local buy = this:slot(13)
+buy:set_item({ kind = "minecraft:emerald", name = "<green>Buy" })
+```
+
+### `menu:item(index)` {#item}
+
+What is in a slot, or `nil` for an empty one. A slot outside the window is an error.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `index` | `integer` | From 0. |
+
+**Returns** [`Item`](types.md#item)`?`
+
+### `menu:set_item(index, item?)` {#set_item}
+
+Puts an item in a slot, replacing what was there, or empties it. An item table with a misspelled field, or an item id the server doesn't have, is an error.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `index` | `integer` | From 0. |
+| `item` (optional) | [`Item`](types.md#item) | Leave it out (or `nil`) to empty the slot. |
+
+**Returns** `boolean`: `false` once the window is gone.
+
+```lua
+local bread = this:item(11)
+if bread then
+  bread.count = bread.count - 1
+  this:set_item(11, bread)
+end
+```
+
+### `menu:add_item(item)` {#add_item}
+
+Puts an item wherever it fits, topping up matching stacks first, the way picking something up does.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `item` | [`Item`](types.md#item) |  |
+
+**Returns** `integer`: How many didn't fit: 0 when all of it went in.
+
+### `menu:items()` {#items}
+
+Every item in it, keyed by slot. Empty slots are left out, so `pairs` visits only what is there.
+
+**Returns** `table<integer, `[`Item`](types.md#item)`>`
+
+```lua
+for index, item in pairs(this:items()) do
+  log(index, item.kind, item.count)
+end
+```
+
+### `menu:set_items(items)` {#set_items}
+
+Puts several items in at once, by slot, replacing what was in those slots; the others are left alone. Every item is checked before any slot changes, so a mistake (a slot outside the window, a misspelled field, an item the server doesn't have) is an error that leaves the window as it was.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `items` | `table<integer, `[`Item`](types.md#item)`>` | Items by slot, from 0: `{ [11] = bread, [15] = cake }`. |
+
+**Returns** `boolean`: `false` once the window is gone.
+
+```lua
+this:set_items({
+  [11] = { kind = "minecraft:bread", count = 4 },
+  [15] = { kind = "minecraft:cake" },
+})
+```
+
+### `menu:fill(item, indices?)` {#fill}
+
+Puts a copy of one item in every empty slot, or in each of the listed slots (empty or not): a border of glass panes, say. A slot outside the window is an error.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `item` | [`Item`](types.md#item) |  |
+| `indices` (optional) | `integer[]` | The slots to fill, from 0. Leave it out for every empty one. |
+
+**Returns** `boolean`: `false` once the window is gone.
+
+```lua
+this:fill({ kind = "minecraft:gray_stained_glass_pane", hide_tooltip = true })
+```
+
+### `menu:clear()` {#clear}
+
+Empties every slot. To empty one, `set_item(index, nil)`.
+
+**Returns** `boolean`: `false` once the window is gone.
+
+### `menu:shift_into(storage, first?, last?)` {#shift_into}
 
 Where a shift-click from the player's own inventory goes: into the slots of this window bound to `storage`, from `first` to `last` (storage slot indexes), in order. Stacks top up partial stacks first, then take empty slots, as vanilla does. Each slot's `click` handlers hear the move as a click on it (`event.item` is the stack moving); `event:cancel()` refuses it there, and the item goes to the next slot. Nothing else is tried: an item that no slot takes stays in the player's inventory, and a window's other slots never get it. Applies whether or not the window is locked, and each call replaces the last. A reload forgets it, so the script's body sets it again. The window must be bound to the storage (`slot:bind`), and not be `shared`.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `storage` | `Inventory` | From `player:storage(name, size)`. |
+| `storage` | [`Inventory`](inventory.md) | From `player:storage(name, size)`. |
 | `first` (optional) | `integer` | The first storage slot to try, from 0. Default 0. |
 | `last` (optional) | `integer` | The last storage slot to try. Default the storage's last slot. |
 
@@ -143,180 +249,89 @@ nf.on("menu_open", function(event)
 end)
 ```
 
-## `menu:slot(index)`
-
-One of its slots, as a handle. A slot outside the window is an error. A handle is the window's id and the index, so it's fine to keep while the window lasts.
-
-| Parameter | Type | |
-| --- | --- | --- |
-| `index` | `integer` | From 0. |
-
-**Returns** `Slot`
-
-```lua
-local buy = this:slot(13)
-buy:set_item({ kind = "minecraft:emerald", name = "<green>Buy" })
-```
-
-## `menu:item(index)`
-
-What is in a slot, or `nil` for an empty one. A slot outside the window is an error.
-
-| Parameter | Type | |
-| --- | --- | --- |
-| `index` | `integer` | From 0. |
-
-**Returns** `Item?`
-
-## `menu:set_item(index, item?)`
-
-Puts an item in a slot, replacing what was there, or empties it. An item table with a misspelled field, or an item id the server doesn't have, is an error.
-
-| Parameter | Type | |
-| --- | --- | --- |
-| `index` | `integer` | From 0. |
-| `item` (optional) | `Item` | Leave it out (or `nil`) to empty the slot. |
-
-**Returns** `boolean`: `false` once the window is gone.
-
-```lua
-local bread = this:item(11)
-if bread then
-  bread.count = bread.count - 1
-  this:set_item(11, bread)
-end
-```
-
-## `menu:add_item(item)`
-
-Puts an item wherever it fits, topping up matching stacks first, the way picking something up does.
-
-| Parameter | Type | |
-| --- | --- | --- |
-| `item` | `Item` |  |
-
-**Returns** `integer`: How many didn't fit: 0 when all of it went in.
-
-## `menu:items()`
-
-Every item in it, keyed by slot. Empty slots are left out, so `pairs` visits only what is there.
-
-**Returns** `table<integer, Item>`
-
-```lua
-for index, item in pairs(this:items()) do
-  log(index, item.kind, item.count)
-end
-```
-
-## `menu:set_items(items)`
-
-Puts several items in at once, by slot, replacing what was in those slots; the others are left alone. Every item is checked before any slot changes, so a mistake (a slot outside the window, a misspelled field, an item the server doesn't have) is an error that leaves the window as it was.
-
-| Parameter | Type | |
-| --- | --- | --- |
-| `items` | `table<integer, Item>` | Items by slot, from 0: `{ [11] = bread, [15] = cake }`. |
-
-**Returns** `boolean`: `false` once the window is gone.
-
-```lua
-this:set_items({
-  [11] = { kind = "minecraft:bread", count = 4 },
-  [15] = { kind = "minecraft:cake" },
-})
-```
-
-## `menu:fill(item, indices?)`
-
-Puts a copy of one item in every empty slot, or in each of the listed slots (empty or not): a border of glass panes, say. A slot outside the window is an error.
-
-| Parameter | Type | |
-| --- | --- | --- |
-| `item` | `Item` |  |
-| `indices` (optional) | `integer[]` | The slots to fill, from 0. Leave it out for every empty one. |
-
-**Returns** `boolean`: `false` once the window is gone.
-
-```lua
-this:fill({ kind = "minecraft:gray_stained_glass_pane", hide_tooltip = true })
-```
-
-## `menu:clear()`
-
-Empties every slot. To empty one, `set_item(index, nil)`.
-
-**Returns** `boolean`: `false` once the window is gone.
-
-## `menu:viewers()`
-
-Everyone looking at it now.
-
-**Returns** `Player[]`
-
-## `menu:cursor_item(player)`
-
-What a viewer is carrying on their cursor while they have this window open, or `nil` for nothing (and when they aren't looking at it).
-
-| Parameter | Type | |
-| --- | --- | --- |
-| `player` | `Player` |  |
-
-**Returns** `Item?`
-
-## `menu:set_cursor_item(player, item?)`
-
-Puts an item on a viewer's cursor, replacing what they were carrying, or empties it. What's on the cursor goes back to their inventory (or drops) when they close the window.
-
-| Parameter | Type | |
-| --- | --- | --- |
-| `player` | `Player` |  |
-| `item` (optional) | `Item` | Leave it out (or `nil`) to empty the cursor. |
-
-**Returns** `boolean`: `false` when they aren't looking at this window or the window is gone.
-
-## `menu:refresh()`
+### `menu:refresh()` {#refresh}
 
 Sends the whole window to everyone looking at it again. Changes are sent by themselves, so this is only for when a viewer's screen may be out of step: after a cancelled click left a ghost item on it, say.
 
 **Returns** `boolean`: `false` once the window is gone.
 
-## `menu:open_for(player)`
+## Viewers {#viewers-section}
+
+### `menu:viewers()` {#viewers}
+
+Everyone looking at it now.
+
+**Returns** [`Player`](player.md)`[]`
+
+### `menu:open_for(player)` {#open_for}
 
 Shows this very window to someone too: a second pair of eyes on one menu. Its `open` handlers hear it. To give someone a window of their own, use `player:open_menu`.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `player` | `Player` |  |
+| `player` | [`Player`](player.md) |  |
 
 **Returns** `boolean`: `false` when they're offline or the window is gone.
 
-## `menu:close_for(player)`
+### `menu:close_for(player)` {#close_for}
 
 Closes it for one viewer.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `player` | `Player` |  |
+| `player` | [`Player`](player.md) |  |
 
 **Returns** `boolean`: `false` when the window is gone or they weren't looking at it.
 
-## `menu:close_all()`
+### `menu:close_all()` {#close_all}
 
 Closes it for everyone looking at it.
 
 **Returns** `boolean`: `false` once the window is gone.
 
-## `menu:on(event, handler, options?)`
+### `menu:cursor_item(player)` {#cursor_item}
+
+What a viewer is carrying on their cursor while they have this window open, or `nil` for nothing (and when they aren't looking at it).
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `player` | [`Player`](player.md) |  |
+
+**Returns** [`Item`](types.md#item)`?`
+
+### `menu:set_cursor_item(player, item?)` {#set_cursor_item}
+
+Puts an item on a viewer's cursor, replacing what they were carrying, or empties it. What's on the cursor goes back to their inventory (or drops) when they close the window.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `player` | [`Player`](player.md) |  |
+| `item` (optional) | [`Item`](types.md#item) | Leave it out (or `nil`) to empty the cursor. |
+
+**Returns** `boolean`: `false` when they aren't looking at this window or the window is gone.
+
+## Events
+
+What `menu:on(event, handler)` listens for. See [Events](events.md) for how events work.
+
+| Event | Payload | |
+| --- | --- | --- |
+| `open` | [MenuEvent](types.md#menuevent) | Someone opened this window: `player:open_menu`, or `menu:open_for`. Then the `MenuTemplate` it was made from (if it was) hears it, then `nf.on("menu_open")`. Bubbles. |
+| `close` | [MenuEvent](types.md#menuevent) | Someone closed this window, or left the server with it open. Then the `MenuTemplate` it was made from (if it was) hears it, then `nf.on("menu_close")`. When the last viewer of a window that isn't shared closes it, the window goes, and with it every handler on it. Bubbles. |
+| `click` | [MenuClickEvent](types.md#menuclickevent) | Someone clicked while this window was open, in it or in their own inventory below it. A click on one of its slots is heard by that slot first; then the menu; then the `MenuTemplate` it was made from, if it was; then `nf.on("menu_click")`. `event:cancel()` keeps it from moving anything. A locked window starts every click that would move items in or out already cancelled; `event:uncancel()` lets one through. **Cancellable.** Bubbles. |
+| `drag` | [MenuDragEvent](types.md#menudragevent) | Someone dragged a stack across slots of this window (spreading it out, or dropping one in each). Then the `MenuTemplate` it was made from (if it was) hears it. A locked window starts it already cancelled. **Cancellable.** Bubbles. |
+
+### `menu:on(event, handler, options?)` {#on}
 
 Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `event` | `Menu.Event` | The event's name. |
-| `handler` | `fun(event: Event)` | Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`. |
-| `options` (optional) | `EventOptions` | How to listen: `{ every = n }` for `tick`. |
+| `handler` | `fun(event: `[`Event`](types.md#event)`)` | Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`. |
+| `options` (optional) | [`EventOptions`](types.md#eventoptions) | How to listen: `{ every = n }` for `tick`. |
 
-**Returns** `Subscription`: Call `:cancel()` on it to stop listening.
+**Returns** [`Subscription`](subscription.md): Call `:cancel()` on it to stop listening.
 
 ```lua
 this:on("open", function(event)
@@ -324,13 +339,13 @@ this:on("open", function(event)
 end)
 ```
 
-## `menu:once(event, handler)`
+### `menu:once(event, handler)` {#once}
 
 Like `menu:on`, but the handler runs only the next time the event happens, then stops listening.
 
 | Parameter | Type | |
 | --- | --- | --- |
 | `event` | `Menu.Event` | The event's name. |
-| `handler` | `fun(event: Event)` | Called with the event. |
+| `handler` | `fun(event: `[`Event`](types.md#event)`)` | Called with the event. |
 
-**Returns** `Subscription`: Call `:cancel()` on it to stop waiting before then.
+**Returns** [`Subscription`](subscription.md): Call `:cancel()` on it to stop waiting before then.

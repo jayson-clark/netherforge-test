@@ -46,7 +46,7 @@ export function terrainReference(spec: TerrainApiSpec): string {
     '',
     '# Terrain scripts',
     '',
-    "What a terrain's script (`terrain/<id>.lua`, named by its file's [`script`](../format/terrain.md#script)) can call. It isn't a server script: it runs in Lua states of its own on the server's chunk threads, and in the editor's preview, so it has nothing of the server (of `nf`, only `nf.math`), and gives the same blocks for a seed every time. Its body is given the world as `...` and returns its stages:",
+    "What a terrain's script (`terrain/<id>.lua`, named by its file's [`script`](../format/terrain.md#script)) can call. It isn't a server script: it runs while chunks are being made, and in the editor's preview, so it has nothing of the server (of `nf`, only `nf.math`), and gives the same blocks for a seed every time. Its body is given the world as `...` and returns its stages:",
     '',
     '```lua',
     '---@type Terrain',

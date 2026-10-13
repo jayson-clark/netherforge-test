@@ -6,13 +6,13 @@ Minecraft versions.
 
 Everything is in one repository on [GitHub](https://github.com/netherforge/netherforge):
 
-| Folder      | What it is                                                                                                  |
-| ----------- | ----------------------------------------------------------------------------------------------------------- |
-| `apps/`     | What we ship: the desktop editor (Tauri 2) and the Paper plugin (a runtime plus one adapter per version).   |
-| `packages/` | Shared libraries: `format` (the file format, Kotlin Multiplatform) and `api` (the Lua API spec).            |
-| `docs/`     | This site, including the [file-format spec](format/project.md) and the [API reference](reference/index.md). |
-| `examples/` | Sample projects, which are also the test fixtures.                                                          |
-| `tools/`    | Build, test, lint and release scripts, and the Gradle build.                                                |
+| Folder      | What it is                                                                                                |
+| ----------- | --------------------------------------------------------------------------------------------------------- |
+| `apps/`     | What we ship: the desktop editor (Tauri 2) and the Paper plugin (a runtime plus one adapter per version). |
+| `packages/` | Shared libraries: `format` (the file format, Kotlin Multiplatform) and `api` (the Lua API spec).          |
+| `docs/`     | This site, including the [file-format spec](format/index.md) and the [API reference](reference/index.md). |
+| `examples/` | Sample projects, which are also the test fixtures.                                                        |
+| `tools/`    | Build, test, lint and release scripts, and the Gradle build.                                              |
 
 ## Where to start
 
@@ -41,8 +41,13 @@ pnpm docs:dev      # live preview at http://localhost:5173
 pnpm docs:build    # what CI runs; fails on dead links
 ```
 
-- **Guides** are in `docs/guide/`. Describe behaviour that exists, and check
-  it against the code or the spec.
+- **Write for people using NetherForge**, not working on it. Say what
+  something does and what it means for a project, not how the engine does it:
+  no class names, threads, caches or protocols. That belongs in the skills
+  and code comments.
+- **Guides** are in `docs/guide/`, listed by section in
+  `docs/.vitepress/config.ts`. Describe behaviour that exists, and check it
+  against the code or the spec.
 - **The file format** in `docs/format/` is the specification the format
   library implements. Change it in the same pull request as the format.
   `pnpm test` checks the pages against the checker (`docs/tests/`), so a page
@@ -58,4 +63,7 @@ pnpm docs:build    # what CI runs; fails on dead links
     shared (item stacks, a project's manifest) is listed in the test's `PAGES`.
 - **The Lua API reference** in `docs/reference/` is generated from
   `packages/api/src/spec/` by `pnpm generate`. Don't edit it here: change the spec and
-  regenerate. The sidebar picks up new pages by itself.
+  regenerate. Which section a page is in, and how a class's methods are
+  grouped on its page, is `packages/api/scripts/emit/layout.ts`;
+  `pnpm generate` fails, saying what to add there, when something new isn't
+  placed.

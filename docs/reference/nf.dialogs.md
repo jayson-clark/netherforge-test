@@ -6,10 +6,9 @@ The project's dialogs (`dialogs/<id>/`), and dialogs scripts make.
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.dialogs.get(dialog)`
+### `nf.dialogs.get(dialog)` {#get}
 
 A dialog by id. There's one of each, so this always finds it; a dialog the project doesn't have is an error.
 
@@ -17,13 +16,13 @@ A dialog by id. There's one of each, so this always finds it; a dialog the proje
 | --- | --- | --- |
 | `dialog` | `string` | Its folder name under `dialogs/`. |
 
-**Returns** `Dialog`
+**Returns** [`Dialog`](dialog.md)
 
 ```lua
 nf.dialogs.get("welcome"):open_for(event.player)
 ```
 
-## `nf.dialogs.create(definition)`
+### `nf.dialogs.create(definition)` {#create}
 
 Makes a dialog from a table instead of a file. The table says what `dialog.json` would, in Lua spelling (`after_action`, `can_close_with_escape`, an input's `max_length`, items as `Item` tables): `title` (required), `type`, `body`, `inputs`, `buttons`, `columns`, `dialogs`, and the rest of the file's fields except `script`. The `Dialog` it returns works like any other: `open_for`, `ask`, `button(key)`, and `press` and `close` handlers on it and its buttons. Its id is made up and never names a folder under `dialogs/`. It lasts as long as the script that created it; after that its methods answer `nil` or `false` and its handlers are gone. A key it doesn't take, a value of the wrong type, or anything `dialog.json` would have an error for (two buttons with one key, a `dialog_list` naming a dialog there isn't) is an error.
 
@@ -31,7 +30,7 @@ Makes a dialog from a table instead of a file. The table says what `dialog.json`
 | --- | --- | --- |
 | `definition` | `table` | What the dialog is, as `dialog.json` would say it, with its keys in snake_case. |
 
-**Returns** `Dialog`
+**Returns** [`Dialog`](dialog.md)
 
 ```lua
 local rename = nf.dialogs.create({

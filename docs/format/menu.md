@@ -319,6 +319,6 @@ the player unless `useEffects` says so.
 with durability, which the server knows) is an error
 (`item.max-stack-size-durable`), as Minecraft refuses it.
 
-`data` is saved on the stack itself (its persistent data container), so it goes
+`data` is saved on the stack itself, so it goes
 wherever the item goes. Tag a coin with `"data": { "coin": true }`. Scripts read
-and write it as `item.data`; see [Item](../reference/events.md#item).
+and write it as `item.data`; see [Item](../reference/types.md#item).

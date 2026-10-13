@@ -648,15 +648,15 @@ The whole API (`terrain.seed()`, `min_y()`, `max_y()`, `sea_level()`, `noise(nam
 column or a place, `plan`, a noise's `:at(x, z)` and `:at(x, y, z)`) is the
 [terrain scripts reference](../reference/terrain-scripts.md).
 
-**It isn't a server script.** It runs where chunks are made, on the server's chunk threads (and in the editor's
-preview), in Lua states of its own: one for each thread making a chunk at once, never the server's state, so it has
-no `nf`, no events and nothing of the server, and nothing it keeps in a global is seen by another state. Lua 5.4's
-basics are there, `require` reaches the project's modules (each state runs its own copy of a module, so only modules
-that don't use `nf` work), and `io`, `os`, `debug`, `load` and `collectgarbage` aren't.
+**It isn't a server script.** It runs while chunks are being made (and in the editor's preview), apart from your
+other scripts, so it has no `nf`, no events and nothing of the server. Several chunks can be made at once, each with
+its own copy of the script, so don't rely on a global one call set being there for the next. Lua 5.4's basics are
+there, `require` reaches the project's modules (only modules that don't use `nf` work), and `io`, `os`, `debug`,
+`load` and `collectgarbage` aren't.
 
 **The same blocks for a seed, every time.** Everything it's given depends only on the world's seed and where it's
 asked (the noises are the file's own noise, seeded from the world's), and `math.random` is seeded for each call from
-the world's seed and the column, place or chunk (in a plan, the cell), so a chunk is the same whichever thread made it and in whichever order the
+the world's seed and the column, place or chunk (in a plan, the cell), so a chunk is the same in whichever order the
 world was explored, and the preview for a seed is that world.
 
 **A script that fails changes nothing.** A call that raises an error, or runs past its `budget` (a `pcall` can't catch
@@ -757,12 +757,11 @@ the file as it is now.
 
 The game's **carvers** and its **noise-based terrain** aren't used: the ground is exactly what this file says,
 decorations included, which is what the preview draws. The game's **features** (its trees, flowers, grass, lakes) are
-the biomes' (see [biomes](#biomes)), on top of the file's decorations. Datapack worldgen passed through is a later step
-of the same system.
+the biomes' (see [biomes](#biomes)), on top of the file's decorations.
 
-A terrain runs off the server's main thread, on as many threads as the server uses for chunks. It reads the
-compiled file and nothing else: no server script, and no other part of the project, is asked while a chunk generates
-(the structures its decorations place, and its script and the modules it requires, were read when the file was).
+A terrain doesn't slow the server down while chunks generate, and nothing else in the project is asked while it
+does: the structures its decorations place, its script and the modules it requires are all read when the terrain
+is saved.
 
 ## Problems
 

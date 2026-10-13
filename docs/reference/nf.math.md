@@ -6,10 +6,9 @@ Small arithmetic `math` doesn't have, for animating by hand: blending, clamping,
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.math.lerp(from, to, fraction)`
+### `nf.math.lerp(from, to, fraction)` {#lerp}
 
 The number `fraction` of the way from `from` to `to`: 0 is `from`, 1 is `to`, and outside that it carries on past either end. (`Vec3` has its own `lerp`.)
 
@@ -21,7 +20,7 @@ The number `fraction` of the way from `from` to `to`: 0 is `from`, 1 is `to`, an
 
 **Returns** `number`
 
-## `nf.math.clamp(value, min, max)`
+### `nf.math.clamp(value, min, max)` {#clamp}
 
 `value`, kept from `min` to `max`. `min` greater than `max` is an error.
 
@@ -33,7 +32,7 @@ The number `fraction` of the way from `from` to `to`: 0 is `from`, 1 is `to`, an
 
 **Returns** `number`
 
-## `nf.math.remap(value, from_min, from_max, to_min, to_max)`
+### `nf.math.remap(value, from_min, from_max, to_min, to_max)` {#remap}
 
 Moves `value` from one range to another: `from_min` becomes `to_min`, `from_max` becomes `to_max`, and everything else in proportion (beyond the ends too; clamp it if it mustn't). A range from a number to itself is an error.
 
@@ -51,7 +50,7 @@ Moves `value` from one range to another: `from_min` becomes `to_min`, `from_max`
 local pitch = nf.math.remap(health, 0, 20, 0.5, 2)
 ```
 
-## `nf.math.ease(easing, fraction)`
+### `nf.math.ease(easing, fraction)` {#ease}
 
 Reshapes a fraction from 0 to 1 by one of the curves animation keyframes use: `"linear"` as it is, `"step"` 0 until 1, `"ease_in"` starting slow, `"ease_out"` ending slow, `"ease_in_out"` both. Every curve takes 0 to 0 and 1 to 1; a fraction outside 0 to 1 is clamped first.
 

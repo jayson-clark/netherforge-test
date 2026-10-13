@@ -62,7 +62,7 @@ block's.
 
 A bow with `"drawWithoutAmmo": true` draws with no arrows in the inventory,
 and fires one each time, using none up. Its arrow is the server's own: the
-shot still goes through [`entity_shoot_bow`](../reference/events.md), so a
+shot still goes through [`entity_shoot_bow`](../reference/events.md#on-nf), so a
 script can cancel it (nothing is fired and the arrow is taken back), and a
 project that wants its own ammo can cancel it and spend its own item instead.
 The arrow can't be picked up again. It's the one behaviour, with no options.
@@ -89,23 +89,21 @@ own in its `data`.
 
 ## The stack remembers
 
-A stack made from a project item carries the item's id, in the project's
-[namespace](references.md#namespaces) (`shop:ruby`), in its persistent data
-container, so it's still a ruby wherever it goes: in a chest, dropped on the
-ground, after a restart, and it's never mistaken for another project's ruby.
-Scripts read it back as `item.item` (or `nf.items.id(item)`), without the
-project's own namespace (`ruby`), and recipes match it by that id, never by
-its looks.
+A stack made from a project item stays that item wherever it goes: in a
+chest, dropped on the ground, after a restart. It's never mistaken for
+another project's ruby, or for the plain item it's built on. Scripts read
+which item it is as `item.item` (or `nf.items.id(item)`), and recipes match
+it by that, never by its looks.
 
-It also carries a short hash of the look it was given. When the definition
-changes (a reload, or simply a different version of the project), a stack
-whose hash is out of date is rewritten the next time the server sees it: in a
-player's inventory when they join or the item reloads, in an inventory when
-someone opens it, and in a player's inventory just after they pick something
-up. The stack takes the definition's fields as they are now, and keeps what's
-its own: its count, its damage, its script `data`, whatever other plugins
-stored on it, and its enchantments when the definition sets none. A stack
-whose item no longer exists is left as it is.
+When the definition changes (you save `item.json`, or the server runs a newer
+version of the project), stacks that already exist are brought up to date the
+next time the server sees them: in a player's inventory when they join or the
+item reloads, in an inventory when someone opens it, and in a player's
+inventory just after they pick something up. A stack takes the definition's
+fields as they are now, and keeps what's its own: its count, its damage, its
+script `data`, whatever other plugins stored on it, and its enchantments when
+the definition sets none. A stack whose item no longer exists is left as it
+is.
 
 A name or lore worked out from one stack's own `data` (a prefix, a stat
 rolled for it) is the item script's `render` event's to give: it's heard for
@@ -125,10 +123,9 @@ saved, what anyone else sees, and what scripts read, which is always the real
 stack. Both fields start as the stack's own, after `render`, so `view` adds to
 what `render` worked out.
 
-The game is sent a stack again only when the stack changes, so when what a
-handler looks at changes (a menu opening or closing), call
-`player:refresh_items()`: at the end of the tick, every stack they can see is
-worked out again, and those that look different are sent. `nf.on("item_view")`
+A stack is only shown again when it changes, so when what a handler looks at
+changes (a menu opening or closing), call `player:refresh_items()`: every
+stack they can see is worked out again. `nf.on("item_view")`
 hears every stack, the project's or not, after its item's own handlers. See
 [Prices on a player's own items](../guide/menus.md#prices-on-a-player-s-own-items)
 for an example.

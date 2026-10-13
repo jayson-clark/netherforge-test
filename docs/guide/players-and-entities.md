@@ -42,9 +42,8 @@ until it's back, then the class it is.
 
 A handle is the entity's UUID (`entity:id()`), so it's fine to keep. Once the
 entity has gone (killed, removed), or while its chunk is unloaded, its
-methods answer `nil` or `false`, and `exists()` is `false`. The display and
-interaction entities NetherForge draws centities with are never handed out as
-entities.
+methods answer `nil` or `false`, and `exists()` is `false`. The entities a centity is drawn with are never handed out as entities: a
+centity is a [Centity](../reference/centity.md).
 
 Entities come from `world:entities(filter?)` (players included, filtered by
 `kind`, `tag`, `near` and `radius`, `living`), `world:spawn_entity(...)`,
@@ -174,8 +173,8 @@ inside a goal's own callbacks happens before the mob's next tick.
 
 ### Data on an entity
 
-`entity:data()` is the entity's own table, saved on the entity itself (its
-persistent data), so it goes where the entity goes and is gone when it is.
+`entity:data()` is the entity's own table, saved on the entity itself, so it goes where the entity goes and is gone
+when it is.
 It holds what every [saved table](./scripting.md#saving-data) does, and it's
 written back when the server autosaves, when the entity's chunk unloads and
 when the server stops. `spawn_entity`'s `data` option is what it starts

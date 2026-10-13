@@ -7,9 +7,9 @@ A random generator from `nf.random.new`: numbers that repeat for its seed, apart
 A handle: call its methods with a colon, `random:method()`.
 
 
+## Methods {#methods}
 
-
-## `random:integer(min, max)`
+### `random:integer(min, max)` {#integer}
 
 A whole number from `min` to `max`, both included, each as likely as the others. `min` greater than `max` is an error.
 
@@ -20,7 +20,7 @@ A whole number from `min` to `max`, both included, each as likely as the others.
 
 **Returns** `integer`
 
-## `random:number(min?, max?)`
+### `random:number(min?, max?)` {#number}
 
 A number from 0 up to (not including) 1, or from `min` up to `max`.
 
@@ -31,7 +31,7 @@ A number from 0 up to (not including) 1, or from `min` up to `max`.
 
 **Returns** `number`
 
-## `random:pick(list)`
+### `random:pick(list)` {#pick}
 
 One item of a list, each as likely as the others. `nil` for an empty list.
 
@@ -45,7 +45,7 @@ One item of a list, each as likely as the others. `nil` for an empty list.
 local greeting = rng:pick({ "Hello", "Welcome back", "Hi there" })
 ```
 
-## `random:shuffle(list)`
+### `random:shuffle(list)` {#shuffle}
 
 Puts a list in a random order, in place.
 
@@ -53,7 +53,7 @@ Puts a list in a random order, in place.
 | --- | --- | --- |
 | `list` | `table` | A list, numbered from 1. |
 
-## `random:weighted(weights)`
+### `random:weighted(weights)` {#weighted}
 
 One key of a table, picked with odds in proportion to its number: in `{ common = 3, rare = 1 }`, `"common"` comes up three times in four. Keys with weight 0 never come up; `nil` when there are none with more. A weight that is negative or not a number is an error. The same seed picks the same keys when the keys are strings, numbers or booleans.
 

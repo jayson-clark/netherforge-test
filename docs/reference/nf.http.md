@@ -6,10 +6,9 @@ Requests to web services (a Discord webhook, a status API). A package declares t
 
 A table of functions: call them with a dot.
 
+## Functions {#functions}
 
-
-
-## `nf.http.request(options, callback?)`
+### `nf.http.request(options, callback?)` {#request}
 
 Sends an HTTP request and gives the response. Any response is a result, whatever its status: a `404` or `500` is `response.status`, not an error, so check it. `nil, err` is for a request that couldn't be made or finished: a name that doesn't resolve, an address that isn't allowed, a refused connection, a timeout, a response over the size limit, too many requests this minute, a redirect to a host the package didn't declare, or more than 5 redirects. A mistake in the call itself (a URL that isn't `http` or `https`, a host the package didn't declare, a body over the limit, a header that can't be sent) is an error at the script's line. It works off the main thread, so its response arrives later: give `callback`, which is called with `response, err` once it's done, or call it inside a task (`nf.task`) without one, and it waits and returns `response, err`. Without a callback outside a task, it's an error. When it fails, `response` is `nil` and `err` says why.
 
@@ -17,10 +16,10 @@ Sends an HTTP request and gives the response. Any response is a result, whatever
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `options` | `HttpRequestOptions` | The request: its `url`, and optionally its `method`, `headers` and `body`. |
-| `callback` (optional) | `fun(response: HttpResponse?, err: string?)` | Called on the main thread once it's done, as this script's code, with the response: its status, headers and body (or `nil` and why not). Not called if the script has stopped by then. |
+| `options` | [`HttpRequestOptions`](types.md#httprequestoptions) | The request: its `url`, and optionally its `method`, `headers` and `body`. |
+| `callback` (optional) | `fun(response: `[`HttpResponse`](types.md#httpresponse)`?, err: string?)` | Called on the main thread once it's done, as this script's code, with the response: its status, headers and body (or `nil` and why not). Not called if the script has stopped by then. |
 
-**Returns** `HttpResponse?`: Only without a callback, in a task: the response: its status, headers and body, or `nil`., `string?`: Why it failed, when it did; `nil` when it worked.
+**Returns** [`HttpResponse`](types.md#httpresponse)`?`: Only without a callback, in a task: the response: its status, headers and body, or `nil`., `string?`: Why it failed, when it did; `nil` when it worked.
 
 ```lua
 nf.task(function()

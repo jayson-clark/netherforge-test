@@ -7,27 +7,33 @@ A scoreboard team, made by `nf.teams.create`: what goes before and after its mem
 A handle: call its methods with a colon, `team:method()`.
 
 
+| | Methods |
+| --- | --- |
+| [Members](#members-section) | [`name`](#name) [`exists`](#exists) [`add_member`](#add_member) [`remove_member`](#remove_member) [`has_member`](#has_member) [`members`](#members) [`remove`](#remove) |
+| [Names and colours](#names-and-colours) | [`display_name`](#display_name) [`set_display_name`](#set_display_name) [`prefix`](#prefix) [`set_prefix`](#set_prefix) [`suffix`](#suffix) [`set_suffix`](#set_suffix) [`color`](#color) [`set_color`](#set_color) |
+| [Rules](#rules) | [`has_friendly_fire`](#has_friendly_fire) [`set_friendly_fire`](#set_friendly_fire) [`can_see_invisible_teammates`](#can_see_invisible_teammates) [`set_can_see_invisible_teammates`](#set_can_see_invisible_teammates) [`nametags`](#nametags) [`set_nametags`](#set_nametags) [`collision`](#collision) [`set_collision`](#set_collision) |
 
+## Members {#members-section}
 
-## `team:name()`
+### `team:name()` {#name}
 
 Its name, as `nf.teams.create` was given it (without the `nf.` the scoreboard adds).
 
 **Returns** `string`
 
-## `team:exists()`
+### `team:exists()` {#exists}
 
 Whether it's still there: `false` once it's removed or its script has unloaded.
 
 **Returns** `boolean`
 
-## `team:add_member(member)`
+### `team:add_member(member)` {#add_member}
 
 Puts a player or entity in it, taking them out of any other team they're in (one team at a time is Minecraft's rule). A player stays in it when they leave and come back, and can be added while offline.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `member` | `Entity` | A player or any other entity. |
+| `member` | [`Entity`](entity.md) | A player or any other entity. |
 
 **Returns** `boolean`: `false` once it's gone, or once the entity has.
 
@@ -35,87 +41,95 @@ Puts a player or entity in it, taking them out of any other team they're in (one
 red:add_member(player)
 ```
 
-## `team:remove_member(member)`
+### `team:remove_member(member)` {#remove_member}
 
 Takes a player or entity out of it.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `member` | `Entity` | A player or any other entity. |
+| `member` | [`Entity`](entity.md) | A player or any other entity. |
 
 **Returns** `boolean`: Whether they were in it: `false` once it's gone.
 
-## `team:has_member(member)`
+### `team:has_member(member)` {#has_member}
 
 Whether a player or entity is in it. `false` once it's gone.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `member` | `Entity` | A player or any other entity. |
+| `member` | [`Entity`](entity.md) | A player or any other entity. |
 
 **Returns** `boolean`
 
-## `team:members()`
+### `team:members()` {#members}
 
 Its members that are here: players online (as `Player`) and entities in loaded chunks. Empty once it has gone.
 
-**Returns** `Entity[]`
+**Returns** [`Entity`](entity.md)`[]`
 
-## `team:display_name()`
+### `team:remove()` {#remove}
+
+Takes it off the scoreboard for good; its members are in no team any more.
+
+**Returns** `boolean`: `false` once it's gone already.
+
+## Names and colours {#names-and-colours}
+
+### `team:display_name()` {#display_name}
 
 What it's called where Minecraft names a team (the `/team list` output), as MiniMessage; `nil` once it's gone.
 
-**Returns** `Text?`
+**Returns** [`Text`](index.md#types)`?`
 
-## `team:set_display_name(text)`
+### `team:set_display_name(text)` {#set_display_name}
 
 Changes what it's called.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `text` | `Text` | MiniMessage. |
+| `text` | [`Text`](index.md#types) | MiniMessage. |
 
 **Returns** `boolean`: `false` once it's gone.
 
-## `team:prefix()`
+### `team:prefix()` {#prefix}
 
 What goes before each member's name, over their head and in the player list, as MiniMessage; `nil` once it's gone.
 
-**Returns** `Text?`
+**Returns** [`Text`](index.md#types)`?`
 
-## `team:set_prefix(text)`
+### `team:set_prefix(text)` {#set_prefix}
 
 Changes what goes before each member's name.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `text` | `Text` | MiniMessage; `""` for none. |
+| `text` | [`Text`](index.md#types) | MiniMessage; `""` for none. |
 
 **Returns** `boolean`: `false` once it's gone.
 
-## `team:suffix()`
+### `team:suffix()` {#suffix}
 
 What goes after each member's name, as MiniMessage; `nil` once it's gone.
 
-**Returns** `Text?`
+**Returns** [`Text`](index.md#types)`?`
 
-## `team:set_suffix(text)`
+### `team:set_suffix(text)` {#set_suffix}
 
 Changes what goes after each member's name.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `text` | `Text` | MiniMessage; `""` for none. |
+| `text` | [`Text`](index.md#types) | MiniMessage; `""` for none. |
 
 **Returns** `boolean`: `false` once it's gone.
 
-## `team:color()`
+### `team:color()` {#color}
 
 The colour of its members' names, and of their outline when they glow; `nil` when it has none (or once it's gone).
 
 **Returns** `"black"\|"dark_blue"\|"dark_green"\|"dark_aqua"\|"dark_red"\|"dark_purple"\|"gold"\|"gray"\|"dark_gray"\|"blue"\|"green"\|"aqua"\|"red"\|"light_purple"\|"yellow"\|"white"\|nil`
 
-## `team:set_color(color?)`
+### `team:set_color(color?)` {#set_color}
 
 Colours its members' names, and their outline when they glow (a glowing entity's outline is white otherwise). A prefix's own colours still win over it for the prefix.
 
@@ -130,13 +144,15 @@ red:set_color("red")
 zombie:set_glowing(true)
 ```
 
-## `team:has_friendly_fire()`
+## Rules {#rules}
+
+### `team:has_friendly_fire()` {#has_friendly_fire}
 
 Whether members can hurt each other. `false` once it's gone.
 
 **Returns** `boolean`
 
-## `team:set_friendly_fire(enabled)`
+### `team:set_friendly_fire(enabled)` {#set_friendly_fire}
 
 Lets members hurt each other, or stops them.
 
@@ -146,13 +162,13 @@ Lets members hurt each other, or stops them.
 
 **Returns** `boolean`: `false` once it's gone.
 
-## `team:can_see_invisible_teammates()`
+### `team:can_see_invisible_teammates()` {#can_see_invisible_teammates}
 
 Whether members see each other, faintly, while invisible. `false` once it's gone.
 
 **Returns** `boolean`
 
-## `team:set_can_see_invisible_teammates(enabled)`
+### `team:set_can_see_invisible_teammates(enabled)` {#set_can_see_invisible_teammates}
 
 Lets members see each other while invisible, or stops them.
 
@@ -162,13 +178,13 @@ Lets members see each other while invisible, or stops them.
 
 **Returns** `boolean`: `false` once it's gone.
 
-## `team:nametags()`
+### `team:nametags()` {#nametags}
 
 Who sees its members' name tags; `nil` once it's gone.
 
 **Returns** `"always"\|"never"\|"hide_for_other_teams"\|"hide_for_own_team"\|nil`
 
-## `team:set_nametags(visibility)`
+### `team:set_nametags(visibility)` {#set_nametags}
 
 Changes who sees its members' name tags.
 
@@ -178,13 +194,13 @@ Changes who sees its members' name tags.
 
 **Returns** `boolean`: `false` once it's gone.
 
-## `team:collision()`
+### `team:collision()` {#collision}
 
 Who its members push, and are pushed by; `nil` once it's gone.
 
 **Returns** `"always"\|"never"\|"push_other_teams"\|"push_own_team"\|nil`
 
-## `team:set_collision(rule)`
+### `team:set_collision(rule)` {#set_collision}
 
 Changes who its members push, and are pushed by.
 
@@ -193,9 +209,3 @@ Changes who its members push, and are pushed by.
 | `rule` | `"always"\|"never"\|"push_other_teams"\|"push_own_team"` | `"always"` (the default), `"never"`, `"push_other_teams"` (members pass through each other) or `"push_own_team"` (members push only each other). |
 
 **Returns** `boolean`: `false` once it's gone.
-
-## `team:remove()`
-
-Takes it off the scoreboard for good; its members are in no team any more.
-
-**Returns** `boolean`: `false` once it's gone already.

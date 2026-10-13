@@ -107,7 +107,7 @@ end)
   required one).
 - `players_only = true` refuses the console with a message, so the handler can
   count on `event.player`.
-- The handler gets a [CommandEvent](../reference/events.md#commandevent):
+- The handler gets a [CommandEvent](../reference/types.md#commandevent):
   `arguments` (the typed values, by name), `input` (everything after the
   command, as typed), `label` (the name or alias typed), `sender` (a
   [Sender](../reference/sender.md): the player or the console; answer with
@@ -142,14 +142,13 @@ An argument with a `default` is optional, and optional arguments come last.
 `default = false` makes one optional without a value, which reads well for
 players: `event.arguments.target or event.player`.
 
-What's typed is read by the server itself before the handler runs: every
-argument is a real Brigadier argument, so the player's client highlights and
-completes it as they type, a mistake (a number out of range, a selector that
-picks no one) gets the server's own red message, and a command or subcommand
-with a `permission` doesn't exist for someone without it. What only your
-project knows (a world, centity, menu or dialog by that name) NetherForge
-checks next, answering a mistake with a red message and the command's usage
-(`/give-coins <target> [amount]`).
+Arguments are checked before your handler runs, so the handler only ever sees
+good values. Players get the same experience as with Minecraft's own commands:
+the arguments are highlighted and completed as they type, a mistake (a number
+out of range, a selector that picks no one) gets a red message, and a command
+or subcommand with a `permission` is hidden from anyone without it. A name your
+project doesn't have (a world, centity, menu or dialog) is answered with a red
+message and the command's usage (`/give-coins <target> [amount]`).
 
 Tab completion comes from the type (online players, the project's menus, live
 centities, …). For anything else, give an argument a `complete` function: it
