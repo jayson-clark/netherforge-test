@@ -66,6 +66,7 @@ export function resourceActions(workspace: WorkspaceStore) {
     async create(folder: ExplorerFolder, group = ''): Promise<string | null> {
       const id = await ask.prompt({
         title: group ? `New ${folder.one} in ${groupPath(group)}` : `New ${folder.one}`,
+        icon: folder.icon,
         label: isFileFolder(folder) ? 'Id (the file name)' : 'Id (the folder name)',
         message: folder.message,
         confirmLabel: 'Create',
@@ -80,6 +81,7 @@ export function resourceActions(workspace: WorkspaceStore) {
     async renameAsking(folder: ExplorerFolder, id: string) {
       const next = await ask.prompt({
         title: `Rename ${id}`,
+        icon: folder.icon,
         label: isFileFolder(folder) ? 'Id (the file name)' : 'Id (the folder name)',
         message: folder.message,
         initial: id,
@@ -125,6 +127,7 @@ export function resourceActions(workspace: WorkspaceStore) {
       const current = groupPath(groupOf(folder, id))
       const next = await ask.prompt({
         title: `Move ${id} to a group`,
+        icon: 'folder',
         label: 'Group (names separated by /, empty for none)',
         message: `Groups sort ${folder.title.toLowerCase()} into folders, like ${KIND_EXAMPLE(folder)}. Its id stays "${id}", so nothing that names it changes.`,
         initial: current,
@@ -151,6 +154,7 @@ export function resourceActions(workspace: WorkspaceStore) {
         title: parent
           ? `New group in ${groupPath(parent)}`
           : `New group of ${folder.title.toLowerCase()}`,
+        icon: 'newFolder',
         label: 'Name',
         message: `A folder to sort ${folder.title.toLowerCase()} into, like ${KIND_EXAMPLE(folder)}. It only sorts: what's in it keeps its id.`,
         confirmLabel: 'Create',

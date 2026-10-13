@@ -198,7 +198,7 @@ export function ParticleEditor({ path }: { path: string }) {
 
 function EffectInspector({ model, edit }: { model: ParticleEffectFile; edit: Edit }) {
   return (
-    <Section title="Effect">
+    <Section title="Effect" icon="sparkles">
       <NumberField
         label="Duration (ticks)"
         dataPath="duration"
@@ -403,7 +403,7 @@ function EmitterInspector({
           ))}
       </Section>
 
-      <Section title="Emission">
+      <Section title="Emission" icon="sparkles">
         <SelectField
           label="Emits"
           value={emitter.rate !== undefined ? 'rate' : 'burst'}
@@ -475,7 +475,7 @@ function EmitterInspector({
         />
       </Section>
 
-      <Section title="Shape">
+      <Section title="Shape" icon="cube">
         <SelectField
           label="Shape"
           dataPath="shape"
@@ -586,7 +586,7 @@ function EmitterInspector({
         />
       </Section>
 
-      <Section title="Motion">
+      <Section title="Motion" icon="wind">
         <SelectField
           label="Motion"
           dataPath="motion"

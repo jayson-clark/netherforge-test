@@ -224,7 +224,7 @@ function AdvancementInspector({
   const project = icon?.item !== undefined
   return (
     <>
-      <Section title="Advancement">
+      <Section title="Advancement" icon="trophy">
         <SelectField
           label="Parent"
           dataPath={at('parent')}
@@ -253,6 +253,7 @@ function AdvancementInspector({
       </Section>
       <Section
         title="Display"
+        icon="eye"
         enabled={display !== undefined}
         onToggle={(on) => edit((draft) => setDisplayEnabled(draft, on))}
       >

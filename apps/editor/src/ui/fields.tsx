@@ -12,6 +12,7 @@
 import { useId, useState, type HTMLAttributes, type ReactNode } from 'react'
 import { cx } from './cx'
 import styles from './fields.module.css'
+import { Icon, type IconName } from './Icon'
 
 export interface GestureHandlers {
   onGestureStart?: () => void
@@ -176,7 +177,7 @@ export function Vec3Field({
     <div className={styles.row} data-path={dataPath}>
       <span
         className={cx(styles.label, styles.scrub)}
-        title="Drag to scrub X; hold Alt and drag a box to scrub one axis"
+        title="Drag to scrub X; drag an axis letter to scrub that axis"
         onPointerDown={(event) =>
           scrub(event, current[0], step, (x) => onChange([x, current[1], current[2]]), gesture)
         }
@@ -184,21 +185,33 @@ export function Vec3Field({
         {label}
       </span>
       <div className={cx(styles.value, styles.vec3)}>
-        {AXES.map((axis, i) => (
-          <NumberInput
-            key={axis}
-            label={`${label} ${axis}`}
-            dataPath={dataPath ? `${dataPath}[${i}]` : undefined}
-            value={current[i]}
-            step={step}
-            onChange={(next) => {
-              const out = [...current] as [number, number, number]
-              out[i] = next ?? defaultValue[i]!
-              onChange(out)
-            }}
-            {...gesture}
-          />
-        ))}
+        {AXES.map((axis, i) => {
+          const set = (next: number | undefined) => {
+            const out = [...current] as [number, number, number]
+            out[i] = next ?? defaultValue[i]!
+            onChange(out)
+          }
+          return (
+            <span key={axis} className={styles.axis} data-axis={axis}>
+              {/* The axis letter scrubs that axis alone. */}
+              <span
+                className={styles.axisLetter}
+                aria-hidden="true"
+                onPointerDown={(event) => scrub(event, current[i]!, step, set, gesture)}
+              >
+                {axis}
+              </span>
+              <NumberInput
+                label={`${label} ${axis}`}
+                dataPath={dataPath ? `${dataPath}[${i}]` : undefined}
+                value={current[i]}
+                step={step}
+                onChange={set}
+                {...gesture}
+              />
+            </span>
+          )
+        })}
       </div>
     </div>
   )
@@ -463,7 +476,7 @@ export function ColorField({
           aria-label={`Clear ${label}`}
           onClick={() => onChange(undefined)}
         >
-          ×
+          <Icon name="close" size={12} />
         </button>
       )}
     </Row>
@@ -511,29 +524,32 @@ export function CheckField({
   onChange: (value: boolean) => void
   dataPath?: string
 }) {
-  const id = useId()
+  // Not a `Row`: a yes-or-no reads as one line, box first, its label free to use the whole width.
   return (
-    <Row label={label} htmlFor={id}>
+    <label className={styles.checkRow}>
       <input
-        id={id}
         type="checkbox"
         data-path={dataPath}
         checked={value}
         onChange={(e) => onChange(e.target.checked)}
       />
-    </Row>
+      <span className={styles.checkLabel}>{label}</span>
+    </label>
   )
 }
 
 /** A collapsible inspector section with an optional enable toggle (for optional node parts). */
 export function Section({
   title,
+  icon,
   enabled,
   onToggle,
   children,
   actions,
 }: {
   title: string
+  /** Drawn before the title, so a long inspector is easy to scan. */
+  icon?: IconName
   enabled?: boolean
   onToggle?: (enabled: boolean) => void
   children?: ReactNode
@@ -542,7 +558,11 @@ export function Section({
   const [open, setOpen] = useState(true)
   const id = useId()
   return (
-    <section className={styles.section} aria-labelledby={id}>
+    <section
+      className={styles.section}
+      aria-labelledby={id}
+      data-off={(onToggle && !enabled) || undefined}
+    >
       <header className={styles.sectionHeader}>
         <button
           type="button"
@@ -551,16 +571,20 @@ export function Section({
           aria-expanded={open}
           onClick={() => setOpen(!open)}
         >
-          <span className={cx(styles.caret, open && styles.caretOpen)} aria-hidden="true">
-            ▸
-          </span>
-          {title}
+          <Icon
+            name="chevronRight"
+            size={12}
+            className={cx(styles.caret, open && styles.caretOpen)}
+          />
+          {icon && <Icon name={icon} size={14} className={styles.sectionIcon} />}
+          <span className={styles.sectionName}>{title}</span>
         </button>
         <span className={styles.sectionActions}>
           {actions}
           {onToggle && (
             <input
               type="checkbox"
+              className={styles.switch}
               aria-label={`${title} enabled`}
               checked={enabled ?? false}
               onChange={(event) => onToggle(event.target.checked)}

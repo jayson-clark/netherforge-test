@@ -106,14 +106,6 @@
   padding-right: 4px;
 }
 
-.up {
-  transform: rotate(-90deg);
-}
-
-.down {
-  transform: rotate(90deg);
-}
-
 .adders {
   display: flex;
   flex-wrap: wrap;

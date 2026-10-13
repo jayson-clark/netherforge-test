@@ -480,7 +480,11 @@ function TerrainSection({ model, edit, gesture, blocks }: Parts) {
     if (name) edit((d) => addEntry(d, 'noises', name, newEntry('noises', '')))
   }
   return (
-    <Section title="Terrain" actions={<AddButton one="terrain noise" onAdd={add} />}>
+    <Section
+      title="Terrain"
+      icon="mountain"
+      actions={<AddButton one="terrain noise" onAdd={add} />}
+    >
       <NumberField
         label="Base height"
         dataPath="terrain.base"
@@ -768,19 +772,17 @@ function LayerRows({
           />
           <span style={{ display: 'flex', gap: 4 }}>
             <IconButton
-              icon="arrow"
+              icon="arrowUp"
               label={`Move layer ${index + 1} up`}
               size={14}
               disabled={index === 0}
-              style={{ transform: 'rotate(-90deg)' }}
               onClick={() => edit((d) => moveLayer(d, at, index, index - 1))}
             />
             <IconButton
-              icon="arrow"
+              icon="arrowDown"
               label={`Move layer ${index + 1} down`}
               size={14}
               disabled={index === layers.length - 1}
-              style={{ transform: 'rotate(90deg)' }}
               onClick={() => edit((d) => moveLayer(d, at, index, index + 1))}
             />
             <IconButton
@@ -811,7 +813,7 @@ const GROUND_KINDS: readonly BlockKind[] = ['block', 'customBlock']
 function LayersSection(parts: Parts) {
   const { model, edit, blocks, customBlocks, structures } = parts
   return (
-    <Section title="Ground">
+    <Section title="Ground" icon="layers">
       <Hint>Layers from the surface down, then stone all the way.</Hint>
       <LayerRows {...parts} at={{ key: 'layers' }} base={['layers']} />
       <FieldGroup data-path="stone" header={<strong>Then, all the way down</strong>}>
@@ -888,7 +890,7 @@ function CavesSection({ model, edit, gesture }: Parts) {
     if (name) edit((d) => addEntry(d, 'caves', name, newEntry('caves', '')))
   }
   return (
-    <Section title="Caves" actions={<AddButton one="cave" onAdd={add} />}>
+    <Section title="Caves" icon="pickaxe" actions={<AddButton one="cave" onAdd={add} />}>
       {names.length === 0 && <Muted>No caves: the ground is solid.</Muted>}
       {names.map((name) => {
         const cave = model.caves?.[name]
@@ -1007,7 +1009,7 @@ function OresSection({ model, edit, gesture, blocks, customBlocks }: Parts) {
       )
   }
   return (
-    <Section title="Ores" actions={<AddButton one="ore" onAdd={add} />}>
+    <Section title="Ores" icon="gem" actions={<AddButton one="ore" onAdd={add} />}>
       {names.length === 0 && <Muted>No ores.</Muted>}
       {names.map((name) => {
         const ore = model.ores?.[name]
@@ -1153,7 +1155,7 @@ function DecorationsSection({
       edit((d) => addEntry(d, 'decorations', name, newEntry('decorations', TERRAIN_DEFAULTS.stone)))
   }
   return (
-    <Section title="Decorations" actions={<AddButton one="decoration" onAdd={add} />}>
+    <Section title="Decorations" icon="leaf" actions={<AddButton one="decoration" onAdd={add} />}>
       {names.length === 0 && <Muted>No decorations: nothing is scattered on the ground.</Muted>}
       {names.map((name) => {
         const decoration = model.decorations?.[name]
@@ -1476,7 +1478,7 @@ function BiomesSection(parts: Parts) {
       recipe(d.climate[key]!)
     })
   return (
-    <Section title="Biomes" actions={<AddButton one="biome area" onAdd={add} />}>
+    <Section title="Biomes" icon="leaf" actions={<AddButton one="biome area" onAdd={add} />}>
       {names.length === 0 && (
         <Muted>No biome areas: all of the world is {TERRAIN_DEFAULTS.biome}.</Muted>
       )}
@@ -1835,7 +1837,7 @@ function AreaTerrainFields({
 
 function StructuresSection({ model, edit }: Parts) {
   return (
-    <Section title="Structures">
+    <Section title="Structures" icon="structure">
       <CheckField
         label="The game's structures"
         dataPath="structures.vanilla"
@@ -1879,6 +1881,7 @@ function ScriptSection({ path, model, edit, gesture, lootTables }: Parts & { pat
   return (
     <Section
       title="Script"
+      icon="code"
       actions={script ? <AddButton one="script noise" onAdd={addNoise} /> : undefined}
     >
       <CheckField

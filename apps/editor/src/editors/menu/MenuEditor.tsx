@@ -296,7 +296,7 @@ function WindowInspector({
     edit((draft) => setKey(draft, key, value))
 
   return (
-    <Section title="Window">
+    <Section title="Window" icon="slot">
       <TextField
         label="Name"
         dataPath="name"

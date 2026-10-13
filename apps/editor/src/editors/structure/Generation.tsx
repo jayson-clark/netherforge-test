@@ -89,7 +89,12 @@ export function Generation({ id, path, exists }: { id: string; path: string; exi
   }
 
   return (
-    <Section title="Generates in the world" enabled={exists} onToggle={(on) => void toggle(on)}>
+    <Section
+      title="Generates in the world"
+      icon="sprout"
+      enabled={exists}
+      onToggle={(on) => void toggle(on)}
+    >
       {!exists && (
         <Hint>
           Turn this on to have the game place {id} by itself in new chunks, in the biomes you pick.

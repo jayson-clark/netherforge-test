@@ -144,7 +144,7 @@ export function GameBlockEditor({ path }: { path: string }) {
       </Stage>
       <InspectorPanel>
         <Datalist id={BLOCKS} values={choices} />
-        <Section title="Blocks">
+        <Section title="Blocks" icon="blocks">
           <div className={styles.list} data-path={fieldPath(['blocks'])}>
             <div className={styles.listHeader}>
               <span>The game&apos;s blocks and #tags</span>
@@ -176,7 +176,7 @@ export function GameBlockEditor({ path }: { path: string }) {
           </div>
           <Hint>Stairs, slabs and walls are blocks of their own: list each one you mean.</Hint>
         </Section>
-        <Section title="Mining">
+        <Section title="Mining" icon="pickaxe">
           <NumberField
             label="Hardness"
             dataPath="hardness"

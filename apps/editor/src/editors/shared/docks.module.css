@@ -3,4 +3,6 @@
   min-height: 0;
   overflow: auto;
   padding-bottom: 40px;
+  /* Fields lay themselves out by the panel's width (ui/fields.module.css). */
+  container: inspector / inline-size;
 }

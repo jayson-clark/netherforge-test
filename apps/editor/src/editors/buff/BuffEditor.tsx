@@ -64,7 +64,7 @@ export function BuffEditor({ path }: { path: string }) {
         </div>
       </Stage>
       <InspectorPanel>
-        <Section title="Shown as">
+        <Section title="Shown as" icon="eye">
           <TextField
             label="Name"
             dataPath="name"
@@ -112,7 +112,7 @@ export function BuffEditor({ path }: { path: string }) {
             }
           />
         </Section>
-        <Section title="Stats">
+        <Section title="Stats" icon="chart">
           {stats.map(([stat, value], index) => (
             <NumberField
               key={stat}
@@ -142,7 +142,7 @@ export function BuffEditor({ path }: { path: string }) {
             player:stat("defense"). Clear a number to take the stat off.
           </Hint>
         </Section>
-        <Section title="Rules">
+        <Section title="Rules" icon="sliders">
           <TextField
             label="Cures"
             dataPath="cures"

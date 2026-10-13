@@ -93,7 +93,7 @@ export function ProjectEditor({ path }: { path: string }) {
         <EditAsJson path={path} />
       </EditorBar>
       <Page className={styles.page}>
-        <Section title="Project">
+        <Section title="Project" icon="gear">
           <TextField
             label="Name"
             dataPath="name"
@@ -177,7 +177,7 @@ export function ProjectEditor({ path }: { path: string }) {
           exports={model.exports}
           onSet={(folder, id, on) => edit((draft) => setExported(draft, folder, id, on))}
         />
-        <Section title="Generators">
+        <Section title="Generators" icon="mountain">
           <TextField
             label="Commands"
             dataPath="generate"
@@ -208,7 +208,7 @@ function ManagedWorlds({
   onRemove: (name: string) => void
 }) {
   return (
-    <Section title="Managed worlds">
+    <Section title="Managed worlds" icon="globe">
       <Hint>
         Worlds already on the server that this project&apos;s scripts may unload and delete. Worlds
         its scripts create are the project&apos;s anyway; the server&apos;s main world never is.
@@ -286,7 +286,7 @@ function WorldSpawning({
     setName('')
   }
   return (
-    <Section title="Worlds">
+    <Section title="Worlds" icon="globe">
       <Hint>
         Settings for a world on the server, by the world&apos;s name (it needn&apos;t be one the
         project manages). A world with a terrain or a dimension type the server doesn&apos;t have
@@ -419,7 +419,7 @@ function Requirements({
   onRemove: (key: RequiredList, name: string) => void
 }) {
   return (
-    <Section title="What scripts need">
+    <Section title="What scripts need" icon="code">
       <Hint>
         What this project&apos;s scripts may do only when they&apos;ve asked for it here, so whoever
         runs the project sees in one place what it needs. A script that tries without it gets an
@@ -486,7 +486,7 @@ const NONE: never[] = []
 function TreeRequirements() {
   const requirements = useWorkspace((s) => s.outline?.requirements ?? NONE)
   return (
-    <Section title="What running it asks of a server">
+    <Section title="What running it asks of a server" icon="server">
       <Hint>
         Everything the project and the packages it depends on need, as the server logs it and{' '}
         <Mono>/nf requires</Mono> lists it.
@@ -528,7 +528,7 @@ function Permissions({
   onRemove: (node: string) => void
 }) {
   return (
-    <Section title="Grantable permissions">
+    <Section title="Grantable permissions" icon="shield">
       <Hint>
         Permissions scripts may grant or deny players. Each covers itself and every permission under
         it: <Mono>shop</Mono> covers <Mono>shop.vip</Mono> too.
@@ -768,7 +768,7 @@ function Dependencies({
     onSet(name, kind === 'path' ? { path: where.trim() } : { git: where.trim() })
   }
   return (
-    <Section title="Dependencies">
+    <Section title="Dependencies" icon="box">
       <Hint>
         Packages this project uses: their exported resources are named <Mono>ns:id</Mono>. A git
         dependency is fetched at its rev (a branch, tag or commit; the default branch without one)
@@ -850,7 +850,7 @@ function Exports({
     (kind) => KINDS[kind].exportable && (resources?.[kind]?.length ?? 0) > 0,
   )
   return (
-    <Section title="Exports">
+    <Section title="Exports" icon="share">
       <Hint>
         When another project depends on this one, it may use only what&apos;s ticked here, by{' '}
         <Mono>ns:id</Mono>. Everything else stays this project&apos;s own.

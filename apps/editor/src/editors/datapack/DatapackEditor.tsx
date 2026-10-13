@@ -141,7 +141,7 @@ function PackFields({ model, edit }: { model: PackMeta; edit: Edit }) {
   const overlays = model.overlays?.entries ?? []
   return (
     <>
-      <Section title="Pack">
+      <Section title="Pack" icon="box">
         {description === undefined || typeof description === 'string' ? (
           <TextField
             label="Description"

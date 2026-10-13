@@ -189,7 +189,7 @@ function MapInfo({
 }) {
   return (
     <>
-      <Section title="World">
+      <Section title="World" icon="globe">
         <Row label="Name">
           <span aria-label="World name">{info.name ?? 'not given'}</span>
         </Row>
@@ -299,7 +299,7 @@ function CaptureWorld({ id, folder, exists }: { id: string; folder: string; exis
   }
 
   return (
-    <Section title="Save a dev-server world as this map">
+    <Section title="Save a dev-server world as this map" icon="save">
       {!connected && <Hint>Start the dev server to save one of its worlds here.</Hint>}
       <WorldSelect
         worlds={worlds}

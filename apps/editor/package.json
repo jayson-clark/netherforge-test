@@ -33,6 +33,7 @@
     "@tauri-apps/plugin-updater": "^2.13.1",
     "comlink": "^4.4.2",
     "immer": "^10.2.0",
+    "lucide-react": "^1.55.0",
     "monaco-languageclient": "~11.0.2",
     "nbtify": "2.2.0",
     "react": "^19.3.0",

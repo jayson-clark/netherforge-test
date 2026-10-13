@@ -33,7 +33,7 @@ describe('the item screen', () => {
   it("edits the item's look, without what belongs to one stack", () => {
     const inspector = show()
     expect(
-      (within(inspector).getByLabelText('Item', { exact: true }) as HTMLInputElement).value,
+      (within(inspector).getByRole('textbox', { name: 'Item' }) as HTMLInputElement).value,
     ).toBe('minecraft:paper')
     expect(within(inspector).queryByRole('textbox', { name: 'Count' })).toBeNull()
     expect(within(inspector).queryByRole('textbox', { name: 'Damage' })).toBeNull()

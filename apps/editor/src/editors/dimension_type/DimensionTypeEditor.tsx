@@ -81,7 +81,7 @@ export function DimensionTypeEditor({ path }: { path: string }) {
 
 function LimitsSection({ model, edit }: { model: DimensionTypeFile; edit: Edit }) {
   return (
-    <Section title="Build limits">
+    <Section title="Build limits" icon="ruler">
       <NumberField
         label="Bottom (min Y)"
         dataPath="minY"
@@ -120,7 +120,7 @@ function LimitsSection({ model, edit }: { model: DimensionTypeFile; edit: Edit }
 function LightSection({ model, edit }: { model: DimensionTypeFile; edit: Edit }) {
   const colors = model.colors ?? {}
   return (
-    <Section title="Light and sky">
+    <Section title="Light and sky" icon="sun">
       {SWITCHES.map(({ key, label, overworld }) => (
         <TriStateField
           key={key}
@@ -187,7 +187,7 @@ function LightSection({ model, edit }: { model: DimensionTypeFile; edit: Edit })
 function RulesSection({ model, edit }: { model: DimensionTypeFile; edit: Edit }) {
   const light = model.monsterSpawnLight ?? {}
   return (
-    <Section title="Rules">
+    <Section title="Rules" icon="sliders">
       {RULES.map(({ key, label, overworld }) => (
         <TriStateField
           key={key}

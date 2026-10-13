@@ -38,11 +38,3 @@
   flex: 1;
   min-width: 0;
 }
-
-.up svg {
-  transform: rotate(-90deg);
-}
-
-.down svg {
-  transform: rotate(90deg);
-}

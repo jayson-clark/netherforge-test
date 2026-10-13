@@ -1,14 +1,16 @@
 /** The first screen: recent projects, open a folder, or create a project. */
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useState, type ReactNode } from 'react'
+import { Label, Radio, RadioGroup } from 'react-aria-components'
 import { create } from 'zustand'
 import type { Backend, RecentProject } from '@/core/backend/types'
 import { TEMPLATES } from '@/core/templates'
 import type { WorkspaceStore } from '@/core/store/workspace'
 import { useApp, useWorkspace } from '@/state/providers'
-import { Button } from '@/ui/Button'
+import { Button, IconButton } from '@/ui/Button'
+import { cx } from '@/ui/cx'
 import { FormActions, FormError, FormLabel } from '@/ui/fields'
+import { Icon, type IconName } from '@/ui/Icon'
 import { Logo } from '@/ui/Logo'
-import { Hint } from '@/ui/text'
 import { BareTitleBar } from '@/workbench/toolbar/TitleBar'
 import styles from './Welcome.module.css'
 
@@ -39,6 +41,17 @@ async function pickAndOpenProject(backend: Backend, workspace: WorkspaceStore) {
   if (root) await openProjectAt(workspace, root)
 }
 
+/** What a project can hold, as the welcome screen sums it up. */
+const MAKES: { icon: IconName; label: string }[] = [
+  { icon: 'cube', label: 'Centities' },
+  { icon: 'gem', label: 'Items' },
+  { icon: 'slot', label: 'Menus' },
+  { icon: 'dialog', label: 'Dialogs' },
+  { icon: 'mountain', label: 'Worlds' },
+  { icon: 'image', label: 'Resource packs' },
+  { icon: 'module', label: 'Lua modules' },
+]
+
 export function Welcome() {
   const { backend, workspace } = useApp()
   const appInfo = useWorkspace((s) => s.appInfo)
@@ -57,55 +70,133 @@ export function Welcome() {
   return (
     <main className={styles.welcome}>
       <BareTitleBar />
-      <div className={styles.card}>
-        <h1 className={styles.title}>
-          <Logo size={24} /> NetherForge
-        </h1>
-        <Hint>Build centities and scripts for your Minecraft server.</Hint>
-        {error && <FormError role="alert">{error}</FormError>}
+      <div className={cx(styles.card, creating && styles.narrow)}>
         {creating ? (
           <CreateProject
             onCancel={() => setCreating(false)}
             versions={appInfo?.minecraftVersions ?? []}
+            error={error}
           />
         ) : (
-          <>
-            <div className={styles.actions}>
-              <Button variant="primary" icon="folder" onClick={() => void openFolder()}>
-                Open folder…
-              </Button>
-              <Button icon="plus" onClick={() => setCreating(true)}>
-                Create project…
-              </Button>
-            </div>
-            <h2 className={styles.heading}>Recent projects</h2>
-            {recent === null ? null : recent.length === 0 ? (
-              <Hint>Nothing yet. Open a folder with a netherforge.json, or create a project.</Hint>
-            ) : (
-              <ul className={styles.recent} aria-label="Recent projects">
-                {recent.map((project) => (
-                  <li key={project.root}>
-                    <button
-                      type="button"
-                      className={styles.recentButton}
-                      onClick={() => void open(project.root)}
-                    >
-                      <span className={styles.recentName}>{project.name}</span>
-                      <span className={styles.recentRoot}>{project.root}</span>
-                    </button>
+          <div className={styles.columns}>
+            <section className={styles.intro}>
+              <h1 className={styles.title}>
+                <Logo size={32} /> NetherForge
+              </h1>
+              <p className={styles.tagline}>
+                Make custom content for your Paper server, run it on a local dev server, and see
+                every save hot-reloaded in game.
+              </p>
+              <ul className={styles.makes} aria-label="What you can make">
+                {MAKES.map((it) => (
+                  <li key={it.label}>
+                    <Icon name={it.icon} size={12} />
+                    {it.label}
                   </li>
                 ))}
               </ul>
-            )}
-          </>
+              {error && (
+                <FormError role="alert" className={styles.error}>
+                  {error}
+                </FormError>
+              )}
+              <div className={styles.actions}>
+                <Action
+                  icon="plus"
+                  title="Create project…"
+                  primary
+                  onPress={() => setCreating(true)}
+                >
+                  A new folder, empty or from a template
+                </Action>
+                <Action icon="folderOpen" title="Open folder…" onPress={() => void openFolder()}>
+                  A project with a netherforge.json
+                </Action>
+              </div>
+              {appInfo && <p className={styles.version}>Version {appInfo.version}</p>}
+            </section>
+            <section className={styles.recentPane}>
+              <h2 className={styles.heading}>Recent projects</h2>
+              {recent === null ? null : recent.length === 0 ? (
+                <div className={styles.empty}>
+                  <Icon name="folder" size={28} />
+                  <p>Projects you open show up here.</p>
+                </div>
+              ) : (
+                <ul className={styles.recent} aria-label="Recent projects">
+                  {recent.map((project) => (
+                    <li key={project.root}>
+                      <button
+                        type="button"
+                        className={styles.recentButton}
+                        title={project.root}
+                        onClick={() => void open(project.root)}
+                      >
+                        <span className={styles.recentIcon}>
+                          <Icon name="folder" size={16} />
+                        </span>
+                        <span className={styles.recentText}>
+                          <span className={styles.recentName}>{project.name}</span>
+                          <span className={styles.recentRoot}>{project.root}</span>
+                        </span>
+                        <Icon name="chevronRight" className={styles.recentGo} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
         )}
-        {appInfo && <p className={styles.version}>NetherForge {appInfo.version}</p>}
       </div>
     </main>
   )
 }
 
-function CreateProject({ onCancel, versions }: { onCancel: () => void; versions: string[] }) {
+/** One of the welcome screen's two big buttons: a title, named by it alone, and what it does. */
+function Action({
+  icon,
+  title,
+  primary,
+  onPress,
+  children,
+}: {
+  icon: IconName
+  title: string
+  primary?: boolean
+  onPress: () => void
+  children: ReactNode
+}) {
+  const id = useId()
+  return (
+    <button
+      type="button"
+      className={cx(styles.action, primary && styles.primary)}
+      aria-describedby={id}
+      onClick={onPress}
+    >
+      <span className={styles.actionIcon}>
+        <Icon name={icon} size={18} />
+      </span>
+      <span className={styles.actionText}>
+        <span className={styles.actionTitle}>{title}</span>
+        <span id={id} className={styles.actionHint}>
+          {children}
+        </span>
+      </span>
+    </button>
+  )
+}
+
+function CreateProject({
+  onCancel,
+  versions,
+  error: openError,
+}: {
+  onCancel: () => void
+  versions: string[]
+  error: string | null
+}) {
   const { backend, workspace } = useApp()
   const [name, setName] = useState('My server')
   const [minecraft, setMinecraft] = useState(versions[0] ?? '')
@@ -117,7 +208,6 @@ function CreateProject({ onCancel, versions }: { onCancel: () => void; versions:
   const [busy, setBusy] = useState(false)
   const nameId = useId()
   const versionId = useId()
-  const templateId = useId()
 
   const create = async () => {
     if (!folder) return
@@ -134,6 +224,15 @@ function CreateProject({ onCancel, versions }: { onCancel: () => void; versions:
     }
   }
 
+  const choices = [
+    {
+      id: '',
+      title: 'Empty project',
+      summary: 'Just a netherforge.json, ready for your own resources.',
+    },
+    ...TEMPLATES,
+  ]
+
   return (
     <form
       className={styles.form}
@@ -143,28 +242,42 @@ function CreateProject({ onCancel, versions }: { onCancel: () => void; versions:
         void create()
       }}
     >
-      <FormLabel htmlFor={nameId}>Name</FormLabel>
-      <input id={nameId} value={name} onChange={(e) => setName(e.target.value)} required />
-      <FormLabel htmlFor={versionId}>Minecraft version</FormLabel>
-      <select id={versionId} value={minecraft} onChange={(e) => setMinecraft(e.target.value)}>
-        {versions.map((version) => (
-          <option key={version} value={version}>
-            {version}
-          </option>
-        ))}
-      </select>
-      <FormLabel htmlFor={templateId}>Start with</FormLabel>
-      <select id={templateId} value={template} onChange={(e) => setTemplate(e.target.value)}>
-        <option value="">An empty project</option>
-        {TEMPLATES.map((it) => (
-          <option key={it.id} value={it.id}>
-            {it.title}: {it.summary}
-          </option>
-        ))}
-      </select>
+      <header className={styles.formHeader}>
+        <IconButton icon="arrowLeft" label="Back" size={16} onClick={onCancel} />
+        <h1 className={styles.formTitle}>Create a project</h1>
+      </header>
+      {openError && <FormError role="alert">{openError}</FormError>}
+      <div className={styles.formRow}>
+        <div className={styles.formField}>
+          <FormLabel htmlFor={nameId}>Name</FormLabel>
+          <input id={nameId} value={name} onChange={(e) => setName(e.target.value)} required />
+        </div>
+        <div className={styles.formField}>
+          <FormLabel htmlFor={versionId}>Minecraft version</FormLabel>
+          <select id={versionId} value={minecraft} onChange={(e) => setMinecraft(e.target.value)}>
+            {versions.map((version) => (
+              <option key={version} value={version}>
+                {version}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <RadioGroup className={styles.templates} value={template} onChange={setTemplate}>
+        <Label className={styles.groupLabel}>Start with</Label>
+        <div className={styles.templateGrid}>
+          {choices.map((it) => (
+            <Radio key={it.id} value={it.id} className={styles.template} aria-label={it.title}>
+              <span className={styles.templateTitle}>{it.title}</span>
+              <span className={styles.templateSummary}>{it.summary}</span>
+            </Radio>
+          ))}
+        </div>
+      </RadioGroup>
       <FormLabel>Folder</FormLabel>
       <div className={styles.folderPick}>
-        <code>{folder ?? 'No folder chosen'}</code>
+        <Icon name="folder" />
+        <code className={cx(!folder && styles.unset)}>{folder ?? 'No folder chosen'}</code>
         <Button
           onClick={async () =>
             setFolder(

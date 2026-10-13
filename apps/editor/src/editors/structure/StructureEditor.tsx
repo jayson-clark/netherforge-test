@@ -93,7 +93,7 @@ function StructureInfo({ structure, mesh }: { structure: Structure; mesh: BlockM
   const [sx, sy, sz] = structure.size
   return (
     <>
-      <Section title="Structure">
+      <Section title="Structure" icon="structure">
         <Row label="Size">
           <span>
             {sx} × {sy} × {sz} blocks
@@ -123,7 +123,7 @@ function StructureInfo({ structure, mesh }: { structure: Structure; mesh: BlockM
           </Hint>
         )}
       </Section>
-      <Section title="Blocks by kind">
+      <Section title="Blocks by kind" icon="blocks">
         <CountsTable label="Blocks by kind" rows={counts.map(({ kind, count }) => [kind, count])} />
       </Section>
     </>
@@ -196,7 +196,7 @@ function CaptureStructure({ id, path, exists }: { id: string; path: string; exis
   }
 
   return (
-    <Section title="Capture from the dev server">
+    <Section title="Capture from the dev server" icon="camera">
       {!connected && <Hint>Start the dev server to capture a structure from its world.</Hint>}
       {players.length > 1 && (
         <SelectField

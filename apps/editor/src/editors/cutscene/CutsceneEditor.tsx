@@ -104,7 +104,7 @@ function CutsceneInspector({
   edit: (recipe: (draft: CutsceneFile) => void) => void
 }) {
   return (
-    <Section title="Cutscene">
+    <Section title="Cutscene" icon="film">
       <NumberField
         label="Length (seconds)"
         dataPath="length"

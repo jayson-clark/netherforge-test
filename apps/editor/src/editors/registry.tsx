@@ -107,7 +107,7 @@ export const KIND_CONTRIBUTIONS = {
     title: 'Blocks',
     one: 'block',
     group: 'gameplay',
-    icon: 'cube',
+    icon: 'block',
     tone: 'orange',
     message:
       'Items place it by this id ({ "block": "ruby_ore" }), and scripts reach it with nf.blocks.get("ruby_ore").',
@@ -120,7 +120,7 @@ export const KIND_CONTRIBUTIONS = {
     title: 'Game blocks',
     one: 'game block',
     group: 'gameplay',
-    icon: 'cube',
+    icon: 'blocks',
     message:
       "Only its name: it gives the game's blocks it lists, by id or #tag, a hardness, tool and drops of the project's.",
     view: lazy(() =>
@@ -147,7 +147,7 @@ export const KIND_CONTRIBUTIONS = {
     title: 'Loot tables',
     one: 'loot table',
     group: 'gameplay',
-    icon: 'box',
+    icon: 'dice',
     tone: 'amber',
     message: 'Scripts roll it by this id, e.g. nf.loot.roll("treasure", { player = player }).',
     view: lazy(() => import('@/editors/loot/LootEditor').then((m) => ({ default: m.LootEditor }))),
@@ -161,7 +161,7 @@ export const KIND_CONTRIBUTIONS = {
     title: 'Advancements',
     one: 'advancement',
     group: 'gameplay',
-    icon: 'check',
+    icon: 'trophy',
     tone: 'green',
     message:
       'Scripts grant it by this id, e.g. player:grant_advancement("treasure_hunter"). Its parent makes the tree.',
@@ -182,7 +182,7 @@ export const KIND_CONTRIBUTIONS = {
     title: 'Menus',
     one: 'menu',
     group: 'interface',
-    icon: 'grid',
+    icon: 'slot',
     tone: 'purple',
     message: 'Scripts open it by this id, e.g. player:open_menu("shop").',
     view: lazy(() => import('@/editors/menu/MenuEditor').then((m) => ({ default: m.MenuEditor }))),
@@ -212,7 +212,7 @@ export const KIND_CONTRIBUTIONS = {
     title: 'Cutscenes',
     one: 'cutscene',
     group: 'interface',
-    icon: 'camera',
+    icon: 'film',
     tone: 'cyan',
     message: 'Scripts play it by this id, e.g. nf.cutscenes.play(player, "intro").',
     view: lazy(() =>
@@ -272,7 +272,7 @@ export const KIND_CONTRIBUTIONS = {
     title: 'Terrain',
     one: 'terrain',
     group: 'world',
-    icon: 'globe',
+    icon: 'mountain',
     tone: 'green',
     message:
       'Worlds are made with it by this id, e.g. nf.worlds.create("realm", { terrain = "ruby_hills" }).',
@@ -298,7 +298,7 @@ export const KIND_CONTRIBUTIONS = {
     title: 'Skies',
     one: 'sky',
     group: 'world',
-    icon: 'leaf',
+    icon: 'cloud',
     tone: 'orange',
     message:
       'Scripts set it by this id, e.g. world:set_sky("blood_moon"). Saving one restarts the dev server.',
@@ -308,7 +308,7 @@ export const KIND_CONTRIBUTIONS = {
     title: 'Buffs',
     one: 'buff',
     group: 'world',
-    icon: 'sparkles',
+    icon: 'flask',
     tone: 'orange',
     message: 'Scripts give it by this id, e.g. player:add_buff("ironskin", 20 * 60).',
     view: lazy(() => import('@/editors/buff/BuffEditor').then((m) => ({ default: m.BuffEditor }))),
@@ -317,7 +317,7 @@ export const KIND_CONTRIBUTIONS = {
     title: 'Dimension types',
     one: 'dimension type',
     group: 'world',
-    icon: 'grid',
+    icon: 'layers',
     tone: 'cyan',
     message:
       'Worlds name it by this id in nf.worlds.create and netherforge.json\'s "worlds", e.g. "dimensionType": "deep". Saving one restarts the dev server.',
@@ -344,7 +344,7 @@ export const KIND_CONTRIBUTIONS = {
     title: 'Maps',
     one: 'map',
     group: 'world',
-    icon: 'globe',
+    icon: 'map',
     tone: 'green',
     message:
       'Scripts copy it by this id, e.g. nf.worlds.copy("arena", "arena_1"). Save a dev-server world into it next.',
@@ -381,7 +381,7 @@ export const KIND_CONTRIBUTIONS = {
     title: 'Migrations',
     one: 'migration',
     group: 'code',
-    icon: 'grid',
+    icon: 'database',
     tone: 'amber',
     message:
       "Name it NNN_name, like 001_init: they run in order on the package's own database, nf.db().",
@@ -463,7 +463,7 @@ export const FILE_TABS = {
     resource: false,
   },
   sql: {
-    icon: 'grid',
+    icon: 'database',
     label: basename,
     view: lazy(() => import('@/editors/script/CodeEditor').then((m) => ({ default: m.SqlEditor }))),
     document: true,

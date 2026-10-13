@@ -75,7 +75,7 @@ export function SkyEditor({ path }: { path: string }) {
         </div>
       </Stage>
       <InspectorPanel>
-        <Section title="Colours">
+        <Section title="Colours" icon="palette">
           {COLORS.map(({ key, label, overworld, alpha }) =>
             alpha ? (
               <TextField
@@ -113,7 +113,7 @@ export function SkyEditor({ path }: { path: string }) {
             player:set_sky("{id}").
           </Hint>
         </Section>
-        <Section title="Night">
+        <Section title="Night" icon="moon">
           <CheckField
             label="Holds its sky and fog at night"
             dataPath="darkens"
@@ -131,7 +131,7 @@ export function SkyEditor({ path }: { path: string }) {
             either way, and night still dims it.
           </Hint>
         </Section>
-        <Section title="Fading">
+        <Section title="Fading" icon="timer">
           <NumberField
             label="Steps"
             dataPath="fade"

@@ -609,7 +609,7 @@ function RecipeInspector({
   const cooking = takes.optional.includes('cookingTime')
   return (
     <>
-      <Section title="Recipe">
+      <Section title="Recipe" icon="recipe">
         <SelectField
           label="Type"
           dataPath="type"
@@ -729,7 +729,7 @@ function RecipeInspector({
           />
         )}
       </Section>
-      <Section title="Result">
+      <Section title="Result" icon="arrowRight">
         <div data-path="result">
           <ItemEditor
             item={model.result ?? {}}

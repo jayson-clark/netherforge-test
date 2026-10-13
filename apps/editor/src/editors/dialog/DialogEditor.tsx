@@ -206,7 +206,7 @@ function DialogSettings({
   const self = path.split('/')[1]
   const type = model.type ?? 'notice'
   return (
-    <Section title="Dialog">
+    <Section title="Dialog" icon="dialog">
       <TextField
         label="Title"
         dataPath="title"

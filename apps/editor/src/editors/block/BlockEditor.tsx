@@ -150,7 +150,7 @@ export function BlockEditor({ path }: { path: string }) {
         </div>
       </Stage>
       <InspectorPanel>
-        <Section title="Block">
+        <Section title="Block" icon="block">
           <SelectField
             label="Look"
             dataPath="model"
@@ -254,7 +254,7 @@ export function BlockEditor({ path }: { path: string }) {
             onChange={(value) => set('properties', value)}
           />
         </Section>
-        <Section title="Sounds">
+        <Section title="Sounds" icon="sound">
           <SelectField
             label="Sounds like"
             dataPath="sound"
@@ -277,7 +277,7 @@ export function BlockEditor({ path }: { path: string }) {
             onChange={(value) => edit((draft) => setSound(draft, 'break', value || undefined))}
           />
         </Section>
-        <Section title="Script">
+        <Section title="Script" icon="code">
           <ScriptField
             folder={dirname(path)}
             script={model.script}

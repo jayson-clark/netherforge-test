@@ -10,9 +10,10 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { Dialog, Heading, Modal as AriaModal, ModalOverlay } from 'react-aria-components'
 import { create } from 'zustand'
-import { Button } from './Button'
+import { Button, IconButton } from './Button'
 import { cx } from './cx'
 import { FormError, FormLabel } from './fields'
+import { Icon, type IconName } from './Icon'
 import { Spacer } from './layout'
 import styles from './Modal.module.css'
 
@@ -20,6 +21,8 @@ interface PromptRequest {
   kind: 'prompt'
   title: string
   message?: string
+  /** Shown beside the title: what's being made or renamed. */
+  icon?: IconName
   label: string
   initial: string
   confirmLabel: string
@@ -34,6 +37,7 @@ interface ConfirmRequest {
   kind: 'confirm'
   title: string
   message: string
+  icon?: IconName
   confirmLabel: string
   danger?: boolean
   /** A third choice, e.g. "Don't save". */
@@ -69,14 +73,24 @@ export const ask = {
   },
 }
 
+/**
+ * A dialog of a set width (`wide` for pickers and diffs), so long text wraps
+ * rather than stretching it: a title with an optional icon, the body, and
+ * its buttons in the footer.
+ */
 export function Modal({
   title,
+  icon,
+  tone,
   children,
   onClose,
   footer,
   wide,
 }: {
   title: string
+  icon?: IconName
+  /** Colours the icon: `danger` for something that can't be taken back. */
+  tone?: 'danger'
   children: ReactNode
   onClose: () => void
   footer?: ReactNode
@@ -91,9 +105,17 @@ export function Modal({
     >
       <AriaModal className={cx(styles.modal, wide && styles.wide)}>
         <Dialog className={styles.dialog}>
-          <Heading slot="title" className={styles.title}>
-            {title}
-          </Heading>
+          <header className={styles.header}>
+            {icon && (
+              <span className={cx(styles.headerIcon, tone === 'danger' && styles.danger)}>
+                <Icon name={icon} size={16} />
+              </span>
+            )}
+            <Heading slot="title" className={styles.title}>
+              {title}
+            </Heading>
+            <IconButton icon="close" label="Close dialog" size={14} onClick={onClose} />
+          </header>
           <div className={styles.body}>{children}</div>
           {footer && <div className={styles.footer}>{footer}</div>}
         </Dialog>
@@ -125,6 +147,8 @@ export function DialogHost() {
   return (
     <Modal
       title={current.title}
+      icon={current.icon ?? (current.danger ? 'warning' : undefined)}
+      tone={current.danger ? 'danger' : undefined}
       onClose={() => done(false)}
       footer={
         <>
@@ -143,7 +167,7 @@ export function DialogHost() {
         </>
       }
     >
-      <p>{current.message}</p>
+      <p className={styles.message}>{current.message}</p>
     </Modal>
   )
 }
@@ -166,6 +190,7 @@ function PromptDialog({
   return (
     <Modal
       title={request.title}
+      icon={request.icon}
       onClose={() => onDone(null)}
       footer={
         <>
@@ -177,14 +202,19 @@ function PromptDialog({
         </>
       }
     >
-      {request.message && <p>{request.message}</p>}
+      {request.message && <p className={styles.message}>{request.message}</p>}
       <FormLabel htmlFor={id}>{request.label}</FormLabel>
       <input
         id={id}
+        className={styles.input}
+        spellCheck={false}
+        autoComplete="off"
         ref={input}
         autoFocus
         value={value}
         aria-invalid={!!error}
+        // Red only once something is typed: an empty field isn't a mistake yet.
+        data-error={(error && value) || undefined}
         // Why it's refused is read with the field.
         aria-describedby={error && value ? `${id}-error` : undefined}
         onChange={(event) => setValue(event.target.value)}

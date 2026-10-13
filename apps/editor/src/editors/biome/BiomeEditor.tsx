@@ -143,7 +143,7 @@ export function BiomeEditor({ path }: { path: string }) {
 function ClimateSection({ model, edit }: { model: BiomeFile; edit: Edit }) {
   const climate = model.climate ?? {}
   return (
-    <Section title="Climate">
+    <Section title="Climate" icon="cloud">
       <NumberField
         label="Temperature"
         dataPath="climate.temperature"
@@ -191,7 +191,7 @@ function ClimateSection({ model, edit }: { model: BiomeFile; edit: Edit }) {
 function ColorsSection({ model, edit }: { model: BiomeFile; edit: Edit }) {
   const colors = model.colors ?? {}
   return (
-    <Section title="Colours">
+    <Section title="Colours" icon="palette">
       {COLORS.map(({ key, label, unset }) => (
         <ColorField
           key={key}
@@ -257,7 +257,7 @@ function SoundsSection({ model, edit }: { model: BiomeFile; edit: Edit }) {
   const sounds = model.sounds ?? {}
   const { mood, additions, music } = sounds
   return (
-    <Section title="Sounds and music">
+    <Section title="Sounds and music" icon="music">
       <TextField
         label="Ambient loop"
         dataPath="sounds.ambient"
@@ -416,7 +416,7 @@ function SpawnsSection({ model, edit }: { model: BiomeFile; edit: Edit }) {
   const costs = model.spawnCosts ?? {}
   const add = (category: SpawnCategory) => edit((d) => addSpawn(d, category, ''))
   return (
-    <Section title="Mobs">
+    <Section title="Mobs" icon="person">
       {SpawnCategoryValues.map((category) => {
         const list = spawns[category] ?? []
         return (
@@ -578,7 +578,7 @@ function FeaturesSection({ model, edit }: { model: BiomeFile; edit: Edit }) {
   const steps = GenerationStepValues
   const listed = steps.filter((step) => (features[step]?.length ?? 0) > 0)
   return (
-    <Section title="Features">
+    <Section title="Features" icon="sparkles">
       {listed.length === 0 && <Muted>None: nothing grows here.</Muted>}
       {steps.map((step) => (
         <FeatureStep key={step} step={step} list={features[step] ?? []} edit={edit} />
@@ -619,17 +619,15 @@ function FeatureStep({ step, list, edit }: { step: GenerationStep; list: string[
             }
           />
           <IconButton
-            icon="arrow"
+            icon="arrowUp"
             size={12}
-            className={styles.up}
             label={`Move ${feature} earlier`}
             disabled={index === 0}
             onClick={() => edit((d) => moveFeature(d, step, index, -1))}
           />
           <IconButton
-            icon="arrow"
+            icon="arrowDown"
             size={12}
-            className={styles.down}
             label={`Move ${feature} later`}
             disabled={index === list.length - 1}
             onClick={() => edit((d) => moveFeature(d, step, index, 1))}

@@ -22,7 +22,7 @@ async function createWith(template: string) {
   )
   await screen.findByRole('form', { name: 'Create project' })
   if (template) {
-    fireEvent.change(screen.getByLabelText('Start with'), { target: { value: template } })
+    fireEvent.click(screen.getByRole('radio', { name: template }))
   }
   fireEvent.click(screen.getByRole('button', { name: 'Choose…' }))
   await screen.findByText('/memory/new')
@@ -32,7 +32,7 @@ async function createWith(template: string) {
 
 describe('creating a project', () => {
   it('can start from a template, which comes in as a package to copy from', async () => {
-    const { backend, app } = await createWith('rpg_mob')
+    const { backend, app } = await createWith('RPG mob')
     await waitFor(() => expect(app.workspace.getState().project?.root).toBe('/memory/new'))
     await waitFor(() =>
       expect(JSON.parse(backend.testFiles()[MANIFEST_FILE]!).dependencies).toEqual({

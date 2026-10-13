@@ -86,7 +86,7 @@ export function ItemScreen({ path }: { path: string }) {
         </section>
       </Stage>
       <InspectorPanel>
-        <Section title="Item">
+        <Section title="Item" icon="gem">
           <ItemEditor item={item} onEdit={editItem} dataPath="" glyphs={glyphs} look />
           <SelectField
             label="Places block"

@@ -119,7 +119,7 @@ export const Inspector = memo(function Inspector({
 
   return (
     <InspectorPanel>
-      <Section title="Node">
+      <Section title="Node" icon="tag">
         <TextField
           label="Name"
           value={selected}
@@ -152,7 +152,7 @@ export const Inspector = memo(function Inspector({
         />
       </Section>
 
-      <Section title="Transform">
+      <Section title="Transform" icon="move">
         {(['translation', 'rotation', 'scale'] as const).map((channel) => (
           <Vec3Field
             key={channel}
@@ -220,6 +220,7 @@ function SpawningSection({ path, model }: { path: string; model: CentityFile }) 
   return (
     <Section
       title="Natural spawning"
+      icon="sprout"
       enabled={spawning !== undefined}
       onToggle={(on) => edit((draft) => setSpawning(draft, on))}
     >
@@ -340,7 +341,7 @@ function CentitySettings({ path, model }: { path: string; model: CentityFile }) 
   const edit = (recipe: (draft: CentityFile) => void) =>
     workspace.getState().edit<CentityFile>(path, recipe)
   return (
-    <Section title="Centity">
+    <Section title="Centity" icon="cube">
       <TextField
         label="Display name"
         dataPath="centity.name"
@@ -397,6 +398,7 @@ function BodySection({ path, model }: { path: string; model: CentityFile }) {
   return (
     <Section
       title="Body"
+      icon="person"
       enabled={body !== undefined}
       onToggle={(on) =>
         workspace
@@ -463,6 +465,7 @@ function HealthSection({ path, model }: { path: string; model: CentityFile }) {
   return (
     <Section
       title="Health"
+      icon="heart"
       enabled={health !== undefined}
       onToggle={(on) =>
         workspace
@@ -571,6 +574,7 @@ function RopeSection({
   return (
     <Section
       title="Rope"
+      icon="spline"
       enabled={rope !== undefined}
       onToggle={(on) => editNode((target) => setKey(target, 'rope', on ? { links: 8 } : undefined))}
     >
@@ -644,7 +648,7 @@ function DisplaySection({ node, editNode }: { node: NodeDef; editNode: EditNode 
     })
 
   return (
-    <Section title="Display">
+    <Section title="Display" icon="eye">
       <SelectField
         label="Type"
         dataPath="display"
@@ -921,6 +925,7 @@ function HitboxSection({
   return (
     <Section
       title="Hitbox"
+      icon="crosshair"
       enabled={hitbox !== undefined}
       onToggle={(on) => editNode((target) => (on ? (target.hitbox = {}) : delete target.hitbox))}
     >
@@ -1111,6 +1116,7 @@ function PhysicsSection({ node, editNode }: { node: NodeDef; editNode: EditNode 
   return (
     <Section
       title="Physics"
+      icon="atom"
       enabled={physics !== undefined}
       onToggle={(on) => editNode((target) => (on ? (target.physics = {}) : delete target.physics))}
     >

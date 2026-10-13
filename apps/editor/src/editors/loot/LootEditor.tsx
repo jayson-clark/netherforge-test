@@ -330,20 +330,8 @@ function EntryCard({
         </span>
       </button>
       <span className={styles.entryActions}>
-        <IconButton
-          icon="arrow"
-          label="Move up"
-          className={styles.up}
-          disabled={!onUp}
-          onClick={onUp}
-        />
-        <IconButton
-          icon="arrow"
-          label="Move down"
-          className={styles.down}
-          disabled={!onDown}
-          onClick={onDown}
-        />
+        <IconButton icon="arrowUp" label="Move up" disabled={!onUp} onClick={onUp} />
+        <IconButton icon="arrowDown" label="Move down" disabled={!onDown} onClick={onDown} />
         <IconButton icon="trash" label={`Remove ${label}`} onClick={onRemove} />
       </span>
     </li>
@@ -670,7 +658,7 @@ function EntryInspector({
         />
       </Section>
       {entry.type === 'item' && (
-        <Section title="Item">
+        <Section title="Item" icon="gem">
           <div data-path={`${here}.item`}>
             <ItemEditor
               item={entry.item}

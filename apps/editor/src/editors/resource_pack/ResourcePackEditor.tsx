@@ -655,7 +655,7 @@ export function ResourcePackEditor({ path }: { path: string }) {
               onPick={pick}
             />
           )}
-        <Section title="Resource pack">
+        <Section title="Resource pack" icon="image">
           <TextField
             label="Name"
             dataPath="name"
@@ -1385,7 +1385,7 @@ function GameHudSection({
     ...(textures.includes(current) ? [] : [{ value: current, label: `${current} (missing)` }]),
   ]
   return (
-    <Section title="The game's HUD">
+    <Section title="The game's HUD" icon="layers">
       <FieldGroup header="Hidden for every player" data-path="hud.hide">
         {HudElementValues.map((element) => (
           <Check
