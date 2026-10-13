@@ -101,11 +101,17 @@ class FakePlayers(private val platform: FakePlatform) : PlayerOps {
     /** What scripts sent the console. */
     val console = mutableListOf<String>()
 
-    fun add(name: String, location: Location = Location("world", 0.5, 64.0, 0.5)): FakePlayer {
-        val player = FakePlayer(PlayerRef(UUID.nameUUIDFromBytes(name.toByteArray()), name), location)
+    /** Someone joining as [name], with a UUID from the name unless [uuid] says otherwise (a script's bot is new each time). */
+    fun add(name: String, location: Location = Location("world", 0.5, 64.0, 0.5), uuid: UUID? = null): FakePlayer {
+        val player = FakePlayer(PlayerRef(uuid ?: UUID.nameUUIDFromBytes(name.toByteArray()), name), location)
         byId[player.ref.uuid] = player
         known[player.ref.uuid] = player.ref
         return player
+    }
+
+    /** Forgets someone who has left was ever here, as the server does a player it never saved. */
+    fun forget(uuid: UUID) {
+        known.remove(uuid)
     }
 
     override fun online() = byId.values.map { it.ref }

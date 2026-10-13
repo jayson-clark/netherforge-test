@@ -636,6 +636,7 @@ const BOT_ACTIONS = [
   'close_menu',
   'dialog_button {button? (its label) | index?, inputs? {key: value}}: press a button of the dialog on screen, setting inputs first',
   'dialog_close: Escape on the dialog (its exit action)',
+  'stop: stop what it is doing over several ticks (walking, mining); that action answers with an error saying so',
   'respawn',
 ]
 

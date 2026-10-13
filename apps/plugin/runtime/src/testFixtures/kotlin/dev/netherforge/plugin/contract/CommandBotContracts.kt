@@ -1,5 +1,6 @@
 package dev.netherforge.plugin.contract
 
+import dev.netherforge.format.bridge.BotAction
 import dev.netherforge.format.bridge.BotEvent
 import dev.netherforge.format.bridge.BotInfo
 import dev.netherforge.format.bridge.BotPackAnswer
@@ -7,6 +8,7 @@ import dev.netherforge.format.bridge.BotPosition
 import dev.netherforge.plugin.platform.ArgumentSyntax
 import dev.netherforge.plugin.platform.ArgumentType
 import dev.netherforge.plugin.platform.ArgumentValue
+import dev.netherforge.plugin.platform.BotJoin
 import dev.netherforge.plugin.platform.CommandHandler
 import dev.netherforge.plugin.platform.CommandInput
 import dev.netherforge.plugin.platform.CommandOps
@@ -14,13 +16,17 @@ import dev.netherforge.plugin.platform.CommandSender
 import dev.netherforge.plugin.platform.CommandSpec
 import dev.netherforge.plugin.platform.CommandSyntax
 import dev.netherforge.plugin.platform.GameEvent
+import dev.netherforge.plugin.platform.ScriptBot
 import dev.netherforge.plugin.platform.SelectedEntity
+import dev.netherforge.plugin.platform.SkinTexture
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.util.UUID
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -221,7 +227,7 @@ abstract class BotOpsContract : PlatformContract() {
     fun `a bot joins as a player, is listed, and leaves`() {
         val name = "nfcbot${BOTS.incrementAndGet()}"
         var joined: Result<BotInfo>? = null
-        main { bots.join(name, BotPosition(origin.x, origin.y, origin.z, world), BotPackAnswer.DECLINE) { joined = it } }
+        main { bots.join(BotJoin(name, BotPosition(origin.x, origin.y, origin.z, world), BotPackAnswer.DECLINE)) { joined = it } }
         eventually("$name joining", ticks = 400) { joined != null }
         val info = joined!!.getOrThrow()
         assertEquals(name, info.name)
@@ -232,16 +238,54 @@ abstract class BotOpsContract : PlatformContract() {
             assertEquals(player.uuid.toString(), info.uuid)
             assertTrue(bots.list().any { it.name == name })
             assertEquals(name, bots.state(name).name)
-            assertThrows<IllegalArgumentException>("already online") { bots.join(name, null, BotPackAnswer.DECLINE) {} }
+            assertTrue(bots.isBot(player.uuid))
+            assertThrows<IllegalArgumentException>("already online") { bots.join(BotJoin(name)) {} }
             bots.leave(name)
         }
         eventually("$name leaving") { platform.players.find(name) == null }
         main {
             assertTrue(bots.list().none { it.name == name })
+            assertFalse(bots.isBot(UUID.fromString(info.uuid)))
             assertThrows<IllegalArgumentException> { bots.leave(name) }
             assertThrows<IllegalArgumentException> { bots.state(name) }
         }
         assertEquals(1, events.heard<GameEvent.PlayerQuit>("playerQuit").count { it.player.name == name })
+    }
+
+    @Test
+    fun `a script's bot is a new player each time, with the pack loaded and its skin`() {
+        val name = "nfcbot${BOTS.incrementAndGet()}"
+        fun joinScripted(): BotInfo {
+            var joined: Result<BotInfo>? = null
+            val skin = SkinTexture(SKIN)
+            main {
+                bots.join(BotJoin(name, BotPosition(origin.x, origin.y, origin.z, world), BotPackAnswer.LOADED, ScriptBot(skin))) {
+                    joined = it
+                }
+            }
+            eventually("$name joining", ticks = 400) { joined != null }
+            return joined!!.getOrThrow()
+        }
+        val first = joinScripted()
+        val join = events.heard<GameEvent.PlayerJoin>("playerJoin").single { it.player.name == name }
+        assertTrue(join.firstJoin, "a script's bot has never played here before")
+        main {
+            assertTrue(bots.isBot(UUID.fromString(first.uuid)))
+            bots.leave(name)
+        }
+        eventually("$name leaving") { platform.players.find(name) == null }
+        events.clear()
+        val second = joinScripted()
+        assertNotEquals(first.uuid, second.uuid, "a new UUID each time")
+        assertTrue(events.heard<GameEvent.PlayerJoin>("playerJoin").single { it.player.name == name }.firstJoin, "nothing was saved")
+        main { bots.leave(name) }
+        eventually("$name leaving") { platform.players.find(name) == null }
+    }
+
+    @Test
+    fun `stopping a bot with nothing to stop is fine`() {
+        val player = join()
+        act(player, BotAction.Stop)
     }
 
     @Test
@@ -287,5 +331,9 @@ abstract class BotOpsContract : PlatformContract() {
 
     private companion object {
         val BOTS = AtomicInteger()
+
+        /** An unsigned `textures` property: the server takes a bot's skin as it's given (only a client checks a signature). */
+        val SKIN = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMW" +
+            "E0YWY3MTg0NTVkNGFhYjUyOGU3YTYxZjg2ZmEyNWU2YTM2OWQxNzY4ZGNiMTNmN2RmMzE5YTcxM2ViODEwYiJ9fX0="
     }
 }

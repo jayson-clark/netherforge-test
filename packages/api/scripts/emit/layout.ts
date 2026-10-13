@@ -56,9 +56,12 @@ export const CATEGORIES: Category[] = [
     pages: [
       'nf.players',
       'Player',
+      'nf.bots',
+      'Bot',
       'Entity',
       'Living',
       'Mob',
+      'Mannequin',
       'DroppedItem',
       'Hud',
       'Sidebar',
@@ -251,6 +254,14 @@ export const FUNCTION_GROUPS: Record<string, Group[]> = {
     ),
     group('Potion effects', 'effects has_effect add_effect remove_effect'),
     group('Equipment', 'equipment set_equipment'),
+  ],
+  Bot: [
+    group('Leaving', 'leave'),
+    group('Moving', 'walk_to stop look_at jump set_sneaking set_sprinting'),
+    group('Talking', 'chat'),
+    group('Clicking', 'attack interact use_item release_item swing use_block break_block'),
+    group('Items and menus', 'swap_hands drop_item click_slot'),
+    group('Dying', 'respawn'),
   ],
   Mob: [
     group('Target and AI', 'target set_target has_ai set_ai'),

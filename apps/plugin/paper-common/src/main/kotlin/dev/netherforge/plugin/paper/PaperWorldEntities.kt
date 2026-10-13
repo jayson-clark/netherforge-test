@@ -23,6 +23,7 @@ import org.bukkit.entity.Entity
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.Item
 import org.bukkit.entity.LivingEntity
+import org.bukkit.entity.Mannequin
 import org.bukkit.entity.Mob
 import org.bukkit.entity.Player
 import org.bukkit.event.entity.CreatureSpawnEvent
@@ -62,6 +63,7 @@ class PaperWorldEntities(private val plugin: Plugin, private val tagged: PaperEn
         PaperPlatform.location(entity.location),
         when (entity) {
             is Mob -> EntityCategory.MOB
+            is Mannequin -> EntityCategory.MANNEQUIN
             is LivingEntity -> EntityCategory.LIVING
             is Item -> EntityCategory.DROPPED_ITEM
             else -> EntityCategory.OTHER

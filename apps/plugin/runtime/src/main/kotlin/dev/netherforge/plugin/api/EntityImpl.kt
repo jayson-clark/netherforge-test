@@ -18,9 +18,10 @@ import kotlin.math.sqrt
 internal fun LuaHandle.Entity.uuidOrNull(): UUID? = runCatching { UUID.fromString(id) }.getOrNull()
 
 /**
- * The handle for the entity [id], as the class it is: a `Player` for anyone who has played
- * here (online or not), a `Mob`, a `Living`, a `DroppedItem`, or a plain `Entity` for anything
- * else and for an entity that isn't in the world now (its handle becomes its class when it's back).
+ * The handle for the entity [id], as the class it is: a `Bot` for a bot online, a `Player` for
+ * anyone who has played here (online or not), a `Mob`, a `Mannequin`, a `Living`, a
+ * `DroppedItem`, or a plain `Entity` for anything else and for an entity that isn't in the world
+ * now (its handle becomes its class when it's back).
  */
 internal fun ProjectSession.entityHandle(id: UUID): LuaHandle.Entity {
     platform.worldEntities.info(id)?.let { return entityHandle(it) }
@@ -29,11 +30,12 @@ internal fun ProjectSession.entityHandle(id: UUID): LuaHandle.Entity {
 }
 
 /** The handle for what [info] describes, as the class it is. */
-internal fun entityHandle(info: EntityInfo): LuaHandle.Entity {
+internal fun ProjectSession.entityHandle(info: EntityInfo): LuaHandle.Entity {
     val id = info.id.toString()
     return when {
-        info.player != null -> LuaHandle.Player(id)
+        info.player != null -> if (platform.bots.isBot(info.id)) LuaHandle.Bot(id) else LuaHandle.Player(id)
         info.category == EntityCategory.MOB -> LuaHandle.Mob(id)
+        info.category == EntityCategory.MANNEQUIN -> LuaHandle.Mannequin(id)
         info.category == EntityCategory.LIVING -> LuaHandle.Living(id)
         info.category == EntityCategory.DROPPED_ITEM -> LuaHandle.DroppedItem(id)
         else -> LuaHandle.Entity(id)

@@ -337,8 +337,8 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
      message) for the rest of the scenario, and waits for the error it checks
      with `next` (`MobScenario`, `ReloadScenario`). Servers run with
      `performance.warn-ms: 0`, so a slow-script warning is never one.
-   - **Bots**: `BotScenario` joins bots (fake players, the `NetherForgeBots`
-     plugin; see the plugin-runtime skill) on an online-mode server and checks
+   - **Bots**: `BotScenario` joins bots (fake players, in the plugin; see
+     the plugin-runtime skill) on an online-mode server and checks
      what only a player can do or see: the join, chat and commands, clicking
      centities, menus, items, recipes, dialogs, titles, the sidebar, boss
      bars, teams and the player list, the resource pack, per-player hiding,

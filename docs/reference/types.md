@@ -1304,6 +1304,20 @@ Has the fields and methods of [Event](#event) too.
 | `item` | [`Item`](types.md#item) | What they were using. |
 | `ticks` | `integer` | How long they held it, in ticks. |
 
+### SkinParts {#skinparts}
+
+The parts of a skin's outer layer a mannequin shows, each `true` when shown. `mannequin:skin_parts()` gives every one; `set_skin_parts` changes those given.
+
+| Field | Type | |
+| --- | --- | --- |
+| `cape` | `boolean?` | Its cape, when its skin has one. |
+| `jacket` | `boolean?` |  |
+| `left_sleeve` | `boolean?` |  |
+| `right_sleeve` | `boolean?` |  |
+| `left_pants` | `boolean?` |  |
+| `right_pants` | `boolean?` |  |
+| `hat` | `boolean?` |  |
+
 ### EffectOptions {#effectoptions}
 
 How a status effect is given. A key that isn't one of these is an error.
@@ -1456,6 +1470,41 @@ How far a player is with an advancement, by its criteria's names as the advancem
 | --- | --- | --- |
 | `done` | `string[]` | The criteria they've met. |
 | `remaining` | `string[]` | The criteria left. |
+
+### BotJoinOptions {#botjoinoptions}
+
+How a bot joins (`nf.bots.join`).
+
+| Field | Type | |
+| --- | --- | --- |
+| `skin` | [`Skin`](types.md#skin)`?` | Its skin. Without one, it wears one of the game's default skins. |
+
+### BotWalkOptions {#botwalkoptions}
+
+How a bot walks (`bot:walk_to`).
+
+| Field | Type | |
+| --- | --- | --- |
+| `sprint` | `boolean?` | Sprint there. Default `false`. |
+| `timeout` | `integer?` | Ticks it may take before it gives up, 1 to 500. Default 200. |
+
+### BotInteractOptions {#botinteractoptions}
+
+How a bot right-clicks (`bot:interact`).
+
+| Field | Type | |
+| --- | --- | --- |
+| `off_hand` | `boolean?` | With what it holds in its off hand. Default `false`. |
+| `at` | [`Vec3`](vec3.md)`?` | A point on it to turn to and click (a square of a board), in the world. Its middle when left out. |
+
+### Skin {#skin}
+
+A skin, as Mojang's session servers sign it: a player profile's `textures` property. Sites that make skins for NPCs (MineSkin, …) give both values.
+
+| Field | Type | |
+| --- | --- | --- |
+| `texture` | `string` | The base64 `value` of the `textures` property. |
+| `signature` | `string?` | Its signature. Players' clients draw an unsigned skin only when the server is in offline mode. |
 
 ### MenuOpenOptions {#menuopenoptions}
 

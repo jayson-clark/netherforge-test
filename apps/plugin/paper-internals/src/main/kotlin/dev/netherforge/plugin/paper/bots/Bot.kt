@@ -18,7 +18,6 @@ import dev.netherforge.plugin.platform.BotAim
 import net.minecraft.commands.arguments.blocks.BlockStateParser
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
-import net.minecraft.core.UUIDUtil
 import net.minecraft.core.component.DataComponents
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.chat.ClickEvent
@@ -161,7 +160,8 @@ import kotlin.math.min
  * downloads, which hand over through queues.
  */
 internal class Bot(
-    val name: String,
+    /** Who it is: its name, its UUID and any skin. */
+    private val profile: GameProfile,
     private val server: MinecraftServer,
     private val plugin: Plugin,
     private val packAnswer: BotPackAnswer,
@@ -169,7 +169,7 @@ internal class Bot(
     private val joinAt: Location?,
     private var onJoined: ((Result<BotInfo>) -> Unit)?
 ) {
-    private val profile = GameProfile(UUIDUtil.createOfflinePlayerUUID(name), name)
+    val name: String get() = profile.name()
     val uuid: UUID get() = profile.id()
 
     private val inbox = ConcurrentLinkedQueue<Packet<*>>()
@@ -579,6 +579,11 @@ internal class Bot(
         screen.packs[id] = BotPack(id.toString(), packet.url(), packet.hash(), "offered")
         when (packAnswer) {
             BotPackAnswer.IGNORE -> {}
+            BotPackAnswer.LOADED -> {
+                answer(ServerboundResourcePackPacket.Action.ACCEPTED)
+                answer(ServerboundResourcePackPacket.Action.DOWNLOADED)
+                answer(ServerboundResourcePackPacket.Action.SUCCESSFULLY_LOADED)
+            }
             BotPackAnswer.DECLINE -> answer(ServerboundResourcePackPacket.Action.DECLINED)
             BotPackAnswer.FAIL -> {
                 answer(ServerboundResourcePackPacket.Action.ACCEPTED)
@@ -960,6 +965,13 @@ internal class Bot(
                 check(dialog.common().canCloseWithEscape()) { "this dialog can't be closed with Escape" }
                 screen.dialog = null
                 dialog.onCancel().orElse(null)?.let { BotDialogs.click(dialog, it, emptyMap()) }?.let { clicked(it, game) }
+                finished()
+            }
+            is BotAction.Stop -> {
+                task?.let {
+                    task = null
+                    it.finish(Result.failure(IllegalStateException("$name was stopped")))
+                }
                 finished()
             }
             is BotAction.Respawn -> {

@@ -111,8 +111,8 @@ class BridgeService(private val runtime: NetherForgeRuntime, private val config:
         answer(Bridge.ping) { }
         // On the bridge's thread: it only sets a flag the main thread reads.
         answer(Bridge.profilerSubscribe) { runtime.profiler.streaming = it.on }
-        // An extension: only a server with bots answers `bots/…`.
-        runtime.platform.bots?.let { BotsBridge(runtime, it).install(this) }
+        // An extension, outside the core protocol: `bots/…`.
+        BotsBridge(runtime, runtime.platform.bots).install(this)
     }
 
     fun start() = client.start()

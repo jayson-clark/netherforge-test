@@ -11,6 +11,7 @@ import { nfBlocks } from './blocks.ts'
 import { nfRecipes } from './recipes.ts'
 import { nfHttp } from './http.ts'
 import { nfWeb } from './web.ts'
+import { nfBots } from './bots.ts'
 import { nfLoot } from './loot.ts'
 import { nfTeams } from './teams.ts'
 import { nfSchedule } from './schedule.ts'
@@ -425,6 +426,7 @@ const namespaces = [
   nfServer,
   nfCommands,
   nfPlayers,
+  nfBots,
   nfWorlds,
   nfStructures,
   nfCentities,

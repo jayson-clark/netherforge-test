@@ -140,7 +140,6 @@ val integrationTests = adapters.map { (minecraft, adapter) ->
     }.also { dependencies.add(it.name, dependencies.project(mapOf("path" to adapter.path, "configuration" to name))) }
 
     val pluginJar = artifact("pluginJar")
-    val botsJar = artifact("botsJar")
     val paperServer = artifact("paperServer")
 
     tasks.register<Test>("integrationTest-$minecraft") {
@@ -175,7 +174,6 @@ val integrationTests = adapters.map { (minecraft, adapter) ->
         val launcher = javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(25)) }
         jvmArgumentProviders.add(SystemPropertyPath("netherforge.it.java", files(launcher.map { it.executablePath })))
         jvmArgumentProviders.add(SystemPropertyPath("netherforge.it.plugin", pluginJar))
-        jvmArgumentProviders.add(SystemPropertyPath("netherforge.it.bots", botsJar))
         jvmArgumentProviders.add(SystemPropertyPath("netherforge.it.paper", paperServer))
         jvmArgumentProviders.add(SystemPropertyPath("netherforge.it.contract", files(contractJar.flatMap { it.archiveFile })))
         systemProperty("netherforge.it.minecraft", minecraft)

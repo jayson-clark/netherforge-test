@@ -5,21 +5,20 @@ import dev.netherforge.format.bridge.BotState
 import dev.netherforge.format.bridge.BotsExtension
 import dev.netherforge.plugin.NetherForgeRuntime
 import dev.netherforge.plugin.platform.BotAim
+import dev.netherforge.plugin.platform.BotJoin
 import dev.netherforge.plugin.platform.BotOps
 import java.util.UUID
 
 /**
  * The bridge's bots extension ([BotsExtension], `bots/…`): requests that
- * drive the platform's bots. Not part of the core protocol: installed only
- * on a platform that has bots, so any other server answers `bots/…` with
- * method-not-found. Self-contained (it needs the [BridgeService] to install
- * into, the bots and the runtime's centities for aiming), so it can move
- * with bots into their own jar.
+ * drive the platform's bots, for tests and coding agents. Not part of the
+ * core protocol, and self-contained: it needs only the [BridgeService] to
+ * install into, the bots, and the runtime's centities for aiming.
  */
 class BotsBridge(private val runtime: NetherForgeRuntime, private val bots: BotOps) {
     fun install(service: BridgeService) {
         // Joining and acting finish ticks later; the answer waits for them.
-        service.handle(BotsExtension.join) { params, reply -> bots.join(params.name, params.at, params.resourcePack, reply) }
+        service.handle(BotsExtension.join) { params, reply -> bots.join(BotJoin(params.name, params.at, params.resourcePack), reply) }
         service.answer(BotsExtension.leave) { bots.leave(it.name) }
         service.answer(BotsExtension.list) { bots.list() }
         service.handle(BotsExtension.act) { params, reply -> bots.act(params.name, params.action, aimOf(params.action), reply) }

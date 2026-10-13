@@ -90,6 +90,10 @@ class FakeSoundOpsTest : SoundOpsContract() {
     override fun connect() = FakeContractServer()
 }
 
+class FakeMannequinOpsTest : MannequinOpsContract() {
+    override fun connect() = FakeContractServer()
+}
+
 class FakeEntityOpsTest : EntityOpsContract() {
     override fun connect() = FakeContractServer()
 }

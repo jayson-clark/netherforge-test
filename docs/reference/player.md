@@ -6,7 +6,7 @@ Someone on the server: a `Living`, with everything living entities have, and mor
 
 A handle: call its methods with a colon, `player:method()`.
 
-It is a [Living](living.md), which is an [Entity](entity.md), so it has every method and event of those classes too, and you can pass it wherever a `Living` or an `Entity` is expected.
+It is a [Living](living.md), which is an [Entity](entity.md), so it has every method and event of those classes too, and you can pass it wherever a `Living` or an `Entity` is expected. More specific kinds: [Bot](bot.md). You always get the most specific kind the server knows it to be.
 
 | | Methods |
 | --- | --- |

@@ -38,6 +38,8 @@ data class RuntimeConfig(
     val http: HttpConfig = HttpConfig(),
     /** Whether `nf.web` routes are served, and the owner's limits on them. */
     val web: WebConfig = WebConfig(),
+    /** Whether scripts may join bots (`nf.bots`), and how many. */
+    val bots: BotsConfig = BotsConfig(),
     /**
      * Whether the project's dependencies are found where `netherforge.json`'s
      * paths point: on the editor's dev server (and in tests). A production
@@ -112,6 +114,8 @@ data class RuntimeConfig(
                     schedules = schedules,
                     http = http,
                     web = web,
+                    // Bots are always on where the project is being made: trying them is the point.
+                    bots = bots(settings.section("bots")).copy(enabled = true),
                     databases = databases,
                     packageCache = properties(Bridge.PACKAGE_CACHE_PROPERTY)?.takeIf {
                         it.isNotBlank()
@@ -129,6 +133,7 @@ data class RuntimeConfig(
                 schedules = schedules,
                 http = http,
                 web = web,
+                bots = bots(settings.section("bots")),
                 databases = databases,
                 resolvesPackages = false
             )
@@ -194,6 +199,15 @@ data class RuntimeConfig(
                 requestsPerMinutePerIp = positive("requests-per-minute-per-ip", defaults.requestsPerMinutePerIp),
                 maxPending = positive("max-pending", defaults.maxPending),
                 handlerTimeoutSeconds = positive("handler-timeout-seconds", defaults.handlerTimeoutSeconds)
+            )
+        }
+
+        /** `bots:`: whether scripts may join bots, and how many at once. A number that isn't a positive one is the default. */
+        private fun bots(section: Map<String, Any?>): BotsConfig {
+            val defaults = BotsConfig()
+            return BotsConfig(
+                enabled = section.boolean("enabled") ?: defaults.enabled,
+                max = section.int("max")?.takeIf { it > 0 } ?: defaults.max
             )
         }
 
@@ -319,6 +333,15 @@ data class WebConfig(
     val maxPending: Int = 64,
     val handlerTimeoutSeconds: Int = 10
 )
+
+/**
+ * `bots:` in `config.yml`: whether scripts may join bots (`nf.bots`, for a
+ * package that declares `requires.bots`), off by default (the editor's dev
+ * server always allows them), and at most [max] of them online at once
+ * across every package. The dev bridge's own bots (tests, coding agents)
+ * aren't held to either.
+ */
+data class BotsConfig(val enabled: Boolean = false, val max: Int = 20)
 
 data class BridgeConfig(
     val port: Int,

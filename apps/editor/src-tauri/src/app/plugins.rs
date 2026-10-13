@@ -9,9 +9,7 @@
 //!
 //! One plugin jar per Minecraft version, named
 //! `NetherForge-<pluginVersion>-paper-<minecraft>.jar`; the project's target
-//! picks it. Beside each, its dev-only bots companion,
-//! `NetherForgeBots-<pluginVersion>-paper-<minecraft>.jar` (the fake players
-//! coding agents and tests drive over the bridge), which a dev server gets too.
+//! picks it. The bots coding agents and tests drive over the bridge are in it.
 
 use std::path::{Path, PathBuf};
 
@@ -22,16 +20,11 @@ pub struct PluginJar {
     pub minecraft: String,
     pub plugin_version: String,
     pub path: PathBuf,
-    /// The bots companion of the same build, when it's beside the plugin.
-    pub bots: Option<PathBuf>,
 }
 
-/// The bots companion's name for a plugin jar's version and Minecraft version.
-pub fn bots_jar_name(plugin_version: &str, minecraft: &str) -> String {
-    format!("NetherForgeBots-{plugin_version}-paper-{minecraft}.jar")
-}
-
-/// Whether a file in a server's `plugins/` is one of ours: the plugin or its bots.
+/// Whether a file in a server's `plugins/` is one of ours: the plugin, or the
+/// bots companion jar older builds installed beside it (the bots are in the
+/// plugin now), which a new install takes away.
 pub fn is_ours(name: &str) -> bool {
     (name.starts_with("NetherForge-") || name.starts_with("NetherForgeBots-"))
         && name.ends_with(".jar")
@@ -83,10 +76,8 @@ pub fn scan(dirs: &[PathBuf]) -> Vec<PluginJar> {
                 let (plugin_version, minecraft) = parse_jar_name(&name)?;
                 let meta = entry.metadata().ok().filter(|m| m.is_file())?;
                 let modified = meta.modified().unwrap_or(std::time::UNIX_EPOCH);
-                let bots = dir.join(bots_jar_name(&plugin_version, &minecraft));
                 Some((
                     PluginJar {
-                        bots: bots.is_file().then_some(bots),
                         minecraft,
                         plugin_version,
                         path: entry.path(),
@@ -145,8 +136,7 @@ mod tests {
         std::fs::write(bundled.join("NetherForge-0.1.0-paper-26.3.jar"), "a").unwrap();
         std::fs::write(dev.join("NetherForge-0.1.1-paper-26.3.jar"), "b").unwrap();
         std::fs::write(dev.join("NetherForge-0.1.1-paper-1.21.11.jar"), "c").unwrap();
-        std::fs::write(dev.join("NetherForgeBots-0.1.1-paper-1.21.11.jar"), "d").unwrap();
-        // Another build's bots don't go with this plugin.
+        // An older build's bots companion isn't a plugin jar.
         std::fs::write(bundled.join("NetherForgeBots-0.0.9-paper-26.3.jar"), "e").unwrap();
         std::fs::write(dev.join("README.txt"), "").unwrap();
 
@@ -157,13 +147,8 @@ mod tests {
             jars[0].path,
             bundled.join("NetherForge-0.1.0-paper-26.3.jar")
         );
-        assert_eq!(jars[0].bots, None);
         let old = find(&[bundled, dev.clone()], "1.21.11").unwrap();
         assert_eq!(old.path, dev.join("NetherForge-0.1.1-paper-1.21.11.jar"));
-        assert_eq!(
-            old.bots,
-            Some(dev.join("NetherForgeBots-0.1.1-paper-1.21.11.jar"))
-        );
         assert!(is_ours("NetherForgeBots-0.1.1-paper-1.21.11.jar"));
         assert!(!is_ours("NetherForgeExtras.zip") && !is_ours("OtherPlugin.jar"));
     }

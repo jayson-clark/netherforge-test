@@ -46,9 +46,8 @@ automatically; anything else isn't), add it to `places` in `release.mjs`.
 
 The plugin's `paper-plugin.yml` gets `${version}` from Gradle at build time.
 There's one plugin jar per supported Minecraft version,
-`NetherForge-<version>-paper-<minecraft>.jar`, and beside each its dev-only
-bots companion, `NetherForgeBots-<version>-paper-<minecraft>.jar` (see the
-minecraft-versions skill).
+`NetherForge-<version>-paper-<minecraft>.jar` (see the minecraft-versions
+skill).
 
 ## Cutting a release
 
@@ -115,16 +114,13 @@ bundled into the editor under `test-runner/` (`tauri.bundle.conf.json`), and the
 editor copies it to `<data>/test-runner/` at startup for the `netherforge`
 command. The command needs the jar of its own version.
 
-Each editor bundle contains the plugin jars and their bots
-(`tauri.bundle.conf.json` globs `apps/plugin/paper-*/build/libs/NetherForge*-paper-*.jar`);
-the editor installs the one for the project's target, with its bots, into
-its dev servers. They're the plugin job's own jars, handed over as the
+Each editor bundle contains the plugin jars
+(`tauri.bundle.conf.json` globs `apps/plugin/paper-*/build/libs/NetherForge-*-paper-*.jar`);
+the editor installs the one for the project's target into its dev servers. They're the plugin job's own jars, handed over as the
 `plugin-jars` workflow artifact and put back in those folders, so an
 installer carries exactly the jars attached to the release (the editor jobs
-wait for the plugin job). The bots jars aren't attached to the release: they
-reach into the server and are for dev servers only, which the editor runs.
-The plugin job checks every jar carries the release's version and every
-plugin jar has its bots. Linux builds on 22.04 so the binaries run on older glibc.
+wait for the plugin job). The plugin job checks every jar carries the
+release's version. Linux builds on 22.04 so the binaries run on older glibc.
 There's no Linux ARM or Windows ARM build yet.
 
 ## Signing secrets

@@ -14,7 +14,7 @@ cross-cutting change (bridge, hot reload, server setup) done.
 2. **Build the plugin jar** for the target version; the editor installs it
    into every dev server, and refuses to start without one:
    `node tools/gradle.mjs :plugin:paper-26.3:assemble` → `apps/plugin/paper-26.3/build/libs/NetherForge-<v>-paper-26.3.jar`
-   and its bots, `NetherForgeBots-<v>-paper-26.3.jar` (each supported version has its own `paper-<mc>`).
+   (each supported version has its own `paper-<mc>`).
    Debug builds of the editor find it there directly; rebuild it after a
    plugin change and restart the dev server.
 3. **Java 25+** is found automatically (JAVA_HOME, PATH, the usual install

@@ -68,6 +68,7 @@ const FREE_NAMES: Record<string, string> = {
   balloon: 'Node',
   button: 'Node',
   node: 'Node',
+  bot: 'Bot',
   zombie: 'Mob',
   pet: 'Mob',
   boss: 'Mob',

@@ -6,7 +6,7 @@ A living entity: a mob, an animal, an armour stand, a player. An `Entity` with h
 
 A handle: call its methods with a colon, `living:method()`.
 
-It is an [Entity](entity.md), so it has every method and event of that class too, and you can pass it wherever an `Entity` is expected. More specific kinds: [Mob](mob.md), [Player](player.md). You always get the most specific kind the server knows it to be.
+It is an [Entity](entity.md), so it has every method and event of that class too, and you can pass it wherever an `Entity` is expected. More specific kinds: [Mob](mob.md), [Mannequin](mannequin.md), [Player](player.md). You always get the most specific kind the server knows it to be.
 
 | | Methods |
 | --- | --- |

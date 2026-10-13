@@ -50,11 +50,12 @@
 --- MiniMessage a player reads, like `"<green>Done!"`: a string. A `<glyph:pack/key>` tag in it names a glyph the way the script's own files would: one of its own package's resource packs bare, or `<glyph:namespace:pack/key>` for one a package it depends on exports. The tag means that glyph wherever and whenever the text is shown, whoever shows it; one naming a glyph the script can't use draws nothing, and the server log says why. Text handed back to a script names its glyphs the same way.
 ---@alias Text string
 
---- Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.web`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
+--- Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.bots`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.web`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
 ---@class nf
 ---@field server nf.server The server itself: its clock, its performance, its version, its settings (players, message of the day, whitelist), and saying or running things as the console.
 ---@field commands nf.commands Slash commands a module adds to the server for as long as it runs, with typed arguments, tab completion and usage messages from their declaration.
 ---@field players nf.players Players: everyone online, or anyone who has ever joined.
+---@field bots nf.bots Bots: fake players that scripts join to the server and drive, for opponents and teammates in games, crowds, and anything a player does that an NPC can't. A bot is a real player to the server and to every other plugin: it's on the player list and counted in the player count, its joins, moves, clicks, chat and deaths are heard like anyone's, and it does everything by sending what a player's client would (walking a step a tick, aiming before it clicks), so the game's rules and every other plugin's checks apply to it. Each is a new player every time it joins (a fresh UUID, nothing of it saved: no inventory, statistics or advancements kept), marked as an NPC for other plugins (the `NPC` metadata they check to leave fake players alone), and it loads only the chunks right around it. A bot belongs to the script that joined it and leaves when that script unloads. A package declares `"requires": { "bots": true }` in its `netherforge.json`, and the server owner allows bots (`bots.enabled` in `config.yml`, with `bots.max` online at once); until then a package that declares them has a warning (`runtime.bots-disabled`). The editor's dev server always allows them. For a figure that stands and looks like a player without being one, spawn a `Mannequin`: it costs far less.
 ---@field worlds nf.worlds The server's worlds: finding them, and making, loading and copying them.
 ---@field structures nf.structures Structures: saved boxes of blocks that `world:place_structure` places. The project's are `structures/<id>.nbt`; scripts save more with `world:save_structure`.
 ---@field centities nf.centities Centity instances: spawning new ones and finding live ones.
@@ -305,7 +306,7 @@ function nf.after(ticks, callback) end
 ---@return Task
 function nf.every(ticks, callback) end
 
---- Starts a task: `callback` runs now, with the extra arguments, until it first waits (`nf.wait`, `nf.wait_until`, `nf.wait_for`, `dialog:ask` or an asynchronous function like `nf.worlds.copy`, `nf.http.request`, `world:locate_biome`, `database:query`, `database:execute` or `database:transaction` called without its callback), and carries on from there when the wait is over. Only a task can wait; event handlers can't, because whether an event is cancelled or stopped has to be known when it returns, so a handler that needs to wait starts a task. Each time a task carries on it gets the script's whole instruction budget again. A task belongs to the script that started it and ends when that script unloads, when `cancel()` is called, or when the handle it waits on goes. One that errors is logged with its file and line and ends; the code that started it carries on either way.
+--- Starts a task: `callback` runs now, with the extra arguments, until it first waits (`nf.wait`, `nf.wait_until`, `nf.wait_for`, `dialog:ask` or an asynchronous function like `nf.bots.join`, `nf.worlds.copy`, `nf.http.request`, `bot:walk_to`, `bot:break_block`, `world:locate_biome`, `database:query`, `database:execute` or `database:transaction` called without its callback), and carries on from there when the wait is over. Only a task can wait; event handlers can't, because whether an event is cancelled or stopped has to be known when it returns, so a handler that needs to wait starts a task. Each time a task carries on it gets the script's whole instruction budget again. A task belongs to the script that started it and ends when that script unloads, when `cancel()` is called, or when the handle it waits on goes. One that errors is logged with its file and line and ends; the code that started it carries on either way.
 ---@param callback async fun(...: any) The task: plain Lua that may wait.
 ---@param ... any Passed to `callback`.
 ---@return Task # Call `:cancel()` on it to end it early.
@@ -687,6 +688,27 @@ function nf.players.banned() end
 --- Everyone on the server's whitelist, whether it's on or not.
 ---@return Player[]
 function nf.players.whitelisted() end
+
+--- Bots: fake players that scripts join to the server and drive, for opponents and teammates in games, crowds, and anything a player does that an NPC can't. A bot is a real player to the server and to every other plugin: it's on the player list and counted in the player count, its joins, moves, clicks, chat and deaths are heard like anyone's, and it does everything by sending what a player's client would (walking a step a tick, aiming before it clicks), so the game's rules and every other plugin's checks apply to it. Each is a new player every time it joins (a fresh UUID, nothing of it saved: no inventory, statistics or advancements kept), marked as an NPC for other plugins (the `NPC` metadata they check to leave fake players alone), and it loads only the chunks right around it. A bot belongs to the script that joined it and leaves when that script unloads. A package declares `"requires": { "bots": true }` in its `netherforge.json`, and the server owner allows bots (`bots.enabled` in `config.yml`, with `bots.max` online at once); until then a package that declares them has a warning (`runtime.bots-disabled`). The editor's dev server always allows them. For a figure that stands and looks like a player without being one, spawn a `Mannequin`: it costs far less.
+---@class nf.bots
+nf.bots = {}
+
+--- Joins a bot named `name` to the server, where it goes through everything a player's join does (the server's checks, `player_join`, the resource pack, which it reports loaded without fetching). `nil, err` when bots are off on this server, `bots.max` are online, someone of that name is online, or the server turned it away. A name that isn't 3 to 16 letters, digits or `_` is an error. It takes ticks: joining loads the world around it, so its bot arrives later: give `callback`, which is called with `bot, err` once it's done, or call it inside a task (`nf.task`) without one, and it waits and returns `bot, err`. Without a callback outside a task, it's an error. When it fails, `bot` is `nil` and `err` says why.
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@param name string Its name, as players see it: 3 to 16 letters, digits or `_`.
+---@param location_or_position? Location|Vec3 Where it appears: a `Location` (facing its way), or a position in the main world. The main world's spawn when left out.
+---@param options? BotJoinOptions
+---@param callback? fun(bot: Bot?, err: string?) Called on the main thread once it's done, as this script's code, with the bot, in the world (or `nil` and why not). Not called if the script has stopped by then.
+---@return Bot? # Only without a callback, in a task: the bot, in the world, or `nil`.
+---@return string? # Why it failed, when it did; `nil` when it worked.
+---@overload async fun(name: string, location_or_position?: Location|Vec3, options?: BotJoinOptions): Bot?, string?
+---@overload fun(name: string, location_or_position?: Location|Vec3, options?: BotJoinOptions, callback: fun(bot: Bot?, err: string?))
+function nf.bots.join(name, location_or_position, options, callback) end
+
+--- Every bot online, whoever joined it.
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@return Bot[]
+function nf.bots.all() end
 
 --- The server's worlds: finding them, and making, loading and copying them.
 ---@class nf.worlds
@@ -2619,6 +2641,64 @@ function DroppedItem:pickup_delay() end
 ---@return boolean # `false` once it has gone (or while its chunk is unloaded).
 function DroppedItem:set_pickup_delay(ticks) end
 
+--- A figure that looks like a player, for shopkeepers, quest givers and statues: a `Living` with a player's skin, a line of text under its name, and a pose, that isn't a player (it's on no player list, counts towards nothing and loads no chunks) and costs no more than an armour stand. Spawn one with `world:spawn_entity("minecraft:mannequin", …)`, and hear players click it with its `interact` event. It stands where it's put unless pushed or hurt (`set_immovable` keeps it there), holds and wears what it's given (`set_equipment`), and turns with `look_at`. For a figure that walks, fights and plays as a player does, join a `Bot`.
+---@class Mannequin: Living
+local Mannequin = {}
+
+--- Its skin: a player's name (their skin, which the server looks up), a `Skin` table, or `nil` for the default skin, and once it has gone (or while its chunk is unloaded).
+---@return string|Skin|nil
+function Mannequin:skin() end
+
+--- Gives it a skin. Players' clients draw it as soon as the server has it.
+---@param skin? string|Skin A player's name (`"Notch"`: their skin, looked up by the server), or a `Skin`. Leave it out (or `nil`) for the default skin.
+---@return boolean # `false` once it has gone (or while its chunk is unloaded).
+function Mannequin:set_skin(skin) end
+
+--- The line of text under its name, as MiniMessage, or `nil` when it shows none (a new one shows "NPC"), and once it has gone (or while its chunk is unloaded).
+---@return Text?
+function Mannequin:description() end
+
+--- Sets the line of text under its name.
+---@param text? Text MiniMessage. Leave it out (or `nil`) to show none.
+---@return boolean # `false` once it has gone (or while its chunk is unloaded).
+function Mannequin:set_description(text) end
+
+--- Whether nothing pushes it: players, mobs, water, explosions. `false` once it has gone (or while its chunk is unloaded).
+---@return boolean
+function Mannequin:is_immovable() end
+
+--- Keeps it where it is whatever pushes it, or lets it be pushed again.
+---@param immovable boolean
+---@return boolean # `false` once it has gone (or while its chunk is unloaded).
+function Mannequin:set_immovable(immovable) end
+
+--- Which hand it holds things in, or `nil` once it has gone (or while its chunk is unloaded).
+---@return "left"|"right"?
+function Mannequin:main_hand() end
+
+--- Sets which hand it holds things in.
+---@param side "left"|"right"
+---@return boolean # `false` once it has gone (or while its chunk is unloaded).
+function Mannequin:set_main_hand(side) end
+
+--- How it stands, or `nil` once it has gone (or while its chunk is unloaded).
+---@return "standing"|"crouching"|"swimming"|"fall_flying"|"sleeping"?
+function Mannequin:pose() end
+
+--- Sets how it stands.
+---@param pose "standing"|"crouching"|"swimming"|"fall_flying"|"sleeping"
+---@return boolean # `false` once it has gone (or while its chunk is unloaded).
+function Mannequin:set_pose(pose) end
+
+--- Which parts of its skin's outer layer show, or `nil` once it has gone (or while its chunk is unloaded).
+---@return SkinParts?
+function Mannequin:skin_parts() end
+
+--- Shows or hides parts of its skin's outer layer: a part left out of the table keeps how it is.
+---@param parts SkinParts
+---@return boolean # `false` once it has gone (or while its chunk is unloaded).
+function Mannequin:set_skin_parts(parts) end
+
 --- Someone on the server: a `Living`, with everything living entities have, and more. A handle is a UUID, so keeping one is fine: if they leave, its methods answer `nil` or `false` rather than erroring, and work again when they come back. `nf.players.get` hands out handles to people who are offline too. Their real inventory is numbered: the hotbar 0 to 8, the rest of the main inventory 9 to 35, armour 36 (feet), 37 (legs), 38 (chest) and 39 (head), the offhand 40, then body armour 41 and a saddle 42 (what the game keeps there for any entity).
 ---@class Player: Living
 local Player = {}
@@ -3282,6 +3362,130 @@ function Player:on(event, handler, options) end
 ---@overload fun(self: Player, event: "mount", handler: fun(event: MountEvent)): Subscription
 ---@overload fun(self: Player, event: "dismount", handler: fun(event: MountEvent)): Subscription
 function Player:once(event, handler) end
+
+--- A fake player a script drives (see `nf.bots`): a `Player` with everything players have, and the controls a player's client has. Every action is done as the client would do it, so what it causes is heard like anyone's (`player_move`, `player_interact`, `entity_damage`, …) and a handler that cancels it stops it. Actions that take ticks (`walk_to`, `break_block`) are asynchronous; a new one ends the one before it with an error, as `stop()` does. Every bot online is a `Bot`, those the editor's agents and tests drive included. Once it has left, every action answers `false` (and an asynchronous one `nil, err`).
+---@class Bot: Player
+local Bot = {}
+
+--- Disconnects it, as a player quitting does: `player_quit` is heard, and it's gone for good (a bot never comes back: join a new one).
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
+function Bot:leave() end
+
+--- Walks in a straight line to a position's x and z, as a player holding forward would: a step a tick, jumping up a block in its way, falling down drops and swimming. It doesn't find a way around a wall: it stops, stuck, when it hasn't come closer for a second, and when it's still short after `timeout` ticks. It takes as many ticks as the walk does, so its position arrives later: give `callback`, which is called with `position, err` once it's done, or call it inside a task (`nf.task`) without one, and it waits and returns `position, err`. Without a callback outside a task, it's an error. When it fails, `position` is `nil` and `err` says why.
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@param position Vec3 Where to: only its x and z matter.
+---@param options? BotWalkOptions
+---@param callback? fun(position: Vec3?, err: string?) Called on the main thread once it's done, as this script's code, with where it arrived (or `nil` and why not). Not called if the script has stopped by then.
+---@return Vec3? # Only without a callback, in a task: where it arrived, or `nil`.
+---@return string? # Why it failed, when it did; `nil` when it worked.
+---@overload async fun(self: Bot, position: Vec3, options?: BotWalkOptions): Vec3?, string?
+---@overload fun(self: Bot, position: Vec3, options?: BotWalkOptions, callback: fun(position: Vec3?, err: string?))
+function Bot:walk_to(position, options, callback) end
+
+--- Stops what it is doing over several ticks (walking, mining): that action ends with `nil` and an error saying it was stopped. Nothing to stop is fine.
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
+function Bot:stop() end
+
+--- Turns its head to look at a point, as its player would with the mouse: its next click aims there at once. (An `Entity`'s `look_at` turns it from the server's side, which a bot's client hears a tick later.)
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@param point Vec3 A world position.
+---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
+function Bot:look_at(point) end
+
+--- Jumps, once it stands on something.
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
+function Bot:jump() end
+
+--- Holds sneak, or lets go.
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@param sneaking boolean
+---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
+function Bot:set_sneaking(sneaking) end
+
+--- Sprints, or stops: it sprints as it walks.
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@param sprinting boolean
+---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
+function Bot:set_sprinting(sprinting) end
+
+--- Says something in chat, as its player typing it. A message starting with `/` is a command it types.
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@param message string
+---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
+function Bot:chat(message) end
+
+--- Hits an entity or a centity's node (a left click), turning to its middle first, and swings its arm. It must be within reach (3 blocks for an entity) and its client must have been sent it: an entity hidden from the bot, or too far away to be sent, can't be clicked.
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@param target Entity|Node What to hit: an entity, or a node with a hitbox.
+---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
+function Bot:attack(target) end
+
+--- Right-clicks an entity or a centity's node, turning to its middle first (or to `options.at`). It must be within reach (3 blocks for an entity) and its client must have been sent it: an entity hidden from the bot, or too far away to be sent, can't be clicked.
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@param target Entity|Node What to click: an entity, or a node with a hitbox.
+---@param options? BotInteractOptions
+---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
+function Bot:interact(target, options) end
+
+--- Right-clicks with what it holds, at nothing: eats, draws a bow, throws a pearl. `release_item` lets go.
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@param off_hand? boolean With what it holds in its off hand. Default `false`.
+---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
+function Bot:use_item(off_hand) end
+
+--- Lets go of right-click while using an item: a drawn bow shoots, a raised shield lowers.
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
+function Bot:release_item() end
+
+--- Swings its arm at nothing (a left click at the air).
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
+function Bot:swing() end
+
+--- Right-clicks a face of a block, turning to it first: opens a door or a chest, places what it holds against it. It must be within reach (4.5 blocks).
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@param position Vec3 The block's position (any point inside it).
+---@param face? "up"|"down"|"north"|"south"|"east"|"west" Which face. Default `"up"`.
+---@param off_hand? boolean With what it holds in its off hand. Default `false`.
+---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
+function Bot:use_block(position, face, off_hand) end
+
+--- Mines a block, turning to it first, for as long as that takes with what it holds, as a player holding the button does. `nil, err` when there's no block there, it's out of reach (4.5 blocks), or the server didn't let it break. It takes as many ticks as the block takes to break, so its broken arrives later: give `callback`, which is called with `broken, err` once it's done, or call it inside a task (`nf.task`) without one, and it waits and returns `broken, err`. Without a callback outside a task, it's an error. When it fails, `broken` is `nil` and `err` says why.
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@param position Vec3 The block's position (any point inside it).
+---@param callback? fun(broken: boolean?, err: string?) Called on the main thread once it's done, as this script's code, with `true` (or `nil` and why not). Not called if the script has stopped by then.
+---@return boolean? # Only without a callback, in a task: `true`, or `nil`.
+---@return string? # Why it failed, when it did; `nil` when it worked.
+---@overload async fun(self: Bot, position: Vec3): boolean?, string?
+---@overload fun(self: Bot, position: Vec3, callback: fun(broken: boolean?, err: string?))
+function Bot:break_block(position, callback) end
+
+--- Swaps what it holds in its hands (F).
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
+function Bot:swap_hands() end
+
+--- Drops one of what it holds (Q), or the whole stack.
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@param stack? boolean The whole stack. Default `false`.
+---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
+function Bot:drop_item(stack) end
+
+--- Clicks a slot of the menu it has open, or of its inventory with none: the menu's own slots first, then its inventory's, as `slot` numbers them.
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@param slot integer Which slot, from 0.
+---@param click? "left"|"right"|"shift_left"|"shift_right"|"drop"|"drop_all"|"double" How. Default `"left"`.
+---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
+function Bot:click_slot(slot, click) end
+
+--- Presses Respawn on the death screen. `false` when it isn't dead.
+--- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
+---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
+function Bot:respawn() end
 
 --- Whoever ran a command: a player or the console. What `event.sender` is in a command handler. For a player, `event.player` is the same person as a `Player`.
 ---@class Sender
@@ -6016,6 +6220,16 @@ function Event:uncancel() end
 ---@field display_name Text? Its name: the file's (or what made it said), until a handler assigns another. `nil` for the game's own name.
 ---@field lore Text[]? Its lore lines, the same way. `nil` for none.
 
+--- The parts of a skin's outer layer a mannequin shows, each `true` when shown. `mannequin:skin_parts()` gives every one; `set_skin_parts` changes those given.
+---@class SkinParts
+---@field cape boolean? Its cape, when its skin has one.
+---@field jacket boolean?
+---@field left_sleeve boolean?
+---@field right_sleeve boolean?
+---@field left_pants boolean?
+---@field right_pants boolean?
+---@field hat boolean?
+
 --- Which entities `world:entities` lists. Every key is optional; an entity is listed when it matches all of those given. A key that isn't one of these is an error.
 ---@class EntityFilter
 ---@field kind string? Only this kind: `"minecraft:zombie"`.
@@ -6125,6 +6339,25 @@ function Event:uncancel() end
 ---@class AdvancementProgress
 ---@field done string[] The criteria they've met.
 ---@field remaining string[] The criteria left.
+
+--- How a bot joins (`nf.bots.join`).
+---@class BotJoinOptions
+---@field skin Skin? Its skin. Without one, it wears one of the game's default skins.
+
+--- How a bot walks (`bot:walk_to`).
+---@class BotWalkOptions
+---@field sprint boolean? Sprint there. Default `false`.
+---@field timeout integer? Ticks it may take before it gives up, 1 to 500. Default 200.
+
+--- How a bot right-clicks (`bot:interact`).
+---@class BotInteractOptions
+---@field off_hand boolean? With what it holds in its off hand. Default `false`.
+---@field at Vec3? A point on it to turn to and click (a square of a board), in the world. Its middle when left out.
+
+--- A skin, as Mojang's session servers sign it: a player profile's `textures` property. Sites that make skins for NPCs (MineSkin, …) give both values.
+---@class Skin
+---@field texture string The base64 `value` of the `textures` property.
+---@field signature string? Its signature. Players' clients draw an unsigned skin only when the server is in offline mode.
 
 --- What a menu slot shows: `slot:binding()`. A slot of a storage (`storage` and `index`), or what a player wears (`player` and `equipment`).
 ---@class SlotBinding

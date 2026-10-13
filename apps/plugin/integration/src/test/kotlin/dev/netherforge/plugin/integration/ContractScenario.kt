@@ -30,7 +30,7 @@ class ContractScenario {
     @TestFactory
     fun `the Platform contract suites hold on Paper`(): List<DynamicTest> {
         val server = PaperServer(onlineMode = true, maxPlayers = 20, viewDistance = 4)
-        server.prepare(listOf(Adapter.plugin, Adapter.bots, Adapter.contract))
+        server.prepare(listOf(Adapter.plugin, Adapter.contract))
         val results = server.folder.resolve("contract-results.json")
         Files.deleteIfExists(results)
         Files.deleteIfExists(server.folder.resolve("contract-test.log"))

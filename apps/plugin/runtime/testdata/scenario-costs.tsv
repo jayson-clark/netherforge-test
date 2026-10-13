@@ -5,7 +5,7 @@ block:kind()	19
 centity:data().hp	16
 centity:emit, nobody listening	55
 centity:id()	15
-give_item({ item })	18
+give_item({ item })	22
 inventory:item(i)	17
 mob:id() (Entity's, on a Mob)	15
 mob:is_mob()	32
@@ -28,7 +28,7 @@ nf.on + cancel	249
 nf.on + cancel, among 100 others	234
 node:set_translation(v)	25
 node:translation()	24
-player:send_message(text)	17
+player:send_message(text)	21
 random:integer(1, 6)	85
 random:number()	59
 set_item(a rich item)	19

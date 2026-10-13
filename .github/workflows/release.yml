@@ -5,8 +5,7 @@
 # 1. prepare: checks every version agrees with the tag and CHANGELOG.md has an
 #    entry, then creates a *draft* GitHub release with that entry as its notes.
 # 2. plugin:  builds the Paper plugin jars (one per supported Minecraft version), the
-#    LuaLS stubs and the JSON Schemas and attaches them. The bots companions
-#    (NetherForgeBots-*.jar, dev servers only) go to the editor builds, not the release.
+#    LuaLS stubs and the JSON Schemas and attaches them.
 # 3. cli:     builds the `netherforge` command (one Node script) and attaches it.
 # 4. editor:  bundles the editor on macOS (universal), Windows and Linux with
 #    tauri-action and attaches the installers, plus the updater's latest.json
@@ -114,8 +113,8 @@ jobs:
           cp apps/plugin/paper-*/build/libs/NetherForge-*-paper-*.jar "$RUNNER_TEMP/assets/"
           # The script test runner (`netherforge test`) is attached too, for CI jobs and terminals without the editor.
           cp apps/plugin/test-runner/build/libs/NetherForgeTest-*.jar "$RUNNER_TEMP/assets/"
-          # The editor bundles the plugin jars and their dev-only bots, and the test runner; servers get the plugin jars alone.
-          cp apps/plugin/paper-*/build/libs/NetherForge-*-paper-*.jar apps/plugin/paper-*/build/libs/NetherForgeBots-*-paper-*.jar apps/plugin/test-runner/build/libs/NetherForgeTest-*.jar "$RUNNER_TEMP/jars/"
+          # The editor bundles the plugin jars and the test runner.
+          cp apps/plugin/paper-*/build/libs/NetherForge-*-paper-*.jar apps/plugin/test-runner/build/libs/NetherForgeTest-*.jar "$RUNNER_TEMP/jars/"
           cp packages/api/generated/luals/nf.lua "$RUNNER_TEMP/assets/"
           # What `this` is in each kind of script: nf-centity.lua, nf-menu.lua, nf-dialog.lua.
           for stub in packages/api/generated/luals/surfaces/*.lua; do
@@ -124,14 +123,11 @@ jobs:
           cp packages/format/build/generated-contract/schema/*.schema.json "$RUNNER_TEMP/assets/"
           ls -l "$RUNNER_TEMP/assets"
           ls -l "$RUNNER_TEMP/jars"
-          # Every jar must carry the release's version, and every plugin jar have its bots.
+          # Every jar must carry the release's version.
           for jar in "$RUNNER_TEMP"/jars/*.jar; do
             case "$(basename "$jar")" in
               "NetherForgeTest-$VERSION.jar") ;;
-              "NetherForge-$VERSION-paper-"*.jar)
-                bots="$RUNNER_TEMP/jars/NetherForgeBots-${jar##*/NetherForge-}"
-                [ -f "$bots" ] || { echo "::error::no bots jar for $jar"; exit 1; } ;;
-              "NetherForgeBots-$VERSION-paper-"*.jar) ;;
+              "NetherForge-$VERSION-paper-"*.jar) ;;
               *) echo "::error::$jar doesn't carry version $VERSION"; exit 1 ;;
             esac
           done

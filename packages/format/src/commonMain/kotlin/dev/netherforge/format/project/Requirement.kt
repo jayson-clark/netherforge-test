@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
  * Something a package's scripts can do only when its `netherforge.json`
  * declares it (`"requires"`, [ProjectRequires]): the capabilities "Trust" in
  * PLAN.md's decisions is about. Its [id] is how the API spec's `requires`
- * names it (`moderation`, `db`, `web`, `http`, `plugin:vault`) and how the editor,
+ * names it (`moderation`, `db`, `web`, `bots`, `http`, `plugin:vault`) and how the editor,
  * the server's log and `/nf requires` show it (`http:discord.com`).
  *
  * The one place a declaration is read: the runtime's check
@@ -51,6 +51,14 @@ sealed class Requirement {
         override fun grantedBy(requires: ProjectRequires?) = requires?.web == true
     }
 
+    /** Joining fake players to the server and driving them (`nf.bots`), when the server owner allows bots. */
+    data object Bots : Requirement() {
+        override val id = "bots"
+        override val declaration = "\"requires\": { \"bots\": true }"
+
+        override fun grantedBy(requires: ProjectRequires?) = requires?.bots == true
+    }
+
     /**
      * HTTP requests to [host] (lowercase), or, with none, to any host the
      * package declares: what the spec's `requires: "http"` checks before the
@@ -80,6 +88,7 @@ sealed class Requirement {
             id == Moderation.id -> Moderation
             id == Db.id -> Db
             id == Web.id -> Web
+            id == Bots.id -> Bots
             id == "http" -> Http()
             id.startsWith("http:") -> id.removePrefix("http:").takeIf(Names::isHostName)?.let(::Http)
             id.startsWith("plugin:") -> id.removePrefix("plugin:").takeIf(Names::isPluginName)?.let(::Plugin)
@@ -99,7 +108,7 @@ sealed class Requirement {
 
         /**
          * What [requires] declares, one requirement each, in the order they're
-         * shown: moderation, db, each host, each plugin. A host or plugin name
+         * shown: moderation, db, web, bots, each host, each plugin. A host or plugin name
          * that isn't one (a problem in the manifest) declares nothing.
          */
         fun declared(requires: ProjectRequires?): List<Requirement> = buildList {
@@ -107,6 +116,7 @@ sealed class Requirement {
             if (requires.moderation == true) add(Moderation)
             if (requires.db == true) add(Db)
             if (requires.web == true) add(Web)
+            if (requires.bots == true) add(Bots)
             requires.http.orEmpty().filter(Names::isHttpHost).distinct().sorted().forEach { add(Http(it)) }
             requires.plugins.orEmpty().filter(Names::isPluginName).distinct().sorted().forEach { add(Plugin(it)) }
         }
@@ -131,8 +141,9 @@ sealed class Requirement {
                     Moderation -> 0
                     Db -> 1
                     Web -> 2
-                    is Http -> 3
-                    is Plugin -> 4
+                    Bots -> 3
+                    is Http -> 4
+                    is Plugin -> 5
                 }
             }
             return by.entries.sortedWith(compareBy({ order(it.key) }, { it.key.id })).map { (requirement, packages) ->

@@ -12,6 +12,8 @@ import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.InventoryRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.Location
+import dev.netherforge.plugin.platform.MannequinLook
+import dev.netherforge.plugin.platform.MannequinOps
 import dev.netherforge.plugin.platform.Ray
 import dev.netherforge.plugin.platform.SpawnSetup
 import dev.netherforge.plugin.platform.StatusEffectData
@@ -40,10 +42,14 @@ open class FakeBody(val id: UUID, val kind: String, var location: Location) {
     /** Has AI: a mob, not an armour stand or a player. */
     val mob get() = type.mob
 
+    /** A mannequin's own look; null for anything else. */
+    var mannequin: MannequinLook? = if (type.mannequin) MannequinLook(description = FakeMannequins.DEFAULT_DESCRIPTION) else null
+
     /** Which of the API's classes it is. */
     val category
         get() = when {
             type.mob -> EntityCategory.MOB
+            type.mannequin -> EntityCategory.MANNEQUIN
             type.health != null -> EntityCategory.LIVING
             type.droppedItem -> EntityCategory.DROPPED_ITEM
             else -> EntityCategory.OTHER
@@ -466,4 +472,20 @@ class FakeWorldEntities(private val platform: FakePlatform) : WorldEntityOps {
     /** A player right-clicks [entity]; true when it was cancelled. */
     fun interact(player: FakePlayer, entity: UUID, hand: String = "main_hand") =
         platform.events!!.playerInteractEntity(player.ref, entity, hand)
+}
+
+/** Mannequins on the fake server: each one's [FakeBody.mannequin]. */
+class FakeMannequins(private val platform: FakePlatform) : MannequinOps {
+    override fun look(id: UUID): MannequinLook? = platform.worldEntities.body(id)?.mannequin
+
+    override fun setLook(id: UUID, look: MannequinLook): Boolean {
+        val body = platform.worldEntities.body(id)?.takeIf { it.mannequin != null } ?: return false
+        body.mannequin = look
+        return true
+    }
+
+    companion object {
+        /** What a new mannequin shows under its name, as Paper hands it over: the game's "NPC". */
+        const val DEFAULT_DESCRIPTION = "<lang:entity.minecraft.mannequin.label>"
+    }
 }

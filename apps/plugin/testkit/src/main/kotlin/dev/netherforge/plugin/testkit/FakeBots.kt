@@ -17,7 +17,6 @@ import dev.netherforge.format.bridge.BotListEntry
 import dev.netherforge.format.bridge.BotMenu
 import dev.netherforge.format.bridge.BotPack
 import dev.netherforge.format.bridge.BotPackAnswer
-import dev.netherforge.format.bridge.BotPosition
 import dev.netherforge.format.bridge.BotSidebar
 import dev.netherforge.format.bridge.BotState
 import dev.netherforge.format.bridge.BotTarget
@@ -34,6 +33,7 @@ import dev.netherforge.format.game.has
 import dev.netherforge.format.menu.MenuType
 import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.BotAim
+import dev.netherforge.plugin.platform.BotJoin
 import dev.netherforge.plugin.platform.BotOps
 import dev.netherforge.plugin.platform.ClickButton
 import dev.netherforge.plugin.platform.DialogSpec
@@ -64,8 +64,8 @@ import kotlin.math.sqrt
  * model of (signs, enchanting, bows, a menu of the server's own) is an
  * error saying so, never a silent success.
  *
- * Like the real ones, joins and actions finish later, on the main thread
- * (here, the scheduler's next [FakeScheduler.runPending]).
+ * Like the real ones, a join finishes later, on the main thread (here, the
+ * scheduler's next [FakeScheduler.runPending]); an action is done at once.
  */
 class FakeBots(private val platform: FakePlatform) : BotOps {
     private val online = linkedMapOf<String, FakePlayer>()
@@ -120,20 +120,40 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
     private val raise get() = platform.raise
     private val events get() = platform.events
 
-    override fun join(name: String, at: BotPosition?, pack: BotPackAnswer, done: (Result<BotInfo>) -> Unit) {
-        require(platform.players.find(name) == null) { "$name is already online" }
+    /** The joins asked for, in order: what a test reads a script bot's options back from. */
+    val joins = mutableListOf<BotJoin>()
+
+    /** Names asked to join that haven't yet: [leave] stops one. */
+    private val joining = HashSet<String>()
+
+    /** The script bots online, by UUID: never [FakePlayers.known] once they've gone, since a real one is never saved. */
+    val scripted = HashSet<UUID>()
+
+    override fun join(join: BotJoin, done: (Result<BotInfo>) -> Unit) {
+        val name = join.name
+        require(NAME.matches(name)) { "a bot's name is 3 to 16 letters, digits or _, not \"$name\"" }
+        require(platform.players.find(name) == null && name !in joining) { "$name is already online" }
         val spawn = platform.worlds.spawnLocation(platform.worlds.defaultWorld())!!
+        val at = join.at
         val location = at?.let { Location(it.world ?: spawn.world, it.x, it.y, it.z, it.yaw ?: 0.0, it.pitch ?: 0.0) } ?: spawn
+        joins += join
+        joining += name
         platform.scheduler.runOnMain {
-            val firstJoin = platform.players.known(name) == null
-            val player = platform.players.add(name, location)
-            player.packAnswer = when (pack) {
-                BotPackAnswer.ACCEPT -> "loaded"
+            if (!joining.remove(name)) {
+                done(Result.failure(IllegalStateException("$name couldn't join: it left")))
+                return@runOnMain
+            }
+            val uuid = if (join.script != null) UUID.randomUUID() else null
+            val firstJoin = uuid != null || platform.players.known(name) == null
+            val player = platform.players.add(name, location, uuid)
+            player.packAnswer = when (join.pack) {
+                BotPackAnswer.ACCEPT, BotPackAnswer.LOADED -> "loaded"
                 BotPackAnswer.DECLINE -> "declined"
                 BotPackAnswer.FAIL -> "failed"
                 BotPackAnswer.IGNORE -> null
             }
             online[name] = player
+            if (uuid != null) scripted += uuid
             screens[player.ref.uuid] = Screen()
             platform.raise.playerJoin(GameEvent.PlayerJoin(player.ref, firstJoin, "$name joined the game"))
             done(Result.success(info(player)))
@@ -141,37 +161,46 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
     }
 
     override fun leave(name: String) {
+        if (joining.remove(name)) return
         val bot = bot(name)
         platform.players.quit(bot)
-        online.remove(name)
-        screens.remove(bot.ref.uuid)
+        gone(bot)
     }
 
+    /** A bot that left: a script's is forgotten as a real one is, never saved. */
+    private fun gone(bot: FakePlayer) {
+        online.remove(bot.ref.name)
+        screens.remove(bot.ref.uuid)
+        if (scripted.remove(bot.ref.uuid)) platform.players.forget(bot.ref.uuid)
+    }
+
+    override fun isBot(id: UUID): Boolean = online.values.any { it.ref.uuid == id && id in players.byId }
+
     override fun leaveAll() {
-        for (player in online.values.toList()) if (player.ref.uuid in platform.players.byId) platform.players.quit(player)
-        online.clear()
-        screens.clear()
+        joining.clear()
+        for (player in online.values.toList()) {
+            if (player.ref.uuid in platform.players.byId) platform.players.quit(player)
+            gone(player)
+        }
     }
 
     override fun list(): List<BotInfo> = online.values.filter { it.ref.uuid in platform.players.byId }.map(::info)
 
     /**
-     * Does [action] on the main thread's next turn, as the real bots do it
-     * on their next tick. A walk or a mine finishes at once here: the fake
-     * has no ticks of its own to spread them over.
+     * Does [action] at once, as the real bots do whatever takes no ticks. A
+     * walk or a mine finishes at once here too: the fake has no ticks of its
+     * own to spread them over.
      */
     override fun act(name: String, action: BotAction, aim: BotAim?, done: (Result<BotActResult>) -> Unit) {
         val bot = bot(name)
         acted += Triple(name, action, aim)
-        platform.scheduler.runOnMain {
-            val outcome = runCatching {
-                check(bot.ref.uuid in players.byId) { "$name is gone" }
-                perform(bot, action, aim)
-                val at = bot.location
-                BotActResult(at.world, at.x, at.y, at.z, since = 0)
-            }
-            done(outcome)
+        val outcome = runCatching {
+            check(bot.ref.uuid in players.byId) { "$name is gone" }
+            perform(bot, action, aim)
+            val at = bot.location
+            BotActResult(at.world, at.x, at.y, at.z, since = 0)
         }
+        done(outcome)
     }
 
     private fun perform(bot: FakePlayer, action: BotAction, aim: BotAim?) {
@@ -323,6 +352,8 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
                 platform.dialogs.press(bot, button.key, values)
             }
             is BotAction.DialogClose -> platform.dialogs.escape(bot)
+            // A walk or a mine is done at once here, so there's never anything to stop.
+            is BotAction.Stop -> {}
             is BotAction.Respawn -> {
                 check(bot.dead) { "${bot.ref.name} isn't dead" }
                 respawn(bot)
@@ -867,6 +898,9 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
 
     private companion object {
         const val OFF_HAND = 40
+
+        /** The real bots' `PaperBots.NAME`. */
+        val NAME = Regex("[A-Za-z0-9_]{3,16}")
 
         /** The real bots' `BotEventLog.KEPT`. */
         const val KEPT = 1000

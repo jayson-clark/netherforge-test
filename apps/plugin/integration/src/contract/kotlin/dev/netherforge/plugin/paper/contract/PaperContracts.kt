@@ -14,6 +14,7 @@ import dev.netherforge.plugin.contract.EntityOpsContract
 import dev.netherforge.plugin.contract.InventoryOpsContract
 import dev.netherforge.plugin.contract.ItemViewOpsContract
 import dev.netherforge.plugin.contract.LootOpsContract
+import dev.netherforge.plugin.contract.MannequinOpsContract
 import dev.netherforge.plugin.contract.MenuOpsContract
 import dev.netherforge.plugin.contract.MobGoalOpsContract
 import dev.netherforge.plugin.contract.ParticleOpsContract
@@ -85,6 +86,10 @@ class PaperPlayerOpsTest : PlayerOpsContract() {
 }
 
 class PaperWorldEntityOpsTest : WorldEntityOpsContract() {
+    override fun connect() = PaperContractServer.current
+}
+
+class PaperMannequinOpsTest : MannequinOpsContract() {
     override fun connect() = PaperContractServer.current
 }
 
@@ -206,6 +211,7 @@ object PaperContracts {
         PaperEntityOpsTest::class.java,
         PaperPlayerOpsTest::class.java,
         PaperWorldEntityOpsTest::class.java,
+        PaperMannequinOpsTest::class.java,
         PaperInventoryOpsTest::class.java,
         PaperBossBarOpsTest::class.java,
         PaperSidebarOpsTest::class.java,

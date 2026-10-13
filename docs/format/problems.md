@@ -1490,6 +1490,10 @@ Error. A package in a bundle isn't what the bundle says it is: a file was change
 
 Warning. A package declares `requires.web`, but the server owner hasn't turned web routes on (`web.enabled`), so its routes aren't served. See [the project format](project.md).
 
+### `runtime.bots-disabled` {#runtime-bots-disabled}
+
+Warning. A package declares `requires.bots`, but the server owner hasn't allowed bots (`bots.enabled`), so its scripts can't join any. See [the project format](project.md).
+
 ### `runtime.plugin-missing` {#runtime-plugin-missing}
 
 Error. A package declares a plugin in `requires.plugins` that isn't enabled on the server: what needs it fails until it is. See [the project format](project.md).

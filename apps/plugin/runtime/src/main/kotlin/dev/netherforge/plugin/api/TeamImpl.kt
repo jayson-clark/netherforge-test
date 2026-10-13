@@ -86,7 +86,7 @@ internal class TeamImpl(private val session: ProjectSession) : TeamApi {
         return teams.entries(team).sorted().mapNotNull { entry ->
             val id = runCatching { UUID.fromString(entry) }.getOrNull()
             if (id != null) {
-                platform.worldEntities.info(id)?.let(::entityHandle)
+                platform.worldEntities.info(id)?.let { session.entityHandle(it) }
             } else {
                 platform.players.find(entry)?.takeIf { it.name == entry }?.let { LuaHandle.Player(it.uuid.toString()) }
             }

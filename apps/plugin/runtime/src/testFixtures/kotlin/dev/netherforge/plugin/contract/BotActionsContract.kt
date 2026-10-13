@@ -447,6 +447,13 @@ abstract class BotActionsContract : PlatformContract() {
         act(player, BotAction.Interact(entity = board.toString(), x = other.first, y = other.second, z = other.third))
         eventually("the second click heard") { events.of("entityClicked").size == 2 }
         assertTrue(aimedAt(other), "a click given a point aims there: ${events.of("entityClicked").last()}")
+
+        // Turned once more and clicked at once: the click is where it looks now, not where it looked before.
+        val third = Triple(middle.x - 0.5, middle.y + 0.2, middle.z - 0.5)
+        act(player, BotAction.LookAt(third.first, third.second, third.third))
+        act(player, BotAction.Interact())
+        eventually("the third click heard") { events.of("entityClicked").size == 3 }
+        assertTrue(aimedAt(third), "a click right after turning aims where it turned to: ${events.of("entityClicked").last()}")
     }
 
     @Test

@@ -94,6 +94,7 @@ internal class ArgumentValues(private val session: ProjectSession) {
     private fun word(value: ArgumentValue) = (value as? ArgumentValue.Text)?.text ?: error("a project name read as $value")
 
     /** An entity as the class it is (a `Player` for a player, a `Mob` for a mob); one the server can't describe as a plain `Entity`. */
-    private fun entity(selected: SelectedEntity): LuaHandle.Entity = platform.worldEntities.info(selected.uuid)?.let(::entityHandle)
-        ?: if (selected.player != null) LuaHandle.Player(selected.uuid.toString()) else LuaHandle.Entity(selected.uuid.toString())
+    private fun entity(selected: SelectedEntity): LuaHandle.Entity =
+        platform.worldEntities.info(selected.uuid)?.let { session.entityHandle(it) }
+            ?: if (selected.player != null) LuaHandle.Player(selected.uuid.toString()) else LuaHandle.Entity(selected.uuid.toString())
 }

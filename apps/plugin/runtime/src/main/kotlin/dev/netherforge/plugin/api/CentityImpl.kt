@@ -48,7 +48,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /** The live instance a handle names, or null once it's removed. */
-private fun ProjectSession.instance(self: LuaHandle.Centity): Instance? = centities.find(self.id)?.takeIf { !it.removed }
+internal fun ProjectSession.instance(self: LuaHandle.Centity): Instance? = centities.find(self.id)?.takeIf { !it.removed }
 
 /** Adds a node a script described under [parent] (a root when null) and returns its handle; the name must be free. */
 private fun ProjectSession.addNode(instance: Instance, name: String, parent: Int?, definition: LuaValue?): LuaHandle.Node {

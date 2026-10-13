@@ -16,6 +16,14 @@
     "requires": "moderation"
   },
   {
+    "function": "nf.bots.join",
+    "requires": "bots"
+  },
+  {
+    "function": "nf.bots.all",
+    "requires": "bots"
+  },
+  {
     "function": "nf.economy.balance",
     "requires": "plugin:vault"
   },
@@ -70,5 +78,81 @@
   {
     "function": "Player:set_whitelisted",
     "requires": "moderation"
+  },
+  {
+    "function": "Bot:leave",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:walk_to",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:stop",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:look_at",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:jump",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:set_sneaking",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:set_sprinting",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:chat",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:attack",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:interact",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:use_item",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:release_item",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:swing",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:use_block",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:break_block",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:swap_hands",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:drop_item",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:click_slot",
+    "requires": "bots"
+  },
+  {
+    "function": "Bot:respawn",
+    "requires": "bots"
   }
 ]

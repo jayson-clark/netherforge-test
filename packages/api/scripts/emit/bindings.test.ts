@@ -375,9 +375,17 @@ describe('handle classes that extend another', () => {
       'Living',
       'DroppedItem',
       'Mob',
+      'Mannequin',
       'Player',
+      'Bot',
     ])
-    expect(byName('Living').handle!.descendants).toEqual(['Living', 'Mob', 'Player'])
+    expect(byName('Living').handle!.descendants).toEqual([
+      'Living',
+      'Mob',
+      'Mannequin',
+      'Player',
+      'Bot',
+    ])
   })
 
   it('refuse a chain that goes round, a key below the top, extending what is no handle class, or no key', () => {

@@ -18,7 +18,3 @@ dependencies:
       load: BEFORE
       required: true
       join-classpath: true
-    NetherForgeBots:
-      load: BEFORE
-      required: true
-      join-classpath: true

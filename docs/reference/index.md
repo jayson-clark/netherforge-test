@@ -49,9 +49,12 @@ Players, mobs and every other entity, and what's on a player's screen.
 
 - [nf.players](nf.players.md): Players: everyone online, or anyone who has ever joined
 - [Player](player.md): Someone on the server: a `Living`, with everything living entities have, and more
+- [nf.bots](nf.bots.md): Bots: fake players that scripts join to the server and drive, for opponents and teammates in games, crowds, and anything a player does that an NPC can't
+- [Bot](bot.md): A fake player a script drives (see `nf.bots`): a `Player` with everything players have, and the controls a player's client has
 - [Entity](entity.md): Something in a world that isn't a block: an arrow, a minecart, a dropped item, a mob, a player
 - [Living](living.md): A living entity: a mob, an animal, an armour stand, a player
 - [Mob](mob.md): A mob: a `Living` with AI, like a zombie, a cow or a bat
+- [Mannequin](mannequin.md): A figure that looks like a player, for shopkeepers, quest givers and statues: a `Living` with a player's skin, a line of text under its name, and a pose, that isn't a player (it's on no player list, counts towards nothing and loads no chunks) and costs no more than an armour stand
 - [DroppedItem](droppeditem.md): An item lying on the ground, which players pick up by walking over it: an `Entity` holding one stack
 - [Hud](hud.md): One player's HUD: the elements of the project's resource packs (`hud` in `pack.json`: bars, rows of icons, lines of text, each at its place on the screen), shown with what a script sets here
 - [Sidebar](sidebar.md): The panel of lines at the right of one player's screen, from `player:sidebar()`: up to 15 lines of MiniMessage under a title, without the score numbers vanilla shows
@@ -174,6 +177,7 @@ Some functions only work once the project has declared that it uses them, so who
 | --- | --- | --- | --- |
 | `db` | keep a database of the package's own | `"requires": { "db": true }` in `netherforge.json` | [`nf.db`](nf.md#db) |
 | `moderation` | ban and unban players, change the whitelist and the server settings players see | `"requires": { "moderation": true }` in `netherforge.json` | [`nf.server.set_max_players`](nf.server.md#set_max_players), [`nf.server.set_motd`](nf.server.md#set_motd), [`nf.server.set_whitelist_enabled`](nf.server.md#set_whitelist_enabled), [`player:ban`](player.md#ban), [`player:unban`](player.md#unban), [`player:set_whitelisted`](player.md#set_whitelisted) |
+| `bots` | join fake players to the server and drive them, when the server owner allows bots | `"requires": { "bots": true }` in `netherforge.json` | [`nf.bots.join`](nf.bots.md#join), [`nf.bots.all`](nf.bots.md#all), [`bot:leave`](bot.md#leave), [`bot:walk_to`](bot.md#walk_to), [`bot:stop`](bot.md#stop), [`bot:look_at`](bot.md#look_at), [`bot:jump`](bot.md#jump), [`bot:set_sneaking`](bot.md#set_sneaking), [`bot:set_sprinting`](bot.md#set_sprinting), [`bot:chat`](bot.md#chat), [`bot:attack`](bot.md#attack), [`bot:interact`](bot.md#interact), [`bot:use_item`](bot.md#use_item), [`bot:release_item`](bot.md#release_item), [`bot:swing`](bot.md#swing), [`bot:use_block`](bot.md#use_block), [`bot:break_block`](bot.md#break_block), [`bot:swap_hands`](bot.md#swap_hands), [`bot:drop_item`](bot.md#drop_item), [`bot:click_slot`](bot.md#click_slot), [`bot:respawn`](bot.md#respawn) |
 | `plugin:vault` | use another plugin on the server | `"requires": { "plugins": ["vault"] }` in `netherforge.json` | [`nf.economy.balance`](nf.economy.md#balance), [`nf.economy.deposit`](nf.economy.md#deposit), [`nf.economy.withdraw`](nf.economy.md#withdraw) |
 | `plugin:placeholderapi` | use another plugin on the server | `"requires": { "plugins": ["placeholderapi"] }` in `netherforge.json` | [`nf.placeholders.parse`](nf.placeholders.md#parse), [`nf.placeholders.register`](nf.placeholders.md#register) |
 | `http` | make requests to other servers, only to the hosts the package lists | each host it calls in `"requires": { "http": [...] }` in `netherforge.json` | [`nf.http.request`](nf.http.md#request), [`nf.http.stream`](nf.http.md#stream), [`nf.http.websocket`](nf.http.md#websocket) |

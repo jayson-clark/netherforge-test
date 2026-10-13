@@ -134,6 +134,34 @@ that opened it and closes when that script reloads or the server stops.
 A connection that would go past a limit isn't an error in the script: it ends
 with the reason `"limit"`, and its `end` event says which limit.
 
+## Bots
+
+A package that declares `"requires": { "bots": true }` can join fake players
+with [`nf.bots`](../reference/nf.bots.md): opponents and teammates in games,
+crowds, anything a person does that an NPC can't. They're **off until you
+turn them on**, and a package that declares them has a warning
+(`runtime.bots-disabled`) until you do. The editor's dev server always allows
+them.
+
+```yaml
+bots:
+  enabled: false
+  max: 20
+```
+
+| Key       | Meaning                                               | Default |
+| --------- | ----------------------------------------------------- | ------- |
+| `enabled` | Let scripts join bots at all.                         | `false` |
+| `max`     | How many scripts' bots may be online at once, in all. | `20`    |
+
+A bot is a player to the server and to your other plugins: it's on the
+player list, counts towards the player count, and is heard joining and
+quitting. Each one is a new player every time (a fresh UUID; nothing of it is
+saved, so it leaves no player data, statistics or advancements behind), it
+carries the `NPC` metadata plugins check to leave fake players alone (the one
+Citizens sets), and it loads only the chunks right around it. A bot leaves
+when the script that joined it unloads.
+
 ## Web routes
 
 A package that declares `"requires": { "web": true }` can answer web requests

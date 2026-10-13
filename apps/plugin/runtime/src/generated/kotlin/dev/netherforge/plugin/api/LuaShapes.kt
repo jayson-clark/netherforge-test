@@ -3969,6 +3969,56 @@ data class ItemRenderEvent(val item: ItemData, var displayName: String? = null, 
 }
 
 /**
+ * The parts of a skin's outer layer a mannequin shows, each `true` when shown.
+ * `mannequin:skin_parts()` gives every one; `set_skin_parts` changes those given.
+ */
+data class SkinParts(val cape: Boolean? = null, val jacket: Boolean? = null, val leftSleeve: Boolean? = null, val rightSleeve: Boolean? = null, val leftPants: Boolean? = null, val rightPants: Boolean? = null, val hat: Boolean? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<SkinParts>("SkinParts") {
+        val capeCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val jacketCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val leftSleeveCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val rightSleeveCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val leftPantsCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val rightPantsCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val hatCodec = LuaOptional(LuaCodecs.BOOLEAN)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "cape" to capeCodec,
+            "jacket" to jacketCodec,
+            "left_sleeve" to leftSleeveCodec,
+            "right_sleeve" to rightSleeveCodec,
+            "left_pants" to leftPantsCodec,
+            "right_pants" to rightPantsCodec,
+            "hat" to hatCodec
+        )
+
+        override fun read(fields: ShapeReader) = SkinParts(
+            cape = fields.field("cape", capeCodec),
+            jacket = fields.field("jacket", jacketCodec),
+            leftSleeve = fields.field("left_sleeve", leftSleeveCodec),
+            rightSleeve = fields.field("right_sleeve", rightSleeveCodec),
+            leftPants = fields.field("left_pants", leftPantsCodec),
+            rightPants = fields.field("right_pants", rightPantsCodec),
+            hat = fields.field("hat", hatCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: SkinParts) {
+            fields.field("cape", value.cape, capeCodec)
+            fields.field("jacket", value.jacket, jacketCodec)
+            fields.field("left_sleeve", value.leftSleeve, leftSleeveCodec)
+            fields.field("right_sleeve", value.rightSleeve, rightSleeveCodec)
+            fields.field("left_pants", value.leftPants, leftPantsCodec)
+            fields.field("right_pants", value.rightPants, rightPantsCodec)
+            fields.field("hat", value.hat, hatCodec)
+        }
+    }
+}
+
+/**
  * Which entities `world:entities` lists. Every key is optional; an entity is listed when it matches
  * all of those given. A key that isn't one of these is an error.
  */
@@ -4501,6 +4551,113 @@ data class AdvancementProgress(val done: List<String>, val remaining: List<Strin
         override fun write(fields: ShapeWriter, value: AdvancementProgress) {
             fields.field("done", value.done, doneCodec)
             fields.field("remaining", value.remaining, remainingCodec)
+        }
+    }
+}
+
+/** How a bot joins (`nf.bots.join`). */
+data class BotJoinOptions(val skin: Skin? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<BotJoinOptions>("BotJoinOptions") {
+        val skinCodec = LuaOptional(Skin.Codec)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "skin" to skinCodec
+        )
+
+        override fun read(fields: ShapeReader) = BotJoinOptions(
+            skin = fields.field("skin", skinCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: BotJoinOptions) {
+            fields.field("skin", value.skin, skinCodec)
+        }
+    }
+}
+
+/** How a bot walks (`bot:walk_to`). */
+data class BotWalkOptions(val sprint: Boolean? = null, val timeout: Long? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<BotWalkOptions>("BotWalkOptions") {
+        val sprintCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val timeoutCodec = LuaOptional(LuaCodecs.INTEGER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "sprint" to sprintCodec,
+            "timeout" to timeoutCodec
+        )
+
+        override fun read(fields: ShapeReader) = BotWalkOptions(
+            sprint = fields.field("sprint", sprintCodec),
+            timeout = fields.field("timeout", timeoutCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: BotWalkOptions) {
+            fields.field("sprint", value.sprint, sprintCodec)
+            fields.field("timeout", value.timeout, timeoutCodec)
+        }
+    }
+}
+
+/** How a bot right-clicks (`bot:interact`). */
+data class BotInteractOptions(val offHand: Boolean? = null, val at: Vec3? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<BotInteractOptions>("BotInteractOptions") {
+        val offHandCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val atCodec = LuaOptional(LuaCodecs.VEC3)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "off_hand" to offHandCodec,
+            "at" to atCodec
+        )
+
+        override fun read(fields: ShapeReader) = BotInteractOptions(
+            offHand = fields.field("off_hand", offHandCodec),
+            at = fields.field("at", atCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: BotInteractOptions) {
+            fields.field("off_hand", value.offHand, offHandCodec)
+            fields.field("at", value.at, atCodec)
+        }
+    }
+}
+
+/**
+ * A skin, as Mojang's session servers sign it: a player profile's `textures` property. Sites that make
+ * skins for NPCs (MineSkin, …) give both values.
+ */
+data class Skin(val texture: String, val signature: String? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<Skin>("Skin") {
+        val textureCodec = LuaCodecs.STRING
+        val signatureCodec = LuaOptional(LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "texture" to textureCodec,
+            "signature" to signatureCodec
+        )
+
+        override fun read(fields: ShapeReader) = Skin(
+            texture = fields.field("texture", textureCodec),
+            signature = fields.field("signature", signatureCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: Skin) {
+            fields.field("texture", value.texture, textureCodec)
+            fields.field("signature", value.signature, signatureCodec)
         }
     }
 }

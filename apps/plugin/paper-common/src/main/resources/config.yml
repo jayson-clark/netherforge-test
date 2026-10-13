@@ -65,6 +65,17 @@ web:
   max-pending: 64
   handler-timeout-seconds: 10
 
+# Bots: fake players scripts join and drive (nf.bots), for packages that declare
+# "requires": { "bots": true }. They're players to the server and to other plugins:
+# on the player list, counted in the player count, heard joining and quitting. Each
+# is a new player every time it joins, never saved, marked as an NPC (the "NPC"
+# metadata plugins check to leave fake players alone), and loads only the chunks
+# right around it. Off until you turn them on; max is how many may be online at
+# once across every package. Read when the server starts; dev servers always allow them.
+bots:
+  enabled: false
+  max: 20
+
 # What nf.http.request (a script's web requests, to the hosts its package
 # declares in netherforge.json) may reach and do. Requests reach public addresses
 # only: a name that leads to loopback, a private, link-local, shared (CGNAT) or

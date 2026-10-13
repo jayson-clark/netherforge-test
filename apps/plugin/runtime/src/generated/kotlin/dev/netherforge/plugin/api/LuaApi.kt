@@ -18,6 +18,7 @@ interface LuaApi {
     val nfServer: NfServerApi
     val nfCommands: NfCommandsApi
     val nfPlayers: NfPlayersApi
+    val nfBots: NfBotsApi
     val nfWorlds: NfWorldsApi
     val nfStructures: NfStructuresApi
     val nfCentities: NfCentitiesApi
@@ -50,7 +51,9 @@ interface LuaApi {
     val living: LivingApi
     val mob: MobApi
     val droppedItem: DroppedItemApi
+    val mannequin: MannequinApi
     val player: PlayerApi
+    val bot: BotApi
     val sender: SenderApi
     val world: WorldApi
     val worldBorder: WorldBorderApi
@@ -83,7 +86,7 @@ interface LuaApi {
 /**
  * Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data,
  * the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`,
- * `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`,
+ * `nf.commands`, `nf.players`, `nf.bots`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`,
  * `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`,
  * `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`,
  * `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.web`, `nf.time`, `nf.random`, `nf.math`
@@ -231,6 +234,39 @@ interface NfPlayersApi {
 
     /** Everyone on the server's whitelist, whether it's on or not. */
     fun whitelisted(caller: Caller): List<LuaHandle.Player>
+}
+
+/**
+ * Bots: fake players that scripts join to the server and drive, for opponents and teammates in games,
+ * crowds, and anything a player does that an NPC can't. A bot is a real player to the server and to
+ * every other plugin: it's on the player list and counted in the player count, its joins, moves,
+ * clicks, chat and deaths are heard like anyone's, and it does everything by sending what a player's
+ * client would (walking a step a tick, aiming before it clicks), so the game's rules and every other
+ * plugin's checks apply to it. Each is a new player every time it joins (a fresh UUID, nothing of it
+ * saved: no inventory, statistics or advancements kept), marked as an NPC for other plugins (the `NPC`
+ * metadata they check to leave fake players alone), and it loads only the chunks right around it. A
+ * bot belongs to the script that joined it and leaves when that script unloads. A package declares
+ * `"requires": { "bots": true }` in its `netherforge.json`, and the server owner allows bots
+ * (`bots.enabled` in `config.yml`, with `bots.max` online at once); until then a package that declares
+ * them has a warning (`runtime.bots-disabled`). The editor's dev server always allows them. For a
+ * figure that stands and looks like a player without being one, spawn a `Mannequin`: it costs far
+ * less.
+ */
+interface NfBotsApi {
+    /**
+     * Joins a bot named `name` to the server, where it goes through everything a player's join does (the
+     * server's checks, `player_join`, the resource pack, which it reports loaded without fetching). `nil,
+     * err` when bots are off on this server, `bots.max` are online, someone of that name is online, or the
+     * server turned it away. A name that isn't 3 to 16 letters, digits or `_` is an error. It takes ticks:
+     * joining loads the world around it, so its bot arrives later: give `callback`, which is called with
+     * `bot, err` once it's done, or call it inside a task (`nf.task`) without one, and it waits and
+     * returns `bot, err`. Without a callback outside a task, it's an error. When it fails, `bot` is `nil`
+     * and `err` says why.
+     */
+    fun join(caller: Caller, name: String, locationOrPosition: LocationOrVec3?, options: BotJoinOptions?): CompletionStage<LuaHandle.Bot>
+
+    /** Every bot online, whoever joined it. */
+    fun all(caller: Caller): List<LuaHandle.Bot>
 }
 
 /** The server's worlds: finding them, and making, loading and copying them. */
@@ -2473,6 +2509,65 @@ interface DroppedItemApi {
 }
 
 /**
+ * A figure that looks like a player, for shopkeepers, quest givers and statues: a `Living` with a
+ * player's skin, a line of text under its name, and a pose, that isn't a player (it's on no player
+ * list, counts towards nothing and loads no chunks) and costs no more than an armour stand. Spawn one
+ * with `world:spawn_entity("minecraft:mannequin", …)`, and hear players click it with its `interact`
+ * event. It stands where it's put unless pushed or hurt (`set_immovable` keeps it there), holds and
+ * wears what it's given (`set_equipment`), and turns with `look_at`. For a figure that walks, fights
+ * and plays as a player does, join a `Bot`.
+ */
+interface MannequinApi {
+    /**
+     * Its skin: a player's name (their skin, which the server looks up), a `Skin` table, or `nil` for the
+     * default skin, and once it has gone (or while its chunk is unloaded).
+     */
+    fun skin(self: LuaHandle.Mannequin): StringOrSkin?
+
+    /** Gives it a skin. Players' clients draw it as soon as the server has it. */
+    fun setSkin(self: LuaHandle.Mannequin, skin: StringOrSkin?): Boolean
+
+    /**
+     * The line of text under its name, as MiniMessage, or `nil` when it shows none (a new one shows
+     * "NPC"), and once it has gone (or while its chunk is unloaded).
+     */
+    fun description(self: LuaHandle.Mannequin): String?
+
+    /** Sets the line of text under its name. */
+    fun setDescription(self: LuaHandle.Mannequin, text: String?): Boolean
+
+    /**
+     * Whether nothing pushes it: players, mobs, water, explosions. `false` once it has gone (or while its
+     * chunk is unloaded).
+     */
+    fun isImmovable(self: LuaHandle.Mannequin): Boolean
+
+    /** Keeps it where it is whatever pushes it, or lets it be pushed again. */
+    fun setImmovable(self: LuaHandle.Mannequin, immovable: Boolean): Boolean
+
+    /** Which hand it holds things in, or `nil` once it has gone (or while its chunk is unloaded). */
+    fun mainHand(self: LuaHandle.Mannequin): String?
+
+    /** Sets which hand it holds things in. */
+    fun setMainHand(self: LuaHandle.Mannequin, side: String): Boolean
+
+    /** How it stands, or `nil` once it has gone (or while its chunk is unloaded). */
+    fun pose(self: LuaHandle.Mannequin): String?
+
+    /** Sets how it stands. */
+    fun setPose(self: LuaHandle.Mannequin, pose: String): Boolean
+
+    /**
+     * Which parts of its skin's outer layer show, or `nil` once it has gone (or while its chunk is
+     * unloaded).
+     */
+    fun skinParts(self: LuaHandle.Mannequin): SkinParts?
+
+    /** Shows or hides parts of its skin's outer layer: a part left out of the table keeps how it is. */
+    fun setSkinParts(self: LuaHandle.Mannequin, parts: SkinParts): Boolean
+}
+
+/**
  * Someone on the server: a `Living`, with everything living entities have, and more. A handle is a
  * UUID, so keeping one is fine: if they leave, its methods answer `nil` or `false` rather than
  * erroring, and work again when they come back. `nf.players.get` hands out handles to people who are
@@ -3059,6 +3154,116 @@ interface PlayerApi {
      * its own part of it under its name, as with `data()`. `nil` for a player who isn't online.
      */
     fun session(self: LuaHandle.Player): Any?
+}
+
+/**
+ * A fake player a script drives (see `nf.bots`): a `Player` with everything players have, and the
+ * controls a player's client has. Every action is done as the client would do it, so what it causes is
+ * heard like anyone's (`player_move`, `player_interact`, `entity_damage`, …) and a handler that
+ * cancels it stops it. Actions that take ticks (`walk_to`, `break_block`) are asynchronous; a new one
+ * ends the one before it with an error, as `stop()` does. Every bot online is a `Bot`, those the
+ * editor's agents and tests drive included. Once it has left, every action answers `false` (and an
+ * asynchronous one `nil, err`).
+ */
+interface BotApi {
+    /**
+     * Disconnects it, as a player quitting does: `player_quit` is heard, and it's gone for good (a bot
+     * never comes back: join a new one).
+     */
+    fun leave(self: LuaHandle.Bot): Boolean
+
+    /**
+     * Walks in a straight line to a position's x and z, as a player holding forward would: a step a tick,
+     * jumping up a block in its way, falling down drops and swimming. It doesn't find a way around a wall:
+     * it stops, stuck, when it hasn't come closer for a second, and when it's still short after `timeout`
+     * ticks. It takes as many ticks as the walk does, so its position arrives later: give `callback`,
+     * which is called with `position, err` once it's done, or call it inside a task (`nf.task`) without
+     * one, and it waits and returns `position, err`. Without a callback outside a task, it's an error.
+     * When it fails, `position` is `nil` and `err` says why.
+     */
+    fun walkTo(self: LuaHandle.Bot, position: Vec3, options: BotWalkOptions?): CompletionStage<Vec3>
+
+    /**
+     * Stops what it is doing over several ticks (walking, mining): that action ends with `nil` and an
+     * error saying it was stopped. Nothing to stop is fine.
+     */
+    fun stop(self: LuaHandle.Bot): Boolean
+
+    /**
+     * Turns its head to look at a point, as its player would with the mouse: its next click aims there at
+     * once. (An `Entity`'s `look_at` turns it from the server's side, which a bot's client hears a tick
+     * later.)
+     */
+    fun lookAt(self: LuaHandle.Bot, point: Vec3): Boolean
+
+    /** Jumps, once it stands on something. */
+    fun jump(self: LuaHandle.Bot): Boolean
+
+    /** Holds sneak, or lets go. */
+    fun setSneaking(self: LuaHandle.Bot, sneaking: Boolean): Boolean
+
+    /** Sprints, or stops: it sprints as it walks. */
+    fun setSprinting(self: LuaHandle.Bot, sprinting: Boolean): Boolean
+
+    /** Says something in chat, as its player typing it. A message starting with `/` is a command it types. */
+    fun chat(self: LuaHandle.Bot, message: String): Boolean
+
+    /**
+     * Hits an entity or a centity's node (a left click), turning to its middle first, and swings its arm.
+     * It must be within reach (3 blocks for an entity) and its client must have been sent it: an entity
+     * hidden from the bot, or too far away to be sent, can't be clicked.
+     */
+    fun attack(self: LuaHandle.Bot, target: LuaHandle): Boolean
+
+    /**
+     * Right-clicks an entity or a centity's node, turning to its middle first (or to `options.at`). It
+     * must be within reach (3 blocks for an entity) and its client must have been sent it: an entity
+     * hidden from the bot, or too far away to be sent, can't be clicked.
+     */
+    fun interact(self: LuaHandle.Bot, target: LuaHandle, options: BotInteractOptions?): Boolean
+
+    /**
+     * Right-clicks with what it holds, at nothing: eats, draws a bow, throws a pearl. `release_item` lets
+     * go.
+     */
+    fun useItem(self: LuaHandle.Bot, offHand: Boolean?): Boolean
+
+    /** Lets go of right-click while using an item: a drawn bow shoots, a raised shield lowers. */
+    fun releaseItem(self: LuaHandle.Bot): Boolean
+
+    /** Swings its arm at nothing (a left click at the air). */
+    fun swing(self: LuaHandle.Bot): Boolean
+
+    /**
+     * Right-clicks a face of a block, turning to it first: opens a door or a chest, places what it holds
+     * against it. It must be within reach (4.5 blocks).
+     */
+    fun useBlock(self: LuaHandle.Bot, position: Vec3, face: String?, offHand: Boolean?): Boolean
+
+    /**
+     * Mines a block, turning to it first, for as long as that takes with what it holds, as a player
+     * holding the button does. `nil, err` when there's no block there, it's out of reach (4.5 blocks), or
+     * the server didn't let it break. It takes as many ticks as the block takes to break, so its broken
+     * arrives later: give `callback`, which is called with `broken, err` once it's done, or call it inside
+     * a task (`nf.task`) without one, and it waits and returns `broken, err`. Without a callback outside a
+     * task, it's an error. When it fails, `broken` is `nil` and `err` says why.
+     */
+    fun breakBlock(self: LuaHandle.Bot, position: Vec3): CompletionStage<Boolean>
+
+    /** Swaps what it holds in its hands (F). */
+    fun swapHands(self: LuaHandle.Bot): Boolean
+
+    /** Drops one of what it holds (Q), or the whole stack. */
+    fun dropItem(self: LuaHandle.Bot, stack: Boolean?): Boolean
+
+    /**
+     * Clicks a slot of the menu it has open, or of its inventory with none: the menu's own slots first,
+     * then its inventory's, as `slot` numbers them.
+     */
+    fun clickSlot(self: LuaHandle.Bot, slot: Long, click: String?): Boolean
+
+    /** Presses Respawn on the death screen. `false` when it isn't dead. */
+    fun respawn(self: LuaHandle.Bot): Boolean
 }
 
 /**

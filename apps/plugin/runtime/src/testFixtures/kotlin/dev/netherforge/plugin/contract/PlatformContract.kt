@@ -8,6 +8,7 @@ import dev.netherforge.format.bridge.BotPosition
 import dev.netherforge.format.bridge.BotState
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.plugin.platform.BotAim
+import dev.netherforge.plugin.platform.BotJoin
 import dev.netherforge.plugin.platform.BotOps
 import dev.netherforge.plugin.platform.EntityFlag
 import dev.netherforge.plugin.platform.ItemData
@@ -110,7 +111,7 @@ abstract class PlatformContract {
 
     // ---- players --------------------------------------------------------------
 
-    protected val bots: BotOps get() = assertNotNull(platform.bots, "a contract server has bots")
+    protected val bots: BotOps get() = platform.bots
 
     /**
      * A player who joins at [at] (declining any resource pack), and leaves
@@ -120,7 +121,7 @@ abstract class PlatformContract {
     protected fun join(at: Location = origin, name: String = "nfc${NAMES.incrementAndGet()}"): PlayerRef {
         var result: Result<*>? = null
         main {
-            bots.join(name, BotPosition(at.x, at.y, at.z, at.world), BotPackAnswer.DECLINE) { result = it }
+            bots.join(BotJoin(name, BotPosition(at.x, at.y, at.z, at.world), BotPackAnswer.DECLINE)) { result = it }
         }
         eventually("$name joining", ticks = 400) { result != null }
         result!!.getOrThrow()

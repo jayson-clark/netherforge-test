@@ -17,6 +17,11 @@ export interface AsyncFn extends Omit<Fn, 'returns' | 'async' | 'impl'> {
    * single type, not a union or optional: on failure it's `nil` anyway), and a doc phrase.
    */
   value: { name: string; type: LuaType; doc: string }
+  /**
+   * Why its value arrives later, as the sentence starts it: `It works off the main thread` (the
+   * default), or `It takes as many ticks as the walk does`.
+   */
+  later?: string
 }
 
 /** Why an asynchronous function's `err` is set, in every one's docs. */
@@ -24,7 +29,7 @@ const ERR_DOC = 'Why it failed, when it did; `nil` when it worked.'
 
 /** An asynchronous function in the form every consumer reads: callback last, returns `value, err`. */
 export function asyncFunction(fn: AsyncFn): Fn {
-  const { value, ...rest } = fn
+  const { value, later = 'It works off the main thread', ...rest } = fn
   if (/[|?]/.test(value.type))
     throw new Error(
       `${fn.name}: an async function's value is one type, neither optional nor a union`,
@@ -35,7 +40,7 @@ export function asyncFunction(fn: AsyncFn): Fn {
   return {
     ...rest,
     doc:
-      `${fn.doc} It works off the main thread, so its ${name} arrives later: give \`callback\`, ` +
+      `${fn.doc} ${later}, so its ${name} arrives later: give \`callback\`, ` +
       `which is called with \`${name}, err\` once it's done, or call it inside a task (\`nf.task\`) ` +
       `without one, and it waits and returns \`${name}, err\`. Without a callback outside a task, ` +
       `it's an error. When it fails, \`${name}\` is \`nil\` and \`err\` says why.`,

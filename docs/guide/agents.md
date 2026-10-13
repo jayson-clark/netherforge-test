@@ -189,8 +189,10 @@ screen: the open menu's items, the dialog's inputs and buttons, the sidebar,
 boss bars, titles, and the entities it can see (one hidden from it with
 `hide_from` isn't there). A bot obeys the same rules as a player: it must be
 within reach to click, it can't click what it can't see, a whitelist keeps it
-out, and mobs can hurt it (`difficulty peaceful` helps). Bots exist only on
-the dev server and leave when it stops.
+out, and mobs can hurt it (`difficulty peaceful` helps). An agent's bots exist
+only on the dev server and leave when it stops. (Scripts have bots of their
+own, [`nf.bots`](../reference/nf.bots.md), and an agent's bot is a `Bot` to
+them too.)
 
 **Connecting.** Every request needs the editor's token, a random one made
 when you first ran NetherForge, sent as `Authorization: Bearer <token>`.

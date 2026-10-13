@@ -67,6 +67,7 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
 
     override val entities = PaperEntities(plugin)
     override val worldEntities = PaperWorldEntities(plugin, entities)
+    override val mannequins = PaperMannequins(worldEntities)
     override val inventories = PaperInventories(worldEntities)
     override val attributes = PaperAttributes(worldEntities)
     override val pathfinding = PaperPathfinding(worldEntities)
@@ -190,12 +191,8 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
         events?.watch(event, listening)
     }
 
-    /**
-     * The bots plugin's (`NetherForgeBots`, a jar of its own per version that
-     * only the editor's dev servers and the integration test install), which
-     * registers them as a service while it's enabled; null on every other server.
-     */
-    override val bots: BotOps? get() = plugin.server.servicesManager.load(BotOps::class.java)
+    /** Made by the version: no API makes a player without a client, so they reach into the server itself. */
+    override val bots: BotOps = version.bots(plugin)
 
     override val resourcePacks = object : ResourcePackOps {
         private val miniMessage = PaperText.mini

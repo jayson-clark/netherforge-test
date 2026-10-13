@@ -31,6 +31,7 @@ import dev.netherforge.plugin.api.entityHandle
 import dev.netherforge.plugin.api.mobHandle
 import dev.netherforge.plugin.async.AsyncWork
 import dev.netherforge.plugin.block.CustomBlocks
+import dev.netherforge.plugin.bots.ScriptBots
 import dev.netherforge.plugin.centity.Centities
 import dev.netherforge.plugin.centity.InstanceRecord
 import dev.netherforge.plugin.centity.NaturalSpawner
@@ -239,6 +240,9 @@ class ProjectSession internal constructor(
     val oauth = service(OAuthFlows(scripts, web, async, { http.fetcher }, { ticks }, testing = config.testing != null))
 
     /** The other plugins packages declared, whether the server has them (a problem for each it doesn't), and the check before a call into one. */
+    /** The bots scripts join (`nf.bots`): they leave with the scope that joined them. */
+    internal val bots = service(ScriptBots(platform, config.bots) { snapshot })
+
     internal val plugins = service(Plugins(platform, log, ::problemsChanged) { namespace })
 
     /** The `%<namespace>_<key>%` placeholders scripts offer PlaceholderAPI, each its script's. */

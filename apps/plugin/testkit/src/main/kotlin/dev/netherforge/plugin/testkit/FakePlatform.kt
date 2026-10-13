@@ -47,6 +47,7 @@ class FakePlatform(
     override val particles = FakeParticles(this)
     override val sounds = FakeSounds(this)
     override val worldEntities = FakeWorldEntities(this)
+    override val mannequins = FakeMannequins(this)
     override val inventories = FakeInventories(this)
     override val attributes = FakeAttributes(this)
     override val pathfinding = FakePathfinding(this)
@@ -226,7 +227,14 @@ class FakePlatform(
         const val EATING_TICKS = 32
 
         /** An entity type as the fake knows it: its box, its health when well (null: not living), and whether it has AI. */
-        class Kind(val width: Double, val height: Double, val health: Double?, val mob: Boolean, val droppedItem: Boolean = false)
+        class Kind(
+            val width: Double,
+            val height: Double,
+            val health: Double?,
+            val mob: Boolean,
+            val droppedItem: Boolean = false,
+            val mannequin: Boolean = false
+        )
 
         /** Every entity type the fake server has, sized and with the health the game gives them. */
         val KINDS = mapOf(
@@ -235,6 +243,7 @@ class FakePlatform(
             "minecraft:zombie" to Kind(0.6, 1.95, 20.0, mob = true),
             "minecraft:creeper" to Kind(0.6, 1.7, 20.0, mob = true),
             "minecraft:armor_stand" to Kind(0.5, 1.975, 20.0, mob = false),
+            "minecraft:mannequin" to Kind(0.6, 1.8, 20.0, mob = false, mannequin = true),
             "minecraft:arrow" to Kind(0.5, 0.5, null, mob = false),
             "minecraft:chest_minecart" to Kind(0.98, 0.7, null, mob = false),
             "minecraft:falling_block" to Kind(0.98, 0.98, null, mob = false),
@@ -407,6 +416,7 @@ class FakePlatform(
                     "minecraft:zombie",
                     "minecraft:chest_minecart",
                     "minecraft:armor_stand",
+                    "minecraft:mannequin",
                     // What examples/basic's biome spawns.
                     "minecraft:skeleton",
                     "minecraft:sheep",

@@ -519,7 +519,7 @@ internal class WorldImpl(private val session: ProjectSession) : WorldApi {
                     (filter?.living == null || info.living == filter.living) &&
                     (near == null || distance(Vec3(at.x, at.y, at.z), near) <= radius!!)
             }
-            .map(::entityHandle)
+            .map { session.entityHandle(it) }
     }
 
     override fun spawnEntity(

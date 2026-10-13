@@ -37,9 +37,10 @@ isn't so: blocks, equipment, a book, a camera, a compass, a view distance),
 `serverAdmin` (who has played, max players, the MOTD, the whitelist, bans),
 `permissions` and `advancements` (`platform/PlayerAdmin.kt`), `pause` (`PauseOps`:
 keeping a server the debugger holds at a breakpoint alive); `WorldOps.collisionBoxes`
-is what physics lands on. The one optional group is `bots`: only a dev
-server has them, so it's null elsewhere (a real absence, not a missing
-feature). A feature some Minecraft version lacks is gated by version (the
+is what physics lands on. `mannequins` (`platform/Mannequins.kt`) is what
+only a `minecraft:mannequin` has (skin, description, pose, skin parts, read
+and written whole as a `MannequinLook`; `EntityCategory.MANNEQUIN` makes its
+handle a `Mannequin`). A feature some Minecraft version lacks is gated by version (the
 minecraft-versions skill), never answered with a null group, so the runtime
 has no `platform.x?.` branches that only a hypothetical server would take.
 `worldEntities` (`platform/Entities.kt`) is vanilla entities by UUID for the `Entity` API and the classes below it (yes-or-no properties and numbers through
@@ -2186,30 +2187,47 @@ false` first, so not even its `stop` runs then. A mob that unloads or dies
   paper-internals, Mojang-named through paperweight-userdev like the bots): the one other place the adapter
   reaches past the Paper API.
 
-## Bots (dev server only)
+## Bots
 
-Fake players that tests and coding agents drive over the bridge's bots
-extension (`bots/…` requests, outside the core protocol; the protocol and
-what each action means are in format's `bridge/Bots.kt`). The runtime sees
-them as `Platform.bots` (`BotOps`, null unless the bridge is configured) and
-is only their bridge: `bridge/BotsBridge.kt`, installed into `BridgeService`
-only when the platform has bots, answers `bots/join` and `bots/act` when they
-finish, ticks later (a deferred reply), and resolves an interact or attack
-naming a centity's node to its interaction entity and the middle of its
-hitbox (`Centities.aim`). It needs nothing else of the runtime, so it can
-move with bots into their own jar.
+Fake players, driven two ways: tests and coding agents over the bridge's
+bots extension (`bots/…` requests, outside the core protocol; the protocol and
+what each action means are in format's `bridge/Bots.kt`), and scripts through
+`nf.bots` and the `Bot` class. The runtime sees them as `Platform.bots`
+(`BotOps`, a required group like any other).
+
+- **The bridge's** (`bridge/BotsBridge.kt`, always installed into
+  `BridgeService`): answers `bots/join` and `bots/act` when they finish, ticks
+  later (a deferred reply), and resolves an interact or attack naming a
+  centity's node to its interaction entity and the middle of its hitbox
+  (`Centities.aim`). A bridge bot is the same player every time (an
+  offline-mode UUID from its name, saved like anyone's), so a test can leave
+  and come back.
+- **Scripts'** (`bots/ScriptBots`, a session service, `session.bots`): a
+  package declares `requires.bots`, and the owner's `bots:` (`BotsConfig`: off
+  by default, `max` online at once; the dev server always on) decides whether
+  `nf.bots.join` may make one, else `nil, err` (and `runtime.bots-disabled` on
+  each declaring package while off). `join` is async: a `BotJoin` with a
+  `ScriptBot` (a fresh UUID, never saved: `Player.setPersistent(false)` keeps
+  `PlayerList.save` away; the `NPC` metadata Citizens sets; view distance
+  `ScriptBot.VIEW_DISTANCE`; the `Skin` as the profile's `textures`), the pack
+  answered `LOADED` without fetching it. On Paper, `PaperBots` sets these at
+  `PlayerJoinEvent` `LOWEST`, so other plugins hear an NPC join. Each belongs
+  to the scope that joined it: `scopeReleased` and `stop` make it leave.
+  `ScriptBots.act` is the one way the runtime drives any bot (a `BotAction`,
+  done now or later, failures as `WorkFailed`); `BotImpl` maps `Bot`'s methods
+  onto it (`walk_to`, `break_block` async; the rest `did`, answering whether
+  it was done), and a click on a `Node` aims as the bridge's does.
+- **Handles.** Every bot online is a `Bot` (extends `Player`):
+  `entityHandle(info)` asks `BotOps.isBot`, and a `Player` handle refines to
+  `Bot` when a `Bot` method is called on it. That gives `Player` the refining
+  `__index`, 4 instructions a call (the goldens say so).
+
 Otherwise a bot is a player like any other: it's in `players.online()`, and
 its joins, clicks and chat come through `PlatformEvents`.
 
-The bots are a plugin of their own, `NetherForgeBots` (one jar per version
-beside the plugin's; `apps/plugin/paper-internals/src/bots`), which only the
-editor's dev servers and the integration test install: nothing that reaches
-this far into the server ships to production servers. It's enabled before
-NetherForge, on NetherForge's classes (`join-classpath`), and registers its
-`PaperBots` as the Bukkit service `BotOps`, which `PaperPlatform.bots` looks
-up: so they're there when the runtime starts and its bridge installs the
-bots extension. It
-reaches past the Paper API (as do the registries and goal priorities, see
+The bots are in the plugin jar (`apps/plugin/paper-internals/src/main/.../bots`,
+made by `PaperVersion.bots`, since they're Mojang-named code each adapter
+compiles against its server). They reach past the Paper API (as do the registries and goal priorities, see
 "Mob goals") into the server itself (`net.minecraft`, Mojang-named, through
 paperweight-userdev), through `BotProtocol` where versions differ:
 
@@ -2254,9 +2272,10 @@ paperweight-userdev), through `BotProtocol` where versions differ:
   each input's value (given or initial) as an `Action.ValueGetter`, the
   button's `Action.createAction`, then the click event (custom click packet,
   command, or another dialog).
-- **`PaperBots`** keeps them by name and ticks them while there are any;
-  `NetherForgePlugin.onDisable` makes them all leave before the runtime
-  stops, so their quits reach scripts.
+- **`PaperBots`** keeps them by name and ticks them while there are any. A
+  script's bots leave as the session stops (`ScriptBots.stop`, while scripts
+  still hear the quits); `NetherForgePlugin.onDisable` makes the rest leave
+  after the runtime has stopped, as a real player's quit comes then.
 
 - **Every player action has a `BotAction`** (walk, teleport, look, use, mine,
   drop, swap hands, `release_item`, `fly`, `edit_sign`, `click_button`,

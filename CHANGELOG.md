@@ -16,6 +16,11 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Changed (breaking)
 
+- **The bots are in the plugin.** There's no `NetherForgeBots` jar any more:
+  the fake players the dev bridge and scripts drive are part of
+  `NetherForge-<version>-paper-<minecraft>.jar`, and the editor takes an old
+  companion jar out of its dev servers. Bots have a `stop` action, and a
+  `loaded` resource pack answer.
 - **Custom blocks are known by their state.** A placed project block keeps no
   record of its own unless a centity is drawn over it or a script gave it a
   `data()` table: each chunk keeps a legend of its blocks' states instead, so a
@@ -89,6 +94,22 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   [naming reference](docs/reference/naming.md).
 
 ### Added
+
+- **Bots for scripts.** `nf.bots.join` joins a fake player that a script
+  drives: a `Bot`, which is a `Player` with a client's controls (`walk_to`,
+  `look_at`, `attack`, `interact` with an entity or a centity's node,
+  `use_item`, `use_block`, `break_block`, `chat`, `stop`, `leave`, …). It does
+  everything by sending what a player's game would, so every event and check
+  applies to it. A package declares `requires.bots`; the server owner allows
+  bots in `config.yml`'s `bots:` (off by default, at most `bots.max` online;
+  the dev server always allows them). A script's bot is a new player every
+  time, never saved, marked as an NPC for other plugins, and leaves with the
+  script that joined it.
+- **Mannequins.** A `minecraft:mannequin` spawned with `world:spawn_entity` is
+  a `Mannequin`: a player-looking figure for shopkeepers and quest givers, with
+  `set_skin` (a player's name or a signed `Skin`), `set_description` (the line
+  under its name), `set_pose`, `set_main_hand`, `set_immovable` and
+  `set_skin_parts`.
 
 - **Streams and WebSockets.** `nf.http.stream` follows a response that keeps
   coming (NDJSON lines, Server-Sent Events or chunks) and `nf.http.websocket`

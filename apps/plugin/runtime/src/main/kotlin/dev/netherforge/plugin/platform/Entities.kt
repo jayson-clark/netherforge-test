@@ -27,7 +27,10 @@ enum class EntityCategory {
     LIVING,
 
     /** Something with health and AI: a zombie, a cow, a bat. */
-    MOB
+    MOB,
+
+    /** A figure that looks like a player (`minecraft:mannequin`): living, with no AI. */
+    MANNEQUIN
 }
 
 /** What an entity is now, for finding and filtering it. [player] is set for a player. */
@@ -43,7 +46,7 @@ data class EntityInfo(
     val tags: Set<String>
 ) {
     /** A mob, an animal or a player: something with health. */
-    val living: Boolean get() = category == EntityCategory.LIVING || category == EntityCategory.MOB
+    val living: Boolean get() = category == EntityCategory.LIVING || category == EntityCategory.MOB || category == EntityCategory.MANNEQUIN
 }
 
 /** An entity's yes-or-no properties. Some only some entities have; asking another answers null. */

@@ -45,7 +45,15 @@ enum class BotPackAnswer {
 
     /** Say nothing, like a client that never answers. */
     @SerialName("ignore")
-    IGNORE
+    IGNORE,
+
+    /**
+     * Accept and report it loaded without fetching it: a bot that draws
+     * nothing (a script's) needs none of it, but the server and scripts see a
+     * player who has the pack.
+     */
+    @SerialName("loaded")
+    LOADED
 }
 
 @Serializable
@@ -328,6 +336,15 @@ sealed interface BotAction {
     @Serializable
     @SerialName("dialog_close")
     data object DialogClose : BotAction
+
+    /**
+     * Stop what it's doing over several ticks (walking, mining, waiting for a
+     * teleport to arrive): that action ends with an error saying it was
+     * stopped. Nothing to stop is fine.
+     */
+    @Serializable
+    @SerialName("stop")
+    data object Stop : BotAction
 
     /** Press Respawn on the death screen. */
     @Serializable

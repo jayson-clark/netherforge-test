@@ -28,7 +28,7 @@ import java.util.UUID
  * implements all of them, and the contract suites (the runtime's test
  * fixtures) check each against the fake and against Paper. A feature a
  * Minecraft version lacks is gated by version, never answered with a
- * missing group. The one exception is [bots], which only a dev server has.
+ * missing group.
  *
  * Every call happens on the server's main thread unless it says otherwise.
  */
@@ -49,6 +49,9 @@ interface Platform {
 
     /** Entities as scripts handle them, by UUID: mobs, dropped items, players (`platform/Entities.kt`). */
     val worldEntities: WorldEntityOps
+
+    /** What only a mannequin has: its skin, the line under its name, its pose (`platform/Mannequins.kt`). */
+    val mannequins: MannequinOps
 
     /** Real inventories: players', ender chests, container blocks', entities'. */
     val inventories: InventoryOps
@@ -152,11 +155,11 @@ interface Platform {
     val pause: PauseOps
 
     /**
-     * Fake players for tests and agents (`platform/Bots.kt`). The one
-     * capability that's really optional: only a dev server (one the editor
-     * runs, with the bridge configured) has bots, so it's null on every other.
+     * Fake players (`platform/Bots.kt`): the dev bridge's, for tests and
+     * agents, and scripts' (`nf.bots`). Whether anyone may make one is the
+     * runtime's to decide (the bridge, the owner's `bots:`), not the adapter's.
      */
-    val bots: BotOps?
+    val bots: BotOps
 
     /**
      * Connects the adapter to the runtime, once, when it enables, before

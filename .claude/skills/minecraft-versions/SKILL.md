@@ -1,6 +1,6 @@
 ---
 name: minecraft-versions
-description: How NetherForge supports multiple Minecraft versions - the project's target version, the supported range (the last 1.21.x and every 26.x), paper-common, paper-internals and one adapter per version, the build-logic convention plugin, the bots companion jar, the feature table and gating a feature by version, and what to do when a new Minecraft version ships. Read before bumping Paper, adding a version adapter, or using a game feature that older versions lack.
+description: How NetherForge supports multiple Minecraft versions - the project's target version, the supported range (the last 1.21.x and every 26.x), paper-common, paper-internals and one adapter per version, the build-logic convention plugin, the bots (in the plugin jar), the feature table and gating a feature by version, and what to do when a new Minecraft version ships. Read before bumping Paper, adding a version adapter, or using a game feature that older versions lack.
 ---
 
 # Minecraft versions
@@ -121,13 +121,10 @@ tools/gradle/build-logic/     the convention plugins: netherforge.kotlin-jvm, ne
 
 - **Jars, per version** (`:plugin:paper-<mc>:assemble`, in `build/libs/`):
   `NetherForge-<v>-paper-<mc>.jar` (the plugin: runtime, format, Kotlin and
-  the adapter shaded in) and `NetherForgeBots-<v>-paper-<mc>.jar`, the
-  dev-only **bots companion**: a plugin of its own (`BotsPlugin`) that's
-  enabled before NetherForge, on its classes (`join-classpath`), and registers
-  its bots as the `BotOps` service, which `PaperPlatform.bots` answers with
-  (so the bridge's `bots/…` extension is there when the runtime starts). The editor
-  installs both into its dev servers (the tauri-backend skill's plugin jars);
-  the release attaches only the plugin jars (release skill).
+  the adapter shaded in, the bots included: `PaperVersion.bots` makes them,
+  since they're paper-internals code). The editor installs it into its dev
+  servers (the tauri-backend skill's plugin jars), and the release attaches it
+  (release skill).
 - **Bytecode**: everything shared (format, runtime, paper-common) targets
   Java 21, since a 1.21.11 server may run on it (`netherforge.kotlin-jvm`);
   a 26.x adapter targets 25. The editor's dev servers always run Java 25.

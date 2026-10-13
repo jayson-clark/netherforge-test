@@ -3,6 +3,7 @@ package dev.netherforge.plugin
 import dev.netherforge.plugin.lua.LuaCodec
 import dev.netherforge.plugin.lua.LuaHost
 import dev.netherforge.plugin.lua.SandboxLimits
+import dev.netherforge.plugin.platform.BotJoin
 import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.script.Scope
 import dev.netherforge.plugin.script.ScopeOwner
@@ -409,6 +410,8 @@ class ConformanceTest {
         h.Mob = h.World:spawn_entity("minecraft:pig", vec3(2, 64, 2))
         h.Living = h.World:spawn_entity("minecraft:armor_stand", vec3(6, 64, 6))
         h.DroppedItem = h.World:spawn_item(vec3(8, 64, 8), { kind = "minecraft:bread" })
+        h.Mannequin = h.World:spawn_entity("minecraft:mannequin", vec3(10, 64, 10))
+        h.Bot = nf.bots.all()[1]
         h.Inventory = h.Player:inventory()
         h.Hud = h.Player:hud()
         h.BossBar = nf.bossbars.create()
@@ -550,7 +553,8 @@ class ConformanceTest {
                 // Every power, so moderation and grants reach Kotlin rather than stopping at the check.
                 TestServer.MANIFEST to TestServer.manifest(
                     allow = """{ "permissions": ["x"] }""",
-                    requires = """{ "moderation": true, "db": true, "http": ["example.com", "conformance.invalid"], "web": true, """ +
+                    requires =
+                    """{ "moderation": true, "db": true, "http": ["example.com", "conformance.invalid"], "web": true, "bots": true, """ +
                         """"plugins": ["vault", "placeholderapi"] }"""
                 ),
                 "centities/c/centity.json" to TestServer.scriptedCentity(),
@@ -573,6 +577,9 @@ class ConformanceTest {
             server.platform.plugins.enable("placeholderapi")
             server.platform.vault.register()
             server.platform.vault.accounts[server.player("Alex").ref.uuid] = 100.0
+            // A bot online for `Bot`'s calls, as the bridge joins one.
+            server.platform.bots.join(BotJoin("Botty")) {}
+            server.platform.scheduler.runPending()
             server.write("modules/smoke/init.lua", module)
             server.start()
             server.runtime.session.web.request(WebCall("GET", "/test/sample", null, emptyMap(), ByteArray(0), "127.0.0.1") { _, _ -> })
@@ -594,7 +601,10 @@ class ConformanceTest {
     @Test
     fun `every function can be called and returns the declared types`() {
         val calls = functions.filter { (_, fn) -> !fn.waits() }
-            .sortedBy { (_, fn) -> fn.name in setOf("remove", "delete", "cancel", "close_for", "close_all", "kick", "ban", "unload") }
+            .sortedBy { (_, fn) ->
+                fn.name in
+                    setOf("remove", "delete", "cancel", "close_for", "close_all", "kick", "ban", "unload", "leave")
+            }
         val lines = calls.map { (cls, fn) ->
             val args = target(cls, fn) + fn.list("params").filter { it.name != "..." }.map(::sample)
             // An async function given its callback (every optional parameter is given) returns nothing: its answer goes to the callback.
@@ -637,7 +647,10 @@ class ConformanceTest {
     @Test
     fun `every function costs what its golden says`() {
         val calls = functions.filter { (_, fn) -> !fn.waits() }
-            .sortedBy { (_, fn) -> fn.name in setOf("remove", "delete", "cancel", "close_for", "close_all", "kick", "ban", "unload") }
+            .sortedBy { (_, fn) ->
+                fn.name in
+                    setOf("remove", "delete", "cancel", "close_for", "close_all", "kick", "ban", "unload", "leave")
+            }
         val lines = calls.map { (cls, fn) ->
             val args = target(cls, fn) + fn.list("params").filter { it.name != "..." }.map(::sample)
             "  { \"${label(cls, fn)}\", function() return ${args.first()}(${args.drop(1).joinToString(", ")}) end },"

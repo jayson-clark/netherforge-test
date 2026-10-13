@@ -22,7 +22,7 @@ sealed interface LuaHandle {
 
     companion object {
         /** The class each handle class extends. */
-        val PARENTS: Map<String, String> = mapOf("Living" to "Entity", "Mob" to "Living", "DroppedItem" to "Entity", "Player" to "Living", "CustomBlock" to "Block")
+        val PARENTS: Map<String, String> = mapOf("Living" to "Entity", "Mob" to "Living", "DroppedItem" to "Entity", "Mannequin" to "Living", "Player" to "Living", "Bot" to "Player", "CustomBlock" to "Block")
 
         /**
          * A handle from its key values, as `new.<Class>` in the prelude asks for one: of the class at
@@ -113,7 +113,7 @@ sealed interface LuaHandle {
         final override fun toString(): String = "$luaClass($id)"
 
         /** Entity handles, and those of every class below it. */
-        object Codec : HandleCodec<Entity>("Entity", setOf("Entity", "Living", "DroppedItem", "Mob", "Player"))
+        object Codec : HandleCodec<Entity>("Entity", setOf("Entity", "Living", "DroppedItem", "Mob", "Mannequin", "Player", "Bot"))
     }
 
     /** A living entity: a mob, an animal, an armour stand, a player. */
@@ -121,7 +121,7 @@ sealed interface LuaHandle {
         override val luaClass: String get() = "Living"
 
         /** Living handles, and those of every class below it. */
-        object Codec : HandleCodec<Living>("Living", setOf("Living", "Mob", "Player"))
+        object Codec : HandleCodec<Living>("Living", setOf("Living", "Mob", "Mannequin", "Player", "Bot"))
     }
 
     /** A mob: a `Living` with AI, like a zombie, a cow or a bat. */
@@ -143,12 +143,35 @@ sealed interface LuaHandle {
         object Codec : HandleCodec<DroppedItem>("DroppedItem", setOf("DroppedItem"))
     }
 
+    /**
+     * A figure that looks like a player, for shopkeepers, quest givers and statues: a `Living` with a
+     * player's skin, a line of text under its name, and a pose, that isn't a player (it's on no player
+     * list, counts towards nothing and loads no chunks) and costs no more than an armour stand.
+     */
+    class Mannequin(id: String) : Living(id) {
+        override val luaClass: String get() = "Mannequin"
+
+        /** Mannequin handles. */
+        object Codec : HandleCodec<Mannequin>("Mannequin", setOf("Mannequin"))
+    }
+
     /** Someone on the server: a `Living`, with everything living entities have, and more. */
-    class Player(id: String) : Living(id) {
+    open class Player(id: String) : Living(id) {
         override val luaClass: String get() = "Player"
 
-        /** Player handles. */
-        object Codec : HandleCodec<Player>("Player", setOf("Player"))
+        /** Player handles, and those of every class below it. */
+        object Codec : HandleCodec<Player>("Player", setOf("Player", "Bot"))
+    }
+
+    /**
+     * A fake player a script drives (see `nf.bots`): a `Player` with everything players have, and the
+     * controls a player's client has.
+     */
+    class Bot(id: String) : Player(id) {
+        override val luaClass: String get() = "Bot"
+
+        /** Bot handles. */
+        object Codec : HandleCodec<Bot>("Bot", setOf("Bot"))
     }
 
     /** Whoever ran a command: a player or the console. */

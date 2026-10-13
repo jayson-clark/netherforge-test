@@ -9,13 +9,9 @@ import io.papermc.paperweight.userdev.ReobfArtifactConfiguration
  * written once in `apps/plugin/paper-internals/src` and compiled by every
  * adapter against its own server, through paperweight-userdev's dev bundle,
  * together with the adapter's own `src`: the few things its server says its
- * own way (`Mojang`, `Protocol`). Each has two source sets:
- *
- *  - `main`: the `PaperVersion` (found through `ServiceLoader`), in the plugin
- *    jar `NetherForge-<version>-paper-<minecraft>.jar`;
- *  - `bots`: the dev server's fake players, a plugin of their own,
- *    `NetherForgeBots-<version>-paper-<minecraft>.jar`, which only the editor's
- *    dev servers and the integration test install.
+ * own way (`Mojang`, `Protocol`). Both go in the plugin jar,
+ * `NetherForge-<version>-paper-<minecraft>.jar`: the `PaperVersion` (found
+ * through `ServiceLoader`) and the bots it makes.
  *
  * See the minecraft-versions skill.
  */
@@ -63,14 +59,9 @@ val sourceRoot = adapter.sources.map { repoRoot.resolve("apps/plugin/paper-$it/s
 paperweight.reobfArtifactConfiguration = ReobfArtifactConfiguration.MOJANG_PRODUCTION
 
 val main: SourceSet = sourceSets["main"]
-val bots: SourceSet by sourceSets.creating {
-    compileClasspath += main.compileClasspath
-}
 
 kotlin.sourceSets["main"].kotlin.setSrcDirs(listOf(internals.resolve("main/kotlin"), sourceRoot.map { it.resolve("main/kotlin") }))
 main.resources.setSrcDirs(listOf(internals.resolve("main/resources")))
-kotlin.sourceSets["bots"].kotlin.setSrcDirs(listOf(internals.resolve("bots/kotlin"), sourceRoot.map { it.resolve("bots/kotlin") }))
-bots.resources.setSrcDirs(emptyList<File>())
 
 /**
  * paper-common compiled again against this version's API, never packaged:
@@ -93,25 +84,21 @@ dependencies {
     // Paper's API and the server, Mojang-named; the server brings its own Kotlin-free libraries.
     addProvider("paperweightDevelopmentBundle", adapter.paper.map { "io.papermc.paper:dev-bundle:$it" })
     "implementation"(project(":plugin:paper-common"))
-    // The bots run on the plugin jar's classes, kotlinx.serialization included.
-    "botsCompileOnly"(rootProject.extensions.getByType<VersionCatalogsExtension>().named("libs").findLibrary("serialization-json").get())
+    // The bots read and write the bridge's JSON; the plugin jar has kotlinx.serialization already (format's).
+    "compileOnly"(rootProject.extensions.getByType<VersionCatalogsExtension>().named("libs").findLibrary("serialization-json").get())
 }
 
-/** paper-common's `paper-plugin.yml` templates, with this jar's version and Minecraft version filled in. */
+/** paper-common's `paper-plugin.yml` template, with this jar's version and Minecraft version filled in. */
 val templates = project(":plugin:paper-common").layout.projectDirectory.dir("src/plugin")
 
-fun Copy.pluginYml(template: String) {
+tasks.named<Copy>("processResources") {
     val version = project.version.toString()
     inputs.property("version", version)
     inputs.property("minecraft", minecraft)
-    from(templates.file(template)) {
-        rename { "paper-plugin.yml" }
+    from(templates.file("paper-plugin.yml")) {
         expand("version" to version, "minecraft" to minecraft)
     }
 }
-
-tasks.named<Copy>("processResources") { pluginYml("paper-plugin.yml") }
-tasks.named<Copy>("processBotsResources") { pluginYml("bots-paper-plugin.yml") }
 
 tasks.named<Jar>("jar") {
     // Only the shadow jar is loadable; keep the thin one from looking like it.
@@ -125,19 +112,7 @@ val pluginJar = tasks.named<ShadowJar>("shadowJar") {
     mergeServiceFiles()
 }
 
-/**
- * `NetherForgeBots-<version>-paper-<minecraft>.jar`: the bots alone. They load
- * with the plugin's own classes (`join-classpath` in their `paper-plugin.yml`),
- * so nothing else goes in.
- */
-val botsJar = tasks.register<Jar>("botsJar") {
-    description = "Builds the dev server's bots for Paper $minecraft, a plugin of their own"
-    archiveBaseName.set("NetherForgeBots")
-    archiveClassifier.set("paper-$minecraft")
-    from(bots.output)
-}
-
-tasks.named("assemble") { dependsOn(pluginJar, botsJar) }
+tasks.named("assemble") { dependsOn(pluginJar) }
 
 /** This version's Paper server, for the integration test. */
 val adapterMinecraft = minecraft
@@ -150,9 +125,7 @@ val downloadPaper = tasks.register<DownloadPaper>("downloadPaper") {
 }
 
 // What the integration test (`:plugin:integration`) runs this adapter with.
-for ((name, task) in listOf("pluginJar" to pluginJar, "botsJar" to botsJar)) {
-    configurations.consumable(name) { outgoing.artifact(task) }
-}
+configurations.consumable("pluginJar") { outgoing.artifact(pluginJar) }
 configurations.consumable("paperServer") { outgoing.artifact(downloadPaper.flatMap { it.jar }) { builtBy(downloadPaper) } }
 
 /** `node tools/gradle.mjs :plugin:paper-<minecraft>:runServer` for trying the plugin by hand against examples/basic. */

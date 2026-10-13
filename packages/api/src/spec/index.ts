@@ -22,11 +22,13 @@ import {
   entityClass,
   entityShapes,
   livingClass,
+  mannequinClass,
   mobClass,
   playerClass,
 } from './entities.ts'
 import { bossBarClass, inventoryClass, inventoryShapes, sidebarClass } from './inventories.ts'
 import { databaseClass, databaseShapes } from './db.ts'
+import { botClass, botShapes } from './bots.ts'
 import { connectionShapes, httpShapes, httpStreamClass, webSocketClass } from './http.ts'
 import { oauthFlowClass, routeClass, webResponseClass, webShapes } from './web.ts'
 import { blockShapes, customBlockClass, projectBlockClass } from './blocks.ts'
@@ -89,7 +91,9 @@ const classes = [
   livingClass,
   mobClass,
   droppedItemClass,
+  mannequinClass,
   playerClass,
+  botClass,
   senderClass,
   worldClass,
   worldBorderClass,
@@ -160,6 +164,7 @@ export const api: ApiSpec = {
     ...itemShapes,
     ...entityShapes,
     ...playerShapes,
+    ...botShapes,
     ...menuShapes,
     itemMatchShape,
     ...commandShapes,

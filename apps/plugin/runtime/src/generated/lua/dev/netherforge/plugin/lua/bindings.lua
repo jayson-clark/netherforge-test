@@ -37,7 +37,9 @@ local Entity_is = accepts.Entity
 local Living_is = accepts.Living
 local Mob_is = accepts.Mob
 local DroppedItem_is = accepts.DroppedItem
+local Mannequin_is = accepts.Mannequin
 local Player_is = accepts.Player
+local Bot_is = accepts.Bot
 local Sender_is = accepts.Sender
 local World_is = accepts.World
 local WorldBorder_is = accepts.WorldBorder
@@ -2371,6 +2373,108 @@ do
   end
 end
 
+-- Mannequin -----------------------------------------------------------------
+
+do
+  local Mannequin = class("Mannequin", "Living")
+
+  function Mannequin.skin(self)
+    local self_key = ids[self]
+    if self_key == nil or not Mannequin_is[class_of(self)] then
+      self_key = self_of(self, "Mannequin")
+    end
+    return prim["Mannequin.skin"](self_key)
+  end
+
+  function Mannequin.set_skin(self, skin)
+    local self_key = ids[self]
+    if self_key == nil or not Mannequin_is[class_of(self)] then
+      self_key = self_of(self, "Mannequin")
+    end
+    return prim["Mannequin.set_skin"](self_key, skin)
+  end
+
+  function Mannequin.description(self)
+    local self_key = ids[self]
+    if self_key == nil or not Mannequin_is[class_of(self)] then
+      self_key = self_of(self, "Mannequin")
+    end
+    return prim["Mannequin.description"](self_key)
+  end
+
+  function Mannequin.set_description(self, text)
+    local self_key = ids[self]
+    if self_key == nil or not Mannequin_is[class_of(self)] then
+      self_key = self_of(self, "Mannequin")
+    end
+    return prim["Mannequin.set_description"](self_key, text)
+  end
+
+  function Mannequin.is_immovable(self)
+    local self_key = ids[self]
+    if self_key == nil or not Mannequin_is[class_of(self)] then
+      self_key = self_of(self, "Mannequin")
+    end
+    return prim["Mannequin.is_immovable"](self_key)
+  end
+
+  function Mannequin.set_immovable(self, immovable)
+    local self_key = ids[self]
+    if self_key == nil or not Mannequin_is[class_of(self)] then
+      self_key = self_of(self, "Mannequin")
+    end
+    return prim["Mannequin.set_immovable"](self_key, immovable)
+  end
+
+  function Mannequin.main_hand(self)
+    local self_key = ids[self]
+    if self_key == nil or not Mannequin_is[class_of(self)] then
+      self_key = self_of(self, "Mannequin")
+    end
+    return prim["Mannequin.main_hand"](self_key)
+  end
+
+  function Mannequin.set_main_hand(self, side)
+    local self_key = ids[self]
+    if self_key == nil or not Mannequin_is[class_of(self)] then
+      self_key = self_of(self, "Mannequin")
+    end
+    return prim["Mannequin.set_main_hand"](self_key, side)
+  end
+
+  function Mannequin.pose(self)
+    local self_key = ids[self]
+    if self_key == nil or not Mannequin_is[class_of(self)] then
+      self_key = self_of(self, "Mannequin")
+    end
+    return prim["Mannequin.pose"](self_key)
+  end
+
+  function Mannequin.set_pose(self, pose)
+    local self_key = ids[self]
+    if self_key == nil or not Mannequin_is[class_of(self)] then
+      self_key = self_of(self, "Mannequin")
+    end
+    return prim["Mannequin.set_pose"](self_key, pose)
+  end
+
+  function Mannequin.skin_parts(self)
+    local self_key = ids[self]
+    if self_key == nil or not Mannequin_is[class_of(self)] then
+      self_key = self_of(self, "Mannequin")
+    end
+    return prim["Mannequin.skin_parts"](self_key)
+  end
+
+  function Mannequin.set_skin_parts(self, parts)
+    local self_key = ids[self]
+    if self_key == nil or not Mannequin_is[class_of(self)] then
+      self_key = self_of(self, "Mannequin")
+    end
+    return prim["Mannequin.set_skin_parts"](self_key, parts)
+  end
+end
+
 -- Player --------------------------------------------------------------------
 
 do
@@ -3334,6 +3438,186 @@ do
       want(handler, "function", "handler")
     end
     return hand.Player.once(self, event, handler)
+  end
+end
+
+-- Bot -----------------------------------------------------------------------
+
+do
+  local Bot = class("Bot", "Player")
+
+  function Bot.leave(self)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    return prim["Bot.leave"](self_key)
+  end
+
+  function Bot.walk_to(self, position, options, callback)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      want_vec3(position, "position")
+    end
+    local waker, task, token, scope = async.begin("Bot:walk_to", callback)
+    local wait_id = prim["Bot.walk_to"](self_key, position[1], position[2], position[3], options, scope, waker)
+    if task ~= nil then
+      local value, err = async.wait(task, token, wait_id)
+      return value, err
+    end
+  end
+
+  function Bot.stop(self)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    return prim["Bot.stop"](self_key)
+  end
+
+  function Bot.look_at(self, point)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    if genuine_mt(point) ~= Vec3_mt then
+      want_vec3(point, "point")
+    end
+    return prim["Bot.look_at"](self_key, point[1], point[2], point[3])
+  end
+
+  function Bot.jump(self)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    return prim["Bot.jump"](self_key)
+  end
+
+  function Bot.set_sneaking(self, sneaking)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    return prim["Bot.set_sneaking"](self_key, sneaking)
+  end
+
+  function Bot.set_sprinting(self, sprinting)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    return prim["Bot.set_sprinting"](self_key, sprinting)
+  end
+
+  function Bot.chat(self, message)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    return prim["Bot.chat"](self_key, message)
+  end
+
+  function Bot.attack(self, target)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    return prim["Bot.attack"](self_key, target)
+  end
+
+  function Bot.interact(self, target, options)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    return prim["Bot.interact"](self_key, target, options)
+  end
+
+  function Bot.use_item(self, off_hand)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    return prim["Bot.use_item"](self_key, off_hand)
+  end
+
+  function Bot.release_item(self)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    return prim["Bot.release_item"](self_key)
+  end
+
+  function Bot.swing(self)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    return prim["Bot.swing"](self_key)
+  end
+
+  function Bot.use_block(self, position, face, off_hand)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      want_vec3(position, "position")
+    end
+    return prim["Bot.use_block"](self_key, position[1], position[2], position[3], face, off_hand)
+  end
+
+  function Bot.break_block(self, position, callback)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      want_vec3(position, "position")
+    end
+    local waker, task, token, scope = async.begin("Bot:break_block", callback)
+    local wait_id = prim["Bot.break_block"](self_key, position[1], position[2], position[3], scope, waker)
+    if task ~= nil then
+      local value, err = async.wait(task, token, wait_id)
+      return value, err
+    end
+  end
+
+  function Bot.swap_hands(self)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    return prim["Bot.swap_hands"](self_key)
+  end
+
+  function Bot.drop_item(self, stack)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    return prim["Bot.drop_item"](self_key, stack)
+  end
+
+  function Bot.click_slot(self, slot, click)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    return prim["Bot.click_slot"](self_key, slot, click)
+  end
+
+  function Bot.respawn(self)
+    local self_key = ids[self]
+    if self_key == nil or not Bot_is[class_of(self)] then
+      self_key = self_of(self, "Bot")
+    end
+    return prim["Bot.respawn"](self_key)
   end
 end
 
@@ -7130,6 +7414,21 @@ namespaces["nf.players"] = function(scope, ns)
 
   function ns.whitelisted()
     return prim["nf.players.whitelisted"](scope)
+  end
+end
+
+namespaces["nf.bots"] = function(scope, ns)
+  function ns.join(name, location_or_position, options, callback)
+    local waker, task, token = async.begin("nf.bots.join", callback)
+    local wait_id = prim["nf.bots.join"](scope, name, location_or_position, options, waker)
+    if task ~= nil then
+      local value, err = async.wait(task, token, wait_id)
+      return value, err
+    end
+  end
+
+  function ns.all()
+    return prim["nf.bots.all"](scope)
   end
 end
 

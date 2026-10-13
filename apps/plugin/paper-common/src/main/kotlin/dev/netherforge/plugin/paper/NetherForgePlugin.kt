@@ -4,7 +4,6 @@ import dev.netherforge.plugin.Folia
 import dev.netherforge.plugin.NetherForgeRuntime
 import dev.netherforge.plugin.RuntimeConfig
 import dev.netherforge.plugin.ServerAddress
-import dev.netherforge.plugin.platform.BotOps
 import org.bukkit.configuration.ConfigurationSection
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
@@ -119,8 +118,8 @@ class NetherForgePlugin :
         if (started) runtime?.disable()
         runtime = null
         // After the runtime has stopped, as a real player's quit is (Paper disables plugins, then saves and removes players): what
-        // stopping puts back (a cutscene's player) is back before a bot's data is saved as it leaves. The bots plugin is disabled after this one.
-        if (started) server.servicesManager.load(BotOps::class.java)?.leaveAll()
+        // stopping puts back (a cutscene's player) is back before a bot's data is saved as it leaves.
+        if (started) platform?.bots?.leaveAll()
         started = false
         // The note block setup is the runtime's too: it is let go once nothing is left to use it.
         platform?.close()

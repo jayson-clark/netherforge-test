@@ -568,7 +568,7 @@ interface), an implementation in `api/` and its property on `RuntimeApi`, and a
 body in the prelude's `handwritten` module if it has `impl: "lua"` methods.
 
 **A handle class that extends another** (`Mob` extends `Living`, which extends
-`Entity`; `Player` extends `Living`; `DroppedItem` extends `Entity`;
+`Entity`; `Player` extends `Living`, and `Bot` extends `Player`; `Mannequin` extends `Living`; `DroppedItem` extends `Entity`;
 `CustomBlock` extends `Block`): `extends` names it, to any depth, and it has
 no `handle` (it's keyed as the top of its chain is). It has every method and
 event up its chain, its own replacing those of the same name (`Player.name`

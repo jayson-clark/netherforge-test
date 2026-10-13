@@ -953,6 +953,12 @@ object ProblemCodes {
             PROJECT,
             "A package declares `requires.web`, but the server owner hasn't turned web routes on (`web.enabled`), so its routes aren't served."
         )
+    val RUNTIME_BOTS_DISABLED =
+        warning(
+            "runtime.bots-disabled",
+            PROJECT,
+            "A package declares `requires.bots`, but the server owner hasn't allowed bots (`bots.enabled`), so its scripts can't join any."
+        )
     val RUNTIME_PLUGIN_MISSING =
         error(
             "runtime.plugin-missing",

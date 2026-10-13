@@ -29,8 +29,8 @@ import java.util.logging.Level
  * [dev.netherforge.plugin.paper.PaperVersion]: the other half of each suite's
  * run against the fake (the runtime's tests). Only the integration test
  * loads it (`ContractScenario`), beside the NetherForge plugin (with no
- * project, so it runs nothing itself) and its bots, whose classes it loads
- * with, and with `-Dnetherforge.contract.results=<file>`. It makes the
+ * project, so it runs nothing itself), whose classes it loads with, and
+ * with `-Dnetherforge.contract.results=<file>`. It makes the
  * platform, keeps the world still (no time, weather, mob spawning or drops)
  * and the chunks round the origin loaded, runs every suite on a thread of its
  * own once the server is ticking, writes each test's result to that file as
@@ -94,7 +94,7 @@ class ContractPlugin : JavaPlugin() {
         server.scheduler.runTask(
             this,
             Runnable {
-                platform.bots?.leaveAll()
+                platform.bots.leaveAll()
                 Bukkit.shutdown()
             }
         )

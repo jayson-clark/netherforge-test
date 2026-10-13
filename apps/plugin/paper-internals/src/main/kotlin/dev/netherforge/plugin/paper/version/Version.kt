@@ -5,6 +5,8 @@ import dev.netherforge.plugin.paper.ItemViewHooks
 import dev.netherforge.plugin.paper.PaperVersion
 import dev.netherforge.plugin.paper.ServerRegistries
 import dev.netherforge.plugin.paper.StackViewer
+import dev.netherforge.plugin.paper.bots.PaperBots
+import dev.netherforge.plugin.platform.BotOps
 import dev.netherforge.plugin.platform.ChunkGrid
 import io.netty.buffer.Unpooled
 import io.papermc.paper.configuration.GlobalConfiguration
@@ -41,6 +43,7 @@ import org.bukkit.craftbukkit.entity.CraftPlayer
 import org.bukkit.entity.Mob
 import org.bukkit.entity.Player
 import org.bukkit.inventory.EquipmentSlot
+import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.util.Vector
 import org.spigotmc.WatchdogThread
 import java.util.Collections
@@ -52,6 +55,8 @@ import net.minecraft.resources.ResourceKey as MojangKey
 /** This adapter's [PaperVersion], listed in `META-INF/services`. */
 
 class Version : PaperVersion {
+    override fun bots(plugin: JavaPlugin): BotOps = PaperBots(plugin)
+
     override fun itemViews(viewer: StackViewer): ItemViewHooks = ItemViews(viewer)
 
     override fun fingerprintStates(world: World, chunkX: Int, chunkZ: Int, wanted: Collection<BlockData>): Long? {

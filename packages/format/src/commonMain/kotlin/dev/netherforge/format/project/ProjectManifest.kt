@@ -191,6 +191,11 @@ data class ProjectRequires(
      */
     val web: Boolean? = null,
     /**
+     * Whether scripts may join fake players to the server and drive them
+     * (`nf.bots`), when the server owner allows bots.
+     */
+    val bots: Boolean? = null,
+    /**
      * The hosts scripts may make HTTP requests to: a host name
      * (`discord.com`), or `*.` and one for any name under it
      * (`*.example.com`, not `example.com` itself). Kept in order.

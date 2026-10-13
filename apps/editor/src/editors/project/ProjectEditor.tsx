@@ -451,6 +451,16 @@ function Requirements({
         Lets scripts answer web requests to the server (webhooks, logins, small pages) under the
         project&apos;s own path, once the server owner has turned web routes on.
       </Hint>
+      <CheckField
+        label="Bots"
+        dataPath="requires.bots"
+        value={requires?.bots === true}
+        onChange={(on) => onFlag('bots', on)}
+      />
+      <Hint>
+        Lets scripts join fake players to the server and drive them (opponents, teammates, crowds),
+        once the server owner allows bots. The dev server always does.
+      </Hint>
       <Hint>
         Hosts scripts may make HTTP requests to. <Mono>*.example.com</Mono> covers every host under{' '}
         <Mono>example.com</Mono>, not <Mono>example.com</Mono> itself.

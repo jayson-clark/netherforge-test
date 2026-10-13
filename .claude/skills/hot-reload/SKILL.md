@@ -238,8 +238,8 @@ the problems and `/nf reload`'s message); the resource itself still reports
 `apps/plugin/runtime/.../bridge/BridgeClient.kt` (socket, threads, the hello
 handshake, the outgoing queue with stream coalescing, reconnect),
 `BridgeService.kt` (dispatch by method and thread, every request answered
-once, the core protocol's handlers), `BotsBridge.kt` (the bots extension:
-self-contained so it can move with bots into their own jar),
+once, the core protocol's handlers), `BotsBridge.kt` (the bots extension,
+self-contained),
 `BridgeOutput` (what `RuntimeLog` sends: console entries and notifications),
 `NetherForgeRuntime.reload`/`reloadAll` (a whole-package reload disposes
 the session and builds a new one) and `ProjectSession.reload` (the

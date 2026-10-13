@@ -29,7 +29,7 @@ pub const PROJECT_FILE: &str = "netherforge-project.txt";
 /// Fills the server folder for a start: the EULA (already accepted, checked by
 /// the caller; written every time so a deleted folder needs no second
 /// acceptance), `server.properties`, `bukkit.yml`'s main-terrain, the
-/// plugin and its bots, and which project it's for.
+/// plugin, and which project it's for.
 pub fn prepare(
     dir: &Path,
     project_root: &Path,
@@ -264,32 +264,25 @@ fn whitelist_is_empty(text: Option<&str>) -> bool {
     }
 }
 
-/// Copies [plugin] (and its bots, when it has them) into `plugins/`, removing
-/// any other NetherForge jar there: another version's, or another build's.
+/// Copies [plugin] into `plugins/`, removing any other NetherForge jar there:
+/// another version's, another build's, or an older build's bots companion.
 pub fn install_plugin(dir: &Path, plugin: &PluginJar) -> Result<()> {
     let plugins = dir.join("plugins");
     std::fs::create_dir_all(&plugins)?;
-    let jars: Vec<&Path> = std::iter::once(plugin.path.as_path())
-        .chain(plugin.bots.as_deref())
-        .collect();
-    let mut names = Vec::new();
-    for jar in &jars {
-        names.push(
-            jar.file_name()
-                .context(|| "The plugin jar has no name".into())?
-                .to_os_string(),
-        );
-    }
+    let name = plugin
+        .path
+        .file_name()
+        .context(|| "The plugin jar has no name".into())?
+        .to_os_string();
     for entry in std::fs::read_dir(&plugins)?.flatten() {
         let other = entry.file_name();
-        if !names.contains(&other) && is_ours(&other.to_string_lossy()) {
+        if other != name && is_ours(&other.to_string_lossy()) {
             std::fs::remove_file(entry.path())?;
         }
     }
-    for (jar, name) in jars.iter().zip(&names) {
-        let bytes = std::fs::read(jar).context(|| format!("Couldn't read {}", jar.display()))?;
-        write_atomic(&plugins.join(name), &bytes)?;
-    }
+    let bytes = std::fs::read(&plugin.path)
+        .context(|| format!("Couldn't read {}", plugin.path.display()))?;
+    write_atomic(&plugins.join(&name), &bytes)?;
     Ok(())
 }
 
@@ -476,19 +469,8 @@ mod tests {
         std::fs::write(dir.join("plugins/OtherPlugin.jar"), "keep").unwrap();
         let jar = tmp.path().join("NetherForge-0.1.0-paper-26.3.jar");
         std::fs::write(&jar, "new").unwrap();
-        let bots = tmp.path().join("NetherForgeBots-0.1.0-paper-26.3.jar");
-        std::fs::write(&bots, "bots").unwrap();
-        install_plugin(&dir, &plugin_jar(&jar, Some(&bots))).unwrap();
-        assert_eq!(
-            jar_names(&dir.join("plugins")),
-            [
-                "NetherForge-0.1.0-paper-26.3.jar",
-                "NetherForgeBots-0.1.0-paper-26.3.jar",
-                "OtherPlugin.jar"
-            ]
-        );
-        // A build without bots takes the old ones away too.
-        install_plugin(&dir, &plugin_jar(&jar, None)).unwrap();
+        // The old build and its bots companion go; another plugin stays.
+        install_plugin(&dir, &plugin_jar(&jar)).unwrap();
         assert_eq!(
             jar_names(&dir.join("plugins")),
             ["NetherForge-0.1.0-paper-26.3.jar", "OtherPlugin.jar"]
@@ -528,12 +510,11 @@ mod tests {
         );
     }
 
-    fn plugin_jar(path: &Path, bots: Option<&Path>) -> PluginJar {
+    fn plugin_jar(path: &Path) -> PluginJar {
         PluginJar {
             minecraft: "26.3".into(),
             plugin_version: "0.1.0".into(),
             path: path.to_path_buf(),
-            bots: bots.map(Path::to_path_buf),
         }
     }
 
@@ -575,7 +556,7 @@ mod tests {
         std::fs::write(&plugin, "ours").unwrap();
 
         let dir = dirs.server_dir(&project);
-        prepare(&dir, &project, &plugin_jar(&plugin, None), 25565, "x").unwrap();
+        prepare(&dir, &project, &plugin_jar(&plugin), 25565, "x").unwrap();
         let args = java_args(&Settings::default(), &project, &dirs.packages(), &cached, 1);
 
         assert!(dir.starts_with(dirs.servers()) && !dir.starts_with(&project));

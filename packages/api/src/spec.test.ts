@@ -380,12 +380,18 @@ const ACTION_VERBS: Record<string, string> = {
     '`menu:close_all()`, `player:close_menu()`, `close_dialog()`, `close_inventory()` take a screen away',
   create: '`file:create_folder()` makes a folder',
   delete: '`file:delete()` erases a file',
+  jump: '`bot:jump()` jumps',
   keep: '`centity:keep()` makes a natural centity a permanent one',
+  leave: '`bot:leave()` disconnects a bot',
   refresh: '`menu:refresh()` sends the window again',
   remove:
     '`entity:remove()`, `bossbar:remove()`, `template:remove()` take something out of the game',
+  release: '`bot:release_item()` lets go of right-click',
   reset: "`player:reset_border()` gives a player their world's border back",
-  stop: '`effect:stop()` ends a playing effect, `mob:stop_pathing()` a walk',
+  respawn: '`bot:respawn()` presses Respawn',
+  stop: '`effect:stop()` ends a playing effect, `mob:stop_pathing()` a walk, `bot:stop()` what a bot is doing',
+  swap: "`bot:swap_hands()` swaps a bot's hands",
+  swing: "`bot:swing()` swings a bot's arm",
   unban: '`player:unban()` lifts a ban',
   unbind: '`slot:unbind()` stops a menu slot showing a storage',
 }
@@ -425,8 +431,14 @@ const members = (type: LuaType) =>
     .filter((it) => it !== 'nil')
 
 /** The setters of each class and value, with the getter each pairs with (if any). */
+/** A class's functions with those it inherits: a setter's getter may be up its chain (`Bot.set_sneaking`, `Player.is_sneaking`). */
+const chainOf = (cls: { extends?: string; functions: Fn[] }): Fn[] => {
+  const parent = cls.extends ? api.classes.find((it) => it.name === cls.extends) : undefined
+  return [...(parent ? chainOf(parent) : []), ...cls.functions]
+}
+
 const setters = [...api.classes, ...values].flatMap((cls) => {
-  const own = new Map(cls.functions.map((fn) => [fn.name, fn]))
+  const own = new Map(chainOf(cls).map((fn) => [fn.name, fn]))
   return cls.functions
     .filter((fn) => fn.name.startsWith('set_'))
     .map((fn) => {

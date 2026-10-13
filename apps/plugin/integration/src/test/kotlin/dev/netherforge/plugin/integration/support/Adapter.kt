@@ -20,7 +20,6 @@ object Adapter {
 
     val java: String get() = property("java")
     val plugin: Path get() = Path.of(property("plugin"))
-    val bots: Path get() = Path.of(property("bots"))
     val contract: Path get() = Path.of(property("contract"))
     val paper: Path get() = Path.of(property("paper"))
 

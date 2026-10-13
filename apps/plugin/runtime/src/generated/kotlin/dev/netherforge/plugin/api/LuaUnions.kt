@@ -161,6 +161,19 @@ sealed interface StringOrNumberOrBoolean {
     )
 }
 
+/** A `String|Skin`: whichever it was. */
+sealed interface StringOrSkin {
+    data class String(val value: kotlin.String) : StringOrSkin
+    data class Skin(val value: dev.netherforge.plugin.api.Skin) : StringOrSkin
+
+    object Codec : LuaCodec<StringOrSkin> by LuaUnion(
+        listOf(
+            LuaUnion.Member<StringOrSkin, kotlin.String>(LuaCodecs.STRING, ::String) { (it as? String)?.value },
+            LuaUnion.Member<StringOrSkin, dev.netherforge.plugin.api.Skin>(dev.netherforge.plugin.api.Skin.Codec, ::Skin) { (it as? Skin)?.value }
+        )
+    )
+}
+
 /** A `Vec3|Choice`: whichever it was. */
 sealed interface Vec3OrChoice {
     data class Vec3(val value: dev.netherforge.format.Vec3) : Vec3OrChoice
@@ -195,5 +208,6 @@ object LuaUnions {
     val CentityOrNodeOrPlayerOrEntity: LuaCodec<LuaHandle> = LuaHandleUnion(listOf(LuaHandle.Centity.Codec, LuaHandle.Node.Codec, LuaHandle.Player.Codec, LuaHandle.Entity.Codec))
     val EntityOrBlock: LuaCodec<LuaHandle> = LuaHandleUnion(listOf(LuaHandle.Entity.Codec, LuaHandle.Block.Codec))
     val EntityOrCentity: LuaCodec<LuaHandle> = LuaHandleUnion(listOf(LuaHandle.Entity.Codec, LuaHandle.Centity.Codec))
+    val EntityOrNode: LuaCodec<LuaHandle> = LuaHandleUnion(listOf(LuaHandle.Entity.Codec, LuaHandle.Node.Codec))
     val HttpStreamOrWebSocket: LuaCodec<LuaHandle> = LuaHandleUnion(listOf(LuaHandle.HttpStream.Codec, LuaHandle.WebSocket.Codec))
 }

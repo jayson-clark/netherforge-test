@@ -22,7 +22,7 @@ import kotlin.test.assertTrue
 class RequirementTest {
     @Test
     fun idsReadBackAsTheRequirementTheyName() {
-        for (id in listOf("moderation", "db", "http", "http:discord.com", "plugin:vault")) {
+        for (id in listOf("moderation", "db", "web", "bots", "http", "http:discord.com", "plugin:vault")) {
             assertEquals(id, Requirement.parse(id)?.id)
         }
         assertEquals(Requirement.Plugin("vault"), Requirement.parse("plugin:vault"))
@@ -37,6 +37,8 @@ class RequirementTest {
         assertTrue(Requirement.Moderation.grantedBy(requires))
         assertFalse(Requirement.Db.grantedBy(requires))
         assertFalse(Requirement.Moderation.grantedBy(null))
+        assertFalse(Requirement.Bots.grantedBy(requires))
+        assertTrue(Requirement.Bots.grantedBy(ProjectRequires(bots = true)))
         // The spec's kind-level check: any host at all.
         assertTrue(Requirement.Http().grantedBy(requires))
         assertFalse(Requirement.Http().grantedBy(ProjectRequires(http = emptyList())))

@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 
 /**
  * A headless Paper of the adapter's version in [Adapter.server], with the
- * NetherForge plugin and its bots installed, the way the editor runs a dev
+ * NetherForge plugin installed, the way the editor runs a dev
  * server: a flat world, the project and the bridge port as system properties,
  * the token in the environment. [prepare] starts from a fresh world;
  * [start] runs it once.
@@ -34,7 +34,7 @@ class PaperServer(
     val folder: Path = Adapter.server
 
     /** A server folder that keeps Paper's downloads between runs but starts with a fresh world and plugins. */
-    fun prepare(plugins: List<Path> = listOf(Adapter.plugin, Adapter.bots)) {
+    fun prepare(plugins: List<Path> = listOf(Adapter.plugin)) {
         Files.createDirectories(folder)
         for (stale in listOf(
             "world",

@@ -50,6 +50,9 @@ const setter = (name: string, doc: string, param: string, type: string, paramDoc
 })
 
 /** How far the `target_*` raycasts reach when the script doesn't say. */
+/** The poses a mannequin can stand in. */
+const MANNEQUIN_POSE = '"standing"|"crouching"|"swimming"|"fall_flying"|"sleeping"'
+
 const TARGET_DISTANCE = 20
 
 const targetDistance = {
@@ -847,6 +850,77 @@ export const droppedItemClass: LuaClass = {
   ],
 }
 
+/** A figure that looks like a player. */
+export const mannequinClass: LuaClass = {
+  name: 'Mannequin',
+  doc: "A figure that looks like a player, for shopkeepers, quest givers and statues: a `Living` with a player's skin, a line of text under its name, and a pose, that isn't a player (it's on no player list, counts towards nothing and loads no chunks) and costs no more than an armour stand. Spawn one with `world:spawn_entity(\"minecraft:mannequin\", …)`, and hear players click it with its `interact` event. It stands where it's put unless pushed or hurt (`set_immovable` keeps it there), holds and wears what it's given (`set_equipment`), and turns with `look_at`. For a figure that walks, fights and plays as a player does, join a `Bot`.",
+  methods: true,
+  extends: 'Living',
+  fields: [],
+  functions: [
+    getter(
+      'skin',
+      `Its skin: a player's name (their skin, which the server looks up), a \`Skin\` table, or \`nil\` for the default skin, and ${ONCE_GONE}.`,
+      'string|Skin|nil',
+    ),
+    {
+      name: 'set_skin',
+      doc: "Gives it a skin. Players' clients draw it as soon as the server has it.",
+      params: [
+        {
+          name: 'skin',
+          type: 'string|Skin',
+          doc: 'A player\'s name (`"Notch"`: their skin, looked up by the server), or a `Skin`. Leave it out (or `nil`) for the default skin.',
+          optional: true,
+        },
+      ],
+      returns: [{ type: 'boolean', doc: `${GONE_FALSE}.` }],
+      example:
+        'local guide = world:spawn_entity("minecraft:mannequin", vec3(0.5, 64, 0.5)) --[[@as Mannequin?]]\nif guide then\n  guide:set_skin("Notch")\n  guide:set_description("<gray>Right-click to talk")\n  guide:set_immovable(true)\nend',
+    },
+    getter(
+      'description',
+      `The line of text under its name, as MiniMessage, or \`nil\` when it shows none (a new one shows \"NPC\"), and ${ONCE_GONE}.`,
+      'Text?',
+    ),
+    {
+      name: 'set_description',
+      doc: 'Sets the line of text under its name.',
+      params: [
+        {
+          name: 'text',
+          type: 'Text',
+          doc: 'MiniMessage. Leave it out (or `nil`) to show none.',
+          optional: true,
+        },
+      ],
+      returns: [{ type: 'boolean', doc: `${GONE_FALSE}.` }],
+    },
+    getter(
+      'is_immovable',
+      `Whether nothing pushes it: players, mobs, water, explosions. ${GONE_FALSE}.`,
+      'boolean',
+    ),
+    setter(
+      'set_immovable',
+      'Keeps it where it is whatever pushes it, or lets it be pushed again.',
+      'immovable',
+      'boolean',
+    ),
+    getter('main_hand', `Which hand it holds things in, or ${GONE}.`, '"left"|"right"?'),
+    setter('set_main_hand', 'Sets which hand it holds things in.', 'side', '"left"|"right"'),
+    getter('pose', `How it stands, or ${GONE}.`, `${MANNEQUIN_POSE}?`),
+    setter('set_pose', 'Sets how it stands.', 'pose', MANNEQUIN_POSE),
+    getter('skin_parts', `Which parts of its skin's outer layer show, or ${GONE}.`, 'SkinParts?'),
+    {
+      name: 'set_skin_parts',
+      doc: "Shows or hides parts of its skin's outer layer: a part left out of the table keeps how it is.",
+      params: [{ name: 'parts', type: 'SkinParts', doc: '' }],
+      returns: [{ type: 'boolean', doc: `${GONE_FALSE}.` }],
+    },
+  ],
+}
+
 const offline = "`false` when they're offline."
 
 /** Someone on the server. */
@@ -1428,6 +1502,19 @@ export const playerClass: LuaClass = {
 
 /** The plain tables entities and players take and give, and their events' payloads. */
 export const entityShapes: LuaClass[] = [
+  shape(
+    'SkinParts',
+    "The parts of a skin's outer layer a mannequin shows, each `true` when shown. `mannequin:skin_parts()` gives every one; `set_skin_parts` changes those given.",
+    [
+      { name: 'cape', type: 'boolean?', doc: 'Its cape, when its skin has one.' },
+      { name: 'jacket', type: 'boolean?', doc: '' },
+      { name: 'left_sleeve', type: 'boolean?', doc: '' },
+      { name: 'right_sleeve', type: 'boolean?', doc: '' },
+      { name: 'left_pants', type: 'boolean?', doc: '' },
+      { name: 'right_pants', type: 'boolean?', doc: '' },
+      { name: 'hat', type: 'boolean?', doc: '' },
+    ],
+  ),
   shape(
     'EntityFilter',
     "Which entities `world:entities` lists. Every key is optional; an entity is listed when it matches all of those given. A key that isn't one of these is an error.",
