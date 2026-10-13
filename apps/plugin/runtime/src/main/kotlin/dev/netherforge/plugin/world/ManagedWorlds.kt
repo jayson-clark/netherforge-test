@@ -221,7 +221,7 @@ internal class ManagedWorlds(
         val work = ops.copy(project().resolve(snapshot()!!.placeOf(MapKind, map).location).normalize(), name)
         copying += name
         own(name, Store.OwnedWorld(NORMAL))
-        return async.workers.submit(files) { work.run() }.handleAsync({ _, failure ->
+        return async.submit(files) { work.run() }.handleAsync({ _, failure ->
             copying -= name
             val why = when {
                 failure != null -> "couldn't copy its files (${failure.message})"

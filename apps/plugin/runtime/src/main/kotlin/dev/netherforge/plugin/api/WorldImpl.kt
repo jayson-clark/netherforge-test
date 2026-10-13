@@ -380,8 +380,7 @@ internal class WorldImpl(private val session: ProjectSession) : WorldApi {
         val search = near?.let {
             worlds.biomeSearch(self.name, floor(it.x).toInt(), floor(it.y).toInt(), floor(it.z).toInt(), radius.toInt(), biome)
         } ?: return CompletableFuture.failedFuture(WorkFailed("world \"${self.name}\" has gone"))
-        val workers = session.async.workers
-        return workers.submit(workers.lane(BIOME_SEARCH_LANE)) {
+        return session.async.submit(session.async.workers.lane(BIOME_SEARCH_LANE)) {
             search.run() ?: throw WorkFailed("no $biome within $radius blocks")
         }
     }

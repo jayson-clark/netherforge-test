@@ -182,7 +182,7 @@ internal class DatabaseImpl(private val session: ProjectSession) : DatabaseApi {
             }
             lane = databases.lane(self.namespace)
         }
-        return session.async.workers.submit(lane) {
+        return session.async.submit(lane) {
             try {
                 database.onLane { connection -> work(database, connection) }
             } catch (e: SQLException) {

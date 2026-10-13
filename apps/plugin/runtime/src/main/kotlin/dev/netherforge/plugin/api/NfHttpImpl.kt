@@ -66,7 +66,7 @@ internal class NfHttpImpl(private val session: ProjectSession) : NfHttpApi {
         }
         val call = HttpCall(method, url, headers, body)
         val fetcher = session.http.fetcher
-        return session.async.workers.submit {
+        return session.async.submit {
             val reply = fetcher.fetch(call) { redirectedTo -> held(Requirement.Http(redirectedTo)) }
             HttpResponse(reply.status.toLong(), reply.headers, reply.body, reply.url.toString())
         }

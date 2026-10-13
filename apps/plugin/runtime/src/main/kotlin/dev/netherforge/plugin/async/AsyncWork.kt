@@ -8,6 +8,7 @@ import dev.netherforge.plugin.script.Scope
 import dev.netherforge.plugin.script.Scripts
 import dev.netherforge.plugin.session.RuntimeService
 import dev.netherforge.plugin.session.TickPhase
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.Executor
@@ -44,6 +45,14 @@ class AsyncWork internal constructor(
 
     /** Where a service carries on once its work is done: the main thread, in [TickPhase.ASYNC], while this session runs. */
     val mainThread: Executor = completions.executor(generation, null)
+
+    /**
+     * Runs [work] on a worker ([on]: the pool or one of its lanes), as
+     * [Workers.submit] does, with the stage completed on [mainThread]: what's
+     * added to it runs in the [TickPhase.ASYNC] after the work finished, never
+     * sooner because the work was quick.
+     */
+    fun <T> submit(on: Executor = workers, work: () -> T): CompletableFuture<T> = workers.submit(on, mainThread, work)
 
     private val waiting = LinkedHashMap<Int, Pending<*>>()
     private var nextId = 1

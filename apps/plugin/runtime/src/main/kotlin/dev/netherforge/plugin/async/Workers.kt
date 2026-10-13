@@ -77,8 +77,14 @@ class Workers(
      * its [lane]s), as the stage's result; what it throws is the stage's
      * failure. Past [maxScriptWork] at once, the stage fails straight away
      * with [WorkFailed]: a script can't queue work without bound.
+     *
+     * With [completeOn] the stage is completed there rather than on the worker
+     * (handed over before the work counts as finished, so [idle] covers it).
+     * Give the main thread's: a stage done on a worker can be done before the
+     * caller has added its next step, and adding one to a done stage runs it at
+     * once, on the main thread, wherever that is in its tick.
      */
-    fun <T> submit(on: Executor = this, work: () -> T): CompletableFuture<T> {
+    fun <T> submit(on: Executor = this, completeOn: Executor? = null, work: () -> T): CompletableFuture<T> {
         if (scriptWork.incrementAndGet() > maxScriptWork) {
             scriptWork.decrementAndGet()
             return CompletableFuture.failedFuture(
@@ -88,13 +94,15 @@ class Workers(
         val future = CompletableFuture<T>()
         try {
             on.execute {
-                try {
-                    future.complete(work())
+                val outcome = try {
+                    Result.success(work())
                 } catch (e: Throwable) {
-                    future.completeExceptionally(e)
+                    Result.failure(e)
                 } finally {
                     scriptWork.decrementAndGet()
                 }
+                val complete = Runnable { outcome.fold(future::complete, future::completeExceptionally) }
+                if (completeOn == null) complete.run() else completeOn.execute(complete)
             }
         } catch (e: RejectedExecutionException) {
             scriptWork.decrementAndGet()

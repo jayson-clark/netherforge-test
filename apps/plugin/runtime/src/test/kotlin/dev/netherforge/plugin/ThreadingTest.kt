@@ -134,4 +134,24 @@ class ThreadingTest {
         completions.drain(1) { it.run.run() }
         assertEquals(listOf("first", "its next stage", "worker's"), ran)
     }
+
+    @Test
+    fun `work started in a drain lands in the next one, however quickly it finished`() {
+        val completions = Completions()
+        val mainThread = completions.executor(1, null)
+        val ran = mutableListOf<String>()
+        Workers(threads = 1).use { workers ->
+            mainThread.execute {
+                ran += "started"
+                val work = workers.submit(completeOn = mainThread) { "done" }
+                // Finished before its next step is added, as a quick worker's can be.
+                assertTrue(workers.idle(10_000))
+                work.thenAcceptAsync({ ran += it }, mainThread)
+            }
+            completions.drain(1) { it.run.run() }
+            assertEquals(listOf("started"), ran)
+            completions.drain(1) { it.run.run() }
+            assertEquals(listOf("started", "done"), ran)
+        }
+    }
 }
