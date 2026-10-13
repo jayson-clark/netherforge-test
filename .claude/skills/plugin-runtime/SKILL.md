@@ -851,8 +851,9 @@ editor fetches and locks it (the lock's rewrite reloads everything).
   is held to what that package's files could name: `names.resource(kind, …)`
   for a resource (the format's `ProjectSnapshot.nameable`: its own, or one a
   package it depends on exports; existence is the registry's to say),
-  `names.entry(refKind, …)` for a resource pack entry (that package's
-  `ReferenceIndex.check`, the files' words), `names.text(…)` for the glyph
+  `names.entry(refKind, …)` for a resource pack entry (a look by `look`'s
+  rule, below; a HUD element by that package's `ReferenceIndex.check`, the
+  files' words), `names.text(…)` for the glyph
   tags in MiniMessage (`Text`, below), `names.definition(…)` for a menu,
   dialog or recipe table (every `@Ref` and glyph tag in it, items skipped),
   `names.item(…)` for an item table. What comes out is the name **as the
@@ -860,12 +861,28 @@ editor fetches and locks it (the lock's rewrite reloads everything).
   registry is keyed by and the adapter resolves in the project's namespace.
   Errors are the format's messages (`BrokenRef.forScript()`):
   `package "library" doesn't export its item "secret", so only it can use it`.
-- **Item tables are values.** `names.item` checks a stack's `item`,
-  `item_model` and `tooltip_style` only for being there in their own
-  package, not for being exported (`stackName`): any script may hold, read
-  and hand back any stack it got, and must be able to write back what it
-  read. Making one from a definition (`nf.items.create`) is a use and needs
-  the export. `nf.items.all()` lists only what the caller may use.
+- **Item tables are values.** `names.item` checks a stack's `item` only for
+  its namespace being a loaded package's (`stackName`), and its looks by
+  `look`: any script may hold, read and hand back any stack it got, and must
+  be able to write back what it read. Making one from a definition
+  (`nf.items.create`) is a use and needs the export. `nf.items.all()` lists
+  only what the caller may use.
+- **Looks are values** (`names.look`, `PackageNames.LOOKS`: item models,
+  glyphs, skins, tooltips, equipment looks, sounds). `ns:<pack>/<key>` may be
+  any loaded package's look, exported or not, depended on or not, as long as
+  that package has it; bare is the caller's own. It's the one rule for every
+  place a script names a look (`Node:set_model`, an item table's looks,
+  `names.text`'s glyph tags, `names.definition`, `nf.text.glyph`, skins,
+  boss bar icons, and `Effects.soundId` through `names.packSound`, which
+  still falls back to the server's sounds). It's what lets a project hand a
+  package it depends on a look of its own (`nf.looks.qualify` writes the full
+  name, a plain string that survives `data()`), which no export could allow:
+  dependencies point one way. Showing a look uses nothing, and every client
+  has every pack. Runtime only: files are checked as before, so a package
+  still validates on its own. A namespace no package has is
+  `no package on this server has the namespace "x"`, and a bare name the
+  caller lacks but another loaded package has says how to write that one
+  (`elsewhere`).
 - **Out.** A name read back is spelled for the reading package: bare for its
   own, `ns:id` for another's (`names.spell`, `spellText`, `spell(item, to)`).
   That's every id an implementation returns (`ProjectItem:id`,

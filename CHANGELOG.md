@@ -90,6 +90,17 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Added
 
+- **A package can show looks a project that depends on it hands over.** A
+  resource pack look (an item model, glyph, skin, tooltip, equipment look or
+  sound) named in full, `<namespace>:<pack>/<key>`, may be any loaded
+  package's, exported or not, wherever a script shows one: `node:set_model`
+  now takes what an `Item`'s `item_model` already did, and both refuse a
+  namespace no package on the server has with the same error.
+  `nf.looks.qualify("nether/pawn")` writes the full name to hand over (a
+  plain string, so it keeps in `this:data()`). Files are checked as before:
+  a package still validates on its own. See "Looks are values" in the
+  packages reference.
+
 - **Spacing in text.** `<space:N>` moves the cursor N pixels in any
   MiniMessage text, and `<at:N>…</at>` draws what it holds N pixels away
   without moving what follows (`from=start|center|end` counts N from the line's

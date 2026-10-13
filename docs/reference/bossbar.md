@@ -72,7 +72,7 @@ Draws a glyph at its left end, or none with `nil`. A glyph no resource pack has 
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `icon` | `string?` | `<pack>/<key>`, like `"ui/boss_king_slime"`. |
+| `icon` | `string?` | `<pack>/<key>`, like `"ui/boss_king_slime"`, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)). |
 
 **Returns** `boolean`: `false` once it's gone.
 

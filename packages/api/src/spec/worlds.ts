@@ -474,7 +474,7 @@ export const worldClass: LuaClass = {
     },
     {
       name: 'play_sound',
-      doc: 'Plays a sound at a position, for everyone near enough to hear it. A Minecraft sound (`"minecraft:block.note_block.pling"`, checked against the server\'s sounds) or one of the project\'s resource pack sounds (`"<pack>/<key>"`, like `"ui/click"`, checked against `resource_packs/`). An unknown sound is an error.',
+      doc: 'Plays a sound at a position, for everyone near enough to hear it. A Minecraft sound (`"minecraft:block.note_block.pling"`, checked against the server\'s sounds) or a resource pack sound (`"<pack>/<key>"`, like `"ui/click"`, your package\'s own, or another loaded package\'s as `"<namespace>:<pack>/<key>"`: [looks are values](packages.md#looks-are-values)). An unknown sound is an error.',
       params: [
         { name: 'sound', type: 'string', doc: 'A sound id.' },
         { name: 'position', type: 'Vec3', doc: 'Where it comes from, in the world.' },

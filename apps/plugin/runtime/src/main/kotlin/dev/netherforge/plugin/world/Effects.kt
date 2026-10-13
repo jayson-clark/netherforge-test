@@ -11,8 +11,6 @@ import dev.netherforge.format.particle.ColorData
 import dev.netherforge.format.particle.DustData
 import dev.netherforge.format.particle.DustTransitionData
 import dev.netherforge.format.particle.SpawnData
-import dev.netherforge.format.ref.RefKind
-import dev.netherforge.format.ref.ReferenceIndex
 import dev.netherforge.plugin.api.ParticleOptions
 import dev.netherforge.plugin.api.SoundOptions
 import dev.netherforge.plugin.lua.LuaApiException
@@ -20,6 +18,7 @@ import dev.netherforge.plugin.platform.ParticleSpawn
 import dev.netherforge.plugin.platform.Platform
 import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.platform.SoundPlay
+import dev.netherforge.plugin.session.PackageNames
 import dev.netherforge.plugin.session.RuntimeService
 import dev.netherforge.format.particle.ItemData as ItemSpawnData
 
@@ -30,7 +29,11 @@ import dev.netherforge.format.particle.ItemData as ItemSpawnData
  * the same batched [dev.netherforge.plugin.platform.ParticleOps.spawn] that
  * particle effects use, with viewers worked out here.
  */
-internal class Effects(private val platform: Platform, private val references: () -> ReferenceIndex?) : RuntimeService {
+internal class Effects(
+    private val platform: Platform,
+    /** A reference as a pack sound, by the rule for looks ([dev.netherforge.plugin.session.PackageNames.packSound]). */
+    private val packSound: (String) -> PackageNames.PackSound
+) : RuntimeService {
     override val name get() = "particles and sounds"
 
     /**
@@ -163,22 +166,20 @@ internal class Effects(private val platform: Platform, private val references: (
 
     /**
      * A sound id, namespaced, once it's known to name a sound: one of the
-     * calling package's pack sounds, or one a package it depends on exports,
-     * by reference (`ui/menu/open`, the game's `shop:ui/menu/open`), or else
-     * one of the server's (`entity.pig.ambient` is
-     * `minecraft:entity.pig.ambient`).
+     * calling package's pack sounds, or one of any loaded package's, by
+     * reference (`ui/menu/open`, the game's `shop:ui/menu/open`: a sound is a
+     * look), or else one of the server's (`entity.pig.ambient` is
+     * `minecraft:entity.pig.ambient`, and another plugin's pack may have
+     * `other:boom`).
      */
     fun soundId(sound: String): String {
-        val references = references()
-        val pack = references?.resolve(RefKind.SOUND, sound)
-        if (pack != null && references.has(RefKind.SOUND, pack)) return pack.toString()
+        val pack = packSound(sound)
+        pack.key?.let { return it.toString() }
         if (!GameIds.isValid(sound)) throw LuaApiException("\"$sound\" isn't a sound id")
         val id = GameIds.normalize(sound)
         if (platform.game.has(RegistryKey.SOUND_EVENT, id) != false) return id
-        // Shaped like a sound of one of the project's packs: say what that pack lacks.
-        if (pack != null && pack.namespace == references.home && pack.pack in references.packs()) {
-            references.check(RefKind.SOUND, sound)?.let { throw LuaApiException(it.message.replaceFirstChar(Char::lowercase)) }
-        }
+        // Shaped like a sound of a loaded package's pack: say what that pack lacks.
+        pack.problem?.let { throw LuaApiException(it) }
         throw LuaApiException("no sound \"$id\" on this server or in the project's resource packs")
     }
 

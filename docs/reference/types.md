@@ -558,8 +558,8 @@ An item stack as a plain table: what `menu:item` returns and what `menu:set_item
 | `hide_tooltip` | `boolean?` | No tooltip at all, for filler panes. |
 | `unbreakable` | `boolean?` |  |
 | `damage` | `integer?` | Durability used: 0 is pristine. |
-| `item_model` | `string?` | `<pack>/<key>`: a look from one of the project's resource packs. |
-| `tooltip_style` | `string?` | `<pack>/<key>`: a tooltip frame from one of the project's resource packs. |
+| `item_model` | `string?` | `<pack>/<key>`: an entry of one of your package's resource packs' `items`, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)). It names a look the server has, or it's an error; read back, it's as your package writes it. |
+| `tooltip_style` | `string?` | `<pack>/<key>`: a tooltip frame from one of your package's resource packs, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)). |
 | `equipment` | [`ItemEquipment`](types.md#itemequipment)`?` | Worn as armour or equipment, drawn as one of the project's resource packs' equipment looks: `{ asset = "gear/ruby", slot = "head" }`. |
 | `color` | `string?` | `#RRGGBB`, for dyed leather, potions and maps. |
 | `profile` | `string?` | Whose head, for a player head: a name or a UUID. |
@@ -605,7 +605,7 @@ What an item looks like worn, and where: an `Item`'s `equipment` (the `equippabl
 
 | Field | Type | |
 | --- | --- | --- |
-| `asset` | `string` | `<pack>/<key>`: an equipment look from one of the project's resource packs. |
+| `asset` | `string` | `<pack>/<key>`: an equipment look from one of your package's resource packs, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)). |
 | `slot` | `"head"\|"chest"\|"legs"\|"feet"\|"body"\|"saddle"` | The slot it is worn in: `"body"` is a horse's or wolf's armour. |
 
 ### ItemCooldown {#itemcooldown}
@@ -2209,8 +2209,8 @@ A partial `Item` that picks stacks: a stack matches when every field given match
 | `hide_tooltip` | `boolean?` | No tooltip at all, for filler panes. |
 | `unbreakable` | `boolean?` |  |
 | `damage` | `integer?` | Durability used: 0 is pristine. |
-| `item_model` | `string?` | `<pack>/<key>`: a look from one of the project's resource packs. |
-| `tooltip_style` | `string?` | `<pack>/<key>`: a tooltip frame from one of the project's resource packs. |
+| `item_model` | `string?` | `<pack>/<key>`: an entry of one of your package's resource packs' `items`, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)). It names a look the server has, or it's an error; read back, it's as your package writes it. |
+| `tooltip_style` | `string?` | `<pack>/<key>`: a tooltip frame from one of your package's resource packs, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)). |
 | `equipment` | [`ItemEquipment`](types.md#itemequipment)`?` | Worn as armour or equipment, drawn as one of the project's resource packs' equipment looks: `{ asset = "gear/ruby", slot = "head" }`. |
 | `color` | `string?` | `#RRGGBB`, for dyed leather, potions and maps. |
 | `profile` | `string?` | Whose head, for a player head: a name or a UUID. |

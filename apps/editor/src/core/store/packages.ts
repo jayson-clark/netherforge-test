@@ -25,10 +25,10 @@ import {
   type ProjectOutline,
 } from '@/core/format'
 import type { Backend } from '@/core/backend/types'
-import { templateById, templateLocation } from '@/core/templates'
+import { templateById } from '@/core/templates'
 import { isModel } from './documents'
 import type { Workspace } from './workspace'
-import { locationOf, readsText } from '@/core/paths'
+import { locationOf, readsText, resourceOf } from '@/core/paths'
 import { errorText, isUnder, nextNonce, type SliceArgs } from './slice'
 import { namespaceOf, projectInput } from './validation'
 
@@ -67,16 +67,38 @@ export interface PackagesActions {
    */
   copyFromPackage(namespace: string, kind: KindId, id: string, to: string): Promise<boolean>
   /**
-   * Puts the project template [id] (see `core/templates.ts`) into the project
-   * as a package: its files under `templates/<namespace>/` and a `path`
-   * dependency on that folder in `netherforge.json` (saved), so its resources
-   * show under the explorer's Dependencies, ready to copy into the project.
-   * One transaction: undo takes the folder and the dependency away together. False, with a notice, when the project already has
-   * that package or it couldn't be written.
+   * Copies the project template [id] (see `core/templates.ts`) into the
+   * project as its own: every file where the template has it, and what the
+   * template requires added to `netherforge.json`'s `requires` (saved). Then
+   * hot-reloads what it wrote. One transaction: undo takes it all away. False,
+   * with a notice, when the project already has a resource or file of the
+   * same name, or it couldn't be written.
    */
-  addTemplate(id: string): Promise<boolean>
+  applyTemplate(id: string): Promise<boolean>
+  /**
+   * Adds the dependency [namespace] on [source] to `netherforge.json` (saved),
+   * which reads its package. False, with a notice, when the project already
+   * depends on that namespace or the manifest doesn't read.
+   */
+  addDependency(namespace: string, source: DependencySource): Promise<boolean>
   /** What a validation found about the packages: the lock to keep, the packages to mark read-only. */
   packagesValidated(outline: ProjectOutline): void
+}
+
+/** A dependency's source in `netherforge.json`: a folder relative to the project, or a git repository at a rev. */
+export type DependencySource = { path: string } | { git: string; rev?: string }
+
+/** [into] with what [extra] requires too: a capability either asks for, hosts and plugins in either (in order). */
+export function mergeRequires(
+  into: NonNullable<ProjectManifest['requires']>,
+  extra: NonNullable<ProjectManifest['requires']>,
+) {
+  if (extra.moderation) into.moderation = true
+  if (extra.db) into.db = true
+  for (const key of ['http', 'plugins'] as const) {
+    const more = (extra[key] ?? []).filter((it) => !into[key]?.includes(it))
+    if (more.length) into[key] = [...(into[key] ?? []), ...more]
+  }
 }
 
 export const PACKAGES_INITIAL: PackagesState = { packages: NO_PACKAGES, fetchingPackages: false }
@@ -443,13 +465,20 @@ export function packagesSlice({ backend, get, set }: SliceArgs): PackagesState &
       })
     },
 
-    async addTemplate(id) {
+    async applyTemplate(id) {
       const template = templateById(id)
       if (!get().project || !template) return false
-      const { namespace } = template
-      const location = templateLocation(template)
-      if (directDependencies(get()).includes(namespace)) {
-        get().notify('info', `The project already uses ${namespace}.`)
+      const paths = Object.keys(template.files)
+      const taken = paths.flatMap((path) => {
+        const found = resourceOf(path)
+        if (!found) return get().files.includes(path) ? [path] : []
+        // By id, wherever the project keeps it (a group folder too).
+        const ids = get().outline?.resources[found.kind] ?? []
+        return ids.includes(found.id) ? [locationOf(found.kind, found.id)] : []
+      })
+      if (taken.length) {
+        const names = [...new Set(taken)].join(', ')
+        get().notify('error', `Couldn't add ${template.title}: the project already has ${names}.`)
         return false
       }
       if (get().refuseReadOnly(MANIFEST_FILE)) return false
@@ -458,24 +487,58 @@ export function packagesSlice({ backend, get, set }: SliceArgs): PackagesState &
         get().notify('error', `Fix ${MANIFEST_FILE} first: it doesn't read as a project.`)
         return false
       }
+      // Each resource's folder (or file), and the other files as they are.
+      const roots = [
+        ...new Set(
+          paths.map((path) => {
+            const found = resourceOf(path)
+            return found ? locationOf(found.kind, found.id) : path
+          }),
+        ),
+      ]
       return get().transact(`Add the ${template.title} template`, async () => {
-        await get().touch(location, MANIFEST_FILE)
+        await get().touch(...roots, MANIFEST_FILE)
         try {
           for (const [path, text] of Object.entries(template.files)) {
-            await backend.writeText(`${location}/${path}`, text)
+            await backend.writeText(path, text)
           }
         } catch (error) {
           get().notify('error', `Couldn't add ${template.title}: ${errorText(error)}`)
           return false
         }
         await get().refreshFiles()
-        // Depending on it is what shows it under Dependencies; the manifest is saved
-        // here, since nobody has the settings page open to do it.
         get().edit<ProjectManifest>(MANIFEST_FILE, (draft) => {
-          draft.dependencies = { ...draft.dependencies, [namespace]: { path: location } }
+          const requires = { ...draft.requires }
+          mergeRequires(requires, template.requires)
+          if (Object.keys(requires).length) draft.requires = requires
         })
-        return get().save(MANIFEST_FILE)
+        // Saved here, since nobody has the settings page open to do it.
+        const saved = await get().save(MANIFEST_FILE)
+        get().validateSoon()
+        get().hotReload(paths)
+        return saved
       })
+    },
+
+    async addDependency(namespace, source) {
+      if (!get().project) return false
+      if (directDependencies(get()).includes(namespace)) {
+        get().notify('info', `The project already depends on ${namespace}.`)
+        return false
+      }
+      if (get().refuseReadOnly(MANIFEST_FILE)) return false
+      const manifest = await get().loadDoc(MANIFEST_FILE)
+      if (!manifest || !isModel(manifest)) {
+        get().notify('error', `Fix ${MANIFEST_FILE} first: it doesn't read as a project.`)
+        return false
+      }
+      get().edit<ProjectManifest>(MANIFEST_FILE, (draft) => {
+        const next = { ...draft.dependencies, [namespace]: source }
+        draft.dependencies = Object.fromEntries(
+          Object.entries(next).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+        )
+      })
+      return get().save(MANIFEST_FILE)
     },
 
     packagesValidated(outline) {

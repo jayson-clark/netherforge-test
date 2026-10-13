@@ -196,7 +196,7 @@ export const bossBarClass: LuaClass = {
         {
           name: 'icon',
           type: 'string?',
-          doc: '`<pack>/<key>`, like `"ui/boss_king_slime"`.',
+          doc: '`<pack>/<key>`, like `"ui/boss_king_slime"`, or another loaded package\'s as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)).',
           names: 'glyph',
         },
       ],

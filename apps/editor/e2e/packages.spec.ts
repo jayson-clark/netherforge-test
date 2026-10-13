@@ -60,7 +60,7 @@ test("shows a dependency's resource with its own files, pictures and looks", asy
 
 test("draws a dependency's centity with its own pack's looks", async ({ page }) => {
   const errors = await openExample(page)
-  // A package kept in the project (as a template is), whose centity shows its own pack's item look.
+  // A package kept inside the project's folder, whose centity shows its own pack's item look.
   const pkg: Record<string, string> = {
     'netherforge.json': JSON.stringify({
       formatVersion: 1,
@@ -99,33 +99,21 @@ test("draws a dependency's centity with its own pack's looks", async ({ page }) 
   expect(errors).toEqual([])
 })
 
-test('adds a template as a package and copies its resources into the project', async ({ page }) => {
+test("adds a template's resources to the project as its own", async ({ page }) => {
   const errors = await openExample(page)
   await showPanel(page, 'Project')
+  await showKind(page, 'Items')
   await page.getByRole('button', { name: 'Add template…' }).click()
-  await page.getByRole('menuitem', { name: /^Shop:/ }).click()
+  await page.getByRole('menuitem', { name: /^RPG mob:/ }).click()
 
-  // It's a package like any other, read-only under Dependencies, kept in the project's templates folder.
-  const pkg = page.getByRole('list', { name: 'Package template_shop' })
-  await expect(pkg.getByRole('listitem', { name: 'template_shop:lucky_charm' })).toBeVisible()
-  await expect(
-    pkg.getByRole('group', { name: 'Menus' }).getByRole('listitem', { name: 'template_shop:shop' }),
-  ).toBeVisible()
+  // The project's own, not a dependency: listed with its items, and what it requires required.
+  await expect(page.getByRole('option', { name: 'goblin_ear', exact: true })).toBeVisible()
   const written = await files(page)
-  expect(JSON.parse(written['netherforge.json']!).dependencies.template_shop).toEqual({
-    path: 'templates/template_shop',
-  })
-  expect(written['templates/template_shop/modules/shop/init.lua']).toContain('shop_wallets')
-  expect(written['templates/template_shop/tests/shop_test.lua']).toBeUndefined()
-
-  // One that's added is greyed out in the menu.
-  await page.getByRole('button', { name: 'Add template…' }).click()
-  await expect(page.getByRole('menuitem', { name: /^Shop:/ })).toBeDisabled()
-  await page.keyboard.press('Escape')
-
-  await pkg.getByRole('button', { name: 'Copy template_shop:lucky_charm into project' }).click()
-  await page.getByRole('button', { name: 'Copy', exact: true }).click()
-  await expect(page.getByRole('option', { name: 'lucky_charm', exact: true })).toBeVisible()
-  expect((await files(page))['items/lucky_charm/item.json']).toContain('Lucky charm')
+  expect(written['centities/goblin/centity.json']).toBeDefined()
+  expect(written['modules/slayers/init.lua']).toBeDefined()
+  expect(written['tests/goblin_test.lua']).toBeDefined()
+  const manifest = JSON.parse(written['netherforge.json']!)
+  expect(manifest.dependencies.template_rpg_mob).toBeUndefined()
+  expect(manifest.requires.db).toBe(true)
   expect(errors).toEqual([])
 })

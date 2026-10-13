@@ -97,11 +97,12 @@ Chest menus and dialog screens.
 
 ## Values and utilities
 
-Vectors and locations, text, time, randomness and maths.
+Vectors and locations, text, looks, time, randomness and maths.
 
 - [Vec3](vec3.md): Three numbers: a position, an offset, a velocity, a direction or a scale
 - [Location](location.md): A position in a particular world, with an optional facing
 - [nf.text](nf.text.md): Helpers for the MiniMessage text players see: escaping what players typed, stripping tags, resource pack glyphs, moving the cursor, and measuring
+- [nf.looks](nf.looks.md): Resource pack looks (item models, glyphs, skins, tooltips, equipment looks, sounds) handed from one package's code to another's
 - [nf.time](nf.time.md): Dates and durations as text, in the same unit as `nf.server.unix_time()`: milliseconds
 - [nf.random](nf.random.md): Randomness `math.random` doesn't give: generators of your own that repeat for a seed, smooth noise, and random ids
 - [Random](random.md): A random generator from `nf.random.new`: numbers that repeat for its seed, apart from `math.random` and every other generator

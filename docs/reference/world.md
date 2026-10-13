@@ -448,7 +448,7 @@ world:spawn_particle("minecraft:dust", this:position() + vec3(0, 1, 0), {
 
 ### `world:play_sound(sound, position, options?)` {#play_sound}
 
-Plays a sound at a position, for everyone near enough to hear it. A Minecraft sound (`"minecraft:block.note_block.pling"`, checked against the server's sounds) or one of the project's resource pack sounds (`"<pack>/<key>"`, like `"ui/click"`, checked against `resource_packs/`). An unknown sound is an error.
+Plays a sound at a position, for everyone near enough to hear it. A Minecraft sound (`"minecraft:block.note_block.pling"`, checked against the server's sounds) or a resource pack sound (`"<pack>/<key>"`, like `"ui/click"`, your package's own, or another loaded package's as `"<namespace>:<pack>/<key>"`: [looks are values](packages.md#looks-are-values)). An unknown sound is an error.
 
 | Parameter | Type | |
 | --- | --- | --- |

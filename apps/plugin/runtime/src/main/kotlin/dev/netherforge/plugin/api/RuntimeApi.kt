@@ -71,6 +71,7 @@ internal class RuntimeApi(private val session: ProjectSession) :
     override val nfCommands = NfCommandsImpl(session)
     override val nfFiles = NfFilesImpl(session)
     override val nfText = NfTextImpl(session)
+    override val nfLooks = NfLooksImpl(session)
     override val nfJson = NfJsonImpl()
     override val nfHttp = NfHttpImpl(session)
     override val nfTime = NfTimeImpl { session.schedules.zone }

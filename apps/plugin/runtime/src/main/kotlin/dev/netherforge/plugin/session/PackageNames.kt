@@ -133,16 +133,90 @@ class PackageNames internal constructor(private val session: ProjectSession) {
     }
 
     /**
-     * [reference], a pack entry of [kind] (a glyph, a skin, an item model, a
-     * tooltip, a sound) the calling code named, as a key: an error when its
-     * package has no such entry, or the caller can't name it, in the words a
-     * file gets.
+     * [reference], a pack entry of [kind] the calling code named, as a key:
+     * a look ([LOOKS]) by [look]'s rule, anything else (a HUD element) as a
+     * file of the caller's package could name it. An error when its package
+     * has no such entry, or the caller can't name it, in the words a file gets.
      */
     fun entry(kind: RefKind, reference: String): ResourceKey {
+        if (kind in LOOKS) return look(kind, reference)
         val references = references()
         references.check(kind, reference)?.let { throw LuaApiException(it.forScript()) }
         return references.resolve(kind, reference)!!
     }
+
+    /**
+     * [reference], a look of [kind] ([LOOKS]: an item model, a glyph, a skin,
+     * a tooltip, an equipment look, a sound) that code in package [from]
+     * named, as a key. **A look is a value, not a use**: showing one is
+     * anyone's to do, so `ns:<pack>/<key>` may be any loaded package's,
+     * exported or not and depended on or not (a project hands a package it
+     * uses its own model to draw), as long as that package has it; a bare
+     * name is [from]'s own. Static checks are untouched: a file still names
+     * only what it may, and a package is validated on its own. An error when
+     * the namespace is no loaded package's, or its package has no such entry
+     * (a bare name another loaded package has says how to write that one).
+     */
+    fun look(kind: RefKind, reference: String, from: String = calling()): ResourceKey {
+        val key = ResourceRef(reference).resolve(from)?.takeIf { kind.isPath(it.path) }
+            ?: throw LuaApiException(references(from).check(kind, reference)!!.forScript())
+        val owner = snapshot.referencesOf(key.namespace) ?: throw LuaApiException(unloaded(key.namespace))
+        val broken = owner.check(kind, key.relativeTo(key.namespace).text) ?: return key
+        if (key.namespace != from) throw LuaApiException("\"${key.namespace}\": ${broken.forScript()}")
+        throw LuaApiException(broken.forScript() + elsewhere(kind, key))
+    }
+
+    /**
+     * For a bare look [key] its own package lacks: the loaded package that has
+     * it, and how to write it, since it was likely handed over by that
+     * package's code in its own words.
+     */
+    private fun elsewhere(kind: RefKind, key: ResourceKey): String {
+        val path = key.relativeTo(key.namespace).text
+        val other = (listOf(home) + snapshot.packages.keys).firstOrNull { namespace ->
+            namespace != key.namespace && snapshot.referencesOf(namespace)?.check(kind, path) == null
+        } ?: return ""
+        return "; package \"$other\" has one, named \"$other:$path\" from outside it (nf.looks.qualify writes it)"
+    }
+
+    /**
+     * [reference], a look the calling code named, in full (`ns:<pack>/<key>`),
+     * so it means the same in any package's code (`nf.looks.qualify`). Not
+     * checked for being there: wherever it's shown checks that.
+     */
+    fun qualify(reference: String): String {
+        val key = ResourceRef(reference).resolve(calling())?.takeIf { key -> LOOKS.any { it.isPath(key.path) } }
+            ?: throw LuaApiException("\"$reference\" isn't a look: write <pack>/<key>, or <namespace>:<pack>/<key> for another package's")
+        return key.toString()
+    }
+
+    /** What a pack sound reference is: [key] when a loaded package has that sound, else [problem] when it names one's pack, which lacks it. */
+    data class PackSound(val key: ResourceKey?, val problem: String?)
+
+    /**
+     * [reference] as a pack sound by [look]'s rule. Neither a key nor a
+     * problem when it doesn't name a loaded package's pack: it may still be
+     * one of the server's sounds (the game's, another plugin's pack's). A
+     * problem is said only once the server has no such sound either.
+     */
+    fun packSound(reference: String): PackSound {
+        val from = calling()
+        val key = ResourceRef(reference).resolve(from)?.takeIf { RefKind.SOUND.isPath(it.path) } ?: return PackSound(null, null)
+        val owner = snapshot.referencesOf(key.namespace) ?: return PackSound(null, null)
+        if (key.pack !in owner.packs()) {
+            // Bare, and another loaded package has it: likely handed over in that package's words.
+            val elsewhere = if (ResourceRef(reference).namespace == null) elsewhere(RefKind.SOUND, key) else ""
+            return PackSound(null, elsewhere.takeIf { it.isNotEmpty() }?.let { "no sound \"$reference\" in package \"$from\"$it" })
+        }
+        return try {
+            PackSound(look(RefKind.SOUND, reference, from), null)
+        } catch (e: LuaApiException) {
+            PackSound(null, e.message)
+        }
+    }
+
+    /** Why a name in [namespace] names nothing: no package loaded here is that namespace. */
+    private fun unloaded(namespace: String) = "no package on this server has the namespace \"$namespace\""
 
     /** [entry], as the server names it (`ui/coin`, `library:gems/gem`). */
     fun entryName(kind: RefKind, reference: String): String = entry(kind, reference).relativeTo(home).text
@@ -156,17 +230,16 @@ class PackageNames internal constructor(private val session: ProjectSession) {
      */
     fun text(text: String, from: String = calling()): String {
         if (!spanning || '<' !in text) return text
-        val references = references(from)
         return GlyphTags.rewrite(text) { tag ->
-            val broken = references.check(RefKind.GLYPH, tag.reference)
-            if (broken != null) {
+            val key = try {
+                look(RefKind.GLYPH, tag.reference, from)
+            } catch (e: LuaApiException) {
                 if (reportedGlyphs.add(from to tag.reference)) {
-                    session.log.warn("<glyph:${tag.reference}> in text from \"$from\" shows nothing: ${broken.forScript()}")
+                    session.log.warn("<glyph:${tag.reference}> in text from \"$from\" shows nothing: ${e.message}")
                 }
-                ""
-            } else {
-                references.resolve(RefKind.GLYPH, tag.reference)!!.relativeTo(home).text.takeIf { it != tag.reference }
+                return@rewrite ""
             }
+            key.relativeTo(home).text.takeIf { it != tag.reference }
         } ?: text
     }
 
@@ -238,20 +311,11 @@ class PackageNames internal constructor(private val session: ProjectSession) {
      * definition (`nf.items.create`) is a use, and needs the export.
      */
     private fun stackName(kind: RefKind, reference: String, from: String): String {
-        val key = ResourceRef(reference).resolve(from)?.takeIf { kind.isPath(it.path) }
-        if (key == null) {
-            // Not shaped like a name: the caller's words for why (an item no project has is the reader's to say).
-            if (kind.scope == RefScope.RESOURCE_PACK) references(from).check(kind, reference)?.let { throw LuaApiException(it.forScript()) }
-            return reference
-        }
-        val owner =
-            snapshot.referencesOf(key.namespace) ?: throw LuaApiException(ReferenceIndex.unknownNamespace(key.namespace, from).forScript())
-        if (kind.scope == RefScope.RESOURCE_PACK) {
-            owner.check(kind, key.relativeTo(key.namespace).text)?.let { broken ->
-                val where = if (key.namespace == from) "" else "\"${key.namespace}\": "
-                throw LuaApiException(where + broken.forScript())
-            }
-        }
+        // Its looks are looks, by the one rule for them.
+        if (kind in LOOKS) return look(kind, reference, from).relativeTo(home).text
+        // Not shaped like a name: an item no project has is the reader's to say.
+        val key = ResourceRef(reference).resolve(from)?.takeIf { kind.isPath(it.path) } ?: return reference
+        if (snapshot.referencesOf(key.namespace) == null) throw LuaApiException(unloaded(key.namespace))
         return key.relativeTo(home).text
     }
 
@@ -262,7 +326,7 @@ class PackageNames internal constructor(private val session: ProjectSession) {
      * A definition the calling code wrote (a menu's, a dialog's, a recipe's,
      * as JSON in the file's spelling, shaped as [descriptor] says), with every
      * name in it as the server knows it, checked as the file would be: a pack
-     * entry for being there, a resource for being one the caller can name
+     * entry for being there (a look by [look]'s rule), a resource for being one the caller can name
      * (whether it exists is the caller's to check). The items in it aren't
      * touched: they were read as every item a script hands over is ([item]).
      * A mistake is an error at its place in the definition ([where] turns a
@@ -273,15 +337,23 @@ class PackageNames internal constructor(private val session: ProjectSession) {
         val references = references(from)
         return RefWalker.rewrite(descriptor, element, skip = ITEMS) { found ->
             if (found.kind.scope == RefScope.FILE) return@rewrite null
-            fun fail(broken: BrokenRef): Nothing {
+            fun fail(problem: String): Nothing {
                 val tag = if (found.start != null) "<${GlyphTags.NAME}:${found.text}>: " else ""
-                throw LuaApiException("${where(found.path)}: $tag${broken.forScript()}")
+                throw LuaApiException("${where(found.path)}: $tag$problem")
             }
+
+            fun fail(broken: BrokenRef): Nothing = fail(broken.forScript())
             val key = if (found.kind.scope == RefScope.RESOURCE) {
                 val kind = Kinds.byId(found.kind.resourceKind!!)!!
                 val key = ResourceRef(found.text).resolve(from) ?: return@rewrite null
                 snapshot.nameable(from, kind, key)?.let(::fail)
                 key
+            } else if (found.kind in LOOKS) {
+                try {
+                    look(found.kind, found.text, from)
+                } catch (e: LuaApiException) {
+                    fail(e.message.orEmpty())
+                }
             } else {
                 references.check(found.kind, found.text)?.let(::fail)
                 references.resolve(found.kind, found.text)!!
@@ -337,6 +409,12 @@ class PackageNames internal constructor(private val session: ProjectSession) {
     }
 
     private companion object {
+        /**
+         * The pack entries that are looks, shown by whoever has one ([look]).
+         * A HUD element isn't: scripts fill it in, so it's its package's to use.
+         */
+        val LOOKS = setOf(RefKind.ITEM_MODEL, RefKind.GLYPH, RefKind.SKIN, RefKind.TOOLTIP, RefKind.EQUIPMENT, RefKind.SOUND)
+
         /** What [definition] leaves to [item]. */
         val ITEMS = setOf(ItemDef.serializer().descriptor.serialName)
 

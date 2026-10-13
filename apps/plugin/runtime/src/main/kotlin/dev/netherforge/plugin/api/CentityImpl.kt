@@ -904,7 +904,7 @@ internal class NodeImpl(private val session: ProjectSession) : NodeApi {
     override fun setModel(self: LuaHandle.Node, model: String): Boolean {
         val (instance, index) = node(self) ?: return false
         val current = instance.display(index) as? ModelDisplay ?: return false
-        // Named as the calling script's package names it; the server holds it as the project spells it.
+        // A look, as the calling script names it (any loaded package's, as `ns:<pack>/<key>`); the server holds it as the project spells it.
         val name = session.names.entryName(RefKind.ITEM_MODEL, model)
         if (name != current.model.text) instance.setDisplay(index, current.copy(model = ResourceRef(name)))
         return true

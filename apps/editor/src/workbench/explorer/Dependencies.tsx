@@ -8,7 +8,8 @@
  */
 import { KINDS, type KindId, type PackageOutline } from '@/core/format'
 import { isBinaryKind } from '@/core/paths'
-import { describeOrigin, directDependencies } from '@/core/store/packages'
+import type { Backend } from '@/core/backend/types'
+import { describeOrigin } from '@/core/store/packages'
 import { TEMPLATES } from '@/core/templates'
 import { useWorkspace } from '@/state/providers'
 import type { WorkspaceStore } from '@/core/store/workspace'
@@ -18,6 +19,11 @@ import { openMenu, type MenuItem } from '@/ui/ContextMenu'
 import { ask } from '@/ui/dialogs'
 import { Bar, Spacer } from '@/ui/layout'
 import { Muted } from '@/ui/text'
+import {
+  askFolderDependency,
+  askGitDependency,
+  type DependencyChoice,
+} from '@/editors/project/dependencyPrompts'
 import { copyId, idProblem } from '../resourceActions'
 import styles from './Explorer.module.css'
 import { EXPLORER_FOLDERS, isFileFolder, type ExplorerFolder } from './folders'
@@ -47,24 +53,33 @@ export async function copyIntoProject(
 }
 
 /**
- * The menu of project templates (`core/templates.ts`): each adds its package to
- * the project, where its resources can be copied in. One the project already
- * uses is greyed out. [onAdded] gets the namespace of the one that was added.
+ * The explorer's **Add dependency…** menu: a folder (the native picker) or a
+ * git repository, added to `netherforge.json`. [onAdded] gets the namespace
+ * of the one that was added.
  */
-export function templateMenu(
+export function dependencyMenu(
+  backend: Backend,
   workspace: WorkspaceStore,
   onAdded: (namespace: string) => void,
 ): MenuItem[] {
-  const used = directDependencies(workspace.getState())
+  const add = async (choice: DependencyChoice | null) => {
+    if (choice && (await workspace.getState().addDependency(choice.namespace, choice.source)))
+      onAdded(choice.namespace)
+  }
+  return [
+    { label: 'Folder…', run: () => void askFolderDependency(backend, workspace).then(add) },
+    { label: 'Git repository…', run: () => void askGitDependency(workspace).then(add) },
+  ]
+}
+
+/**
+ * The menu of project templates (`core/templates.ts`): each copies its
+ * resources into the project as the project's own.
+ */
+export function templateMenu(workspace: WorkspaceStore): MenuItem[] {
   return TEMPLATES.map((template) => ({
     label: `${template.title}: ${template.summary}`,
-    disabled: used.includes(template.namespace),
-    run: () => {
-      void workspace
-        .getState()
-        .addTemplate(template.id)
-        .then((added) => added && onAdded(template.namespace))
-    },
+    run: () => void workspace.getState().applyTemplate(template.id),
   }))
 }
 

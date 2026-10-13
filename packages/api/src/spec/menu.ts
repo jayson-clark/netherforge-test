@@ -175,12 +175,12 @@ export const menuClass: LuaClass = {
     },
     {
       name: 'set_skin',
-      doc: "Changes the background. A skin is drawn in the title, so this costs the same close-and-open `set_title` does. A skin the project's resource packs don't have is an error.",
+      doc: "Changes the background. A skin is drawn in the title, so this costs the same close-and-open `set_title` does. A skin the server's packages don't have is an error.",
       params: [
         {
           name: 'skin',
           type: 'string',
-          doc: '`<pack>/<key>`, or leave it out for the vanilla look.',
+          doc: "`<pack>/<key>`, another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)), or leave it out for the vanilla look.",
           optional: true,
           names: 'skin',
         },
@@ -701,12 +701,12 @@ export const menuShapes: LuaClass[] = [
       {
         name: 'item_model',
         type: 'string?',
-        doc: "`<pack>/<key>`: a look from one of the project's resource packs.",
+        doc: "`<pack>/<key>`: an entry of one of your package's resource packs' `items`, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)). It names a look the server has, or it's an error; read back, it's as your package writes it.",
       },
       {
         name: 'tooltip_style',
         type: 'string?',
-        doc: "`<pack>/<key>`: a tooltip frame from one of the project's resource packs.",
+        doc: "`<pack>/<key>`: a tooltip frame from one of your package's resource packs, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)).",
       },
       {
         name: 'equipment',
@@ -821,7 +821,7 @@ export const menuShapes: LuaClass[] = [
       {
         name: 'asset',
         type: 'string',
-        doc: "`<pack>/<key>`: an equipment look from one of the project's resource packs.",
+        doc: "`<pack>/<key>`: an equipment look from one of your package's resource packs, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)).",
       },
       {
         name: 'slot',

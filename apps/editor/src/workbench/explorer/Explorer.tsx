@@ -30,7 +30,7 @@ import { RevealGate, useReveal } from '@/ui/Reveal'
 import { InlineInput } from '@/ui/Tree'
 import { fuzzyMatch } from '../quickOpen/fuzzy'
 import { groupPath, idProblem, resourceActions } from '../resourceActions'
-import { PackageView, templateMenu } from './Dependencies'
+import { dependencyMenu, PackageView, templateMenu } from './Dependencies'
 import styles from './Explorer.module.css'
 import {
   EXPLORER_FOLDERS,
@@ -80,7 +80,7 @@ const ownName = (group: string) => groupName(group.slice(group.lastIndexOf('/') 
 const PACKAGE_TAB = 'package:'
 
 export function Explorer() {
-  const { workspace, layout } = useApp()
+  const { backend, workspace, layout } = useApp()
   const files = useWorkspace((s) => s.files)
   const problems = useWorkspace((s) => s.problems)
   const docs = useWorkspace((s) => s.docs)
@@ -383,7 +383,14 @@ export function Explorer() {
           <Button
             variant="link"
             icon="plus"
-            onClick={(event) => openMenu(event, templateMenu(workspace, setPkg))}
+            onClick={(event) => openMenu(event, dependencyMenu(backend, workspace, setPkg))}
+          >
+            Add dependency…
+          </Button>
+          <Button
+            variant="link"
+            icon="plus"
+            onClick={(event) => openMenu(event, templateMenu(workspace))}
           >
             Add template…
           </Button>

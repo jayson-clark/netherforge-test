@@ -96,11 +96,11 @@ The resource pack skin drawn behind it, as `<pack>/<key>`, or `nil` for the vani
 
 ### `menu:set_skin(skin?)` {#set_skin}
 
-Changes the background. A skin is drawn in the title, so this costs the same close-and-open `set_title` does. A skin the project's resource packs don't have is an error.
+Changes the background. A skin is drawn in the title, so this costs the same close-and-open `set_title` does. A skin the server's packages don't have is an error.
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `skin` (optional) | `string` | `<pack>/<key>`, or leave it out for the vanilla look. |
+| `skin` (optional) | `string` | `<pack>/<key>`, another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)), or leave it out for the vanilla look. |
 
 **Returns** `boolean`: `false` once the window is gone.
 

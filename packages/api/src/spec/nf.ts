@@ -353,7 +353,7 @@ export const nfText = namespace(
         {
           name: 'glyph',
           type: 'string',
-          doc: '`<pack>/<key>`, like `"ui/coin"`.',
+          doc: '`<pack>/<key>`, like `"ui/coin"`, or another loaded package\'s as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)).',
           names: 'glyph',
         },
       ],
@@ -376,6 +376,28 @@ export const nfText = namespace(
       returns: [{ type: 'integer?' }],
       example:
         'local width = nf.text.width("<bold>Shop")\nif width then\n  log("the title is " .. width .. " pixels wide")\nend',
+    },
+  ],
+)
+
+/** `nf.looks`: resource pack looks handed between packages. */
+export const nfLooks = namespace(
+  'looks',
+  "Resource pack looks (item models, glyphs, skins, tooltips, equipment looks, sounds) handed from one package's code to another's. A look is a value, not a use: any script can show any look the server has, by its full name `<namespace>:<pack>/<key>`, whether or not its package exports it or is one the script's package depends on. That's how a project hands a package it uses looks of its own to draw with (see [Packages](packages.md#looks-are-values)).",
+  [
+    {
+      name: 'qualify',
+      doc: "A look's full name, `<namespace>:<pack>/<key>`, as the calling script's package names it: `\"nether/pawn\"` in the project `chess_server` is `\"chess_server:nether/pawn\"`, which means the same in any package's code. Hand that to a package, never the bare name: a bare name means the package's own look wherever it's used. A name that already has a namespace comes back as it is. It's a plain string, so it can be kept in saved data (`this:data()`). Whether the look is there isn't checked here, but where it's shown; a name that isn't shaped like a look is an error.",
+      params: [
+        {
+          name: 'look',
+          type: 'string',
+          doc: '`<pack>/<key>`, or `<namespace>:<pack>/<key>`.',
+        },
+      ],
+      returns: [{ type: 'string' }],
+      example:
+        '-- The project hands the chess package a skin of its own models.\nlocal chess = require("chess:board")\nchess.set_skin("black", {\n  pawn = nf.looks.qualify("nether/pawn"),\n  king = nf.looks.qualify("nether/king"),\n})',
     },
   ],
 )
@@ -421,6 +443,7 @@ const namespaces = [
   nfCutscenes,
   nfFiles,
   nfText,
+  nfLooks,
   nfJson,
   nfHttp,
   nfTime,

@@ -238,6 +238,10 @@ internal class NfFilesImpl(private val session: ProjectSession) : NfFilesApi {
 }
 
 /** `nf.text`. */
+internal class NfLooksImpl(private val session: ProjectSession) : NfLooksApi {
+    override fun qualify(caller: Caller, look: String): String = session.names.qualify(look)
+}
+
 internal class NfTextImpl(private val session: ProjectSession) : NfTextApi {
     override fun escape(caller: Caller, text: String): String = session.platform.text.escape(text)
 

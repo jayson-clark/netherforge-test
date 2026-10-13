@@ -223,7 +223,10 @@ definition)`). So a body holds only logic: it takes `self` and the arguments
   through `session.names` (`resource(kind, …)`, `entry(refKind, …)`) before
   looking it up, and **a name it hands back** through `names.spell`
   (bare for the reader's own package, `ns:id` otherwise). Item tables and
-  `Text` do this in their codecs. See plugin-runtime, "Packages in a
+  `Text` do this in their codecs. A look (an item model, glyph, skin,
+  tooltip, equipment look or sound) goes through `names.look` or `entry`,
+  never `references().check`: any loaded package's look may be shown by its
+  full name ("Looks are values"). See plugin-runtime, "Packages in a
   session", and `docs/reference/packages.md` for the rules scripts see.
 - **`Text`** is the spec's one type alias (`spec/values.ts` `aliases`,
   `ApiSpec.aliases`): MiniMessage a player reads, a `string` to Lua and

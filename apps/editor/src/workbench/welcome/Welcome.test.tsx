@@ -31,23 +31,20 @@ async function createWith(template: string) {
 }
 
 describe('creating a project', () => {
-  it('can start from a template, which comes in as a package to copy from', async () => {
+  it("can start from a template, whose files become the project's own", async () => {
     const { backend, app } = await createWith('RPG mob')
     await waitFor(() => expect(app.workspace.getState().project?.root).toBe('/memory/new'))
     await waitFor(() =>
-      expect(JSON.parse(backend.testFiles()[MANIFEST_FILE]!).dependencies).toEqual({
-        template_rpg_mob: { path: 'templates/template_rpg_mob' },
-      }),
+      expect(JSON.parse(backend.testFiles()[MANIFEST_FILE]!).requires).toEqual({ db: true }),
     )
-    expect(
-      backend.testFiles()['templates/template_rpg_mob/centities/goblin/centity.json'],
-    ).toBeDefined()
+    expect(JSON.parse(backend.testFiles()[MANIFEST_FILE]!).dependencies).toBeUndefined()
+    expect(backend.testFiles()['centities/goblin/centity.json']).toBeDefined()
   })
 
   it('starts empty unless asked', async () => {
     const { backend, app } = await createWith('')
     await waitFor(() => expect(app.workspace.getState().project?.root).toBe('/memory/new'))
     expect(JSON.parse(backend.testFiles()[MANIFEST_FILE]!).dependencies).toBeUndefined()
-    expect(Object.keys(backend.testFiles()).filter((it) => it.startsWith('templates/'))).toEqual([])
+    expect(backend.testFiles()['centities/goblin/centity.json']).toBeUndefined()
   })
 })

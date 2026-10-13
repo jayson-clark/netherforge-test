@@ -1,5 +1,6 @@
 package dev.netherforge.plugin
 
+import dev.netherforge.format.centity.ModelDisplay
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.project.FormatVersion
 import dev.netherforge.format.ref.ResourceKey
@@ -8,6 +9,7 @@ import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.testkit.BlockAt
 import java.nio.file.Files
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -98,7 +100,8 @@ class PackageNamesTest {
                     "pick\tok",
                     "quiet\t${notExported("dialog \"quiet\"")}",
                     "vault\t${notExported("menu \"vault\"")}",
-                    "glyph\t${notExported("resource pack \"gems\"")}",
+                    // A look is a value: any loaded package's, exported or not.
+                    "glyph\tok",
                     "model\tok",
                     "model typo\titem.item_model: \"lib\": resource pack \"gems\" has no item model \"nope\" (it has: gem)",
                     "list\tdefinition.dialogs[1]: ${notExported("dialog \"quiet\"")}"
@@ -218,7 +221,7 @@ class PackageNamesTest {
     }
 
     @Test
-    fun `glyph tags in text a package's script builds draw that package's glyph, and the project can't reach an unexported one`() {
+    fun `glyph tags draw the writing package's glyph, any loaded package's in full, and nothing for an unknown namespace`() {
         val files = tree(
             mapOf(
                 "modules/main/init.lua" to """
@@ -226,6 +229,7 @@ class PackageNamesTest {
                     nf.commands.register("hi", function(ctx)
                       api.greet(ctx.player)
                       ctx.player:send_message("<glyph:lib:gems/gem> from the project")
+                      ctx.player:send_message("<glyph:nope:gems/gem> from nowhere")
                     end)
                 """
             ),
@@ -240,10 +244,135 @@ class PackageNamesTest {
         TestServer(files).use { server ->
             val alex = server.player("Alex")
             server.platform.commands.run(alex, "hi")
-            assertEquals(listOf("<glyph:lib:gems/gem> from the library", " from the project"), alex.messages)
+            assertEquals(
+                listOf("<glyph:lib:gems/gem> from the library", "<glyph:lib:gems/gem> from the project", " from nowhere"),
+                alex.messages
+            )
             assertNotNull(server.platform.glyphs("lib:gems/gem"), "the library's glyph is built, exported or not")
-            val warning = server.platform.log.lines.single { "<glyph:lib:gems/gem>" in it }
-            assertTrue("doesn't export its resource pack \"gems\"" in warning, warning)
+            val warning = server.platform.log.lines.single { "<glyph:nope:gems/gem>" in it }
+            assertTrue("no package on this server has the namespace \"nope\"" in warning, warning)
+        }
+    }
+
+    /** A project with a pack `p` (a model `box`, a glyph `star`), and `lib`'s centity `thing`, whose model node `n` shows what its data names. */
+    private fun skins(project: String) = tree(
+        mapOf(
+            "resource_packs/p/pack.json" to
+                """{ "glyphs": { "star": { "texture": "glyph/star.png" } }, "items": { "box": { "texture": "glyph/star.png" } } }""",
+            "resource_packs/p/textures/glyph/star.png" to png,
+            "resource_packs/p/sounds/zap.ogg" to byteArrayOf(0x4f, 0x67, 0x67, 0x53),
+            "modules/main/init.lua" to tryIt + project
+        ),
+        mapOf(
+            "centities/thing/centity.json" to """
+                { "nodes": { "n": { "display": { "type": "model", "model": "gems/gem" } } }, "script": { "file": "script.lua" } }
+            """.trimIndent(),
+            "centities/thing/script.lua" to """
+                local model = this:data().model
+                if model then
+                  this:node("n"):set_model(model)
+                  log("shown", this:node("n"):model())
+                end
+            """.trimIndent(),
+            "modules/api/init.lua" to tryIt + """
+                local api = {}
+                -- The skin is the project's, handed over in full; the library keeps it with the thing it draws.
+                function api.place(player, skin)
+                  local thing = assert(nf.centities.spawn("thing", vec3(0, 64, 0)))
+                  thing:data().model = skin.model
+                  local ok = thing:node("n"):set_model(skin.model)
+                  log("placed", thing:id(), tostring(ok), thing:node("n"):model())
+                  local stack = nf.items.create("coin", { item_model = skin.model })
+                  log("stack", stack.item_model)
+                  player:send_message("<glyph:" .. skin.glyph .. "> " .. tostring(nf.text.glyph(skin.glyph) ~= nil))
+                  return thing
+                end
+                function api.wrong()
+                  local node = nf.centities.spawn("thing", vec3(0, 64, 0)):node("n")
+                  try("set_model unknown", node.set_model, node, "nope:p/box")
+                  try("item_model unknown", nf.items.create, "coin", { item_model = "nope:p/box" })
+                  try("set_model bare", node.set_model, node, "p/box")
+                  try("item_model bare", nf.items.create, "coin", { item_model = "p/box" })
+                  try("set_model missing", node.set_model, node, "test:p/crate")
+                  try("item_model missing", nf.items.create, "coin", { item_model = "test:p/crate" })
+                  try("qualify", nf.looks.qualify, "box")
+                  local world = nf.worlds.default()
+                  try("sound", world.play_sound, world, "test:p/zap", vec3.zero)
+                  try("sound missing", world.play_sound, world, "test:p/zip", vec3.zero)
+                  try("sound bare", world.play_sound, world, "p/zap", vec3.zero)
+                end
+                return api
+            """
+        )
+    )
+
+    @Test
+    fun `a package shows a model a project that depends on it hands over in full, and again from saved data after a restart`() {
+        val files = skins(
+            """
+            local api = require("lib:api")
+            log("qualified", nf.looks.qualify("p/box"), nf.looks.qualify("lib:gems/gem"))
+            nf.commands.register("place", function(ctx)
+              local thing = api.place(ctx.player, { model = nf.looks.qualify("p/box"), glyph = nf.looks.qualify("p/star") })
+              log("project reads", thing:node("n"):model())
+            end)
+            """
+        )
+        TestServer(files).use { server ->
+            assertEquals(emptyList(), server.errors.map { it.message })
+            val alex = server.player("Alex")
+            server.platform.commands.run(alex, "place")
+            assertEquals(emptyList(), server.errors.map { it.message })
+            val placed = server.logs.single { it.startsWith("placed\t") }.split('\t')
+            val id = placed[1]
+            assertEquals(
+                listOf(
+                    "qualified\ttest:p/box\tlib:gems/gem",
+                    "placed\t$id\ttrue\ttest:p/box",
+                    "stack\ttest:p/box",
+                    "project reads\tp/box"
+                ),
+                server.logs
+            )
+            assertEquals(listOf("<glyph:p/star> true"), alex.messages)
+            server.tick(1)
+            assertEquals(ModelDisplay(ResourceRef("p/box")), server.platform.entities.display(UUID.fromString(id), "n").display)
+
+            // The thing's script puts the skin back from its saved data when it starts again.
+            server.restart()
+            server.tick(1)
+            assertEquals(emptyList(), server.errors.map { it.message })
+            assertTrue("shown\ttest:p/box" in server.logs, server.logs.toString())
+            assertEquals(ModelDisplay(ResourceRef("p/box")), server.platform.entities.display(UUID.fromString(id), "n").display)
+        }
+    }
+
+    @Test
+    fun `set_model and item_model take a look by the same rule, and refuse a namespace no package has in the same words`() {
+        val files = skins("""require("lib:api").wrong()""")
+        TestServer(files).use { server ->
+            assertEquals(emptyList(), server.errors.map { it.message })
+            val unknown = "no package on this server has the namespace \"nope\""
+            val bare = "there's no resource pack \"p\"; package \"test\" has one, named \"test:p/box\" " +
+                "from outside it (nf.looks.qualify writes it)"
+            val missing = "\"test\": resource pack \"p\" has no item model \"crate\" (it has: box)"
+            assertEquals(
+                listOf(
+                    "set_model unknown\t$unknown",
+                    "item_model unknown\titem.item_model: $unknown",
+                    "set_model bare\t$bare",
+                    "item_model bare\titem.item_model: $bare",
+                    "set_model missing\t$missing",
+                    "item_model missing\titem.item_model: $missing",
+                    "qualify\t\"box\" isn't a look: write <pack>/<key>, or <namespace>:<pack>/<key> for another package's",
+                    "sound\tok",
+                    "sound missing\t\"test\": resource pack \"p\" has no sound \"zip\" (it has: zap)",
+                    "sound bare\tno sound \"p/zap\" in package \"lib\"; package \"test\" has one, named \"test:p/zap\" " +
+                        "from outside it (nf.looks.qualify writes it)"
+                ),
+                server.logs
+            )
+            assertEquals(listOf("world test:p/zap master 1.0 1.0"), server.platform.sounds.played)
         }
     }
 

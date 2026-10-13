@@ -15,26 +15,16 @@ In the editor, **Add template…** (under the explorer's kinds) lists them, and
 **Create project** has a **Start with** choice, so a new project can begin
 with one.
 
-A template is an ordinary [package](../format/packages.md). Adding one writes
-it into your project as a folder, `templates/<name>/` (`template_shop`), and
-makes it a dependency (`"template_shop": { "path": "templates/template_shop" }`
-in `netherforge.json`). It then shows under **Dependencies** in the explorer,
-read-only, with every resource listed.
-
-## Making it yours
-
-Use **Copy into project** on each resource you want: the menu, the module, the
-item. The copy is yours to change, and the references between them are kept
-(the menu's lucky charm is the one you copied, if you copied it, and the
-package's otherwise). Copy everything a template has to get all of it working,
-then delete the dependency (and the `templates/<name>` folder) from
-`netherforge.json` when you no longer need it beside your copy.
+Adding one copies its files into your project as your own: its menus, items,
+centities, modules and loot tables where they'd be in any project, and its
+`tests/` beside them, as examples of testing your copy. They're yours to change
+from then on. If your project already has a resource or file of the same name
+(a `shop` menu, say), nothing is copied and the editor says which.
 
 Two of them keep data in the project's database (the shop's coins, the goblin
-kills). Their modules make their own tables when they start, so there is
-nothing else to copy, but your project has to say it uses a database:
-`"requires": { "db": true }` in `netherforge.json` (the Project settings page
-has a checkbox for it).
+kills). What a template requires (`"requires": { "db": true }`) is added to
+your `netherforge.json` with it, so it works straight away. Their modules make
+their own tables when they start.
 
 ## They are tested
 

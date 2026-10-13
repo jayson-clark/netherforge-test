@@ -586,4 +586,96 @@ class ScriptTestRunnerTest {
         )
         expectStatuses(events, Status.PASSED)
     }
+
+    @Test
+    fun `a package shows a look a project that depends on it hands over, kept in saved data, and refuses an unknown namespace`() {
+        // Two projects side by side: app depends on lib, and hands lib's thing a model of app's own pack to show.
+        val parent = Files.createTempDirectory("netherforge-runner-packages")
+        fun write(path: String, text: String) {
+            val file = parent.resolve(path)
+            file.parent.createDirectories()
+            file.writeText(text.trimIndent() + "\n")
+        }
+        fun manifest(namespace: String, more: String) =
+            """{ "formatVersion": ${FormatVersion.CURRENT}, "name": "$namespace", "namespace": "$namespace", "version": "1.0.0", "minecraft": "26.3"$more }"""
+        write("lib/netherforge.json", manifest("lib", ""","exports": { "modules": ["lib"] }"""))
+        write("lib/resource_packs/gems/pack.json", """{ "items": { "gem": { "model": "gem.json" } } }""")
+        write("lib/resource_packs/gems/models/gem.json", MODEL)
+        write("lib/items/token/item.json", """{ "kind": "minecraft:paper" }""")
+        write(
+            "lib/centities/thing/centity.json",
+            """{ "nodes": { "n": { "display": { "type": "model", "model": "gems/gem" } } }, "script": { "file": "script.lua" } }"""
+        )
+        write("lib/centities/thing/script.lua", """if this:data().model then this:node("n"):set_model(this:data().model) end""")
+        write(
+            "lib/modules/lib/init.lua",
+            """
+            local lib = {}
+            -- Shows a look whoever uses lib hands it, and keeps it with the thing.
+            function lib.place(model)
+              local thing = assert(nf.centities.spawn("thing", vec3(0, 64, 0)))
+              thing:data().model = model
+              thing:node("n"):set_model(model)
+              return thing
+            end
+            function lib.stack(model) return nf.items.create("token", { item_model = model }) end
+            -- Not a tail call: one would hide that this is lib's code.
+            function lib.shown(thing)
+              local model = thing:node("n"):model()
+              return model
+            end
+            return lib
+            """
+        )
+        write("app/netherforge.json", manifest("app", ""","dependencies": { "lib": { "path": "../lib" } }"""))
+        write("app/resource_packs/p/pack.json", """{ "items": { "box": { "model": "box.json" } } }""")
+        write("app/resource_packs/p/models/box.json", MODEL)
+        write(
+            "app/tests/skins_test.lua",
+            """
+            local lib = require("lib:lib")
+
+            nf.test.case("a package shows a look its dependent hands it", function()
+              local box = nf.looks.qualify("p/box")
+              assert(box == "app:p/box", box)
+              local thing = lib.place(box)
+              assert(lib.shown(thing) == "app:p/box", "lib reads " .. tostring(lib.shown(thing)))
+              assert(thing:node("n"):model() == "p/box", "app reads " .. tostring(thing:node("n"):model()))
+              -- An item table keeps the words it was handed out in: lib's, here.
+              local stack = lib.stack(box)
+              assert(stack.item_model == "app:p/box", stack.item_model)
+            end)
+
+            nf.test.case("the look is a plain string, so it survives saved data", function()
+              local thing = lib.place(nf.looks.qualify("p/box"))
+              local saved = nf.json.decode(nf.json.encode(thing:data()))
+              local again = lib.place(saved.model)
+              assert(again:node("n"):model() == "p/box")
+            end)
+
+            nf.test.case("an unknown namespace is refused, by set_model and item_model alike", function()
+              local unknown = 'no package on this server has the namespace "nope"'
+              local ok, problem = pcall(lib.place, "nope:p/box")
+              assert(not ok and tostring(problem):find(unknown, 1, true), tostring(problem))
+              ok, problem = pcall(lib.stack, "nope:p/box")
+              assert(not ok and tostring(problem):find("item.item_model: " .. unknown, 1, true), tostring(problem))
+              -- Handed bare, the name is lib's own: the error says how to write app's.
+              ok, problem = pcall(lib.place, "p/box")
+              assert(not ok and tostring(problem):find('"app:p/box"', 1, true), tostring(problem))
+            end)
+            """
+        )
+        try {
+            val events = mutableListOf<TestEvent>()
+            ScriptTestRunner(parent.resolve("app"), FakePlatform.GAME).run(null) { events += it }
+            expectStatuses(events, Status.PASSED, Status.PASSED, Status.PASSED)
+        } finally {
+            parent.toFile().deleteRecursively()
+        }
+    }
+
+    private companion object {
+        /** A resource pack model with one element and no textures. */
+        const val MODEL = """{ "elements": [{ "from": [6, 0, 6], "to": [10, 12, 10], "faces": {} }] }"""
+    }
 }

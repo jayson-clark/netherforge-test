@@ -13,11 +13,20 @@ import {
   opensAs,
   resourcePackTexturePath,
   parseJsonPath,
+  relativeFolder,
   resourceIdsOf,
   resourceOf,
 } from './paths'
 
 describe('paths', () => {
+  it('writes a folder relative to the project, as a path dependency names it', () => {
+    expect(relativeFolder('/home/me/game', '/home/me/library')).toBe('../library')
+    expect(relativeFolder('/home/me/game', '/home/me/game/libs/a')).toBe('libs/a')
+    expect(relativeFolder('/home/me/game/', '/srv/shared')).toBe('../../../srv/shared')
+    expect(relativeFolder('C:\\work\\game', 'c:\\work\\library')).toBe('../library')
+    expect(relativeFolder('C:\\work\\game', 'D:\\library')).toBeNull()
+  })
+
   it('parses format JSON paths', () => {
     expect(parseJsonPath('$.nodes.top.display.block')).toEqual(['nodes', 'top', 'display', 'block'])
     expect(parseJsonPath('$.nodes["a b"].hitbox.boxes[1]')).toEqual([

@@ -2,7 +2,7 @@
 
 # nf
 
-Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
+Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
 
 A table of functions: call them with a dot.
 
@@ -38,6 +38,7 @@ A table of functions: call them with a dot.
 | [`nf.cutscenes`](nf.cutscenes.md) | The project's cutscenes (`cutscenes/<id>.json`): camera paths keyed in the editor, played for one player at a time. |
 | [`nf.files`](nf.files.md) | Files in the one directory scripts may keep things in: the only state a script has that survives a restart. |
 | [`nf.text`](nf.text.md) | Helpers for the MiniMessage text players see: escaping what players typed, stripping tags, resource pack glyphs, moving the cursor, and measuring. |
+| [`nf.looks`](nf.looks.md) | Resource pack looks (item models, glyphs, skins, tooltips, equipment looks, sounds) handed from one package's code to another's. |
 | [`nf.json`](nf.json.md) | JSON text to and from Lua values. |
 | [`nf.http`](nf.http.md) | Requests to web services (a Discord webhook, a status API). |
 | [`nf.time`](nf.time.md) | Dates and durations as text, in the same unit as `nf.server.unix_time()`: milliseconds. |

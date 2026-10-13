@@ -1106,12 +1106,12 @@ export const nodeClass: LuaClass = {
     },
     {
       name: 'set_model',
-      doc: "Changes the look a model display shows: another entry of a resource pack's `items`, a model with elements or not. The display entity stays and only its item changes, which costs one small update to each player who sees it, so swapping models every few ticks animates a node frame by frame (a flipbook), alongside the transform tracks. A look the project's resource packs don't have is an error.",
+      doc: "Changes the look a model display shows: another entry of a resource pack's `items`, a model with elements or not. The display entity stays and only its item changes, which costs one small update to each player who sees it, so swapping models every few ticks animates a node frame by frame (a flipbook), alongside the transform tracks. A look the server's packages don't have is an error, and so is a namespace no package on the server has.",
       params: [
         {
           name: 'model',
           type: 'string',
-          doc: "`<pack>/<key>`: an entry of a resource pack's `items` (a package's as `ns:<pack>/<key>`).",
+          doc: "`<pack>/<key>`: an entry of one of your package's resource packs' `items`, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)): a project can hand a package it uses a look of its own to show (`nf.looks.qualify`).",
         },
       ],
       returns: [{ type: 'boolean', doc: "`false` when the node isn't a model display." }],

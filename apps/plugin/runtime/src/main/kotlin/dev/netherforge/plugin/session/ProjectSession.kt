@@ -257,7 +257,7 @@ class ProjectSession internal constructor(
     )
 
     /** Particles and sounds, checked against the server and the project's packs. */
-    internal val effects = service(Effects(platform) { names.references() })
+    internal val effects = service(Effects(platform, names::packSound))
 
     /** Builds and sends the resource pack: first, since menus' skins and scripts' glyphs read the build. */
     private val packService = service(PackService(packs, log))

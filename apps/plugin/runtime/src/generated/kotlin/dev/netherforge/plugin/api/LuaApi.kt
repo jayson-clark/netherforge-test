@@ -37,6 +37,7 @@ interface LuaApi {
     val nfCutscenes: NfCutscenesApi
     val nfFiles: NfFilesApi
     val nfText: NfTextApi
+    val nfLooks: NfLooksApi
     val nfJson: NfJsonApi
     val nfHttp: NfHttpApi
     val nfTime: NfTimeApi
@@ -79,8 +80,8 @@ interface LuaApi {
  * `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`,
  * `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`,
  * `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`,
- * `nf.files`, `nf.text`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain
- * functions on tables, so call them with a dot: `nf.players.online()`.
+ * `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and
+ * `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
  */
 interface NfApi {
     /**
@@ -752,6 +753,25 @@ interface NfTextApi {
      * cover.
      */
     fun width(caller: Caller, text: String): Long?
+}
+
+/**
+ * Resource pack looks (item models, glyphs, skins, tooltips, equipment looks, sounds) handed from one
+ * package's code to another's. A look is a value, not a use: any script can show any look the server
+ * has, by its full name `<namespace>:<pack>/<key>`, whether or not its package exports it or is one
+ * the script's package depends on. That's how a project hands a package it uses looks of its own to
+ * draw with (see [Packages](packages.md#looks-are-values)).
+ */
+interface NfLooksApi {
+    /**
+     * A look's full name, `<namespace>:<pack>/<key>`, as the calling script's package names it:
+     * `"nether/pawn"` in the project `chess_server` is `"chess_server:nether/pawn"`, which means the same
+     * in any package's code. Hand that to a package, never the bare name: a bare name means the package's
+     * own look wherever it's used. A name that already has a namespace comes back as it is. It's a plain
+     * string, so it can be kept in saved data (`this:data()`). Whether the look is there isn't checked
+     * here, but where it's shown; a name that isn't shaped like a look is an error.
+     */
+    fun qualify(caller: Caller, look: String): String
 }
 
 /** JSON text to and from Lua values. */
@@ -1670,8 +1690,8 @@ interface NodeApi {
      * Changes the look a model display shows: another entry of a resource pack's `items`, a model with
      * elements or not. The display entity stays and only its item changes, which costs one small update to
      * each player who sees it, so swapping models every few ticks animates a node frame by frame (a
-     * flipbook), alongside the transform tracks. A look the project's resource packs don't have is an
-     * error.
+     * flipbook), alongside the transform tracks. A look the server's packages don't have is an error, and
+     * so is a namespace no package on the server has.
      */
     fun setModel(self: LuaHandle.Node, model: String): Boolean
 
@@ -3122,9 +3142,10 @@ interface WorldApi {
 
     /**
      * Plays a sound at a position, for everyone near enough to hear it. A Minecraft sound
-     * (`"minecraft:block.note_block.pling"`, checked against the server's sounds) or one of the project's
-     * resource pack sounds (`"<pack>/<key>"`, like `"ui/click"`, checked against `resource_packs/`). An
-     * unknown sound is an error.
+     * (`"minecraft:block.note_block.pling"`, checked against the server's sounds) or a resource pack sound
+     * (`"<pack>/<key>"`, like `"ui/click"`, your package's own, or another loaded package's as
+     * `"<namespace>:<pack>/<key>"`: [looks are values](packages.md#looks-are-values)). An unknown sound is
+     * an error.
      */
     fun playSound(self: LuaHandle.World, sound: String, position: Vec3, options: SoundOptions?): Boolean
 
@@ -3903,7 +3924,7 @@ interface MenuApi {
 
     /**
      * Changes the background. A skin is drawn in the title, so this costs the same close-and-open
-     * `set_title` does. A skin the project's resource packs don't have is an error.
+     * `set_title` does. A skin the server's packages don't have is an error.
      */
     fun setSkin(self: LuaHandle.Menu, skin: String?): Boolean
 

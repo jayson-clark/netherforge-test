@@ -640,19 +640,32 @@ things become `ns:…`, the resource itself the copy), then validates and
 hot-reloads.
 
 **Templates (W3.2).** The minigame, shop and RPG mob templates are the
-packages `examples/template_*`, bundled by `core/templates.ts`
-(`import.meta.glob` of the example's files, without `tests/` and `.luarc.json`;
-`TEMPLATES`, `templateLocation`). The packages slice's `addTemplate(id)` writes
-one into the project as `templates/<namespace>/` (one transaction: undo removes
-the folder), adds the `path` dependency to `netherforge.json` through the
-manifest's model (`edit`, then `save`), and the usual refresh makes it a
-package under Dependencies, where **Copy into project** works as for any. The
-explorer's **Add template…** (`templateMenu` in `Dependencies.tsx`; one the
-project uses is disabled) and **Create project**'s **Start with** select
-(`Welcome.tsx`, which calls `addTemplate` once the project is open) offer
-them. The memory backend serves a package folder inside the open project
-(`folderOfOpenProject`), as the Rust side does by path. The templates' own
-tests are the repository's (testing skill), not the editor's.
+projects `examples/template_*`, bundled by `core/templates.ts`
+(`import.meta.glob` of the example's files, tests included, without
+`netherforge.json` and `.luarc.json`; `TEMPLATES`, each with the `requires` its
+manifest declares). They're starting content, not dependencies: the packages
+slice's `applyTemplate(id)` writes every file into the project where the
+template has it (one transaction: undo removes it all), merges the template's
+`requires` into `netherforge.json` (`mergeRequires`, through the manifest's
+model, then saved), and hot-reloads; it refuses, naming them, when the project
+already has a resource of the same kind and id (wherever its group folder) or
+a file at the same path. The explorer's **Add template…** (`templateMenu` in
+`Dependencies.tsx`) and **Create project**'s **Start with** select
+(`Welcome.tsx`, which calls `applyTemplate` once the project is open) offer
+them. The templates' own tests are the repository's (testing skill).
+
+**Adding a dependency.** The explorer's **Add dependency…** (`dependencyMenu`)
+and the project settings' Dependencies section share
+`editors/project/dependencyPrompts.ts`: **Folder…** is the native picker
+(`pickFolder`), the path made relative to the project (`relativeFolder` in
+`core/paths.ts`; another drive is refused) and the namespace read from the
+folder's `netherforge.json` (`packageReadText`), since a dependency's name must
+be its package's; **Git repository…** asks for the URL and then the namespace
+(guessed by `namespaceFromUrl`). The explorer adds it with the packages slice's
+`addDependency(namespace, source)` (manifest edited and saved; the usual refresh
+reads the package) and shows the package; the settings page edits its open
+document. The memory backend still serves a package folder inside the open
+project (`folderOfOpenProject`), as the Rust side does by path.
 
 **A dependency's resources render wherever the project's do** (L5): a menu
 slot, recipe or item icon naming `library:gem`, an item picker, a glyph in

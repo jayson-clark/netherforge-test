@@ -33,7 +33,7 @@ class AdventureBlocksTest {
             fails("missing block", function() inventory:set_item(1, { kind = "minecraft:paper", can_place_on = { "*", "emerald_ore" } }) end,
               "item.can_place_on[2]: there's no block \"emerald_ore\"")
             fails("another namespace", function() inventory:set_item(1, { kind = "minecraft:paper", can_break = { "acme:gem" } }) end,
-              "\"acme\" is neither")
+              "no package on this server has the namespace \"acme\"")
             """.trimIndent(),
             files,
             setup = { it.platform.players.add("Alex") }

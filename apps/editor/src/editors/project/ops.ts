@@ -6,6 +6,7 @@
  * altogether, rather than becoming `[]`, `false` or `{}`.
  */
 import { SpawnCategoryValues, type ProjectManifest, type SpawnCategory } from '@/core/format'
+import type { DependencySource } from '@/core/store/packages'
 
 export function addManagedWorld(manifest: ProjectManifest, name: string) {
   const worlds = manifest.managedWorlds ?? []
@@ -184,8 +185,7 @@ function sortWorlds(manifest: ProjectManifest) {
   )
 }
 
-/** A dependency's source: a folder beside the project, or a git repository at a rev (a branch, tag or commit). */
-export type DependencySource = { path: string } | { git: string; rev?: string }
+export type { DependencySource }
 
 /** Adds or replaces the dependency [namespace]. */
 export function setDependency(

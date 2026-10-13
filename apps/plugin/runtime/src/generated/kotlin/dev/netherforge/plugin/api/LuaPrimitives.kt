@@ -718,6 +718,15 @@ fun luaPrimitives(api: LuaApi, marshal: Marshal): Map<String, Primitive> = build
         1
     }
 
+    fn("nf.looks.qualify") { call ->
+        val lua = call.lua
+        val caller = marshal.caller(lua, 1)
+        val look = call.arg(2, "look", LuaCodecs.STRING)
+        val result = api.nfLooks.qualify(caller, look)
+        call.push(result, LuaCodecs.STRING)
+        1
+    }
+
     fn("nf.json.encode") { call ->
         val lua = call.lua
         val caller = marshal.caller(lua, 1)

@@ -200,8 +200,8 @@ function CreateProject({
   const { backend, workspace } = useApp()
   const [name, setName] = useState('My server')
   const [minecraft, setMinecraft] = useState(versions[0] ?? '')
-  // A template to start from ('' for an empty project): it comes into the new project as a
-  // package, under the explorer's Dependencies, ready to copy from.
+  // A template to start from ('' for an empty project): its files are copied into the new
+  // project as its own.
   const [template, setTemplate] = useState('')
   const [folder, setFolder] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -215,7 +215,7 @@ function CreateProject({
     setError(null)
     try {
       await workspace.getState().createProject(folder, name.trim(), minecraft)
-      if (template) await workspace.getState().addTemplate(template)
+      if (template) await workspace.getState().applyTemplate(template)
       useWelcome.setState({ creating: false })
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))

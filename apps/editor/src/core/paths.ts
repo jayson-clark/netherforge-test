@@ -328,3 +328,26 @@ export function findSourceRefs(
   }
   return refs
 }
+
+/**
+ * [to] relative to [from], both absolute folders, with `/` between segments
+ * as a `path` dependency names it (`/a/game` to `/a/library` is
+ * `../library`); null when there's no way between them (another drive).
+ */
+export function relativeFolder(from: string, to: string): string | null {
+  // A Windows drive (`C:`, any case) is where both must start alike.
+  const parts = (path: string) =>
+    path
+      .replace(/\\/g, '/')
+      .split('/')
+      .filter(Boolean)
+      .map((it, i) => (i === 0 && /^[A-Za-z]:$/.test(it) ? it.toLowerCase() : it))
+  const a = parts(from)
+  const b = parts(to)
+  const drive = (it: string[]) => (it[0]?.endsWith(':') ? it[0] : '')
+  if (drive(a) !== drive(b)) return null
+  let same = 0
+  while (same < a.length && same < b.length && a[same] === b[same]) same++
+  const up = a.slice(same).map(() => '..')
+  return [...up, ...b.slice(same)].join('/') || '.'
+}

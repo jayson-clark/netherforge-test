@@ -7018,6 +7018,12 @@ namespaces["nf.text"] = function(scope, ns)
   end
 end
 
+namespaces["nf.looks"] = function(scope, ns)
+  function ns.qualify(look)
+    return prim["nf.looks.qualify"](scope, look)
+  end
+end
+
 namespaces["nf.json"] = function(scope, ns)
   function ns.encode(value)
     return prim["nf.json.encode"](scope, value)

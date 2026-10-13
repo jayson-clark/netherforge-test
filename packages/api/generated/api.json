@@ -29,7 +29,7 @@
   "classes": [
     {
       "name": "nf",
-      "doc": "Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.",
+      "doc": "Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.",
       "methods": false,
       "fields": [
         {
@@ -141,6 +141,11 @@
           "name": "text",
           "type": "nf.text",
           "doc": "Helpers for the MiniMessage text players see: escaping what players typed, stripping tags, resource pack glyphs, moving the cursor, and measuring."
+        },
+        {
+          "name": "looks",
+          "type": "nf.looks",
+          "doc": "Resource pack looks (item models, glyphs, skins, tooltips, equipment looks, sounds) handed from one package's code to another's. A look is a value, not a use: any script can show any look the server has, by its full name `<namespace>:<pack>/<key>`, whether or not its package exports it or is one the script's package depends on. That's how a project hands a package it uses looks of its own to draw with (see [Packages](packages.md#looks-are-values))."
         },
         {
           "name": "json",
@@ -3088,7 +3093,7 @@
             {
               "name": "glyph",
               "type": "string",
-              "doc": "`<pack>/<key>`, like `\"ui/coin\"`.",
+              "doc": "`<pack>/<key>`, like `\"ui/coin\"`, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)).",
               "names": "glyph"
             }
           ],
@@ -3132,6 +3137,31 @@
             }
           ],
           "example": "local width = nf.text.width(\"<bold>Shop\")\nif width then\n  log(\"the title is \" .. width .. \" pixels wide\")\nend"
+        }
+      ]
+    },
+    {
+      "name": "nf.looks",
+      "doc": "Resource pack looks (item models, glyphs, skins, tooltips, equipment looks, sounds) handed from one package's code to another's. A look is a value, not a use: any script can show any look the server has, by its full name `<namespace>:<pack>/<key>`, whether or not its package exports it or is one the script's package depends on. That's how a project hands a package it uses looks of its own to draw with (see [Packages](packages.md#looks-are-values)).",
+      "methods": false,
+      "fields": [],
+      "functions": [
+        {
+          "name": "qualify",
+          "doc": "A look's full name, `<namespace>:<pack>/<key>`, as the calling script's package names it: `\"nether/pawn\"` in the project `chess_server` is `\"chess_server:nether/pawn\"`, which means the same in any package's code. Hand that to a package, never the bare name: a bare name means the package's own look wherever it's used. A name that already has a namespace comes back as it is. It's a plain string, so it can be kept in saved data (`this:data()`). Whether the look is there isn't checked here, but where it's shown; a name that isn't shaped like a look is an error.",
+          "params": [
+            {
+              "name": "look",
+              "type": "string",
+              "doc": "`<pack>/<key>`, or `<namespace>:<pack>/<key>`."
+            }
+          ],
+          "returns": [
+            {
+              "type": "string"
+            }
+          ],
+          "example": "-- The project hands the chess package a skin of its own models.\nlocal chess = require(\"chess:board\")\nchess.set_skin(\"black\", {\n  pawn = nf.looks.qualify(\"nether/pawn\"),\n  king = nf.looks.qualify(\"nether/king\"),\n})"
         }
       ]
     },
@@ -5682,12 +5712,12 @@
         },
         {
           "name": "set_model",
-          "doc": "Changes the look a model display shows: another entry of a resource pack's `items`, a model with elements or not. The display entity stays and only its item changes, which costs one small update to each player who sees it, so swapping models every few ticks animates a node frame by frame (a flipbook), alongside the transform tracks. A look the project's resource packs don't have is an error.",
+          "doc": "Changes the look a model display shows: another entry of a resource pack's `items`, a model with elements or not. The display entity stays and only its item changes, which costs one small update to each player who sees it, so swapping models every few ticks animates a node frame by frame (a flipbook), alongside the transform tracks. A look the server's packages don't have is an error, and so is a namespace no package on the server has.",
           "params": [
             {
               "name": "model",
               "type": "string",
-              "doc": "`<pack>/<key>`: an entry of a resource pack's `items` (a package's as `ns:<pack>/<key>`)."
+              "doc": "`<pack>/<key>`: an entry of one of your package's resource packs' `items`, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)): a project can hand a package it uses a look of its own to show (`nf.looks.qualify`)."
             }
           ],
           "returns": [
@@ -10788,7 +10818,7 @@
         },
         {
           "name": "play_sound",
-          "doc": "Plays a sound at a position, for everyone near enough to hear it. A Minecraft sound (`\"minecraft:block.note_block.pling\"`, checked against the server's sounds) or one of the project's resource pack sounds (`\"<pack>/<key>\"`, like `\"ui/click\"`, checked against `resource_packs/`). An unknown sound is an error.",
+          "doc": "Plays a sound at a position, for everyone near enough to hear it. A Minecraft sound (`\"minecraft:block.note_block.pling\"`, checked against the server's sounds) or a resource pack sound (`\"<pack>/<key>\"`, like `\"ui/click\"`, your package's own, or another loaded package's as `\"<namespace>:<pack>/<key>\"`: [looks are values](packages.md#looks-are-values)). An unknown sound is an error.",
           "params": [
             {
               "name": "sound",
@@ -12297,7 +12327,7 @@
             {
               "name": "icon",
               "type": "string?",
-              "doc": "`<pack>/<key>`, like `\"ui/boss_king_slime\"`.",
+              "doc": "`<pack>/<key>`, like `\"ui/boss_king_slime\"`, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)).",
               "names": "glyph"
             }
           ],
@@ -13160,12 +13190,12 @@
         },
         {
           "name": "set_skin",
-          "doc": "Changes the background. A skin is drawn in the title, so this costs the same close-and-open `set_title` does. A skin the project's resource packs don't have is an error.",
+          "doc": "Changes the background. A skin is drawn in the title, so this costs the same close-and-open `set_title` does. A skin the server's packages don't have is an error.",
           "params": [
             {
               "name": "skin",
               "type": "string",
-              "doc": "`<pack>/<key>`, or leave it out for the vanilla look.",
+              "doc": "`<pack>/<key>`, another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)), or leave it out for the vanilla look.",
               "optional": true,
               "names": "skin"
             }
@@ -19741,12 +19771,12 @@
         {
           "name": "item_model",
           "type": "string?",
-          "doc": "`<pack>/<key>`: a look from one of the project's resource packs."
+          "doc": "`<pack>/<key>`: an entry of one of your package's resource packs' `items`, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)). It names a look the server has, or it's an error; read back, it's as your package writes it."
         },
         {
           "name": "tooltip_style",
           "type": "string?",
-          "doc": "`<pack>/<key>`: a tooltip frame from one of the project's resource packs."
+          "doc": "`<pack>/<key>`: a tooltip frame from one of your package's resource packs, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values))."
         },
         {
           "name": "equipment",
@@ -19895,7 +19925,7 @@
         {
           "name": "asset",
           "type": "string",
-          "doc": "`<pack>/<key>`: an equipment look from one of the project's resource packs."
+          "doc": "`<pack>/<key>`: an equipment look from one of your package's resource packs, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values))."
         },
         {
           "name": "slot",
@@ -20233,12 +20263,12 @@
         {
           "name": "item_model",
           "type": "string?",
-          "doc": "`<pack>/<key>`: a look from one of the project's resource packs."
+          "doc": "`<pack>/<key>`: an entry of one of your package's resource packs' `items`, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)). It names a look the server has, or it's an error; read back, it's as your package writes it."
         },
         {
           "name": "tooltip_style",
           "type": "string?",
-          "doc": "`<pack>/<key>`: a tooltip frame from one of the project's resource packs."
+          "doc": "`<pack>/<key>`: a tooltip frame from one of your package's resource packs, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values))."
         },
         {
           "name": "equipment",

@@ -697,6 +697,7 @@ nf.items.get	8
 nf.items.id	9
 nf.json.decode	8
 nf.json.encode	9
+nf.looks.qualify	8
 nf.loot.fill	37
 nf.loot.roll	35
 nf.math.clamp	29

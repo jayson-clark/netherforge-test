@@ -200,10 +200,7 @@ project's from then on; the dependency stays as it was.
 
 ## Templates
 
-The editor's project templates (a minigame, a shop, an RPG mob) are packages
-too, kept in the project as a folder, `templates/<namespace>/`, and depended
-on by `path` (`"template_shop": { "path": "templates/template_shop" }`). A
-package may live inside the project that depends on it: nothing in that
-folder is the project's own resource, since resources are found by their kind's
-folder at the project's top. See
+The editor's project templates (a minigame, a shop, an RPG mob) aren't
+packages a project depends on: adding one copies its files into the project as
+its own, and adds what it requires to the project's `requires`. See
 [Starting from a template](../guide/templates.md).

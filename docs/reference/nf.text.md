@@ -38,7 +38,7 @@ The character a resource pack glyph is drawn as, for building text by hand: a gl
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `glyph` | `string` | `<pack>/<key>`, like `"ui/coin"`. |
+| `glyph` | `string` | `<pack>/<key>`, like `"ui/coin"`, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)). |
 
 **Returns** `string?`
 

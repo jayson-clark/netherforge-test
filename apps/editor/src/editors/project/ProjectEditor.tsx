@@ -14,7 +14,6 @@
 import { useState } from 'react'
 import {
   KINDS,
-  NAMESPACE_PATTERN,
   HTTP_HOST_PATTERN,
   HTTP_HOST_RULE,
   NAMESPACE_RULE,
@@ -29,7 +28,7 @@ import {
   type KindId,
   type ProjectManifest,
 } from '@/core/format'
-import { useWorkspace } from '@/state/providers'
+import { useApp, useWorkspace } from '@/state/providers'
 import { ask } from '@/ui/dialogs'
 import {
   Check,
@@ -49,6 +48,7 @@ import { RawDocView } from '@/editors/shared/RawDocView'
 import { EditorBar, EditorScreen, Page } from '@/editors/shared/EditorLayout'
 import styles from './ProjectEditor.module.css'
 import { SettingsSection } from './SettingsSection'
+import { askFolderDependency, askGitDependency } from './dependencyPrompts'
 import {
   addManagedWorld,
   addPermission,
@@ -168,7 +168,6 @@ export function ProjectEditor({ path }: { path: string }) {
           onRemove={(node) => edit((draft) => removePermission(draft, node))}
         />
         <Dependencies
-          namespace={model.namespace}
           dependencies={model.dependencies}
           onSet={(namespace, source) => edit((draft) => setDependency(draft, namespace, source))}
           onRemove={(namespace) => edit((draft) => removeDependency(draft, namespace))}
@@ -730,42 +729,22 @@ function GameRules({
 
 /** `dependencies`: the packages the project uses, by namespace: a folder beside it, or a git repository. */
 function Dependencies({
-  namespace,
   dependencies,
   onSet,
   onRemove,
 }: {
-  namespace: string
   dependencies: ProjectManifest['dependencies']
   onSet: (namespace: string, source: DependencySource) => void
   onRemove: (namespace: string) => void
 }) {
+  const { backend, workspace } = useApp()
   const entries = Object.entries(dependencies ?? {})
   const add = async (kind: 'path' | 'git') => {
-    const name = await ask.prompt({
-      title: kind === 'path' ? 'Depend on a folder' : 'Depend on a git repository',
-      label: 'Its namespace (what this project names its things by)',
-      initial: '',
-      confirmLabel: 'Next',
-      validate: (value) =>
-        !NAMESPACE_PATTERN.test(value)
-          ? capitalised(NAMESPACE_RULE)
-          : value === namespace
-            ? "That's this project's own"
-            : dependencies?.[value]
-              ? 'It depends on that one already'
-              : null,
-    })
-    if (!name) return
-    const where = await ask.prompt({
-      title: `${name}'s source`,
-      label: kind === 'path' ? 'Folder, relative to this one' : 'Repository URL',
-      initial: kind === 'path' ? `../${name}` : 'https://',
-      confirmLabel: 'Add',
-      validate: (value) => (value.trim() ? null : 'Required'),
-    })
-    if (!where) return
-    onSet(name, kind === 'path' ? { path: where.trim() } : { git: where.trim() })
+    const choice =
+      kind === 'path'
+        ? await askFolderDependency(backend, workspace)
+        : await askGitDependency(workspace)
+    if (choice) onSet(choice.namespace, choice.source)
   }
   return (
     <Section title="Dependencies" icon="box">
@@ -827,10 +806,10 @@ function Dependencies({
       ))}
       <div className={styles.add}>
         <Button size="small" icon="plus" onClick={() => void add('path')}>
-          Add folder dependency
+          Add folder dependency…
         </Button>
         <Button size="small" icon="plus" onClick={() => void add('git')}>
-          Add git dependency
+          Add git dependency…
         </Button>
       </div>
     </Section>

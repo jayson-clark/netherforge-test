@@ -94,8 +94,18 @@ export const CATEGORIES: Category[] = [
   },
   {
     title: 'Values and utilities',
-    doc: 'Vectors and locations, text, time, randomness and maths.',
-    pages: ['Vec3', 'Location', 'nf.text', 'nf.time', 'nf.random', 'Random', 'nf.math', 'nf.json'],
+    doc: 'Vectors and locations, text, looks, time, randomness and maths.',
+    pages: [
+      'Vec3',
+      'Location',
+      'nf.text',
+      'nf.looks',
+      'nf.time',
+      'nf.random',
+      'Random',
+      'nf.math',
+      'nf.json',
+    ],
   },
   {
     title: 'Files, data and the web',

@@ -177,14 +177,52 @@ A name a script hands the API means what it would in one of its own package's fi
   (its \`netherforge.json\`'s \`exports\`). Anything else is an error naming the package:
   \`package "library" doesn't export its item "secret", so only it can use it\`.
 
-That holds for every name: items, menus, dialogs, centities, particle effects, recipes, loot tables, resource pack
-glyphs, skins, sounds and item models, modules, and the \`<glyph:…>\` tags in [Text](index.md#types).
-A package's code calling another package's function is still that package's code: the library's
+That holds for every name of a thing a script uses: items, menus, dialogs, centities, particle
+effects, recipes, loot tables, HUD elements and modules. Looks are the exception (below). A package's
+code calling another package's function is still that package's code: the library's
 \`nf.items.create("gem")\` makes the library's gem whoever called it.
 
 An \`Item\` table is a value, not a use: any script may hold, read, compare and hand back any
 stack, whatever package's item or look it carries, as long as that's there. Making a stack from
 an item's definition (\`nf.items.create\`) is a use, and needs the export.
+
+## Looks are values
+
+A resource pack's looks (item models, glyphs, skins, tooltips, equipment looks and sounds)
+are values too. Showing a look uses nothing of its package's, and every player's game
+already has them all. So wherever a script names a look (\`node:set_model\`, an \`Item\`'s
+\`item_model\`, \`tooltip_style\` and \`equipment.asset\`, a menu skin, a \`<glyph:…>\` tag in
+[Text](index.md#types), \`nf.text.glyph\`, a boss bar icon, \`play_sound\`):
+
+- **Bare** (\`"ui/coin"\`) is its own package's, as for every name.
+- **\`namespace:<pack>/<key>\`** may be **any loaded package's** look: the project's, a
+  package it depends on, or a package that depends on it, exported or not, as long as that
+  package has it. A package can't name the projects that use it in its files, but it can
+  show a look one hands it.
+- A namespace no package on the server has is an error:
+  \`no package on this server has the namespace "chess_srv"\`. A sound's is the server's
+  to look up instead, since the game and other plugins have sounds of their own.
+
+This holds only for what scripts do at runtime. Files are still checked as before: a
+package's files name only its own looks and what its dependencies export, so a package is
+validated on its own, and nothing a project does can make it valid or invalid.
+
+This is how a project hands a package looks to draw with. Give it full names, which
+[\`nf.looks.qualify\`](nf.looks.md) writes for you:
+
+\`\`\`lua
+-- In the project chess_server, which depends on the package chess:
+local board = nf.centities.spawn("chess:board", here)
+board:data().skin = { pawn = nf.looks.qualify("nether/pawn") } -- "chess_server:nether/pawn"
+
+-- In chess's board script, today or after a restart:
+this:node("pawn"):set_model(this:data().skin.pawn)
+\`\`\`
+
+A full name is a plain string, so it keeps its meaning in saved data (\`this:data()\`), across
+chunk loads and restarts. A bare name handed over would mean the *package's* look of that
+name. When the package has no such look but another loaded package does, the error says so
+and gives the full name.
 
 ## Names read back
 
@@ -192,8 +230,11 @@ A name the API hands a script is written as that script's package writes it: bar
 \`namespace:name\` for another's. The library's gem is \`"gem"\` to the library's scripts and
 \`"library:gem"\` to the project's; the project's ruby is \`"ruby"\` to the project and
 \`"shop:ruby"\` to the library (with \`shop\` the project's namespace). That's every name read
-back: \`stack.item\`, \`nf.items.id\`, \`item:id()\`, \`centity:kind()\`, \`menu:id()\`, glyph tags in
-text, and an event's fields, which each package's handlers read in their own words.
+back: \`stack.item\`, \`stack.item_model\`, \`nf.items.id\`, \`item:id()\`, \`centity:kind()\`, \`menu:id()\`,
+\`node:model()\`, glyph tags in text, and an event's fields, which each package's handlers read in
+their own words. A look from a package that depends on the reader's reads back in full too:
+a chess piece showing the project's pawn says \`"chess_server:nether/pawn"\` to chess's scripts
+and \`"nether/pawn"\` to the project's.
 
 An \`Item\` table keeps the words it was handed out in: one the project read, passed to a
 library function, still says \`"ruby"\`. The API reads it in those words whichever package's

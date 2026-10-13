@@ -47,7 +47,7 @@
 --- MiniMessage a player reads, like `"<green>Done!"`: a string. A `<glyph:pack/key>` tag in it names a glyph the way the script's own files would: one of its own package's resource packs bare, or `<glyph:namespace:pack/key>` for one a package it depends on exports. The tag means that glyph wherever and whenever the text is shown, whoever shows it; one naming a glyph the script can't use draws nothing, and the server log says why. Text handed back to a script names its glyphs the same way.
 ---@alias Text string
 
---- Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
+--- Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
 ---@class nf
 ---@field server nf.server The server itself: its clock, its performance, its version, its settings (players, message of the day, whitelist), and saying or running things as the console.
 ---@field commands nf.commands Slash commands a module adds to the server for as long as it runs, with typed arguments, tab completion and usage messages from their declaration.
@@ -71,6 +71,7 @@
 ---@field cutscenes nf.cutscenes The project's cutscenes (`cutscenes/<id>.json`): camera paths keyed in the editor, played for one player at a time.
 ---@field files nf.files Files in the one directory scripts may keep things in: the only state a script has that survives a restart.
 ---@field text nf.text Helpers for the MiniMessage text players see: escaping what players typed, stripping tags, resource pack glyphs, moving the cursor, and measuring.
+---@field looks nf.looks Resource pack looks (item models, glyphs, skins, tooltips, equipment looks, sounds) handed from one package's code to another's. A look is a value, not a use: any script can show any look the server has, by its full name `<namespace>:<pack>/<key>`, whether or not its package exports it or is one the script's package depends on. That's how a project hands a package it uses looks of its own to draw with (see [Packages](packages.md#looks-are-values)).
 ---@field json nf.json JSON text to and from Lua values.
 ---@field http nf.http Requests to web services (a Discord webhook, a status API). A package declares the hosts it talks to in `netherforge.json`'s `requires` (`"http": ["discord.com"]`, or `"*.discord.com"` for every name under it), and the server owner sees every host the project and its packages declare when it starts (`/nf requires`); a request to any other host is an error. Every request is held to the package whose code makes it. The server looks a name up once, checks the addresses it leads to and connects to exactly the address it checked: a loopback, private, link-local, shared (`100.64.0.0/10`), unique-local or IPv4-mapped address is refused even when its name is declared, unless the server owner turned on `http.allow-private-addresses` in `config.yml` (for a service on the same machine or network). Redirects (at most 5) are followed, and each one is held to the same rules, host declaration included. The server's proxy settings are never used. Only `http` and `https` URLs work. The server owner also limits requests in `config.yml`'s `http:` section: how large a request and a response may be, how long a request may take, and how many a package may make a minute.
 ---@field time nf.time Dates and durations as text, in the same unit as `nf.server.unix_time()`: milliseconds. For timers, use ticks (`nf.after`, `nf.wait`); this is for showing and reading clock times and lengths of time.
@@ -1031,7 +1032,7 @@ function nf.text.escape(text) end
 function nf.text.strip(text) end
 
 --- The character a resource pack glyph is drawn as, for building text by hand: a glyph wider than 256 pixels is drawn in pieces, so it's those pieces' characters and the moves between them. In MiniMessage text the tag `<glyph:ui/coin>` is usually simpler: it works anywhere text does (names, lore, chat, titles, dialogs, text displays) and draws the picture in its own colours, never bold, while this text is tinted by the text colour around it like any other (wrap it in `<white>` to avoid that, and keep it out of `<bold>`, which pulls a wide glyph's pieces apart). `nil` while the project's resource packs have errors (nothing is built then); a glyph no resource pack has is an error.
----@param glyph GlyphRef `<pack>/<key>`, like `"ui/coin"`.
+---@param glyph GlyphRef `<pack>/<key>`, like `"ui/coin"`, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)).
 ---@return string?
 function nf.text.glyph(glyph) end
 
@@ -1044,6 +1045,15 @@ function nf.text.space(pixels) end
 ---@param text Text MiniMessage.
 ---@return integer?
 function nf.text.width(text) end
+
+--- Resource pack looks (item models, glyphs, skins, tooltips, equipment looks, sounds) handed from one package's code to another's. A look is a value, not a use: any script can show any look the server has, by its full name `<namespace>:<pack>/<key>`, whether or not its package exports it or is one the script's package depends on. That's how a project hands a package it uses looks of its own to draw with (see [Packages](packages.md#looks-are-values)).
+---@class nf.looks
+nf.looks = {}
+
+--- A look's full name, `<namespace>:<pack>/<key>`, as the calling script's package names it: `"nether/pawn"` in the project `chess_server` is `"chess_server:nether/pawn"`, which means the same in any package's code. Hand that to a package, never the bare name: a bare name means the package's own look wherever it's used. A name that already has a namespace comes back as it is. It's a plain string, so it can be kept in saved data (`this:data()`). Whether the look is there isn't checked here, but where it's shown; a name that isn't shaped like a look is an error.
+---@param look string `<pack>/<key>`, or `<namespace>:<pack>/<key>`.
+---@return string
+function nf.looks.qualify(look) end
 
 --- JSON text to and from Lua values.
 ---@class nf.json
@@ -1827,8 +1837,8 @@ function Node:set_display_item(item) end
 ---@return string?
 function Node:model() end
 
---- Changes the look a model display shows: another entry of a resource pack's `items`, a model with elements or not. The display entity stays and only its item changes, which costs one small update to each player who sees it, so swapping models every few ticks animates a node frame by frame (a flipbook), alongside the transform tracks. A look the project's resource packs don't have is an error.
----@param model string `<pack>/<key>`: an entry of a resource pack's `items` (a package's as `ns:<pack>/<key>`).
+--- Changes the look a model display shows: another entry of a resource pack's `items`, a model with elements or not. The display entity stays and only its item changes, which costs one small update to each player who sees it, so swapping models every few ticks animates a node frame by frame (a flipbook), alongside the transform tracks. A look the server's packages don't have is an error, and so is a namespace no package on the server has.
+---@param model string `<pack>/<key>`: an entry of one of your package's resource packs' `items`, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)): a project can hand a package it uses a look of its own to show (`nf.looks.qualify`).
 ---@return boolean # `false` when the node isn't a model display.
 function Node:set_model(model) end
 
@@ -3388,7 +3398,7 @@ function World:spawn_item(position, item) end
 ---@return boolean # `false` when the world has gone.
 function World:spawn_particle(particle, position, options) end
 
---- Plays a sound at a position, for everyone near enough to hear it. A Minecraft sound (`"minecraft:block.note_block.pling"`, checked against the server's sounds) or one of the project's resource pack sounds (`"<pack>/<key>"`, like `"ui/click"`, checked against `resource_packs/`). An unknown sound is an error.
+--- Plays a sound at a position, for everyone near enough to hear it. A Minecraft sound (`"minecraft:block.note_block.pling"`, checked against the server's sounds) or a resource pack sound (`"<pack>/<key>"`, like `"ui/click"`, your package's own, or another loaded package's as `"<namespace>:<pack>/<key>"`: [looks are values](packages.md#looks-are-values)). An unknown sound is an error.
 ---@param sound string A sound id.
 ---@param position Vec3 Where it comes from, in the world.
 ---@param options? SoundOptions
@@ -3888,7 +3898,7 @@ function BossBar:set_text(text) end
 function BossBar:icon() end
 
 --- Draws a glyph at its left end, or none with `nil`. A glyph no resource pack has is an error.
----@param icon string? `<pack>/<key>`, like `"ui/boss_king_slime"`.
+---@param icon string? `<pack>/<key>`, like `"ui/boss_king_slime"`, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)).
 ---@return boolean # `false` once it's gone.
 function BossBar:set_icon(icon) end
 
@@ -4160,8 +4170,8 @@ function Menu:set_title(text) end
 ---@return string?
 function Menu:skin() end
 
---- Changes the background. A skin is drawn in the title, so this costs the same close-and-open `set_title` does. A skin the project's resource packs don't have is an error.
----@param skin? SkinRef `<pack>/<key>`, or leave it out for the vanilla look.
+--- Changes the background. A skin is drawn in the title, so this costs the same close-and-open `set_title` does. A skin the server's packages don't have is an error.
+---@param skin? SkinRef `<pack>/<key>`, another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)), or leave it out for the vanilla look.
 ---@return boolean # `false` once the window is gone.
 function Menu:set_skin(skin) end
 
@@ -5896,8 +5906,8 @@ function Event:uncancel() end
 ---@field hide_tooltip boolean? No tooltip at all, for filler panes.
 ---@field unbreakable boolean?
 ---@field damage integer? Durability used: 0 is pristine.
----@field item_model string? `<pack>/<key>`: a look from one of the project's resource packs.
----@field tooltip_style string? `<pack>/<key>`: a tooltip frame from one of the project's resource packs.
+---@field item_model string? `<pack>/<key>`: an entry of one of your package's resource packs' `items`, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)). It names a look the server has, or it's an error; read back, it's as your package writes it.
+---@field tooltip_style string? `<pack>/<key>`: a tooltip frame from one of your package's resource packs, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)).
 ---@field equipment ItemEquipment? Worn as armour or equipment, drawn as one of the project's resource packs' equipment looks: `{ asset = "gear/ruby", slot = "head" }`.
 ---@field color string? `#RRGGBB`, for dyed leather, potions and maps.
 ---@field profile string? Whose head, for a player head: a name or a UUID.
@@ -5931,7 +5941,7 @@ function Event:uncancel() end
 
 --- What an item looks like worn, and where: an `Item`'s `equipment` (the `equippable` component).
 ---@class ItemEquipment
----@field asset string `<pack>/<key>`: an equipment look from one of the project's resource packs.
+---@field asset string `<pack>/<key>`: an equipment look from one of your package's resource packs, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)).
 ---@field slot "head"|"chest"|"legs"|"feet"|"body"|"saddle" The slot it is worn in: `"body"` is a horse's or wolf's armour.
 
 --- A cooldown after using an item: an `Item`'s `cooldown`.
@@ -6013,8 +6023,8 @@ function Event:uncancel() end
 ---@field hide_tooltip boolean? No tooltip at all, for filler panes.
 ---@field unbreakable boolean?
 ---@field damage integer? Durability used: 0 is pristine.
----@field item_model string? `<pack>/<key>`: a look from one of the project's resource packs.
----@field tooltip_style string? `<pack>/<key>`: a tooltip frame from one of the project's resource packs.
+---@field item_model string? `<pack>/<key>`: an entry of one of your package's resource packs' `items`, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)). It names a look the server has, or it's an error; read back, it's as your package writes it.
+---@field tooltip_style string? `<pack>/<key>`: a tooltip frame from one of your package's resource packs, or another loaded package's as `<namespace>:<pack>/<key>` ([looks are values](packages.md#looks-are-values)).
 ---@field equipment ItemEquipment? Worn as armour or equipment, drawn as one of the project's resource packs' equipment looks: `{ asset = "gear/ruby", slot = "head" }`.
 ---@field color string? `#RRGGBB`, for dyed leather, potions and maps.
 ---@field profile string? Whose head, for a player head: a name or a UUID.
