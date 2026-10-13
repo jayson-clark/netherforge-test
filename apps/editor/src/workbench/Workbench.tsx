@@ -212,11 +212,25 @@ const STUDIOS = (Object.values(KIND_CONTRIBUTIONS) as KindContribution[]).flatMa
   it.studio ? [it.studio] : [],
 )
 
-/** Mounts a kind's studio while it has work, so its code loads only once something needs drawing. */
+/** How long a studio stays mounted once it has nothing to do, so a burst of work (edits) keeps its one canvas. */
+const STUDIO_LINGER_MS = 10_000
+
+/**
+ * Mounts a kind's studio while it has work, so its code loads only once
+ * something needs drawing, and for a while after: each mount makes a WebGL
+ * context, and the browser drops the oldest once there are too many.
+ */
 function Studio({ studio }: { studio: NonNullable<KindContribution['studio']> }) {
   const busy = useSyncExternalStore(studio.subscribe, studio.busy)
+  const [kept, setKept] = useState(false)
+  if (busy && !kept) setKept(true)
+  useEffect(() => {
+    if (busy || !kept) return
+    const timer = setTimeout(() => setKept(false), STUDIO_LINGER_MS)
+    return () => clearTimeout(timer)
+  }, [busy, kept])
   const View = studio.view
-  return busy ? (
+  return busy || kept ? (
     <Suspense fallback={null}>
       <View />
     </Suspense>

@@ -40,7 +40,8 @@
       "@johnnymorganz/stylua-bin"
     ],
     "patchedDependencies": {
-      "nbtify@2.2.0": "patches/nbtify@2.2.0.patch"
+      "nbtify@2.2.0": "patches/nbtify@2.2.0.patch",
+      "@react-three/fiber@9.8.1": "patches/@react-three__fiber@9.8.1.patch"
     }
   }
 }

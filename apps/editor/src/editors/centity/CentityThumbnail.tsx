@@ -82,20 +82,24 @@ function CentityPicture({ id, size }: { id: string; size: number }) {
   )
 }
 
-/** Mount once where centity thumbnails show: it draws whatever is queued. */
+/**
+ * Mount once where centity thumbnails show: it draws whatever is queued, one
+ * job after another in the same canvas (a canvas is a WebGL context, and the
+ * browser keeps only a handful).
+ */
 export function ThumbnailStudio() {
   const job = useThumbnails((s) => s.queue[0] ?? null)
-  if (!job) return null
   return (
     <div className={styles.studio} aria-hidden="true">
       <Canvas
-        key={job.key}
         style={{ width: SIZE, height: SIZE }}
+        // Idle between jobs, while it waits for the next.
+        frameloop={job ? 'always' : 'never'}
         camera={{ fov: 30, near: 0.01, far: 500 }}
         gl={{ antialias: true, preserveDrawingBuffer: true, alpha: true }}
       >
         <ambientLight intensity={1} />
-        <Shot job={job} />
+        {job && <Shot key={job.key} job={job} />}
       </Canvas>
     </div>
   )

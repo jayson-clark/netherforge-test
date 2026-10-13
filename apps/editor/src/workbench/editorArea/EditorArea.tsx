@@ -30,6 +30,7 @@ const DiffView = lazy(() =>
 const HINTS: [string, string[]][] = [
   ['Go to a resource or file', ['Mod+P']],
   ['Save · save all', ['Mod+S', 'Mod+Shift+S']],
+  ['Close tab', ['Mod+W']],
   ['Outline · inspector · bottom dock', ['Mod+B', 'Mod+Alt+B', 'Mod+J']],
   ['Next · previous tab', ['Ctrl+Tab', 'Ctrl+Shift+Tab']],
   ['Zoom in · out · actual size', ['Mod+=', 'Mod+-', 'Mod+0']],

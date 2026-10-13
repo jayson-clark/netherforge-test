@@ -343,6 +343,45 @@ test('Edit → Select All acts on the field being typed in, and on nothing outsi
   expect(await page.evaluate('String(getSelection())')).toBe('')
 })
 
+test("closing an unsaved tab asks first: cancel keeps it, Don't save closes it", async ({
+  page,
+}) => {
+  await openExample(page)
+  await makeDirty(page)
+  const dirty = page.getByRole('tab', { name: 'tower (unsaved)' })
+  const dialog = page.getByRole('dialog', { name: 'Unsaved changes' })
+
+  await dirty.hover()
+  await dirty.getByRole('button', { name: 'Close tower' }).click()
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  await expect(dirty).toBeVisible()
+
+  await dirty.hover()
+  await dirty.getByRole('button', { name: 'Close tower' }).click()
+  await dialog.getByRole('button', { name: "Don't save" }).click()
+  await expect(page.getByRole('tab', { name: /^tower/ })).toHaveCount(0)
+  expect(JSON.parse((await files(page))[TOWER]!).nodes.top.transform.translation).toEqual([0, 1, 0])
+})
+
+test('Cmd/Ctrl+W asks about unsaved edits, in an editor and in a script', async ({ page }) => {
+  await openExample(page)
+  await makeDirty(page)
+  const dialog = page.getByRole('dialog', { name: 'Unsaved changes' })
+
+  await page.keyboard.press('ControlOrMeta+w')
+  await dialog.getByRole('button', { name: "Don't save" }).click()
+  await expect(page.getByRole('tab', { name: /^tower/ })).toHaveCount(0)
+
+  await openCentity(page, 'tower')
+  await page.getByRole('row', { name: 'script.lua' }).click()
+  await page.locator('.monaco-editor .view-line').last().click()
+  await page.keyboard.type('\n-- edited')
+  await expect(page.getByRole('tab', { name: 'script.lua (unsaved)' })).toBeVisible()
+  await page.keyboard.press('ControlOrMeta+w')
+  await dialog.getByRole('button', { name: "Don't save" }).click()
+  await expect(page.getByRole('tab', { name: /^script\.lua/ })).toHaveCount(0)
+})
+
 test('leaving a project with unsaved edits asks first, and Open Recent brings it back without them', async ({
   page,
 }) => {
