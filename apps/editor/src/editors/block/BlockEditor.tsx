@@ -26,10 +26,10 @@ import {
   useCompiledResourcePacks,
   useHomeNamespace,
   useReferenceNamespace,
+  useResourcePackOutlines,
 } from '@/state/useResourcePacks'
 import { useProjectFileUrl } from '@/state/useResourcePacks'
 import { useWorkspace } from '@/state/providers'
-import type { ProjectOutline } from '@/core/format'
 import { CheckField, JsonObjectField, NumberField, SelectField, Section } from '@/ui/fields'
 import { Hint, Muted } from '@/ui/text'
 import { BLOCK_FACES, lookOf } from '@/minecraft/block/look'
@@ -76,7 +76,6 @@ function toolSound(tool: BlockTool | undefined): string {
 }
 
 /** One empty map, so a selector returns the same value while there's no outline yet. */
-const NO_RESOURCE_PACKS: NonNullable<ProjectOutline>['resourcePacks'] = {}
 const NO_IDS: string[] = []
 
 /** The choices of a reference field: none, each of [refs], and the current one when nothing has it. */
@@ -92,7 +91,7 @@ function options(refs: string[], current: string | undefined, none: string) {
 
 export function BlockEditor({ path }: { path: string }) {
   const { doc, model, edit } = useModelDoc<BlockFile>(path)
-  const packs = useWorkspace((s) => s.outline?.resourcePacks ?? NO_RESOURCE_PACKS)
+  const packs = useResourcePackOutlines()
   const lootTables = useWorkspace((s) => s.outline?.resources.loot_table ?? NO_IDS)
   const centities = useWorkspace((s) => s.outline?.resources.centity ?? NO_IDS)
   const compiled = useCompiledResourcePacks()

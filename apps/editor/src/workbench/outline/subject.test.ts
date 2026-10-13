@@ -7,6 +7,7 @@ describe('subjectOf', () => {
       kind: 'centity',
       id: 'tower',
       group: '',
+      pkg: null,
       location: 'centities/tower',
       main: 'centities/tower/centity.json',
       hasFiles: true,
@@ -31,5 +32,25 @@ describe('subjectOf', () => {
     })
     expect(subjectOf('netherforge.json')).toBeNull()
     expect(subjectOf(null)).toBeNull()
+  })
+
+  it("is a package's resource with the package's paths, so the outline reads its files and not the project's", () => {
+    expect(subjectOf('chess:centities/chess_king/script.lua')).toEqual({
+      kind: 'centity',
+      id: 'chess_king',
+      group: '',
+      pkg: 'chess',
+      location: 'chess:centities/chess_king',
+      main: 'chess:centities/chess_king/centity.json',
+      hasFiles: true,
+      companion: null,
+    })
+    expect(subjectOf('library:resource_packs/gems/pack.json')).toMatchObject({
+      pkg: 'library',
+      main: 'library:resource_packs/gems/pack.json',
+    })
+    expect(subjectOf('vale_lore:terrain/vale.json')).toMatchObject({
+      companion: 'vale_lore:terrain/vale.lua',
+    })
   })
 })

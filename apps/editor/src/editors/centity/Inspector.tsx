@@ -31,7 +31,6 @@ import {
   type HitboxDef,
   type NodeDef,
   type PhysicsDef,
-  type ProjectOutline,
   type Vec3,
 } from '@/core/format'
 import { useClientAssets } from '@/minecraft/client/useClientAssets'
@@ -39,6 +38,7 @@ import { usePickerIds } from '@/minecraft/client/usePickerIds'
 import { parseBlockState } from '@/minecraft/client/model'
 import { dirname, NODE_NAME_PATTERN } from '@/core/paths'
 import { useApp, useWorkspace } from '@/state/providers'
+import { useResourcePackOutlines } from '@/state/useResourcePacks'
 import { usePrimary, useView } from '@/editors/views'
 import {
   Datalist,
@@ -623,14 +623,12 @@ function RopeSection({
   )
 }
 
-const NO_RESOURCE_PACKS: NonNullable<ProjectOutline>['resourcePacks'] = {}
-
 function DisplaySection({ node, editNode }: { node: NodeDef; editNode: EditNode }) {
   const gameData = useWorkspace((s) => s.gameData)
   const display = node.display
   const type = display?.type ?? 'none'
   const { blocks, items } = usePickerIds()
-  const packs = useWorkspace((s) => s.outline?.resourcePacks ?? NO_RESOURCE_PACKS)
+  const packs = useResourcePackOutlines()
   const looks = resourcePackRefs(packs, 'items')
 
   const switchType = (next: string) =>

@@ -3,14 +3,23 @@
  * to, whether that's its own editor or one of its scripts.
  */
 import { KINDS, type KindId } from '@/core/format'
-import { companionOf, isBinaryKind, locationOf, mainFileOf, resourceOf } from '@/core/paths'
+import {
+  companionOf,
+  inPackage,
+  isBinaryKind,
+  locationOf,
+  mainFileOf,
+  resourceOf,
+} from '@/core/paths'
 
 export interface OutlineSubject {
   kind: KindId
   id: string
   /** The group folders it's in (`(weapons)`), empty when none. */
   group: string
-  /** Its folder (or its one file), whose files the outline lists. */
+  /** The package it's in (opened read-only from the explorer's Dependencies), null for the project's own. */
+  pkg: string | null
+  /** Its folder (or its one file), whose files the outline lists: a package path for a package's. */
   location: string
   /** The file that opens it in its own editor, if it has one. */
   main: string | null
@@ -23,15 +32,17 @@ export interface OutlineSubject {
 export function subjectOf(path: string | null): OutlineSubject | null {
   const resource = path ? resourceOf(path) : null
   if (!resource) return null
-  const { kind, id, group } = resource
+  const { kind, id, group, pkg } = resource
   const where = KINDS[kind]
+  const companion = isBinaryKind(kind) ? null : companionOf(kind, id, group)
   return {
     kind,
     id,
     group,
-    location: locationOf(kind, id, group),
-    main: where.contents === 'json' ? mainFileOf(kind, id, group) : null,
+    pkg,
+    location: inPackage(pkg, locationOf(kind, id, group)),
+    main: where.contents === 'json' ? inPackage(pkg, mainFileOf(kind, id, group)) : null,
     hasFiles: where.layout === 'folder' && !isBinaryKind(kind),
-    companion: isBinaryKind(kind) ? null : companionOf(kind, id, group),
+    companion: companion === null ? null : inPackage(pkg, companion),
   }
 }

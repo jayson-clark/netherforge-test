@@ -10,6 +10,7 @@ import { useExpansionSetter, useTreeExpansion, usePane } from '@/state/useExpand
 import { useApp, useWorkspace } from '@/state/providers'
 import { KINDS, newSiblingFile, type ScriptedKindId } from '@/core/format'
 import { basename, dirname } from '@/core/paths'
+import { filesIn, splitPackagePath } from '@/core/store/packages'
 import { kindContribution } from '@/editors/registry'
 import { IconButton } from '@/ui/Button'
 import type { MenuItem } from '@/ui/ContextMenu'
@@ -56,7 +57,8 @@ export function FilesPane({
   main: string | null
 }) {
   const { workspace } = useApp()
-  const files = useWorkspace((s) => s.files)
+  // A package's resource (opened read-only from Dependencies) lists the package's files, by package path.
+  const files = useWorkspace((s) => filesIn(s, splitPackagePath(root)[0]))
   const docs = useWorkspace((s) => s.docs)
   const problems = useWorkspace((s) => s.problems)
   const activePath = useWorkspace((s) => s.tabs.find((it) => it.id === s.activeTab)?.path ?? null)
@@ -305,7 +307,7 @@ export function FilesPane({
  */
 export function CompanionFilesPane({ file, companion }: { file: string; companion: string }) {
   const { workspace } = useApp()
-  const files = useWorkspace((s) => s.files)
+  const files = useWorkspace((s) => filesIn(s, splitPackagePath(file)[0]))
   const docs = useWorkspace((s) => s.docs)
   const problems = useWorkspace((s) => s.problems)
   const activePath = useWorkspace((s) => s.tabs.find((it) => it.id === s.activeTab)?.path ?? null)

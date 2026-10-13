@@ -23,8 +23,10 @@ import {
   soundEvents,
   soundFileOf,
   soundFilesOf,
+  packOf,
   type EntryKind,
 } from './ops'
+import { filesIn, splitPackagePath } from '@/core/store/packages'
 import type { OutlineProps } from '@/editors/contributions'
 import { pickKey } from './view'
 
@@ -49,14 +51,15 @@ function parseEntry(id: string): { kind: EntryKind | 'sounds'; key: string } | n
 export function ResourcePackOutline({ path, files: filesPane }: OutlineProps) {
   const { workspace } = useApp()
   const { model, edit } = useModelDoc<ResourcePackFile>(path)
-  const files = useWorkspace((s) => s.files)
+  // A package's pack (opened read-only from Dependencies) has its pictures and sounds in the package.
+  const files = useWorkspace((s) => filesIn(s, splitPackagePath(path)[0]))
   const selected = usePrimary('resource_pack', path)
   const view = useView('resource_pack', path)
   const pane = usePane('resource-pack-entries')
   const expansion = useTreeExpansion(`resource_pack:${path}`, () => true)
   if (!model) return filesPane
   const ws = () => workspace.getState()
-  const pack = path.split('/')[1]!
+  const pack = packOf(path)
   const soundFiles = soundFilesOf(files, pack)
   const sounds = soundEvents(model, soundFiles)
 

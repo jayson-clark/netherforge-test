@@ -103,9 +103,11 @@ import {
   texturesOf,
   unusedTextures,
   type EntryDef,
+  packOf,
   type EntryKind,
   type ResourcePackPick,
 } from './ops'
+import { filesIn, splitPackagePath } from '@/core/store/packages'
 import {
   useCompiledResourcePacks,
   useResourcePackFiles,
@@ -142,10 +144,11 @@ type Pick = ResourcePackPick | null
 export function ResourcePackEditor({ path }: { path: string }) {
   const { workspace } = useApp()
   const { doc, model, edit } = useModelDoc<ResourcePackFile>(path)
-  const files = useWorkspace((s) => s.files)
+  // A package's pack (opened read-only from Dependencies) has its pictures and sounds in the package.
+  const files = useWorkspace((s) => filesIn(s, splitPackagePath(path)[0]))
   const picked = usePrimary('resource_pack', path)
   const view = useView('resource_pack', path)
-  const pack = path.split('/')[1]!
+  const pack = packOf(path)
   const textures = texturesOf(files, pack)
   const soundFiles = soundFilesOf(files, pack)
   const url = useProjectFileUrl()
@@ -700,7 +703,7 @@ function TextureInspector({
   onDeleted: () => void
 }) {
   const { workspace } = useApp()
-  const pack = path.split('/')[1]!
+  const pack = packOf(path)
   const users = ENTRY_KINDS.flatMap((kind) =>
     Object.entries(model[kind] ?? {})
       .filter(([, def]) => entryTextures(kind, def as EntryDef).includes(texture))

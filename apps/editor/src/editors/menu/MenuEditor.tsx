@@ -16,7 +16,6 @@ import {
   type MenuType,
   type ItemDef,
   type SlotDef,
-  type ProjectOutline,
 } from '@/core/format'
 import { ItemEditor } from '@/minecraft/item/ItemForm'
 import { ItemIcon } from '@/minecraft/item/ItemIcon'
@@ -25,6 +24,7 @@ import { useProjectItemIds } from '@/minecraft/item/projectItems'
 import { useGlyphMap } from '@/minecraft/text/glyphs'
 import { dirname } from '@/core/paths'
 import { useWorkspace } from '@/state/providers'
+import { useResourcePackOutlines } from '@/state/useResourcePacks'
 import { usePrimary, useView } from '@/editors/views'
 import { MiniText, TextPreview } from '@/minecraft/text/MiniText'
 import { useItemTooltip } from '@/minecraft/item/ItemTooltip'
@@ -54,7 +54,6 @@ import { useSkin, WindowFrame } from '@/minecraft/window/WindowFrame'
 import styles from './MenuEditor.module.css'
 
 /** One empty map, so a selector returns the same value while there's no outline yet. */
-const NO_RESOURCE_PACKS: NonNullable<ProjectOutline>['resourcePacks'] = {}
 
 const TYPE_LABELS: Record<MenuType, string> = {
   chest: 'Chest',
@@ -288,7 +287,7 @@ function WindowInspector({
   model: MenuFile
   edit: (recipe: (draft: MenuFile) => void) => void
 }) {
-  const packs = useWorkspace((s) => s.outline?.resourcePacks ?? NO_RESOURCE_PACKS)
+  const packs = useResourcePackOutlines()
   const glyphs = useGlyphMap()
   const skins = resourcePackRefs(packs, 'skins')
   const shape = shapeOf(model)

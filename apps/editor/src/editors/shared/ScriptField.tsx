@@ -4,6 +4,7 @@
  * open it, or unlink it; and add a file beside it for the script to
  * `require`. Scripts are sibling files, never JSON.
  */
+import { filesIn, splitPackagePath } from '@/core/store/packages'
 import { SCRIPT_DEFAULT_BUDGET, type ScriptDef } from '@/core/format'
 import { LUA_FILE_PATTERN } from '@/core/paths'
 import { useApp, useWorkspace } from '@/state/providers'
@@ -37,7 +38,8 @@ export function ScriptField({
   label?: string
 }) {
   const { workspace } = useApp()
-  const files = useWorkspace((s) => s.files)
+  // A package's resource (read-only) has its scripts in the package.
+  const files = useWorkspace((s) => filesIn(s, splitPackagePath(folder)[0]))
   const luaFiles = files
     .filter((it) => it.startsWith(`${folder}/`) && it.endsWith('.lua'))
     .map((it) => it.slice(folder.length + 1))

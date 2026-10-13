@@ -195,7 +195,9 @@ another field) and `exports` (kind folder → ids).
   project's resources by id and every package's as `ns:id`, which is how the
   plugin names them. A package's resources are compiled from a copy with
   every reference written in full (`ReferenceIndex.qualify`), so they mean
-  the same beside the project's; `compiledResourcePacks` holds every resource pack in the
+  the same beside the project's, and compiled **under that `ns:id`** (`Resource.compiled`), so a compiled
+  resource's `id` is always its key in `running` (the runtime spells instances and finds script files by it: a
+  bare id there once made a package's centities run no script); `compiledResourcePacks` holds every resource pack in the
   tree (a package's keyed `ns:id`, built in its namespace, `CompiledResourcePack.key`
   saying where its files are). `lock()` is the lock the packages make.
 - **The hash.** `PackageHash.isContent` (manifest, `client/vanilla.json`, resource

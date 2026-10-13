@@ -306,7 +306,10 @@ object Projects {
         private fun compiled(qualifiedIn: String?): C {
             compiled?.takeIf { it.first == qualifiedIn }?.let { return it.second }
             val running = if (qualifiedIn != null && kind is DocumentResourceKind<T, C>) qualify(kind, value, qualifiedIn) else value
-            return kind.compile(id, running, own).also { compiled = qualifiedIn to it }
+            // Named as the server running it names it (`chess:board`), as [ProjectSnapshot.running] keys it: what a
+            // compiled resource says its id is is what the runtime spells it by and finds its files from.
+            val named = if (qualifiedIn != null) PackagePaths.of(qualifiedIn, id) else id
+            return kind.compile(named, running, own).also { compiled = qualifiedIn to it }
         }
 
         /** Checked against the project, and compiled when nothing found errors: from a [qualified] copy for a package, which runs beside the project. */

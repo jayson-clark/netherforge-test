@@ -3,7 +3,7 @@ import { MemoryBackend, type FileContents } from '@/core/backend/memory'
 import { LOCK_FILE, MANIFEST_FILE, type ItemFile } from '@/core/format'
 import { EXAMPLE_ROOT, exampleProject, libraryProject } from '@/testing/fixtures'
 import { exampleWorkspace, settle } from '@/testing/workspace'
-import { directDependencies, fileUrl, packageText } from './packages'
+import { directDependencies, fileUrl, filesIn, packageText } from './packages'
 import { readOnlyReason } from './project'
 import { VALIDATE_DELAY_MS } from './validation'
 import { createWorkspace } from './workspace'
@@ -137,6 +137,23 @@ describe('packages', () => {
     expect(fileUrl(backend, ws().outline, 'resource_packs/ui/pack.json')).toBe(
       backend.projectFileUrl('resource_packs/ui/pack.json'),
     )
+  })
+
+  it("lists a package's files by package path, for a resource of it opened read-only", async () => {
+    const { ws } = await open()
+    await eventually(() =>
+      expect(filesIn(ws(), 'library')).toContain('library:items/gem/item.json'),
+    )
+    const files = filesIn(ws(), 'library')
+    expect(files).toContain('library:resource_packs/gems/textures/item/gem.png')
+    expect(files.every((it) => it.startsWith('library:'))).toBe(true)
+    // The same list while the folder is the same read: a selector can hold it.
+    expect(filesIn(ws(), 'library')).toBe(files)
+    expect(filesIn(ws(), null)).toBe(ws().files)
+    expect(filesIn(ws(), 'nobody')).toEqual([])
+    // A package's module folder opens on its entry, in the package.
+    await ws().openFile('library:modules/greetings')
+    expect(ws().tabs.map((it) => it.path)).toEqual(['library:modules/greetings/init.lua'])
   })
 })
 

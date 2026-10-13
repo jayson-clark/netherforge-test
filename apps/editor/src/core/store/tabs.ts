@@ -5,6 +5,7 @@
  */
 import { KINDS, type BinaryKindId, type EditedKind } from '@/core/format'
 import {
+  inPackage,
   isBinaryKind,
   locationIn,
   locationOf,
@@ -14,6 +15,7 @@ import {
   resourceOf,
 } from '@/core/paths'
 import { docKind, type Doc } from './documents'
+import { filesIn } from './packages'
 import { nextNonce, type SliceArgs } from './slice'
 
 /**
@@ -139,12 +141,15 @@ export function tabsSlice({ get, set }: SliceArgs): TabsState & TabsActions {
         return get().openBinary(resource.kind, resource.id, resource.group)
       // A problem about a resource folder rather than a file: a module opens on the file it runs first.
       if (resource?.role === 'folder')
-        return get().openFile(opensAs(resource.kind, resource.id, resource.group), at)
+        return get().openFile(
+          inPackage(resource.pkg, opensAs(resource.kind, resource.id, resource.group)),
+          at,
+        )
       // A module without an `init.lua` opens on one of the files it does have.
       if (resource && KINDS[resource.kind].contents === 'lua' && resource.rest === MODULE_ENTRY) {
-        const { files } = get()
+        const files = filesIn(get(), resource.pkg)
         if (!files.includes(path)) {
-          const folder = `${locationOf(resource.kind, resource.id, resource.group)}/`
+          const folder = `${inPackage(resource.pkg, locationOf(resource.kind, resource.id, resource.group))}/`
           const lua = files.filter((it) => it.startsWith(folder) && it.endsWith('.lua'))
           // Its top-level files before those in subfolders, each in order.
           const depth = (it: string) => it.split('/').length
@@ -187,7 +192,7 @@ export function tabsSlice({ get, set }: SliceArgs): TabsState & TabsActions {
       const mainOf = (path: string) => {
         const resource = resourceOf(path)
         return resource && KINDS[resource.kind].contents === 'json'
-          ? mainFileOf(resource.kind, resource.id, resource.group)
+          ? inPackage(resource.pkg, mainFileOf(resource.kind, resource.id, resource.group))
           : undefined
       }
       const shown = (path: string) =>

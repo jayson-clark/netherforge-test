@@ -140,6 +140,41 @@ class PackagesTest {
     }
 
     @Test
+    fun `a package's centity runs its own script, which spawns and finds the package's centities by their bare names`() {
+        val files = tree() + mapOf(
+            "../lib/netherforge.json" to manifest("lib", """, "exports": { "centities": ["board"], "modules": ["api"] }"""),
+            "../lib/centities/board/centity.json" to TestServer.scriptedCentity(),
+            "../lib/centities/board/script.lua" to """
+                log("board script", this:kind())
+                -- Not exported: only the package's own code can spawn it.
+                nf.centities.spawn("piece", this:position(), { temporary = true })
+            """,
+            "../lib/centities/piece/centity.json" to TestServer.scriptedCentity(),
+            "../lib/centities/piece/script.lua" to """log("piece script", this:kind())""",
+            "../lib/modules/api/init.lua" to """
+                local api = {}
+                function api.spawn(at) return nf.centities.spawn("board", at) end
+                function api.boards() return #nf.centities.all({ kind = "board" }) end
+                return api
+            """,
+            "modules/main/init.lua" to """
+                local api = require("lib:api")
+                local board = api.spawn(vec3(0.5, 64, 0.5))
+                log("project", board:kind(), api.boards(), #nf.centities.all({ kind = "lib:board" }), #nf.centities.all())
+            """
+        )
+        TestServer(files).use { server ->
+            assertEquals(emptyList(), server.errors.map { it.message })
+            assertEquals(
+                listOf("board script\tboard", "piece script\tpiece", "project\tlib:board\t1\t1\t2"),
+                // Without what the package's other modules and items log as they start.
+                server.logs.filter { "script\t" in it || it.startsWith("project") }
+            )
+            assertEquals(listOf("lib:board", "lib:piece"), server.runtime.session.centities.all().map { it.centity })
+        }
+    }
+
+    @Test
     fun `an error in a package's script is reported at its package path`() {
         val files = tree() + ("../lib/modules/secret/init.lua" to "error(\"boom\")")
         TestServer(files).use { server ->

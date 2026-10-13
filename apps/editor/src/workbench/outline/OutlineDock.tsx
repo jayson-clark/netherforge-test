@@ -6,9 +6,11 @@
  * centity's nodes are there while its Lua is.
  */
 import { Suspense, useEffect } from 'react'
+import { inPackage } from '@/core/paths'
+import { DocumentNamespace } from '@/state/useResourcePacks'
 import { useApp, useWorkspace } from '@/state/providers'
 import { IconButton } from '@/ui/Button'
-import { openMenu } from '@/ui/ContextMenu'
+import { openMenu, type MenuItem } from '@/ui/ContextMenu'
 import { ask } from '@/ui/dialogs'
 import { Empty } from '@/ui/text'
 import { folderByKey } from '../explorer/folders'
@@ -86,7 +88,10 @@ function SubjectOutline({ subject }: { subject: OutlineSubject }) {
     if (subject.main && KindOutline) void workspace.getState().loadDoc(subject.main)
   }, [subject.main, KindOutline, workspace])
 
-  const open = () => void ws().openFile(folder.openPath(subject.id, subject.group))
+  const { pkg } = subject
+  const open = () => void ws().openFile(inPackage(pkg, folder.openPath(subject.id, subject.group)))
+  // A package's resource is read-only, and named in full from the project.
+  const name = inPackage(pkg, subject.id)
   const files = subject.hasFiles ? (
     <FilesPane root={subject.location} kind={subject.kind} main={subject.main} />
   ) : subject.companion ? (
@@ -97,48 +102,66 @@ function SubjectOutline({ subject }: { subject: OutlineSubject }) {
     <>
       <div className={styles.header}>
         <span className={styles.picture}>
-          <Thumbnail folder={folder} id={subject.id} size={HEADER_PICTURE} />
+          {/* Thumbnails are drawn from the project's own resources: a package's shows its kind. */}
+          {pkg === null ? (
+            <Thumbnail folder={folder} id={subject.id} size={HEADER_PICTURE} />
+          ) : (
+            <Icon name={folder.icon} size={18} className={styles.pictureIcon} />
+          )}
         </span>
-        <button type="button" className={styles.name} title={`Open ${subject.id}`} onClick={open}>
+        <button type="button" className={styles.name} title={`Open ${name}`} onClick={open}>
           <span className={styles.id}>{subject.id}</span>
-          <span className={styles.kind}>{folder.one}</span>
+          <span className={styles.kind}>
+            {pkg === null ? folder.one : `${folder.one} · ${pkg}`}
+          </span>
         </button>
         <IconButton
           icon="more"
-          label={`More for ${subject.id}`}
+          label={`More for ${name}`}
           onClick={(event) =>
             openMenu(event, [
               { label: 'Open', run: open },
-              {
-                label: 'Rename…',
-                run: () =>
-                  void askRename(subject.id).then((next) => {
-                    if (next) void actions.rename(folder, subject.id, next)
-                  }),
-              },
-              { label: 'Duplicate', run: () => void actions.duplicate(folder, subject.id) },
-              { label: 'Copy id', run: () => void navigator.clipboard?.writeText(subject.id) },
-              'separator',
-              {
-                label: 'Delete…',
-                danger: true,
-                run: () => void actions.remove(folder, subject.id),
-              },
+              ...(pkg === null
+                ? ownActions()
+                : [{ label: 'Copy id', run: () => void navigator.clipboard?.writeText(name) }]),
             ])
           }
         />
       </div>
-      <div className={styles.body}>
-        {KindOutline && subject.main && loaded ? (
-          <Suspense fallback={<Empty>Loading…</Empty>}>
-            <KindOutline path={subject.main} files={files} />
-          </Suspense>
-        ) : (
-          files
-        )}
-      </div>
+      {/* Outside the editor area: a package's resource names things in its package, as its editor does. */}
+      <DocumentNamespace.Provider value={pkg}>
+        <div className={styles.body}>
+          {KindOutline && subject.main && loaded ? (
+            <Suspense fallback={<Empty>Loading…</Empty>}>
+              <KindOutline path={subject.main} files={files} />
+            </Suspense>
+          ) : (
+            files
+          )}
+        </div>
+      </DocumentNamespace.Provider>
     </>
   )
+
+  function ownActions(): MenuItem[] {
+    return [
+      {
+        label: 'Rename…',
+        run: () =>
+          void askRename(subject.id).then((next) => {
+            if (next) void actions.rename(folder, subject.id, next)
+          }),
+      },
+      { label: 'Duplicate', run: () => void actions.duplicate(folder, subject.id) },
+      { label: 'Copy id', run: () => void navigator.clipboard?.writeText(subject.id) },
+      'separator',
+      {
+        label: 'Delete…',
+        danger: true,
+        run: () => void actions.remove(folder, subject.id),
+      },
+    ]
+  }
 
   function askRename(id: string) {
     return ask.prompt({

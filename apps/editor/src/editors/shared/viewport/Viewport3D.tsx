@@ -8,9 +8,10 @@
  * The scene outlives this component: switching tabs hides it (undrawn,
  * deaf to the pointer) with everything in it, and closing the tab drops it.
  */
-import { useLayoutEffect, useRef, type ReactNode } from 'react'
+import { useContext, useLayoutEffect, useRef, type ReactNode } from 'react'
 import { useStore } from 'zustand'
 import { useApp } from '@/state/providers'
+import { DocumentNamespace } from '@/state/useResourcePacks'
 import { IconButton } from '@/ui/Button'
 import { useView, useViewState } from '@/editors/views'
 import type { ViewKind, ViewStateOf } from '@/editors/registry'
@@ -45,9 +46,15 @@ export function Viewport3D<K extends CameraKind>({
   const view = useView(kind, path)
   const { camera } = useViewState(kind, path) as { camera: CameraPose | null }
   const slot = useRef<HTMLDivElement>(null)
+  // The canvas is the workbench's, outside the editor area: a package's document (opened read-only) names things in
+  // its package, so its scene is given the namespace the editor area set here.
+  const namespace = useContext(DocumentNamespace)
 
   const spec: SceneSpec = {
     ...scene,
+    content: (
+      <DocumentNamespace.Provider value={namespace}>{scene.content}</DocumentNamespace.Provider>
+    ),
     camera,
     onCamera: (pose) => view.update({ camera: pose } as unknown as Partial<ViewStateOf<K>>),
   }

@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { files, openExample, showPanel, test, showKind } from './helpers'
+import { files, filesOf, openExample, outside, showPanel, test, showKind } from './helpers'
 
 test('shows a dependency read-only and copies its item into the project', async ({ page }) => {
   const errors = await openExample(page)
@@ -28,6 +28,74 @@ test('shows a dependency read-only and copies its item into the project', async 
   const written = (await files(page))['items/shiny_gem/item.json']!
   expect(JSON.parse(written).itemModel).toBe('library:gems/gem')
   expect((await files(page))['items/shiny_gem/script.lua']).toContain('The gem hums.')
+  expect(errors).toEqual([])
+})
+
+test("shows a dependency's resource with its own files, pictures and looks", async ({ page }) => {
+  const errors = await openExample(page)
+  await showKind(page, 'Package library')
+  const pkg = page.getByRole('list', { name: 'Package library' })
+
+  // Its item: the outline lists the package's files, and its look is the package's pack's.
+  await pkg.getByRole('listitem', { name: 'library:gem', exact: true }).dblclick()
+  const itemFiles = filesOf(page, 'library:items/gem')
+  await expect(itemFiles.getByRole('row', { name: 'item.json' })).toBeVisible()
+  await expect(itemFiles.getByRole('row', { name: 'script.lua' })).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Item model' })).toHaveValue('gems/gem')
+  await expect(page.getByRole('combobox', { name: 'Item model' })).not.toContainText('missing')
+
+  // Its pack: read from the package (nothing reads resource_packs/gems from the project), its pictures there.
+  await pkg
+    .getByRole('group', { name: 'Resource packs' })
+    .getByRole('listitem', { name: 'library:gems' })
+    .dblclick()
+  await expect(page.getByRole('tab', { name: 'gems', selected: true })).toBeVisible()
+  await expect(
+    filesOf(page, 'library:resource_packs/gems').getByRole('row', { name: 'pack.json' }),
+  ).toBeVisible()
+  await expect(page.getByText(/Couldn't read/)).toHaveCount(0)
+  await expect(page.locator('img[src^="data:image/png"]').first()).toBeVisible()
+  expect(errors).toEqual([])
+})
+
+test("draws a dependency's centity with its own pack's looks", async ({ page }) => {
+  const errors = await openExample(page)
+  // A package kept in the project (as a template is), whose centity shows its own pack's item look.
+  const pkg: Record<string, string> = {
+    'netherforge.json': JSON.stringify({
+      formatVersion: 1,
+      name: 'Board',
+      namespace: 'board',
+      version: '1.0.0',
+      minecraft: '26.3',
+    }),
+    'centities/piece/centity.json': JSON.stringify({
+      nodes: { piece: { display: { type: 'model', model: 'board/pawn' } } },
+    }),
+    'resource_packs/board/pack.json': JSON.stringify({ items: { pawn: { texture: 'pawn.png' } } }),
+  }
+  for (const [path, text] of Object.entries(pkg)) {
+    await outside(page, (b, [p, t]) => b.testWrite(p!, t!), [`vendor/board/${path}`, text])
+  }
+  // A 1×1 PNG.
+  const png =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=='
+  await outside(page, (b, [p, d]) => b.testWriteBytes(p!, d!), [
+    'vendor/board/resource_packs/board/textures/pawn.png',
+    png,
+  ])
+  const manifest = JSON.parse((await files(page))['netherforge.json']!)
+  manifest.dependencies = { ...manifest.dependencies, board: { path: 'vendor/board' } }
+  await outside(page, (b, t) => b.testWrite('netherforge.json', t), JSON.stringify(manifest))
+
+  await showKind(page, 'Package board')
+  await page
+    .getByRole('list', { name: 'Package board' })
+    .getByRole('listitem', { name: 'board:piece' })
+    .dblclick()
+  // `board/pawn` is the package's own look, in the outline (outside the editor area) as in the editor.
+  const node = page.getByRole('treegrid', { name: 'Nodes' }).getByRole('row', { name: /piece/ })
+  await expect(node.locator('img[src^="data:image/png"]')).toBeVisible()
   expect(errors).toEqual([])
 })
 

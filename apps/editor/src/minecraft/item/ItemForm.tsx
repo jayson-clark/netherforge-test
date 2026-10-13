@@ -18,12 +18,11 @@ import {
   type EquipSlot,
   type ItemDef,
   type ItemRarity,
-  type ProjectOutline,
   type TooltipComponent,
   UseAnimationValues,
 } from '@/core/format'
 import { usePickerIds } from '@/minecraft/client/usePickerIds'
-import { useWorkspace } from '@/state/providers'
+import { useResourcePackOutlines } from '@/state/useResourcePacks'
 import type { GlyphMap } from '@/minecraft/text/MiniText'
 import {
   CheckField,
@@ -62,7 +61,6 @@ import { TooltipFrame } from './ItemTooltip'
 import { tooltipOf } from './tooltip'
 
 /** One empty map, so a selector returns the same value while there's no outline yet. */
-const NO_RESOURCE_PACKS: NonNullable<ProjectOutline>['resourcePacks'] = {}
 
 export function ItemEditor({
   item,
@@ -88,7 +86,7 @@ export function ItemEditor({
   projectItems?: string[]
 }) {
   const { items } = usePickerIds()
-  const packs = useWorkspace((s) => s.outline?.resourcePacks ?? NO_RESOURCE_PACKS)
+  const packs = useResourcePackOutlines()
   const listId = useId()
   const itemModels = resourcePackRefs(packs, 'items')
   const tooltipStyles = resourcePackRefs(packs, 'tooltips')

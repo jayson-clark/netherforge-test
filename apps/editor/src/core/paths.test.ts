@@ -37,6 +37,7 @@ describe('paths', () => {
       role: 'file',
       rest: 'script.lua',
       group: '',
+      pkg: null,
     })
     expect(resourceOf('modules/greeter/lib/a.lua')).toMatchObject({
       kind: 'module',
@@ -51,6 +52,7 @@ describe('paths', () => {
       role: 'folder',
       rest: '',
       group: '',
+      pkg: null,
     })
     expect(resourceOf('maps/arena/region/r.0.0.mca')).toMatchObject({ kind: 'map' })
     expect(resourcePackTexturePath('ui', 'gui/shop.png')).toBe(
@@ -92,6 +94,7 @@ describe('paths', () => {
       role: 'main',
       rest: '',
       group: '',
+      pkg: null,
     })
     expect(resourceOf('recipes/.json')).toBeNull()
     expect(resourceOf('recipes/a/b.json')).toBeNull()
@@ -108,6 +111,7 @@ describe('paths', () => {
       role: 'file',
       rest: 'script.lua',
       group: '(weapons)/(wands)',
+      pkg: null,
     })
     expect(resourceOf('items/(weapons)')).toBeNull()
     expect(groupAt('items/(weapons)')).toEqual({ kind: 'item', group: '(weapons)' })

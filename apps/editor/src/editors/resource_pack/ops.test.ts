@@ -20,6 +20,7 @@ import {
   freeEntryKey,
   idFrom,
   importPath,
+  packOf,
   isOgg,
   newEntry,
   pngSize,
@@ -50,6 +51,21 @@ describe('pack ops', () => {
     expect(textures).toContain('gui/shop.png')
     expect(textures).not.toContain('notes.txt')
     expect(unusedTextures(ui(), textures)).toEqual(['gui/extra.png'])
+  })
+
+  it("finds a package's pack in the package's files, by package path", () => {
+    expect(packOf('resource_packs/ui/pack.json')).toBe('ui')
+    expect(packOf('library:resource_packs/gems/pack.json')).toBe('library:gems')
+    const files = [
+      'library:resource_packs/gems/pack.json',
+      'library:resource_packs/gems/textures/item/gem.png',
+      'library:resource_packs/gems/sounds/hum.ogg',
+      // The project's pack of the same id isn't the package's.
+      'resource_packs/gems/textures/other.png',
+    ]
+    expect(texturesOf(files, 'library:gems')).toEqual(['item/gem.png'])
+    expect(soundFilesOf(files, 'library:gems')).toEqual(['hum.ogg'])
+    expect(texturesOf(files, 'gems')).toEqual(['other.png'])
   })
 
   it('adds, renames and removes entries', () => {

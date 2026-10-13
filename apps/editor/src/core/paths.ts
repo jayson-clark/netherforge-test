@@ -120,7 +120,16 @@ export interface ResourcePath {
   rest: string
   /** The group folders it's in (`(weapons)`), empty when none. */
   group: string
+  /** The package it's in, for a package path (`library:items/gem/item.json` → `library`); null for the project's. */
+  pkg: string | null
 }
+
+/**
+ * [path] in package [pkg] (`library:items/gem`), or as it is for the project's own (null). What a path built from
+ * a [ResourcePath] is written with, so a package's resource names its own files and not the project's.
+ */
+export const inPackage = (pkg: string | null, path: string): string =>
+  pkg === null ? path : `${pkg}:${path}`
 
 /**
  * The resource a path belongs to: `centities/tower/script.lua` → centity
@@ -137,6 +146,7 @@ export function resourceOf(path: string): ResourcePath | null {
     role: found.role,
     rest: found.rest ?? '',
     group: found.group ?? '',
+    pkg: found.package ?? null,
   }
 }
 
@@ -229,19 +239,28 @@ export const locationIn = (paths: string[], kind: KindId, id: string) =>
 
 const NO_IDS: string[] = []
 
-/** A pack sound file's project path: `resource_packs/<ns>/sounds/<file>`. */
+/**
+ * A file in a pack by its path there (`textures/gem.png`): `resource_packs/<id>/<file>`; for a package's pack
+ * (`library:gems`, as the packs store keys it) its package path, `library:resource_packs/gems/<file>`.
+ */
+export function resourcePackFilePath(pack: string, file: string): string {
+  const colon = pack.indexOf(':')
+  return inPackage(
+    colon < 0 ? null : pack.slice(0, colon),
+    `${RESOURCE_PACKS}/${pack.slice(colon + 1)}/${file}`,
+  )
+}
+
+/** A pack sound file's path: `resource_packs/<id>/sounds/<file>` (a package's pack's, its package path). */
 export const resourcePackSoundPath = (pack: string, file: string) =>
-  `${RESOURCE_PACKS}/${pack}/${SOUNDS}/${file}`
+  resourcePackFilePath(pack, `${SOUNDS}/${file}`)
 /**
  * A pack texture's project path: `resource_packs/<id>/textures/<texture>`; for a
  * package's pack (`library:gems`, as the packs store keys it) its package path,
  * `library:resource_packs/gems/textures/<texture>` (format's `CompiledResourcePack.texturePath`).
  */
-export function resourcePackTexturePath(pack: string, texture: string): string {
-  const colon = pack.indexOf(':')
-  const local = `${RESOURCE_PACKS}/${pack.slice(colon + 1)}/${TEXTURES}/${texture}`
-  return colon < 0 ? local : `${pack.slice(0, colon)}:${local}`
-}
+export const resourcePackTexturePath = (pack: string, texture: string): string =>
+  resourcePackFilePath(pack, `${TEXTURES}/${texture}`)
 
 export const dirname = (path: string) => path.slice(0, Math.max(0, path.lastIndexOf('/')))
 export const basename = (path: string) => path.slice(path.lastIndexOf('/') + 1)

@@ -184,6 +184,38 @@ export function fileUrl(
   return location === undefined ? '' : backend.packageFileUrl(location, local, stamp)
 }
 
+/** Each package folder's file list by package path, per namespace: worked out once per read of the folder. */
+const listedFiles = new WeakMap<PackageFolder, Map<string, string[]>>()
+
+/**
+ * The files of package [pkg] by package path (`library:items/gem/item.json`), sorted, as the packages slice read
+ * them; the project's own ([Workspace.files]) for null. What lists a resource's files lists a package's from here,
+ * so a dependency's resource opened read-only shows its own files and not the project's. Empty for a package the
+ * outline doesn't have.
+ */
+export function filesIn(
+  s: Pick<Workspace, 'files' | 'packages'> & { outline: Pick<ProjectOutline, 'packages'> | null },
+  pkg: string | null,
+): string[] {
+  if (pkg === null) return s.files
+  const location = s.outline?.packages?.[pkg]?.location
+  const folder = location === undefined ? null : s.packages.folders[location]
+  if (!folder) return NO_FILES
+  let byNamespace = listedFiles.get(folder)
+  if (!byNamespace) listedFiles.set(folder, (byNamespace = new Map()))
+  let listed = byNamespace.get(pkg)
+  if (!listed)
+    byNamespace.set(
+      pkg,
+      (listed = Object.keys(folder.files)
+        .sort()
+        .map((it) => `${pkg}:${it}`)),
+    )
+  return listed
+}
+
+const NO_FILES: string[] = []
+
 /** A read-only mark for a whole package: `library:` (see `readOnlyReason`). */
 export const isPackageMark = (path: string) => path.endsWith(':')
 

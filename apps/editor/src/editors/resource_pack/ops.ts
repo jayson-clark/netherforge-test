@@ -26,7 +26,7 @@ import {
   type SoundDef,
   type TooltipDef,
 } from '@/core/format'
-import { RESOURCE_PACKS, SOUNDS, TEXTURES } from '@/core/paths'
+import { inPackage, resourceOf, resourcePackFilePath, SOUNDS, TEXTURES } from '@/core/paths'
 
 export type EntryKind = 'skins' | 'glyphs' | 'items' | 'tooltips' | 'equipment' | 'blocks'
 export const ENTRY_KINDS: EntryKind[] = [
@@ -67,18 +67,30 @@ export const TEXTURE_FIELDS: Record<EntryKind, readonly string[]> = RESOURCE_PAC
 /** Lower case, so a picture or sound with the wrong case still shows up and format can say what's wrong with it. */
 const hasExtension = (path: string, extension: string) => path.toLowerCase().endsWith(extension)
 
-/** Texture paths (under `textures/`) of a pack, from the project's file list. Format judges their names. */
+/**
+ * The pack a file of one is in, as the packs store keys it: its id (`gems`), or for a package's (opened read-only
+ * from Dependencies) `ns:id` (`library:gems`), so its pictures and sounds are found in the package's folder.
+ */
+export function packOf(path: string): string {
+  const resource = resourceOf(path)
+  return resource ? inPackage(resource.pkg, resource.id) : (path.split('/')[1] ?? '')
+}
+
+/**
+ * Texture paths (under `textures/`) of a pack, from a file list: the project's, or for a package's pack
+ * (`library:gems`) the package's ([filesIn]). Format judges their names.
+ */
 export function texturesOf(files: string[], pack: string): string[] {
-  const prefix = `${RESOURCE_PACKS}/${pack}/${TEXTURES}/`
+  const prefix = resourcePackFilePath(pack, `${TEXTURES}/`)
   return files
     .filter((it) => it.startsWith(prefix) && hasExtension(it, RESOURCE_PACK_TEXTURE_EXTENSION))
     .map((it) => it.slice(prefix.length))
     .sort()
 }
 
-/** Sound files (paths under `sounds/`) of a pack, from the project's file list. Format judges their names. */
+/** Sound files (paths under `sounds/`) of a pack, from a file list as [texturesOf]'s. Format judges their names. */
 export function soundFilesOf(files: string[], pack: string): string[] {
-  const prefix = `${RESOURCE_PACKS}/${pack}/${SOUNDS}/`
+  const prefix = resourcePackFilePath(pack, `${SOUNDS}/`)
   return files
     .filter((it) => it.startsWith(prefix) && hasExtension(it, RESOURCE_PACK_SOUND_EXTENSION))
     .map((it) => it.slice(prefix.length))
