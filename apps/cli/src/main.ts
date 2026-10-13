@@ -5,6 +5,7 @@ import { build, check, format, generate, lock, type Outcome } from './commands.t
 import { findProjectRoot } from './project.ts'
 import { preview } from './preview.ts'
 import { gallery, render } from './render.ts'
+import { findPlaceable, importSchematic, placeableAt, previewStructure } from './structures.ts'
 import { test } from './test.ts'
 
 declare const __NETHERFORGE_VERSION__: string
@@ -55,6 +56,23 @@ Usage:
       requires) as the server does. Prints the picture's size, what its
       colours are and what the script failed at. Problems in the file print
       as check prints them and exit 1.
+  netherforge preview structures/<id>.nbt|builds/<id> --out <file>.png
+                     [--view top|iso | --slice x|y|z --at <n>] [--scale <pixels>]
+  netherforge preview [dir] --structure <id> --out <file>.png ...
+      Draw a structure or a build as the editor's structure screens do:
+      from above (default), isometric from the south-east (--view iso), or
+      a slice through layer --at (counted from 0 at its smallest corner)
+      along x, y or z. Each block is --scale pixels (4; 2 isometric). A
+      build is read a part at a time. Prints what each colour is.
+  netherforge import <file.schem|file.litematic> --as <id> [--build]
+                     [--replace] [--game-data <file>]
+      Import a WorldEdit or Litematica schematic into the project in this
+      folder: structures/<id>.nbt when it fits in one (48 blocks a side),
+      else (or with --build) builds/<id>/, a grid of parts scripts place
+      with world:place_gradually. Block entities come with it; entities
+      don't. Lists the blocks the game data doesn't know (an older
+      version's, which the server renames as it reads them, or a mod's).
+      --replace replaces what's already called <id>.
   netherforge render <item|block|centity file> --out <file>.png [--size <pixels>]
       Draw an item or a block as its inventory icon (64 pixels), or a
       centity in its base pose from the front, its right and above (256),
@@ -107,6 +125,11 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env):
         'min-y': { type: 'string' },
         'max-y': { type: 'string' },
         'dimension-type': { type: 'string' },
+        view: { type: 'string' },
+        structure: { type: 'string' },
+        as: { type: 'string' },
+        build: { type: 'boolean' },
+        replace: { type: 'boolean' },
         help: { type: 'boolean', short: 'h' },
         version: { type: 'boolean', short: 'v' },
       },
@@ -123,9 +146,20 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env):
   const testFile =
     command === 'test' && dir.endsWith('_test.lua') && isFile(dir) ? path.resolve(dir) : null
   // `netherforge preview terrain/hills.json` draws that file, from the project it's in; so does render.
-  const previewFile = command === 'preview' || command === 'render' ? path.resolve(dir) : null
+  // `--structure <id>` names what to draw instead, and the folder is the project's.
+  const previewFile =
+    (command === 'preview' && values.structure === undefined) || command === 'render'
+      ? path.resolve(dir)
+      : null
+  // `netherforge import city.litematic` imports into the project this folder is in.
   const root = findProjectRoot(
-    testFile ? path.dirname(testFile) : previewFile ? path.dirname(previewFile) : dir,
+    testFile
+      ? path.dirname(testFile)
+      : previewFile
+        ? path.dirname(previewFile)
+        : command === 'import'
+          ? '.'
+          : dir,
   )
   if (!root)
     return { out: [], err: [`No netherforge.json in ${dir} or any folder above it.`], code: 2 }
@@ -173,6 +207,29 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env):
         }
         numbers[key] = Number(text)
       }
+      const named = values.structure
+      const placeable =
+        named !== undefined
+          ? findPlaceable(root, named)
+          : placeableAt(path.relative(root, previewFile!).split(path.sep).join('/'))
+      if (named !== undefined && !placeable) {
+        return {
+          out: [],
+          err: [
+            `There's no structure or build "${named}" in the project (structures/${named}.nbt, builds/${named}/).`,
+          ],
+          code: 2,
+        }
+      }
+      if (placeable) {
+        return previewStructure(root, placeable, {
+          view: values.view,
+          slice: values.slice,
+          at: numbers.at,
+          scale: numbers.scale,
+          out: values.out,
+        })
+      }
       return preview(root, previewFile!, {
         seed: values.seed,
         x: numbers.x,
@@ -190,6 +247,18 @@ export async function run(argv: string[], env: NodeJS.ProcessEnv = process.env):
         out: values.out,
       })
     }
+    case 'import':
+      return importSchematic(
+        root,
+        path.resolve(dir),
+        {
+          as: values.as,
+          build: values.build,
+          replace: values.replace,
+          gameData: values['game-data'],
+        },
+        env,
+      )
     case 'test':
       return test(
         root,

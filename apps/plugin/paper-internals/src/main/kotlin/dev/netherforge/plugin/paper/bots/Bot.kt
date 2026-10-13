@@ -218,11 +218,17 @@ internal class Bot(
     private val chunks = HashSet<Long>()
 
     /**
-     * The tick the chunk it stands in arrived (since joining or respawning),
-     * or null while it's still loading: when the client says it has loaded,
-     * and what a join waits for.
+     * The tick the chunk it stands in arrived (since joining, respawning or
+     * changing worlds), or null while it's still loading: when the client says
+     * it has loaded, and what a join waits for.
      */
     private var loadedAt: Int? = null
+
+    /**
+     * Actions asked for while it's loading another world, done once it has: a client
+     * on the loading screen does nothing, and the server ignores what it would.
+     */
+    private val afterLoading = ArrayDeque<Triple<BotAction, BotAim?, (Result<BotActResult>) -> Unit>>()
 
     /** The client's counter for actions the server acknowledges (using items, breaking blocks). */
     private var sequence = 0
@@ -288,6 +294,14 @@ internal class Bot(
             // The terrain it stands in has arrived: the client stops showing "Loading terrain" and says so.
             loadedAt = ticks
             deliver { ServerboundPlayerLoadedPacket().handle(game) }
+            while (true) {
+                val (action, aim, done) = afterLoading.removeFirstOrNull() ?: break
+                try {
+                    act(action, aim, done)
+                } catch (e: Exception) {
+                    done(Result.failure(e))
+                }
+            }
         }
         val joining = onJoined
         // In once it's placed and its first terrain has had a tick to bring the entities standing in it.
@@ -325,6 +339,10 @@ internal class Bot(
         task?.let {
             task = null
             it.finish(Result.failure(IllegalStateException("$name is gone: $goneReason")))
+        }
+        while (true) {
+            val (_, _, done) = afterLoading.removeFirstOrNull() ?: break
+            done(Result.failure(IllegalStateException("$name is gone: $goneReason")))
         }
     }
 
@@ -731,6 +749,10 @@ internal class Bot(
      */
     fun act(action: BotAction, aim: BotAim?, done: (Result<BotActResult>) -> Unit) {
         val game = game?.takeIf { joined } ?: throw IllegalStateException("$name is still joining")
+        if (loadedAt == null && action !is BotAction.Stop) {
+            afterLoading += Triple(action, aim, done)
+            return
+        }
         val player = game.player
         val since = events.next
         fun finished() = done(Result.success(result(since)))

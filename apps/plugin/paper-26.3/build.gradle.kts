@@ -3,5 +3,5 @@ plugins {
 }
 
 paperAdapter {
-    paper = "26.3.build.152-beta"
+    paper = "26.3.build.181-stable"
 }

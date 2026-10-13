@@ -10,6 +10,8 @@ import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.ProjectGenerator
 import dev.netherforge.plugin.platform.StructureOps
 import dev.netherforge.plugin.platform.StructurePlacement
+import dev.netherforge.plugin.platform.StructurePlacer
+import dev.netherforge.plugin.platform.StructureTransform
 import dev.netherforge.plugin.platform.WorldFiles
 import dev.netherforge.plugin.platform.WorldManagerOps
 import dev.netherforge.plugin.platform.WorldSettings
@@ -296,6 +298,54 @@ class FakeStructures(private val platform: FakePlatform) : StructureOps {
             }
         }
         return true
+    }
+
+    /** Gradual placements opened, as `"<file name> <world> origin=x,y,z offset=x,y,z rotation=<r> mirror=<m>"`. */
+    val placers = mutableListOf<String>()
+
+    /**
+     * Its blocks (the fake's text, or a real file's, air and all) put where [transform] says, a few at a time; a
+     * block's state is written as saved (the fake doesn't turn states). It holds no entities.
+     */
+    override fun placer(
+        file: Path,
+        world: String,
+        transform: StructureTransform,
+        placement: StructurePlacement,
+        seed: Long
+    ): StructurePlacer? {
+        if (!platform.worlds.exists(world)) return null
+        val template = template(file) ?: return null
+        val states = template.palette
+        val blocks = template.blocks
+        placers += "${file.fileName} $world origin=${transform.origin.x},${transform.origin.y},${transform.origin.z} " +
+            "offset=${transform.offset.x},${transform.offset.y},${transform.offset.z} rotation=${placement.rotation} mirror=${placement.mirror}"
+        val random = java.util.Random(seed)
+        return object : StructurePlacer {
+            private var next = 0
+            override val size = BlockVector(template.sizeX, template.sizeY, template.sizeZ)
+            override val hasEntities = false
+            override val remaining get() = blocks.size / 4 - next
+            override var placed = 0L
+
+            override fun place(budget: Int): Int? {
+                if (!platform.worlds.exists(world)) return null
+                val (bottom, top) = platform.worldManager.heightsOf(world)
+                var went = 0
+                while (went < budget && next < blocks.size / 4) {
+                    val i = next++ * 4
+                    went++
+                    if (placement.integrity < 1.0 && random.nextFloat() > placement.integrity) continue
+                    val at = transform.block(blocks[i], blocks[i + 1], blocks[i + 2])
+                    if (at.y < bottom || at.y >= top) continue
+                    platform.worlds.blocks[BlockAt(world, at.x, at.y, at.z)] = states[blocks[i + 3]]
+                    placed++
+                }
+                return went
+            }
+
+            override fun entities(): Boolean = platform.worlds.exists(world)
+        }
     }
 
     override fun save(file: Path, world: String, min: BlockVector, max: BlockVector, entities: Boolean): Boolean {

@@ -66,6 +66,8 @@ import dev.netherforge.format.terrain.TerrainNoise
 import dev.netherforge.format.terrain.TerrainScript
 import dev.netherforge.format.terrain.WorldHeight
 import dev.netherforge.format.text.DefaultFontFile
+import dev.netherforge.format.world.Builds
+import dev.netherforge.format.world.EmptyBlocks
 import kotlinx.serialization.descriptors.StructureKind
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -317,6 +319,19 @@ internal object Constants {
         append("  maxCoordinate: ${num(CutsceneFile.MAX_COORDINATE)},\n")
         append("  defaultCueDuration: ${num(Cue.DEFAULT_DURATION)},\n")
         append("} as const\n\n")
+
+        append("/** Builds (`builds/<id>/`): a part's side in blocks, and the most parts along an axis. */\n")
+        append("export const BUILD_LIMITS = {\n")
+        append("  partSide: ${Builds.PART_SIDE},\n")
+        append("  maxParts: ${Builds.MAX_PARTS},\n")
+        append("} as const\n\n")
+
+        append("/** Blocks a structure file holds that mean nothing's there: a picture of it draws them as empty. */\n")
+        append(
+            "export const EMPTY_BLOCKS: readonly string[] = [${EmptyBlocks.IDS.sorted().joinToString(", ") {
+                CanonicalJson.quote(it)
+            }}]\n\n"
+        )
 
         append("/** Terrain limits (the validator's ranges) and what an absent field means. */\n")
         append("export const TERRAIN_LIMITS = {\n")

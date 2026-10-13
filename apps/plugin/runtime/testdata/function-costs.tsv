@@ -666,6 +666,7 @@ World:environment	15
 World:exists	15
 World:explode	54
 World:fill_blocks	86
+World:fill_gradually	111
 World:flood	142
 World:game_rule	17
 World:highest_block	48
@@ -686,6 +687,7 @@ World:once	148
 World:overlap_box	96
 World:overlap_cone	100
 World:overlap_sphere	65
+World:place_gradually	81
 World:place_structure	56
 World:play_sound	55
 World:players	15

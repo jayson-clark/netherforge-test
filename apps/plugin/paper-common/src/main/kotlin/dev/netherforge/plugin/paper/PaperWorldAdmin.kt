@@ -9,6 +9,8 @@ import dev.netherforge.plugin.platform.FileWork
 import dev.netherforge.plugin.platform.ProjectGenerator
 import dev.netherforge.plugin.platform.StructureOps
 import dev.netherforge.plugin.platform.StructurePlacement
+import dev.netherforge.plugin.platform.StructurePlacer
+import dev.netherforge.plugin.platform.StructureTransform
 import dev.netherforge.plugin.platform.WorldFiles
 import dev.netherforge.plugin.platform.WorldManagerOps
 import dev.netherforge.plugin.platform.WorldSettings
@@ -19,9 +21,12 @@ import org.bukkit.World
 import org.bukkit.WorldBorder
 import org.bukkit.WorldCreator
 import org.bukkit.WorldType
+import org.bukkit.block.BlockFace
+import org.bukkit.block.BlockState
 import org.bukkit.block.TileState
 import org.bukkit.block.structure.Mirror
 import org.bukkit.block.structure.StructureRotation
+import org.bukkit.entity.Hanging
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
@@ -324,6 +329,99 @@ class PaperStructures(private val entities: PaperEntities) : StructureOps {
             listOf(notOurs)
         )
         return true
+    }
+
+    override fun placer(
+        file: Path,
+        world: String,
+        transform: StructureTransform,
+        placement: StructurePlacement,
+        seed: Long
+    ): StructurePlacer? {
+        val w = Bukkit.getWorld(world) ?: return null
+        // A build's parts are read for this alone and let go with it; a structure already kept is used as kept.
+        val structure = cache[file] ?: try {
+            manager.loadStructure(file.toFile())
+        } catch (_: Exception) {
+            null
+        } ?: return null
+        return PaperPlacer(w, structure, transform, placement, Random(seed))
+    }
+
+    /**
+     * Places [structure] a few blocks at a time, as the game's template would all at once: each block's data
+     * mirrored then turned, its block entity's data with it, no updates to neighbours (`/place` sets them the
+     * same way); then its entities, copied where the template would put them and turned as it turns them.
+     */
+    private inner class PaperPlacer(
+        private val world: World,
+        private val structure: Structure,
+        private val transform: StructureTransform,
+        private val placement: StructurePlacement,
+        private val random: Random
+    ) : StructurePlacer {
+        // A random palette, as /place picks one: a structure saved here has one.
+        private val blocks: List<BlockState> = structure.palettes.let {
+            if (it.isEmpty()) emptyList() else it[random.nextInt(it.size)].blocks
+        }
+        private var next = 0
+        private val rotation = when (placement.rotation) {
+            90 -> StructureRotation.CLOCKWISE_90
+            180 -> StructureRotation.CLOCKWISE_180
+            270 -> StructureRotation.COUNTERCLOCKWISE_90
+            else -> StructureRotation.NONE
+        }
+        private val mirror = when (placement.mirror) {
+            "left_right" -> Mirror.LEFT_RIGHT
+            "front_back" -> Mirror.FRONT_BACK
+            else -> Mirror.NONE
+        }
+
+        override val size: BlockVector = structure.size.let { BlockVector(it.blockX, it.blockY, it.blockZ) }
+        override val hasEntities: Boolean get() = structure.entityCount > 0
+        override val remaining: Int get() = blocks.size - next
+        override var placed = 0L
+            private set
+
+        private fun live(): Boolean = Bukkit.getWorld(world.uid) === world
+
+        override fun place(budget: Int): Int? {
+            if (!live()) return null
+            val bottom = world.minHeight
+            val top = world.maxHeight
+            var went = 0
+            while (went < budget && next < blocks.size) {
+                val saved = blocks[next++]
+                went++
+                if (placement.integrity < 1.0 && random.nextFloat() > placement.integrity) continue
+                val at = transform.block(saved.x, saved.y, saved.z)
+                if (at.y < bottom || at.y >= top) continue
+                val data = saved.blockData.clone()
+                data.mirror(mirror)
+                data.rotate(rotation)
+                val state = saved.copy(Location(world, at.x.toDouble(), at.y.toDouble(), at.z.toDouble()))
+                state.blockData = data
+                state.update(true, false)
+                placed++
+            }
+            return went
+        }
+
+        override fun entities(): Boolean {
+            if (!live()) return false
+            for (entity in structure.entities) {
+                // What centities are drawn with would come back as strays nobody owns.
+                if (this@PaperStructures.entities.tagOf(entity) != null) continue
+                val from = entity.location
+                val (x, y, z) = transform.point(from.x, from.y, from.z)
+                val copy = entity.copy(Location(world, x, y, z, transform.yaw(from.yaw), from.pitch))
+                if (copy is Hanging) {
+                    val facing = BlockFace.valueOf(transform.facing(copy.facing.name.lowercase()).uppercase())
+                    copy.setFacingDirection(facing, true)
+                }
+            }
+            return true
+        }
     }
 
     override fun save(file: Path, world: String, min: BlockVector, max: BlockVector, entities: Boolean): Boolean {

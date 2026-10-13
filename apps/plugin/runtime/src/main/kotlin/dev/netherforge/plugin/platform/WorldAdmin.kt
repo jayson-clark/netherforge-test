@@ -208,6 +208,120 @@ data class StructurePlacement(val rotation: Int, val mirror: String, val integri
 data class BlockVector(val x: Int, val y: Int, val z: Int)
 
 /**
+ * Where a structure file's blocks and entities go when what it's part of is placed with its smallest corner at
+ * [origin], mirrored by [mirror] then turned [rotation] degrees clockwise about that corner: the game's own
+ * arithmetic (its structure template's `transform` with the pivot at the corner), so a gradual placement puts
+ * every block where `/place` would. [offset] is where the file sits inside what's placed: a build's part, or
+ * nothing for a structure.
+ */
+class StructureTransform(val origin: BlockVector, val offset: BlockVector, val rotation: Int, val mirror: String) {
+    init {
+        require(rotation in setOf(0, 90, 180, 270)) { "rotation $rotation" }
+        require(mirror in setOf("none", "left_right", "front_back")) { "mirror $mirror" }
+    }
+
+    /** Where the block at [x], [y], [z] in the file goes in the world. */
+    fun block(x: Int, y: Int, z: Int): BlockVector {
+        var bx = offset.x + x
+        var bz = offset.z + z
+        when (mirror) {
+            "left_right" -> bz = -bz
+            "front_back" -> bx = -bx
+        }
+        val (tx, tz) = when (rotation) {
+            90 -> -bz to bx
+            180 -> -bx to -bz
+            270 -> bz to -bx
+            else -> bx to bz
+        }
+        return BlockVector(origin.x + tx, origin.y + offset.y + y, origin.z + tz)
+    }
+
+    /** Where an entity at [x], [y], [z] in the file goes in the world: a point, so turning it keeps it inside its block. */
+    fun point(x: Double, y: Double, z: Double): Triple<Double, Double, Double> {
+        var px = offset.x + x
+        var pz = offset.z + z
+        when (mirror) {
+            "left_right" -> pz = 1.0 - pz
+            "front_back" -> px = 1.0 - px
+        }
+        val (tx, tz) = when (rotation) {
+            90 -> 1.0 - pz to px
+            180 -> 1.0 - px to 1.0 - pz
+            270 -> pz to 1.0 - px
+            else -> px to pz
+        }
+        return Triple(origin.x + tx, origin.y + offset.y + y, origin.z + tz)
+    }
+
+    /** The yaw an entity facing [yaw] has once placed: mirrored, then turned (the game's `mirror` and `rotate`). */
+    fun yaw(yaw: Float): Float {
+        val wrapped = wrapDegrees(yaw)
+        val mirrored = when (mirror) {
+            "front_back" -> -wrapped
+            "left_right" -> 180f - wrapped
+            else -> wrapped
+        }
+        return wrapDegrees(mirrored + rotation)
+    }
+
+    /** A horizontal facing (`north`, `east`, `south`, `west`) once placed; any other (`up`, `down`) stays. */
+    fun facing(facing: String): String {
+        val mirrored = when {
+            mirror == "left_right" && facing == "north" -> "south"
+            mirror == "left_right" && facing == "south" -> "north"
+            mirror == "front_back" && facing == "east" -> "west"
+            mirror == "front_back" && facing == "west" -> "east"
+            else -> facing
+        }
+        val at = HORIZONTAL.indexOf(mirrored)
+        return if (at < 0) mirrored else HORIZONTAL[(at + rotation / 90) % 4]
+    }
+
+    private fun wrapDegrees(degrees: Float): Float {
+        val turned = degrees % 360f
+        return when {
+            turned >= 180f -> turned - 360f
+            turned < -180f -> turned + 360f
+            else -> turned
+        }
+    }
+
+    private companion object {
+        /** Clockwise, seen from above. */
+        val HORIZONTAL = listOf("north", "east", "south", "west")
+    }
+}
+
+/**
+ * One structure file being placed a few blocks at a time ([StructureOps.placer]): its blocks in the file's own
+ * order (the game saves whole blocks first, bottom up, then blocks with data, then the rest, so what stands on
+ * something goes in after it), then its entities.
+ */
+interface StructurePlacer {
+    /** The file's size, in blocks along x, y and z (before it's turned). */
+    val size: BlockVector
+
+    /** Whether the file holds entities (other than NetherForge's own) that [entities] would place. */
+    val hasEntities: Boolean
+
+    /** Blocks it hasn't gone through yet. */
+    val remaining: Int
+
+    /** Blocks it has placed: not those integrity left out, nor those outside the world's heights. */
+    val placed: Long
+
+    /**
+     * Goes through up to [budget] more blocks, placing each as it was saved (its data with it, no updates to its
+     * neighbours) and loading its chunk if need be; answers how many it went through, or null when the world has gone.
+     */
+    fun place(budget: Int): Int?
+
+    /** Places its entities (none of NetherForge's own), once every block is in. False when the world has gone. */
+    fun entities(): Boolean
+}
+
+/**
  * Structures, in Minecraft's structure file format. A file is read once and
  * kept until [forget] (a reload of it); placing loads the chunks it covers.
  */
@@ -224,6 +338,14 @@ interface StructureOps {
 
     /** Places the structure in [file] with its smallest corner at [at]. False when the world has gone or the file can't be read. */
     fun place(file: Path, world: String, at: BlockVector, placement: StructurePlacement): Boolean
+
+    /**
+     * The structure in [file] to place a few blocks at a time where [transform] says, with [placement]'s
+     * integrity and entities ([placement]'s rotation and mirror are [transform]'s), integrity's chances drawn from
+     * [seed]. Null when the world has gone or the file can't be read. A file not already kept is read for this and
+     * let go with it, so a build's parts don't all stay in memory.
+     */
+    fun placer(file: Path, world: String, transform: StructureTransform, placement: StructurePlacement, seed: Long): StructurePlacer?
 
     /** Saves the box from [min] to [max] (both included) into [file], replacing it. False when the world has gone or it can't be written. */
     fun save(file: Path, world: String, min: BlockVector, max: BlockVector, entities: Boolean): Boolean

@@ -103,6 +103,18 @@ decorations without the editor, and a terrain with problems prints them as
 `check` does.
 
 ```sh
+node .netherforge/bin/netherforge.mjs preview builds/castle --view iso --out castle.png
+node .netherforge/bin/netherforge.mjs import ~/schematics/castle.litematic --as castle
+```
+
+`preview` draws a structure or a [build](../format/worlds.md#builds) too: from
+above, isometric (`--view iso`), or a slice through one layer (`--slice y --at
+12`), with a line per kind of block it shows, so an agent can check a build's
+shape. `import` brings a WorldEdit `.schem` or Litematica `.litematic`
+schematic into the project, as `structures/<id>.nbt` when it fits in one and
+as a build when it doesn't, and names the blocks the game data doesn't know.
+
+```sh
 node .netherforge/bin/netherforge.mjs render centities/wisp/centity.json --out wisp.png
 node .netherforge/bin/netherforge.mjs gallery --out build/gallery
 ```

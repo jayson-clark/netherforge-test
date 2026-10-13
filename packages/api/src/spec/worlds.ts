@@ -20,6 +20,16 @@ const shape = (name: string, doc: string, fields: Field[]): LuaClass => ({
 export const FILL_LIMIT = 32768
 
 /**
+ * How many blocks one `world:fill_gradually` may change: 256 × 256 × 256. It goes a few thousand blocks a tick,
+ * so this is minutes of work, not a stall; the cap only keeps a typo from queueing hours of it.
+ */
+export const FILL_GRADUALLY_LIMIT = 16777216
+
+/** What `place_gradually` and `fill_gradually` say about how fast they go, the owner's settings named. */
+const GRADUAL =
+  "It goes a few thousand blocks a tick, shared with every other gradual placement and fill on the server (the owner's `structures.blocks-per-tick` in `config.yml`), so even a big one never stalls the server; each package may have a few going at once (`structures.max-jobs-per-package`), past which one fails at once."
+
+/**
  * How far `world:locate_biome` may look, in blocks: `/locate biome`'s own
  * limit, which a search that finds nothing covers in a few seconds of one
  * background thread.
@@ -335,7 +345,7 @@ export const worldClass: LuaClass = {
     },
     {
       name: 'fill_blocks',
-      doc: `Sets every block in the box between two corners (both included) to one state. One call changes at most ${FILL_LIMIT} blocks: a bigger box is an error, so spread a big fill over several ticks with a task. A block state the server doesn't have is an error. Blocks in unloaded chunks are skipped.`,
+      doc: `Sets every block in the box between two corners (both included) to one state. One call changes at most ${FILL_LIMIT} blocks: a bigger box is an error (\`fill_gradually\` spreads a big fill over several ticks). A block state the server doesn't have is an error. Blocks in unloaded chunks are skipped.`,
       params: [
         { name: 'from', type: 'Vec3', doc: 'One corner.' },
         { name: 'to', type: 'Vec3', doc: 'The opposite corner.' },
@@ -348,6 +358,24 @@ export const worldClass: LuaClass = {
       example:
         'nf.task(function()\n  for y = 64, 127 do\n    world:fill_blocks(vec3(0, y, 0), vec3(63, y, 63), "minecraft:air")\n    nf.wait(1)\n  end\nend)',
     },
+    asyncFunction({
+      name: 'fill_gradually',
+      doc: `Sets every block in the box between two corners (both included) to one state, like \`fill_blocks\`, but over as many ticks as it takes, for a box too big for one call: up to ${FILL_GRADUALLY_LIMIT} blocks (256 × 256 × 256). ${GRADUAL} It goes a chunk's column at a time, from the bottom up, loading the chunks the box covers as it reaches them (\`fill_blocks\` skips unloaded ones). A bigger box, a block state the server doesn't have, or a \`per_tick\` below 1 is an error at once. The world going, or this script stopping, stops it part way, and what was set stays.`,
+      later: 'It takes as many ticks as the fill does',
+      params: [
+        { name: 'from', type: 'Vec3', doc: 'One corner.' },
+        { name: 'to', type: 'Vec3', doc: 'The opposite corner.' },
+        { name: 'state', type: 'string', doc: 'A block state, as `set_block` takes it.' },
+        { name: 'options', type: 'GradualFillOptions', doc: '', optional: true },
+      ],
+      value: {
+        name: 'changed',
+        type: 'integer',
+        doc: 'how many blocks it changed (a block that was already that state is not counted)',
+      },
+      example:
+        'world:fill_gradually(vec3(-200, 0, -200), vec3(199, 120, 199), "minecraft:air", nil, function(changed, err)\n  if err then\n    print("The clear-out stopped: " .. err)\n  else\n    nf.server.broadcast(changed .. " blocks cleared")\n  end\nend)',
+    }),
     {
       name: 'highest_block',
       doc: "The highest block at a column that isn't air, ignoring the position's `y`. `nil` in an unloaded chunk, or a world that has gone.",
@@ -702,7 +730,7 @@ export const worldClass: LuaClass = {
     },
     {
       name: 'save_structure',
-      doc: "Saves the box between two corners (both included) as a structure named `id`, to place later with `place_structure`: an arena to reset, a prefab to stamp. It's saved in the server's data folder, not the project, and kept across restarts; saving the same id again replaces it. An id that isn't an id (lowercase letters, digits and `_`), or that one of the project's structures (`structures/<id>.nbt`) already has, is an error, as is a box over 48 blocks along any side. Air is saved too, so placing it puts back the empty space as well; it loads the chunks the box covers, as `/place` does.",
+      doc: "Saves the box between two corners (both included) as a structure named `id`, to place later with `place_structure`: an arena to reset, a prefab to stamp. It's saved in the server's data folder, not the project, and kept across restarts; saving the same id again replaces it. An id that isn't an id (lowercase letters, digits and `_`), or that one of the project's structures (`structures/<id>.nbt`) or builds (`builds/<id>/`) already has, is an error, as is a box over 48 blocks along any side. Air is saved too, so placing it puts back the empty space as well; it loads the chunks the box covers, as `/place` does.",
       params: [
         { name: 'id', type: 'string', doc: 'Its name: `"arena_reset"`.', names: 'structure' },
         { name: 'from', type: 'Vec3', doc: 'One corner.' },
@@ -720,7 +748,7 @@ export const worldClass: LuaClass = {
     },
     {
       name: 'place_structure',
-      doc: "Places a structure with its smallest corner at `position` (before it's turned): one of the project's (`structures/<id>.nbt`) or one a script saved (`save_structure`). Loads the chunks it covers, as `/place` does. A structure there's none of, one whose file can't be read, a `rotation` that isn't a multiple of 90 or an `integrity` outside 0 to 1 is an error.",
+      doc: "Places a structure with its smallest corner at `position` (before it's turned): one of the project's (`structures/<id>.nbt`) or one a script saved (`save_structure`). Loads the chunks it covers, as `/place` does, all in this tick: `place_gradually` spreads a big one over several. A build (`builds/<id>/`) is always placed that way, so naming one here is an error, as is a structure there's none of, one whose file can't be read, a `rotation` that isn't a multiple of 90 or an `integrity` outside 0 to 1.",
       params: [
         { name: 'id', type: 'string', doc: 'Which structure.', names: 'structure' },
         {
@@ -734,6 +762,27 @@ export const worldClass: LuaClass = {
       example:
         'world:place_structure("arena_reset", vec3(0, 60, 0), { rotation = 90, mirror = "none", integrity = 1, entities = false })',
     },
+    asyncFunction({
+      name: 'place_gradually',
+      doc: `Places a structure or a build (\`builds/<id>/\`, a structure too big for one file) like \`place_structure\`, its smallest corner at \`position\` before it's turned, but over as many ticks as it takes. ${GRADUAL} Its blocks go in from the bottom up (a build's a part at a time), loading the chunks it covers as it reaches them, then its entities, once every block is in. Blocks go in as they were saved, with no updates to their neighbours, as \`/place\` puts them. A structure or build there's none of, a \`rotation\` that isn't a multiple of 90, an \`integrity\` outside 0 to 1 or a \`per_tick\` below 1 is an error at once. A part that can't be read, the world going, or this script stopping stops it part way, and what was placed stays.`,
+      later: 'It takes as many ticks as the placing does',
+      params: [
+        { name: 'id', type: 'string', doc: 'Which structure or build.', names: 'structure' },
+        {
+          name: 'position',
+          type: 'Vec3',
+          doc: 'Where its smallest corner goes, floored to a block.',
+        },
+        { name: 'options', type: 'GradualPlaceOptions', doc: '', optional: true },
+      ],
+      value: {
+        name: 'placed',
+        type: 'integer',
+        doc: "how many blocks it placed (those `integrity` left out, or outside the world's heights, are not counted)",
+      },
+      example:
+        'nf.task(function()\n  local placed, err = world:place_gradually("castle", vec3(0, 64, 0), { rotation = 90 })\n  if not placed then\n    print("The castle stopped part way: " .. err)\n    return\n  end\n  nf.server.broadcast("The castle is up: " .. placed .. " blocks")\nend)',
+    }),
     ...eventFunctions(
       'World',
       'world',
@@ -1140,6 +1189,53 @@ export const worldShapes: LuaClass[] = [
     ],
   ),
   shape(
+    'GradualPlaceOptions',
+    "How `world:place_gradually` places one. A key that isn't one of these is an error.",
+    [
+      {
+        name: 'rotation',
+        type: 'integer?',
+        doc: 'How far it turns clockwise (seen from above) about its smallest corner, in degrees: 0, 90, 180 or 270 (any multiple of 90). Default 0.',
+      },
+      {
+        name: 'mirror',
+        type: '"none"|"left_right"|"front_back"?',
+        doc: 'Whether it\'s mirrored first: `"left_right"` flips it along z, `"front_back"` along x. Default `"none"`.',
+      },
+      {
+        name: 'integrity',
+        type: 'number?',
+        doc: 'How much of it is placed, 0 to 1: each block is kept with this chance. Default 1: all of it.',
+      },
+      {
+        name: 'entities',
+        type: 'boolean?',
+        doc: 'Whether the entities saved with it are placed too, once its blocks are in. Default `true`.',
+      },
+      {
+        name: 'per_tick',
+        type: 'integer?',
+        doc: "The most blocks it places in one tick, 1 or more: slower than the server's share, never faster. Default: as many as its share allows.",
+      },
+    ],
+  ),
+  shape(
+    'GradualFillOptions',
+    "How `world:fill_gradually` fills. A key that isn't one of these is an error.",
+    [
+      {
+        name: 'update',
+        type: 'boolean?',
+        doc: 'Whether neighbours react to each block (sand falls, water flows), as `BlockSetOptions` says. Default `true`.',
+      },
+      {
+        name: 'per_tick',
+        type: 'integer?',
+        doc: "The most blocks it goes through in one tick, 1 or more: slower than the server's share, never faster. Default: as many as its share allows.",
+      },
+    ],
+  ),
+  shape(
     'BlockBoxOptions',
     "What `world:blocks` gives for each block. A key that isn't one of these is an error.",
     [
@@ -1532,19 +1628,19 @@ export const nfWorlds: LuaClass = {
 /** `nf.structures`. */
 export const nfStructures: LuaClass = {
   name: 'nf.structures',
-  doc: "Structures: saved boxes of blocks that `world:place_structure` places. The project's are `structures/<id>.nbt`; scripts save more with `world:save_structure`.",
+  doc: "Structures: saved boxes of blocks that `world:place_structure` places. The project's are `structures/<id>.nbt`; scripts save more with `world:save_structure`. A build (`builds/<id>/`) is a structure too big for one file, kept in parts, which `world:place_gradually` places over several ticks; these functions name both alike.",
   methods: false,
   fields: [],
   functions: [
     {
       name: 'exists',
-      doc: "Whether there's a structure by that id: one of the project's, or one a script saved.",
+      doc: "Whether there's a structure or build by that id: one of the project's, or a structure a script saved.",
       params: [{ name: 'id', type: 'string', doc: '', names: 'structure' }],
       returns: [{ type: 'boolean' }],
     },
     {
       name: 'size',
-      doc: "How big a structure is, in blocks along x, y and z (before it's turned), or `nil` when there's none by that id. One whose file can't be read is an error.",
+      doc: "How big a structure or build is, in blocks along x, y and z (before it's turned), or `nil` when there's none by that id. One whose file (for a build, its last part's) can't be read is an error.",
       params: [{ name: 'id', type: 'string', doc: '', names: 'structure' }],
       returns: [{ type: 'Vec3?' }],
       example:

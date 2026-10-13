@@ -40,6 +40,8 @@ data class RuntimeConfig(
     val web: WebConfig = WebConfig(),
     /** Whether scripts may join bots (`nf.bots`), and how many. */
     val bots: BotsConfig = BotsConfig(),
+    /** How fast `world:place_gradually` and `world:fill_gradually` go, and how many a package may have going. */
+    val structures: StructuresConfig = StructuresConfig(),
     /**
      * Whether the project's dependencies are found where `netherforge.json`'s
      * paths point: on the editor's dev server (and in tests). A production
@@ -103,6 +105,7 @@ data class RuntimeConfig(
             val http = http(settings.section("http"))
             val web = web(settings.section("web"))
             val databases = DatabasesConfig.read(settings.section("databases"))
+            val structures = structures(settings.section("structures"))
             properties(Bridge.PROJECT_PROPERTY)?.takeIf { it.isNotBlank() }?.let { project ->
                 val port = properties(Bridge.PORT_PROPERTY)?.toIntOrNull()
                 return RuntimeConfig(
@@ -117,6 +120,7 @@ data class RuntimeConfig(
                     // Bots are always on where the project is being made: trying them is the point.
                     bots = bots(settings.section("bots")).copy(enabled = true),
                     databases = databases,
+                    structures = structures,
                     packageCache = properties(Bridge.PACKAGE_CACHE_PROPERTY)?.takeIf {
                         it.isNotBlank()
                     }?.let { Path.of(it).toAbsolutePath().normalize() },
@@ -135,6 +139,7 @@ data class RuntimeConfig(
                 web = web,
                 bots = bots(settings.section("bots")),
                 databases = databases,
+                structures = structures,
                 resolvesPackages = false
             )
         }
@@ -208,6 +213,16 @@ data class RuntimeConfig(
             return BotsConfig(
                 enabled = section.boolean("enabled") ?: defaults.enabled,
                 max = section.int("max")?.takeIf { it > 0 } ?: defaults.max
+            )
+        }
+
+        /** `structures:`: how fast gradual placements and fills go. A number that isn't a positive one is the default. */
+        private fun structures(section: Map<String, Any?>): StructuresConfig {
+            val defaults = StructuresConfig()
+            fun positive(key: String, default: Int) = section.int(key)?.takeIf { it > 0 } ?: default
+            return StructuresConfig(
+                blocksPerTick = positive("blocks-per-tick", defaults.blocksPerTick),
+                maxJobsPerPackage = positive("max-jobs-per-package", defaults.maxJobsPerPackage)
             )
         }
 
@@ -342,6 +357,13 @@ data class WebConfig(
  * aren't held to either.
  */
 data class BotsConfig(val enabled: Boolean = false, val max: Int = 20)
+
+/**
+ * `structures:` in `config.yml`, read on dev servers too: how fast `world:place_gradually` and
+ * `world:fill_gradually` go. Every one going shares [blocksPerTick] blocks a tick, in turn, so two scripts can't
+ * double the load; a package has at most [maxJobsPerPackage] going at once, past which one fails at once.
+ */
+data class StructuresConfig(val blocksPerTick: Int = 8192, val maxJobsPerPackage: Int = 4)
 
 data class BridgeConfig(
     val port: Int,

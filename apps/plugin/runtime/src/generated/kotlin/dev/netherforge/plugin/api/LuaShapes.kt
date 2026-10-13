@@ -5376,6 +5376,72 @@ data class StructurePlaceOptions(val rotation: Long? = null, val mirror: String?
     }
 }
 
+/** How `world:place_gradually` places one. A key that isn't one of these is an error. */
+data class GradualPlaceOptions(val rotation: Long? = null, val mirror: String? = null, val integrity: Double? = null, val entities: Boolean? = null, val perTick: Long? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<GradualPlaceOptions>("GradualPlaceOptions") {
+        val rotationCodec = LuaOptional(LuaCodecs.INTEGER)
+        val mirrorCodec = LuaOptional(LuaChoice(listOf("none", "left_right", "front_back")))
+        val integrityCodec = LuaOptional(LuaCodecs.NUMBER)
+        val entitiesCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val perTickCodec = LuaOptional(LuaCodecs.INTEGER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "rotation" to rotationCodec,
+            "mirror" to mirrorCodec,
+            "integrity" to integrityCodec,
+            "entities" to entitiesCodec,
+            "per_tick" to perTickCodec
+        )
+
+        override fun read(fields: ShapeReader) = GradualPlaceOptions(
+            rotation = fields.field("rotation", rotationCodec),
+            mirror = fields.field("mirror", mirrorCodec),
+            integrity = fields.field("integrity", integrityCodec),
+            entities = fields.field("entities", entitiesCodec),
+            perTick = fields.field("per_tick", perTickCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: GradualPlaceOptions) {
+            fields.field("rotation", value.rotation, rotationCodec)
+            fields.field("mirror", value.mirror, mirrorCodec)
+            fields.field("integrity", value.integrity, integrityCodec)
+            fields.field("entities", value.entities, entitiesCodec)
+            fields.field("per_tick", value.perTick, perTickCodec)
+        }
+    }
+}
+
+/** How `world:fill_gradually` fills. A key that isn't one of these is an error. */
+data class GradualFillOptions(val update: Boolean? = null, val perTick: Long? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<GradualFillOptions>("GradualFillOptions") {
+        val updateCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val perTickCodec = LuaOptional(LuaCodecs.INTEGER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "update" to updateCodec,
+            "per_tick" to perTickCodec
+        )
+
+        override fun read(fields: ShapeReader) = GradualFillOptions(
+            update = fields.field("update", updateCodec),
+            perTick = fields.field("per_tick", perTickCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: GradualFillOptions) {
+            fields.field("update", value.update, updateCodec)
+            fields.field("per_tick", value.perTick, perTickCodec)
+        }
+    }
+}
+
 /** What `world:blocks` gives for each block. A key that isn't one of these is an error. */
 data class BlockBoxOptions(val what: String? = null, val custom: Boolean? = null) : LuaShape {
     override fun push(call: LuaCall) = Codec.push(call, this)

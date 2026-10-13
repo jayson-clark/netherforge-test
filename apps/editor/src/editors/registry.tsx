@@ -340,6 +340,18 @@ export const KIND_CONTRIBUTIONS = {
     ),
     viewState: STRUCTURE_VIEW,
   },
+  build: {
+    title: 'Builds',
+    one: 'build',
+    group: 'world',
+    icon: 'blocks',
+    tone: 'green',
+    message:
+      'Scripts place it a few thousand blocks a tick by this id, e.g. world:place_gradually("castle", position). Capture it from the dev server, or import a schematic, next.',
+    view: lazy(() =>
+      import('@/editors/builds/BuildEditor').then((m) => ({ default: m.BuildEditor })),
+    ),
+  },
   map: {
     title: 'Maps',
     one: 'map',

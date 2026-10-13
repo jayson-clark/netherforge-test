@@ -58,7 +58,7 @@ const RELEASE = /^\d+(\.\d+)*$/
  * editor's cache for the project's target version. Null when there is none;
  * validation then checks everything but whether ids exist in the game.
  */
-function loadGameData(
+export function loadGameData(
   input: Record<string, string | null>,
   explicit: string | undefined,
   env: NodeJS.ProcessEnv,

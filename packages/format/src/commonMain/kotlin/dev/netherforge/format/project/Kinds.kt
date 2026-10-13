@@ -30,6 +30,7 @@ object Kinds {
         ModuleKind,
         MigrationKind,
         StructureKind,
+        BuildKind,
         MapKind,
         ItemKind,
         RecipeKind,

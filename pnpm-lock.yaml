@@ -47,6 +47,9 @@ importers:
       '@types/three':
         specifier: ^0.186.0
         version: 0.186.0
+      nbtify:
+        specifier: 2.2.0
+        version: 2.2.0(patch_hash=69b5b08e01cc2c13af3f7e5e315c1bd41d92c274ceda4732256f9cc7e7e3c14a)
       typescript:
         specifier: ~6.0.3
         version: 6.0.3

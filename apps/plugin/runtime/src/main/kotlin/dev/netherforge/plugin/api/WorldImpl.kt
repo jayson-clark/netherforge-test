@@ -24,6 +24,7 @@ import dev.netherforge.plugin.platform.GameRuleType
 import dev.netherforge.plugin.platform.InventoryRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.SpawnSetup
+import dev.netherforge.plugin.platform.StructurePlacement
 import dev.netherforge.plugin.session.ProjectSession
 import dev.netherforge.plugin.world.Daylight
 import dev.netherforge.plugin.world.Flood
@@ -33,6 +34,7 @@ import kotlinx.serialization.json.doubleOrNull
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
+import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
@@ -40,6 +42,9 @@ import kotlin.math.sqrt
 
 /** How many blocks one `world:fill_blocks` may change: `FILL_LIMIT` in the spec (`spec/worlds.ts`). */
 internal const val FILL_LIMIT = 32768
+
+/** How many blocks one `world:fill_gradually` may change: `FILL_GRADUALLY_LIMIT` in the spec (`spec/worlds.ts`). */
+internal const val FILL_GRADUALLY_LIMIT = 16777216L
 
 /** How far `world:locate_biome` may look: `BIOME_SEARCH_LIMIT` in the spec (`spec/worlds.ts`). */
 internal const val BIOME_SEARCH_LIMIT = 6400
@@ -630,6 +635,63 @@ internal class WorldImpl(private val session: ProjectSession) : WorldApi {
             integrity = options?.integrity ?: 1.0,
             entities = options?.entities != false
         )
+
+    override fun placeGradually(self: LuaHandle.World, id: String, position: Vec3, options: GradualPlaceOptions?): CompletionStage<Long> {
+        val rotation = options?.rotation ?: 0
+        val integrity = options?.integrity ?: 1.0
+        if (rotation % 90 != 0L) throw LuaApiException("rotation must be a multiple of 90, not $rotation")
+        if (integrity !in 0.0..1.0) throw LuaApiException("integrity must be between 0 and 1, not $integrity")
+        val perTick = perTick(options?.perTick)
+        val pieces = session.structures.pieces(id)
+        val scope = callingScope("World:place_gradually")
+        if (!worlds.exists(self.name)) return CompletableFuture.failedFuture(WorkFailed("world \"${self.name}\" has gone"))
+        val placement = StructurePlacement(
+            Math.floorMod(rotation, 360L).toInt(),
+            options?.mirror ?: "none",
+            integrity,
+            options?.entities != false
+        )
+        return session.gradual.place(scope, self.name, pieces, BlockPosition.of(position).vector(), placement, perTick)
+    }
+
+    override fun fillGradually(
+        self: LuaHandle.World,
+        from: Vec3,
+        to: Vec3,
+        state: String,
+        options: GradualFillOptions?
+    ): CompletionStage<Long> {
+        val a = BlockPosition.of(from)
+        val b = BlockPosition.of(to)
+        val canonical = session.effects.blockState(state, "state")
+        val volume = (abs(a.x - b.x) + 1L) * (abs(a.y - b.y) + 1L) * (abs(a.z - b.z) + 1L)
+        if (volume > FILL_GRADUALLY_LIMIT) {
+            throw LuaApiException("that box is $volume blocks, and one fill_gradually changes at most $FILL_GRADUALLY_LIMIT")
+        }
+        val perTick = perTick(options?.perTick)
+        val scope = callingScope("World:fill_gradually")
+        if (!worlds.exists(self.name)) return CompletableFuture.failedFuture(WorkFailed("world \"${self.name}\" has gone"))
+        return session.gradual.fill(
+            scope,
+            self.name,
+            BlockVector(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z)),
+            BlockVector(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)),
+            canonical,
+            options?.update != false,
+            perTick
+        )
+    }
+
+    /** A gradual job's own `per_tick`, or null for its share. */
+    private fun perTick(value: Long?): Int? {
+        if (value == null) return null
+        if (value < 1) throw LuaApiException("options.per_tick must be 1 or more, not $value")
+        return value.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    }
+
+    /** The scope whose code called [what]: the binding names it before the call (`marshal.caller`). */
+    private fun callingScope(what: String) = session.scripts.host?.callerScope?.let(session.scripts::scope)
+        ?: throw LuaApiException("$what can only be called by a script")
 
     private fun BlockPosition.vector() = BlockVector(x, y, z)
 

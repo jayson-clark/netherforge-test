@@ -2088,6 +2088,21 @@ storage (`world/dimensions/minecraft/<name>`), and a map copied to
 scripts save, in `<data>/.nf/structures/` (never the project: a running
 server doesn't write project files; the bridge's `save_structure` saves into a
 temp file there and answers the bytes, for the editor to write).
+The store also knows the project's builds (`builds/<id>/`, format's `BuildKind`; it reloads both kinds): `size` of
+one is its whole parts plus its last part's size, `pieces(id)` what a gradual placement goes through (a structure's
+one file, or a build's parts bottom up, each with its offset in the build and a check that its size is what its place
+in the grid says), `place` refuses one (it would be one tick's work) and `save` refuses its id.
+`world/GradualJobs.kt` is `world:place_gradually` and `world:fill_gradually`: jobs owned by the calling scope (the
+binding names it before the call: `host.callerScope`, which `marshal.caller` sets), ticked in `TickPhase.WORLD`,
+sharing `structures.blocks-per-tick` (`StructuresConfig`) each tick in turn and in equal shares under each job's own
+`per_tick`, at most `structures.max-jobs-per-package` per package (past it the stage fails at once). A placement goes
+through `StructureOps.placer` a part at a time (the adapter reads a part for its placer alone and lets it go: Paper
+copies each saved `BlockState` to its place, data mirrored then turned, `update(true, false)`; the fake writes its
+states), then a second read of only the parts with entities, after every block; `StructureTransform` (platform) is
+the game's own transform about the corner, shared by both adapters and tested once (`GradualTest`). A fill goes a
+chunk column at a time, loading chunks as it reaches them. A job finishes in the same step as its last block (so its
+value is heard at the next tick's `ASYNC`), fails with `WorkFailed` (world gone, a part unreadable or the wrong size),
+and is dropped when its scope is released or the session stops: what it did stays. `/nf scripts` counts `gradual`.
 `world/StructureSpawns.kt` is centities in structures: a template holds
 `marker` entities tagged `nf.centity.<centity>` (`StructureMarker.TAG_PREFIX`;
 `Entity.scoreboardTags`, which a structure's saved entity NBT keeps, so the game

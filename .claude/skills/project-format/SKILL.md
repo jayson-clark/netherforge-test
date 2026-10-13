@@ -686,6 +686,17 @@ for them, and must not read a binary kind's folder as text: a world has
 `project.stray-file`, as for every kind. Only the server reads the contents.
 They're `snapshot.models(MapKind)`/`(StructureKind)`.
 
+**Builds** (`builds/<id>/`, `BuildKind`, `world/BuildFile.kt`): a structure too big for one file, a `FilesKind`
+(`Contents.BINARY`, `Layout.Folder(Builds.MAIN)`: its first part, `0_0_0.nbt`, makes a folder one) whose other files
+are its parts, `<x>_<y>_<z>.nbt` (`Builds.partOf`/`fileOf`), each `Builds.PART_SIDE` (48) a side but the last along
+each axis. Format still never reads them: `BuildFile.grid` is one past the furthest part's name along each axis, and
+`validate` checks the names alone (`build.part-name`, a warning for a file that isn't a part; `build.part-missing`, a
+gap in the grid; `build.size`, past `Builds.MAX_PARTS` along an axis); `crossCheck` refuses a structure's id
+(`build.id-taken`: scripts name both alike). `BuildGrid.parts` is the order they're placed in (bottom up, x fastest),
+which `@netherforge/terrain-preview/parts` repeats in TS from the generated `BUILD_LIMITS`. `EmptyBlocks.IDS` (generated
+`EMPTY_BLOCKS`) is the one list of blocks that mean "nothing here": a terrain's decorations leave them out and the
+structure pictures don't draw them. Cases: `BuildTest`.
+
 **Structures that generate (W5.1).** `structures/<id>.json` beside the `.nbt`
 is the one document in a binary folder: `Layout.SingleFile(".nbt", companion =
 ".json")` makes `Kinds.classify` answer it as `PathRole.FILE` of the structure

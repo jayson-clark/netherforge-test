@@ -960,6 +960,24 @@ Error. A pool's name isn't usable (or is `start`), or the pool has no elements. 
 
 Error. A pool element names a structure the project doesn't have. See [format/worlds.md](worlds.md).
 
+## build
+
+### `build.part-name` {#build-part-name}
+
+Warning. A file in a build's folder isn't one of its parts (`<x>_<y>_<z>.nbt`), so it's ignored. See [format/worlds.md](worlds.md).
+
+### `build.part-missing` {#build-part-missing}
+
+Error. A build's grid of parts has a gap: a part it needs isn't there. See [format/worlds.md](worlds.md).
+
+### `build.size` {#build-size}
+
+Error. A build has more parts along an axis than a build may. See [format/worlds.md](worlds.md).
+
+### `build.id-taken` {#build-id-taken}
+
+Error. A build has the id of one of the project's structures. See [format/worlds.md](worlds.md).
+
 ## Particle effects
 
 ### `particle.duration` {#particle-duration}

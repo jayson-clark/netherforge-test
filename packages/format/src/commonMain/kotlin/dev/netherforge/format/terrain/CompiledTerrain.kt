@@ -4,6 +4,7 @@ import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.lua.LuaStrings
 import dev.netherforge.format.noise.NoiseDef
+import dev.netherforge.format.world.EmptyBlocks
 
 /**
  * A block a generated chunk holds: a vanilla block state in canonical text
@@ -366,7 +367,7 @@ data class CompiledTerrain(
 
     private companion object {
         /** What a template holds that a decoration leaves as the world has it. */
-        val NOT_PLACED = setOf("minecraft:air", "minecraft:cave_air", "minecraft:void_air", "minecraft:structure_void")
+        val NOT_PLACED = EmptyBlocks.IDS
 
         /** What a project block's id written in a script looks like: the project's own (a package's is listed). */
         val PROJECT_BLOCK = Regex("[a-z0-9_]+")

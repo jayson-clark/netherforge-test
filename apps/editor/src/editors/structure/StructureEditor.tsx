@@ -27,6 +27,8 @@ import { useLoadedWorlds, WorldSelect } from '@/editors/shared/ServerWorlds'
 import { useAsyncResult } from '@/ui/useAsync'
 import type { BlockMesh } from '@/minecraft/client/blockMesh'
 import { blockCounts, parseStructure, type Structure } from '@netherforge/terrain-preview/structure'
+import { ImportSchematic } from '@/editors/builds/ImportSchematic'
+import { BUILD_LIMITS } from '@netherforge/format/constants'
 import { Generation } from './Generation'
 import { StructureView, type Built } from './StructureView'
 
@@ -83,6 +85,7 @@ export function StructureEditor({ path }: { path: string }) {
         {structure && <StructureInfo structure={structure} mesh={built?.mesh ?? null} />}
         {exists && <Generation id={id} path={generationPath} exists={generates} />}
         <CaptureStructure id={id} path={path} exists={exists} />
+        <ImportSchematic target={{ kind: 'structure', path, exists }} />
       </InspectorPanel>
     </EditorScreen>
   )
@@ -234,6 +237,12 @@ function CaptureStructure({ id, path, exists }: { id: string; path: string; exis
           {Math.abs(from[2] - to[2]) + 1} blocks
         </span>
       </Row>
+      {[0, 1, 2].some((i) => Math.abs(from[i]! - to[i]!) + 1 > BUILD_LIMITS.partSide) && (
+        <Hint tone="error">
+          A structure is at most {BUILD_LIMITS.partSide} blocks a side. Capture a bigger box as a
+          build (Builds in the explorer), which scripts place with world:place_gradually.
+        </Hint>
+      )}
       <Actions>
         <Button
           variant="primary"

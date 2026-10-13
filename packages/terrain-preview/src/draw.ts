@@ -65,7 +65,7 @@ export function sliceColors(slice: TerrainSlice, fluid: string, stone: string): 
   return slice.palette.map((entry, index) => blockColor(index, entry, full(fluid), full(stone)))
 }
 
-const shadeOf = (rgb: Rgb, factor: number): Rgb => [
+export const shadeOf = (rgb: Rgb, factor: number): Rgb => [
   Math.max(0, Math.min(255, Math.round(rgb[0] * factor))),
   Math.max(0, Math.min(255, Math.round(rgb[1] * factor))),
   Math.max(0, Math.min(255, Math.round(rgb[2] * factor))),

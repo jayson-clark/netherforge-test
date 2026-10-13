@@ -1,7 +1,8 @@
 # Worlds and structures
 
-Two kinds of resource are Minecraft's own files rather than JSON: **maps**
-(`maps/<id>/`) and **structures** (`structures/<id>.nbt`). They ship
+Three kinds of resource are Minecraft's own files rather than JSON: **maps**
+(`maps/<id>/`), **structures** (`structures/<id>.nbt`) and **builds**
+(`builds/<id>/`, a structure too big for one file, in parts). They ship
 with the project like everything else, so a minigame's arena travels with its
 scripts. Only the server reads what's inside them; NetherForge checks their
 names and their place, and the plugin reads them when a script uses them.
@@ -17,6 +18,12 @@ my-project/
     arena_reset.nbt            a saved region of blocks, in Minecraft's structure format
     ruins.nbt                  one that also generates in the world by itself...
     ruins.json                 ...where and how (optional, beside its .nbt)
+  builds/
+    castle/                    a build: a box too big for one structure file...
+      0_0_0.nbt                ...cut into parts, each a structure file, by its place in the grid
+      1_0_0.nbt
+      0_1_0.nbt
+      ...
 ```
 
 ## Maps
@@ -77,6 +84,65 @@ the name the script gave, and are found by the same functions. A project's
 files change only when someone edits them; a running server never rewrites
 them, so a save on a production server can't leave a deployed project dirty.
 A saved structure can't take the id of one of the project's.
+
+## Builds
+
+A structure file holds at most 48 blocks along a side (what the game's
+structure block saves), and the server places all of it in one tick. A
+**build** is for anything bigger: a castle, a town, a whole arena. It's a
+folder of structure files, its **parts**, each 48 blocks along every side but
+the last along each axis, which holds what's left. A part's name is its place
+in the grid, counted from 0 at the build's smallest corner: `0_0_0.nbt` is
+the first (its smallest corner is the build's, and it's what makes the folder
+a build), `1_0_0.nbt` the next along x, `0_1_0.nbt` the one above it. A build
+is at most 22 parts along each axis: 1056 blocks.
+
+Scripts place a build with `world:place_gradually`, which spreads the work
+over as many ticks as it takes, a few thousand blocks a tick, a part at a
+time, so even a big one never stalls the server (how fast is the server
+owner's `structures.blocks-per-tick`, see [server
+settings](../guide/server-config.md#gradual-placement)). It takes a structure
+too, for one big enough that placing it in one tick would show:
+
+```lua
+nf.task(function()
+  local placed, err = world:place_gradually("castle", vec3(0, 64, 0), { rotation = 90 })
+  if not placed then
+    print("The castle stopped part way: " .. err)
+  end
+end)
+```
+
+`world:fill_gradually` is the same for a fill too big for `fill_blocks`. Builds
+and structures share their ids: `nf.structures.exists` and `size` name both,
+and `world:place_structure` refuses a build (it would be one tick's work), as
+`world:save_structure` refuses a build's id.
+
+A build is made in the editor, on its own screen: [captured](#capturing-from-the-dev-server)
+from the dev server a part at a time, or imported from a schematic, WorldEdit's
+`.schem` or Litematica's `.litematic` (`netherforge import` does the same from
+a terminal). An import keeps the schematic's blocks and block entities (a
+chest's items, a sign's text) and leaves its entities out; its parts are
+written in the schematic's own Minecraft version, so the server renames an
+older version's blocks as it reads them, as it does any old structure file. A
+block no version of the game has (a mod's) is read as air; the import names
+the ones the game data doesn't know. A schematic that fits in 48 blocks a side
+can be imported as a plain structure instead.
+
+| Problem                                                        | Code                                      |
+| -------------------------------------------------------------- | ----------------------------------------- |
+| The folder name isn't an id                                    | `project.id` (error)                      |
+| A part the grid needs isn't there (the parts don't make a box) | `build.part-missing` (error)              |
+| More than 22 parts along an axis                               | `build.size` (error)                      |
+| A file in the folder that isn't a part (`<x>_<y>_<z>.nbt`)     | `build.part-name` (warning; it's ignored) |
+| A build with the id of one of the project's structures         | `build.id-taken` (error)                  |
+
+Only the server reads what's in a part. Placing a build checks that each part
+is the size its place in the grid says (48 a side, but the last along each
+axis); a part that isn't, or that can't be read, stops the placement there
+with an error saying which, and what was placed stays. A build never
+generates in the world by itself: give a structure a [generation
+file](#structures-that-generate) for that, with jigsaw pieces for size.
 
 ## Structures that generate
 
@@ -235,9 +301,12 @@ needs a restart.
 
 ## Capturing from the dev server
 
-The editor makes both from the dev server's worlds. On a structure's screen,
+The editor makes all three from the dev server's worlds. On a structure's screen,
 pick two corners (or stand at each and press "Use my position") and capture:
-the plugin saves the box and the editor writes `structures/<id>.nbt`. On a
+the plugin saves the box and the editor writes `structures/<id>.nbt`. A
+build's screen captures a box of any size the same way, a part's box at a
+time, and writes the parts once every one is saved (a capture that fails part
+way changes nothing). On a
 map's screen, pick a loaded world and save it: the server saves it,
 and the editor copies its `level.dat` and the world's own folder in as the
 map's overworld, leaving out what a server keeps for itself (its lock,
@@ -257,10 +326,18 @@ later; chunks the game hadn't finished generating aren't drawn, as in the
 game, and a chunk that can't be read is named with why. Neither preview ever
 writes to the file. Water and lava have no block model, so they aren't drawn.
 
+A build is drawn as a picture rather than in 3D, so a big one stays quick: from
+above (higher blocks lighter), isometric from the south-east, or a slice
+through one layer along x, y or z, a colour per block id and a list of what
+shows. `netherforge preview builds/<id>` (or `structures/<id>.nbt`, or
+`--structure <id>`) draws the same pictures into a PNG, for checking a build
+without the editor: `--view iso`, or `--slice y --at 12`.
+
 ## Hot reload
 
-Saving a structure reloads it: the next placement reads the new file (a
-structure that [generates](#structures-that-generate) needs a restart). A
+Saving a structure or a build's part reloads it: the next placement reads the
+new file (a structure that [generates](#structures-that-generate) needs a
+restart; a gradual placement already going keeps the part it's on). A
 map's files are read only when a world is copied from it, so a
 change affects only later copies; worlds already copied keep what they were
 made from.

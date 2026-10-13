@@ -13,13 +13,13 @@ A `data()` table, `Item.data` and `nf.json` can keep one: it is saved as what id
 | --- | --- |
 | [The world itself](#the-world-itself) | [`name`](#name) [`exists`](#exists) [`environment`](#environment) [`is_managed`](#is_managed) [`unload`](#unload) [`location`](#location) [`spawn_location`](#spawn_location) [`set_spawn_location`](#set_spawn_location) [`min_height`](#min_height) [`max_height`](#max_height) |
 | [Time, weather and sky](#time-weather-and-sky) | [`time_of_day`](#time_of_day) [`set_time_of_day`](#set_time_of_day) [`is_day`](#is_day) [`is_night`](#is_night) [`day_count`](#day_count) [`moon_phase`](#moon_phase) [`weather`](#weather) [`set_weather`](#set_weather) [`sky`](#sky) [`set_sky`](#set_sky) [`clear_sky`](#clear_sky) |
-| [Blocks](#blocks-section) | [`block`](#block) [`blocks`](#blocks) [`set_block`](#set_block) [`fill_blocks`](#fill_blocks) [`flood`](#flood) [`highest_block`](#highest_block) |
+| [Blocks](#blocks-section) | [`block`](#block) [`blocks`](#blocks) [`set_block`](#set_block) [`fill_blocks`](#fill_blocks) [`fill_gradually`](#fill_gradually) [`flood`](#flood) [`highest_block`](#highest_block) |
 | [Chunks and biomes](#chunks-and-biomes) | [`is_chunk_loaded`](#is_chunk_loaded) [`load_chunk`](#load_chunk) [`locate_biome`](#locate_biome) |
 | [Entities](#entities-section) | [`players`](#players) [`centities`](#centities) [`entities`](#entities) [`spawn_entity`](#spawn_entity) [`spawn_item`](#spawn_item) |
 | [Particles, sounds and explosions](#particles-sounds-and-explosions) | [`spawn_particle`](#spawn_particle) [`play_sound`](#play_sound) [`explode`](#explode) [`strike_lightning`](#strike_lightning) |
 | [Raycasts and overlaps](#raycasts-and-overlaps) | [`raycast`](#raycast) [`sweep`](#sweep) [`overlap_box`](#overlap_box) [`overlap_sphere`](#overlap_sphere) [`overlap_cone`](#overlap_cone) [`nearest`](#nearest) |
 | [Game rules and spawning](#game-rules-and-spawning) | [`game_rule`](#game_rule) [`set_game_rule`](#set_game_rule) [`spawn_limit`](#spawn_limit) [`set_spawn_limit`](#set_spawn_limit) [`spawn_interval`](#spawn_interval) [`set_spawn_interval`](#set_spawn_interval) |
-| [Border and structures](#border-and-structures) | [`border`](#border) [`save_structure`](#save_structure) [`place_structure`](#place_structure) |
+| [Border and structures](#border-and-structures) | [`border`](#border) [`save_structure`](#save_structure) [`place_structure`](#place_structure) [`place_gradually`](#place_gradually) |
 | [Events](#events) | [`on`](#on) [`once`](#once) and 27 events |
 
 ## The world itself {#the-world-itself}
@@ -265,7 +265,7 @@ world:set_block(vec3(10, 64, 10), "minecraft:gold_block")
 
 ### `world:fill_blocks(from, to, state, options?)` {#fill_blocks}
 
-Sets every block in the box between two corners (both included) to one state. One call changes at most 32768 blocks: a bigger box is an error, so spread a big fill over several ticks with a task. A block state the server doesn't have is an error. Blocks in unloaded chunks are skipped.
+Sets every block in the box between two corners (both included) to one state. One call changes at most 32768 blocks: a bigger box is an error (`fill_gradually` spreads a big fill over several ticks). A block state the server doesn't have is an error. Blocks in unloaded chunks are skipped.
 
 | Parameter | Type | |
 | --- | --- | --- |
@@ -281,6 +281,30 @@ nf.task(function()
   for y = 64, 127 do
     world:fill_blocks(vec3(0, y, 0), vec3(63, y, 63), "minecraft:air")
     nf.wait(1)
+  end
+end)
+```
+
+### `world:fill_gradually(from, to, state, options?, callback?)` {#fill_gradually}
+
+Sets every block in the box between two corners (both included) to one state, like `fill_blocks`, but over as many ticks as it takes, for a box too big for one call: up to 16777216 blocks (256 × 256 × 256). It goes a few thousand blocks a tick, shared with every other gradual placement and fill on the server (the owner's `structures.blocks-per-tick` in `config.yml`), so even a big one never stalls the server; each package may have a few going at once (`structures.max-jobs-per-package`), past which one fails at once. It goes a chunk's column at a time, from the bottom up, loading the chunks the box covers as it reaches them (`fill_blocks` skips unloaded ones). A bigger box, a block state the server doesn't have, or a `per_tick` below 1 is an error at once. The world going, or this script stopping, stops it part way, and what was set stays. It takes as many ticks as the fill does, so its changed arrives later: give `callback`, which is called with `changed, err` once it's done, or call it inside a task (`nf.task`) without one, and it waits and returns `changed, err`. Without a callback outside a task, it's an error. When it fails, `changed` is `nil` and `err` says why.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `from` | [`Vec3`](vec3.md) | One corner. |
+| `to` | [`Vec3`](vec3.md) | The opposite corner. |
+| `state` | `string` | A block state, as `set_block` takes it. |
+| `options` (optional) | [`GradualFillOptions`](types.md#gradualfilloptions) |  |
+| `callback` (optional) | `fun(changed: integer?, err: string?)` | Called on the main thread once it's done, as this script's code, with how many blocks it changed (a block that was already that state is not counted) (or `nil` and why not). Not called if the script has stopped by then. |
+
+**Returns** `integer?`: Only without a callback, in a task: how many blocks it changed (a block that was already that state is not counted), or `nil`., `string?`: Why it failed, when it did; `nil` when it worked.
+
+```lua
+world:fill_gradually(vec3(-200, 0, -200), vec3(199, 120, 199), "minecraft:air", nil, function(changed, err)
+  if err then
+    print("The clear-out stopped: " .. err)
+  else
+    nf.server.broadcast(changed .. " blocks cleared")
   end
 end)
 ```
@@ -709,7 +733,7 @@ end
 
 ### `world:save_structure(id, from, to, options?)` {#save_structure}
 
-Saves the box between two corners (both included) as a structure named `id`, to place later with `place_structure`: an arena to reset, a prefab to stamp. It's saved in the server's data folder, not the project, and kept across restarts; saving the same id again replaces it. An id that isn't an id (lowercase letters, digits and `_`), or that one of the project's structures (`structures/<id>.nbt`) already has, is an error, as is a box over 48 blocks along any side. Air is saved too, so placing it puts back the empty space as well; it loads the chunks the box covers, as `/place` does.
+Saves the box between two corners (both included) as a structure named `id`, to place later with `place_structure`: an arena to reset, a prefab to stamp. It's saved in the server's data folder, not the project, and kept across restarts; saving the same id again replaces it. An id that isn't an id (lowercase letters, digits and `_`), or that one of the project's structures (`structures/<id>.nbt`) or builds (`builds/<id>/`) already has, is an error, as is a box over 48 blocks along any side. Air is saved too, so placing it puts back the empty space as well; it loads the chunks the box covers, as `/place` does.
 
 | Parameter | Type | |
 | --- | --- | --- |
@@ -726,7 +750,7 @@ world:save_structure("arena_reset", vec3(0, 60, 0), vec3(47, 90, 47), { entities
 
 ### `world:place_structure(id, position, options?)` {#place_structure}
 
-Places a structure with its smallest corner at `position` (before it's turned): one of the project's (`structures/<id>.nbt`) or one a script saved (`save_structure`). Loads the chunks it covers, as `/place` does. A structure there's none of, one whose file can't be read, a `rotation` that isn't a multiple of 90 or an `integrity` outside 0 to 1 is an error.
+Places a structure with its smallest corner at `position` (before it's turned): one of the project's (`structures/<id>.nbt`) or one a script saved (`save_structure`). Loads the chunks it covers, as `/place` does, all in this tick: `place_gradually` spreads a big one over several. A build (`builds/<id>/`) is always placed that way, so naming one here is an error, as is a structure there's none of, one whose file can't be read, a `rotation` that isn't a multiple of 90 or an `integrity` outside 0 to 1.
 
 | Parameter | Type | |
 | --- | --- | --- |
@@ -738,6 +762,30 @@ Places a structure with its smallest corner at `position` (before it's turned): 
 
 ```lua
 world:place_structure("arena_reset", vec3(0, 60, 0), { rotation = 90, mirror = "none", integrity = 1, entities = false })
+```
+
+### `world:place_gradually(id, position, options?, callback?)` {#place_gradually}
+
+Places a structure or a build (`builds/<id>/`, a structure too big for one file) like `place_structure`, its smallest corner at `position` before it's turned, but over as many ticks as it takes. It goes a few thousand blocks a tick, shared with every other gradual placement and fill on the server (the owner's `structures.blocks-per-tick` in `config.yml`), so even a big one never stalls the server; each package may have a few going at once (`structures.max-jobs-per-package`), past which one fails at once. Its blocks go in from the bottom up (a build's a part at a time), loading the chunks it covers as it reaches them, then its entities, once every block is in. Blocks go in as they were saved, with no updates to their neighbours, as `/place` puts them. A structure or build there's none of, a `rotation` that isn't a multiple of 90, an `integrity` outside 0 to 1 or a `per_tick` below 1 is an error at once. A part that can't be read, the world going, or this script stopping stops it part way, and what was placed stays. It takes as many ticks as the placing does, so its placed arrives later: give `callback`, which is called with `placed, err` once it's done, or call it inside a task (`nf.task`) without one, and it waits and returns `placed, err`. Without a callback outside a task, it's an error. When it fails, `placed` is `nil` and `err` says why.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `id` | `string` | Which structure or build. |
+| `position` | [`Vec3`](vec3.md) | Where its smallest corner goes, floored to a block. |
+| `options` (optional) | [`GradualPlaceOptions`](types.md#gradualplaceoptions) |  |
+| `callback` (optional) | `fun(placed: integer?, err: string?)` | Called on the main thread once it's done, as this script's code, with how many blocks it placed (those `integrity` left out, or outside the world's heights, are not counted) (or `nil` and why not). Not called if the script has stopped by then. |
+
+**Returns** `integer?`: Only without a callback, in a task: how many blocks it placed (those `integrity` left out, or outside the world's heights, are not counted), or `nil`., `string?`: Why it failed, when it did; `nil` when it worked.
+
+```lua
+nf.task(function()
+  local placed, err = world:place_gradually("castle", vec3(0, 64, 0), { rotation = 90 })
+  if not placed then
+    print("The castle stopped part way: " .. err)
+    return
+  end
+  nf.server.broadcast("The castle is up: " .. placed .. " blocks")
+end)
 ```
 
 ## Events

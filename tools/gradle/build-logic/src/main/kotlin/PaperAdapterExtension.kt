@@ -7,7 +7,7 @@ import org.gradle.api.provider.Property
 abstract class PaperAdapterExtension {
     /**
      * The Paper build the adapter compiles against (paper-api and its dev
-     * bundle) and the integration test runs: `26.3.build.152-beta`. Paper
+     * bundle) and the integration test runs: `26.3.build.181-stable`. Paper
      * published 1.21.x as snapshots instead (`1.21.11-R0.1-SNAPSHOT`); those
      * need [serverBuild] too.
      */
@@ -15,7 +15,7 @@ abstract class PaperAdapterExtension {
 
     /**
      * The server build to run (Paper's downloads API): read from [paper]
-     * (`…build.152-beta` is 152) unless it's a snapshot.
+     * (`…build.181-stable` is 181) unless it's a snapshot.
      */
     abstract val serverBuild: Property<Int>
 

@@ -13,6 +13,7 @@ import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.platform.ProjectGenerator
 import dev.netherforge.plugin.platform.StructureOps
 import dev.netherforge.plugin.platform.StructurePlacement
+import dev.netherforge.plugin.platform.StructureTransform
 import dev.netherforge.plugin.platform.WorldManagerOps
 import dev.netherforge.plugin.platform.WorldSettings
 import org.junit.jupiter.api.Test
@@ -278,6 +279,35 @@ abstract class StructureOpsContract : PlatformContract() {
             assertEquals(BlockVector(1, 1, 1), structures.size(file), "still the one read")
             structures.forget(file)
             assertEquals(BlockVector(3, 1, 1), structures.size(file))
+        }
+    }
+
+    @Test
+    fun `a placer puts a structure in a few blocks at a time, turned where the transform says`() {
+        val file = server.directory().resolve("gradual.nbt")
+        main {
+            place(at(-20, 3, -8), "minecraft:stone")
+            place(at(-19, 3, -8), "minecraft:gold_block")
+            val (x, y, z) = block(at(-20, 3, -8))
+            assertTrue(structures.save(file, world, BlockVector(x, y, z), BlockVector(x + 1, y, z), entities = false))
+            val (px, py, pz) = block(at(-20, 3, -16))
+            for (dz in 0..1) place(at(-20, 3, -16 + dz), "minecraft:air")
+            // A quarter turn clockwise: what was along +x goes along +z.
+            val transform = StructureTransform(BlockVector(px, py, pz), BlockVector(0, 0, 0), 90, "none")
+            val placer =
+                assertNotNull(structures.placer(file, world, transform, StructurePlacement(90, "none", 1.0, entities = true), seed = 1))
+            assertEquals(BlockVector(2, 1, 1), placer.size)
+            assertEquals(2, placer.remaining)
+            assertEquals(1, placer.place(1))
+            assertEquals(1, placer.remaining)
+            assertEquals(1, placer.place(5))
+            assertEquals(0, placer.remaining)
+            assertEquals(2L, placer.placed)
+            assertTrue(placer.entities())
+            assertEquals("minecraft:stone", platform.blocks.get(world, px, py, pz)?.state)
+            assertEquals("minecraft:gold_block", platform.blocks.get(world, px, py, pz + 1)?.state)
+            assertNull(structures.placer(file, MISSING_WORLD, transform, placement, seed = 1))
+            assertNull(structures.placer(server.directory().resolve("missing.nbt"), world, transform, placement, seed = 1))
         }
     }
 

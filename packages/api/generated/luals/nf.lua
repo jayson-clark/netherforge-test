@@ -57,7 +57,7 @@
 ---@field players nf.players Players: everyone online, or anyone who has ever joined.
 ---@field bots nf.bots Bots: fake players that scripts join to the server and drive, for opponents and teammates in games, crowds, and anything a player does that an NPC can't. A bot is a real player to the server and to every other plugin: it's on the player list and counted in the player count, its joins, moves, clicks, chat and deaths are heard like anyone's, and it does everything by sending what a player's client would (walking a step a tick, aiming before it clicks), so the game's rules and every other plugin's checks apply to it. Each is a new player every time it joins (a fresh UUID, nothing of it saved: no inventory, statistics or advancements kept), marked as an NPC for other plugins (the `NPC` metadata they check to leave fake players alone), and it loads only the chunks right around it. A bot belongs to the script that joined it and leaves when that script unloads. A package declares `"requires": { "bots": true }` in its `netherforge.json`, and the server owner allows bots (`bots.enabled` in `config.yml`, with `bots.max` online at once); until then a package that declares them has a warning (`runtime.bots-disabled`). The editor's dev server always allows them. For a figure that stands and looks like a player without being one, spawn a `Mannequin`: it costs far less.
 ---@field worlds nf.worlds The server's worlds: finding them, and making, loading and copying them.
----@field structures nf.structures Structures: saved boxes of blocks that `world:place_structure` places. The project's are `structures/<id>.nbt`; scripts save more with `world:save_structure`.
+---@field structures nf.structures Structures: saved boxes of blocks that `world:place_structure` places. The project's are `structures/<id>.nbt`; scripts save more with `world:save_structure`. A build (`builds/<id>/`) is a structure too big for one file, kept in parts, which `world:place_gradually` places over several ticks; these functions name both alike.
 ---@field centities nf.centities Centity instances: spawning new ones and finding live ones.
 ---@field spawning nf.spawning Natural spawning (a centity's `spawning` block in `centity.json`): conditions a script decides, which a `spawning` block names with `when`.
 ---@field menus nf.menus The project's menus (`menus/<id>/`), and menus scripts make.
@@ -306,7 +306,7 @@ function nf.after(ticks, callback) end
 ---@return Task
 function nf.every(ticks, callback) end
 
---- Starts a task: `callback` runs now, with the extra arguments, until it first waits (`nf.wait`, `nf.wait_until`, `nf.wait_for`, `dialog:ask` or an asynchronous function like `nf.bots.join`, `nf.worlds.copy`, `nf.http.request`, `bot:walk_to`, `bot:break_block`, `world:locate_biome`, `database:query`, `database:execute` or `database:transaction` called without its callback), and carries on from there when the wait is over. Only a task can wait; event handlers can't, because whether an event is cancelled or stopped has to be known when it returns, so a handler that needs to wait starts a task. Each time a task carries on it gets the script's whole instruction budget again. A task belongs to the script that started it and ends when that script unloads, when `cancel()` is called, or when the handle it waits on goes. One that errors is logged with its file and line and ends; the code that started it carries on either way.
+--- Starts a task: `callback` runs now, with the extra arguments, until it first waits (`nf.wait`, `nf.wait_until`, `nf.wait_for`, `dialog:ask` or an asynchronous function like `nf.bots.join`, `nf.worlds.copy`, `nf.http.request`, `bot:walk_to`, `bot:break_block`, `world:fill_gradually`, `world:locate_biome`, `world:place_gradually`, `database:query`, `database:execute` or `database:transaction` called without its callback), and carries on from there when the wait is over. Only a task can wait; event handlers can't, because whether an event is cancelled or stopped has to be known when it returns, so a handler that needs to wait starts a task. Each time a task carries on it gets the script's whole instruction budget again. A task belongs to the script that started it and ends when that script unloads, when `cancel()` is called, or when the handle it waits on goes. One that errors is logged with its file and line and ends; the code that started it carries on either way.
 ---@param callback async fun(...: any) The task: plain Lua that may wait.
 ---@param ... any Passed to `callback`.
 ---@return Task # Call `:cancel()` on it to end it early.
@@ -748,16 +748,16 @@ function nf.worlds.copy(map, name, callback) end
 ---@return World
 function nf.worlds.default() end
 
---- Structures: saved boxes of blocks that `world:place_structure` places. The project's are `structures/<id>.nbt`; scripts save more with `world:save_structure`.
+--- Structures: saved boxes of blocks that `world:place_structure` places. The project's are `structures/<id>.nbt`; scripts save more with `world:save_structure`. A build (`builds/<id>/`) is a structure too big for one file, kept in parts, which `world:place_gradually` places over several ticks; these functions name both alike.
 ---@class nf.structures
 nf.structures = {}
 
---- Whether there's a structure by that id: one of the project's, or one a script saved.
+--- Whether there's a structure or build by that id: one of the project's, or a structure a script saved.
 ---@param id StructureId
 ---@return boolean
 function nf.structures.exists(id) end
 
---- How big a structure is, in blocks along x, y and z (before it's turned), or `nil` when there's none by that id. One whose file can't be read is an error.
+--- How big a structure or build is, in blocks along x, y and z (before it's turned), or `nil` when there's none by that id. One whose file (for a build, its last part's) can't be read is an error.
 ---@param id StructureId
 ---@return Vec3?
 function nf.structures.size(id) end
@@ -3628,13 +3628,25 @@ function World:flood(start, options) end
 ---@return boolean # Whether it changed: `false` in an unloaded chunk or a world that's gone.
 function World:set_block(position, state, options) end
 
---- Sets every block in the box between two corners (both included) to one state. One call changes at most 32768 blocks: a bigger box is an error, so spread a big fill over several ticks with a task. A block state the server doesn't have is an error. Blocks in unloaded chunks are skipped.
+--- Sets every block in the box between two corners (both included) to one state. One call changes at most 32768 blocks: a bigger box is an error (`fill_gradually` spreads a big fill over several ticks). A block state the server doesn't have is an error. Blocks in unloaded chunks are skipped.
 ---@param from Vec3 One corner.
 ---@param to Vec3 The opposite corner.
 ---@param state string A block state, as `set_block` takes it.
 ---@param options? BlockSetOptions
 ---@return integer # How many blocks it changed: 0 in a world that has gone.
 function World:fill_blocks(from, to, state, options) end
+
+--- Sets every block in the box between two corners (both included) to one state, like `fill_blocks`, but over as many ticks as it takes, for a box too big for one call: up to 16777216 blocks (256 × 256 × 256). It goes a few thousand blocks a tick, shared with every other gradual placement and fill on the server (the owner's `structures.blocks-per-tick` in `config.yml`), so even a big one never stalls the server; each package may have a few going at once (`structures.max-jobs-per-package`), past which one fails at once. It goes a chunk's column at a time, from the bottom up, loading the chunks the box covers as it reaches them (`fill_blocks` skips unloaded ones). A bigger box, a block state the server doesn't have, or a `per_tick` below 1 is an error at once. The world going, or this script stopping, stops it part way, and what was set stays. It takes as many ticks as the fill does, so its changed arrives later: give `callback`, which is called with `changed, err` once it's done, or call it inside a task (`nf.task`) without one, and it waits and returns `changed, err`. Without a callback outside a task, it's an error. When it fails, `changed` is `nil` and `err` says why.
+---@param from Vec3 One corner.
+---@param to Vec3 The opposite corner.
+---@param state string A block state, as `set_block` takes it.
+---@param options? GradualFillOptions
+---@param callback? fun(changed: integer?, err: string?) Called on the main thread once it's done, as this script's code, with how many blocks it changed (a block that was already that state is not counted) (or `nil` and why not). Not called if the script has stopped by then.
+---@return integer? # Only without a callback, in a task: how many blocks it changed (a block that was already that state is not counted), or `nil`.
+---@return string? # Why it failed, when it did; `nil` when it worked.
+---@overload async fun(self: World, from: Vec3, to: Vec3, state: string, options?: GradualFillOptions): integer?, string?
+---@overload fun(self: World, from: Vec3, to: Vec3, state: string, options?: GradualFillOptions, callback: fun(changed: integer?, err: string?))
+function World:fill_gradually(from, to, state, options, callback) end
 
 --- The highest block at a column that isn't air, ignoring the position's `y`. `nil` in an unloaded chunk, or a world that has gone.
 ---@param position Vec3 Any point in the column.
@@ -3806,7 +3818,7 @@ function World:unload(options) end
 ---@return WorldBorder?
 function World:border() end
 
---- Saves the box between two corners (both included) as a structure named `id`, to place later with `place_structure`: an arena to reset, a prefab to stamp. It's saved in the server's data folder, not the project, and kept across restarts; saving the same id again replaces it. An id that isn't an id (lowercase letters, digits and `_`), or that one of the project's structures (`structures/<id>.nbt`) already has, is an error, as is a box over 48 blocks along any side. Air is saved too, so placing it puts back the empty space as well; it loads the chunks the box covers, as `/place` does.
+--- Saves the box between two corners (both included) as a structure named `id`, to place later with `place_structure`: an arena to reset, a prefab to stamp. It's saved in the server's data folder, not the project, and kept across restarts; saving the same id again replaces it. An id that isn't an id (lowercase letters, digits and `_`), or that one of the project's structures (`structures/<id>.nbt`) or builds (`builds/<id>/`) already has, is an error, as is a box over 48 blocks along any side. Air is saved too, so placing it puts back the empty space as well; it loads the chunks the box covers, as `/place` does.
 ---@param id StructureId Its name: `"arena_reset"`.
 ---@param from Vec3 One corner.
 ---@param to Vec3 The opposite corner.
@@ -3814,12 +3826,23 @@ function World:border() end
 ---@return boolean # Whether it was saved: `false` when the world has gone, or the file couldn't be written.
 function World:save_structure(id, from, to, options) end
 
---- Places a structure with its smallest corner at `position` (before it's turned): one of the project's (`structures/<id>.nbt`) or one a script saved (`save_structure`). Loads the chunks it covers, as `/place` does. A structure there's none of, one whose file can't be read, a `rotation` that isn't a multiple of 90 or an `integrity` outside 0 to 1 is an error.
+--- Places a structure with its smallest corner at `position` (before it's turned): one of the project's (`structures/<id>.nbt`) or one a script saved (`save_structure`). Loads the chunks it covers, as `/place` does, all in this tick: `place_gradually` spreads a big one over several. A build (`builds/<id>/`) is always placed that way, so naming one here is an error, as is a structure there's none of, one whose file can't be read, a `rotation` that isn't a multiple of 90 or an `integrity` outside 0 to 1.
 ---@param id StructureId Which structure.
 ---@param position Vec3 Where its smallest corner goes, floored to a block.
 ---@param options? StructurePlaceOptions
 ---@return boolean # `false` when the world has gone.
 function World:place_structure(id, position, options) end
+
+--- Places a structure or a build (`builds/<id>/`, a structure too big for one file) like `place_structure`, its smallest corner at `position` before it's turned, but over as many ticks as it takes. It goes a few thousand blocks a tick, shared with every other gradual placement and fill on the server (the owner's `structures.blocks-per-tick` in `config.yml`), so even a big one never stalls the server; each package may have a few going at once (`structures.max-jobs-per-package`), past which one fails at once. Its blocks go in from the bottom up (a build's a part at a time), loading the chunks it covers as it reaches them, then its entities, once every block is in. Blocks go in as they were saved, with no updates to their neighbours, as `/place` puts them. A structure or build there's none of, a `rotation` that isn't a multiple of 90, an `integrity` outside 0 to 1 or a `per_tick` below 1 is an error at once. A part that can't be read, the world going, or this script stopping stops it part way, and what was placed stays. It takes as many ticks as the placing does, so its placed arrives later: give `callback`, which is called with `placed, err` once it's done, or call it inside a task (`nf.task`) without one, and it waits and returns `placed, err`. Without a callback outside a task, it's an error. When it fails, `placed` is `nil` and `err` says why.
+---@param id StructureId Which structure or build.
+---@param position Vec3 Where its smallest corner goes, floored to a block.
+---@param options? GradualPlaceOptions
+---@param callback? fun(placed: integer?, err: string?) Called on the main thread once it's done, as this script's code, with how many blocks it placed (those `integrity` left out, or outside the world's heights, are not counted) (or `nil` and why not). Not called if the script has stopped by then.
+---@return integer? # Only without a callback, in a task: how many blocks it placed (those `integrity` left out, or outside the world's heights, are not counted), or `nil`.
+---@return string? # Why it failed, when it did; `nil` when it worked.
+---@overload async fun(self: World, id: StructureId, position: Vec3, options?: GradualPlaceOptions): integer?, string?
+---@overload fun(self: World, id: StructureId, position: Vec3, options?: GradualPlaceOptions, callback: fun(placed: integer?, err: string?))
+function World:place_gradually(id, position, options, callback) end
 
 --- Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
 ---@param event World.Event The event's name.
@@ -6597,6 +6620,19 @@ function Event:uncancel() end
 ---@field mirror "none"|"left_right"|"front_back"? Whether it's mirrored first: `"left_right"` flips it along z, `"front_back"` along x. Default `"none"`.
 ---@field integrity number? How much of it is placed, 0 to 1: each block is kept with this chance. Default 1: all of it.
 ---@field entities boolean? Whether the entities saved with it are placed too. Default `true`.
+
+--- How `world:place_gradually` places one. A key that isn't one of these is an error.
+---@class GradualPlaceOptions
+---@field rotation integer? How far it turns clockwise (seen from above) about its smallest corner, in degrees: 0, 90, 180 or 270 (any multiple of 90). Default 0.
+---@field mirror "none"|"left_right"|"front_back"? Whether it's mirrored first: `"left_right"` flips it along z, `"front_back"` along x. Default `"none"`.
+---@field integrity number? How much of it is placed, 0 to 1: each block is kept with this chance. Default 1: all of it.
+---@field entities boolean? Whether the entities saved with it are placed too, once its blocks are in. Default `true`.
+---@field per_tick integer? The most blocks it places in one tick, 1 or more: slower than the server's share, never faster. Default: as many as its share allows.
+
+--- How `world:fill_gradually` fills. A key that isn't one of these is an error.
+---@class GradualFillOptions
+---@field update boolean? Whether neighbours react to each block (sand falls, water flows), as `BlockSetOptions` says. Default `true`.
+---@field per_tick integer? The most blocks it goes through in one tick, 1 or more: slower than the server's share, never faster. Default: as many as its share allows.
 
 --- What `world:blocks` gives for each block. A key that isn't one of these is an error.
 ---@class BlockBoxOptions

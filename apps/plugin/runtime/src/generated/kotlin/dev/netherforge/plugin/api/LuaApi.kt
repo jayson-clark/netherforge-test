@@ -313,15 +313,20 @@ interface NfWorldsApi {
 
 /**
  * Structures: saved boxes of blocks that `world:place_structure` places. The project's are
- * `structures/<id>.nbt`; scripts save more with `world:save_structure`.
+ * `structures/<id>.nbt`; scripts save more with `world:save_structure`. A build (`builds/<id>/`) is a
+ * structure too big for one file, kept in parts, which `world:place_gradually` places over several
+ * ticks; these functions name both alike.
  */
 interface NfStructuresApi {
-    /** Whether there's a structure by that id: one of the project's, or one a script saved. */
+    /**
+     * Whether there's a structure or build by that id: one of the project's, or a structure a script
+     * saved.
+     */
     fun exists(caller: Caller, id: String): Boolean
 
     /**
-     * How big a structure is, in blocks along x, y and z (before it's turned), or `nil` when there's none
-     * by that id. One whose file can't be read is an error.
+     * How big a structure or build is, in blocks along x, y and z (before it's turned), or `nil` when
+     * there's none by that id. One whose file (for a build, its last part's) can't be read is an error.
      */
     fun size(caller: Caller, id: String): Vec3?
 }
@@ -3420,10 +3425,26 @@ interface WorldApi {
 
     /**
      * Sets every block in the box between two corners (both included) to one state. One call changes at
-     * most 32768 blocks: a bigger box is an error, so spread a big fill over several ticks with a task. A
-     * block state the server doesn't have is an error. Blocks in unloaded chunks are skipped.
+     * most 32768 blocks: a bigger box is an error (`fill_gradually` spreads a big fill over several
+     * ticks). A block state the server doesn't have is an error. Blocks in unloaded chunks are skipped.
      */
     fun fillBlocks(self: LuaHandle.World, from: Vec3, to: Vec3, state: String, options: BlockSetOptions?): Long
+
+    /**
+     * Sets every block in the box between two corners (both included) to one state, like `fill_blocks`,
+     * but over as many ticks as it takes, for a box too big for one call: up to 16777216 blocks (256 × 256
+     * × 256). It goes a few thousand blocks a tick, shared with every other gradual placement and fill on
+     * the server (the owner's `structures.blocks-per-tick` in `config.yml`), so even a big one never
+     * stalls the server; each package may have a few going at once (`structures.max-jobs-per-package`),
+     * past which one fails at once. It goes a chunk's column at a time, from the bottom up, loading the
+     * chunks the box covers as it reaches them (`fill_blocks` skips unloaded ones). A bigger box, a block
+     * state the server doesn't have, or a `per_tick` below 1 is an error at once. The world going, or this
+     * script stopping, stops it part way, and what was set stays. It takes as many ticks as the fill does,
+     * so its changed arrives later: give `callback`, which is called with `changed, err` once it's done,
+     * or call it inside a task (`nf.task`) without one, and it waits and returns `changed, err`. Without a
+     * callback outside a task, it's an error. When it fails, `changed` is `nil` and `err` says why.
+     */
+    fun fillGradually(self: LuaHandle.World, from: Vec3, to: Vec3, state: String, options: GradualFillOptions?): CompletionStage<Long>
 
     /**
      * The highest block at a column that isn't air, ignoring the position's `y`. `nil` in an unloaded
@@ -3640,18 +3661,39 @@ interface WorldApi {
      * `place_structure`: an arena to reset, a prefab to stamp. It's saved in the server's data folder, not
      * the project, and kept across restarts; saving the same id again replaces it. An id that isn't an id
      * (lowercase letters, digits and `_`), or that one of the project's structures (`structures/<id>.nbt`)
-     * already has, is an error, as is a box over 48 blocks along any side. Air is saved too, so placing it
-     * puts back the empty space as well; it loads the chunks the box covers, as `/place` does.
+     * or builds (`builds/<id>/`) already has, is an error, as is a box over 48 blocks along any side. Air
+     * is saved too, so placing it puts back the empty space as well; it loads the chunks the box covers,
+     * as `/place` does.
      */
     fun saveStructure(self: LuaHandle.World, id: String, from: Vec3, to: Vec3, options: StructureSaveOptions?): Boolean
 
     /**
      * Places a structure with its smallest corner at `position` (before it's turned): one of the project's
      * (`structures/<id>.nbt`) or one a script saved (`save_structure`). Loads the chunks it covers, as
-     * `/place` does. A structure there's none of, one whose file can't be read, a `rotation` that isn't a
-     * multiple of 90 or an `integrity` outside 0 to 1 is an error.
+     * `/place` does, all in this tick: `place_gradually` spreads a big one over several. A build
+     * (`builds/<id>/`) is always placed that way, so naming one here is an error, as is a structure
+     * there's none of, one whose file can't be read, a `rotation` that isn't a multiple of 90 or an
+     * `integrity` outside 0 to 1.
      */
     fun placeStructure(self: LuaHandle.World, id: String, position: Vec3, options: StructurePlaceOptions?): Boolean
+
+    /**
+     * Places a structure or a build (`builds/<id>/`, a structure too big for one file) like
+     * `place_structure`, its smallest corner at `position` before it's turned, but over as many ticks as
+     * it takes. It goes a few thousand blocks a tick, shared with every other gradual placement and fill
+     * on the server (the owner's `structures.blocks-per-tick` in `config.yml`), so even a big one never
+     * stalls the server; each package may have a few going at once (`structures.max-jobs-per-package`),
+     * past which one fails at once. Its blocks go in from the bottom up (a build's a part at a time),
+     * loading the chunks it covers as it reaches them, then its entities, once every block is in. Blocks
+     * go in as they were saved, with no updates to their neighbours, as `/place` puts them. A structure or
+     * build there's none of, a `rotation` that isn't a multiple of 90, an `integrity` outside 0 to 1 or a
+     * `per_tick` below 1 is an error at once. A part that can't be read, the world going, or this script
+     * stopping stops it part way, and what was placed stays. It takes as many ticks as the placing does,
+     * so its placed arrives later: give `callback`, which is called with `placed, err` once it's done, or
+     * call it inside a task (`nf.task`) without one, and it waits and returns `placed, err`. Without a
+     * callback outside a task, it's an error. When it fails, `placed` is `nil` and `err` says why.
+     */
+    fun placeGradually(self: LuaHandle.World, id: String, position: Vec3, options: GradualPlaceOptions?): CompletionStage<Long>
 }
 
 /**

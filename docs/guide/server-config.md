@@ -162,6 +162,29 @@ carries the `NPC` metadata plugins check to leave fake players alone (the one
 Citizens sets), and it loads only the chunks right around it. A bot leaves
 when the script that joined it unloads.
 
+## Gradual placement
+
+`world:place_gradually` (a [build](../format/worlds.md#builds), or a big
+structure) and `world:fill_gradually` (a fill too big for `fill_blocks`)
+spread their work over ticks. Every one going shares a number of blocks each
+tick, in turn and in equal shares, so two scripts can't double the load and one
+can't starve another:
+
+```yaml
+structures:
+  blocks-per-tick: 8192
+  max-jobs-per-package: 4
+```
+
+| Key                    | Meaning                                                                                                       | Default |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------- | ------- |
+| `blocks-per-tick`      | Blocks every gradual placement and fill together may set in one tick. Lower it if big builds make ticks long. | `8192`  |
+| `max-jobs-per-package` | How many one package may have going at once; past it, a new one fails at once with a message naming this key. | `4`     |
+
+A placement reads a build one part at a time, so a big build is never all in
+memory. A job stops when the script that started it unloads (what it placed
+stays). `/nf scripts` counts each script's under `gradual`.
+
 ## Web routes
 
 A package that declares `"requires": { "web": true }` can answer web requests

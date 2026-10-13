@@ -1967,6 +1967,27 @@ How `world:place_structure` places one. A key that isn't one of these is an erro
 | `integrity` | `number?` | How much of it is placed, 0 to 1: each block is kept with this chance. Default 1: all of it. |
 | `entities` | `boolean?` | Whether the entities saved with it are placed too. Default `true`. |
 
+### GradualPlaceOptions {#gradualplaceoptions}
+
+How `world:place_gradually` places one. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `rotation` | `integer?` | How far it turns clockwise (seen from above) about its smallest corner, in degrees: 0, 90, 180 or 270 (any multiple of 90). Default 0. |
+| `mirror` | `"none"\|"left_right"\|"front_back"?` | Whether it's mirrored first: `"left_right"` flips it along z, `"front_back"` along x. Default `"none"`. |
+| `integrity` | `number?` | How much of it is placed, 0 to 1: each block is kept with this chance. Default 1: all of it. |
+| `entities` | `boolean?` | Whether the entities saved with it are placed too, once its blocks are in. Default `true`. |
+| `per_tick` | `integer?` | The most blocks it places in one tick, 1 or more: slower than the server's share, never faster. Default: as many as its share allows. |
+
+### GradualFillOptions {#gradualfilloptions}
+
+How `world:fill_gradually` fills. A key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `update` | `boolean?` | Whether neighbours react to each block (sand falls, water flows), as `BlockSetOptions` says. Default `true`. |
+| `per_tick` | `integer?` | The most blocks it goes through in one tick, 1 or more: slower than the server's share, never faster. Default: as many as its share allows. |
+
 ### BlockBoxOptions {#blockboxoptions}
 
 What `world:blocks` gives for each block. A key that isn't one of these is an error.

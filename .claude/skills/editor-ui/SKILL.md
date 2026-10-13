@@ -200,7 +200,7 @@ onChange }`, oldest first, the row acted on last being the primary:
   it rolls), a game block file's blocks or a particle effect's emitter sprites (tinted with CSS masks); a
   menu's `WindowFrame` and a dialog's `DialogPreview` in miniature (`inert`); a biome's `BiomeScene`; a
   cutscene's path from above (`topDown`); a datapack's `pack.png` or a map's `icon.png` (`folderPicture`).
-  Terrains, structures, dimension types, modules and migrations have none. Vanilla pictures everywhere
+  Terrains, structures, builds, dimension types, modules and migrations have none. Vanilla pictures everywhere
   come through `useClientAssets`, which draws the textures resource packs redraw (`textures` in `pack.json`)
   with the packs' pictures (`withReplacedTextures`; its `key` tells asset sets apart in caches, never
   `version`); `useGameClientAssets` is the game's own, for starting a replacement from. A kind's (or group's) tiles stay hidden (`opacity: 0`, `data-loading`) until their
@@ -721,6 +721,14 @@ has a track, a drag keys that channel at the playhead instead of editing the
 base transform.
 
 ## Viewports (`editors/shared/viewport/`)
+
+**The build screen** (`editors/builds/`: not `build/`, which `.gitignore` leaves out): a build's parts are read through `readProjectBytes` and drawn as a 2D
+picture (`PictureView`, from `@netherforge/terrain-preview/picture`'s `StructurePicture`: from above, isometric, or a
+slice; the same pixels `netherforge preview` writes), never as a 3D mesh, so a big one stays quick; `ops.ts` cuts a
+capture's box into part boxes (each one bridge `save_structure`, all captured before any is written) and works out
+the size and gaps. `ImportSchematic` (shared with the structure screen, which takes only what fits in one file) reads
+a `.schem`/`.litematic` with `@netherforge/terrain-preview/schematic` and writes `parts.ts`'s files through
+`workspace.writeBinary`, deleting parts an old grid had past the new one.
 
 **The structure screen's generation section** (`editors/structure/Generation`):
 a structure's `structures/<id>.json` (format's `StructureGeneration`, the

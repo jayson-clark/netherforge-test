@@ -3,13 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "What the terrain preview draws, shared by the editor and the netherforge command: colours and pixels from format's numbers, and the project structures (NBT) a generator's decorations place",
+  "description": "What the terrain and structure previews draw, shared by the editor and the netherforge command: colours and pixels from format's numbers, the project structures (NBT) a generator's decorations place, pictures of structures and builds, and schematics imported into them",
   "exports": {
     ".": "./src/index.ts",
     "./nbt": "./src/nbt.ts",
     "./structure": "./src/structure.ts",
     "./lua.browser": "./src/lua.browser.ts",
-    "./lua.node": "./src/lua.node.ts"
+    "./lua.node": "./src/lua.node.ts",
+    "./schematic": "./src/schematic.ts",
+    "./parts": "./src/parts.ts",
+    "./picture": "./src/picture.ts"
   },
   "scripts": {
     "lint": "tsc --noEmit -p .",

@@ -3897,6 +3897,25 @@ do
     return prim["World.fill_blocks"](self_key, from[1], from[2], from[3], to[1], to[2], to[3], state, options)
   end
 
+  function World.fill_gradually(self, from, to, state, options, callback)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(from) ~= Vec3_mt then
+      want_vec3(from, "from")
+    end
+    if genuine_mt(to) ~= Vec3_mt then
+      want_vec3(to, "to")
+    end
+    local waker, task, token, scope = async.begin("World:fill_gradually", callback)
+    local wait_id = prim["World.fill_gradually"](self_key, from[1], from[2], from[3], to[1], to[2], to[3], state, options, scope, waker)
+    if task ~= nil then
+      local value, err = async.wait(task, token, wait_id)
+      return value, err
+    end
+  end
+
   function World.highest_block(self, position)
     local self_key = ids[self]
     if self_key == nil or not World_is[class_of(self)] then
@@ -4203,6 +4222,22 @@ do
       want_vec3(position, "position")
     end
     return prim["World.place_structure"](self_key, id, position[1], position[2], position[3], options)
+  end
+
+  function World.place_gradually(self, id, position, options, callback)
+    local self_key = ids[self]
+    if self_key == nil or not World_is[class_of(self)] then
+      self_key = self_of(self, "World")
+    end
+    if genuine_mt(position) ~= Vec3_mt then
+      want_vec3(position, "position")
+    end
+    local waker, task, token, scope = async.begin("World:place_gradually", callback)
+    local wait_id = prim["World.place_gradually"](self_key, id, position[1], position[2], position[3], options, scope, waker)
+    if task ~= nil then
+      local value, err = async.wait(task, token, wait_id)
+      return value, err
+    end
   end
 
   function World.location(self, position, yaw, pitch)

@@ -76,6 +76,15 @@ bots:
   enabled: false
   max: 20
 
+# How fast world:place_gradually and world:fill_gradually go. Every placement and
+# fill going at once shares blocks-per-tick blocks a tick, in turn, so two scripts
+# can't double the load; a package may have max-jobs-per-package going at once,
+# past which a new one fails. Lower blocks-per-tick if big builds make ticks long.
+# Read when the server starts; dev servers read it too.
+structures:
+  blocks-per-tick: 8192
+  max-jobs-per-package: 4
+
 # What nf.http.request (a script's web requests, to the hosts its package
 # declares in netherforge.json) may reach and do. Requests reach public addresses
 # only: a name that leads to loopback, a private, link-local, shared (CGNAT) or

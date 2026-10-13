@@ -75,6 +75,7 @@ import dev.netherforge.plugin.world.BossBars
 import dev.netherforge.plugin.world.Daylight
 import dev.netherforge.plugin.world.Effects
 import dev.netherforge.plugin.world.EntityData
+import dev.netherforge.plugin.world.GradualJobs
 import dev.netherforge.plugin.world.HiddenEntities
 import dev.netherforge.plugin.world.ManagedWorlds
 import dev.netherforge.plugin.world.MobGoals
@@ -284,6 +285,13 @@ class ProjectSession internal constructor(
     /** The project's structures and the ones scripts saved. */
     internal val structures =
         service(StructureStore(platform, { source.rootFolder }, config.dataDirectory, { structureSpawns.scan() }) { snapshot })
+
+    /** `world:place_gradually` and `world:fill_gradually`: placements and fills spread over ticks, each its scope's. */
+    internal val gradual = service(
+        GradualJobs(platform, { config.structures }, { structureSpawns.scan() }) { world, x, y, z, state ->
+            customBlocks.replaced(world, x, y, z, state)
+        }
+    )
 
     /** The worlds the project made and may unload. */
     internal val managedWorlds =

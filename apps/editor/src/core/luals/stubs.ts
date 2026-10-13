@@ -77,6 +77,8 @@ export function projectNames(
   // A name kind that's a resource kind (`centity`, `menu`...) names its resources.
   for (const kind of Object.keys(names) as NameKind[])
     if (kind in KINDS) for (const id of ids(kind as KindId)) add(kind, id)
+  // Scripts name builds as they name structures (`world:place_gradually("castle", …)`).
+  for (const id of ids('build')) add('structure', id)
   // Parts of resources: a centity's nodes and animations, a dialog's buttons.
   for (const id of ids('centity')) {
     const model = modelAt<{ nodes?: object; animations?: object }>(

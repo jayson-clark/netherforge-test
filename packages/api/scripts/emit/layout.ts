@@ -325,7 +325,7 @@ export const FUNCTION_GROUPS: Record<string, Group[]> = {
       'Time, weather and sky',
       'time_of_day set_time_of_day is_day is_night day_count moon_phase weather set_weather sky set_sky clear_sky',
     ),
-    group('Blocks', 'block blocks set_block fill_blocks flood highest_block'),
+    group('Blocks', 'block blocks set_block fill_blocks fill_gradually flood highest_block'),
     group('Chunks and biomes', 'is_chunk_loaded load_chunk locate_biome'),
     group('Entities', 'players centities entities spawn_entity spawn_item'),
     group('Particles, sounds and explosions', 'spawn_particle play_sound explode strike_lightning'),
@@ -334,7 +334,7 @@ export const FUNCTION_GROUPS: Record<string, Group[]> = {
       'Game rules and spawning',
       'game_rule set_game_rule spawn_limit set_spawn_limit spawn_interval set_spawn_interval',
     ),
-    group('Border and structures', 'border save_structure place_structure'),
+    group('Border and structures', 'border save_structure place_structure place_gradually'),
   ],
   Block: [
     group('Where it is', 'world position location relative'),

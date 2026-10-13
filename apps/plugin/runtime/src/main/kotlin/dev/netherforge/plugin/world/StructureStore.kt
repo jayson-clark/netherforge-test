@@ -1,9 +1,12 @@
 package dev.netherforge.plugin.world
 
+import dev.netherforge.format.project.BuildKind
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.project.ProjectSnapshot
 import dev.netherforge.format.project.StructureKind
+import dev.netherforge.format.world.BuildGrid
+import dev.netherforge.format.world.Builds
 import dev.netherforge.plugin.api.notInProject
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.BlockVector
@@ -16,11 +19,15 @@ import dev.netherforge.plugin.session.RuntimeService
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.isRegularFile
+import kotlin.io.path.listDirectoryEntries
 import kotlin.math.abs
 
 /**
  * Where structures come from: the project's (`structures/<id>.nbt`, read
- * from the project folder) and the ones scripts save at runtime.
+ * from the project folder), its builds (`builds/<id>/`, a grid of structure
+ * files placed only gradually, [pieces]) and the ones scripts save at runtime.
+ * An id names one of them: a build can't take a structure's (format's
+ * `build.id-taken`) and a save can't take either's.
  *
  * Saves go to `<data>/.nf/structures/<id>.nbt`, never into the project: a
  * project's files change only when a person (or the editor, through format)
@@ -41,13 +48,13 @@ internal class StructureStore(
 ) : RuntimeService {
     override val name get() = "structures"
 
-    override val reloads: Set<KindSpec<*, *>> get() = setOf(StructureKind)
+    override val reloads: Set<KindSpec<*, *>> get() = setOf(StructureKind, BuildKind)
 
-    /** Nothing runs on a structure, so nothing restarts; the next placement reads the file again. */
+    /** Nothing runs on a structure or a build, so nothing restarts; the next placement reads the files again. */
     override fun reload(kind: KindSpec<*, *>, ids: Set<String>, batch: ReloadBatch) {
         for (id in ids) {
-            reload(id)
-            batch.data(Resource(StructureKind, id))
+            if (kind == BuildKind) forgetBuild(id) else reload(id)
+            batch.data(Resource(kind, id))
         }
     }
 
@@ -69,13 +76,34 @@ internal class StructureStore(
         return savedFile(id).takeIf { it.isRegularFile() }
     }
 
-    fun exists(id: String): Boolean = file(id) != null
+    /** A build of the project's: where its folder is (and how the project names it), and its grid. */
+    class Build(val id: String, val folder: Path, val location: String, val grid: BuildGrid) {
+        fun part(x: Int, y: Int, z: Int): Path = folder.resolve(Builds.fileOf(x, y, z))
+
+        fun shown(x: Int, y: Int, z: Int): String = "$location/${Builds.fileOf(x, y, z)}"
+    }
+
+    /** The project's build [id], or null when it has none (a structure, a saved one, or nothing). */
+    fun build(id: String): Build? {
+        val snapshot = snapshot() ?: return null
+        val file = snapshot.models(BuildKind)[id] ?: return null
+        val location = snapshot.placeOf(BuildKind, id).location
+        return Build(id, project().resolve(location), location, file.grid)
+    }
+
+    fun exists(id: String): Boolean = file(id) != null || build(id) != null
 
     /** [id]'s file, or an error naming what there is. */
-    private fun required(id: String): Path = file(id) ?: throw LuaApiException(
-        notInProject("structure", id, snapshot()?.models(StructureKind)?.keys?.toList().orEmpty() + savedIds()) +
-            " (the project's are structures/<id>.nbt; scripts add more with world:save_structure)"
+    private fun required(id: String): Path = file(id) ?: missing(id)
+
+    private fun missing(id: String): Nothing = throw LuaApiException(
+        notInProject("structure", id, allIds()) +
+            " (the project's are structures/<id>.nbt and builds/<id>/; scripts add more with world:save_structure)"
     )
+
+    /** Every id there is something by, for an error naming what there is. */
+    private fun allIds(): List<String> =
+        snapshot()?.let { it.models(StructureKind).keys + it.models(BuildKind).keys }.orEmpty().sorted() + savedIds()
 
     private fun savedIds(): List<String> = runCatching {
         Files.list(saved).use { files ->
@@ -91,13 +119,66 @@ internal class StructureStore(
     }
 
     fun size(id: String): BlockVector? {
-        val file = file(id) ?: return null
+        val file = file(id) ?: return build(id)?.let(::buildSize)
         return ops.size(file) ?: unreadable(id, file)
+    }
+
+    /** A build's size: its whole parts, and what its last part along each axis holds. */
+    private fun buildSize(build: Build): BlockVector {
+        val grid = build.grid
+        val last = build.part(grid.x - 1, grid.y - 1, grid.z - 1)
+        val tail = ops.size(last) ?: throw LuaApiException(
+            "${build.shown(
+                grid.x - 1,
+                grid.y - 1,
+                grid.z - 1
+            )} can't be read as a structure${if (last.isRegularFile()) "" else " (it's gone)"}"
+        )
+        return BlockVector(
+            (grid.x - 1) * Builds.PART_SIDE + tail.x,
+            (grid.y - 1) * Builds.PART_SIDE + tail.y,
+            (grid.z - 1) * Builds.PART_SIDE + tail.z
+        )
+    }
+
+    /**
+     * What `world:place_gradually` goes through to place [id]: a structure's one file, or a build's parts from the
+     * bottom up, each with where it sits in the build and the size its place in the grid says it has (whole parts
+     * [Builds.PART_SIDE] a side, the last along each axis what the last part holds). An error when there's nothing
+     * by that id, or a build's last part can't be read.
+     */
+    fun pieces(id: String): List<Piece> {
+        file(id)?.let { file ->
+            return listOf(Piece(file, projectPath(id) ?: "the structure saved as \"$id\"", BlockVector(0, 0, 0)))
+        }
+        val build = build(id) ?: missing(id)
+        val size = buildSize(build)
+        val grid = build.grid
+        fun side(part: Int, parts: Int, whole: Int) = if (part < parts - 1) Builds.PART_SIDE else whole - (parts - 1) * Builds.PART_SIDE
+        return grid.parts.map { part ->
+            val expected = BlockVector(side(part.x, grid.x, size.x), side(part.y, grid.y, size.y), side(part.z, grid.z, size.z))
+            val shown = build.shown(part.x, part.y, part.z)
+            Piece(build.part(part.x, part.y, part.z), shown, BlockVector(part.originX, part.originY, part.originZ)) { actual ->
+                if (actual == expected) {
+                    null
+                } else {
+                    "$shown is ${actual.x} × ${actual.y} × ${actual.z} blocks, but its place in the build's grid makes it " +
+                        "${expected.x} × ${expected.y} × ${expected.z} (every part is ${Builds.PART_SIDE} a side but the last along each axis)"
+                }
+            }
+        }
     }
 
     fun place(id: String, world: String, at: BlockVector, rotation: Long, mirror: String, integrity: Double, entities: Boolean): Boolean {
         if (rotation % 90 != 0L) throw LuaApiException("rotation must be a multiple of 90, not $rotation")
         if (integrity !in 0.0..1.0) throw LuaApiException("integrity must be between 0 and 1, not $integrity")
+        if (file(id) == null) {
+            build(id)?.let { build ->
+                throw LuaApiException(
+                    "\"$id\" is a build (${build.location}/), too big to place in one tick: place it with world:place_gradually"
+                )
+            }
+        }
         val file = required(id)
         val ops = ops
         if (!platform.worlds.exists(world)) return false
@@ -112,6 +193,9 @@ internal class StructureStore(
         if (!Names.isId(id)) throw LuaApiException("\"$id\" can't name a structure (${Names.ID_RULE})")
         projectPath(id)?.let { path ->
             throw LuaApiException("\"$id\" is one of the project's structures ($path): save under another id")
+        }
+        build(id)?.let { build ->
+            throw LuaApiException("\"$id\" is one of the project's builds (${build.location}/): save under another id")
         }
         checkSides(from, to)
         val ops = ops
@@ -158,6 +242,12 @@ internal class StructureStore(
 
     private fun corners(from: BlockVector, to: BlockVector) = BlockVector(minOf(from.x, to.x), minOf(from.y, to.y), minOf(from.z, to.z)) to
         BlockVector(maxOf(from.x, to.x), maxOf(from.y, to.y), maxOf(from.z, to.z))
+
+    /** The project's build [id] changed on disk (or went): the next placement or size reads its parts again. */
+    private fun forgetBuild(id: String) {
+        val folder = project().resolve(snapshot()?.placeOf(BuildKind, id)?.location ?: BuildKind.locationOf(id))
+        runCatching { folder.listDirectoryEntries("*${Builds.EXTENSION}") }.getOrDefault(emptyList()).forEach(ops::forget)
+    }
 
     /** The project's structure [id] changed on disk (or went): the next placement reads it again. */
     private fun reload(id: String) {

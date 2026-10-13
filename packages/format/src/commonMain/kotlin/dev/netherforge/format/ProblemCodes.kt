@@ -542,6 +542,14 @@ object ProblemCodes {
     val STRUCTURE_POOL = error("structure.pool", WORLDS, "A pool's name isn't usable (or is `start`), or the pool has no elements.")
     val STRUCTURE_POOL_ELEMENT = error("structure.pool-element", WORLDS, "A pool element names a structure the project doesn't have.")
 
+    // ---- builds -----------------------------------------------------------------
+
+    val BUILD_PART_NAME =
+        warning("build.part-name", WORLDS, "A file in a build's folder isn't one of its parts (`<x>_<y>_<z>.nbt`), so it's ignored.")
+    val BUILD_PART_MISSING = error("build.part-missing", WORLDS, "A build's grid of parts has a gap: a part it needs isn't there.")
+    val BUILD_SIZE = error("build.size", WORLDS, "A build has more parts along an axis than a build may.")
+    val BUILD_ID_TAKEN = error("build.id-taken", WORLDS, "A build has the id of one of the project's structures.")
+
     // ---- particle effects -------------------------------------------------------
 
     val PARTICLE_DURATION = error("particle.duration", PARTICLE, "`duration` is outside the ticks an effect may last.")

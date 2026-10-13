@@ -94,7 +94,7 @@ tools/gradle/build-logic/     the convention plugins: netherforge.kotlin-jvm, ne
 
   ```kotlin
   plugins { id("netherforge.paper-adapter") }
-  paperAdapter { paper = "26.3.build.152-beta" }
+  paperAdapter { paper = "26.3.build.181-stable" }
   ```
 
   The folder name is the one place its Minecraft version is written: Gradle
@@ -102,7 +102,7 @@ tools/gradle/build-logic/     the convention plugins: netherforge.kotlin-jvm, ne
   the jar names, `paper-plugin.yml`'s `api-version`, `runServer`'s version and
   the Java it targets (21 before 26.1, 25 from it) from it. `paper` is the
   Paper build: paper-api and its dev bundle for compiling, and the server
-  build the integration test downloads (`.build.152`), which the plugin jar
+  build the integration test downloads (`.build.181`), which the plugin jar
   names in `META-INF/netherforge/paper.properties` so the editor's dev server
   runs that build too, never a newer, untested one. Paper published 1.21.x
   as snapshots, so `paper-1.21.11` also says `serverBuild = 132`.

@@ -2,7 +2,7 @@
 
 # nf.structures
 
-Structures: saved boxes of blocks that `world:place_structure` places. The project's are `structures/<id>.nbt`; scripts save more with `world:save_structure`.
+Structures: saved boxes of blocks that `world:place_structure` places. The project's are `structures/<id>.nbt`; scripts save more with `world:save_structure`. A build (`builds/<id>/`) is a structure too big for one file, kept in parts, which `world:place_gradually` places over several ticks; these functions name both alike.
 
 A table of functions: call them with a dot.
 
@@ -10,7 +10,7 @@ A table of functions: call them with a dot.
 
 ### `nf.structures.exists(id)` {#exists}
 
-Whether there's a structure by that id: one of the project's, or one a script saved.
+Whether there's a structure or build by that id: one of the project's, or a structure a script saved.
 
 | Parameter | Type | |
 | --- | --- | --- |
@@ -20,7 +20,7 @@ Whether there's a structure by that id: one of the project's, or one a script sa
 
 ### `nf.structures.size(id)` {#size}
 
-How big a structure is, in blocks along x, y and z (before it's turned), or `nil` when there's none by that id. One whose file can't be read is an error.
+How big a structure or build is, in blocks along x, y and z (before it's turned), or `nil` when there's none by that id. One whose file (for a build, its last part's) can't be read is an error.
 
 | Parameter | Type | |
 | --- | --- | --- |
