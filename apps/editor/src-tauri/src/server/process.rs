@@ -242,18 +242,28 @@ impl ServerManager {
         ));
         check()?;
 
+        // The plugin first: it names the Paper build to run.
+        let plugin = plugins::find(&config.tools.plugin_dirs, minecraft)
+            .context(|| format!("No NetherForge plugin for Minecraft {minecraft}"))?;
         status(&format!("Getting Paper {minecraft}"));
         let paper_jar = match &config.tools.paper {
             PaperSource::Fill => {
-                paper::ensure(&self.dirs, self.http()?, minecraft, &report, &cancelled).await?
+                let build = plugins::paper_build(&plugin)?;
+                paper::ensure(
+                    &self.dirs,
+                    self.http()?,
+                    minecraft,
+                    build,
+                    &report,
+                    &cancelled,
+                )
+                .await?
             }
             PaperSource::Jar(jar) => jar.clone(),
         };
         check()?;
 
         status("Setting up the server folder");
-        let plugin = plugins::find(&config.tools.plugin_dirs, minecraft)
-            .context(|| format!("No NetherForge plugin for Minecraft {minecraft}"))?;
         let dir = self.dirs.server_dir(&config.project_root);
         // Copying the plugin is blocking file work: off the async workers.
         tokio::task::spawn_blocking({
@@ -952,9 +962,14 @@ mod tests {
         let plugins = tmp.path().join("plugins");
         std::fs::create_dir_all(&plugins).unwrap();
         let jar = plugins.join("NetherForge-0.0.0-paper-26.3.jar");
-        zip::ZipWriter::new(std::fs::File::create(&jar).unwrap())
-            .finish()
-            .unwrap();
+        let mut zip = zip::ZipWriter::new(std::fs::File::create(&jar).unwrap());
+        zip.start_file(
+            plugins::PAPER_PROPERTIES,
+            zip::write::SimpleFileOptions::default(),
+        )
+        .unwrap();
+        std::io::Write::write_all(&mut zip, b"minecraft=26.3\nbuild=152\n").unwrap();
+        zip.finish().unwrap();
         std::fs::create_dir_all(tmp.path().join("project")).unwrap();
         let port = std::net::TcpListener::bind("127.0.0.1:0")
             .unwrap()

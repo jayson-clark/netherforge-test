@@ -93,6 +93,13 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   The rules behind every name are in the
   [naming reference](docs/reference/naming.md).
 
+- **The dev server runs the Paper build the plugin was tested against.** The
+  editor no longer downloads the newest Paper build for the project's Minecraft
+  version: each plugin jar names the build its integration tests ran
+  (`META-INF/netherforge/paper.properties`), and the editor runs that one, so a
+  new Paper build can't break a dev server before NetherForge has tested it.
+  A cached build starts without the network.
+
 ### Added
 
 - **Bots for scripts.** `nf.bots.join` joins a fake player that a script

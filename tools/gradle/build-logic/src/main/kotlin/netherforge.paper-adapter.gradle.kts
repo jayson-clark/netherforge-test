@@ -91,7 +91,19 @@ dependencies {
 /** paper-common's `paper-plugin.yml` template, with this jar's version and Minecraft version filled in. */
 val templates = project(":plugin:paper-common").layout.projectDirectory.dir("src/plugin")
 
+/**
+ * `META-INF/netherforge/paper.properties`: the Paper server build this jar is
+ * tested against (the integration test's), which the editor runs its dev
+ * server on rather than whatever build is newest.
+ */
+val paperBuildProperties = tasks.register<WriteProperties>("paperBuildProperties") {
+    destinationFile.set(layout.buildDirectory.file("generated/paper-build/paper.properties"))
+    property("minecraft", minecraft)
+    property("build", adapter.serverBuild)
+}
+
 tasks.named<Copy>("processResources") {
+    from(paperBuildProperties) { into("META-INF/netherforge") }
     val version = project.version.toString()
     inputs.property("version", version)
     inputs.property("minecraft", minecraft)
