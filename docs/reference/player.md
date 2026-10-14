@@ -17,13 +17,13 @@ It is a [Living](living.md), which is an [Entity](entity.md), so it has every me
 | [Game mode, food and experience](#game-mode-food-and-experience) | [`game_mode`](#game_mode) [`set_game_mode`](#set_game_mode) [`food`](#food) [`set_food`](#set_food) [`saturation`](#saturation) [`set_saturation`](#set_saturation) [`level`](#level) [`set_level`](#set_level) [`experience_progress`](#experience_progress) [`set_experience_progress`](#set_experience_progress) [`give_experience`](#give_experience) |
 | [Movement](#movement) | [`is_flying`](#is_flying) [`set_flying`](#set_flying) [`can_fly`](#can_fly) [`set_can_fly`](#set_can_fly) [`walk_speed`](#walk_speed) [`set_walk_speed`](#set_walk_speed) [`fly_speed`](#fly_speed) [`set_fly_speed`](#set_fly_speed) [`is_sneaking`](#is_sneaking) [`is_sprinting`](#is_sprinting) |
 | [Stats and buffs](#stats-and-buffs) | [`stat`](#stat) [`stats`](#stats) [`modifiers`](#modifiers) [`set_modifiers`](#set_modifiers) [`add_buff`](#add_buff) [`remove_buff`](#remove_buff) [`has_buff`](#has_buff) [`buff_ticks`](#buff_ticks) [`buffs`](#buffs) |
-| [Items](#items) | [`held_item`](#held_item) [`set_held_item`](#set_held_item) [`off_hand_item`](#off_hand_item) [`set_off_hand_item`](#set_off_hand_item) [`held_slot`](#held_slot) [`set_held_slot`](#set_held_slot) [`give_item`](#give_item) [`item_cooldown`](#item_cooldown) [`set_item_cooldown`](#set_item_cooldown) [`ender_chest`](#ender_chest) [`storage`](#storage) [`refresh_items`](#refresh_items) |
+| [Items](#items) | [`held_item`](#held_item) [`set_held_item`](#set_held_item) [`off_hand_item`](#off_hand_item) [`set_off_hand_item`](#set_off_hand_item) [`cursor_item`](#cursor_item) [`set_cursor_item`](#set_cursor_item) [`held_slot`](#held_slot) [`set_held_slot`](#set_held_slot) [`give_item`](#give_item) [`item_cooldown`](#item_cooldown) [`set_item_cooldown`](#set_item_cooldown) [`ender_chest`](#ender_chest) [`storage`](#storage) [`refresh_items`](#refresh_items) |
 | [Recipes and advancements](#recipes-and-advancements) | [`discover_recipe`](#discover_recipe) [`undiscover_recipe`](#undiscover_recipe) [`has_discovered_recipe`](#has_discovered_recipe) [`grant_advancement`](#grant_advancement) [`revoke_advancement`](#revoke_advancement) [`has_advancement`](#has_advancement) [`advancement_progress`](#advancement_progress) |
 | [Menus, inventories and dialogs](#menus-inventories-and-dialogs) | [`open_menu`](#open_menu) [`menu`](#menu) [`close_menu`](#close_menu) [`open_inventory`](#open_inventory) [`close_inventory`](#close_inventory) [`open_dialog`](#open_dialog) [`close_dialog`](#close_dialog) |
 | [On their screen](#on-their-screen) | [`hud`](#hud) [`sidebar`](#sidebar) [`bossbars`](#bossbars) [`below_name`](#below_name) [`set_below_name`](#set_below_name) |
 | [The player list](#the-player-list) | [`tab_header`](#tab_header) [`set_tab_header`](#set_tab_header) [`tab_footer`](#tab_footer) [`set_tab_footer`](#set_tab_footer) [`tab_name`](#tab_name) [`set_tab_name`](#set_tab_name) [`tab_order`](#tab_order) [`set_tab_order`](#set_tab_order) [`is_listed_for`](#is_listed_for) [`set_listed_for`](#set_listed_for) |
 | [What they see of the world](#what-they-see-of-the-world) | [`sky`](#sky) [`set_sky`](#set_sky) [`clear_sky`](#clear_sky) [`border`](#border) [`has_own_border`](#has_own_border) [`reset_border`](#reset_border) [`send_block_change`](#send_block_change) [`reset_block`](#reset_block) [`send_equipment_change`](#send_equipment_change) [`camera`](#camera) [`set_camera`](#set_camera) [`compass_target`](#compass_target) [`set_compass_target`](#set_compass_target) [`view_distance`](#view_distance) [`set_view_distance`](#set_view_distance) [`resource_pack_status`](#resource_pack_status) |
-| [Events](#events) | [`on`](#on) [`once`](#once) and 41 events |
+| [Events](#events) | [`on`](#on) [`once`](#once) and 43 events |
 | From [Living](living.md) | [`health`](living.md#health) [`set_health`](living.md#set_health) [`max_health`](living.md#max_health) [`damage`](living.md#damage) [`heal`](living.md#heal) [`attribute`](living.md#attribute) [`attribute_base`](living.md#attribute_base) [`set_attribute_base`](living.md#set_attribute_base) [`attribute_modifiers`](living.md#attribute_modifiers) [`add_attribute_modifier`](living.md#add_attribute_modifier) [`remove_attribute_modifier`](living.md#remove_attribute_modifier) [`effects`](living.md#effects) [`has_effect`](living.md#has_effect) [`add_effect`](living.md#add_effect) [`remove_effect`](living.md#remove_effect) [`equipment`](living.md#equipment) [`set_equipment`](living.md#set_equipment) |
 | From [Entity](entity.md) | [`id`](entity.md#id) [`kind`](entity.md#kind) [`exists`](entity.md#exists) [`is_player`](entity.md#is_player) [`is_living`](entity.md#is_living) [`is_mob`](entity.md#is_mob) [`location`](entity.md#location) [`position`](entity.md#position) [`world`](entity.md#world) [`eye_position`](entity.md#eye_position) [`yaw`](entity.md#yaw) [`pitch`](entity.md#pitch) [`direction`](entity.md#direction) [`set_yaw`](entity.md#set_yaw) [`set_pitch`](entity.md#set_pitch) [`look_at`](entity.md#look_at) [`teleport`](entity.md#teleport) [`velocity`](entity.md#velocity) [`set_velocity`](entity.md#set_velocity) [`add_velocity`](entity.md#add_velocity) [`is_on_ground`](entity.md#is_on_ground) [`remove`](entity.md#remove) [`custom_name`](entity.md#custom_name) [`set_custom_name`](entity.md#set_custom_name) [`is_custom_name_visible`](entity.md#is_custom_name_visible) [`set_custom_name_visible`](entity.md#set_custom_name_visible) [`tags`](entity.md#tags) [`has_tag`](entity.md#has_tag) [`add_tag`](entity.md#add_tag) [`remove_tag`](entity.md#remove_tag) [`is_glowing`](entity.md#is_glowing) [`set_glowing`](entity.md#set_glowing) [`is_visible`](entity.md#is_visible) [`set_visible`](entity.md#set_visible) [`hide_from`](entity.md#hide_from) [`show_to`](entity.md#show_to) [`is_hidden_from`](entity.md#is_hidden_from) [`team`](entity.md#team) [`is_silent`](entity.md#is_silent) [`set_silent`](entity.md#set_silent) [`has_gravity`](entity.md#has_gravity) [`set_gravity`](entity.md#set_gravity) [`is_invulnerable`](entity.md#is_invulnerable) [`set_invulnerable`](entity.md#set_invulnerable) [`passengers`](entity.md#passengers) [`add_passenger`](entity.md#add_passenger) [`remove_passenger`](entity.md#remove_passenger) [`vehicle`](entity.md#vehicle) [`inventory`](entity.md#inventory) [`target_block`](entity.md#target_block) [`target_entity`](entity.md#target_entity) [`target_centity`](entity.md#target_centity) |
 
@@ -628,6 +628,35 @@ Puts an item in their offhand, or empties it.
 | `item` (optional) | [`Item`](types.md#item) | Leave it out (or `nil`) to empty it. |
 
 **Returns** `boolean`: `false` when they're offline.
+
+### `player:cursor_item()` {#cursor_item}
+
+What they carry on their cursor with an inventory screen open (their own, a vanilla one or one of the project's menus), or `nil` for nothing or when they're offline.
+
+**Returns** [`Item`](types.md#item)`?`
+
+### `player:set_cursor_item(item?)` {#set_cursor_item}
+
+Puts an item on their cursor, replacing what they carry, or empties it: for `click_inventory` and `drag_inventory` handlers, say, taking what they hold. What's on the cursor goes back to their inventory (or drops) when they close the screen. The server can't tell whether their own inventory is open, so with no screen open it's carried out of sight until they next open and close it.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `item` (optional) | [`Item`](types.md#item) | Leave it out (or `nil`) to empty it. |
+
+**Returns** `boolean`: `false` when they're offline.
+
+```lua
+player:on("click_inventory", function(event)
+  local gem = event.cursor_item
+  if event.own and gem and gem.data and gem.data.gem and event.item then
+    event:cancel()
+    local item = event.item
+    item.lore = { "<aqua>Socketed" }
+    event.inventory:set_item(event.index, item)
+    player:set_cursor_item(nil)
+  end
+end)
+```
 
 ### `player:held_slot()` {#held_slot}
 
@@ -1235,7 +1264,7 @@ What `player:on(event, handler)` listens for. See [Events](events.md) for how ev
 | `break_item` | [PlayerItemEvent](types.md#playeritemevent) | A tool, weapon or piece of armour a player was using wore out and broke. `event.item` is what it was, before it went. Only this player's: heard before `nf.on("player_break_item")`, with the same event, so `event:stop()` keeps it from there. Bubbles. |
 | `drop_item` | [PlayerItemEvent](types.md#playeritemevent) | A player is dropping an item from their inventory. `event:cancel()` keeps it in their inventory. Only this player's: heard before `nf.on("player_drop_item")`, with the same event, so `event:stop()` keeps it from there. **Cancellable.** Bubbles. |
 | `pickup_item` | [PlayerPickupItemEvent](types.md#playerpickupitemevent) | A player is picking up a dropped item. `event:cancel()` leaves it lying there (it is asked again while they stand on it). Only this player's: heard before `nf.on("player_pickup_item")`, with the same event, so `event:stop()` keeps it from there. **Cancellable.** Bubbles. |
-| `swap_hands` | [PlayerEvent](types.md#playerevent) | A player pressed the key that swaps the items in their hands. `event:cancel()` leaves them where they are, so the key can be used for something else. Only this player's: heard before `nf.on("player_swap_hands")`, with the same event, so `event:stop()` keeps it from there. **Cancellable.** Bubbles. |
+| `swap_hands` | [PlayerSwapHandsEvent](types.md#playerswaphandsevent) | A player pressed the key that swaps the items in their hands (F). With an inventory screen open (their own, a vanilla one or one of the project's menus) the key swaps the slot they point at with their off hand instead, and this is heard too, after that click's `click_inventory` or `click` handlers and only when they let it through; `event.in_inventory` says which. `event:cancel()` leaves them where they are, so the key can be used for something else. Only this player's: heard before `nf.on("player_swap_hands")`, with the same event, so `event:stop()` keeps it from there. **Cancellable.** Bubbles. |
 | `change_slot` | [PlayerChangeSlotEvent](types.md#playerchangeslotevent) | A player picked another hotbar slot: a number key or the scroll wheel. `event:cancel()` keeps the slot they had. Only this player's: heard before `nf.on("player_change_slot")`, with the same event, so `event:stop()` keeps it from there. **Cancellable.** Bubbles. |
 
 ### Life and progress
@@ -1258,6 +1287,8 @@ What `player:on(event, handler)` listens for. See [Events](events.md) for how ev
 | --- | --- | --- |
 | `open_inventory` | [PlayerInventoryEvent](types.md#playerinventoryevent) | A player is opening a vanilla inventory: a chest, a furnace, a crafting table, a villager's trades, a horse's. Not one of the project's menus: those are `menu_open`. `event:cancel()` keeps it closed. Only this player's: heard before `nf.on("player_open_inventory")`, with the same event, so `event:stop()` keeps it from there. **Cancellable.** Bubbles. |
 | `close_inventory` | [PlayerInventoryEvent](types.md#playerinventoryevent) | A player closed a vanilla inventory (not one of the project's menus: those are `menu_close`), or left the server with it open. Only this player's: heard before `nf.on("player_close_inventory")`, with the same event, so `event:stop()` keeps it from there. Bubbles. |
+| `click_inventory` | [PlayerClickInventoryEvent](types.md#playerclickinventoryevent) | A player clicked in an inventory that isn't one of the project's menus: their own (with nothing else open, or below a chest, a furnace, …) or the vanilla one they have open. While one of the project's menus is open, clicks in their own inventory below it are the menu's `click` instead. Not on the creative inventory screen, which sends whole stacks rather than clicks. `event:cancel()` stops the click: nothing moves. Only this player's: heard before `nf.on("player_click_inventory")`, with the same event, so `event:stop()` keeps it from there. **Cancellable.** Bubbles. |
+| `drag_inventory` | [PlayerDragInventoryEvent](types.md#playerdraginventoryevent) | A player dragged a stack across slots (holding a mouse button down) in an inventory that isn't one of the project's menus: their own, or the vanilla one they have open. While one of the project's menus is open, that's the menu's `drag` instead. `event:cancel()` stops it: nothing moves. Only this player's: heard before `nf.on("player_drag_inventory")`, with the same event, so `event:stop()` keeps it from there. **Cancellable.** Bubbles. |
 | `craft` | [PlayerCraftEvent](types.md#playercraftevent) | A player is taking what they crafted out of the result slot (with shift, as many as they can make). `event:cancel()` leaves it there and keeps the ingredients. Only this player's: heard before `nf.on("player_craft")`, with the same event, so `event:stop()` keeps it from there. **Cancellable.** Bubbles. |
 | `prepare_craft` | [PlayerPrepareCraftEvent](types.md#playerpreparecraftevent) | What's in a crafting grid changed (a crafting table's, or the 2×2 in a player's inventory), and the game is working out what it makes. Assign `event.result` to make something else, or `nil` for nothing: a recipe of your own. Only this player's: heard before `nf.on("player_prepare_craft")`, with the same event, so `event:stop()` keeps it from there. Bubbles. Writable: `result`. |
 | `prepare_anvil` | [PlayerPrepareAnvilEvent](types.md#playerprepareanvilevent) | What is in an anvil changed (or the name typed into it), and the game is working out the result. Assign `event.result` to make something else (or `nil` for nothing), and `event.cost` to change how many levels it takes. Only this player's: heard before `nf.on("player_prepare_anvil")`, with the same event, so `event:stop()` keeps it from there. Bubbles. Writable: `result`, `cost`. |

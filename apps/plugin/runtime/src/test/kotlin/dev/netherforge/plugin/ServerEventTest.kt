@@ -287,7 +287,10 @@ class ServerEventTest {
                   event:cancel()
                 end)
                 alex:on("consume_item", function(event) log("consume", event.item.kind) event:cancel() end)
-                alex:on("swap_hands", function(event) log("swap", event.player:name()) event:cancel() end)
+                alex:on("swap_hands", function(event)
+                  log("swap", event.player:name(), event.item.kind, tostring(event.off_hand_item), tostring(event.in_inventory))
+                  event:cancel()
+                end)
                 nf.on("player_sneak", function(event) log("sneak", tostring(event.sneaking)) end)
                 nf.on("player_command", function(event)
                   log("command", event.input)
@@ -302,7 +305,7 @@ class ServerEventTest {
             assertTrue(runtime.events.playerDropItem(alex.ref, bread))
             assertTrue(runtime.events.playerPickupItem(alex.ref, bread, dropped))
             assertTrue(runtime.events.playerConsumeItem(alex.ref, bread))
-            assertTrue(server.platform.raise.playerSwapHands(GameEvent.Player(alex.ref)))
+            assertTrue(server.platform.raise.playerSwapHands(GameEvent.PlayerSwapHands(alex.ref, bread, null, false)))
             server.platform.raise.playerSneak(GameEvent.PlayerSneak(alex.ref, true))
             assertFalse(server.platform.raise.playerCommand(GameEvent.PlayerCommand(alex.ref, "give @s minecraft:diamond")))
             assertTrue(server.platform.raise.playerCommand(GameEvent.PlayerCommand(alex.ref, "stop")))
@@ -311,7 +314,7 @@ class ServerEventTest {
                     "drop\tminecraft:bread",
                     "pickup\tminecraft:bread\t3\tminecraft:item",
                     "consume\tminecraft:bread",
-                    "swap\tAlex",
+                    "swap\tAlex\tminecraft:bread\tnil\tfalse",
                     "sneak\ttrue",
                     "command\tgive @s minecraft:diamond",
                     "command\tstop"

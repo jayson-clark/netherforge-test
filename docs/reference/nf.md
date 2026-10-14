@@ -10,7 +10,7 @@ A table of functions: call them with a dot.
 | --- | --- |
 | [Timers and tasks](#timers-and-tasks) | [`after`](#after) [`every`](#every) [`task`](#task) [`wait`](#wait) [`wait_until`](#wait_until) [`wait_for`](#wait_for) [`instructions_left`](#instructions_left) |
 | [Data and settings](#data-and-settings) | [`data`](#data) [`db`](#db) [`config`](#config) |
-| [Events](#events) | [`on`](#on) [`once`](#once) [`emit`](#emit) and 95 events |
+| [Events](#events) | [`on`](#on) [`once`](#once) [`emit`](#emit) and 97 events |
 
 ## Namespaces
 
@@ -281,7 +281,7 @@ What `nf.on(event, handler)` listens for. See [Events](events.md) for how events
 | `player_break_item` | [PlayerItemEvent](types.md#playeritemevent) | A tool, weapon or piece of armour a player was using wore out and broke. `event.item` is what it was, before it went. |
 | `player_drop_item` | [PlayerItemEvent](types.md#playeritemevent) | A player is dropping an item from their inventory. `event:cancel()` keeps it in their inventory. **Cancellable.** |
 | `player_pickup_item` | [PlayerPickupItemEvent](types.md#playerpickupitemevent) | A player is picking up a dropped item. `event:cancel()` leaves it lying there (it is asked again while they stand on it). **Cancellable.** |
-| `player_swap_hands` | [PlayerEvent](types.md#playerevent) | A player pressed the key that swaps the items in their hands. `event:cancel()` leaves them where they are, so the key can be used for something else. **Cancellable.** |
+| `player_swap_hands` | [PlayerSwapHandsEvent](types.md#playerswaphandsevent) | A player pressed the key that swaps the items in their hands (F). With an inventory screen open (their own, a vanilla one or one of the project's menus) the key swaps the slot they point at with their off hand instead, and this is heard too, after that click's `click_inventory` or `click` handlers and only when they let it through; `event.in_inventory` says which. `event:cancel()` leaves them where they are, so the key can be used for something else. **Cancellable.** |
 | `player_change_slot` | [PlayerChangeSlotEvent](types.md#playerchangeslotevent) | A player picked another hotbar slot: a number key or the scroll wheel. `event:cancel()` keeps the slot they had. **Cancellable.** |
 | `item_view` | [ItemViewEvent](types.md#itemviewevent) | Any stack is being sent to one player's game (their inventory, a window they have open, their cursor): after its project item's own `view` handlers, for a stack of one, and for every other stack too. Assign `event.display_name` and `event.lore` to change how it looks to `event.player` alone; nothing the server keeps changes. While nobody listens, stacks are sent as they are; while someone does, every stack sent is worked out here first, so prefer an item's own `view` when only some items change. Writable: `display_name`, `lore`. |
 
@@ -303,6 +303,8 @@ What `nf.on(event, handler)` listens for. See [Events](events.md) for how events
 | --- | --- | --- |
 | `player_open_inventory` | [PlayerInventoryEvent](types.md#playerinventoryevent) | A player is opening a vanilla inventory: a chest, a furnace, a crafting table, a villager's trades, a horse's. Not one of the project's menus: those are `menu_open`. `event:cancel()` keeps it closed. **Cancellable.** |
 | `player_close_inventory` | [PlayerInventoryEvent](types.md#playerinventoryevent) | A player closed a vanilla inventory (not one of the project's menus: those are `menu_close`), or left the server with it open. |
+| `player_click_inventory` | [PlayerClickInventoryEvent](types.md#playerclickinventoryevent) | A player clicked in an inventory that isn't one of the project's menus: their own (with nothing else open, or below a chest, a furnace, …) or the vanilla one they have open. While one of the project's menus is open, clicks in their own inventory below it are the menu's `click` instead. Not on the creative inventory screen, which sends whole stacks rather than clicks. `event:cancel()` stops the click: nothing moves. **Cancellable.** |
+| `player_drag_inventory` | [PlayerDragInventoryEvent](types.md#playerdraginventoryevent) | A player dragged a stack across slots (holding a mouse button down) in an inventory that isn't one of the project's menus: their own, or the vanilla one they have open. While one of the project's menus is open, that's the menu's `drag` instead. `event:cancel()` stops it: nothing moves. **Cancellable.** |
 | `player_craft` | [PlayerCraftEvent](types.md#playercraftevent) | A player is taking what they crafted out of the result slot (with shift, as many as they can make). `event:cancel()` leaves it there and keeps the ingredients. **Cancellable.** |
 | `player_prepare_craft` | [PlayerPrepareCraftEvent](types.md#playerpreparecraftevent) | What's in a crafting grid changed (a crafting table's, or the 2×2 in a player's inventory), and the game is working out what it makes. Assign `event.result` to make something else, or `nil` for nothing: a recipe of your own. Writable: `result`. |
 | `player_prepare_anvil` | [PlayerPrepareAnvilEvent](types.md#playerprepareanvilevent) | What is in an anvil changed (or the name typed into it), and the game is working out the result. Assign `event.result` to make something else (or `nil` for nothing), and `event.cost` to change how many levels it takes. Writable: `result`, `cost`. |

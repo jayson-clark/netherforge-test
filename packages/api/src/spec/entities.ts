@@ -1218,6 +1218,21 @@ export const playerClass: LuaClass = {
       returns: [{ type: 'boolean', doc: offline }],
     },
     getter(
+      'cursor_item',
+      "What they carry on their cursor with an inventory screen open (their own, a vanilla one or one of the project's menus), or `nil` for nothing or when they're offline.",
+      'Item?',
+    ),
+    {
+      name: 'set_cursor_item',
+      doc: "Puts an item on their cursor, replacing what they carry, or empties it: for `click_inventory` and `drag_inventory` handlers, say, taking what they hold. What's on the cursor goes back to their inventory (or drops) when they close the screen. The server can't tell whether their own inventory is open, so with no screen open it's carried out of sight until they next open and close it.",
+      params: [
+        { name: 'item', type: 'Item', doc: 'Leave it out (or `nil`) to empty it.', optional: true },
+      ],
+      returns: [{ type: 'boolean', doc: offline }],
+      example:
+        'player:on("click_inventory", function(event)\n  local gem = event.cursor_item\n  if event.own and gem and gem.data and gem.data.gem and event.item then\n    event:cancel()\n    local item = event.item\n    item.lore = { "<aqua>Socketed" }\n    event.inventory:set_item(event.index, item)\n    player:set_cursor_item(nil)\n  end\nend)',
+    },
+    getter(
       'held_slot',
       "Which hotbar slot they have selected, 0 to 8, or `nil` when they're offline.",
       'integer?',

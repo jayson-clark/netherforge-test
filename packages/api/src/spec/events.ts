@@ -293,6 +293,20 @@ export const shapes: LuaClass[] = [
     ],
   ),
   payload('PlayerEvent', 'Something a player did that needs no more said.', [player]),
+  payload('PlayerSwapHandsEvent', 'A player pressed the swap-hands key.', [
+    player,
+    {
+      name: 'item',
+      type: 'Item?',
+      doc: 'What is going to their off hand: what is in their main hand, or in the slot they point at with an inventory screen open.',
+    },
+    { name: 'off_hand_item', type: 'Item?', doc: 'What is leaving their off hand.' },
+    {
+      name: 'in_inventory',
+      type: 'boolean',
+      doc: 'Whether they pressed it over a slot with an inventory screen open, rather than with their hands.',
+    },
+  ]),
   payload('PlayerMoveEvent', 'A player walked, swam, flew or fell into another block.', [
     player,
     {
@@ -530,8 +544,8 @@ export const nfEvents: EventSpec[] = [
   },
   {
     name: 'player_swap_hands',
-    doc: 'A player pressed the key that swaps the items in their hands. `event:cancel()` leaves them where they are, so the key can be used for something else.',
-    payload: 'PlayerEvent',
+    doc: "A player pressed the key that swaps the items in their hands (F). With an inventory screen open (their own, a vanilla one or one of the project's menus) the key swaps the slot they point at with their off hand instead, and this is heard too, after that click's `click_inventory` or `click` handlers and only when they let it through; `event.in_inventory` says which. `event:cancel()` leaves them where they are, so the key can be used for something else.",
+    payload: 'PlayerSwapHandsEvent',
     cancellable: true,
     raised: byPlayer('player_swap_hands'),
   },

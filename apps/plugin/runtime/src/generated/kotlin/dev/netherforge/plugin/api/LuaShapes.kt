@@ -536,25 +536,37 @@ data class BlockPlaceEvent(val player: LuaHandle.Player, val block: LuaHandle.Bl
     }
 }
 
-/** Something a player did that needs no more said. */
-data class PlayerEvent(val player: LuaHandle.Player) : LuaEvent {
+/** A player pressed the swap-hands key. */
+data class PlayerSwapHandsEvent(val player: LuaHandle.Player, val item: ItemData? = null, val offHandItem: ItemData? = null, val inInventory: Boolean) : LuaEvent {
     override fun push(call: LuaCall) = Codec.push(call, this)
 
-    object Codec : ShapeCodec<PlayerEvent>("PlayerEvent") {
+    object Codec : ShapeCodec<PlayerSwapHandsEvent>("PlayerSwapHandsEvent") {
         val playerCodec = LuaHandle.Player.Codec
+        val itemCodec = LuaOptional(LuaCodecs.ITEM)
+        val offHandItemCodec = LuaOptional(LuaCodecs.ITEM)
+        val inInventoryCodec = LuaCodecs.BOOLEAN
 
         override val pinned = false
 
         override val fields: Map<String, LuaCodec<*>> = mapOf(
-            "player" to playerCodec
+            "player" to playerCodec,
+            "item" to itemCodec,
+            "off_hand_item" to offHandItemCodec,
+            "in_inventory" to inInventoryCodec
         )
 
-        override fun read(fields: ShapeReader) = PlayerEvent(
-            player = fields.field("player", playerCodec)
+        override fun read(fields: ShapeReader) = PlayerSwapHandsEvent(
+            player = fields.field("player", playerCodec),
+            item = fields.field("item", itemCodec),
+            offHandItem = fields.field("off_hand_item", offHandItemCodec),
+            inInventory = fields.field("in_inventory", inInventoryCodec)
         )
 
-        override fun write(fields: ShapeWriter, value: PlayerEvent) {
+        override fun write(fields: ShapeWriter, value: PlayerSwapHandsEvent) {
             fields.field("player", value.player, playerCodec)
+            fields.field("item", value.item, itemCodec)
+            fields.field("off_hand_item", value.offHandItem, offHandItemCodec)
+            fields.field("in_inventory", value.inInventory, inInventoryCodec)
         }
     }
 }
@@ -1878,6 +1890,108 @@ data class PlayerInventoryEvent(val player: LuaHandle.Player, val kind: String, 
             fields.field("kind", value.kind, kindCodec)
             fields.field("inventory", value.inventory, inventoryCodec)
             fields.field("block", value.block, blockCodec)
+        }
+    }
+}
+
+/** A player clicked in an inventory that isn't one of the project's menus. */
+data class PlayerClickInventoryEvent(val player: LuaHandle.Player, val kind: String, val inventory: LuaHandle.Inventory? = null, val own: Boolean, val index: Long? = null, val click: String, val hotbarIndex: Long? = null, val item: ItemData? = null, val cursorItem: ItemData? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<PlayerClickInventoryEvent>("PlayerClickInventoryEvent") {
+        val playerCodec = LuaHandle.Player.Codec
+        val kindCodec = LuaCodecs.STRING
+        val inventoryCodec = LuaOptional(LuaHandle.Inventory.Codec)
+        val ownCodec = LuaCodecs.BOOLEAN
+        val indexCodec = LuaOptional(LuaCodecs.INTEGER)
+        val clickCodec = LuaChoice(listOf("left", "right", "shift_left", "shift_right", "middle", "number_key", "swap_offhand", "double", "drop", "control_drop", "other"))
+        val hotbarIndexCodec = LuaOptional(LuaCodecs.INTEGER)
+        val itemCodec = LuaOptional(LuaCodecs.ITEM)
+        val cursorItemCodec = LuaOptional(LuaCodecs.ITEM)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "player" to playerCodec,
+            "kind" to kindCodec,
+            "inventory" to inventoryCodec,
+            "own" to ownCodec,
+            "index" to indexCodec,
+            "click" to clickCodec,
+            "hotbar_index" to hotbarIndexCodec,
+            "item" to itemCodec,
+            "cursor_item" to cursorItemCodec
+        )
+
+        override fun read(fields: ShapeReader) = PlayerClickInventoryEvent(
+            player = fields.field("player", playerCodec),
+            kind = fields.field("kind", kindCodec),
+            inventory = fields.field("inventory", inventoryCodec),
+            own = fields.field("own", ownCodec),
+            index = fields.field("index", indexCodec),
+            click = fields.field("click", clickCodec),
+            hotbarIndex = fields.field("hotbar_index", hotbarIndexCodec),
+            item = fields.field("item", itemCodec),
+            cursorItem = fields.field("cursor_item", cursorItemCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: PlayerClickInventoryEvent) {
+            fields.field("player", value.player, playerCodec)
+            fields.field("kind", value.kind, kindCodec)
+            fields.field("inventory", value.inventory, inventoryCodec)
+            fields.field("own", value.own, ownCodec)
+            fields.field("index", value.index, indexCodec)
+            fields.field("click", value.click, clickCodec)
+            fields.field("hotbar_index", value.hotbarIndex, hotbarIndexCodec)
+            fields.field("item", value.item, itemCodec)
+            fields.field("cursor_item", value.cursorItem, cursorItemCodec)
+        }
+    }
+}
+
+/** A player dragged a stack in an inventory that isn't one of the project's menus. */
+data class PlayerDragInventoryEvent(val player: LuaHandle.Player, val kind: String, val inventory: LuaHandle.Inventory? = null, val indices: List<Long>, val ownIndices: List<Long>, val click: String, val cursorItem: ItemData? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<PlayerDragInventoryEvent>("PlayerDragInventoryEvent") {
+        val playerCodec = LuaHandle.Player.Codec
+        val kindCodec = LuaCodecs.STRING
+        val inventoryCodec = LuaOptional(LuaHandle.Inventory.Codec)
+        val indicesCodec = LuaList(LuaCodecs.INTEGER)
+        val ownIndicesCodec = LuaList(LuaCodecs.INTEGER)
+        val clickCodec = LuaChoice(listOf("left", "right"))
+        val cursorItemCodec = LuaOptional(LuaCodecs.ITEM)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "player" to playerCodec,
+            "kind" to kindCodec,
+            "inventory" to inventoryCodec,
+            "indices" to indicesCodec,
+            "own_indices" to ownIndicesCodec,
+            "click" to clickCodec,
+            "cursor_item" to cursorItemCodec
+        )
+
+        override fun read(fields: ShapeReader) = PlayerDragInventoryEvent(
+            player = fields.field("player", playerCodec),
+            kind = fields.field("kind", kindCodec),
+            inventory = fields.field("inventory", inventoryCodec),
+            indices = fields.field("indices", indicesCodec),
+            ownIndices = fields.field("own_indices", ownIndicesCodec),
+            click = fields.field("click", clickCodec),
+            cursorItem = fields.field("cursor_item", cursorItemCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: PlayerDragInventoryEvent) {
+            fields.field("player", value.player, playerCodec)
+            fields.field("kind", value.kind, kindCodec)
+            fields.field("inventory", value.inventory, inventoryCodec)
+            fields.field("indices", value.indices, indicesCodec)
+            fields.field("own_indices", value.ownIndices, ownIndicesCodec)
+            fields.field("click", value.click, clickCodec)
+            fields.field("cursor_item", value.cursorItem, cursorItemCodec)
         }
     }
 }
@@ -4848,7 +4962,7 @@ data class MenuClickEvent(val player: LuaHandle.Player, val menu: LuaHandle.Menu
         val targetCodec = LuaOptional(LuaHandle.Slot.Codec)
         val indexCodec = LuaOptional(LuaCodecs.INTEGER)
         val inMenuCodec = LuaCodecs.BOOLEAN
-        val clickCodec = LuaChoice(listOf("left", "right", "shift_left", "shift_right", "middle", "number_key", "double", "drop", "control_drop", "other"))
+        val clickCodec = LuaChoice(listOf("left", "right", "shift_left", "shift_right", "middle", "number_key", "swap_offhand", "double", "drop", "control_drop", "other"))
         val hotbarIndexCodec = LuaOptional(LuaCodecs.INTEGER)
         val itemCodec = LuaOptional(LuaCodecs.ITEM)
         val cursorItemCodec = LuaOptional(LuaCodecs.ITEM)
@@ -4898,13 +5012,15 @@ data class MenuClickEvent(val player: LuaHandle.Player, val menu: LuaHandle.Menu
 }
 
 /** Someone dragged a stack across slots of a menu window. */
-data class MenuDragEvent(val player: LuaHandle.Player, val menu: LuaHandle.Menu, val indices: List<Long>, val cursorItem: ItemData? = null, val context: Any? = null) : LuaEvent {
+data class MenuDragEvent(val player: LuaHandle.Player, val menu: LuaHandle.Menu, val indices: List<Long>, val ownIndices: List<Long>, val click: String, val cursorItem: ItemData? = null, val context: Any? = null) : LuaEvent {
     override fun push(call: LuaCall) = Codec.push(call, this)
 
     object Codec : ShapeCodec<MenuDragEvent>("MenuDragEvent") {
         val playerCodec = LuaHandle.Player.Codec
         val menuCodec = LuaHandle.Menu.Codec
         val indicesCodec = LuaList(LuaCodecs.INTEGER)
+        val ownIndicesCodec = LuaList(LuaCodecs.INTEGER)
+        val clickCodec = LuaChoice(listOf("left", "right"))
         val cursorItemCodec = LuaOptional(LuaCodecs.ITEM)
         val contextCodec = LuaCodecs.DYNAMIC
 
@@ -4914,6 +5030,8 @@ data class MenuDragEvent(val player: LuaHandle.Player, val menu: LuaHandle.Menu,
             "player" to playerCodec,
             "menu" to menuCodec,
             "indices" to indicesCodec,
+            "own_indices" to ownIndicesCodec,
+            "click" to clickCodec,
             "cursor_item" to cursorItemCodec,
             "context" to contextCodec
         )
@@ -4922,6 +5040,8 @@ data class MenuDragEvent(val player: LuaHandle.Player, val menu: LuaHandle.Menu,
             player = fields.field("player", playerCodec),
             menu = fields.field("menu", menuCodec),
             indices = fields.field("indices", indicesCodec),
+            ownIndices = fields.field("own_indices", ownIndicesCodec),
+            click = fields.field("click", clickCodec),
             cursorItem = fields.field("cursor_item", cursorItemCodec),
             context = fields.field("context", contextCodec)
         )
@@ -4930,6 +5050,8 @@ data class MenuDragEvent(val player: LuaHandle.Player, val menu: LuaHandle.Menu,
             fields.field("player", value.player, playerCodec)
             fields.field("menu", value.menu, menuCodec)
             fields.field("indices", value.indices, indicesCodec)
+            fields.field("own_indices", value.ownIndices, ownIndicesCodec)
+            fields.field("click", value.click, clickCodec)
             fields.field("cursor_item", value.cursorItem, cursorItemCodec)
             fields.field("context", value.context, contextCodec)
         }

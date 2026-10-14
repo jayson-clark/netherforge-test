@@ -184,8 +184,8 @@ class RecordingEvents : PlatformEvents {
 
     override fun menuClicked(window: UUID, click: MenuClick) = hear("menuClicked", window, click)
 
-    override fun menuDragged(window: UUID, player: PlayerRef, slots: List<Int>, cursor: ItemData?) =
-        hear("menuDragged", window, player, slots, cursor)
+    override fun menuDragged(window: UUID, player: PlayerRef, slots: List<Int>, cursor: ItemData?, ownSlots: List<Int>, click: String) =
+        hear("menuDragged", window, player, slots, cursor, ownSlots, click)
 
     override fun menuClosed(window: UUID, player: PlayerRef) {
         hear("menuClosed", window, player)

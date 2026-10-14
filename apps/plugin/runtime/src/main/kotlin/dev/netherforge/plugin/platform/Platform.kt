@@ -655,6 +655,12 @@ interface PlayerOps {
     /** Closes whatever container screen they have open. */
     fun closeInventory(uuid: UUID): Boolean
 
+    /** What they carry on their cursor, whatever screen they have open; null for nothing, or when they're offline. */
+    fun cursor(uuid: UUID): ItemData?
+
+    /** Puts [item] (null empties it) on their cursor, whatever screen they have open. False when they're offline, or it can't be built. */
+    fun setCursor(uuid: UUID, item: ItemData?): Boolean
+
     /** A MiniMessage line to everyone online and the console. */
     fun broadcast(miniMessage: String)
 

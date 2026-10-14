@@ -2869,6 +2869,20 @@ interface PlayerApi {
     /** Puts an item in their offhand, or empties it. */
     fun setOffHandItem(self: LuaHandle.Player, item: ItemData?): Boolean
 
+    /**
+     * What they carry on their cursor with an inventory screen open (their own, a vanilla one or one of
+     * the project's menus), or `nil` for nothing or when they're offline.
+     */
+    fun cursorItem(self: LuaHandle.Player): ItemData?
+
+    /**
+     * Puts an item on their cursor, replacing what they carry, or empties it: for `click_inventory` and
+     * `drag_inventory` handlers, say, taking what they hold. What's on the cursor goes back to their
+     * inventory (or drops) when they close the screen. The server can't tell whether their own inventory
+     * is open, so with no screen open it's carried out of sight until they next open and close it.
+     */
+    fun setCursorItem(self: LuaHandle.Player, item: ItemData?): Boolean
+
     /** Which hotbar slot they have selected, 0 to 8, or `nil` when they're offline. */
     fun heldSlot(self: LuaHandle.Player): Long?
 

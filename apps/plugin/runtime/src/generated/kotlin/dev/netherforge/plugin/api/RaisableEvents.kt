@@ -102,6 +102,8 @@ object RaisableEvents {
         "vehicle_destroy" to Raisable(Events.NF_VEHICLE_DESTROY),
         "player_open_inventory" to Raisable(Events.NF_PLAYER_OPEN_INVENTORY, Events.PLAYER_OPEN_INVENTORY) { it.player },
         "player_close_inventory" to Raisable(Events.NF_PLAYER_CLOSE_INVENTORY, Events.PLAYER_CLOSE_INVENTORY) { it.player },
+        "player_click_inventory" to Raisable(Events.NF_PLAYER_CLICK_INVENTORY, Events.PLAYER_CLICK_INVENTORY) { it.player },
+        "player_drag_inventory" to Raisable(Events.NF_PLAYER_DRAG_INVENTORY, Events.PLAYER_DRAG_INVENTORY) { it.player },
         "player_craft" to Raisable(Events.NF_PLAYER_CRAFT, Events.PLAYER_CRAFT) { it.player },
         "player_prepare_craft" to Raisable(Events.NF_PLAYER_PREPARE_CRAFT, Events.PLAYER_PREPARE_CRAFT) { it.player },
         "player_prepare_anvil" to Raisable(Events.NF_PLAYER_PREPARE_ANVIL, Events.PLAYER_PREPARE_ANVIL) { it.player },

@@ -311,6 +311,23 @@ class FakePlayers(private val platform: FakePlatform) : PlayerOps {
         if (uuid !in byId) return false
         platform.inventories.open.remove(uuid)
         platform.menus.closeAny(uuid)
+        cursors.remove(uuid)
+        return true
+    }
+
+    /** What players carry on the cursor with no project menu open (a menu's window keeps its viewers'). */
+    val cursors = LinkedHashMap<UUID, ItemData>()
+
+    override fun cursor(uuid: UUID): ItemData? {
+        if (uuid !in byId) return null
+        val window = platform.menus.viewing(uuid) ?: return cursors[uuid]
+        return platform.menus.cursor(window, uuid)
+    }
+
+    override fun setCursor(uuid: UUID, item: ItemData?): Boolean {
+        if (uuid !in byId) return false
+        platform.menus.viewing(uuid)?.let { return platform.menus.setCursor(it, uuid, item) }
+        if (item == null) cursors.remove(uuid) else cursors[uuid] = platform.stack(item) ?: return false
         return true
     }
 

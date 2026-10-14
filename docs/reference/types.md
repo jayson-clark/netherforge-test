@@ -767,15 +767,18 @@ Has the fields and methods of [Event](#event) too.
 | `item` | [`Item`](types.md#item)`?` | What's in the hand the click was with, or `nil` for an empty hand. |
 | `hand` | `"main_hand"\|"off_hand"` | Which hand: the game asks for each hand in turn. |
 
-### PlayerEvent {#playerevent}
+### PlayerSwapHandsEvent {#playerswaphandsevent}
 
-Something a player did that needs no more said.
+A player pressed the swap-hands key.
 
 Has the fields and methods of [Event](#event) too.
 
 | Field | Type | |
 | --- | --- | --- |
 | `player` | [`Player`](player.md) | Who it was. |
+| `item` | [`Item`](types.md#item)`?` | What is going to their off hand: what is in their main hand, or in the slot they point at with an inventory screen open. |
+| `off_hand_item` | [`Item`](types.md#item)`?` | What is leaving their off hand. |
+| `in_inventory` | `boolean` | Whether they pressed it over a slot with an inventory screen open, rather than with their hands. |
 
 ### PlayerMoveEvent {#playermoveevent}
 
@@ -1050,6 +1053,40 @@ Has the fields and methods of [Event](#event) too.
 | `kind` | `string` | What kind of inventory it is: `"chest"`, `"barrel"`, `"shulker_box"`, `"ender_chest"`, `"furnace"`, `"workbench"` (a crafting table), `"anvil"`, `"enchanting"`, `"merchant"` (a villager), … |
 | `inventory` | [`Inventory`](inventory.md)`?` | The inventory, when it's a real one (a container block's, an entity's, their ender chest); `nil` for one with nothing kept in it (a crafting table, an anvil). |
 | `block` | [`Block`](block.md)`?` | The block it belongs to (a chest, a crafting table), or `nil` for an entity's. |
+
+### PlayerClickInventoryEvent {#playerclickinventoryevent}
+
+A player clicked in an inventory that isn't one of the project's menus.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `player` | [`Player`](player.md) | Who it was. |
+| `kind` | `string` | What kind of inventory they have open: `"crafting"` when it is only their own (opened with the inventory key), else as `PlayerInventoryEvent.kind` says (`"chest"`, `"furnace"`, …). |
+| `inventory` | [`Inventory`](inventory.md)`?` | The inventory clicked, when it's a real one: their own (`player:inventory()`), a container block's, an entity's, their ender chest. `nil` for a click outside both, and in one with nothing kept in it (the crafting grid, an anvil). |
+| `own` | `boolean` | Whether the click landed in their own inventory (hotbar, main slots, armour, off hand) rather than in the one above it or outside both. |
+| `index` | `integer?` | The slot clicked, from 0, in the inventory clicked. In their own: 0 to 8 the hotbar, 9 to 35 the rest, 36 to 39 armour (boots first), 40 the off hand, as `player:inventory()` numbers them. `nil` for a click outside both. |
+| `click` | `"left"\|"right"\|"shift_left"\|"shift_right"\|"middle"\|"number_key"\|"swap_offhand"\|"double"\|"drop"\|"control_drop"\|"other"` | What kind of click it was. `swap_offhand` is the swap-hands key (F) over a slot: what is in it and what is in the off hand change places. |
+| `hotbar_index` | `integer?` | For `number_key`: the hotbar slot, 0 to 8. |
+| `item` | [`Item`](types.md#item)`?` | What was in the slot clicked. |
+| `cursor_item` | [`Item`](types.md#item)`?` | What the player was carrying on the cursor. |
+
+### PlayerDragInventoryEvent {#playerdraginventoryevent}
+
+A player dragged a stack in an inventory that isn't one of the project's menus.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `player` | [`Player`](player.md) | Who it was. |
+| `kind` | `string` | What kind of inventory they have open, as `PlayerClickInventoryEvent.kind` says: `"crafting"` when it is only their own. |
+| `inventory` | [`Inventory`](inventory.md)`?` | The inventory above their own, when it's a real one (a container block's, an entity's, their ender chest); `nil` for one with nothing kept in it (the crafting grid, an anvil) and when only their own is open. |
+| `indices` | `integer[]` | The slots of the inventory above their own the stack is spread over, from 0, in order (the crafting grid's 1 to 4 when only their own is open, 0 being its result). |
+| `own_indices` | `integer[]` | The slots of their own inventory the stack is spread over, in order, numbered as `player:inventory()` numbers them. |
+| `click` | `"left"\|"right"` | `"left"` spreads the stack evenly over the slots, `"right"` puts one in each. |
+| `cursor_item` | [`Item`](types.md#item)`?` | The stack being dragged. |
 
 ### PlayerCraftEvent {#playercraftevent}
 
@@ -2359,7 +2396,7 @@ Has the fields and methods of [Event](#event) too.
 | `target` | [`Slot`](slot.md)`?` | The window's slot that was clicked, or `nil` for a click in the player's own inventory or outside both. |
 | `index` | `integer?` | The slot clicked, from 0: in the window when `in_menu` is true, and in the player's own inventory below it otherwise. `nil` for a click outside both. |
 | `in_menu` | `boolean` | Whether the click landed in the window rather than in the player's own inventory below it. |
-| `click` | `"left"\|"right"\|"shift_left"\|"shift_right"\|"middle"\|"number_key"\|"double"\|"drop"\|"control_drop"\|"other"` | What kind of click it was. |
+| `click` | `"left"\|"right"\|"shift_left"\|"shift_right"\|"middle"\|"number_key"\|"swap_offhand"\|"double"\|"drop"\|"control_drop"\|"other"` | What kind of click it was. `swap_offhand` is the swap-hands key (F) over a slot: what is in it and what is in the off hand change places. |
 | `hotbar_index` | `integer?` | For `number_key`: the hotbar slot, 0 to 8. |
 | `item` | [`Item`](types.md#item)`?` | What was in the slot clicked. |
 | `cursor_item` | [`Item`](types.md#item)`?` | What the player was carrying on the cursor. |
@@ -2376,6 +2413,8 @@ Has the fields and methods of [Event](#event) too.
 | `player` | [`Player`](player.md) | Who dragged. |
 | `menu` | [`Menu`](menu.md) | The window. |
 | `indices` | `integer[]` | The window's slots the stack is spread over, from 0, in order. |
+| `own_indices` | `integer[]` | The slots of the player's own inventory below it the stack is spread over, in order, numbered as `player:inventory()` numbers them. |
+| `click` | `"left"\|"right"` | `"left"` spreads the stack evenly over the slots, `"right"` puts one in each. |
 | `cursor_item` | [`Item`](types.md#item)`?` | The stack being dragged. |
 | `context` | `any` | What the script that opened the window passed along (`player:open_menu(menu, { context = ... })`), the same as `menu:context()`: the very value, not a copy. `nil` when nothing was, and always for a shared window. |
 
@@ -2715,3 +2754,15 @@ What `nf.test.raise` gives back.
 | --- | --- | --- |
 | `cancelled` | `boolean` | Whether a handler called `event:cancel()` (always `false` for an event that can't be cancelled). |
 | `event` | `table` | The payload as the handlers left it: a writable field they assigned (`message`) holds what they set. |
+
+## Other
+
+### PlayerEvent {#playerevent}
+
+Something a player did that needs no more said.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `player` | [`Player`](player.md) | Who it was. |

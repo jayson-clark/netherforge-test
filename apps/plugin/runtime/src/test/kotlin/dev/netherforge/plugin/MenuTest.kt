@@ -145,7 +145,8 @@ class MenuTest {
               end
             end)
             this:on("drag", function(event)
-              log("drag", #event.indices, event.indices[1], event.cursor_item.kind, tostring(event.cancelled))
+              log("drag", #event.indices, tostring(event.indices[1]), table.concat(event.own_indices, ","), event.click,
+                event.cursor_item.kind, tostring(event.cancelled))
             end)
         """
         TestServer(menu(extra = ", \"locked\": true", script = script)).use { server ->
@@ -154,8 +155,18 @@ class MenuTest {
             val windows = server.platform.menus
             assertFalse(windows.click(alex, 0), "uncancelled by the handler")
             assertTrue(windows.click(alex, 1), "locked: cancelled")
-            assertTrue(windows.drag(alex, listOf(2, 3), ItemData(ItemDef("minecraft:bread", count = 2))))
-            assertEquals(listOf("click\t0\ttrue", "click\t1\ttrue", "drag\t2\t2\tminecraft:bread\ttrue"), server.logs)
+            val bread = ItemData(ItemDef("minecraft:bread", count = 2))
+            assertTrue(windows.drag(alex, listOf(2, 3), bread))
+            assertFalse(windows.drag(alex, emptyList(), bread, ownSlots = listOf(9, 10), click = "right"), "only their own inventory")
+            assertEquals(
+                listOf(
+                    "click\t0\ttrue",
+                    "click\t1\ttrue",
+                    "drag\t2\t2\t\tleft\tminecraft:bread\ttrue",
+                    "drag\t0\tnil\t9,10\tright\tminecraft:bread\tfalse"
+                ),
+                server.logs
+            )
         }
     }
 

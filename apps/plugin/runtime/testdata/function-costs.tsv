@@ -468,6 +468,7 @@ Player:close_dialog	19
 Player:close_inventory	19
 Player:close_menu	19
 Player:compass_target	19
+Player:cursor_item	19
 Player:data	19
 Player:discover_recipe	21
 Player:display_name	19
@@ -531,6 +532,7 @@ Player:set_below_name	21
 Player:set_camera	21
 Player:set_can_fly	21
 Player:set_compass_target	39
+Player:set_cursor_item	22
 Player:set_display_name	21
 Player:set_experience_progress	21
 Player:set_fly_speed	21

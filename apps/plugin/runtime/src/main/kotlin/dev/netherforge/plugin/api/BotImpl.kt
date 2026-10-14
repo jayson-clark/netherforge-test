@@ -143,6 +143,7 @@ internal class BotImpl(private val session: ProjectSession) : BotApi {
             "drop" -> BotClick.DROP
             "drop_all" -> BotClick.DROP_ALL
             "double" -> BotClick.DOUBLE
+            "swap_offhand" -> BotClick.OFF_HAND
             else -> error("the binding checked click: $click")
         }
         if (slot !in 0..Int.MAX_VALUE) return false

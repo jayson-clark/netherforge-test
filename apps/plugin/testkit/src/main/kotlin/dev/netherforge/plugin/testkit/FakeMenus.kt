@@ -157,10 +157,20 @@ class FakeMenus(private val platform: FakePlatform) : MenuOps {
         platform.events!!.menuChanged(window, slots.keys)
     }
 
-    /** A player drags [cursor] across [slots] of the window they have open; true when it was cancelled. */
-    fun drag(player: FakePlayer, slots: List<Int>, cursor: ItemData? = null): Boolean {
+    /**
+     * A player drags [cursor] across [slots] of the window they have open and [ownSlots] of their inventory below,
+     * with the [click] button; true when it was cancelled.
+     */
+    fun drag(
+        player: FakePlayer,
+        slots: List<Int>,
+        cursor: ItemData? = null,
+        ownSlots: List<Int> = emptyList(),
+        click: String = "left"
+    ): Boolean {
         val window = viewing(player.ref.uuid) ?: error("${player.ref.name} has no window open")
-        return platform.events!!.menuDragged(window, player.ref, slots, cursor ?: windows.getValue(window).cursors[player.ref.uuid])
+        val carried = cursor ?: windows.getValue(window).cursors[player.ref.uuid]
+        return platform.events!!.menuDragged(window, player.ref, slots, carried, ownSlots, click)
     }
 }
 

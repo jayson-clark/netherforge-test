@@ -4,6 +4,7 @@ import dev.netherforge.format.game.GameDataBundle
 import dev.netherforge.format.sky.SkyNight
 import dev.netherforge.plugin.platform.BotOps
 import dev.netherforge.plugin.platform.InventoryRef
+import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.ItemLook
 import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.platform.PackOffer
@@ -332,6 +333,15 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
 
         override fun closeInventory(uuid: UUID): Boolean {
             player(uuid)?.closeInventory() ?: return false
+            return true
+        }
+
+        override fun cursor(uuid: UUID): ItemData? = player(uuid)?.itemOnCursor?.let(PaperItems::toItem)
+
+        override fun setCursor(uuid: UUID, item: ItemData?): Boolean {
+            val player = player(uuid) ?: return false
+            val stack = if (item == null) null else PaperItems.toStack(item) ?: return false
+            player.setItemOnCursor(stack)
             return true
         }
 

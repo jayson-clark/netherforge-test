@@ -172,8 +172,8 @@ export const botClass: LuaClass = {
         { name: 'slot', type: 'integer', doc: 'Which slot, from 0.' },
         {
           name: 'click',
-          type: '"left"|"right"|"shift_left"|"shift_right"|"drop"|"drop_all"|"double"',
-          doc: 'How. Default `"left"`.',
+          type: '"left"|"right"|"shift_left"|"shift_right"|"drop"|"drop_all"|"double"|"swap_offhand"',
+          doc: 'How. Default `"left"`. `"swap_offhand"` is the swap-hands key (F) over the slot.',
           optional: true,
         },
       ],

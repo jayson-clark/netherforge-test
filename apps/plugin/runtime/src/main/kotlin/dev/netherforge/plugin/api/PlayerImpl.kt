@@ -256,6 +256,10 @@ internal class PlayerImpl(private val session: ProjectSession) : PlayerApi {
     override fun setOffHandItem(self: LuaHandle.Player, item: ItemData?): Boolean =
         online(self)?.let { entities.setEquipment(it, "off_hand", item) } == true
 
+    override fun cursorItem(self: LuaHandle.Player): ItemData? = online(self)?.let { players.cursor(it) }
+
+    override fun setCursorItem(self: LuaHandle.Player, item: ItemData?): Boolean = online(self)?.let { players.setCursor(it, item) } == true
+
     override fun heldSlot(self: LuaHandle.Player): Long? = number(self, EntityNumber.HELD_SLOT)?.toLong()
 
     override fun setHeldSlot(self: LuaHandle.Player, index: Long): Boolean = setNumber(

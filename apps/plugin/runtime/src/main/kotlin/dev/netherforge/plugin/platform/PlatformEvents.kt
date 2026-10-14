@@ -186,8 +186,19 @@ interface PlatformEvents {
     /** A click while [window] (one of ours) was open. True cancels it. */
     fun menuClicked(window: UUID, click: MenuClick): Boolean
 
-    /** A drag of [cursor] across [slots] of [window] (only the window's own slots). True cancels it. */
-    fun menuDragged(window: UUID, player: PlayerRef, slots: List<Int>, cursor: ItemData?): Boolean
+    /**
+     * A drag of [cursor] across [slots] of [window] (only the window's own slots) and [ownSlots] of the player's own
+     * inventory below it (numbered as `InventoryRef.Player` is), spreading it evenly ([click] `left`) or one in each
+     * (`right`). True cancels it.
+     */
+    fun menuDragged(
+        window: UUID,
+        player: PlayerRef,
+        slots: List<Int>,
+        cursor: ItemData?,
+        ownSlots: List<Int> = emptyList(),
+        click: String = "left"
+    ): Boolean
 
     /** A player closed [window], or left with it open. Not delivered for [MenuOps.destroy] or a retitle. */
     fun menuClosed(window: UUID, player: PlayerRef)

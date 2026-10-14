@@ -216,13 +216,40 @@ abstract class BotActionsContract : PlatformContract() {
         holding(player, item("minecraft:diamond", 2))
         events.cancelling += "playerSwapHands"
         act(player, BotAction.SwapHands)
-        eventually("heard") { events.heard<GameEvent.Player>("playerSwapHands").any { it.player == player } }
+        eventually("heard") { events.heard<GameEvent.PlayerSwapHands>("playerSwapHands").any { it.player == player } }
+        val heard = events.heard<GameEvent.PlayerSwapHands>("playerSwapHands").first { it.player == player }
+        assertEquals(listOf<Any?>("minecraft:diamond", null, false), listOf(heard.item?.def?.kind, heard.offHandItem, heard.inInventory))
         ticks(2)
         assertEquals("minecraft:diamond", held(player)?.def?.kind, "cancelled: still in the main hand")
         events.cancelling.clear()
         act(player, BotAction.SwapHands)
         eventually("swapped") { held(player) == null && held(player, "off_hand")?.def?.kind == "minecraft:diamond" }
-        assertEquals(2, events.heard<GameEvent.Player>("playerSwapHands").count { it.player == player })
+        assertEquals(2, events.heard<GameEvent.PlayerSwapHands>("playerSwapHands").count { it.player == player })
+    }
+
+    @Test
+    fun `clicks, the swap-hands key and drags in its own inventory are heard`() {
+        val player = join()
+        holding(player, item("minecraft:diamond", 2))
+        main { assertEquals(0.0, platform.worldEntities.number(player.uuid, EntityNumber.HELD_SLOT)) }
+        // The inventory screen numbers the hotbar from 36 and the main rows from 9.
+        events.cancelling += "playerSwapHands"
+        act(player, BotAction.ClickSlot(36, BotClick.OFF_HAND))
+        eventually("the swap heard") { events.heard<GameEvent.PlayerSwapHands>("playerSwapHands").any { it.player == player } }
+        val click = events.heard<GameEvent.PlayerClickInventory>("playerClickInventory").single { it.player == player }
+        assertEquals(
+            listOf<Any?>("crafting", InventoryRef.Player(player.uuid), true, 0, "swap_offhand", "minecraft:diamond"),
+            listOf(click.kind, click.inventory, click.own, click.index, click.click, click.item?.def?.kind)
+        )
+        val swap = events.heard<GameEvent.PlayerSwapHands>("playerSwapHands").single { it.player == player }
+        assertEquals(listOf<Any?>("minecraft:diamond", true), listOf(swap.item?.def?.kind, swap.inInventory))
+        ticks(2)
+        assertEquals("minecraft:diamond", held(player)?.def?.kind, "cancelled: still in the hotbar")
+        act(player, BotAction.ClickSlot(36))
+        act(player, BotAction.Drag(listOf(9, 10)))
+        eventually("the drag heard") { events.heard<GameEvent.PlayerDragInventory>("playerDragInventory").any { it.player == player } }
+        val drag = events.heard<GameEvent.PlayerDragInventory>("playerDragInventory").single { it.player == player }
+        assertEquals(listOf<Any?>(emptyList<Int>(), listOf(9, 10), "left"), listOf(drag.indices, drag.ownIndices, drag.click))
     }
 
     @Test

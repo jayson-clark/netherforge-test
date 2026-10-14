@@ -59,9 +59,13 @@ import org.bukkit.event.entity.EntityTargetEvent
 import org.bukkit.event.entity.FoodLevelChangeEvent
 import org.bukkit.event.entity.ProjectileHitEvent
 import org.bukkit.event.entity.ProjectileLaunchEvent
+import org.bukkit.event.inventory.ClickType
 import org.bukkit.event.inventory.CraftItemEvent
 import org.bukkit.event.inventory.FurnaceSmeltEvent
+import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
+import org.bukkit.event.inventory.InventoryCreativeEvent
+import org.bukkit.event.inventory.InventoryDragEvent
 import org.bukkit.event.inventory.InventoryOpenEvent
 import org.bukkit.event.inventory.InventoryType
 import org.bukkit.event.inventory.PrepareAnvilEvent
@@ -99,7 +103,9 @@ import org.bukkit.event.world.WorldLoadEvent
 import org.bukkit.event.world.WorldUnloadEvent
 import org.bukkit.inventory.BlockInventoryHolder
 import org.bukkit.inventory.EquipmentSlot
+import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryView
+import org.bukkit.inventory.PlayerInventory
 import org.bukkit.inventory.Recipe
 import org.bukkit.plugin.java.JavaPlugin
 import java.util.concurrent.TimeUnit
@@ -179,7 +185,9 @@ class PaperGameEvents(private val plugin: JavaPlugin, private val platform: Pape
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     fun onSwapHands(event: PlayerSwapHandItemsEvent) {
-        if (game.playerSwapHands(GameEvent.Player(ref(event)))) event.isCancelled = true
+        // Paper's items are where each ends up: the off hand's is what leaves the main hand.
+        val swap = GameEvent.PlayerSwapHands(ref(event), PaperItems.toItem(event.offHandItem), PaperItems.toItem(event.mainHandItem), false)
+        if (game.playerSwapHands(swap)) event.isCancelled = true
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -555,15 +563,83 @@ class PaperGameEvents(private val plugin: JavaPlugin, private val platform: Pape
         if (platform.menus.holderOf(top) != null || top.type == InventoryType.CRAFTING) return null
         val holder = top.getHolder(false)
         val location = top.location
-        val inventory = when {
-            top.type == InventoryType.ENDER_CHEST -> InventoryRef.EnderChest(player.uniqueId)
+        val block = location?.takeIf { holder !is Entity }?.block?.let(::blockRef)
+        return GameEvent.PlayerInventory(ref(player), top.type.name.lowercase(), inventoryRef(top, player), block)
+    }
+
+    /** [inventory] as an `Inventory` handle finds it again, or null for one with nothing kept in it. */
+    private fun inventoryRef(inventory: Inventory, player: Player): InventoryRef? {
+        val holder = inventory.getHolder(false)
+        val location = inventory.location
+        return when {
+            inventory.type == InventoryType.ENDER_CHEST -> InventoryRef.EnderChest(player.uniqueId)
+            inventory is PlayerInventory && holder is Player -> InventoryRef.Player(holder.uniqueId)
             holder is Entity && holder !is Player -> InventoryRef.Entity(holder.uniqueId)
             (holder is BlockInventoryHolder || holder is DoubleChest) && location != null ->
                 InventoryRef.Block(location.world.name, location.blockX, location.blockY, location.blockZ)
             else -> null
         }
-        val block = location?.takeIf { holder !is Entity }?.block?.let(::blockRef)
-        return GameEvent.PlayerInventory(ref(player), top.type.name.lowercase(), inventory, block)
+    }
+
+    /**
+     * A click in their own inventory or a vanilla one. One of NetherForge's menus open takes its clicks, those
+     * below it too (`PaperEvents.onInventoryClick`); a creative player's screen sends stacks, not clicks.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun onClickInventory(event: InventoryClickEvent) {
+        if (event is InventoryCreativeEvent) return
+        val player = event.whoClicked as? Player ?: return
+        val top = event.view.topInventory
+        if (platform.menus.holderOf(top) != null) return
+        val clicked = event.clickedInventory
+        val click = GameEvent.PlayerClickInventory(
+            ref(player),
+            top.type.name.lowercase(),
+            clicked?.let { inventoryRef(it, player) },
+            clicked is PlayerInventory && clicked.holder == player,
+            event.slot.takeIf { clicked != null },
+            clickName(event.click),
+            event.hotbarButton.takeIf { it >= 0 },
+            PaperItems.toItem(event.currentItem),
+            PaperItems.toItem(event.cursor)
+        )
+        if (game.playerClickInventory(click)) event.isCancelled = true
+    }
+
+    /**
+     * The swap-hands key over a slot with a screen open: a click, which the server never raises as a swap of hands.
+     * Heard once the click's own handlers (this listener's and a project menu's) have let it through.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onSwapInInventory(event: InventoryClickEvent) {
+        if (event.click != ClickType.SWAP_OFFHAND || event is InventoryCreativeEvent) return
+        val player = event.whoClicked as? Player ?: return
+        val swap = GameEvent.PlayerSwapHands(
+            ref(player),
+            PaperItems.toItem(event.currentItem),
+            PaperItems.toItem(player.inventory.itemInOffHand),
+            true
+        )
+        if (game.playerSwapHands(swap)) event.isCancelled = true
+    }
+
+    /** A drag in their own inventory or a vanilla one; one of NetherForge's menus open takes its drags (`PaperEvents.onInventoryDrag`). */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun onDragInventory(event: InventoryDragEvent) {
+        val player = event.whoClicked as? Player ?: return
+        val top = event.view.topInventory
+        if (platform.menus.holderOf(top) != null) return
+        val (slots, own) = dragSlots(event)
+        val drag = GameEvent.PlayerDragInventory(
+            ref(player),
+            top.type.name.lowercase(),
+            inventoryRef(top, player),
+            slots,
+            own,
+            dragName(event.type),
+            PaperItems.toItem(event.oldCursor)
+        )
+        if (game.playerDragInventory(drag)) event.isCancelled = true
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)

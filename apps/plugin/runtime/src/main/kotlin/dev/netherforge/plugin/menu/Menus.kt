@@ -506,11 +506,29 @@ class Menus(
         return !scripts.emit(listOf(Events.SLOT_CLICK to target), event, precancelled = false)
     }
 
-    /** A drag of [cursor] over [slots] of the window. A locked window starts it already cancelled. True means cancel. */
-    fun drag(uuid: UUID, player: PlayerRef, slots: List<Int>, cursor: ItemData?): Boolean {
+    /**
+     * A drag of [cursor] over [slots] of the window and [ownSlots] of the player's inventory below. A locked window
+     * starts one over its own slots already cancelled. True means cancel.
+     */
+    fun drag(
+        uuid: UUID,
+        player: PlayerRef,
+        slots: List<Int>,
+        cursor: ItemData?,
+        ownSlots: List<Int> = emptyList(),
+        click: String = "left"
+    ): Boolean {
         val window = windowOf(uuid) ?: return false
         val menu = LuaHandle.Menu(window.id)
-        val event = MenuDragEvent(playerHandle(player), menu, slots.map { it.toLong() }, cursor, window.context)
+        val event = MenuDragEvent(
+            playerHandle(player),
+            menu,
+            slots.map { it.toLong() },
+            ownSlots.map { it.toLong() },
+            click,
+            cursor,
+            window.context
+        )
         val path = listOfNotNull(Events.MENU_DRAG to menu, templateOf(window)?.let { Events.MENUTEMPLATE_DRAG to it })
         // A drag puts some of the cursor in each slot: refused over a slot that doesn't take it or holds fewer than it brings.
         val refused = cursor != null &&

@@ -289,8 +289,14 @@ class ServerEvents internal constructor(private val runtime: NetherForgeRuntime)
 
     override fun menuClicked(window: UUID, click: MenuClick): Boolean = running && session.menus.click(window, click)
 
-    override fun menuDragged(window: UUID, player: PlayerRef, slots: List<Int>, cursor: ItemData?): Boolean =
-        running && session.menus.drag(window, player, slots, cursor)
+    override fun menuDragged(
+        window: UUID,
+        player: PlayerRef,
+        slots: List<Int>,
+        cursor: ItemData?,
+        ownSlots: List<Int>,
+        click: String
+    ): Boolean = running && session.menus.drag(window, player, slots, cursor, ownSlots, click)
 
     override fun menuClosed(window: UUID, player: PlayerRef) {
         if (running) session.menus.closed(window, player)

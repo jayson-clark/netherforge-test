@@ -360,8 +360,8 @@
         },
         {
           "name": "player_swap_hands",
-          "doc": "A player pressed the key that swaps the items in their hands. `event:cancel()` leaves them where they are, so the key can be used for something else.",
-          "payload": "PlayerEvent",
+          "doc": "A player pressed the key that swaps the items in their hands (F). With an inventory screen open (their own, a vanilla one or one of the project's menus) the key swaps the slot they point at with their off hand instead, and this is heard too, after that click's `click_inventory` or `click` handlers and only when they let it through; `event.in_inventory` says which. `event:cancel()` leaves them where they are, so the key can be used for something else.",
+          "payload": "PlayerSwapHandsEvent",
           "cancellable": true,
           "raised": {
             "first": {
@@ -1194,6 +1194,33 @@
             "first": {
               "class": "Player",
               "event": "close_inventory",
+              "field": "player"
+            }
+          }
+        },
+        {
+          "name": "player_click_inventory",
+          "doc": "A player clicked in an inventory that isn't one of the project's menus: their own (with nothing else open, or below a chest, a furnace, …) or the vanilla one they have open. While one of the project's menus is open, clicks in their own inventory below it are the menu's `click` instead. Not on the creative inventory screen, which sends whole stacks rather than clicks. `event:cancel()` stops the click: nothing moves.",
+          "payload": "PlayerClickInventoryEvent",
+          "cancellable": true,
+          "example": "nf.on(\"player_click_inventory\", function(event)\n  if event.own and event.index == 40 then\n    event:cancel() -- keep the off hand as it is\n  end\nend)",
+          "raised": {
+            "first": {
+              "class": "Player",
+              "event": "click_inventory",
+              "field": "player"
+            }
+          }
+        },
+        {
+          "name": "player_drag_inventory",
+          "doc": "A player dragged a stack across slots (holding a mouse button down) in an inventory that isn't one of the project's menus: their own, or the vanilla one they have open. While one of the project's menus is open, that's the menu's `drag` instead. `event:cancel()` stops it: nothing moves.",
+          "payload": "PlayerDragInventoryEvent",
+          "cancellable": true,
+          "raised": {
+            "first": {
+              "class": "Player",
+              "event": "drag_inventory",
               "field": "player"
             }
           }
@@ -3839,7 +3866,7 @@
           "params": [
             {
               "name": "event",
-              "type": "\"tick\"|\"player_join\"|\"player_quit\"|\"player_chat\"|\"player_interact\"|\"player_interact_entity\"|\"player_move\"|\"player_teleport\"|\"player_change_world\"|\"player_death\"|\"player_respawn\"|\"player_drop_item\"|\"player_pickup_item\"|\"player_use_item\"|\"player_consume_item\"|\"player_swap_hands\"|\"player_sneak\"|\"player_command\"|\"block_break\"|\"block_place\"|\"entity_damage\"|\"entity_death\"|\"entity_spawn\"|\"world_dusk\"|\"world_dawn\"|\"player_input\"|\"player_change_slot\"|\"player_swing\"|\"player_sprint\"|\"player_fly\"|\"player_jump\"|\"player_change_game_mode\"|\"player_change_food\"|\"player_gain_experience\"|\"player_change_level\"|\"player_kick\"|\"player_complete_advancement\"|\"player_stop_using_item\"|\"player_break_item\"|\"entity_heal\"|\"projectile_launch\"|\"projectile_hit\"|\"entity_shoot_bow\"|\"entity_target\"|\"entity_explode\"|\"block_explode\"|\"entity_combust\"|\"entity_change_effect\"|\"block_ignite\"|\"block_burn\"|\"block_spread\"|\"block_flow\"|\"block_grow\"|\"block_fade\"|\"block_form\"|\"leaves_decay\"|\"piston_extend\"|\"piston_retract\"|\"block_redstone\"|\"sign_change\"|\"block_start_break\"|\"block_drop_item\"|\"weather_change\"|\"thunder_change\"|\"lightning_strike\"|\"chunk_load\"|\"chunk_generated\"|\"chunk_unload\"|\"world_load\"|\"world_unload\"|\"entity_mount\"|\"entity_dismount\"|\"vehicle_move\"|\"vehicle_damage\"|\"vehicle_destroy\"|\"player_open_inventory\"|\"player_close_inventory\"|\"player_craft\"|\"player_prepare_craft\"|\"player_prepare_anvil\"|\"player_prepare_smithing\"|\"player_prepare_grindstone\"|\"player_enchant_item\"|\"furnace_smelt\"|\"server_list_ping\"|\"centity_click\"|\"recipe_craft\"|\"item_view\"|\"centity_natural_spawn\"|\"menu_open\"|\"menu_close\"|\"menu_click\"|\"dialog_press\"|\"setting_changed\"",
+              "type": "\"tick\"|\"player_join\"|\"player_quit\"|\"player_chat\"|\"player_interact\"|\"player_interact_entity\"|\"player_move\"|\"player_teleport\"|\"player_change_world\"|\"player_death\"|\"player_respawn\"|\"player_drop_item\"|\"player_pickup_item\"|\"player_use_item\"|\"player_consume_item\"|\"player_swap_hands\"|\"player_sneak\"|\"player_command\"|\"block_break\"|\"block_place\"|\"entity_damage\"|\"entity_death\"|\"entity_spawn\"|\"world_dusk\"|\"world_dawn\"|\"player_input\"|\"player_change_slot\"|\"player_swing\"|\"player_sprint\"|\"player_fly\"|\"player_jump\"|\"player_change_game_mode\"|\"player_change_food\"|\"player_gain_experience\"|\"player_change_level\"|\"player_kick\"|\"player_complete_advancement\"|\"player_stop_using_item\"|\"player_break_item\"|\"entity_heal\"|\"projectile_launch\"|\"projectile_hit\"|\"entity_shoot_bow\"|\"entity_target\"|\"entity_explode\"|\"block_explode\"|\"entity_combust\"|\"entity_change_effect\"|\"block_ignite\"|\"block_burn\"|\"block_spread\"|\"block_flow\"|\"block_grow\"|\"block_fade\"|\"block_form\"|\"leaves_decay\"|\"piston_extend\"|\"piston_retract\"|\"block_redstone\"|\"sign_change\"|\"block_start_break\"|\"block_drop_item\"|\"weather_change\"|\"thunder_change\"|\"lightning_strike\"|\"chunk_load\"|\"chunk_generated\"|\"chunk_unload\"|\"world_load\"|\"world_unload\"|\"entity_mount\"|\"entity_dismount\"|\"vehicle_move\"|\"vehicle_damage\"|\"vehicle_destroy\"|\"player_open_inventory\"|\"player_close_inventory\"|\"player_click_inventory\"|\"player_drag_inventory\"|\"player_craft\"|\"player_prepare_craft\"|\"player_prepare_anvil\"|\"player_prepare_smithing\"|\"player_prepare_grindstone\"|\"player_enchant_item\"|\"furnace_smelt\"|\"server_list_ping\"|\"centity_click\"|\"recipe_craft\"|\"item_view\"|\"centity_natural_spawn\"|\"menu_open\"|\"menu_close\"|\"menu_click\"|\"dialog_press\"|\"setting_changed\"",
               "doc": "The event's name, as `nf.on` takes it."
             },
             {
@@ -8445,9 +8472,9 @@
         },
         {
           "name": "swap_hands",
-          "doc": "A player pressed the key that swaps the items in their hands. `event:cancel()` leaves them where they are, so the key can be used for something else. Only this player's: heard before `nf.on(\"player_swap_hands\")`, with the same event, so `event:stop()` keeps it from there.",
+          "doc": "A player pressed the key that swaps the items in their hands (F). With an inventory screen open (their own, a vanilla one or one of the project's menus) the key swaps the slot they point at with their off hand instead, and this is heard too, after that click's `click_inventory` or `click` handlers and only when they let it through; `event.in_inventory` says which. `event:cancel()` leaves them where they are, so the key can be used for something else. Only this player's: heard before `nf.on(\"player_swap_hands\")`, with the same event, so `event:stop()` keeps it from there.",
           "bubbles": true,
-          "payload": "PlayerEvent",
+          "payload": "PlayerSwapHandsEvent",
           "cancellable": true
         },
         {
@@ -8579,6 +8606,20 @@
           "doc": "A player closed a vanilla inventory (not one of the project's menus: those are `menu_close`), or left the server with it open. Only this player's: heard before `nf.on(\"player_close_inventory\")`, with the same event, so `event:stop()` keeps it from there.",
           "bubbles": true,
           "payload": "PlayerInventoryEvent"
+        },
+        {
+          "name": "click_inventory",
+          "doc": "A player clicked in an inventory that isn't one of the project's menus: their own (with nothing else open, or below a chest, a furnace, …) or the vanilla one they have open. While one of the project's menus is open, clicks in their own inventory below it are the menu's `click` instead. Not on the creative inventory screen, which sends whole stacks rather than clicks. `event:cancel()` stops the click: nothing moves. Only this player's: heard before `nf.on(\"player_click_inventory\")`, with the same event, so `event:stop()` keeps it from there.",
+          "bubbles": true,
+          "payload": "PlayerClickInventoryEvent",
+          "cancellable": true
+        },
+        {
+          "name": "drag_inventory",
+          "doc": "A player dragged a stack across slots (holding a mouse button down) in an inventory that isn't one of the project's menus: their own, or the vanilla one they have open. While one of the project's menus is open, that's the menu's `drag` instead. `event:cancel()` stops it: nothing moves. Only this player's: heard before `nf.on(\"player_drag_inventory\")`, with the same event, so `event:stop()` keeps it from there.",
+          "bubbles": true,
+          "payload": "PlayerDragInventoryEvent",
+          "cancellable": true
         },
         {
           "name": "craft",
@@ -9614,6 +9655,35 @@
               "doc": "`false` when they're offline."
             }
           ]
+        },
+        {
+          "name": "cursor_item",
+          "doc": "What they carry on their cursor with an inventory screen open (their own, a vanilla one or one of the project's menus), or `nil` for nothing or when they're offline.",
+          "params": [],
+          "returns": [
+            {
+              "type": "Item?"
+            }
+          ]
+        },
+        {
+          "name": "set_cursor_item",
+          "doc": "Puts an item on their cursor, replacing what they carry, or empties it: for `click_inventory` and `drag_inventory` handlers, say, taking what they hold. What's on the cursor goes back to their inventory (or drops) when they close the screen. The server can't tell whether their own inventory is open, so with no screen open it's carried out of sight until they next open and close it.",
+          "params": [
+            {
+              "name": "item",
+              "type": "Item",
+              "doc": "Leave it out (or `nil`) to empty it.",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` when they're offline."
+            }
+          ],
+          "example": "player:on(\"click_inventory\", function(event)\n  local gem = event.cursor_item\n  if event.own and gem and gem.data and gem.data.gem and event.item then\n    event:cancel()\n    local item = event.item\n    item.lore = { \"<aqua>Socketed\" }\n    event.inventory:set_item(event.index, item)\n    player:set_cursor_item(nil)\n  end\nend)"
         },
         {
           "name": "held_slot",
@@ -10783,8 +10853,8 @@
             },
             {
               "name": "click",
-              "type": "\"left\"|\"right\"|\"shift_left\"|\"shift_right\"|\"drop\"|\"drop_all\"|\"double\"",
-              "doc": "How. Default `\"left\"`.",
+              "type": "\"left\"|\"right\"|\"shift_left\"|\"shift_right\"|\"drop\"|\"drop_all\"|\"double\"|\"swap_offhand\"",
+              "doc": "How. Default `\"left\"`. `\"swap_offhand\"` is the swap-hands key (F) over the slot.",
               "optional": true
             }
           ],
@@ -18091,6 +18161,35 @@
       "extends": "Event"
     },
     {
+      "name": "PlayerSwapHandsEvent",
+      "doc": "A player pressed the swap-hands key.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "player",
+          "type": "Player",
+          "doc": "Who it was."
+        },
+        {
+          "name": "item",
+          "type": "Item?",
+          "doc": "What is going to their off hand: what is in their main hand, or in the slot they point at with an inventory screen open."
+        },
+        {
+          "name": "off_hand_item",
+          "type": "Item?",
+          "doc": "What is leaving their off hand."
+        },
+        {
+          "name": "in_inventory",
+          "type": "boolean",
+          "doc": "Whether they pressed it over a slot with an inventory screen open, rather than with their hands."
+        }
+      ],
+      "extends": "Event"
+    },
+    {
       "name": "PlayerMoveEvent",
       "doc": "A player walked, swam, flew or fell into another block.",
       "methods": false,
@@ -19096,6 +19195,104 @@
           "name": "block",
           "type": "Block?",
           "doc": "The block it belongs to (a chest, a crafting table), or `nil` for an entity's."
+        }
+      ],
+      "extends": "Event"
+    },
+    {
+      "name": "PlayerClickInventoryEvent",
+      "doc": "A player clicked in an inventory that isn't one of the project's menus.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "player",
+          "type": "Player",
+          "doc": "Who it was."
+        },
+        {
+          "name": "kind",
+          "type": "string",
+          "doc": "What kind of inventory they have open: `\"crafting\"` when it is only their own (opened with the inventory key), else as `PlayerInventoryEvent.kind` says (`\"chest\"`, `\"furnace\"`, …)."
+        },
+        {
+          "name": "inventory",
+          "type": "Inventory?",
+          "doc": "The inventory clicked, when it's a real one: their own (`player:inventory()`), a container block's, an entity's, their ender chest. `nil` for a click outside both, and in one with nothing kept in it (the crafting grid, an anvil)."
+        },
+        {
+          "name": "own",
+          "type": "boolean",
+          "doc": "Whether the click landed in their own inventory (hotbar, main slots, armour, off hand) rather than in the one above it or outside both."
+        },
+        {
+          "name": "index",
+          "type": "integer?",
+          "doc": "The slot clicked, from 0, in the inventory clicked. In their own: 0 to 8 the hotbar, 9 to 35 the rest, 36 to 39 armour (boots first), 40 the off hand, as `player:inventory()` numbers them. `nil` for a click outside both."
+        },
+        {
+          "name": "click",
+          "type": "\"left\"|\"right\"|\"shift_left\"|\"shift_right\"|\"middle\"|\"number_key\"|\"swap_offhand\"|\"double\"|\"drop\"|\"control_drop\"|\"other\"",
+          "doc": "What kind of click it was. `swap_offhand` is the swap-hands key (F) over a slot: what is in it and what is in the off hand change places."
+        },
+        {
+          "name": "hotbar_index",
+          "type": "integer?",
+          "doc": "For `number_key`: the hotbar slot, 0 to 8."
+        },
+        {
+          "name": "item",
+          "type": "Item?",
+          "doc": "What was in the slot clicked."
+        },
+        {
+          "name": "cursor_item",
+          "type": "Item?",
+          "doc": "What the player was carrying on the cursor."
+        }
+      ],
+      "extends": "Event"
+    },
+    {
+      "name": "PlayerDragInventoryEvent",
+      "doc": "A player dragged a stack in an inventory that isn't one of the project's menus.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "player",
+          "type": "Player",
+          "doc": "Who it was."
+        },
+        {
+          "name": "kind",
+          "type": "string",
+          "doc": "What kind of inventory they have open, as `PlayerClickInventoryEvent.kind` says: `\"crafting\"` when it is only their own."
+        },
+        {
+          "name": "inventory",
+          "type": "Inventory?",
+          "doc": "The inventory above their own, when it's a real one (a container block's, an entity's, their ender chest); `nil` for one with nothing kept in it (the crafting grid, an anvil) and when only their own is open."
+        },
+        {
+          "name": "indices",
+          "type": "integer[]",
+          "doc": "The slots of the inventory above their own the stack is spread over, from 0, in order (the crafting grid's 1 to 4 when only their own is open, 0 being its result)."
+        },
+        {
+          "name": "own_indices",
+          "type": "integer[]",
+          "doc": "The slots of their own inventory the stack is spread over, in order, numbered as `player:inventory()` numbers them."
+        },
+        {
+          "name": "click",
+          "type": "\"left\"|\"right\"",
+          "doc": "`\"left\"` spreads the stack evenly over the slots, `\"right\"` puts one in each."
+        },
+        {
+          "name": "cursor_item",
+          "type": "Item?",
+          "doc": "The stack being dragged."
         }
       ],
       "extends": "Event"
@@ -21714,8 +21911,8 @@
         },
         {
           "name": "click",
-          "type": "\"left\"|\"right\"|\"shift_left\"|\"shift_right\"|\"middle\"|\"number_key\"|\"double\"|\"drop\"|\"control_drop\"|\"other\"",
-          "doc": "What kind of click it was."
+          "type": "\"left\"|\"right\"|\"shift_left\"|\"shift_right\"|\"middle\"|\"number_key\"|\"swap_offhand\"|\"double\"|\"drop\"|\"control_drop\"|\"other\"",
+          "doc": "What kind of click it was. `swap_offhand` is the swap-hands key (F) over a slot: what is in it and what is in the off hand change places."
         },
         {
           "name": "hotbar_index",
@@ -21760,6 +21957,16 @@
           "name": "indices",
           "type": "integer[]",
           "doc": "The window's slots the stack is spread over, from 0, in order."
+        },
+        {
+          "name": "own_indices",
+          "type": "integer[]",
+          "doc": "The slots of the player's own inventory below it the stack is spread over, in order, numbered as `player:inventory()` numbers them."
+        },
+        {
+          "name": "click",
+          "type": "\"left\"|\"right\"",
+          "doc": "`\"left\"` spreads the stack evenly over the slots, `\"right\"` puts one in each."
         },
         {
           "name": "cursor_item",

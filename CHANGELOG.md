@@ -102,6 +102,18 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Added
 
+- **Clicks and drags in a player's own inventory.** `player_click_inventory`
+  and `player_drag_inventory` (`click_inventory`, `drag_inventory` on
+  `Player`) are heard for clicks and drags in a player's own inventory and in
+  vanilla ones (a chest, a furnace), saying which inventory, whether it's their
+  own, which slots, and what's held; either can be cancelled. A project menu's
+  `drag` now also says which of the player's own slots below it were dragged
+  over (`own_indices`) and with which button (`click`), and both click events
+  name the swap-hands key over a slot (`swap_offhand`). `player:cursor_item()`
+  and `player:set_cursor_item()` read and set the cursor whatever screen is
+  open. `player_swap_hands` is heard for that key over a slot too
+  (`event.in_inventory`), and says what moves (`item`, `off_hand_item`).
+  Bots' `click_slot` takes `"swap_offhand"`.
 - **Bots for scripts.** `nf.bots.join` joins a fake player that a script
   drives: a `Bot`, which is a `Player` with a client's controls (`walk_to`,
   `look_at`, `attack`, `interact` with an entity or a centity's node,

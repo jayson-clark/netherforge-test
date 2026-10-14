@@ -209,6 +209,21 @@ abstract class PlayerOpsContract : PlatformContract() {
     }
 
     @Test
+    fun `what's on the cursor reads back as set`() {
+        val player = join()
+        main {
+            assertNull(players.cursor(player.uuid))
+            assertTrue(players.setCursor(player.uuid, item("minecraft:stick", 3)))
+            val carried = players.cursor(player.uuid)
+            assertEquals("minecraft:stick" to 3, carried?.def?.kind to carried?.def?.count)
+            assertTrue(players.setCursor(player.uuid, null))
+            assertNull(players.cursor(player.uuid))
+            assertNull(players.cursor(offline))
+            assertFalse(players.setCursor(offline, item("minecraft:stick")))
+        }
+    }
+
+    @Test
     fun `a kicked player leaves, and the server hears them quit`() {
         val player = join()
         main { assertTrue(players.kick(player.uuid, "<red>Bye")) }

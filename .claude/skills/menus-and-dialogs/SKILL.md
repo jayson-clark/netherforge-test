@@ -49,7 +49,15 @@ while the window or dialog exists, answering nil once it's gone.
   double-click collect from below) already cancelled, and `event:uncancel()`
   lets one through; clicks that only rearrange the player's own bag start
   uncancelled. Drags raise `MENU_DRAG` (the window only), precancelled on a
-  locked window.
+  locked window when they cover any of its own slots (`own_indices`, the bag
+  below, never precancel).
+- **Outside our windows** a click or drag is `player_click_inventory` /
+  `player_drag_inventory` (`PaperGameEvents.onClickInventory`/`onDragInventory`,
+  skipped while one of ours is the top inventory, and on the creative screen).
+  The swap-hands key over a slot is a click (`swap_offhand`), never a
+  `PlayerSwapHandItemsEvent`, so `onSwapInInventory` (HIGHEST, ignoreCancelled:
+  after both click listeners let it through) raises `player_swap_hands` with
+  `in_inventory`. The fake bots mirror all three.
 - **Context**: `player:open_menu(menu, { context = v })`
   keeps `v` (a `LuaRef`, the very value) on the new `Window`; the script reads
   it with `this:context()` (its body already can) and every `MenuEvent`,

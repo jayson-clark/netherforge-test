@@ -313,9 +313,9 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
             }
             is BotAction.SwapHands -> {
                 alive()
-                if (!raise.playerSwapHands(GameEvent.Player(bot.ref))) {
-                    val main = heldSlot(bot)
-                    val slots = bot.inventorySlots
+                val main = heldSlot(bot)
+                val slots = bot.inventorySlots
+                if (!raise.playerSwapHands(GameEvent.PlayerSwapHands(bot.ref, slots[main], slots[OFF_HAND], false))) {
                     slots[main] = slots[OFF_HAND].also { slots[OFF_HAND] = slots[main] }
                 }
             }
@@ -324,10 +324,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
                 drop(bot, action.all)
             }
             is BotAction.ClickSlot -> click(bot, action)
-            is BotAction.Drag -> {
-                platform.menus.viewing(bot.ref.uuid) ?: unsupported("dragging in anything but a project menu")
-                platform.menus.drag(bot, action.slots)
-            }
+            is BotAction.Drag -> drag(bot, action)
             is BotAction.CloseMenu -> closeMenu(bot)
             is BotAction.DialogButton -> {
                 val shown = platform.dialogs.showing[bot.ref.uuid] ?: throw IllegalStateException("${bot.ref.name} has no dialog open")
@@ -640,16 +637,91 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
     }
 
     /** A click in a project menu: the menu's own slots first, then the inventory below it. */
+    private fun clickName(click: BotClick) = when (click) {
+        BotClick.HOTBAR -> "number_key"
+        BotClick.DROP_ALL -> "control_drop"
+        BotClick.OFF_HAND -> "swap_offhand"
+        else -> click.name.lowercase()
+    }
+
+    /** What a swap-hands key over [held] that was let through is heard as, after the click. */
+    private fun swappedOver(bot: FakePlayer, held: ItemData?) {
+        raise.playerSwapHands(GameEvent.PlayerSwapHands(bot.ref, held, bot.inventorySlots[OFF_HAND], true))
+    }
+
+    /**
+     * Raw slot [slot] of the screen with no project menu open, as Paper's click names it: in the vanilla inventory
+     * open (null), or the crafting grid, its own slots first; below it the bot's inventory, its main rows then the
+     * hotbar. With only its own open, the game's inventory screen: result and grid 0 to 4, armour 5 (head) to 8,
+     * main rows 9 to 35, hotbar 36 to 44, off hand 45. The inventory clicked, whether it's the bot's own, and the index.
+     */
+    private fun inventorySlot(bot: FakePlayer, slot: Int): Triple<InventoryRef?, Boolean, Int> {
+        val open = platform.inventories.open[bot.ref.uuid]
+        val own = InventoryRef.Player(bot.ref.uuid)
+        if (open != null) {
+            val size = platform.inventories.size(open) ?: 0
+            if (slot < size) return Triple(open, false, slot)
+            val below = slot - size
+            return Triple(own, true, if (below < MAIN_ROWS) below + HOTBAR else below - MAIN_ROWS)
+        }
+        return when (slot) {
+            in 0 until CRAFTING_SLOTS -> Triple(null, false, slot)
+            in CRAFTING_SLOTS until HOTBAR -> Triple(own, true, HEAD - (slot - CRAFTING_SLOTS))
+            in HOTBAR until HOTBAR + MAIN_ROWS -> Triple(own, true, slot)
+            in HOTBAR + MAIN_ROWS until HOTBAR + MAIN_ROWS + HOTBAR -> Triple(own, true, slot - HOTBAR - MAIN_ROWS)
+            HOTBAR + MAIN_ROWS + HOTBAR -> Triple(own, true, OFF_HAND)
+            else -> throw IllegalArgumentException("slot $slot isn't in the inventory (slots 0 to ${HOTBAR + MAIN_ROWS + HOTBAR})")
+        }
+    }
+
+    private fun kindOpen(bot: FakePlayer) = platform.inventories.open[bot.ref.uuid]?.let { platform.inventories.kind(it) } ?: "crafting"
+
+    /** A click with no project menu open: in its own inventory or the vanilla one it has open, heard as Paper's is. */
+    private fun inventoryClick(bot: FakePlayer, click: BotAction.ClickSlot) {
+        val (inventory, own, index) = inventorySlot(bot, click.slot)
+        val held = inventory?.let { platform.inventories.item(it, index) }
+        val hotbar = click.hotbar.takeIf { click.click == BotClick.HOTBAR }
+        val heard = GameEvent.PlayerClickInventory(
+            bot.ref,
+            kindOpen(
+                bot
+            ),
+            inventory, own, index, clickName(click.click), hotbar, held, null
+        )
+        if (!raise.playerClickInventory(heard) && click.click == BotClick.OFF_HAND) swappedOver(bot, held)
+    }
+
+    /** A drag: the project menu's when one is open, else in its own inventory or the vanilla one it has open. */
+    private fun drag(bot: FakePlayer, drag: BotAction.Drag) {
+        val button = drag.button.name.lowercase()
+        val window = platform.menus.viewing(bot.ref.uuid)
+        if (window != null) {
+            val size = platform.menus.windows.getValue(window).slots.size
+            val (top, below) = drag.slots.partition { it < size }
+            val own = below.map { (it - size).let { b -> if (b < MAIN_ROWS) b + HOTBAR else b - MAIN_ROWS } }
+            platform.menus.drag(bot, top, ownSlots = own, click = button)
+            return
+        }
+        val slots = drag.slots.map { inventorySlot(bot, it) }
+        val inventory = platform.inventories.open[bot.ref.uuid]
+        raise.playerDragInventory(
+            GameEvent.PlayerDragInventory(
+                bot.ref,
+                kindOpen(bot),
+                inventory,
+                slots.filter { !it.second }.map { it.third },
+                slots.filter { it.second }.map { it.third },
+                button,
+                null
+            )
+        )
+    }
+
     private fun click(bot: FakePlayer, click: BotAction.ClickSlot) {
-        val window = platform.menus.viewing(bot.ref.uuid) ?: unsupported("clicks outside a project menu")
+        val window = platform.menus.viewing(bot.ref.uuid) ?: return inventoryClick(bot, click)
         val size = platform.menus.windows.getValue(window).slots.size
         val top = click.slot < size
-        val name = when (click.click) {
-            BotClick.HOTBAR -> "number_key"
-            BotClick.DROP_ALL -> "control_drop"
-            BotClick.OFF_HAND -> "other"
-            else -> click.click.name.lowercase()
-        }
+        val name = clickName(click.click)
         // Below the menu, the player's inventory as Paper numbers it: its main rows from 9, then the hotbar from 0.
         val below = click.slot - size
         val slot = if (top) {
@@ -662,7 +734,10 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
         // From below, only what moves a stack across: a shift-click on one, or gathering onto the cursor.
         val shift = click.click == BotClick.SHIFT_LEFT || click.click == BotClick.SHIFT_RIGHT
         val moves = top || (shift && bot.inventorySlots[slot] != null) || click.click == BotClick.DOUBLE
-        platform.menus.click(bot, slot, top, name, moves)
+        val hotbar = click.hotbar.takeIf { click.click == BotClick.HOTBAR }
+        if (!platform.menus.click(bot, slot, top, name, moves, hotbar) && click.click == BotClick.OFF_HAND) {
+            swappedOver(bot, if (top) platform.menus.windows.getValue(window).slots.getOrNull(slot) else bot.inventorySlots[slot])
+        }
     }
 
     /** Escape: a project menu closes (heard), or a container they opened. */
@@ -898,6 +973,12 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
 
     private companion object {
         const val OFF_HAND = 40
+
+        /** A player's helmet slot, above leggings and boots (36). */
+        const val HEAD = 39
+
+        /** The inventory screen's crafting result and 2×2 grid, before its armour. */
+        const val CRAFTING_SLOTS = 5
 
         /** The real bots' `PaperBots.NAME`. */
         val NAME = Regex("[A-Za-z0-9_]{3,16}")

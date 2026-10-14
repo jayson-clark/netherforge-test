@@ -597,6 +597,101 @@ class GameEventTest {
     }
 
     @Test
+    fun `a click in a player's own inventory says where and what, and can be stopped`() {
+        server(
+            """
+                local alex = nf.players.get("Alex")
+                alex:on("click_inventory", function(event)
+                  log("player", event.kind, tostring(event.own), tostring(event.inventory == alex:inventory()),
+                    tostring(event.index), event.click, tostring(event.hotbar_index),
+                    event.item and event.item.kind or "none", event.cursor_item and event.cursor_item.kind or "none")
+                  if event.index == 40 then event:cancel() end
+                end)
+                nf.on("player_click_inventory", function(event) log("nf", tostring(event.index)) end)
+                """
+        ).use { server ->
+            val game = server.game
+            val alex = server.alex.ref
+            val own = InventoryRef.Player(alex.uuid)
+            val sword = item("minecraft:iron_sword")
+            assertFalse(
+                game.playerClickInventory(
+                    GameEvent.PlayerClickInventory(alex, "crafting", own, true, 3, "left", null, sword, null)
+                )
+            )
+            assertTrue(
+                game.playerClickInventory(
+                    GameEvent.PlayerClickInventory(alex, "crafting", own, true, 40, "number_key", 2, null, sword)
+                )
+            )
+            game.playerClickInventory(GameEvent.PlayerClickInventory(alex, "chest", null, false, null, "left", null, null, null))
+            assertEquals(
+                listOf(
+                    "player\tcrafting\ttrue\ttrue\t3\tleft\tnil\tminecraft:iron_sword\tnone",
+                    "nf\t3",
+                    "player\tcrafting\ttrue\ttrue\t40\tnumber_key\t2\tnone\tminecraft:iron_sword",
+                    "nf\t40",
+                    "player\tchest\tfalse\tfalse\tnil\tleft\tnil\tnone\tnone",
+                    "nf\tnil"
+                ),
+                server.logs
+            )
+        }
+    }
+
+    @Test
+    fun `a drag in a player's own inventory or a chest says over which slots, and can be stopped`() {
+        server(
+            """
+                nf.players.get("Alex"):on("drag_inventory", function(event)
+                  log("drag", event.kind, event.inventory and event.inventory:kind() or "none", table.concat(event.indices, ","),
+                    table.concat(event.own_indices, ","), event.click, event.cursor_item.kind)
+                  if #event.indices > 0 then event:cancel() end
+                end)
+                """
+        ).use { server ->
+            val game = server.game
+            val alex = server.alex.ref
+            server.platform.worlds.blocks[BlockAt("world", 4, 64, 4)] =
+                "minecraft:chest[facing=north,type=single,waterlogged=false]"
+            val chest = InventoryRef.Block("world", 4, 64, 4)
+            val bread = item("minecraft:bread", 4)
+            assertFalse(
+                game.playerDragInventory(GameEvent.PlayerDragInventory(alex, "crafting", null, emptyList(), listOf(9, 10), "right", bread))
+            )
+            assertTrue(
+                game.playerDragInventory(GameEvent.PlayerDragInventory(alex, "chest", chest, listOf(0, 1), listOf(0), "left", bread))
+            )
+            assertEquals(
+                listOf("drag\tcrafting\tnone\t\t9,10\tright\tminecraft:bread", "drag\tchest\tchest\t0,1\t0\tleft\tminecraft:bread"),
+                server.logs
+            )
+        }
+    }
+
+    @Test
+    fun `what a player carries on the cursor reads back as set, and empties`() {
+        server(
+            """
+                nf.commands.register("cursor", function(ctx)
+                  local player = ctx.player
+                  log("empty", tostring(player:cursor_item()))
+                  log("set", tostring(player:set_cursor_item({ kind = "minecraft:emerald", count = 3 })))
+                  local carried = player:cursor_item()
+                  log("carried", carried.kind, carried.count)
+                  log("cleared", tostring(player:set_cursor_item()), tostring(player:cursor_item()))
+                  log(pcall(function() player:set_cursor_item({ kind = "minecraft:emerald", colour = 1 }) end))
+                end)
+                """
+        ).use { server ->
+            server.platform.commands.run(server.alex, "cursor")
+            assertEquals("empty\tnil", server.logs[0])
+            assertEquals(listOf("set\ttrue", "carried\tminecraft:emerald\t3", "cleared\ttrue\tnil"), server.logs.subList(1, 4))
+            assertTrue(server.logs[4].startsWith("false\t") && "colour" in server.logs[4], server.logs[4])
+        }
+    }
+
+    @Test
     fun `a crafting grid's result can be replaced or taken away, checked as it's assigned`() {
         server(
             """

@@ -1,4 +1,5 @@
 import type { EventSpec, Field, LuaClass, Raised } from '../types.ts'
+import { CLICK_DOC, CLICK_KIND, DRAG_CLICK } from './menu.ts'
 
 /**
  * The server's events past the core ones in `events.ts`: a player's state and input, combat
@@ -797,6 +798,21 @@ const inventoryEvents: EventSpec[] = [
     { payload: 'PlayerInventoryEvent' },
   ),
   playerEvent(
+    'click_inventory',
+    "A player clicked in an inventory that isn't one of the project's menus: their own (with nothing else open, or below a chest, a furnace, …) or the vanilla one they have open. While one of the project's menus is open, clicks in their own inventory below it are the menu's `click` instead. Not on the creative inventory screen, which sends whole stacks rather than clicks. `event:cancel()` stops the click: nothing moves.",
+    {
+      payload: 'PlayerClickInventoryEvent',
+      cancellable: true,
+      example:
+        'nf.on("player_click_inventory", function(event)\n  if event.own and event.index == 40 then\n    event:cancel() -- keep the off hand as it is\n  end\nend)',
+    },
+  ),
+  playerEvent(
+    'drag_inventory',
+    "A player dragged a stack across slots (holding a mouse button down) in an inventory that isn't one of the project's menus: their own, or the vanilla one they have open. While one of the project's menus is open, that's the menu's `drag` instead. `event:cancel()` stops it: nothing moves.",
+    { payload: 'PlayerDragInventoryEvent', cancellable: true },
+  ),
+  playerEvent(
     'craft',
     'A player is taking what they crafted out of the result slot (with shift, as many as they can make). `event:cancel()` leaves it there and keeps the ingredients.',
     { payload: 'PlayerCraftEvent', cancellable: true },
@@ -867,6 +883,74 @@ const inventoryShapes: LuaClass[] = [
       doc: "The block it belongs to (a chest, a crafting table), or `nil` for an entity's.",
     },
   ]),
+  payload(
+    'PlayerClickInventoryEvent',
+    "A player clicked in an inventory that isn't one of the project's menus.",
+    [
+      player,
+      {
+        name: 'kind',
+        type: 'string',
+        doc: 'What kind of inventory they have open: `"crafting"` when it is only their own (opened with the inventory key), else as `PlayerInventoryEvent.kind` says (`"chest"`, `"furnace"`, …).',
+      },
+      {
+        name: 'inventory',
+        type: 'Inventory?',
+        doc: "The inventory clicked, when it's a real one: their own (`player:inventory()`), a container block's, an entity's, their ender chest. `nil` for a click outside both, and in one with nothing kept in it (the crafting grid, an anvil).",
+      },
+      {
+        name: 'own',
+        type: 'boolean',
+        doc: 'Whether the click landed in their own inventory (hotbar, main slots, armour, off hand) rather than in the one above it or outside both.',
+      },
+      {
+        name: 'index',
+        type: 'integer?',
+        doc: 'The slot clicked, from 0, in the inventory clicked. In their own: 0 to 8 the hotbar, 9 to 35 the rest, 36 to 39 armour (boots first), 40 the off hand, as `player:inventory()` numbers them. `nil` for a click outside both.',
+      },
+      {
+        name: 'click',
+        type: CLICK_KIND,
+        doc: CLICK_DOC,
+      },
+      {
+        name: 'hotbar_index',
+        type: 'integer?',
+        doc: 'For `number_key`: the hotbar slot, 0 to 8.',
+      },
+      { name: 'item', type: 'Item?', doc: 'What was in the slot clicked.' },
+      { name: 'cursor_item', type: 'Item?', doc: 'What the player was carrying on the cursor.' },
+    ],
+  ),
+  payload(
+    'PlayerDragInventoryEvent',
+    "A player dragged a stack in an inventory that isn't one of the project's menus.",
+    [
+      player,
+      {
+        name: 'kind',
+        type: 'string',
+        doc: 'What kind of inventory they have open, as `PlayerClickInventoryEvent.kind` says: `"crafting"` when it is only their own.',
+      },
+      {
+        name: 'inventory',
+        type: 'Inventory?',
+        doc: "The inventory above their own, when it's a real one (a container block's, an entity's, their ender chest); `nil` for one with nothing kept in it (the crafting grid, an anvil) and when only their own is open.",
+      },
+      {
+        name: 'indices',
+        type: 'integer[]',
+        doc: "The slots of the inventory above their own the stack is spread over, from 0, in order (the crafting grid's 1 to 4 when only their own is open, 0 being its result).",
+      },
+      {
+        name: 'own_indices',
+        type: 'integer[]',
+        doc: 'The slots of their own inventory the stack is spread over, in order, numbered as `player:inventory()` numbers them.',
+      },
+      DRAG_CLICK,
+      { name: 'cursor_item', type: 'Item?', doc: 'The stack being dragged.' },
+    ],
+  ),
   payload('PlayerCraftEvent', 'A player is taking what they crafted.', [
     player,
     { name: 'recipe', type: 'string?', doc: RECIPE_DOC },

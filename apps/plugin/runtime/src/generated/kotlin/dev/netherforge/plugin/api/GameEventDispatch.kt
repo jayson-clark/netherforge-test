@@ -114,13 +114,16 @@ open class GameEventDispatch(private val session: EventSession) : GameEvents {
         event.location = session.placed(payload.location, event.location)
     }
 
-    override fun playerSwapHands(event: GameEvent.Player): Boolean {
+    override fun playerSwapHands(event: GameEvent.PlayerSwapHands): Boolean {
         if (!session.running) return false
         val first = session.player(event.player)
         val stages = listOf(Events.PLAYER_SWAP_HANDS to first, Events.NF_PLAYER_SWAP_HANDS to null)
         if (!session.listening(stages)) return false
-        val payload = PlayerEvent(
-            player = first
+        val payload = PlayerSwapHandsEvent(
+            player = first,
+            item = event.item,
+            offHandItem = event.offHandItem,
+            inInventory = event.inInventory
         )
         return session.emit(stages, payload)
     }
@@ -890,6 +893,42 @@ open class GameEventDispatch(private val session: EventSession) : GameEvents {
         session.emit(stages, payload)
     }
 
+    override fun playerClickInventory(event: GameEvent.PlayerClickInventory): Boolean {
+        if (!session.running) return false
+        val first = session.player(event.player)
+        val stages = listOf(Events.PLAYER_CLICK_INVENTORY to first, Events.NF_PLAYER_CLICK_INVENTORY to null)
+        if (!session.listening(stages)) return false
+        val payload = PlayerClickInventoryEvent(
+            player = first,
+            kind = event.kind,
+            inventory = event.inventory?.let { x0 -> session.inventory(x0) },
+            own = event.own,
+            index = event.index?.let { x0 -> x0.toLong() },
+            click = event.click,
+            hotbarIndex = event.hotbarIndex?.let { x0 -> x0.toLong() },
+            item = event.item,
+            cursorItem = event.cursorItem
+        )
+        return session.emit(stages, payload)
+    }
+
+    override fun playerDragInventory(event: GameEvent.PlayerDragInventory): Boolean {
+        if (!session.running) return false
+        val first = session.player(event.player)
+        val stages = listOf(Events.PLAYER_DRAG_INVENTORY to first, Events.NF_PLAYER_DRAG_INVENTORY to null)
+        if (!session.listening(stages)) return false
+        val payload = PlayerDragInventoryEvent(
+            player = first,
+            kind = event.kind,
+            inventory = event.inventory?.let { x0 -> session.inventory(x0) },
+            indices = event.indices.map { x0 -> x0.toLong() },
+            ownIndices = event.ownIndices.map { x0 -> x0.toLong() },
+            click = event.click,
+            cursorItem = event.cursorItem
+        )
+        return session.emit(stages, payload)
+    }
+
     override fun playerCraft(event: GameEvent.PlayerCraft): Boolean {
         if (!session.running) return false
         val first = session.player(event.player)
@@ -1165,6 +1204,10 @@ open class GameEventDispatch(private val session: EventSession) : GameEvents {
             Events.NF_PLAYER_OPEN_INVENTORY,
             Events.PLAYER_CLOSE_INVENTORY,
             Events.NF_PLAYER_CLOSE_INVENTORY,
+            Events.PLAYER_CLICK_INVENTORY,
+            Events.NF_PLAYER_CLICK_INVENTORY,
+            Events.PLAYER_DRAG_INVENTORY,
+            Events.NF_PLAYER_DRAG_INVENTORY,
             Events.PLAYER_CRAFT,
             Events.NF_PLAYER_CRAFT,
             Events.PLAYER_PREPARE_CRAFT,

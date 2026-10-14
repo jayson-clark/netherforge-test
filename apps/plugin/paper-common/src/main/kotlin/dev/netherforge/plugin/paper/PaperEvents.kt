@@ -33,6 +33,7 @@ import org.bukkit.event.entity.EntityPickupItemEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.inventory.ClickType
+import org.bukkit.event.inventory.DragType
 import org.bukkit.event.inventory.InventoryAction
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
@@ -389,28 +390,15 @@ class PaperEvents(
         }
     }
 
-    private fun clickName(click: ClickType): String = when (click) {
-        ClickType.LEFT -> "left"
-        ClickType.RIGHT -> "right"
-        ClickType.SHIFT_LEFT -> "shift_left"
-        ClickType.SHIFT_RIGHT -> "shift_right"
-        ClickType.MIDDLE -> "middle"
-        ClickType.NUMBER_KEY -> "number_key"
-        ClickType.DOUBLE_CLICK -> "double"
-        ClickType.DROP -> "drop"
-        ClickType.CONTROL_DROP -> "control_drop"
-        else -> "other"
-    }
-
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     fun onInventoryDrag(event: InventoryDragEvent) {
         val window = platform.menus.holderOf(event.view.topInventory)?.window ?: return
         val player = event.whoClicked as? Player ?: return
-        val size = event.view.topInventory.size
-        val slots = event.rawSlots.filter { it < size }.sorted()
+        val (slots, own) = dragSlots(event)
         platform.menus.inClick = true
         try {
-            if (runtime.menuDragged(window, platform.players.ref(player), slots, PaperItems.toItem(event.oldCursor))) {
+            val cursor = PaperItems.toItem(event.oldCursor)
+            if (runtime.menuDragged(window, platform.players.ref(player), slots, cursor, own, dragName(event.type))) {
                 event.isCancelled = true
             }
         } finally {
@@ -515,3 +503,28 @@ class PaperEvents(
 
 /** A block state, canonical. */
 internal fun stateOf(data: BlockData): String = BlockState.parse(data.asString)?.toString() ?: data.asString
+
+/** A click as scripts name it (`MenuClickEvent.click`, `PlayerClickInventoryEvent.click`). */
+internal fun clickName(click: ClickType): String = when (click) {
+    ClickType.LEFT -> "left"
+    ClickType.RIGHT -> "right"
+    ClickType.SHIFT_LEFT -> "shift_left"
+    ClickType.SHIFT_RIGHT -> "shift_right"
+    ClickType.MIDDLE -> "middle"
+    ClickType.NUMBER_KEY -> "number_key"
+    ClickType.SWAP_OFFHAND -> "swap_offhand"
+    ClickType.DOUBLE_CLICK -> "double"
+    ClickType.DROP -> "drop"
+    ClickType.CONTROL_DROP -> "control_drop"
+    else -> "other"
+}
+
+/** A drag's slots in the inventory above, and in the player's own (as their inventory numbers them), each in order. */
+internal fun dragSlots(event: InventoryDragEvent): Pair<List<Int>, List<Int>> {
+    val size = event.view.topInventory.size
+    val (top, own) = event.rawSlots.sorted().partition { it < size }
+    return top to own.map(event.view::convertSlot)
+}
+
+/** A drag's button as scripts name it (`MenuDragEvent.click`, `PlayerDragInventoryEvent.click`). */
+internal fun dragName(type: DragType): String = if (type == DragType.SINGLE) "right" else "left"

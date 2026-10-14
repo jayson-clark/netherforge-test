@@ -59,10 +59,13 @@ interface GameEvents {
     fun playerRespawn(event: GameEvent.PlayerRespawn)
 
     /**
-     * A player pressed the key that swaps the items in their hands. `event:cancel()` leaves them where
-     * they are, so the key can be used for something else. True when it ended cancelled.
+     * A player pressed the key that swaps the items in their hands (F). With an inventory screen open
+     * (their own, a vanilla one or one of the project's menus) the key swaps the slot they point at with
+     * their off hand instead, and this is heard too, after that click's `click_inventory` or `click`
+     * handlers and only when they let it through; `event.in_inventory` says which. `event:cancel()` leaves
+     * them where they are, so the key can be used for something else. True when it ended cancelled.
      */
-    fun playerSwapHands(event: GameEvent.Player): Boolean
+    fun playerSwapHands(event: GameEvent.PlayerSwapHands): Boolean
 
     /** A player started or stopped sneaking. */
     fun playerSneak(event: GameEvent.PlayerSneak)
@@ -447,6 +450,23 @@ interface GameEvents {
     fun playerCloseInventory(event: GameEvent.PlayerInventory)
 
     /**
+     * A player clicked in an inventory that isn't one of the project's menus: their own (with nothing else
+     * open, or below a chest, a furnace, …) or the vanilla one they have open. While one of the project's
+     * menus is open, clicks in their own inventory below it are the menu's `click` instead. Not on the
+     * creative inventory screen, which sends whole stacks rather than clicks. `event:cancel()` stops the
+     * click: nothing moves. True when it ended cancelled.
+     */
+    fun playerClickInventory(event: GameEvent.PlayerClickInventory): Boolean
+
+    /**
+     * A player dragged a stack across slots (holding a mouse button down) in an inventory that isn't one
+     * of the project's menus: their own, or the vanilla one they have open. While one of the project's
+     * menus is open, that's the menu's `drag` instead. `event:cancel()` stops it: nothing moves. True when
+     * it ended cancelled.
+     */
+    fun playerDragInventory(event: GameEvent.PlayerDragInventory): Boolean
+
+    /**
      * A player is taking what they crafted out of the result slot (with shift, as many as they can make).
      * `event:cancel()` leaves it there and keeps the ingredients. True when it ended cancelled.
      */
@@ -596,10 +616,19 @@ sealed interface GameEvent {
         var location: Location
     ) : GameEvent
 
-    /** Something a player did that needs no more said. */
-    data class Player(
+    /** A player pressed the swap-hands key. */
+    data class PlayerSwapHands(
         /** Who it was. */
-        val player: PlayerRef
+        val player: PlayerRef,
+        /**
+         * What is going to their off hand: what is in their main hand, or in the slot they point at with an
+         * inventory screen open.
+         */
+        val item: ItemData?,
+        /** What is leaving their off hand. */
+        val offHandItem: ItemData?,
+        /** Whether they pressed it over a slot with an inventory screen open, rather than with their hands. */
+        val inInventory: Boolean
     ) : GameEvent
 
     /** A player started or stopped sneaking. */
@@ -1167,6 +1196,76 @@ sealed interface GameEvent {
         val block: BlockRef?
     ) : GameEvent
 
+    /** A player clicked in an inventory that isn't one of the project's menus. */
+    data class PlayerClickInventory(
+        /** Who it was. */
+        val player: PlayerRef,
+        /**
+         * What kind of inventory they have open: `"crafting"` when it is only their own (opened with the
+         * inventory key), else as `PlayerInventoryEvent.kind` says (`"chest"`, `"furnace"`, …).
+         */
+        val kind: String,
+        /**
+         * The inventory clicked, when it's a real one: their own (`player:inventory()`), a container block's,
+         * an entity's, their ender chest. `nil` for a click outside both, and in one with nothing kept in it
+         * (the crafting grid, an anvil).
+         */
+        val inventory: InventoryRef?,
+        /**
+         * Whether the click landed in their own inventory (hotbar, main slots, armour, off hand) rather than
+         * in the one above it or outside both.
+         */
+        val own: Boolean,
+        /**
+         * The slot clicked, from 0, in the inventory clicked. In their own: 0 to 8 the hotbar, 9 to 35 the
+         * rest, 36 to 39 armour (boots first), 40 the off hand, as `player:inventory()` numbers them. `nil`
+         * for a click outside both.
+         */
+        val index: Int?,
+        /**
+         * What kind of click it was. `swap_offhand` is the swap-hands key (F) over a slot: what is in it and
+         * what is in the off hand change places.
+         */
+        val click: String,
+        /** For `number_key`: the hotbar slot, 0 to 8. */
+        val hotbarIndex: Int?,
+        /** What was in the slot clicked. */
+        val item: ItemData?,
+        /** What the player was carrying on the cursor. */
+        val cursorItem: ItemData?
+    ) : GameEvent
+
+    /** A player dragged a stack in an inventory that isn't one of the project's menus. */
+    data class PlayerDragInventory(
+        /** Who it was. */
+        val player: PlayerRef,
+        /**
+         * What kind of inventory they have open, as `PlayerClickInventoryEvent.kind` says: `"crafting"` when
+         * it is only their own.
+         */
+        val kind: String,
+        /**
+         * The inventory above their own, when it's a real one (a container block's, an entity's, their ender
+         * chest); `nil` for one with nothing kept in it (the crafting grid, an anvil) and when only their own
+         * is open.
+         */
+        val inventory: InventoryRef?,
+        /**
+         * The slots of the inventory above their own the stack is spread over, from 0, in order (the crafting
+         * grid's 1 to 4 when only their own is open, 0 being its result).
+         */
+        val indices: List<Int>,
+        /**
+         * The slots of their own inventory the stack is spread over, in order, numbered as
+         * `player:inventory()` numbers them.
+         */
+        val ownIndices: List<Int>,
+        /** `"left"` spreads the stack evenly over the slots, `"right"` puts one in each. */
+        val click: String,
+        /** The stack being dragged. */
+        val cursorItem: ItemData?
+    ) : GameEvent
+
     /** A player is taking what they crafted. */
     data class PlayerCraft(
         /** Who it was. */
@@ -1371,7 +1470,7 @@ class GameEventDelivery(private val watched: Set<WatchedEvent>, private val sink
         sink()?.playerRespawn(event)
     }
 
-    override fun playerSwapHands(event: GameEvent.Player): Boolean = sink()?.playerSwapHands(event) == true
+    override fun playerSwapHands(event: GameEvent.PlayerSwapHands): Boolean = sink()?.playerSwapHands(event) == true
 
     override fun playerSneak(event: GameEvent.PlayerSneak) {
         sink()?.playerSneak(event)
@@ -1517,6 +1616,10 @@ class GameEventDelivery(private val watched: Set<WatchedEvent>, private val sink
         sink()?.playerCloseInventory(event)
     }
 
+    override fun playerClickInventory(event: GameEvent.PlayerClickInventory): Boolean = sink()?.playerClickInventory(event) == true
+
+    override fun playerDragInventory(event: GameEvent.PlayerDragInventory): Boolean = sink()?.playerDragInventory(event) == true
+
     override fun playerCraft(event: GameEvent.PlayerCraft): Boolean = sink()?.playerCraft(event) == true
 
     override fun playerPrepareCraft(event: GameEvent.PlayerPrepareCraft) {
@@ -1569,7 +1672,7 @@ class GameEventFunnel(private val heard: (method: String, event: GameEvent) -> B
         heard("playerRespawn", event)
     }
 
-    override fun playerSwapHands(event: GameEvent.Player): Boolean = heard("playerSwapHands", event)
+    override fun playerSwapHands(event: GameEvent.PlayerSwapHands): Boolean = heard("playerSwapHands", event)
 
     override fun playerSneak(event: GameEvent.PlayerSneak) {
         heard("playerSneak", event)
@@ -1714,6 +1817,10 @@ class GameEventFunnel(private val heard: (method: String, event: GameEvent) -> B
     override fun playerCloseInventory(event: GameEvent.PlayerInventory) {
         heard("playerCloseInventory", event)
     }
+
+    override fun playerClickInventory(event: GameEvent.PlayerClickInventory): Boolean = heard("playerClickInventory", event)
+
+    override fun playerDragInventory(event: GameEvent.PlayerDragInventory): Boolean = heard("playerDragInventory", event)
 
     override fun playerCraft(event: GameEvent.PlayerCraft): Boolean = heard("playerCraft", event)
 

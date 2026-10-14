@@ -10,6 +10,21 @@ const shape = (name: string, doc: string, fields: LuaClass['fields']): LuaClass 
   fields,
 })
 
+/** What kind of click it was: `MenuClickEvent.click`, `PlayerClickInventoryEvent.click`. */
+export const CLICK_KIND =
+  '"left"|"right"|"shift_left"|"shift_right"|"middle"|"number_key"|"swap_offhand"|"double"|"drop"|"control_drop"|"other"'
+
+/** The doc of a click event's `click` field. */
+export const CLICK_DOC =
+  'What kind of click it was. `swap_offhand` is the swap-hands key (F) over a slot: what is in it and what is in the off hand change places.'
+
+/** What kind of drag it was: `MenuDragEvent.click`, `PlayerDragInventoryEvent.click`. */
+export const DRAG_CLICK: LuaClass['fields'][number] = {
+  name: 'click',
+  type: '"left"|"right"',
+  doc: '`"left"` spreads the stack evenly over the slots, `"right"` puts one in each.',
+}
+
 const menuContext = {
   name: 'context',
   type: 'any',
@@ -931,8 +946,8 @@ export const menuShapes: LuaClass[] = [
       },
       {
         name: 'click',
-        type: '"left"|"right"|"shift_left"|"shift_right"|"middle"|"number_key"|"double"|"drop"|"control_drop"|"other"',
-        doc: 'What kind of click it was.',
+        type: CLICK_KIND,
+        doc: CLICK_DOC,
       },
       {
         name: 'hotbar_index',
@@ -952,6 +967,12 @@ export const menuShapes: LuaClass[] = [
       type: 'integer[]',
       doc: "The window's slots the stack is spread over, from 0, in order.",
     },
+    {
+      name: 'own_indices',
+      type: 'integer[]',
+      doc: "The slots of the player's own inventory below it the stack is spread over, in order, numbered as `player:inventory()` numbers them.",
+    },
+    DRAG_CLICK,
     { name: 'cursor_item', type: 'Item?', doc: 'The stack being dragged.' },
     menuContext,
   ]),

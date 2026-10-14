@@ -296,7 +296,7 @@ export const FUNCTION_GROUPS: Record<string, Group[]> = {
     ),
     group(
       'Items',
-      'held_item set_held_item off_hand_item set_off_hand_item held_slot set_held_slot give_item item_cooldown set_item_cooldown ender_chest storage refresh_items',
+      'held_item set_held_item off_hand_item set_off_hand_item cursor_item set_cursor_item held_slot set_held_slot give_item item_cooldown set_item_cooldown ender_chest storage refresh_items',
     ),
     group(
       'Recipes and advancements',
@@ -408,7 +408,7 @@ export const EVENT_GROUPS: Record<string, Group[]> = {
     ),
     group(
       'Players: crafting and containers',
-      'player_open_inventory player_close_inventory player_craft player_prepare_craft player_prepare_anvil player_prepare_smithing player_prepare_grindstone player_enchant_item recipe_craft furnace_smelt',
+      'player_open_inventory player_close_inventory player_click_inventory player_drag_inventory player_craft player_prepare_craft player_prepare_anvil player_prepare_smithing player_prepare_grindstone player_enchant_item recipe_craft furnace_smelt',
     ),
     group(
       'Entities',
@@ -442,7 +442,7 @@ export const EVENT_GROUPS: Record<string, Group[]> = {
     ),
     group(
       'Crafting and containers',
-      'open_inventory close_inventory craft prepare_craft prepare_anvil prepare_smithing prepare_grindstone enchant_item',
+      'open_inventory close_inventory click_inventory drag_inventory craft prepare_craft prepare_anvil prepare_smithing prepare_grindstone enchant_item',
     ),
   ],
   World: [

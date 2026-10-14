@@ -6,13 +6,13 @@
 -- project's modules: "Lua.runtime.path": ["modules/?.lua", "modules/?/init.lua"].
 -- The sandbox removes io, os, package, load, loadstring, dofile, loadfile, debug, collectgarbage, warn, java.
 
----@alias nf.Event "tick"|"unload"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"world_dusk"|"world_dawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"recipe_craft"|"item_view"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed"|string
+---@alias nf.Event "tick"|"unload"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"world_dusk"|"world_dawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_click_inventory"|"player_drag_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"recipe_craft"|"item_view"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed"|string
 ---@alias Centity.Event "spawn"|"remove"|"tick"|"click"|"animation_start"|"animation_end"|"chunk_load"|"chunk_unload"|"hit"|"bounce"|"stick"|"flight_end"|"damage"|"death"|"land"|"bump"|"touch"|"path_end"|"buff_add"|"buff_end"|string
 ---@alias Node.Event "click"|"collide"|"wake"|"sleep"
 ---@alias Entity.Event "damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
 ---@alias Living.Event "death"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
 ---@alias Mob.Event "path_end"|"target"|"death"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"interact"|"hit"|"explode"|"combust"|"mount"|"dismount"
----@alias Player.Event "join"|"quit"|"chat"|"interact"|"interact_entity"|"move"|"teleport"|"change_world"|"death"|"respawn"|"drop_item"|"pickup_item"|"use_item"|"consume_item"|"swap_hands"|"sneak"|"command"|"input"|"change_slot"|"swing"|"sprint"|"fly"|"jump"|"change_game_mode"|"change_food"|"gain_experience"|"change_level"|"kick"|"complete_advancement"|"stop_using_item"|"break_item"|"open_inventory"|"close_inventory"|"craft"|"prepare_craft"|"prepare_anvil"|"prepare_smithing"|"prepare_grindstone"|"enchant_item"|"buff_add"|"buff_end"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"hit"|"explode"|"combust"|"mount"|"dismount"
+---@alias Player.Event "join"|"quit"|"chat"|"interact"|"interact_entity"|"move"|"teleport"|"change_world"|"death"|"respawn"|"drop_item"|"pickup_item"|"use_item"|"consume_item"|"swap_hands"|"sneak"|"command"|"input"|"change_slot"|"swing"|"sprint"|"fly"|"jump"|"change_game_mode"|"change_food"|"gain_experience"|"change_level"|"kick"|"complete_advancement"|"stop_using_item"|"break_item"|"open_inventory"|"close_inventory"|"click_inventory"|"drag_inventory"|"craft"|"prepare_craft"|"prepare_anvil"|"prepare_smithing"|"prepare_grindstone"|"enchant_item"|"buff_add"|"buff_end"|"heal"|"launch_projectile"|"shoot_bow"|"change_effect"|"damage"|"hit"|"explode"|"combust"|"mount"|"dismount"
 ---@alias World.Event "block_break"|"block_place"|"entity_spawn"|"dusk"|"dawn"|"block_explode"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"furnace_smelt"
 ---@alias ProjectBlock.Event "place"|"break"|"click"|"tick"
 ---@alias Menu.Event "open"|"close"|"click"|"drag"
@@ -106,7 +106,7 @@ nf = {}
 ---@overload fun(event: "player_pickup_item", handler: fun(event: PlayerPickupItemEvent)): Subscription
 ---@overload fun(event: "player_use_item", handler: fun(event: PlayerUseItemEvent)): Subscription
 ---@overload fun(event: "player_consume_item", handler: fun(event: PlayerItemEvent)): Subscription
----@overload fun(event: "player_swap_hands", handler: fun(event: PlayerEvent)): Subscription
+---@overload fun(event: "player_swap_hands", handler: fun(event: PlayerSwapHandsEvent)): Subscription
 ---@overload fun(event: "player_sneak", handler: fun(event: PlayerSneakEvent)): Subscription
 ---@overload fun(event: "player_command", handler: fun(event: PlayerCommandEvent)): Subscription
 ---@overload fun(event: "block_break", handler: fun(event: BlockBreakEvent)): Subscription
@@ -168,6 +168,8 @@ nf = {}
 ---@overload fun(event: "vehicle_destroy", handler: fun(event: VehicleDestroyEvent)): Subscription
 ---@overload fun(event: "player_open_inventory", handler: fun(event: PlayerInventoryEvent)): Subscription
 ---@overload fun(event: "player_close_inventory", handler: fun(event: PlayerInventoryEvent)): Subscription
+---@overload fun(event: "player_click_inventory", handler: fun(event: PlayerClickInventoryEvent)): Subscription
+---@overload fun(event: "player_drag_inventory", handler: fun(event: PlayerDragInventoryEvent)): Subscription
 ---@overload fun(event: "player_craft", handler: fun(event: PlayerCraftEvent)): Subscription
 ---@overload fun(event: "player_prepare_craft", handler: fun(event: PlayerPrepareCraftEvent)): Subscription
 ---@overload fun(event: "player_prepare_anvil", handler: fun(event: PlayerPrepareAnvilEvent)): Subscription
@@ -207,7 +209,7 @@ function nf.on(event, handler, options) end
 ---@overload fun(event: "player_pickup_item", handler: fun(event: PlayerPickupItemEvent)): Subscription
 ---@overload fun(event: "player_use_item", handler: fun(event: PlayerUseItemEvent)): Subscription
 ---@overload fun(event: "player_consume_item", handler: fun(event: PlayerItemEvent)): Subscription
----@overload fun(event: "player_swap_hands", handler: fun(event: PlayerEvent)): Subscription
+---@overload fun(event: "player_swap_hands", handler: fun(event: PlayerSwapHandsEvent)): Subscription
 ---@overload fun(event: "player_sneak", handler: fun(event: PlayerSneakEvent)): Subscription
 ---@overload fun(event: "player_command", handler: fun(event: PlayerCommandEvent)): Subscription
 ---@overload fun(event: "block_break", handler: fun(event: BlockBreakEvent)): Subscription
@@ -269,6 +271,8 @@ function nf.on(event, handler, options) end
 ---@overload fun(event: "vehicle_destroy", handler: fun(event: VehicleDestroyEvent)): Subscription
 ---@overload fun(event: "player_open_inventory", handler: fun(event: PlayerInventoryEvent)): Subscription
 ---@overload fun(event: "player_close_inventory", handler: fun(event: PlayerInventoryEvent)): Subscription
+---@overload fun(event: "player_click_inventory", handler: fun(event: PlayerClickInventoryEvent)): Subscription
+---@overload fun(event: "player_drag_inventory", handler: fun(event: PlayerDragInventoryEvent)): Subscription
 ---@overload fun(event: "player_craft", handler: fun(event: PlayerCraftEvent)): Subscription
 ---@overload fun(event: "player_prepare_craft", handler: fun(event: PlayerPrepareCraftEvent)): Subscription
 ---@overload fun(event: "player_prepare_anvil", handler: fun(event: PlayerPrepareAnvilEvent)): Subscription
@@ -349,7 +353,7 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: nf, event: "player_pickup_item", filter?: fun(event: PlayerPickupItemEvent): boolean): PlayerPickupItemEvent
 ---@overload fun(handle: nf, event: "player_use_item", filter?: fun(event: PlayerUseItemEvent): boolean): PlayerUseItemEvent
 ---@overload fun(handle: nf, event: "player_consume_item", filter?: fun(event: PlayerItemEvent): boolean): PlayerItemEvent
----@overload fun(handle: nf, event: "player_swap_hands", filter?: fun(event: PlayerEvent): boolean): PlayerEvent
+---@overload fun(handle: nf, event: "player_swap_hands", filter?: fun(event: PlayerSwapHandsEvent): boolean): PlayerSwapHandsEvent
 ---@overload fun(handle: nf, event: "player_sneak", filter?: fun(event: PlayerSneakEvent): boolean): PlayerSneakEvent
 ---@overload fun(handle: nf, event: "player_command", filter?: fun(event: PlayerCommandEvent): boolean): PlayerCommandEvent
 ---@overload fun(handle: nf, event: "block_break", filter?: fun(event: BlockBreakEvent): boolean): BlockBreakEvent
@@ -411,6 +415,8 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: nf, event: "vehicle_destroy", filter?: fun(event: VehicleDestroyEvent): boolean): VehicleDestroyEvent
 ---@overload fun(handle: nf, event: "player_open_inventory", filter?: fun(event: PlayerInventoryEvent): boolean): PlayerInventoryEvent
 ---@overload fun(handle: nf, event: "player_close_inventory", filter?: fun(event: PlayerInventoryEvent): boolean): PlayerInventoryEvent
+---@overload fun(handle: nf, event: "player_click_inventory", filter?: fun(event: PlayerClickInventoryEvent): boolean): PlayerClickInventoryEvent
+---@overload fun(handle: nf, event: "player_drag_inventory", filter?: fun(event: PlayerDragInventoryEvent): boolean): PlayerDragInventoryEvent
 ---@overload fun(handle: nf, event: "player_craft", filter?: fun(event: PlayerCraftEvent): boolean): PlayerCraftEvent
 ---@overload fun(handle: nf, event: "player_prepare_craft", filter?: fun(event: PlayerPrepareCraftEvent): boolean): PlayerPrepareCraftEvent
 ---@overload fun(handle: nf, event: "player_prepare_anvil", filter?: fun(event: PlayerPrepareAnvilEvent): boolean): PlayerPrepareAnvilEvent
@@ -480,7 +486,7 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: Player, event: "pickup_item", filter?: fun(event: PlayerPickupItemEvent): boolean): PlayerPickupItemEvent
 ---@overload fun(handle: Player, event: "use_item", filter?: fun(event: PlayerUseItemEvent): boolean): PlayerUseItemEvent
 ---@overload fun(handle: Player, event: "consume_item", filter?: fun(event: PlayerItemEvent): boolean): PlayerItemEvent
----@overload fun(handle: Player, event: "swap_hands", filter?: fun(event: PlayerEvent): boolean): PlayerEvent
+---@overload fun(handle: Player, event: "swap_hands", filter?: fun(event: PlayerSwapHandsEvent): boolean): PlayerSwapHandsEvent
 ---@overload fun(handle: Player, event: "sneak", filter?: fun(event: PlayerSneakEvent): boolean): PlayerSneakEvent
 ---@overload fun(handle: Player, event: "command", filter?: fun(event: PlayerCommandEvent): boolean): PlayerCommandEvent
 ---@overload fun(handle: Player, event: "input", filter?: fun(event: PlayerInputEvent): boolean): PlayerInputEvent
@@ -499,6 +505,8 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: Player, event: "break_item", filter?: fun(event: PlayerItemEvent): boolean): PlayerItemEvent
 ---@overload fun(handle: Player, event: "open_inventory", filter?: fun(event: PlayerInventoryEvent): boolean): PlayerInventoryEvent
 ---@overload fun(handle: Player, event: "close_inventory", filter?: fun(event: PlayerInventoryEvent): boolean): PlayerInventoryEvent
+---@overload fun(handle: Player, event: "click_inventory", filter?: fun(event: PlayerClickInventoryEvent): boolean): PlayerClickInventoryEvent
+---@overload fun(handle: Player, event: "drag_inventory", filter?: fun(event: PlayerDragInventoryEvent): boolean): PlayerDragInventoryEvent
 ---@overload fun(handle: Player, event: "craft", filter?: fun(event: PlayerCraftEvent): boolean): PlayerCraftEvent
 ---@overload fun(handle: Player, event: "prepare_craft", filter?: fun(event: PlayerPrepareCraftEvent): boolean): PlayerPrepareCraftEvent
 ---@overload fun(handle: Player, event: "prepare_anvil", filter?: fun(event: PlayerPrepareAnvilEvent): boolean): PlayerPrepareAnvilEvent
@@ -1269,7 +1277,7 @@ function nf.test.advance(ticks) end
 function nf.test.player(name) end
 
 --- Raises a server-wide event as the server would, to the scripts: whoever listens to `event` with `nf.on` hears it, and, for an event the server raises about a player, an entity or a world, the handlers on that handle (`player:on("chat")`) hear it first, in the order the server uses. Each can `stop()` or `cancel()` it or set its writable fields. The few events the runtime stages itself (a death, damage, a click on a centity) reach `nf.on` handlers only. `payload` is what the event carries, the same table its handlers read (`event.player`, `event.message`): a field the event does not have is an error naming the fields. What the server would then do with a cancelled event is not simulated: read the result.
----@param event "tick"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"world_dusk"|"world_dawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"recipe_craft"|"item_view"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed" The event's name, as `nf.on` takes it.
+---@param event "tick"|"player_join"|"player_quit"|"player_chat"|"player_interact"|"player_interact_entity"|"player_move"|"player_teleport"|"player_change_world"|"player_death"|"player_respawn"|"player_drop_item"|"player_pickup_item"|"player_use_item"|"player_consume_item"|"player_swap_hands"|"player_sneak"|"player_command"|"block_break"|"block_place"|"entity_damage"|"entity_death"|"entity_spawn"|"world_dusk"|"world_dawn"|"player_input"|"player_change_slot"|"player_swing"|"player_sprint"|"player_fly"|"player_jump"|"player_change_game_mode"|"player_change_food"|"player_gain_experience"|"player_change_level"|"player_kick"|"player_complete_advancement"|"player_stop_using_item"|"player_break_item"|"entity_heal"|"projectile_launch"|"projectile_hit"|"entity_shoot_bow"|"entity_target"|"entity_explode"|"block_explode"|"entity_combust"|"entity_change_effect"|"block_ignite"|"block_burn"|"block_spread"|"block_flow"|"block_grow"|"block_fade"|"block_form"|"leaves_decay"|"piston_extend"|"piston_retract"|"block_redstone"|"sign_change"|"block_start_break"|"block_drop_item"|"weather_change"|"thunder_change"|"lightning_strike"|"chunk_load"|"chunk_generated"|"chunk_unload"|"world_load"|"world_unload"|"entity_mount"|"entity_dismount"|"vehicle_move"|"vehicle_damage"|"vehicle_destroy"|"player_open_inventory"|"player_close_inventory"|"player_click_inventory"|"player_drag_inventory"|"player_craft"|"player_prepare_craft"|"player_prepare_anvil"|"player_prepare_smithing"|"player_prepare_grindstone"|"player_enchant_item"|"furnace_smelt"|"server_list_ping"|"centity_click"|"recipe_craft"|"item_view"|"centity_natural_spawn"|"menu_open"|"menu_close"|"menu_click"|"dialog_press"|"setting_changed" The event's name, as `nf.on` takes it.
 ---@param payload? table The payload: its fields by name. Leave it out for an event that has none.
 ---@return RaisedEvent # Whether a handler cancelled it, and the event as the handlers left it.
 function nf.test.raise(event, payload) end
@@ -3011,6 +3019,15 @@ function Player:off_hand_item() end
 ---@return boolean # `false` when they're offline.
 function Player:set_off_hand_item(item) end
 
+--- What they carry on their cursor with an inventory screen open (their own, a vanilla one or one of the project's menus), or `nil` for nothing or when they're offline.
+---@return Item?
+function Player:cursor_item() end
+
+--- Puts an item on their cursor, replacing what they carry, or empties it: for `click_inventory` and `drag_inventory` handlers, say, taking what they hold. What's on the cursor goes back to their inventory (or drops) when they close the screen. The server can't tell whether their own inventory is open, so with no screen open it's carried out of sight until they next open and close it.
+---@param item? Item Leave it out (or `nil`) to empty it.
+---@return boolean # `false` when they're offline.
+function Player:set_cursor_item(item) end
+
 --- Which hotbar slot they have selected, 0 to 8, or `nil` when they're offline.
 ---@return integer?
 function Player:held_slot() end
@@ -3267,7 +3284,7 @@ function Player:session() end
 ---@overload fun(self: Player, event: "pickup_item", handler: fun(event: PlayerPickupItemEvent)): Subscription
 ---@overload fun(self: Player, event: "use_item", handler: fun(event: PlayerUseItemEvent)): Subscription
 ---@overload fun(self: Player, event: "consume_item", handler: fun(event: PlayerItemEvent)): Subscription
----@overload fun(self: Player, event: "swap_hands", handler: fun(event: PlayerEvent)): Subscription
+---@overload fun(self: Player, event: "swap_hands", handler: fun(event: PlayerSwapHandsEvent)): Subscription
 ---@overload fun(self: Player, event: "sneak", handler: fun(event: PlayerSneakEvent)): Subscription
 ---@overload fun(self: Player, event: "command", handler: fun(event: PlayerCommandEvent)): Subscription
 ---@overload fun(self: Player, event: "input", handler: fun(event: PlayerInputEvent)): Subscription
@@ -3286,6 +3303,8 @@ function Player:session() end
 ---@overload fun(self: Player, event: "break_item", handler: fun(event: PlayerItemEvent)): Subscription
 ---@overload fun(self: Player, event: "open_inventory", handler: fun(event: PlayerInventoryEvent)): Subscription
 ---@overload fun(self: Player, event: "close_inventory", handler: fun(event: PlayerInventoryEvent)): Subscription
+---@overload fun(self: Player, event: "click_inventory", handler: fun(event: PlayerClickInventoryEvent)): Subscription
+---@overload fun(self: Player, event: "drag_inventory", handler: fun(event: PlayerDragInventoryEvent)): Subscription
 ---@overload fun(self: Player, event: "craft", handler: fun(event: PlayerCraftEvent)): Subscription
 ---@overload fun(self: Player, event: "prepare_craft", handler: fun(event: PlayerPrepareCraftEvent)): Subscription
 ---@overload fun(self: Player, event: "prepare_anvil", handler: fun(event: PlayerPrepareAnvilEvent)): Subscription
@@ -3324,7 +3343,7 @@ function Player:on(event, handler, options) end
 ---@overload fun(self: Player, event: "pickup_item", handler: fun(event: PlayerPickupItemEvent)): Subscription
 ---@overload fun(self: Player, event: "use_item", handler: fun(event: PlayerUseItemEvent)): Subscription
 ---@overload fun(self: Player, event: "consume_item", handler: fun(event: PlayerItemEvent)): Subscription
----@overload fun(self: Player, event: "swap_hands", handler: fun(event: PlayerEvent)): Subscription
+---@overload fun(self: Player, event: "swap_hands", handler: fun(event: PlayerSwapHandsEvent)): Subscription
 ---@overload fun(self: Player, event: "sneak", handler: fun(event: PlayerSneakEvent)): Subscription
 ---@overload fun(self: Player, event: "command", handler: fun(event: PlayerCommandEvent)): Subscription
 ---@overload fun(self: Player, event: "input", handler: fun(event: PlayerInputEvent)): Subscription
@@ -3343,6 +3362,8 @@ function Player:on(event, handler, options) end
 ---@overload fun(self: Player, event: "break_item", handler: fun(event: PlayerItemEvent)): Subscription
 ---@overload fun(self: Player, event: "open_inventory", handler: fun(event: PlayerInventoryEvent)): Subscription
 ---@overload fun(self: Player, event: "close_inventory", handler: fun(event: PlayerInventoryEvent)): Subscription
+---@overload fun(self: Player, event: "click_inventory", handler: fun(event: PlayerClickInventoryEvent)): Subscription
+---@overload fun(self: Player, event: "drag_inventory", handler: fun(event: PlayerDragInventoryEvent)): Subscription
 ---@overload fun(self: Player, event: "craft", handler: fun(event: PlayerCraftEvent)): Subscription
 ---@overload fun(self: Player, event: "prepare_craft", handler: fun(event: PlayerPrepareCraftEvent)): Subscription
 ---@overload fun(self: Player, event: "prepare_anvil", handler: fun(event: PlayerPrepareAnvilEvent)): Subscription
@@ -3478,7 +3499,7 @@ function Bot:drop_item(stack) end
 --- Clicks a slot of the menu it has open, or of its inventory with none: the menu's own slots first, then its inventory's, as `slot` numbers them.
 --- Needs `"requires": { "bots": true }` in `netherforge.json`: without it, calling it is an error.
 ---@param slot integer Which slot, from 0.
----@param click? "left"|"right"|"shift_left"|"shift_right"|"drop"|"drop_all"|"double" How. Default `"left"`.
+---@param click? "left"|"right"|"shift_left"|"shift_right"|"drop"|"drop_all"|"double"|"swap_offhand" How. Default `"left"`. `"swap_offhand"` is the swap-hands key (F) over the slot.
 ---@return boolean # Whether it did: `false` once it has left (or while it's still joining).
 function Bot:click_slot(slot, click) end
 
@@ -5599,6 +5620,13 @@ function Event:uncancel() end
 ---@class PlayerEvent: Event
 ---@field player Player Who it was.
 
+--- A player pressed the swap-hands key.
+---@class PlayerSwapHandsEvent: Event
+---@field player Player Who it was.
+---@field item Item? What is going to their off hand: what is in their main hand, or in the slot they point at with an inventory screen open.
+---@field off_hand_item Item? What is leaving their off hand.
+---@field in_inventory boolean Whether they pressed it over a slot with an inventory screen open, rather than with their hands.
+
 --- A player walked, swam, flew or fell into another block.
 ---@class PlayerMoveEvent: Event
 ---@field player Player Who it was.
@@ -5847,6 +5875,28 @@ function Event:uncancel() end
 ---@field kind string What kind of inventory it is: `"chest"`, `"barrel"`, `"shulker_box"`, `"ender_chest"`, `"furnace"`, `"workbench"` (a crafting table), `"anvil"`, `"enchanting"`, `"merchant"` (a villager), …
 ---@field inventory Inventory? The inventory, when it's a real one (a container block's, an entity's, their ender chest); `nil` for one with nothing kept in it (a crafting table, an anvil).
 ---@field block Block? The block it belongs to (a chest, a crafting table), or `nil` for an entity's.
+
+--- A player clicked in an inventory that isn't one of the project's menus.
+---@class PlayerClickInventoryEvent: Event
+---@field player Player Who it was.
+---@field kind string What kind of inventory they have open: `"crafting"` when it is only their own (opened with the inventory key), else as `PlayerInventoryEvent.kind` says (`"chest"`, `"furnace"`, …).
+---@field inventory Inventory? The inventory clicked, when it's a real one: their own (`player:inventory()`), a container block's, an entity's, their ender chest. `nil` for a click outside both, and in one with nothing kept in it (the crafting grid, an anvil).
+---@field own boolean Whether the click landed in their own inventory (hotbar, main slots, armour, off hand) rather than in the one above it or outside both.
+---@field index integer? The slot clicked, from 0, in the inventory clicked. In their own: 0 to 8 the hotbar, 9 to 35 the rest, 36 to 39 armour (boots first), 40 the off hand, as `player:inventory()` numbers them. `nil` for a click outside both.
+---@field click "left"|"right"|"shift_left"|"shift_right"|"middle"|"number_key"|"swap_offhand"|"double"|"drop"|"control_drop"|"other" What kind of click it was. `swap_offhand` is the swap-hands key (F) over a slot: what is in it and what is in the off hand change places.
+---@field hotbar_index integer? For `number_key`: the hotbar slot, 0 to 8.
+---@field item Item? What was in the slot clicked.
+---@field cursor_item Item? What the player was carrying on the cursor.
+
+--- A player dragged a stack in an inventory that isn't one of the project's menus.
+---@class PlayerDragInventoryEvent: Event
+---@field player Player Who it was.
+---@field kind string What kind of inventory they have open, as `PlayerClickInventoryEvent.kind` says: `"crafting"` when it is only their own.
+---@field inventory Inventory? The inventory above their own, when it's a real one (a container block's, an entity's, their ender chest); `nil` for one with nothing kept in it (the crafting grid, an anvil) and when only their own is open.
+---@field indices integer[] The slots of the inventory above their own the stack is spread over, from 0, in order (the crafting grid's 1 to 4 when only their own is open, 0 being its result).
+---@field own_indices integer[] The slots of their own inventory the stack is spread over, in order, numbered as `player:inventory()` numbers them.
+---@field click "left"|"right" `"left"` spreads the stack evenly over the slots, `"right"` puts one in each.
+---@field cursor_item Item? The stack being dragged.
 
 --- A player is taking what they crafted.
 ---@class PlayerCraftEvent: Event
@@ -6486,7 +6536,7 @@ function Event:uncancel() end
 ---@field target Slot? The window's slot that was clicked, or `nil` for a click in the player's own inventory or outside both.
 ---@field index integer? The slot clicked, from 0: in the window when `in_menu` is true, and in the player's own inventory below it otherwise. `nil` for a click outside both.
 ---@field in_menu boolean Whether the click landed in the window rather than in the player's own inventory below it.
----@field click "left"|"right"|"shift_left"|"shift_right"|"middle"|"number_key"|"double"|"drop"|"control_drop"|"other" What kind of click it was.
+---@field click "left"|"right"|"shift_left"|"shift_right"|"middle"|"number_key"|"swap_offhand"|"double"|"drop"|"control_drop"|"other" What kind of click it was. `swap_offhand` is the swap-hands key (F) over a slot: what is in it and what is in the off hand change places.
 ---@field hotbar_index integer? For `number_key`: the hotbar slot, 0 to 8.
 ---@field item Item? What was in the slot clicked.
 ---@field cursor_item Item? What the player was carrying on the cursor.
@@ -6497,6 +6547,8 @@ function Event:uncancel() end
 ---@field player Player Who dragged.
 ---@field menu Menu The window.
 ---@field indices integer[] The window's slots the stack is spread over, from 0, in order.
+---@field own_indices integer[] The slots of the player's own inventory below it the stack is spread over, in order, numbered as `player:inventory()` numbers them.
+---@field click "left"|"right" `"left"` spreads the stack evenly over the slots, `"right"` puts one in each.
 ---@field cursor_item Item? The stack being dragged.
 ---@field context any What the script that opened the window passed along (`player:open_menu(menu, { context = ... })`), the same as `menu:context()`: the very value, not a copy. `nil` when nothing was, and always for a shared window.
 

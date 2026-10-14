@@ -3011,6 +3011,22 @@ do
     return prim["Player.set_off_hand_item"](self_key, item)
   end
 
+  function Player.cursor_item(self)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.cursor_item"](self_key)
+  end
+
+  function Player.set_cursor_item(self, item)
+    local self_key = ids[self]
+    if self_key == nil or not Player_is[class_of(self)] then
+      self_key = self_of(self, "Player")
+    end
+    return prim["Player.set_cursor_item"](self_key, item)
+  end
+
   function Player.held_slot(self)
     local self_key = ids[self]
     if self_key == nil or not Player_is[class_of(self)] then
