@@ -736,6 +736,11 @@ export const menuShapes: LuaClass[] = [
         doc: "How many fit in one stack, 1 to 99, instead of the kind's own. More than 1 on an item that takes damage (a sword, armour) is an error.",
       },
       {
+        name: 'map',
+        type: 'integer?',
+        doc: "The map a filled map shows, by its number: a screen's (`screen:item`), or any of the game's. Only a `minecraft:filled_map` draws it.",
+      },
+      {
         name: 'rarity',
         type: '"common"|"uncommon"|"rare"|"epic"?',
         doc: 'The colour of its name when it has no colour of its own: white, yellow, aqua or light purple.',

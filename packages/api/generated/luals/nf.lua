@@ -26,6 +26,8 @@
 ---@alias WebSocket.Event "open"|"message"|"end"
 ---@alias OAuthFlow.Event "complete"|"fail"
 ---@alias Cutscene.Event "end"|"cue"
+---@alias Screen.Event "click"|"hover"|"leave"
+---@alias Playback.Event "end"|"frame"
 
 ---@alias CentityId string # A project centity's name.
 ---@alias MenuId string # A project menu's name.
@@ -46,11 +48,13 @@
 ---@alias MapId string # A project map's name.
 ---@alias StructureId string # A project structure's name.
 ---@alias SettingName string # A project setting's name.
+---@alias ScreenId string # A project screen's name.
+---@alias VideoId string # A project video's name.
 
 --- MiniMessage a player reads, like `"<green>Done!"`: a string. A `<glyph:pack/key>` tag in it names a glyph the way the script's own files would: one of its own package's resource packs bare, or `<glyph:namespace:pack/key>` for one a package it depends on exports. The tag means that glyph wherever and whenever the text is shown, whoever shows it; one naming a glyph the script can't use draws nothing, and the server log says why. Text handed back to a script names its glyphs the same way.
 ---@alias Text string
 
---- Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.bots`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.web`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
+--- Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.bots`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.screens`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.web`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
 ---@class nf
 ---@field server nf.server The server itself: its clock, its performance, its version, its settings (players, message of the day, whitelist), and saying or running things as the console.
 ---@field commands nf.commands Slash commands a module adds to the server for as long as it runs, with typed arguments, tab completion and usage messages from their declaration.
@@ -73,6 +77,7 @@
 ---@field placeholders nf.placeholders Placeholders, through [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/): fill in the `%player_name%`-style placeholders every plugin offers, and offer your own as `%<namespace>_<key>%` to every plugin that reads them (scoreboards, chat formats, holograms). Needs PlaceholderAPI. The plugin has to be on the server and enabled: a package that declares it (`requires`) while it isn't is a problem on the project's problem list until it is, and calling without it is an error. A plugin that is enabled after NetherForge counts from then on.
 ---@field particles nf.particles The project's particle effects (`particles/<id>/effect.json`): timelines of particles authored in the editor, played at a place by scripts.
 ---@field cutscenes nf.cutscenes The project's cutscenes (`cutscenes/<id>.json`): camera paths keyed in the editor, played for one player at a time.
+---@field screens nf.screens Screens: walls of maps, 128 by 128 pixels each, that scripts draw on (pixels, shapes, text, pictures) and play videos on. The project's own are its `screens/<id>/screen.json` files; a script can make more. What a screen shows is sent to each player who can see it, a change at a time, so drawing every tick costs only what changed.
 ---@field files nf.files Files in the one directory scripts may keep things in: the only state a script has that survives a restart.
 ---@field text nf.text Helpers for the MiniMessage text players see: escaping what players typed, stripping tags, resource pack glyphs, moving the cursor, and measuring.
 ---@field looks nf.looks Resource pack looks (item models, glyphs, skins, tooltips, equipment looks, sounds) handed from one package's code to another's. A look is a value, not a use: any script can show any look the server has, by its full name `<namespace>:<pack>/<key>`, whether or not its package exports it or is one the script's package depends on. That's how a project hands a package it uses looks of its own to draw with (see [Packages](packages.md#looks-are-values)).
@@ -332,7 +337,7 @@ function nf.wait_until(predicate, timeout) end
 
 --- Pauses the task until `event` next happens on `handle` (or, for `nf`, anywhere on the server) and returns that event. The task carries on straight away, while the event is still being delivered, so until its next wait it can still `cancel()` or `stop()` the event or set its writable fields. If the handle goes first (a removed centity, a closed window, a dialog taken away by a reload), the task ends. An event the handle doesn't have is an error.
 --- Only in a task's own code (`nf.task`): it waits, so calling it anywhere else (an event handler, a timer, a script's body) is an error.
----@param handle Centity|Node|Entity|World|ProjectBlock|Menu|Slot|MenuTemplate|Dialog|Button|ProjectItem|Effect|HttpStream|WebSocket|OAuthFlow|Cutscene|nf What the event happens to, as for `handle:on`; `nf` for a server-wide event.
+---@param handle Centity|Node|Entity|World|ProjectBlock|Menu|Slot|MenuTemplate|Dialog|Button|ProjectItem|Effect|HttpStream|WebSocket|OAuthFlow|Cutscene|Screen|Playback|nf What the event happens to, as for `handle:on`; `nf` for a server-wide event.
 ---@param event string The event's name, as `handle:on` takes it.
 ---@param filter? fun(event: CustomEvent): boolean Waits for the first event this returns `true` for; the others pass by. Run as the task's code, so an error in it ends the task.
 ---@return CustomEvent # The event: its payload and its methods.
@@ -579,6 +584,11 @@ function nf.wait_until(predicate, timeout) end
 ---@overload fun(handle: OAuthFlow, event: "fail", filter?: fun(event: OAuthFailEvent): boolean): OAuthFailEvent
 ---@overload fun(handle: Cutscene, event: "end", filter?: fun(event: CutsceneEndEvent): boolean): CutsceneEndEvent
 ---@overload fun(handle: Cutscene, event: "cue", filter?: fun(event: CutsceneCueEvent): boolean): CutsceneCueEvent
+---@overload fun(handle: Screen, event: "click", filter?: fun(event: ScreenClickEvent): boolean): ScreenClickEvent
+---@overload fun(handle: Screen, event: "hover", filter?: fun(event: ScreenHoverEvent): boolean): ScreenHoverEvent
+---@overload fun(handle: Screen, event: "leave", filter?: fun(event: ScreenLeaveEvent): boolean): ScreenLeaveEvent
+---@overload fun(handle: Playback, event: "end", filter?: fun(event: PlaybackEndEvent): boolean): PlaybackEndEvent
+---@overload fun(handle: Playback, event: "frame", filter?: fun(event: PlaybackFrameEvent): boolean): PlaybackFrameEvent
 function nf.wait_for(handle, event, filter) end
 
 --- A saved table for the whole project, by name: `nf.data("shop")` is the same table in every script, so a module keeps its own under its own name and two modules never collide. Each name is its own file in the data directory, kept across restarts. It may hold strings, numbers, booleans, tables of them (keyed by strings, or a list numbered from 1), and the API's own values: `Vec3`s, `Location`s, `Item` tables, and `Player`, `Entity`, `Centity` and `World` handles, which come back as the same types (a handle to something gone answers `nil` or `false`, as handles do). Anything else (a function, a `Menu` window, a `Subscription`) is skipped when it's saved, with a line in the log naming where it was (`data.inventory[3]: a function can't be saved`). The table is live: change it and the change is saved, at the next autosave (every five minutes), when the project reloads and when the server stops. It stays in memory across hot reloads rather than being read again, so a script that reloads finds it as it left it. A table that would take more than 1 MiB isn't saved (the last save stands), and the log says so. A name that isn't lowercase letters, digits and `_` (starting with a letter or digit, at most 64 characters) is an error.
@@ -1049,6 +1059,45 @@ function nf.cutscenes.stop(player) end
 ---@param player Player Who.
 ---@return Cutscene? # `nil` when they are not watching one.
 function nf.cutscenes.current(player) end
+
+--- Screens: walls of maps, 128 by 128 pixels each, that scripts draw on (pixels, shapes, text, pictures) and play videos on. The project's own are its `screens/<id>/screen.json` files; a script can make more. What a screen shows is sent to each player who can see it, a change at a time, so drawing every tick costs only what changed.
+---@class nf.screens
+nf.screens = {}
+
+--- One of the project's screens (`screens/<id>/screen.json`). A screen the project doesn't have, or one whose file has errors and never had a good version, is an error.
+---@param screen ScreenId Its folder name under `screens/`.
+---@return Screen
+function nf.screens.get(screen) end
+
+--- Every one of the project's screens, and every screen a script made that's still there.
+---@return Screen[]
+function nf.screens.all() end
+
+--- Makes a screen. It belongs to the script that made it: when that script unloads, the screen goes, its frames taken down. With a `key`, the screen's maps keep their numbers for good (a map item handed out, or a frame someone hung, still shows it after a restart, once a script makes it again with the same key); without one, they're new each time. A size outside 1 to 16 maps is an error.
+---@param options ScreenOptions Its size, and how it shows.
+---@return Screen
+function nf.screens.create(options) end
+
+--- The fonts text can be drawn in: `default` (the game's own map font) and every font of the project's (`screen_fonts/<id>/`).
+---@return string[]
+function nf.screens.fonts() end
+
+--- How big `text` would be drawn with `options`, in pixels, without drawing it. An unknown font is an error.
+---@param text Text MiniMessage: colours and `<b>`, `<u>`, `<st>` are drawn.
+---@param options? ScreenTextOptions How it would be drawn.
+---@return ScreenTextSize
+function nf.screens.measure_text(text, options) end
+
+--- The colour a map would really draw for `color`: the nearest it can show, as `#rrggbb`, or `"clear"` for `"clear"`. A colour that isn't written `#rrggbb` is an error.
+---@param color string A colour, `#rrggbb` (drawn as the nearest of the colours a map can show), or `"clear"` for none: the map shows through.
+---@return string
+function nf.screens.map_color(color) end
+
+--- The screen a player is looking at and the pixel at the middle of their view, within `distance` blocks; `nil` when they look at none, or something solid is in the way. Screens hidden from the player are looked through.
+---@param player Player Who.
+---@param distance? number How far to look, in blocks (default 64).
+---@return ScreenPoint?
+function nf.screens.looking_at(player, distance) end
 
 --- Files in the one directory scripts may keep things in: the only state a script has that survives a restart.
 ---@class nf.files
@@ -5145,6 +5194,307 @@ function Cutscene:on(event, handler, options) end
 ---@overload fun(self: Cutscene, event: "cue", handler: fun(event: CutsceneCueEvent)): Subscription
 function Cutscene:once(event, handler) end
 
+--- A screen: maps (each 128 by 128 pixels) side by side, which scripts draw on and play videos on, shown in item frames (`place`, or the file's `place`) or as map items in players' hands (`item`). Pixel `0, 0` is its top left. What it shows is the server's to send and isn't saved: draw it whenever its script starts. Once a screen is gone (a script's screen whose script unloaded, a project screen whose file was deleted) its drawing does nothing and its getters answer `nil` or `false`.
+---
+--- A screen is drawn for every player near it (`viewers = "near"`), or only for those a script shows it to. `for_player` gives a player a view of their own: the same maps, drawn differently for them alone.
+---@class Screen
+local Screen = {}
+
+--- The project's screen it is (its folder name under `screens/`), or the `key` a script made it with; `nil` for a script's screen made without one.
+---@return string?
+function Screen:name() end
+
+--- Whether it's still there.
+---@return boolean
+function Screen:exists() end
+
+--- How wide it is, in pixels: 128 a map.
+---@return integer
+function Screen:width() end
+
+--- How tall it is, in pixels: 128 a map.
+---@return integer
+function Screen:height() end
+
+--- Fills the whole screen with one colour. Nothing happens once the screen is gone.
+---@param color? string A colour, `#rrggbb` (drawn as the nearest of the colours a map can show), or `"clear"` for none: the map shows through. Default `"clear"`.
+function Screen:clear(color) end
+
+--- One pixel's colour, as the map draws it: `#rrggbb`, or `"clear"`. `nil` for a pixel off the screen, or once the screen is gone.
+---@param x integer From the left edge, 0 first.
+---@param y integer From the top edge, 0 first.
+---@return string?
+function Screen:pixel(x, y) end
+
+--- Sets one pixel. One off the screen is left alone. Nothing happens once the screen is gone.
+---@param x integer From the left edge, 0 first.
+---@param y integer From the top edge, 0 first.
+---@param color string? A colour, `#rrggbb` (drawn as the nearest of the colours a map can show), or `"clear"` for none: the map shows through. `nil` is `"clear"`.
+function Screen:set_pixel(x, y, color) end
+
+--- A block of pixels' colours, row by row (`#rrggbb`, or `"clear"`): what `set_pixels` takes. Pixels off the screen are `"clear"`; an empty list once the screen is gone. A block of more than 65536 pixels is an error.
+---@param x integer The block's left, in pixels from the screen's left edge.
+---@param y integer The block's top, in pixels from the screen's top edge.
+---@param width integer In pixels.
+---@param height integer In pixels.
+---@return string[]
+function Screen:pixels(x, y, width, height) end
+
+--- Sets a block of pixels from a list of colours, row by row, `width` to a row: the quick way to draw many pixels at once. What's off the screen is left alone. Nothing happens once the screen is gone.
+---@param x integer The block's left, in pixels from the screen's left edge.
+---@param y integer The block's top, in pixels from the screen's top edge.
+---@param width integer Pixels in a row of `colors`.
+---@param colors string[] Each pixel's colour. A colour, `#rrggbb` (drawn as the nearest of the colours a map can show), or `"clear"` for none: the map shows through.
+function Screen:set_pixels(x, y, width, colors) end
+
+--- Fills a rectangle with one colour. Nothing happens once the screen is gone.
+---@param x integer The rectangle's left, in pixels from the screen's left edge.
+---@param y integer The rectangle's top, in pixels from the screen's top edge.
+---@param width integer In pixels.
+---@param height integer In pixels.
+---@param color string A colour, `#rrggbb` (drawn as the nearest of the colours a map can show), or `"clear"` for none: the map shows through.
+function Screen:fill(x, y, width, height, color) end
+
+--- Draws a rectangle: filled, outlined, or both, with rounded corners if `style.radius` says. Nothing happens once the screen is gone.
+---@param x integer The rectangle's left, in pixels from the screen's left edge.
+---@param y integer The rectangle's top, in pixels from the screen's top edge.
+---@param width integer In pixels.
+---@param height integer In pixels.
+---@param style ShapeStyle Its fill and outline.
+function Screen:rectangle(x, y, width, height, style) end
+
+--- Draws a straight line between two pixels, both included. Nothing happens once the screen is gone.
+---@param x1 integer Where it starts.
+---@param y1 integer
+---@param x2 integer Where it ends.
+---@param y2 integer
+---@param color string A colour, `#rrggbb` (drawn as the nearest of the colours a map can show), or `"clear"` for none: the map shows through.
+---@param thickness? integer In pixels, 1 to 32 (default 1).
+function Screen:line(x1, y1, x2, y2, color, thickness) end
+
+--- Draws a circle round a pixel: filled, outlined, or both. Nothing happens once the screen is gone.
+---@param x integer Its middle, from the left edge.
+---@param y integer Its middle, from the top edge.
+---@param radius integer In pixels, 0 or more.
+---@param style ShapeStyle Its fill and outline (`radius` is not used).
+function Screen:circle(x, y, radius, style) end
+
+--- Draws an ellipse round a pixel. Nothing happens once the screen is gone.
+---@param x integer Its middle, from the left edge.
+---@param y integer Its middle, from the top edge.
+---@param radius_x integer Across, in pixels.
+---@param radius_y integer Down, in pixels.
+---@param style ShapeStyle Its fill and outline (`radius` is not used).
+function Screen:ellipse(x, y, radius_x, radius_y, style) end
+
+--- Draws a closed shape through points, `{ x1, y1, x2, y2, … }` (at least three points). Fewer than three, or an odd count of numbers, is an error. Nothing happens once the screen is gone.
+---@param points integer[] The corners, each an x then a y.
+---@param style ShapeStyle Its fill and outline (`radius` is not used).
+function Screen:polygon(points, style) end
+
+--- Writes text with its top left at a pixel. Lines break at `\n`, and at spaces past `options.width` when it's given. MiniMessage colours, `<b>`, `<u>` and `<st>` are drawn; glyphs and other tags aren't. An unknown font is an error. Returns how big it was, as `nf.screens.measure_text` would say (`0` by `0` once the screen is gone).
+---@param x integer The text's left, in pixels from the screen's left edge.
+---@param y integer The text's top, in pixels from the screen's top edge.
+---@param text Text What to write.
+---@param options? ScreenTextOptions Font, colour, size, alignment.
+---@return ScreenTextSize
+function Screen:text(x, y, text, options) end
+
+--- Draws a picture: a texture of a resource pack, as `<pack>/<path>` (`ui/logo` is `resource_packs/ui/textures/logo.png`). Its colours become map colours as `options.dither` says; pixels less than half opaque draw nothing. A picture the project doesn't have is an error. Returns `false` when the picture can't be read. Nothing happens once the screen is gone.
+---@param x integer The picture's left, in pixels from the screen's left edge.
+---@param y integer The picture's top, in pixels from the screen's top edge.
+---@param image string The texture, `<pack>/<path>` without `.png`.
+---@param options? ScreenImageOptions Its size and dithering.
+---@return boolean
+function Screen:image(x, y, image, options) end
+
+--- Copies a rectangle of the screen to another place on it (overlapping is fine): a quick way to scroll. What's off the screen is left alone. Nothing happens once the screen is gone.
+---@param x integer The rectangle copied's left, in pixels from the screen's left edge.
+---@param y integer The rectangle copied's top, in pixels from the screen's top edge.
+---@param width integer In pixels.
+---@param height integer In pixels.
+---@param to_x integer Where its left goes.
+---@param to_y integer Where its top goes.
+function Screen:copy(x, y, width, height, to_x, to_y) end
+
+--- Hangs it on a wall: an invisible, fixed item frame a map, its top left map at `location`'s block (the air in front of the wall) and the rest going right and down as a player facing it sees them. The frames need no wall behind them. A screen already hanging somewhere is moved. A project screen hangs where its file says again when the server restarts. Returns `false` when the world isn't loaded.
+---@param location Location Where its top left map goes.
+---@param facing "north"|"south"|"east"|"west" The way it faces: out of the wall, towards whoever looks at it.
+---@return boolean
+function Screen:place(location, facing) end
+
+--- Takes its frames down. It can still be drawn on, and its map items still show it.
+---@return boolean # `false` when it hung nowhere.
+function Screen:take_down() end
+
+--- Where its top left map hangs; `nil` when it hangs nowhere.
+---@return Location?
+function Screen:location() end
+
+--- Which way it faces where it hangs; `nil` when it hangs nowhere.
+---@return ("north"|"south"|"east"|"west")?
+function Screen:facing() end
+
+--- A map item showing one of its maps, to give a player or put in a frame: `column` and `row` count from 0 at its top left. A map off the screen is an error. A screen made without a `key` gets new map numbers each time it's made, so its items show nothing after a restart.
+---@param column? integer Which map across, 0 first (default 0).
+---@param row? integer Which map down, 0 first (default 0).
+---@return Item
+function Screen:item(column, row) end
+
+--- Draws it for a player, whoever it's drawn for otherwise (a `viewers = "script"` screen is drawn only for those it's shown to). Lasts until `hide_from`, or the screen goes.
+---@param player Player Who.
+---@return boolean # `false` when they are offline or the screen is gone.
+function Screen:show_to(player) end
+
+--- Stops drawing it for a player (they see blank maps, and can't click it), until `show_to`.
+---@param player Player Who.
+---@return boolean # `false` when they are offline or the screen is gone.
+function Screen:hide_from(player) end
+
+--- Whether it is drawn for a player now: shown to them, or near them on a `"near"` screen, and not hidden from them.
+---@param player Player Who.
+---@return boolean
+function Screen:is_shown_to(player) end
+
+--- Everyone it is drawn for now.
+---@return Player[]
+function Screen:viewers() end
+
+--- A player's own view of the screen: drawing on it changes what they see alone (the same maps, the same frames), starting from what everyone sees now. It lasts until `release`, they leave, or the screen goes; drawing on the shared screen meanwhile doesn't reach them. Called on a player's own view, it's that view.
+---@param player Player Whose view.
+---@return Screen
+function Screen:for_player(player) end
+
+--- Whose own view this is; `nil` for the screen everyone sees.
+---@return Player?
+function Screen:player() end
+
+--- Ends a player's own view (see `for_player`): they see what everyone sees again.
+---@return boolean # `false` when this isn't a player's own view, or it has ended.
+function Screen:release() end
+
+--- Plays a video (`videos/<id>/`) on the screen, from its top left (`options.x`, `options.y` move it), replacing any video playing on it (that one ends, reason `"replaced"`). Its sound plays to the players it's drawn for who are near where it hangs. It belongs to the script that played it: when that script unloads, it ends. A video the project doesn't have is an error; one not yet converted in the editor gives `nil`.
+---@param video VideoId Its folder name under `videos/`.
+---@param options? VideoPlayOptions How it plays.
+---@return Playback? # `nil` when it can't be played, or the screen is gone.
+function Screen:play(video, options) end
+
+--- The video playing on it now; `nil` when none is.
+---@return Playback?
+function Screen:playback() end
+
+--- Takes a script's screen away for good: its frames come down, and its video ends. A project screen can't be removed (its file says it's there): that's an error.
+---@return boolean # `false` when it was already gone.
+function Screen:remove() end
+
+--- Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
+---@param event Screen.Event The event's name.
+---@param handler fun(event: Event) Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`.
+---@param options? EventOptions How to listen: `{ every = n }` for `tick`.
+---@return Subscription # Call `:cancel()` on it to stop listening.
+---@overload fun(self: Screen, event: "click", handler: fun(event: ScreenClickEvent)): Subscription
+---@overload fun(self: Screen, event: "hover", handler: fun(event: ScreenHoverEvent)): Subscription
+---@overload fun(self: Screen, event: "leave", handler: fun(event: ScreenLeaveEvent)): Subscription
+function Screen:on(event, handler, options) end
+
+--- Like `screen:on`, but the handler runs only the next time the event happens, then stops listening.
+---@param event Screen.Event The event's name.
+---@param handler fun(event: Event) Called with the event.
+---@return Subscription # Call `:cancel()` on it to stop waiting before then.
+---@overload fun(self: Screen, event: "click", handler: fun(event: ScreenClickEvent)): Subscription
+---@overload fun(self: Screen, event: "hover", handler: fun(event: ScreenHoverEvent)): Subscription
+---@overload fun(self: Screen, event: "leave", handler: fun(event: ScreenLeaveEvent)): Subscription
+function Screen:once(event, handler) end
+
+--- A video playing on a screen, from `screen:play`. Once it has ended its methods answer `nil` or `false`, except `video()` and `length()`; `exists()` says whether it has.
+---@class Playback
+local Playback = {}
+
+--- Which video it is: its folder name under `videos/`, even after it has ended.
+---@return string
+function Playback:video() end
+
+--- The screen it plays on; `nil` once it has ended.
+---@return Screen?
+function Playback:screen() end
+
+--- How long the video lasts, in seconds, even after it has ended.
+---@return number
+function Playback:length() end
+
+--- Whether it hasn't ended: paused counts.
+---@return boolean
+function Playback:exists() end
+
+--- Whether it is paused.
+---@return boolean
+function Playback:is_paused() end
+
+--- Holds it on the frame it shows, its sound stopped.
+---@return boolean # `false` when it was paused already, or has ended.
+function Playback:pause() end
+
+--- Plays it on from where it was paused, its sound from there too.
+---@return boolean # `false` when it wasn't paused, or has ended.
+function Playback:resume() end
+
+--- Ends it now, with reason `"stopped"`. The screen keeps its last frame.
+---@return boolean # `false` when it had already ended.
+function Playback:stop() end
+
+--- Where it is, in seconds from the video's start; `nil` once it has ended.
+---@return number?
+function Playback:time() end
+
+--- Jumps to a time in the video, in seconds (held to 0 and its length); its sound starts again from there.
+---@param seconds number Where to.
+---@return boolean # `false` when it has ended.
+function Playback:seek(seconds) end
+
+--- How fast it plays: 1 is as recorded. `nil` once it has ended.
+---@return number?
+function Playback:speed() end
+
+--- Plays it faster or slower, 0.25 to 4 (held to that). Its sound plays only at speed 1.
+---@param speed number? The new speed; `nil` is 1.
+---@return boolean # `false` when it has ended.
+function Playback:set_speed(speed) end
+
+--- Its sound's volume, 0 to 1; `nil` once it has ended.
+---@return number?
+function Playback:volume() end
+
+--- Changes its sound's volume, 0 to 1 (held to that); its sound starts again at the new volume.
+---@param volume number? The new volume; `nil` is 1.
+---@return boolean # `false` when it has ended.
+function Playback:set_volume(volume) end
+
+--- Whether it starts again when it reaches its end.
+---@return boolean
+function Playback:is_looping() end
+
+--- Whether it starts again when it reaches its end.
+---@param looping boolean Loop or not.
+---@return boolean # `false` when it has ended.
+function Playback:set_looping(looping) end
+
+--- Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.
+---@param event Playback.Event The event's name.
+---@param handler fun(event: Event) Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`.
+---@param options? EventOptions How to listen: `{ every = n }` for `tick`.
+---@return Subscription # Call `:cancel()` on it to stop listening.
+---@overload fun(self: Playback, event: "end", handler: fun(event: PlaybackEndEvent)): Subscription
+---@overload fun(self: Playback, event: "frame", handler: fun(event: PlaybackFrameEvent)): Subscription
+function Playback:on(event, handler, options) end
+
+--- Like `playback:on`, but the handler runs only the next time the event happens, then stops listening.
+---@param event Playback.Event The event's name.
+---@param handler fun(event: Event) Called with the event.
+---@return Subscription # Call `:cancel()` on it to stop waiting before then.
+---@overload fun(self: Playback, event: "end", handler: fun(event: PlaybackEndEvent)): Subscription
+---@overload fun(self: Playback, event: "frame", handler: fun(event: PlaybackFrameEvent)): Subscription
+function Playback:once(event, handler) end
+
 --- A path in the scripts' data directory (`plugins/NetherForge/data/`, on the editor's dev server too). The only state a script has that survives a restart. Files are capped at 1 MiB; writes past it are refused, not truncated.
 ---@class File
 local File = {}
@@ -6465,6 +6815,7 @@ function Event:uncancel() end
 ---@field color string? `#RRGGBB`, for dyed leather, potions and maps.
 ---@field profile string? Whose head, for a player head: a name or a UUID.
 ---@field max_stack_size integer? How many fit in one stack, 1 to 99, instead of the kind's own. More than 1 on an item that takes damage (a sword, armour) is an error.
+---@field map integer? The map a filled map shows, by its number: a screen's (`screen:item`), or any of the game's. Only a `minecraft:filled_map` draws it.
 ---@field rarity "common"|"uncommon"|"rare"|"epic"? The colour of its name when it has no colour of its own: white, yellow, aqua or light purple.
 ---@field attribute_modifiers ItemAttributeModifier[]? What it changes about whoever wears or holds it: `{ { attribute = "minecraft:attack_damage", amount = 6, operation = "add_value", slot = "main_hand" } }`. These replace the kind's own (a sword's damage) rather than adding to them.
 ---@field can_break string[]? The blocks a player in adventure mode can break with it: the project's by id (`"ruby_ore"`, a package's `"acme:gem_ore"`), the game's with their namespace (`"minecraft:stone"`), `#tags` of blocks (`"#minecraft:logs"`, or one a project datapack defines), or `"*"` for any block: `{ "ruby_ore", "#minecraft:logs" }`. A project block it names that the project doesn't have is an error.
@@ -6584,6 +6935,7 @@ function Event:uncancel() end
 ---@field color string? `#RRGGBB`, for dyed leather, potions and maps.
 ---@field profile string? Whose head, for a player head: a name or a UUID.
 ---@field max_stack_size integer? How many fit in one stack, 1 to 99, instead of the kind's own. More than 1 on an item that takes damage (a sword, armour) is an error.
+---@field map integer? The map a filled map shows, by its number: a screen's (`screen:item`), or any of the game's. Only a `minecraft:filled_map` draws it.
 ---@field rarity "common"|"uncommon"|"rare"|"epic"? The colour of its name when it has no colour of its own: white, yellow, aqua or light purple.
 ---@field attribute_modifiers ItemAttributeModifier[]? What it changes about whoever wears or holds it: `{ { attribute = "minecraft:attack_damage", amount = 6, operation = "add_value", slot = "main_hand" } }`. These replace the kind's own (a sword's damage) rather than adding to them.
 ---@field can_break string[]? The blocks a player in adventure mode can break with it: the project's by id (`"ruby_ore"`, a package's `"acme:gem_ore"`), the game's with their namespace (`"minecraft:stone"`), `#tags` of blocks (`"#minecraft:logs"`, or one a project datapack defines), or `"*"` for any block: `{ "ruby_ore", "#minecraft:logs" }`. A project block it names that the project doesn't have is an error.
@@ -7043,6 +7395,93 @@ function Event:uncancel() end
 ---@field player Player Who is watching.
 ---@field cue string The cue's `event` name in the cutscene's file.
 
+--- A screen `nf.screens.create` makes: `width` and `height` are required; a key that isn't one of these is an error.
+---@class ScreenOptions
+---@field width integer Maps across, 1 to 16.
+---@field height integer Maps down, 1 to 16.
+---@field key string? Keeps its maps' numbers for good, across restarts (see `nf.screens.create`): any name, unique among the screens this package's scripts make. Making one with a key a screen that's still there has is an error.
+---@field background string? What it starts filled with. A colour, `#rrggbb` (drawn as the nearest of the colours a map can show), or `"clear"` for none: the map shows through. Default `"clear"`.
+---@field viewers ("near"|"script")? `"near"` (the default): every player near where it hangs, or everyone online while it hangs nowhere. `"script"`: only those `show_to` shows it to.
+---@field range integer? How near is near, in blocks: 1 to 256 (default 64).
+---@field glowing boolean? Whether its frames glow, drawing it at full brightness (default true).
+---@field click_range number? How far a click reaches it from, in blocks: 0 to 64 (default 24). Within the game's reach a click on a frame always counts.
+
+--- How a shape is drawn: `fill`, `outline`, or both (neither is an error).
+---@class ShapeStyle
+---@field fill string? Its inside. A colour, `#rrggbb` (drawn as the nearest of the colours a map can show), or `"clear"` for none: the map shows through.
+---@field outline string? Its edge. A colour, `#rrggbb` (drawn as the nearest of the colours a map can show), or `"clear"` for none: the map shows through.
+---@field thickness integer? The outline's width, in pixels: 1 to 32 (default 1).
+---@field radius integer? A rectangle's rounded corners, in pixels (default 0).
+
+--- How text is drawn on a screen. Every key is optional.
+---@class ScreenTextOptions
+---@field font string? `"default"` (the game's own map font, the default) or one of the project's (`screen_fonts/<id>/`).
+---@field color string? Its colour where the text sets none, `#rrggbb` (default white).
+---@field scale integer? Each pixel of the font drawn this many pixels a side: 1 to 8 (default 1).
+---@field align ("left"|"center"|"right")? Where `x` is: its left (the default), its middle or its right, line by line.
+---@field width integer? Breaks lines at spaces so none is wider than this, in pixels.
+---@field shadow string? Draws a shadow a pixel down and right of every pixel, in this colour.
+---@field line_height integer? Pixels from one line's top to the next's (default the font's).
+
+--- How big text is drawn, in pixels.
+---@class ScreenTextSize
+---@field width integer Its widest line.
+---@field height integer All its lines.
+
+--- How a picture is drawn on a screen. Every key is optional.
+---@class ScreenImageOptions
+---@field width integer? Drawn this wide, in pixels (default its own width, or kept in shape with `height`).
+---@field height integer? Drawn this tall, in pixels (default its own height, or kept in shape with `width`).
+---@field dither ("none"|"floyd_steinberg"|"ordered")? How its colours become map colours: `"floyd_steinberg"` (the default) spreads each pixel's error to its neighbours, best for photos; `"ordered"` uses a fixed pattern; `"none"` takes each pixel's nearest.
+
+--- How `screen:play` plays a video. Every key is optional.
+---@class VideoPlayOptions
+---@field loop boolean? Starts it again when it ends (default false).
+---@field speed number? How fast: 0.25 to 4 (default 1). Its sound plays only at 1.
+---@field start number? Where to start, in seconds (default 0).
+---@field volume number? Its sound's volume, 0 to 1 (default 1); 0 plays it silent.
+---@field x integer? Where its left is on the screen, in pixels (default 0).
+---@field y integer? Where its top is on the screen, in pixels (default 0).
+---@field audio_range number? How near where the screen hangs a player must be to hear it, in blocks (default 32). A screen that hangs nowhere plays its sound to everyone it's drawn for.
+
+--- A pixel of a screen a player aims at.
+---@class ScreenPoint
+---@field screen Screen The screen: the player's own view of it, when they have one.
+---@field x integer From its left edge.
+---@field y integer From its top edge.
+---@field distance number From the player's eyes, in blocks.
+
+--- A player clicked a screen.
+---@class ScreenClickEvent: Event
+---@field screen Screen The screen clicked: the player's own view of it, when they have one.
+---@field player Player Who clicked.
+---@field x integer The pixel aimed at, from the left edge.
+---@field y integer From the top edge.
+---@field click "left"|"right" Which button.
+
+--- The pixel a player aims at on a screen moved.
+---@class ScreenHoverEvent: Event
+---@field screen Screen The screen: the player's own view of it, when they have one.
+---@field player Player Who.
+---@field x integer The pixel aimed at now, from the left edge.
+---@field y integer From the top edge.
+
+--- A player stopped aiming at a screen.
+---@class ScreenLeaveEvent: Event
+---@field screen Screen The screen.
+---@field player Player Who.
+
+--- A video stopped playing.
+---@class PlaybackEndEvent: Event
+---@field playback Playback The playback.
+---@field reason "finished"|"stopped"|"replaced"|"removed"|"unloaded" Why: it played to its end (and doesn't loop); `stop()` was called; another video was played on the screen; the screen went; or the script that played it unloaded.
+
+--- A frame of a video was drawn.
+---@class PlaybackFrameEvent: Event
+---@field playback Playback The playback.
+---@field frame integer Which frame, 0 first.
+---@field time number Its time in the video, in seconds.
+
 --- How `nf.time.format` and `nf.time.parse` read a clock time. A key that isn't one of these is an error.
 ---@class TimeOptions
 ---@field zone string? Which time zone the clock time is in: an IANA name like `"Europe/London"` or `"America/New_York"`, `"UTC"`, or an offset like `"+02:00"`. Default the server owner's zone (`schedules.time-zone` in `config.yml`, the server's own by default), the one `nf.schedule` runs in. A zone the server doesn't know is an error.
@@ -7109,8 +7548,8 @@ function Event:uncancel() end
 ---@type fun(...: any)
 log = nil
 
---- The script's own handle: `Centity` in a centity script, `Menu` in a menu script, `Dialog` in a dialog script, `ProjectItem` in a item script, `ProjectBlock` in a block script. Nothing in a module.
+--- The script's own handle: `Centity` in a centity script, `Menu` in a menu script, `Dialog` in a dialog script, `ProjectItem` in a item script, `ProjectBlock` in a block script, `Screen` in a screen script. Nothing in a module.
 ---
 --- Start a script with `local this = this --[[@as Centity]]` so lua-language-server knows which.
----@type Centity|Menu|Dialog|ProjectItem|ProjectBlock
+---@type Centity|Menu|Dialog|ProjectItem|ProjectBlock|Screen
 this = nil

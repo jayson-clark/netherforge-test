@@ -74,6 +74,8 @@ class ProblemCoverageTest {
         "resource_pack.too-many-glyphs" to unit("ResourcePackTest", "it takes thousands of glyphs, too many for a golden file"),
         "terrain.script-failed" to plugin("TerrainTest"),
         "migration.failed" to plugin("PackageDatabaseTest"),
+        "video.stale" to plugin("ScreenTest"),
+        "screen_font.grid" to unit("ScreenTest", "it needs a picture's size, which goldens are loaded without"),
         "runtime.minecraft-unsupported" to plugin("ReloadTest"),
         "runtime.unbundled" to plugin("PackagesTest"),
         "runtime.bundle-hash" to plugin("PackagesTest"),

@@ -259,7 +259,10 @@ class TestServer(
             // The default font is skipped too: opening the example writes it from the client, and it isn't committed.
             paths.filter { Files.isRegularFile(it) && !skipped(dir.relativize(it)) }.toList().associate { file ->
                 val path = dir.relativize(file).joinToString("/")
-                path to if (path.endsWith(".png") || path.endsWith(".nbt")) Files.readAllBytes(file) else Files.readString(file)
+                // Text is what reads as UTF-8; anything else (pictures, structures, a converted video) is bytes.
+                val bytes = Files.readAllBytes(file)
+                path to
+                    (runCatching { Charsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(bytes)).toString() }.getOrNull() ?: bytes)
             }
         }
 

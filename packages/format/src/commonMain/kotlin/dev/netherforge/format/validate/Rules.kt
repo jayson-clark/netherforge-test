@@ -62,6 +62,9 @@ object Rules {
         if (item.count != null && (item.count < 1 || item.count > 99)) {
             sink.report(ProblemCodes.ITEM_COUNT, "count must be between 1 and 99", "$at.count")
         }
+        if (item.map != null && item.map < 0) {
+            sink.report(ProblemCodes.ITEM_MAP, "map is a map's number, 0 or more, not ${item.map}", "$at.map")
+        }
         if (item.damage != null && item.damage < 0) {
             sink.report(ProblemCodes.ITEM_DAMAGE, "damage can't be negative", "$at.damage")
         }

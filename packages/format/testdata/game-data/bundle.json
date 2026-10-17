@@ -24,5 +24,6 @@
   "packFormat": [97, 1],
   "dataPackFormat": [121, 0],
   "particles": { "minecraft:dust": "dust", "minecraft:flame": "none" },
-  "schema": 2
+  "mapColors": [0, 0, 0, 0, -16777216, -1, -65536, -16711936, -16776961, -8355712, -256, -16711681],
+  "schema": 3
 }

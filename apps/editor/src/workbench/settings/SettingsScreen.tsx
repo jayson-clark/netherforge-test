@@ -374,6 +374,14 @@ function ServerSettings() {
           {jvmError}
         </FormError>
       )}
+      <FormLabel htmlFor="server-ffmpeg">ffmpeg, for converting videos for screens</FormLabel>
+      <input
+        id="server-ffmpeg"
+        type="text"
+        placeholder="Found on PATH"
+        value={settings.ffmpegPath}
+        onChange={(e) => update({ ffmpegPath: e.target.value })}
+      />
       {error && <FormError role="alert">{error}</FormError>}
       <FormActions>
         {saved && <Muted>Saved. Applies the next time the server starts.</Muted>}

@@ -31,7 +31,10 @@ import dev.netherforge.format.game.RegistryKey as GameRegistry
  * property list), collision boxes from asking each state for its shape. Both
  * are cached: a block state never changes shape while the server runs.
  */
-class PaperGameData(private val registries: ServerRegistries) : GameData {
+class PaperGameData(private val registries: ServerRegistries, private val readMapColors: () -> List<Int> = { emptyList() }) : GameData {
+    /** The game's map colours, read off the server once. */
+    override val mapColors: List<Int> by lazy { readMapColors() }
+
     override val minecraftVersion: String = Bukkit.getMinecraftVersion()
 
     private val blockRegistry get() = RegistryAccess.registryAccess().getRegistry(RegistryKey.BLOCK)
@@ -136,7 +139,8 @@ class PaperGameData(private val registries: ServerRegistries) : GameData {
             collision = shapes,
             packFormat = resourcePackFormat,
             dataPackFormat = dataPackFormat,
-            particles = particleRegistry.stream().toList().sortedBy { it.key.toString() }.associate { it.key.toString() to kindOf(it) }
+            particles = particleRegistry.stream().toList().sortedBy { it.key.toString() }.associate { it.key.toString() to kindOf(it) },
+            mapColors = mapColors
         )
     }
 

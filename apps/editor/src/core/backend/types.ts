@@ -30,6 +30,7 @@ import type {
   AppInfo,
   CacheStatus,
   CaptureProgress,
+  ConvertProgress,
   ErrorCode,
   EulaStatus,
   FileEntry,
@@ -49,6 +50,8 @@ import type {
   ServerState,
   Settings,
   TestReport,
+  VideoConverted,
+  VideoInfo,
 } from './generated/bindings'
 
 export type { BridgeEventName, BridgeEvents, BridgeMethod, BridgeParamsArg, BridgeResult }
@@ -56,6 +59,9 @@ export type {
   AppInfo,
   CacheStatus,
   CaptureProgress,
+  ConvertProgress,
+  VideoConverted,
+  VideoInfo,
   CommandError,
   ErrorCode,
   EulaStatus,
@@ -322,6 +328,16 @@ export interface Backend {
     replace: boolean,
   ): Promise<void>
   onCaptureProgress(listener: (event: CaptureProgress) => void): Promise<Unlisten>
+  /**
+   * Converts the video in [folder] (`videos/trailer`) for screens: its frames in the game's map colours
+   * (`video.nfv`) and its sound (`audio.ogg`, `audio/<n>.ogg`), with ffmpeg (the `ffmpegPath` setting, or
+   * the first on `PATH`), reporting `onVideoProgress`. Rejects `untrusted` (ffmpeg reads the project's file),
+   * `unavailable` without ffmpeg or the project's version's game data, `notFound` without the source.
+   */
+  convertVideo(folder: string): Promise<VideoConverted>
+  onVideoProgress(listener: (event: ConvertProgress) => void): Promise<Unlisten>
+  /** What the converted frames of the video in [folder] say, and whether its source changed since. */
+  videoInfo(folder: string): Promise<VideoInfo>
   onServerState(listener: (state: ServerState) => void): Promise<Unlisten>
   onServerOutput(listener: (event: ServerOutputEvent) => void): Promise<Unlisten>
   onPrepareProgress(listener: (event: PrepareProgress) => void): Promise<Unlisten>

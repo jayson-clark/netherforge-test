@@ -11,6 +11,7 @@ import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.format.resourcepack.CompiledResourcePack
 import dev.netherforge.format.resourcepack.PackLayout
+import dev.netherforge.format.resourcepack.VideoSound
 import dev.netherforge.format.resourcepack.pngSize
 import dev.netherforge.plugin.PackConfig
 import dev.netherforge.plugin.RuntimeLog
@@ -85,7 +86,9 @@ class Packs(
         home = snapshot.namespace
         reportedGlyphs.clear()
         // Blocks need a pack too, even a project with no pictures of its own: the note block states they're held as are drawn by it.
-        if (snapshot.everywhere(ResourcePackKind).isEmpty() && snapshot.everywhere(BlockKind).isEmpty()) {
+        // So do videos' sounds, which the pack carries as sound events.
+        val videos = VideoSound.of(snapshot)
+        if (snapshot.everywhere(ResourcePackKind).isEmpty() && snapshot.everywhere(BlockKind).isEmpty() && videos.isEmpty()) {
             compiled = emptyMap()
             built = null
             return emptyList()
@@ -102,7 +105,7 @@ class Packs(
         val description = snapshot.manifest?.name?.takeIf { it.isNotBlank() } ?: "NetherForge"
         // The states the project's blocks are held as: drawn as their models, everything else as the game draws it.
         val blocks = BlockKind.plan(snapshot.everywhere(BlockKind), snapshot.namespace, platform.game)
-        val layout = PackLayout.build(compiled.values.toList(), format, description, blocks, snapshot.vanilla) { path ->
+        val layout = PackLayout.build(compiled.values.toList(), format, description, blocks, snapshot.vanilla, videos) { path ->
             readBytes(path)?.let(::pngSize)
         }
         val files = LinkedHashMap<String, ByteArray>()

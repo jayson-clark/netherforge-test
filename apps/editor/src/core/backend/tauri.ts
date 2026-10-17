@@ -28,6 +28,7 @@ import type {
   BridgeResult,
   CacheStatus,
   CaptureProgress,
+  ConvertProgress,
   EulaStatus,
   FileEntry,
   PackageFiles,
@@ -46,6 +47,8 @@ import type {
   ServerState,
   Settings,
   TestReport,
+  VideoConverted,
+  VideoInfo,
   Unlisten,
   UpdateInfo,
   UpdateProgress,
@@ -301,6 +304,15 @@ export class TauriBackend implements Backend {
   }
   onCaptureProgress(listener: (event: CaptureProgress) => void): Promise<Unlisten> {
     return on(events.mapCaptureProgress, listener)
+  }
+  convertVideo(folder: string): Promise<VideoConverted> {
+    return call(commands.videoConvert(folder))
+  }
+  onVideoProgress(listener: (event: ConvertProgress) => void): Promise<Unlisten> {
+    return on(events.videoConvertProgress, listener)
+  }
+  videoInfo(folder: string): Promise<VideoInfo> {
+    return call(commands.videoInfo(folder))
   }
   onServerState(listener: (state: ServerState) => void): Promise<Unlisten> {
     return on(events.serverState, listener)

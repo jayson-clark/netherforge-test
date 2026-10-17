@@ -42,6 +42,8 @@ data class RuntimeConfig(
     val bots: BotsConfig = BotsConfig(),
     /** How fast `world:place_gradually` and `world:fill_gradually` go, and how many a package may have going. */
     val structures: StructuresConfig = StructuresConfig(),
+    /** How much of screens' pictures each player is sent a tick. */
+    val screens: ScreensConfig = ScreensConfig(),
     /**
      * Whether the project's dependencies are found where `netherforge.json`'s
      * paths point: on the editor's dev server (and in tests). A production
@@ -106,6 +108,7 @@ data class RuntimeConfig(
             val web = web(settings.section("web"))
             val databases = DatabasesConfig.read(settings.section("databases"))
             val structures = structures(settings.section("structures"))
+            val screens = screens(settings.section("screens"))
             properties(Bridge.PROJECT_PROPERTY)?.takeIf { it.isNotBlank() }?.let { project ->
                 val port = properties(Bridge.PORT_PROPERTY)?.toIntOrNull()
                 return RuntimeConfig(
@@ -121,6 +124,7 @@ data class RuntimeConfig(
                     bots = bots(settings.section("bots")).copy(enabled = true),
                     databases = databases,
                     structures = structures,
+                    screens = screens,
                     packageCache = properties(Bridge.PACKAGE_CACHE_PROPERTY)?.takeIf {
                         it.isNotBlank()
                     }?.let { Path.of(it).toAbsolutePath().normalize() },
@@ -140,6 +144,7 @@ data class RuntimeConfig(
                 bots = bots(settings.section("bots")),
                 databases = databases,
                 structures = structures,
+                screens = screens,
                 resolvesPackages = false
             )
         }
@@ -226,6 +231,18 @@ data class RuntimeConfig(
             )
         }
 
+        /** `screens:`: how many bytes of screens' pictures a player is sent a tick. Read on dev servers too. */
+        private fun screens(section: Map<String, Any?>): ScreensConfig {
+            val defaults = ScreensConfig()
+            return ScreensConfig(
+                bytesPerTick = (
+                    section.int(
+                        "bytes-per-tick"
+                    ) ?: defaults.bytesPerTick
+                    ).coerceIn(ScreensConfig.MIN_BYTES_PER_TICK, ScreensConfig.MAX_BYTES_PER_TICK)
+            )
+        }
+
         /** `performance:`: when a script is slow enough to warn about. Read on dev servers too. */
         private fun performance(section: Map<String, Any?>): PerformanceConfig {
             val defaults = PerformanceConfig()
@@ -272,6 +289,19 @@ data class ServerAddress(val directory: Path, val ip: String)
  * above [warnMillis] milliseconds a tick. 0 turns the warning off.
  */
 data class PerformanceConfig(val warnMillis: Double = 10.0, val warnTicks: Int = 20)
+
+/**
+ * `screens:` in `config.yml`, read on dev servers too: at most [bytesPerTick] of screens' pixels go to each player a
+ * tick (a whole map is 16 KiB). What doesn't fit waits for the next tick, merged with what changes meanwhile, so a
+ * video someone can't keep up with skips frames for them rather than falling behind.
+ */
+data class ScreensConfig(val bytesPerTick: Int = 64 * 1024) {
+    companion object {
+        /** A whole map has to fit in a tick. */
+        const val MIN_BYTES_PER_TICK = 16 * 1024
+        const val MAX_BYTES_PER_TICK = 4 * 1024 * 1024
+    }
+}
 
 /**
  * `schedules:` in `config.yml`, read on dev servers too: the IANA time zone

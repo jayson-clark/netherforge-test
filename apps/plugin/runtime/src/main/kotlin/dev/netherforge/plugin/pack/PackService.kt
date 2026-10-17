@@ -7,6 +7,7 @@ import dev.netherforge.format.project.BlockKind
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.ResourcePackKind
 import dev.netherforge.format.project.VanillaKind
+import dev.netherforge.format.project.VideoKind
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.project.Resource
@@ -45,10 +46,11 @@ internal class PackService(private val packs: Packs, private val log: RuntimeLog
     override val reloads: Set<KindSpec<*, *>> get() = setOf(ResourcePackKind)
 
     /**
-     * The blocks the pack draws (their states, their models) change with the project's blocks, and the game's own
-     * looks of their carriers with `client/vanilla.json`: it's built again after either.
+     * The blocks the pack draws (their states, their models) change with the project's blocks, the game's own
+     * looks of their carriers with `client/vanilla.json`, and the sounds it carries with videos converted again:
+     * it's built again after any of them.
      */
-    override val follows: Set<String> get() = setOf(BlockKind.id, VanillaKind.id)
+    override val follows: Set<String> get() = setOf(BlockKind.id, VanillaKind.id, VideoKind.id)
 
     override fun followed(kind: String, ids: Set<String>, batch: ReloadBatch) {
         val before = packs.built?.sha1

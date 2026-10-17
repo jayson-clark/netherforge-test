@@ -21,6 +21,7 @@ pub mod state;
 #[cfg(test)]
 mod testing;
 pub mod trust;
+pub mod video;
 pub mod watcher;
 
 use std::sync::Arc;

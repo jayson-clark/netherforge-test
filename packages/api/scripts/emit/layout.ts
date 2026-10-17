@@ -51,6 +51,11 @@ export const CATEGORIES: Category[] = [
     ],
   },
   {
+    title: 'Screens',
+    doc: 'Walls of maps scripts draw on and play videos on.',
+    pages: ['nf.screens', 'Screen', 'Playback'],
+  },
+  {
     title: 'Players and entities',
     doc: "Players, mobs and every other entity, and what's on a player's screen.",
     pages: [
@@ -173,6 +178,23 @@ export const FUNCTION_GROUPS: Record<string, Group[]> = {
     group(
       'Settings',
       'max_players set_max_players motd set_motd is_whitelist_enabled set_whitelist_enabled',
+    ),
+  ],
+  Screen: [
+    group('Identity', 'name exists width height remove'),
+    group(
+      'Drawing',
+      'clear pixel set_pixel pixels set_pixels fill rectangle line circle ellipse polygon text image copy',
+    ),
+    group('Hanging and items', 'place take_down location facing item'),
+    group('Who sees it', 'show_to hide_from is_shown_to viewers for_player player release'),
+    group('Videos', 'play playback'),
+  ],
+  Playback: [
+    group('What it is', 'video screen length exists'),
+    group(
+      'Controls',
+      'is_paused pause resume stop time seek speed set_speed volume set_volume is_looping set_looping',
     ),
   ],
   Centity: [

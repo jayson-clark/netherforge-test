@@ -83,6 +83,9 @@ object ProblemCodes {
     private const val TERRAIN = "format/terrain.md"
     private const val BIOME = "format/biome.md"
     private const val SKY = "format/sky.md"
+    private const val SCREEN = "format/screen.md"
+    private const val SCREEN_FONT = "format/screen-font.md"
+    private const val VIDEO = "format/video.md"
     private const val BUFF = "format/buff.md"
     private const val DATAPACK = "format/datapack.md"
     private const val DIMENSION_TYPE = "format/dimension-type.md"
@@ -188,6 +191,7 @@ object ProblemCodes {
     val REFERENCE_PLACED_FEATURE =
         error("reference.placed-feature", REFERENCES, "A reference names a placed feature the project's datapacks don't define.")
     val REFERENCE_DIMENSION_TYPE = error("reference.dimension-type", REFERENCES, "A reference names a dimension type that doesn't exist.")
+    val REFERENCE_VIDEO = error("reference.video", REFERENCES, "A reference names a video that doesn't exist.")
     val REFERENCE_RESOURCE_PACK =
         error(
             "reference.resource-pack",
@@ -377,6 +381,7 @@ object ProblemCodes {
     val ITEM_KIND_MISMATCH = error("item.kind-mismatch", ITEM, "A stack of a project item gives a `kind` other than the item's.")
     val ITEM_COUNT = error("item.count", ITEM, "`count` is outside 1 to 99, or above `maxStackSize`.")
     val ITEM_DAMAGE = error("item.damage", ITEM, "`damage` is negative.")
+    val ITEM_MAP = error("item.map", ITEM, "`map` is negative.")
     val ITEM_ENCHANTMENT = error("item.enchantment", ITEM, "A key in `enchantments` isn't an enchantment id.")
     val ITEM_UNKNOWN_ENCHANTMENT = error("item.unknown-enchantment", ITEM, "An enchantment the target version doesn't have.")
     val ITEM_ENCHANTMENT_LEVEL = error("item.enchantment-level", ITEM, "An enchantment level is outside 1 to 255.")
@@ -686,6 +691,38 @@ object ProblemCodes {
     val SKY_EMPTY = error("sky.empty", SKY, "A sky gives no colour at all.")
     val SKY_FADE = error("sky.fade", SKY, "A sky's fade is outside 1 to 8 steps.")
     val SKY_NIGHT = warning("sky.night", SKY, "A sky that doesn't darken at night gives no sky or fog colour to hold.")
+
+    // ---- screens, their fonts and videos ------------------------------------
+
+    val SCREEN_SIZE = error("screen.size", SCREEN, "A screen's (or a video's) width or height isn't 1 to 16 maps.")
+    val SCREEN_COLOR = error("screen.color", SCREEN, "A screen's colour isn't written `#rrggbb`.")
+    val SCREEN_WORLD = error("screen.world", SCREEN, "Where a screen hangs names something that isn't a world name.")
+    val SCREEN_RANGE = error("screen.range", SCREEN, "A screen's `range` or `clickRange` is outside what it may be.")
+    val SCREEN_VOLUME = error("screen.volume", SCREEN, "A screen's video's `volume` isn't 0 to 1.")
+    val SCREEN_PLACE = warning("screen.place", SCREEN, "Two screens hang in the same block, so one covers part of the other.")
+    val SCREEN_FONT_ID = error("screen_font.id", SCREEN_FONT, "A screen font is called `default`, which is the game's own map font.")
+    val SCREEN_FONT_FILE =
+        error("screen_font.file", SCREEN_FONT, "A screen font's `file` isn't a picture or font file of the right kind in its folder.")
+    val SCREEN_FONT_MISSING = error("screen_font.missing", SCREEN_FONT, "A screen font's picture or font file isn't in its folder.")
+    val SCREEN_FONT_CHARS =
+        error("screen_font.chars", SCREEN_FONT, "A bitmap screen font lists no characters, or rows of different lengths.")
+    val SCREEN_FONT_FIELD = error("screen_font.field", SCREEN_FONT, "A screen font sets a field of the other type of font.")
+    val SCREEN_FONT_SIZE = error("screen_font.size", SCREEN_FONT, "A screen font's size, spacing or line height is outside what it may be.")
+    val SCREEN_FONT_GLYPH =
+        error(
+            "screen_font.glyph",
+            SCREEN_FONT,
+            "A pixels screen font's glyph isn't one character drawn in rows of `#` and `.`, all as tall."
+        )
+    val SCREEN_FONT_GRID =
+        error("screen_font.grid", SCREEN_FONT, "A bitmap screen font's picture doesn't divide into its grid of characters.")
+    val VIDEO_FPS = error("video.fps", VIDEO, "A video's `fps` isn't 1 to 20.")
+    val VIDEO_RANGE = error("video.range", VIDEO, "A video's `start` or `end` isn't a time in it.")
+    val VIDEO_SOURCE = error("video.source", VIDEO, "A video's `source` isn't a file in its folder.")
+    val VIDEO_NOT_CONVERTED = warning("video.not-converted", VIDEO, "A video hasn't been converted for screens yet, so it can't play.")
+    val VIDEO_AUDIO_MISSING = warning("video.audio-missing", VIDEO, "A video keeps its sound, but its converted sound isn't there.")
+    val VIDEO_STALE =
+        warning("video.stale", VIDEO, "A video's converted frames were made for other settings than its file has now: convert it again.")
     val BIOME_FEATURE_ORDER =
         error(
             "biome.feature-order",

@@ -120,6 +120,6 @@ data class ItemFile(
         const val SCHEMA = "../../.netherforge/schema/item.schema.json"
 
         /** [ItemDef]'s fields a definition doesn't have: they belong to each stack, or name the definition itself. */
-        val STACK_FIELDS = setOf("item", "count", "damage", "data")
+        val STACK_FIELDS = setOf("item", "count", "damage", "map", "data")
     }
 }

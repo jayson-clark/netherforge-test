@@ -7306,6 +7306,441 @@ data class CutsceneCueEvent(val cutscene: LuaHandle.Cutscene, val player: LuaHan
 }
 
 /**
+ * A screen `nf.screens.create` makes: `width` and `height` are required; a key that isn't one of these
+ * is an error.
+ */
+data class ScreenOptions(val width: Long, val height: Long, val key: String? = null, val background: String? = null, val viewers: String? = null, val range: Long? = null, val glowing: Boolean? = null, val clickRange: Double? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<ScreenOptions>("ScreenOptions") {
+        val widthCodec = LuaCodecs.INTEGER
+        val heightCodec = LuaCodecs.INTEGER
+        val keyCodec = LuaOptional(LuaCodecs.STRING)
+        val backgroundCodec = LuaOptional(LuaCodecs.STRING)
+        val viewersCodec = LuaOptional(LuaChoice(listOf("near", "script")))
+        val rangeCodec = LuaOptional(LuaCodecs.INTEGER)
+        val glowingCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val clickRangeCodec = LuaOptional(LuaCodecs.NUMBER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "width" to widthCodec,
+            "height" to heightCodec,
+            "key" to keyCodec,
+            "background" to backgroundCodec,
+            "viewers" to viewersCodec,
+            "range" to rangeCodec,
+            "glowing" to glowingCodec,
+            "click_range" to clickRangeCodec
+        )
+
+        override fun read(fields: ShapeReader) = ScreenOptions(
+            width = fields.field("width", widthCodec),
+            height = fields.field("height", heightCodec),
+            key = fields.field("key", keyCodec),
+            background = fields.field("background", backgroundCodec),
+            viewers = fields.field("viewers", viewersCodec),
+            range = fields.field("range", rangeCodec),
+            glowing = fields.field("glowing", glowingCodec),
+            clickRange = fields.field("click_range", clickRangeCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: ScreenOptions) {
+            fields.field("width", value.width, widthCodec)
+            fields.field("height", value.height, heightCodec)
+            fields.field("key", value.key, keyCodec)
+            fields.field("background", value.background, backgroundCodec)
+            fields.field("viewers", value.viewers, viewersCodec)
+            fields.field("range", value.range, rangeCodec)
+            fields.field("glowing", value.glowing, glowingCodec)
+            fields.field("click_range", value.clickRange, clickRangeCodec)
+        }
+    }
+}
+
+/** How a shape is drawn: `fill`, `outline`, or both (neither is an error). */
+data class ShapeStyle(val fill: String? = null, val outline: String? = null, val thickness: Long? = null, val radius: Long? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<ShapeStyle>("ShapeStyle") {
+        val fillCodec = LuaOptional(LuaCodecs.STRING)
+        val outlineCodec = LuaOptional(LuaCodecs.STRING)
+        val thicknessCodec = LuaOptional(LuaCodecs.INTEGER)
+        val radiusCodec = LuaOptional(LuaCodecs.INTEGER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "fill" to fillCodec,
+            "outline" to outlineCodec,
+            "thickness" to thicknessCodec,
+            "radius" to radiusCodec
+        )
+
+        override fun read(fields: ShapeReader) = ShapeStyle(
+            fill = fields.field("fill", fillCodec),
+            outline = fields.field("outline", outlineCodec),
+            thickness = fields.field("thickness", thicknessCodec),
+            radius = fields.field("radius", radiusCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: ShapeStyle) {
+            fields.field("fill", value.fill, fillCodec)
+            fields.field("outline", value.outline, outlineCodec)
+            fields.field("thickness", value.thickness, thicknessCodec)
+            fields.field("radius", value.radius, radiusCodec)
+        }
+    }
+}
+
+/** How text is drawn on a screen. Every key is optional. */
+data class ScreenTextOptions(val font: String? = null, val color: String? = null, val scale: Long? = null, val align: String? = null, val width: Long? = null, val shadow: String? = null, val lineHeight: Long? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<ScreenTextOptions>("ScreenTextOptions") {
+        val fontCodec = LuaOptional(LuaCodecs.STRING)
+        val colorCodec = LuaOptional(LuaCodecs.STRING)
+        val scaleCodec = LuaOptional(LuaCodecs.INTEGER)
+        val alignCodec = LuaOptional(LuaChoice(listOf("left", "center", "right")))
+        val widthCodec = LuaOptional(LuaCodecs.INTEGER)
+        val shadowCodec = LuaOptional(LuaCodecs.STRING)
+        val lineHeightCodec = LuaOptional(LuaCodecs.INTEGER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "font" to fontCodec,
+            "color" to colorCodec,
+            "scale" to scaleCodec,
+            "align" to alignCodec,
+            "width" to widthCodec,
+            "shadow" to shadowCodec,
+            "line_height" to lineHeightCodec
+        )
+
+        override fun read(fields: ShapeReader) = ScreenTextOptions(
+            font = fields.field("font", fontCodec),
+            color = fields.field("color", colorCodec),
+            scale = fields.field("scale", scaleCodec),
+            align = fields.field("align", alignCodec),
+            width = fields.field("width", widthCodec),
+            shadow = fields.field("shadow", shadowCodec),
+            lineHeight = fields.field("line_height", lineHeightCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: ScreenTextOptions) {
+            fields.field("font", value.font, fontCodec)
+            fields.field("color", value.color, colorCodec)
+            fields.field("scale", value.scale, scaleCodec)
+            fields.field("align", value.align, alignCodec)
+            fields.field("width", value.width, widthCodec)
+            fields.field("shadow", value.shadow, shadowCodec)
+            fields.field("line_height", value.lineHeight, lineHeightCodec)
+        }
+    }
+}
+
+/** How big text is drawn, in pixels. */
+data class ScreenTextSize(val width: Long, val height: Long) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<ScreenTextSize>("ScreenTextSize") {
+        val widthCodec = LuaCodecs.INTEGER
+        val heightCodec = LuaCodecs.INTEGER
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "width" to widthCodec,
+            "height" to heightCodec
+        )
+
+        override fun read(fields: ShapeReader) = ScreenTextSize(
+            width = fields.field("width", widthCodec),
+            height = fields.field("height", heightCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: ScreenTextSize) {
+            fields.field("width", value.width, widthCodec)
+            fields.field("height", value.height, heightCodec)
+        }
+    }
+}
+
+/** How a picture is drawn on a screen. Every key is optional. */
+data class ScreenImageOptions(val width: Long? = null, val height: Long? = null, val dither: String? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<ScreenImageOptions>("ScreenImageOptions") {
+        val widthCodec = LuaOptional(LuaCodecs.INTEGER)
+        val heightCodec = LuaOptional(LuaCodecs.INTEGER)
+        val ditherCodec = LuaOptional(LuaChoice(listOf("none", "floyd_steinberg", "ordered")))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "width" to widthCodec,
+            "height" to heightCodec,
+            "dither" to ditherCodec
+        )
+
+        override fun read(fields: ShapeReader) = ScreenImageOptions(
+            width = fields.field("width", widthCodec),
+            height = fields.field("height", heightCodec),
+            dither = fields.field("dither", ditherCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: ScreenImageOptions) {
+            fields.field("width", value.width, widthCodec)
+            fields.field("height", value.height, heightCodec)
+            fields.field("dither", value.dither, ditherCodec)
+        }
+    }
+}
+
+/** How `screen:play` plays a video. Every key is optional. */
+data class VideoPlayOptions(val loop: Boolean? = null, val speed: Double? = null, val start: Double? = null, val volume: Double? = null, val x: Long? = null, val y: Long? = null, val audioRange: Double? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<VideoPlayOptions>("VideoPlayOptions") {
+        val loopCodec = LuaOptional(LuaCodecs.BOOLEAN)
+        val speedCodec = LuaOptional(LuaCodecs.NUMBER)
+        val startCodec = LuaOptional(LuaCodecs.NUMBER)
+        val volumeCodec = LuaOptional(LuaCodecs.NUMBER)
+        val xCodec = LuaOptional(LuaCodecs.INTEGER)
+        val yCodec = LuaOptional(LuaCodecs.INTEGER)
+        val audioRangeCodec = LuaOptional(LuaCodecs.NUMBER)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "loop" to loopCodec,
+            "speed" to speedCodec,
+            "start" to startCodec,
+            "volume" to volumeCodec,
+            "x" to xCodec,
+            "y" to yCodec,
+            "audio_range" to audioRangeCodec
+        )
+
+        override fun read(fields: ShapeReader) = VideoPlayOptions(
+            loop = fields.field("loop", loopCodec),
+            speed = fields.field("speed", speedCodec),
+            start = fields.field("start", startCodec),
+            volume = fields.field("volume", volumeCodec),
+            x = fields.field("x", xCodec),
+            y = fields.field("y", yCodec),
+            audioRange = fields.field("audio_range", audioRangeCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: VideoPlayOptions) {
+            fields.field("loop", value.loop, loopCodec)
+            fields.field("speed", value.speed, speedCodec)
+            fields.field("start", value.start, startCodec)
+            fields.field("volume", value.volume, volumeCodec)
+            fields.field("x", value.x, xCodec)
+            fields.field("y", value.y, yCodec)
+            fields.field("audio_range", value.audioRange, audioRangeCodec)
+        }
+    }
+}
+
+/** A pixel of a screen a player aims at. */
+data class ScreenPoint(val screen: LuaHandle.Screen, val x: Long, val y: Long, val distance: Double) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<ScreenPoint>("ScreenPoint") {
+        val screenCodec = LuaHandle.Screen.Codec
+        val xCodec = LuaCodecs.INTEGER
+        val yCodec = LuaCodecs.INTEGER
+        val distanceCodec = LuaCodecs.NUMBER
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "screen" to screenCodec,
+            "x" to xCodec,
+            "y" to yCodec,
+            "distance" to distanceCodec
+        )
+
+        override fun read(fields: ShapeReader) = ScreenPoint(
+            screen = fields.field("screen", screenCodec),
+            x = fields.field("x", xCodec),
+            y = fields.field("y", yCodec),
+            distance = fields.field("distance", distanceCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: ScreenPoint) {
+            fields.field("screen", value.screen, screenCodec)
+            fields.field("x", value.x, xCodec)
+            fields.field("y", value.y, yCodec)
+            fields.field("distance", value.distance, distanceCodec)
+        }
+    }
+}
+
+/** A player clicked a screen. */
+data class ScreenClickEvent(val screen: LuaHandle.Screen, val player: LuaHandle.Player, val x: Long, val y: Long, val click: String) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<ScreenClickEvent>("ScreenClickEvent") {
+        val screenCodec = LuaHandle.Screen.Codec
+        val playerCodec = LuaHandle.Player.Codec
+        val xCodec = LuaCodecs.INTEGER
+        val yCodec = LuaCodecs.INTEGER
+        val clickCodec = LuaChoice(listOf("left", "right"))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "screen" to screenCodec,
+            "player" to playerCodec,
+            "x" to xCodec,
+            "y" to yCodec,
+            "click" to clickCodec
+        )
+
+        override fun read(fields: ShapeReader) = ScreenClickEvent(
+            screen = fields.field("screen", screenCodec),
+            player = fields.field("player", playerCodec),
+            x = fields.field("x", xCodec),
+            y = fields.field("y", yCodec),
+            click = fields.field("click", clickCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: ScreenClickEvent) {
+            fields.field("screen", value.screen, screenCodec)
+            fields.field("player", value.player, playerCodec)
+            fields.field("x", value.x, xCodec)
+            fields.field("y", value.y, yCodec)
+            fields.field("click", value.click, clickCodec)
+        }
+    }
+}
+
+/** The pixel a player aims at on a screen moved. */
+data class ScreenHoverEvent(val screen: LuaHandle.Screen, val player: LuaHandle.Player, val x: Long, val y: Long) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<ScreenHoverEvent>("ScreenHoverEvent") {
+        val screenCodec = LuaHandle.Screen.Codec
+        val playerCodec = LuaHandle.Player.Codec
+        val xCodec = LuaCodecs.INTEGER
+        val yCodec = LuaCodecs.INTEGER
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "screen" to screenCodec,
+            "player" to playerCodec,
+            "x" to xCodec,
+            "y" to yCodec
+        )
+
+        override fun read(fields: ShapeReader) = ScreenHoverEvent(
+            screen = fields.field("screen", screenCodec),
+            player = fields.field("player", playerCodec),
+            x = fields.field("x", xCodec),
+            y = fields.field("y", yCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: ScreenHoverEvent) {
+            fields.field("screen", value.screen, screenCodec)
+            fields.field("player", value.player, playerCodec)
+            fields.field("x", value.x, xCodec)
+            fields.field("y", value.y, yCodec)
+        }
+    }
+}
+
+/** A player stopped aiming at a screen. */
+data class ScreenLeaveEvent(val screen: LuaHandle.Screen, val player: LuaHandle.Player) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<ScreenLeaveEvent>("ScreenLeaveEvent") {
+        val screenCodec = LuaHandle.Screen.Codec
+        val playerCodec = LuaHandle.Player.Codec
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "screen" to screenCodec,
+            "player" to playerCodec
+        )
+
+        override fun read(fields: ShapeReader) = ScreenLeaveEvent(
+            screen = fields.field("screen", screenCodec),
+            player = fields.field("player", playerCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: ScreenLeaveEvent) {
+            fields.field("screen", value.screen, screenCodec)
+            fields.field("player", value.player, playerCodec)
+        }
+    }
+}
+
+/** A video stopped playing. */
+data class PlaybackEndEvent(val playback: LuaHandle.Playback, val reason: String) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<PlaybackEndEvent>("PlaybackEndEvent") {
+        val playbackCodec = LuaHandle.Playback.Codec
+        val reasonCodec = LuaChoice(listOf("finished", "stopped", "replaced", "removed", "unloaded"))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "playback" to playbackCodec,
+            "reason" to reasonCodec
+        )
+
+        override fun read(fields: ShapeReader) = PlaybackEndEvent(
+            playback = fields.field("playback", playbackCodec),
+            reason = fields.field("reason", reasonCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: PlaybackEndEvent) {
+            fields.field("playback", value.playback, playbackCodec)
+            fields.field("reason", value.reason, reasonCodec)
+        }
+    }
+}
+
+/** A frame of a video was drawn. */
+data class PlaybackFrameEvent(val playback: LuaHandle.Playback, val frame: Long, val time: Double) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<PlaybackFrameEvent>("PlaybackFrameEvent") {
+        val playbackCodec = LuaHandle.Playback.Codec
+        val frameCodec = LuaCodecs.INTEGER
+        val timeCodec = LuaCodecs.NUMBER
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "playback" to playbackCodec,
+            "frame" to frameCodec,
+            "time" to timeCodec
+        )
+
+        override fun read(fields: ShapeReader) = PlaybackFrameEvent(
+            playback = fields.field("playback", playbackCodec),
+            frame = fields.field("frame", frameCodec),
+            time = fields.field("time", timeCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: PlaybackFrameEvent) {
+            fields.field("playback", value.playback, playbackCodec)
+            fields.field("frame", value.frame, frameCodec)
+            fields.field("time", value.time, timeCodec)
+        }
+    }
+}
+
+/**
  * How `nf.time.format` and `nf.time.parse` read a clock time. A key that isn't one of these is an
  * error.
  */

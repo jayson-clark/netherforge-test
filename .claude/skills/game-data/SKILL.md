@@ -55,6 +55,11 @@ can't list them, see minecraft-versions). For 26.3 the export is
 6.8 MB: about 5 MB of collision shapes, 1.2 MB of registries and tags (the
 integration test prints its size), written once per version.
 
+`GameData.mapColors` is the game's map colours by the byte a map pixel holds (`base * 4 + shade`, `0xAARRGGBB`,
+alpha 0 for none), read off the server's `MapColor` table (`PaperVersion.mapColors`) and exported in the bundle
+(`GameDataBundle.SCHEMA` 3): what screens match colours against and the editor converts videos to. Test fixtures
+hold made-up palettes, never the game's.
+
 The plugin asks its platform one server fact `GameData` doesn't carry: which
 game rules exist (`WorldOps.gameRuleType`, which is a type, not an id set). A
 sound for `play_sound` is checked with `GameData.has(SOUND_EVENT)`; a resource pack's

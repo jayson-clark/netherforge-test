@@ -65,6 +65,14 @@ Config: `RuntimeConfig.pack` (`PackConfig`). Dev server: loopback, a free
 port. Production: `resource-pack:` in `config.yml` (bind `0.0.0.0`, port 8163,
 `public-url` defaulting to `http://<server-ip or localhost>:<port>`).
 
+## Videos' sounds
+
+A converted video's sound is in the pack too, though no resource pack holds it: `VideoSound.of(snapshot)` lists
+each running video that keeps its sound and has `audio.ogg`, and `PackLayout.build(..., videos)` copies it to
+`assets/<ns>/sounds/video.<id>.ogg` (event `video.<id>`) and each piece `audio/<n>.ogg` to `video.<id>/<n>.ogg`
+(event `video.<id>.<n>`), all `stream: true`. A pack id has no `.`, so neither can collide with a pack's
+`<pack>/<key>`. `PackService` follows `VideoKind`, so converting again rebuilds and resends the pack.
+
 ## Sounds
 
 Every `.ogg` under `resource_packs/<id>/sounds/` is the sound event `<id>/<path without

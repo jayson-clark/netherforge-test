@@ -221,6 +221,17 @@ export const KIND_CONTRIBUTIONS = {
     viewState: CUTSCENE_VIEW,
     thumbnail: CutsceneThumbnail,
   },
+  screen: {
+    title: 'Screens',
+    one: 'screen',
+    group: 'interface',
+    icon: 'screen',
+    tone: 'green',
+    message: 'Scripts reach it by this id, e.g. nf.screens.get("lobby_board").',
+    view: lazy(() =>
+      import('@/editors/screen/ScreenEditor').then((m) => ({ default: m.ScreenEditor })),
+    ),
+  },
   resource_pack: {
     title: 'Resource packs',
     one: 'resource pack',
@@ -240,6 +251,30 @@ export const KIND_CONTRIBUTIONS = {
     ),
     thumbnail: ResourcePackThumbnail,
     viewState: RESOURCE_PACK_VIEW,
+  },
+  screen_font: {
+    title: 'Screen fonts',
+    one: 'screen font',
+    group: 'art',
+    icon: 'font',
+    tone: 'purple',
+    message: 'Screens write in it by this id, e.g. screen:text(4, 4, "Hi", { font = "pixel" }).',
+    view: lazy(() =>
+      import('@/editors/screen_font/ScreenFontEditor').then((m) => ({
+        default: m.ScreenFontEditor,
+      })),
+    ),
+  },
+  video: {
+    title: 'Videos',
+    one: 'video',
+    group: 'art',
+    icon: 'video',
+    tone: 'amber',
+    message: 'Screens play it by this id, e.g. screen:play("trailer").',
+    view: lazy(() =>
+      import('@/editors/video/VideoEditor').then((m) => ({ default: m.VideoEditor })),
+    ),
   },
   particle_effect: {
     title: 'Particle effects',

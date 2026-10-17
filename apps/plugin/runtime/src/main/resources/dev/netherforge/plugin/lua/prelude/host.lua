@@ -314,6 +314,13 @@ function host.unload(scope)
   deliver(NF, "unload", ev, state, scope)
 end
 
+-- The scope whose code is running now (the innermost budget frame's), or nil: what a handle method that makes
+-- something (`screen:play`) files it under, as `:on` files a subscription.
+---@return integer?
+function host.running_scope()
+  return events.running_scope()
+end
+
 -- Things are gone (a removed centity and its nodes, a closed menu window and
 -- its slots, a deleted dialog and its buttons): every subscription on each of
 -- `targets` (a list of handles) goes.

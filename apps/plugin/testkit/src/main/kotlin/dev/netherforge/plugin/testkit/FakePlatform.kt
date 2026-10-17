@@ -45,6 +45,7 @@ class FakePlatform(
     override val resourcePacks = FakePacks(this)
     override val blocks = FakeBlocks(this)
     override val particles = FakeParticles(this)
+    override val screens = FakeScreens(this)
     override val sounds = FakeSounds(this)
     override val worldEntities = FakeWorldEntities(this)
     override val mannequins = FakeMannequins(this)
@@ -291,9 +292,26 @@ class FakePlatform(
             )
         )
 
+        /**
+         * A made-up map palette (not the game's): transparent 0 to 3, then black, white, red, green, blue, grey,
+         * yellow, cyan, orange and purple, each in four shades (darkest to brightest: 180, 220, 255 and 135 of 255,
+         * as the game shades its own).
+         */
+        val MAP_COLORS: List<Int> = listOf(0, 0, 0, 0) + listOf(
+            0x000000, 0xFFFFFF, 0xFF0000, 0x00FF00, 0x0000FF, 0x808080, 0xFFFF00, 0x00FFFF, 0xFF8800, 0x8800FF
+        ).flatMap { base ->
+            listOf(180, 220, 255, 135).map { shade ->
+                val r = ((base shr 16) and 0xFF) * shade / 255
+                val g = ((base shr 8) and 0xFF) * shade / 255
+                val b = (base and 0xFF) * shade / 255
+                (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+            }
+        }
+
         /** Just enough of a game for the example project and the tests. */
         val GAME = GameDataBundle(
             minecraft = "26.3",
+            mapColors = MAP_COLORS,
             blocks = mapOf(
                 "minecraft:air" to BlockInfo(),
                 // What examples/basic's terrain is made of.

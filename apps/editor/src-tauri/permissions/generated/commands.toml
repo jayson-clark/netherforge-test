@@ -42,4 +42,6 @@ commands.allow = [
   "settings_get",
   "settings_set",
   "tests_run",
+  "video_convert",
+  "video_info",
 ]

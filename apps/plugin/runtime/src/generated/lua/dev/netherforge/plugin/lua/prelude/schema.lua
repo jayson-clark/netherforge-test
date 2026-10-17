@@ -397,6 +397,15 @@ local events = {
     ["end"] = { owner = "Cutscene", cancellable = false, options = {}, writable = {} },
     ["cue"] = { owner = "Cutscene", cancellable = false, options = {}, writable = {} },
   },
+  ["Screen"] = {
+    ["click"] = { owner = "Screen", cancellable = false, options = {}, writable = {} },
+    ["hover"] = { owner = "Screen", cancellable = false, options = {}, writable = {} },
+    ["leave"] = { owner = "Screen", cancellable = false, options = {}, writable = {} },
+  },
+  ["Playback"] = {
+    ["end"] = { owner = "Playback", cancellable = false, options = {}, writable = {} },
+    ["frame"] = { owner = "Playback", cancellable = false, options = {}, writable = {} },
+  },
 }
 local custom_events = {
   ["nf"] = true,
@@ -427,6 +436,8 @@ local event_functions = {
   WebSocket = { "on", "once" },
   OAuthFlow = { "on", "once" },
   Cutscene = { "on", "once" },
+  Screen = { "on", "once" },
+  Playback = { "on", "once" },
 }
 
 -- Checked tables ------------------------------------------------------------

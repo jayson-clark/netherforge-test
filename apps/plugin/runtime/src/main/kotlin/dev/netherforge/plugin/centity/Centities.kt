@@ -1100,6 +1100,8 @@ class Centities(
      */
     override fun entitiesLoaded(tagged: Map<UUID, EntityTag>, untagged: List<UUID>) {
         for ((entity, tag) in tagged) {
+            // A screen's frame is the screens' to keep or take down.
+            if (tag.role == EntityRole.SCREEN) continue
             val owner = owners[entity]
             if (owner != null) {
                 owner.first.forceSync = true

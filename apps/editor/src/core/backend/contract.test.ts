@@ -31,6 +31,8 @@ export const EXCLUDED: Partial<Record<keyof Backend, string>> = {
     'the memory backend has no lua-language-server; luals/mod.rs and luals.node.test.ts drive a real one',
   onLualsExit:
     'the memory backend has no lua-language-server; luals/mod.rs tests the exit with a stand-in',
+  onVideoProgress:
+    'reported while ffmpeg converts, which neither contract run has; video/mod.rs tests it with a stand-in ffmpeg',
 }
 
 const ROOT = '/memory/contract'

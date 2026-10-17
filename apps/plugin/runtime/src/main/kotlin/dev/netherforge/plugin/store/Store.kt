@@ -50,6 +50,7 @@ class Store private constructor(private val database: Database) : AutoCloseable 
     val worlds = Worlds()
     val scheduleRuns = ScheduleRuns()
     val cutsceneStates = CutsceneStates()
+    val screenMaps = ScreenMaps()
 
     /** Hands what services staged this tick to the store's lane, as one transaction. */
     fun commit() = database.commit()
@@ -351,6 +352,31 @@ class Store private constructor(private val database: Database) : AutoCloseable 
         }
     }
 
+    /** The numbers screens' maps keep for good (`screen/Screens.kt`), by package and screen. */
+    inner class ScreenMaps {
+        /** Every screen's maps: (namespace, screen) to its map numbers by tile. */
+        fun all(): Map<Pair<String, String>, Map<Int, Int>> = database.read { connection ->
+            connection.query("SELECT namespace, screen, tile, map FROM screen_maps") { rows ->
+                val out = HashMap<Pair<String, String>, MutableMap<Int, Int>>()
+                while (rows.next()) out.getOrPut(rows.getString(1) to rows.getString(2)) { HashMap() }[rows.getInt(3)] = rows.getInt(4)
+                out
+            }
+        }
+
+        /** Map [tile] of [screen] (in [namespace]) is [map], for good. */
+        fun put(namespace: String, screen: String, tile: Int, map: Int) =
+            database.stage(Key("screen_maps", "$namespace:$screen:$tile")) { connection ->
+                connection.update(
+                    "INSERT INTO screen_maps (namespace, screen, tile, map) VALUES (?, ?, ?, ?) " +
+                        "ON CONFLICT (namespace, screen, tile) DO UPDATE SET map = excluded.map",
+                    namespace,
+                    screen,
+                    tile,
+                    map
+                )
+            }
+    }
+
     // ---- looking at it: /nf data ------------------------------------------------------
 
     /** A table's size: its rows, and how many are each namespace's where rows say. */
@@ -473,7 +499,8 @@ class Store private constructor(private val database: Database) : AutoCloseable 
                 "003_cutscene_states.sql",
                 "004_world_terrains.sql",
                 "005_world_dimension_types.sql",
-                "006_instance_anchors.sql"
+                "006_instance_anchors.sql",
+                "007_screen_maps.sql"
             )
 
         private const val DISPLAY = "display"

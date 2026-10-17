@@ -21,12 +21,15 @@ object Kinds {
      * loot tables (data scripts roll), blocks (their drops are loot tables; the
      * world's blocks are drawn as the pack says), the game's blocks' rules (which refuse the blocks' carriers), biomes and dimension types (the server learns them only at start), terrains (the ores' blocks are blocks), advancements (which the server
      * learns only at start: a reload says it needs a restart),
-     * then the windows, dialogs and centities whose scripts restart.
+     * then the windows, dialogs, screens and centities whose scripts restart (screen fonts and videos come early:
+     * data the restarting screens draw and play).
      */
     val all: List<KindSpec<*, *>> = listOf(
         ResourcePackKind,
         ParticleEffectKind,
         CutsceneKind,
+        ScreenFontKind,
+        VideoKind,
         ModuleKind,
         MigrationKind,
         StructureKind,
@@ -46,6 +49,7 @@ object Kinds {
         AdvancementKind,
         MenuKind,
         DialogKind,
+        ScreenKind,
         CentityKind
     )
 

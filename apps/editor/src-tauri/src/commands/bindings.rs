@@ -18,7 +18,7 @@ use std::path::Path;
 use specta_typescript::Typescript;
 use tauri_specta::{BuilderConfiguration, LanguageExt, collect_commands, collect_events};
 
-use super::{app, fs, luals, minecraft, project, server, tests};
+use super::{app, fs, luals, minecraft, project, server, tests, video};
 use crate::app::events::{BridgeMessage, FsChangedEvent, ImportProgress};
 use crate::error::Error;
 use crate::fs::map::CaptureProgress;
@@ -26,6 +26,7 @@ use crate::luals::{LualsExit, LualsMessage};
 use crate::mcp::McpMessage;
 use crate::minecraft::cache::CacheStatus;
 use crate::server::{PrepareProgress, ServerOutputEvent, ServerState};
+use crate::video::ConvertProgress;
 
 /// Where [export] writes, relative to the repo root.
 pub const BINDINGS: &str = "apps/editor/src/core/backend/generated/bindings.ts";
@@ -69,6 +70,8 @@ macro_rules! builder {
                 server::bridge_send,
                 server::map_capture::<$runtime>,
                 tests::tests_run,
+                video::video_convert::<$runtime>,
+                video::video_info,
                 minecraft::mc_installs,
                 minecraft::mc_cache_status,
                 minecraft::mc_import_client::<$runtime>,
@@ -83,6 +86,7 @@ macro_rules! builder {
                 PrepareProgress,
                 BridgeMessage,
                 CaptureProgress,
+                ConvertProgress,
                 ImportProgress,
                 CacheStatus,
                 McpMessage,

@@ -17,6 +17,7 @@ pub mod minecraft;
 pub mod project;
 pub mod server;
 pub mod tests;
+pub mod video;
 
 use serde::{Deserialize, Serialize};
 

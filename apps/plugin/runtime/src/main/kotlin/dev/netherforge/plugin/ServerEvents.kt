@@ -91,14 +91,16 @@ class ServerEvents internal constructor(private val runtime: NetherForgeRuntime)
         hand: String
     ): Boolean = running &&
         (
-            itemEvent(
-                Events.PROJECTITEM_INTERACT,
-                item,
-                Events.PLAYER_INTERACT,
-                Events.NF_PLAYER_INTERACT,
-                player,
-                PlayerInteractEvent(handle(player), button.luaName, block?.let(session::block), face, item, hand)
-            ) ||
+            // A click aimed at a screen within its click range is the screen's, before anything in the world hears it.
+            session.screens.swing(player, button) ||
+                itemEvent(
+                    Events.PROJECTITEM_INTERACT,
+                    item,
+                    Events.PLAYER_INTERACT,
+                    Events.NF_PLAYER_INTERACT,
+                    player,
+                    PlayerInteractEvent(handle(player), button.luaName, block?.let(session::block), face, item, hand)
+                ) ||
                 // Then the block's own: a click on one of the project's blocks, or on any block with an item that places one.
                 session.customBlocks.interact(player, button, block, face, item, hand)
             )
@@ -261,7 +263,7 @@ class ServerEvents internal constructor(private val runtime: NetherForgeRuntime)
     override fun resourcePackStatus(player: UUID, pack: UUID, status: String?) = runtime.packs.statusChanged(player, pack, status)
 
     override fun entityClicked(entity: UUID, player: PlayerRef, button: ClickButton, sight: Ray?): Boolean =
-        session.centities.click(entity, player, button, sight)
+        session.centities.click(entity, player, button, sight) || session.screens.click(entity, player, button, sight)
 
     override fun entitiesLoaded(tagged: Map<UUID, EntityTag>, untagged: List<UUID>) = session.entitiesLoaded(tagged, untagged)
 

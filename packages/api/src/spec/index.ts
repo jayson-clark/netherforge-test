@@ -13,6 +13,7 @@ import {
 } from './menu.ts'
 import { nfClasses } from './nf.ts'
 import { cutsceneClass, cutsceneShapes } from './cutscenes.ts'
+import { playbackClass, screenClass, screenShapes } from './screens.ts'
 import { effectClass, particleShapes } from './particles.ts'
 import { menuTemplateClass } from './templates.ts'
 import { aliases, values } from './values.ts'
@@ -77,6 +78,12 @@ const blockSurface: Surface = {
   ],
 }
 
+const screenSurface: Surface = {
+  name: 'screen',
+  doc: 'A screen\'s script (`screens/<id>/*.lua`, named by `script` in `screen.json`). There\'s one of each screen, so its script runs once, from load until the screen is reloaded. Its body draws the screen (what a screen shows isn\'t saved, so this is where it\'s drawn after every restart) and registers handlers: `this:on("click", ...)`, `this:on("hover", ...)`.',
+  globals: [{ name: 'this', type: 'Screen', doc: 'The screen this script belongs to.' }],
+}
+
 const moduleSurface: Surface = {
   name: 'module',
   doc: "A module's files (`modules/<id>/**/*.lua`). `init.lua` runs when the server loads the module; other files run when something requires them. All of a module's files share one set of globals. Modules listen with `nf.on` (and `:on` on any handle they hold) and add commands with `nf.commands.register`.",
@@ -118,6 +125,8 @@ const classes = [
   webResponseClass,
   oauthFlowClass,
   cutsceneClass,
+  screenClass,
+  playbackClass,
   fileClass,
   subscriptionClass,
   taskClass,
@@ -154,7 +163,15 @@ export const api: ApiSpec = {
   classes: [...nfClasses(classes), ...classes],
   values,
   aliases,
-  surfaces: [centitySurface, moduleSurface, menuSurface, dialogSurface, itemSurface, blockSurface],
+  surfaces: [
+    centitySurface,
+    moduleSurface,
+    menuSurface,
+    dialogSurface,
+    itemSurface,
+    blockSurface,
+    screenSurface,
+  ],
   shapes: [
     ...shapes,
     ...gameShapes,
@@ -182,6 +199,7 @@ export const api: ApiSpec = {
     ...webShapes,
     ...particleShapes,
     ...cutsceneShapes,
+    ...screenShapes,
     ...utilityShapes,
     ...testShapes,
   ],

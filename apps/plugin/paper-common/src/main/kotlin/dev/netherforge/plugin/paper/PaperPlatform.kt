@@ -46,7 +46,7 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
         supportedTargets = listOfNotNull(plugin.pluginMeta.apiVersion)
     )
 
-    private val gameData = PaperGameData(version.registries)
+    private val gameData = PaperGameData(version.registries, version::mapColors)
     override val game get() = gameData
 
     override val log = object : PlatformLog {
@@ -67,6 +67,7 @@ class PaperPlatform(private val plugin: JavaPlugin, private val version: PaperVe
     override val sounds = PaperSounds()
 
     override val entities = PaperEntities(plugin)
+    override val screens = PaperScreens(entities, version)
     override val worldEntities = PaperWorldEntities(plugin, entities)
     override val mannequins = PaperMannequins(worldEntities)
     override val inventories = PaperInventories(worldEntities)

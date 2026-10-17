@@ -62,6 +62,10 @@ class FakeLootOpsTest : LootOpsContract() {
     override fun connect() = FakeContractServer()
 }
 
+class FakeScreenOpsTest : ScreenOpsContract() {
+    override fun connect() = FakeContractServer()
+}
+
 class FakeTextOpsTest : TextOpsContract() {
     override fun connect() = FakeContractServer()
 }

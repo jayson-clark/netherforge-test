@@ -55,6 +55,8 @@ sealed interface LuaHandle {
             "WebResponse" -> WebResponse(keyValues[0] as Long)
             "OAuthFlow" -> OAuthFlow(keyValues[0] as Long)
             "Cutscene" -> Cutscene(keyValues[0] as Long, keyValues[1] as String)
+            "Screen" -> Screen(keyValues[0] as String, keyValues[1] as String)
+            "Playback" -> Playback(keyValues[0] as Long, keyValues[1] as String)
             "File" -> File(keyValues[0] as String)
             "Subscription" -> Subscription(keyValues[0] as Long)
             "Task" -> Task(keyValues[0] as Long)
@@ -590,6 +592,41 @@ sealed interface LuaHandle {
 
         /** Cutscene handles. */
         object Codec : HandleCodec<Cutscene>("Cutscene", setOf("Cutscene"))
+    }
+
+    /**
+     * A screen: maps (each 128 by 128 pixels) side by side, which scripts draw on and play videos on,
+     * shown in item frames (`place`, or the file's `place`) or as map items in players' hands (`item`).
+     */
+    class Screen(val id: String, val player: String) : LuaHandle {
+        override val luaClass: String get() = "Screen"
+
+        override val keyValues: List<Any> get() = listOf(id, player)
+
+        override fun equals(other: Any?): Boolean = other is Screen && other.id == id && other.player == player
+
+        override fun hashCode(): Int = 31 * (31 * "Screen".hashCode() + id.hashCode()) + player.hashCode()
+
+        override fun toString(): String = "$luaClass($id, $player)"
+
+        /** Screen handles. */
+        object Codec : HandleCodec<Screen>("Screen", setOf("Screen"))
+    }
+
+    /** A video playing on a screen, from `screen:play`. */
+    class Playback(val number: Long, val video: String) : LuaHandle {
+        override val luaClass: String get() = "Playback"
+
+        override val keyValues: List<Any> get() = listOf(number, video)
+
+        override fun equals(other: Any?): Boolean = other is Playback && other.number == number && other.video == video
+
+        override fun hashCode(): Int = 31 * (31 * "Playback".hashCode() + number.hashCode()) + video.hashCode()
+
+        override fun toString(): String = "$luaClass($number, $video)"
+
+        /** Playback handles. */
+        object Codec : HandleCodec<Playback>("Playback", setOf("Playback"))
     }
 
     /** A path in the scripts' data directory (`plugins/NetherForge/data/`, on the editor's dev server too). */

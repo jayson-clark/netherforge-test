@@ -114,6 +114,9 @@ enum class RefKind(
     @SerialName("dimension_type")
     DIMENSION_TYPE("dimension type", RefScope.RESOURCE, resourceKind = "dimension_type"),
 
+    @SerialName("video")
+    VIDEO("video", RefScope.RESOURCE, resourceKind = "video"),
+
     @SerialName("skin")
     SKIN("skin", RefScope.RESOURCE_PACK, resourcePackEntries = "skins"),
 

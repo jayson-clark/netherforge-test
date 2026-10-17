@@ -43,6 +43,14 @@ Your own entities, the particle effects and cutscenes made in the editor.
 - [nf.cutscenes](nf.cutscenes.md): The project's cutscenes (`cutscenes/<id>.json`): camera paths keyed in the editor, played for one player at a time
 - [Cutscene](cutscene.md): One cutscene playing for one player, from `nf.cutscenes.play`
 
+## Screens
+
+Walls of maps scripts draw on and play videos on.
+
+- [nf.screens](nf.screens.md): Screens: walls of maps, 128 by 128 pixels each, that scripts draw on (pixels, shapes, text, pictures) and play videos on
+- [Screen](screen.md): A screen: maps (each 128 by 128 pixels) side by side, which scripts draw on and play videos on, shown in item frames (`place`, or the file's `place`) or as map items in players' hands (`item`)
+- [Playback](playback.md): A video playing on a screen, from `screen:play`
+
 ## Players and entities
 
 Players, mobs and every other entity, and what's on a player's screen.

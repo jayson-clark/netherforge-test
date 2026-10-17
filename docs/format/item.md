@@ -19,7 +19,7 @@ recipes, scripts) can name it by id.
 
 The file holds what the item _is_: the fields an [item](menu.md#items) has
 that describe its look and behaviour. What one stack holds (`count`, `damage`,
-`data`) belongs to each stack, so it isn't here.
+`map`, `data`) belongs to each stack, so it isn't here.
 
 | Key                       | Meaning                                                                                                                                   |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |

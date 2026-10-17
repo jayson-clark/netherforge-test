@@ -157,6 +157,13 @@ tools/gradle/build-logic/     the convention plugins: netherforge.kotlin-jvm, ne
    `PaperVersion`'s (or an older adapter's `Mojang`/`Protocol`), never a
    version check in paper-common.
 
+## Screens' maps and frames
+
+The map packet (`ClientboundMapItemDataPacket` with a `MapPatch`), `MapColor`'s table and fixed item frames
+(`ItemFrame`/`GlowItemFrame(level, pos, direction)`, `fixed` set before `addFreshEntity`, which skips Bukkit's
+wall check) are the same on 1.21.11 and every 26.x, so `Version` (paper-internals) does them once
+(`PaperVersion.sendMap`, `mapColors`, `hangFrame`); a version that moves one gets its own in its `Mojang`.
+
 ## A new Minecraft version ships
 
 1. **A new build of a supported version**: bump `paper` in its adapter's

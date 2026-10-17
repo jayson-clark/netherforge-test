@@ -16,8 +16,11 @@ import net.minecraft.core.Holder
 import net.minecraft.core.registries.Registries
 import net.minecraft.network.FriendlyByteBuf
 import net.minecraft.network.protocol.game.ClientboundChunksBiomesPacket
+import net.minecraft.network.protocol.game.ClientboundMapItemDataPacket
 import net.minecraft.resources.Identifier
 import net.minecraft.world.InteractionHand
+import net.minecraft.world.entity.decoration.GlowItemFrame
+import net.minecraft.world.entity.decoration.ItemFrame
 import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.inventory.ContainerListener
 import net.minecraft.world.item.ItemStack
@@ -30,6 +33,9 @@ import net.minecraft.world.level.chunk.LevelChunk
 import net.minecraft.world.level.chunk.Palette
 import net.minecraft.world.level.chunk.PalettedContainer
 import net.minecraft.world.level.gameevent.GameEvent
+import net.minecraft.world.level.material.MapColor
+import net.minecraft.world.level.saveddata.maps.MapId
+import net.minecraft.world.level.saveddata.maps.MapItemSavedData
 import net.minecraft.world.phys.BlockHitResult
 import net.minecraft.world.phys.Vec3
 import org.bukkit.Instrument
@@ -40,14 +46,17 @@ import org.bukkit.block.data.BlockData
 import org.bukkit.craftbukkit.CraftWorld
 import org.bukkit.craftbukkit.block.data.CraftBlockData
 import org.bukkit.craftbukkit.entity.CraftPlayer
+import org.bukkit.craftbukkit.inventory.CraftItemStack
 import org.bukkit.entity.Mob
 import org.bukkit.entity.Player
+import org.bukkit.event.entity.CreatureSpawnEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.plugin.java.JavaPlugin
 import org.bukkit.util.Vector
 import org.spigotmc.WatchdogThread
 import java.util.Collections
 import java.util.IdentityHashMap
+import java.util.Optional
 import java.util.WeakHashMap
 import kotlin.jvm.optionals.getOrNull
 import net.minecraft.resources.ResourceKey as MojangKey
@@ -55,6 +64,49 @@ import net.minecraft.resources.ResourceKey as MojangKey
 /** This adapter's [PaperVersion], listed in `META-INF/services`. */
 
 class Version : PaperVersion {
+    override fun mapColors(): List<Int> = (0 until MAP_COLORS).map { packed ->
+        val base = packed shr 2
+        val color = MapColor.byId(base)
+        // An id the game has no colour for answers its "no colour", whose own shades are transparent too.
+        if (base == 0 || color.id != base) 0 else MapColor.getColorFromPackedId(packed)
+    }
+
+    override fun hangFrame(
+        world: World,
+        x: Int,
+        y: Int,
+        z: Int,
+        facing: BlockFace,
+        glowing: Boolean,
+        item: org.bukkit.inventory.ItemStack,
+        prepare: (org.bukkit.entity.Entity) -> Unit
+    ): org.bukkit.entity.Entity? {
+        val level = (world as CraftWorld).handle
+        val direction = when (facing) {
+            BlockFace.NORTH -> Direction.NORTH
+            BlockFace.SOUTH -> Direction.SOUTH
+            BlockFace.EAST -> Direction.EAST
+            BlockFace.WEST -> Direction.WEST
+            BlockFace.UP -> Direction.UP
+            else -> Direction.DOWN
+        }
+        val pos = BlockPos(x, y, z)
+        val frame = if (glowing) GlowItemFrame(level, pos, direction) else ItemFrame(level, pos, direction)
+        // Fixed before it's in the world: a fixed frame never asks for a wall, can't be turned and drops nothing.
+        frame.fixed = true
+        frame.isInvisible = true
+        frame.setItem(CraftItemStack.asNMSCopy(item), false)
+        prepare(frame.bukkitEntity)
+        if (!level.addFreshEntity(frame, CreatureSpawnEvent.SpawnReason.CUSTOM)) return null
+        return frame.bukkitEntity
+    }
+
+    override fun sendMap(player: Player, map: Int, x: Int, y: Int, width: Int, height: Int, colors: ByteArray) {
+        val patch = MapItemSavedData.MapPatch(x, y, width, height, colors)
+        val packet = ClientboundMapItemDataPacket(MapId(map), 0.toByte(), true, Optional.empty(), Optional.of(patch))
+        (player as CraftPlayer).handle.connection.send(packet)
+    }
+
     override fun bots(plugin: JavaPlugin): BotOps = PaperBots(plugin)
 
     override fun itemViews(viewer: StackViewer): ItemViewHooks = ItemViews(viewer)
@@ -295,3 +347,6 @@ class Version : PaperVersion {
 
 /** Chunks a chunk-biomes packet carries at most: the game's own sends one per chunk it changed. */
 private const val BIOME_BATCH = 64
+
+/** How many bytes a map pixel can be: every map colour index. */
+private const val MAP_COLORS = 256

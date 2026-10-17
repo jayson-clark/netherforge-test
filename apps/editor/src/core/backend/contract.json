@@ -766,7 +766,8 @@
             "serverMemoryMb": 2048,
             "serverPort": 25565,
             "mcpEnabled": true,
-            "mcpPort": 47615
+            "mcpPort": 47615,
+            "ffmpegPath": ""
           }
         },
         {
@@ -777,7 +778,8 @@
               "serverMemoryMb": 4096,
               "serverPort": 25570,
               "mcpEnabled": false,
-              "mcpPort": 47615
+              "mcpPort": 47615,
+              "ffmpegPath": ""
             }
           ],
           "ok": null
@@ -789,7 +791,8 @@
             "serverMemoryMb": 4096,
             "serverPort": 25570,
             "mcpEnabled": false,
-            "mcpPort": 47615
+            "mcpPort": 47615,
+            "ffmpegPath": ""
           }
         },
         {
@@ -800,7 +803,8 @@
               "serverMemoryMb": 100,
               "serverPort": 25565,
               "mcpEnabled": false,
-              "mcpPort": 47615
+              "mcpPort": 47615,
+              "ffmpegPath": ""
             }
           ],
           "error": "invalid"
@@ -813,7 +817,8 @@
               "serverMemoryMb": 2048,
               "serverPort": 25565,
               "mcpEnabled": true,
-              "mcpPort": 25565
+              "mcpPort": 25565,
+              "ffmpegPath": ""
             }
           ],
           "error": "invalid"
@@ -836,7 +841,8 @@
               "serverMemoryMb": 2048,
               "serverPort": 25565,
               "mcpEnabled": false,
-              "mcpPort": 47615
+              "mcpPort": 47615,
+              "ffmpegPath": ""
             }
           ],
           "ok": null
@@ -849,7 +855,8 @@
               "serverMemoryMb": 2048,
               "serverPort": 25565,
               "mcpEnabled": false,
-              "mcpPort": 47615
+              "mcpPort": 47615,
+              "ffmpegPath": ""
             }
           ],
           "error": "jvmArgument"
@@ -862,7 +869,8 @@
               "serverMemoryMb": 2048,
               "serverPort": 25565,
               "mcpEnabled": false,
-              "mcpPort": 47615
+              "mcpPort": 47615,
+              "ffmpegPath": ""
             }
           ],
           "error": "jvmArgument"
@@ -875,7 +883,8 @@
               "serverMemoryMb": 2048,
               "serverPort": 25565,
               "mcpEnabled": false,
-              "mcpPort": 47615
+              "mcpPort": 47615,
+              "ffmpegPath": ""
             }
           ],
           "error": "jvmArgument"
@@ -888,7 +897,8 @@
               "serverMemoryMb": 2048,
               "serverPort": 25565,
               "mcpEnabled": false,
-              "mcpPort": 47615
+              "mcpPort": 47615,
+              "ffmpegPath": ""
             }
           ],
           "error": "jvmArgument"
@@ -901,7 +911,8 @@
               "serverMemoryMb": 2048,
               "serverPort": 25565,
               "mcpEnabled": false,
-              "mcpPort": 47615
+              "mcpPort": 47615,
+              "ffmpegPath": ""
             }
           ],
           "error": "jvmArgument"
@@ -1221,7 +1232,7 @@
       "setup": {
         "gameData": {
           "26.3": {
-            "schema": 2,
+            "schema": 3,
             "minecraft": "26.3"
           }
         }
@@ -1240,7 +1251,7 @@
           "call": "gameData",
           "args": ["26.3"],
           "ok": {
-            "schema": 2,
+            "schema": 3,
             "minecraft": "26.3"
           }
         },
@@ -1299,7 +1310,7 @@
       "setup": {
         "gameData": {
           "26.3": {
-            "schema": 2,
+            "schema": 3,
             "minecraft": "26.3"
           }
         },
@@ -1410,7 +1421,8 @@
               "serverMemoryMb": 2048,
               "serverPort": "$PORT",
               "mcpEnabled": false,
-              "mcpPort": 47615
+              "mcpPort": 47615,
+              "ffmpegPath": ""
             }
           ],
           "ok": null
@@ -1638,7 +1650,8 @@
               "serverMemoryMb": 2048,
               "serverPort": 25565,
               "mcpEnabled": false,
-              "mcpPort": "$MCP_PORT"
+              "mcpPort": "$MCP_PORT",
+              "ffmpegPath": ""
             }
           ],
           "ok": null
@@ -1661,7 +1674,8 @@
               "serverMemoryMb": 2048,
               "serverPort": 25565,
               "mcpEnabled": true,
-              "mcpPort": "$MCP_PORT"
+              "mcpPort": "$MCP_PORT",
+              "ffmpegPath": ""
             }
           ],
           "ok": null
@@ -1889,6 +1903,71 @@
             false
           ],
           "error": "invalid"
+        }
+      ]
+    },
+    {
+      "name": "a video's converted frames are read back, and converting needs trust, ffmpeg and the game's map colours",
+      "steps": [
+        {
+          "call": "writeText",
+          "args": [
+            "videos/clip/video.json",
+            "{ \"source\": \"source.mp4\", \"width\": 2, \"height\": 1 }\n"
+          ],
+          "ok": null
+        },
+        {
+          "call": "writeText",
+          "args": ["videos/clip/source.mp4", "a video\n"],
+          "ok": null
+        },
+        {
+          "call": "videoInfo",
+          "args": ["videos/clip"],
+          "ok": {
+            "converted": false,
+            "columns": 0,
+            "rows": 0,
+            "fps": 0,
+            "frames": 0,
+            "audio": false,
+            "bytes": 0,
+            "sourcePresent": true,
+            "sourceChanged": null
+          }
+        },
+        {
+          "call": "videoInfo",
+          "args": ["videos/none"],
+          "error": "notFound"
+        },
+        {
+          "call": "videoInfo",
+          "args": ["menus/clip"],
+          "error": "invalid"
+        },
+        {
+          "call": "videoInfo",
+          "args": ["../clip"],
+          "error": "invalidPath"
+        },
+        {
+          "call": "convertVideo",
+          "args": ["videos/clip"],
+          "error": "untrusted"
+        },
+        {
+          "call": "trustProject",
+          "args": [true],
+          "ok": {
+            "trusted": true
+          }
+        },
+        {
+          "call": "convertVideo",
+          "args": ["videos/clip"],
+          "error": "unavailable"
         }
       ]
     }

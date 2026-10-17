@@ -80,6 +80,9 @@ interface Platform {
     /** Particles. */
     val particles: ParticleOps
 
+    /** Maps drawn as screens: their pixels, the frames they hang in (`platform/ScreenOps.kt`). */
+    val screens: ScreenOps
+
     /** Sounds. */
     val sounds: SoundOps
 
@@ -449,8 +452,11 @@ data class EntityTag(val instance: UUID, val node: String, val role: EntityRole)
  * instance's **anchor**, the invisible vehicle at the anchor its displays
  * (and the hitboxes that sit at the anchor) ride, so moving the centity is
  * one teleport. An anchor's tag has an empty node.
+ *
+ * A [SCREEN] entity is no centity's: it's an item frame a screen hangs in,
+ * its tag's instance the screen and its node the map (`column,row`).
  */
-enum class EntityRole { DISPLAY, HITBOX, ANCHOR }
+enum class EntityRole { DISPLAY, HITBOX, ANCHOR, SCREEN }
 
 /**
  * A `marker` entity in a structure that asks for a centity ([centity], as a

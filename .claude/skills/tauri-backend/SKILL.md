@@ -539,6 +539,20 @@ the first release; with the signing key set and no pubkey, the release
 workflow fails (see the release skill). The UI calls the
 plugins' JS API behind `Backend.checkForUpdate`/`installUpdate`.
 
+## Videos (`video/`)
+
+`video_convert(folder)` (trusted only: ffmpeg reads the project's file) converts a project video for screens:
+ffmpeg (`Settings.ffmpeg_path`, else the first on `PATH`; `find_ffmpeg`) decodes the source to raw RGBA at the
+maps' size and rate (`filter`: contain, cover or stretch), `palette.rs` dithers each frame into the map colours
+of the project's version (`mapColors` in the cached game data; none is `Unavailable`), and `nfv.rs` writes the
+frames (key frames every two seconds, else one rectangle round each map's changes, zlib) to a body file, then
+header + index + body into `video.nfv` through a temp file renamed into place. The sound goes first (whether
+there is one is in the header): `audio.ogg` and five-second pieces in `audio/`, each made aside and renamed in; a
+source without sound converts silent. `video://convert-progress` reports it. `video_info(folder)` reads a header
+back and hashes the source against it. Tests drive the whole pipeline with `fake_server`'s ffmpeg mode
+(`-nostdin`: frames at the `scale=` asked, a silent source by name); the contract suite has `video_info` and the
+refusals, and excludes the progress event (no ffmpeg in either contract run).
+
 ## Tests
 
 `cargo test --manifest-path apps/editor/src-tauri/Cargo.toml` (no network, temp

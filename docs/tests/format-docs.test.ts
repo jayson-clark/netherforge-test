@@ -80,6 +80,7 @@ const NEIGHBOURS = [
   'script.missing',
   'terrain.script-missing',
   'resource_pack.texture-missing',
+  'screen_font.missing',
   'package.missing',
   'package.export-missing',
 ]
@@ -185,6 +186,9 @@ const PAGES: Record<(typeof DOCUMENT_KINDS)[number], string[]> = {
   bundle: ['packages.md'],
   datapack: ['datapack.md'],
   buff: ['buff.md'],
+  screen: ['screen.md'],
+  screen_font: ['screen-font.md'],
+  video: ['video.md'],
 }
 
 /** Every name a schema gives a property: its `properties`, and the names a map's keys may be (`propertyNames`). */

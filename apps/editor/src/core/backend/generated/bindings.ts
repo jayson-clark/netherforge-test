@@ -76,6 +76,15 @@ export const commands = {
 	 *  server or the project's files. The project runs its scripts, so it has to be trusted.
 	 */
 	testsRun: (filter: string | null) => __TAURI_INVOKE<TestReport>("tests_run", { filter }),
+	/**
+	 *  Converts the video in [folder] (`videos/trailer`) for screens: `video.nfv` and its sound, reporting
+	 *  `video://convert-progress` as it goes. ffmpeg (the user's `ffmpegPath`, or the first on `PATH`) reads the
+	 *  project's source file, so the project must be trusted; the colours are the game data's of the project's
+	 *  Minecraft version, which the dev server exports the first time it starts.
+	 */
+	videoConvert: (folder: string) => __TAURI_INVOKE<VideoConverted>("video_convert", { folder }),
+	/**  What the converted frames of the video in [folder] say, and whether its source changed since. */
+	videoInfo: (folder: string) => __TAURI_INVOKE<VideoInfo>("video_info", { folder }),
 	mcInstalls: () => __TAURI_INVOKE<MinecraftInstall[]>("mc_installs"),
 	mcCacheStatus: (version: string) => __TAURI_INVOKE<CacheStatus>("mc_cache_status", { version }),
 	mcImportClient: (version: string, jar: string) => __TAURI_INVOKE<null>("mc_import_client", { version, jar }),
@@ -97,6 +106,7 @@ export const events = {
 	serverOutput: makeEvent<ServerOutputEvent>("server://output"),
 	serverProgress: makeEvent<PrepareProgress>("server://progress"),
 	serverState: makeEvent<ServerState>("server://state"),
+	videoConvertProgress: makeEvent<ConvertProgress>("video://convert-progress"),
 };
 
 /* Types */
@@ -136,6 +146,18 @@ export type CaptureProgress = {
 export type CommandError = {
 	code: ErrorCode,
 	message: string,
+};
+
+/**  How far a conversion has got. */
+export type ConvertProgress = {
+	/**  The video's folder (`videos/trailer`). */
+	folder: string,
+	/**  `"audio"`, `"frames"` or `"writing"`. */
+	stage: string,
+	/**  Frames converted so far. */
+	done: number,
+	/**  Frames there will be, as far as the source's length says; 0 when unknown. */
+	total: number,
 };
 
 /**
@@ -328,6 +350,8 @@ export type Settings = {
 	/**  The MCP server for coding agents (`mcp/`), on 127.0.0.1. */
 	mcpEnabled: boolean,
 	mcpPort: number,
+	/**  ffmpeg, for converting videos for screens (`video/`): a path to it, or empty to find it on `PATH`. */
+	ffmpegPath: string,
 };
 
 export type Stream = "stdout" | "stderr";
@@ -375,6 +399,33 @@ export type TestStatus = "passed" |
 "failed" | 
 /**  Something else went wrong while it ran: a script erroring, the project not starting. */
 "errored";
+
+/**  What a conversion made. */
+export type VideoConverted = {
+	frames: number,
+	seconds: number | null,
+	/**  Whether it has a sound: false when the file says so, or the source has none. */
+	audio: boolean,
+	/**  Bytes of `video.nfv`. */
+	bytes: number,
+};
+
+/**  What a video's converted frames say about themselves, against its file and source now. */
+export type VideoInfo = {
+	/**  Whether `video.nfv` is there and reads. */
+	converted: boolean,
+	columns: number,
+	rows: number,
+	fps: number,
+	frames: number,
+	audio: boolean,
+	/**  Bytes of `video.nfv`. */
+	bytes: number,
+	/**  Whether the source is in the folder. */
+	sourcePresent: boolean,
+	/**  Whether the source differs from what was converted (null when either isn't there to compare). */
+	sourceChanged: boolean | null,
+};
 
 /* Tauri Specta runtime */
 type EventEmit<T> = [T] extends [null] ? () => Promise<void> : (payload: T) => Promise<void>;

@@ -102,6 +102,22 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
 
 ### Added
 
+- **Screens: walls of maps scripts draw on, and videos.** A screen
+  (`screens/<id>/screen.json`, or `nf.screens.create`) is up to 16 by 16 maps,
+  hung in invisible fixed frames the server keeps on a wall, or handed out as
+  map items (`screen:item`). Scripts draw pixels, lines, rectangles (rounded),
+  circles, ellipses, polygons, MiniMessage text and resource pack pictures
+  (dithered into map colours), in the game's map font or a screen font
+  (`screen_fonts/<id>/`: drawn in the editor, a picture of a grid, or a
+  TrueType file). Each player is sent only what changed, within a per-player
+  budget (`screens.bytes-per-tick`). Clicks (on a frame, or a swing aimed at it
+  from afar), `hover` and `leave` give the pixel aimed at; `for_player` gives a
+  player a view of their own; a keyed screen's maps keep their numbers across
+  restarts. Videos (`videos/<id>/`) are converted by the editor with ffmpeg
+  into map colours and a sound in the resource pack, and played with
+  `screen:play` (pause, resume, seek, speed, volume, loop, `frame` and `end`).
+  Items have a `map` field (the `map_id` component).
+
 - **Clicks and drags in a player's own inventory.** `player_click_inventory`
   and `player_drag_inventory` (`click_inventory`, `drag_inventory` on
   `Player`) are heard for clicks and drags in a player's own inventory and in

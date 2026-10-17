@@ -2405,6 +2405,45 @@ which would starve the pool). All of it is in
   main-thread step, throwing `WorkFailed("why")` for a failure the script
   should read. Return the stage; the binding does the rest.
 
+## Screens (`screen/`)
+
+`Screens` is one service for the project's screens (`ScreenKind`), the ones scripts make (`nf.screens.create`,
+owned by their scope), their fonts (`ScreenFontKind`) and videos (`VideoKind`). The pieces:
+
+- **Pixels.** A `Canvas` per screen (and one per player's own view, `for_player`: `ScreenState.personal`) holds a
+  map colour a byte, and every write marks the changed rectangle of each map it touches. `Raster` draws shapes,
+  `ScreenText` lays out and draws MiniMessage (format's `MiniMessagePass`) in a `ScreenFont` (the game's from
+  `ScreenOps.font`, Bukkit's `MinecraftFont`; a project's pixels, bitmap or TrueType font, the last two through AWT,
+  headless), `ScreenImages` scales and dithers a pack texture with format's `Dither` against `MapPalette` (the live
+  server's `GameData.mapColors`). Colours are `#rrggbb` (nearest map colour) or `"clear"`.
+- **Sending.** Once a tick (`TickPhase.UPKEEP`, after scripts and videos drew) each `Viewer` gets each map's changed
+  rectangle (`ScreenOps.sendMap`, the game's map packet with a patch), within `screens.bytes-per-tick` a player
+  (`ScreensConfig`); what doesn't fit stays in the viewer's `pending`, merged with later changes, so a video skips
+  frames for a slow player rather than falling behind. Who's a viewer is worked out every `VIEW_EVERY` ticks (and
+  on show/hide/place): near (range of the middle, or everyone while unplaced), shown, not hidden; a new viewer (or
+  one back from another world, whose client dropped the maps) is sent everything.
+- **Maps.** Numbers from `MAP_BASE` (1e9) up, which the server never makes, so it has no saved data for them and
+  never sends anything of them itself. A project screen's and a keyed screen's are in the store for good
+  (`screen_maps`, by namespace, screen and a stable tile number `row * 16 + column`, so resizing keeps them).
+- **Frames.** `ScreenOps.hang` hangs a fixed, invisible item frame tagged `EntityRole.SCREEN` (instance: the
+  screen's UUID, node: `column,row`), never saved with its chunk: `hang` checks every `HANG_EVERY` ticks and hangs
+  what's missing where the chunk's entities are loaded, and `stop` takes them all down. Centities' stray cleanup
+  leaves `SCREEN` tags alone; `entitiesLoaded` here removes a frame no screen owns.
+- **Clicks.** `ServerEvents.entityClicked` asks centities, then `click` (the frame's screen, the pixel from the
+  player's sight through `Placement.hit`); `playerInteract` asks `swing` first, a ray from the eye against every
+  placed screen within its click range, a block in front (`raycastBlocks`) in the way. One click per player per
+  tick (an attack on a frame also swings). `hover`/`leave` run only while something listens.
+- **Videos.** `NfvReader` reads `video.nfv` a frame at a time (key frames every two seconds: a jump draws from the
+  key before); a `Playback` moves `speed / 20` seconds a tick and draws the frames it passed onto its canvas. Its
+  sound: the whole `audio.ogg` (`video.<id>`) played to the listeners (viewers within `audio_range`, following the
+  player, category `record`) while it plays uninterrupted from its start; after a pause, seek, speed or volume
+  change, the five-second piece starting at the next boundary (`video.<id>.<n>`), since the game can't start a
+  sound mid-file. `problems()` says `video.stale` when a header's size, rate, dither, fit or sound differs from
+  the file. A playback belongs to the scope running when `screen:play` was called (`LuaHost.runningScope`: a handle
+  method has no caller scope of its own).
+
+`ScreenTest` is the model: what reaches each fake player's maps (`FakeScreens.pixel`, applied patch by patch).
+
 ## How to…
 
 **Give the runtime a new server capability**: add a required group

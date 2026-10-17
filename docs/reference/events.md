@@ -1090,3 +1090,54 @@ if scene then
   end)
 end
 ```
+
+## On Screen
+
+What [Screen](screen.md) listens for.
+
+| Event | Payload | |
+| --- | --- | --- |
+| `click` | [ScreenClickEvent](types.md#screenclickevent) | A player clicked the screen: `event.x` and `event.y` are the pixel they aimed at. A click on one of its frames always counts; from further than the game's reach, a swing of the arm aimed at the screen does, up to its click range. Only players it's drawn for can click it. The game's own use of the click (breaking, turning the map) never happens. |
+| `hover` | [ScreenHoverEvent](types.md#screenhoverevent) | The pixel a player is aiming at moved: heard each tick their aim lands on another pixel, within the screen's click range. Costs nothing while nobody listens. |
+| `leave` | [ScreenLeaveEvent](types.md#screenleaveevent) | A player who was aiming at the screen (a `hover` was heard for them) looks away from it, goes out of range or leaves. |
+
+#### Example: screen click
+
+```lua
+this:on("click", function(event)
+  if event.x < 64 then
+    event.player:send_message("Left half!")
+  end
+end)
+```
+
+#### Example: screen hover
+
+```lua
+local cursor = {}
+this:on("hover", function(event)
+  cursor[event.player:name()] = { event.x, event.y }
+end)
+```
+
+## On Playback
+
+What [Playback](playback.md) listens for.
+
+| Event | Payload | |
+| --- | --- | --- |
+| `end` | [PlaybackEndEvent](types.md#playbackendevent) | The video ended, for any reason (`event.reason` says which). After it, the playback is gone and so is every handler on it; the screen keeps showing its last frame. |
+| `frame` | [PlaybackFrameEvent](types.md#playbackframeevent) | A frame of the video was drawn: as often as the video's rate while it plays. Costs nothing while nobody listens. |
+
+#### Example: playback frame
+
+```lua
+local show = this:play("trailer")
+if show then
+  show:on("frame", function(event)
+    if event.frame == 40 then
+      this:text(4, 4, "<yellow>Here it comes!")
+    end
+  end)
+end
+```

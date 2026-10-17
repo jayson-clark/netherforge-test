@@ -29,6 +29,7 @@ import dev.netherforge.plugin.contract.PlayerViewOpsContract
 import dev.netherforge.plugin.contract.ProjectItemOpsContract
 import dev.netherforge.plugin.contract.RecipeOpsContract
 import dev.netherforge.plugin.contract.ResourcePackOpsContract
+import dev.netherforge.plugin.contract.ScreenOpsContract
 import dev.netherforge.plugin.contract.ServerAdminOpsContract
 import dev.netherforge.plugin.contract.SidebarOpsContract
 import dev.netherforge.plugin.contract.SoundOpsContract
@@ -145,6 +146,10 @@ class PaperLootOpsTest : LootOpsContract() {
     override fun connect() = PaperContractServer.current
 }
 
+class PaperScreenOpsTest : ScreenOpsContract() {
+    override fun connect() = PaperContractServer.current
+}
+
 class PaperAttributeOpsTest : AttributeOpsContract() {
     override fun connect() = PaperContractServer.current
 }
@@ -224,6 +229,7 @@ object PaperContracts {
         PaperItemViewOpsTest::class.java,
         PaperRecipeOpsTest::class.java,
         PaperLootOpsTest::class.java,
+        PaperScreenOpsTest::class.java,
         PaperDatapackOpsTest::class.java,
         PaperDatapackCheckTest::class.java,
         PaperAttributeOpsTest::class.java,

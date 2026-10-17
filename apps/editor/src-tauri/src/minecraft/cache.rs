@@ -41,7 +41,7 @@ pub fn status(dirs: &AppDirs, minecraft: &str) -> Result<CacheStatus> {
 /// The shape of game data this editor reads: format's `GameDataBundle.SCHEMA`,
 /// which the export carries as `schema`. A cache with any other (or none) is
 /// treated as missing, so the next dev server start exports it again.
-pub const GAME_DATA_SCHEMA: u64 = 2;
+pub const GAME_DATA_SCHEMA: u64 = 3;
 
 /// Just the `schema` of a cached export, read without building the rest.
 #[derive(Deserialize)]

@@ -1128,6 +1128,16 @@ are the generic ones. What's specific:
   Lua loads Node's, `loadNodeLua`), `e2e/terrain.spec.ts`'s script flow (the template made, a module required, a
   failure said and opened).
 
+## Screens, screen fonts and videos
+
+`editors/screen/` draws a screen's maps as the wall a player faces (columns, rows, its background) and edits its
+size, placement, viewers, autoplay video and script; `editors/screen_font/` draws a pixels font's glyph on a grid
+(each cell a toggle button) with a sample line, and shows a bitmap font's picture; `editors/video/` plays the
+source (`projectFileUrl`), shows `videoInfo` (and `staleness` against the file) and runs `convertVideo` with its
+`onVideoProgress`. Each has pure `ops.ts` (or helpers) and a component test. The memory backend's `convertVideo`
+needs `ffmpeg: true` and game data with `mapColors`, and writes a real `.nfv` header (so `videoInfo` reads the
+example's `bounce`).
+
 ## Map previews
 
 `map/MapView` draws a map's overworld around its spawn, a disc

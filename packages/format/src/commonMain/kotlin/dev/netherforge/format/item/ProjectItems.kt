@@ -46,6 +46,7 @@ object ProjectItems {
         cooldown = def.cooldown ?: look.cooldown,
         hold = def.hold ?: look.hold,
         useEffects = def.useEffects ?: look.useEffects,
+        map = def.map,
         data = def.data
     )
 
@@ -61,6 +62,7 @@ object ProjectItems {
         item = item,
         count = old.count,
         damage = old.damage,
+        map = old.map,
         data = old.data,
         enchantments = look.enchantments ?: old.enchantments
     )

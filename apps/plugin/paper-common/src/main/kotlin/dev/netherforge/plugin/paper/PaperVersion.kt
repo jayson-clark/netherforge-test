@@ -5,6 +5,7 @@ import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.plugin.platform.BotOps
 import dev.netherforge.plugin.platform.ChunkGrid
 import org.bukkit.World
+import org.bukkit.block.BlockFace
 import org.bukkit.block.data.BlockData
 import org.bukkit.entity.Mob
 import org.bukkit.entity.Player
@@ -59,6 +60,36 @@ interface PaperVersion {
 
     /** Tells [player] alone the world clock [clock] is at [ticks], not running. Nothing for a clock the server hasn't. */
     fun sendClock(player: org.bukkit.entity.Player, clock: String, ticks: Long) {}
+
+    /**
+     * The game's map colours, by the byte a map pixel holds (`base * 4 + shade`, 256 of them), as `0xAARRGGBB`:
+     * alpha 0 for its "no colour" and any byte it has none for. Read off the server's own table (Paper's API has
+     * only a deprecated copy of it).
+     */
+    fun mapColors(): List<Int>
+
+    /**
+     * Sends [player] the rectangle ([x], [y]) [width] by [height] of map [map]'s pixels, [colors] row by row, in the
+     * game's map packet: no saved data, no decorations, so the server's own map tracking never hears of it.
+     */
+    fun sendMap(player: org.bukkit.entity.Player, map: Int, x: Int, y: Int, width: Int, height: Int, colors: ByteArray)
+
+    /**
+     * Hangs a fixed, invisible item frame (a glowing one with [glowing]) holding [item] in the block ([x], [y], [z])
+     * of [world], facing [facing], with nothing behind it needed: Bukkit's spawn refuses a frame with no wall to
+     * hang on, and a fixed frame never checks. [prepare] gets it before it's in the world (its tag, whether it's
+     * saved), so the spawn event already sees it's ours.
+     */
+    fun hangFrame(
+        world: World,
+        x: Int,
+        y: Int,
+        z: Int,
+        facing: BlockFace,
+        glowing: Boolean,
+        item: ItemStack,
+        prepare: (org.bukkit.entity.Entity) -> Unit
+    ): org.bukkit.entity.Entity?
 
     fun readBox(
         world: World,

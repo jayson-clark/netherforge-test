@@ -52,7 +52,7 @@ object LuaItems {
     private val FIELDS = listOf(
         "kind", "item", "count", "name", "lore", "enchantments", "glint", "hide_tooltip", "unbreakable", "damage",
         "item_model", "tooltip_style", "equipment", "color", "profile", "max_stack_size", "rarity", "attribute_modifiers",
-        "can_break", "can_place_on", "hidden_tooltip_components", "food", "cooldown", "hold", "use_effects", "data", "raw"
+        "can_break", "can_place_on", "hidden_tooltip_components", "food", "cooldown", "hold", "use_effects", "map", "data", "raw"
     )
     private val MODIFIER_FIELDS = listOf("id", "attribute", "amount", "operation", "slot")
     private val FOOD_FIELDS = listOf("nutrition", "saturation", "can_always_eat", "eat_seconds")
@@ -214,6 +214,7 @@ object LuaItems {
             color = string("color"),
             profile = string("profile"),
             maxStackSize = integer("max_stack_size"),
+            map = integer("map"),
             rarity = fields.enum("rarity", ItemRarity.entries),
             attributeModifiers = modifiers,
             canBreak = blocks("can_break"),
@@ -301,6 +302,7 @@ object LuaItems {
             def.color?.let { put("color", it) }
             def.profile?.let { put("profile", it) }
             def.maxStackSize?.let { put("max_stack_size", it) }
+            def.map?.let { put("map", it) }
             def.rarity?.let { put("rarity", serialName(it)) }
             def.attributeModifiers?.let { modifiers ->
                 put(

@@ -86,6 +86,7 @@ describe('the API spec', () => {
       dialog: ['this: Dialog'],
       item: ['this: ProjectItem'],
       block: ['this: ProjectBlock'],
+      screen: ['this: Screen'],
       module: [],
     })
   })
@@ -382,6 +383,7 @@ const ACTION_VERBS: Record<string, string> = {
   delete: '`file:delete()` erases a file',
   jump: '`bot:jump()` jumps',
   keep: '`centity:keep()` makes a natural centity a permanent one',
+  pause: '`playback:pause()` holds a video on its frame',
   leave: '`bot:leave()` disconnects a bot',
   refresh: '`menu:refresh()` sends the window again',
   remove:
@@ -389,9 +391,11 @@ const ACTION_VERBS: Record<string, string> = {
   release: '`bot:release_item()` lets go of right-click',
   reset: "`player:reset_border()` gives a player their world's border back",
   respawn: '`bot:respawn()` presses Respawn',
+  resume: '`playback:resume()` plays a paused video on',
   stop: '`effect:stop()` ends a playing effect, `mob:stop_pathing()` a walk, `bot:stop()` what a bot is doing',
   swap: "`bot:swap_hands()` swaps a bot's hands",
   swing: "`bot:swing()` swings a bot's arm",
+  take: "`screen:take_down()` takes a screen's frames down",
   unban: '`player:unban()` lifts a ban',
   unbind: '`slot:unbind()` stops a menu slot showing a storage',
 }

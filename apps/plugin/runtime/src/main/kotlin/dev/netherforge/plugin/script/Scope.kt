@@ -6,6 +6,7 @@ import dev.netherforge.format.project.DialogKind
 import dev.netherforge.format.project.ItemKind
 import dev.netherforge.format.project.MenuKind
 import dev.netherforge.format.project.ModuleKind
+import dev.netherforge.format.project.ScreenKind
 import dev.netherforge.plugin.project.Resource
 import java.util.UUID
 
@@ -53,6 +54,12 @@ sealed interface ScopeOwner {
     data class BlockScript(val block: String, override val file: String) : ScopeOwner {
         override val label: String get() = "block $block"
         override val resource get() = Resource(BlockKind, block)
+    }
+
+    /** A project screen's script. */
+    data class ScreenScript(val screen: String, override val file: String) : ScopeOwner {
+        override val label: String get() = "screen $screen"
+        override val resource get() = Resource(ScreenKind, screen)
     }
 
     /** A test file (`*_test.lua`) run by the script test runner: part of the project, but no resource. */

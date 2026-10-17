@@ -85,7 +85,10 @@ function formatSidebar(): DefaultTheme.SidebarItem[] {
       ['project.md', 'references.md', 'packages.md', 'settings.md', 'migrations.md', 'problems.md'],
     ],
     ['Centities and effects', ['centity.md', 'particle-effect.md', 'cutscene.md']],
-    ['Menus, dialogs and looks', ['menu.md', 'dialog.md', 'resource-pack.md']],
+    [
+      'Menus, dialogs and looks',
+      ['menu.md', 'dialog.md', 'resource-pack.md', 'screen.md', 'screen-font.md', 'video.md'],
+    ],
     [
       'Items and gameplay',
       ['item.md', 'block.md', 'game-block.md', 'recipe.md', 'loot.md', 'buff.md', 'advancement.md'],
@@ -129,6 +132,7 @@ const guide: DefaultTheme.SidebarItem[] = [
       { text: 'Physics', link: '/guide/physics' },
       { text: 'Particle effects', link: '/guide/particles' },
       { text: 'Cutscenes', link: '/guide/cutscenes' },
+      { text: 'Screens and videos', link: '/guide/screens' },
       { text: 'Menus', link: '/guide/menus' },
       { text: 'Dialogs', link: '/guide/dialogs' },
       { text: 'Items, recipes and loot', link: '/guide/items' },

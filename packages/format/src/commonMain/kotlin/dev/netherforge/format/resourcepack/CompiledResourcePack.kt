@@ -6,6 +6,9 @@ import dev.netherforge.format.block.VanillaFile
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.project.ImageInfo
 import dev.netherforge.format.project.PackagePaths
+import dev.netherforge.format.project.ProjectSnapshot
+import dev.netherforge.format.project.VideoKind
+import dev.netherforge.format.screen.VideoFile
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -263,6 +266,27 @@ class CompiledResourcePack(
  * will contain. Texture bytes never pass through here; an entry is either text
  * or "copy this project file".
  */
+/**
+ * A video's converted sound for the resource pack: the video [id] (its own, without a package's namespace) of the
+ * project or package [namespace], whose whole sound ([VideoFile.AUDIO]) is [projectPath] and whose pieces
+ * ([VideoFile.AUDIO_CHUNKS]) are [chunks], in order.
+ */
+data class VideoSound(val namespace: String, val id: String, val projectPath: String, val chunks: List<String> = emptyList()) {
+    companion object {
+        /** Every running video of the project and its packages that keeps a sound and has one converted. */
+        fun of(snapshot: ProjectSnapshot): List<VideoSound> = snapshot.everywhere(VideoKind).mapNotNull { (name, loaded) ->
+            val video = loaded.compiled ?: return@mapNotNull null
+            if (!video.audioOrDefault || VideoFile.AUDIO !in loaded.files) return@mapNotNull null
+            val (pkg, id) = PackagePaths.split(name)
+            val place = snapshot.placeOf(VideoKind, name)
+            // Every piece from the first on, stopping at a gap: a piece after one that's missing could never be reached in order.
+            val pieces = loaded.files.mapNotNull(VideoFile::chunkOf).toSet()
+            val chunks = generateSequence(0) { it + 1 }.takeWhile { it in pieces }.map { place.file(VideoFile.chunkFile(it)) }.toList()
+            VideoSound(pkg ?: snapshot.namespace, id, place.file(VideoFile.AUDIO), chunks)
+        }
+    }
+}
+
 object PackLayout {
 
     sealed interface Entry {
@@ -302,6 +326,7 @@ object PackLayout {
         description: String,
         blocks: BlockCarriers.Plan? = null,
         vanilla: VanillaFile? = null,
+        videos: List<VideoSound> = emptyList(),
         textureSize: (projectPath: String) -> Pair<Int, Int>?
     ): Map<String, Entry> {
         val out = LinkedHashMap<String, Entry>()
@@ -571,6 +596,28 @@ object PackLayout {
         // A sprite in both atlases is one the game draws from only one of them (and warns about), which leaves the
         // block models drawing the missing texture; item models draw from the blocks atlas as well, as vanilla's do.
         (itemSprites - blockSprites).takeIf { it.isNotEmpty() }?.let { out["assets/minecraft/atlases/items.json"] = atlas(it) }
+        // Each video's sound, streamed as music is: `video.<id>`, which no pack's `<pack>/<key>` can be.
+        for (video in videos.sortedWith(compareBy({ it.namespace }, { it.id }))) {
+            val events = soundEvents.getOrPut(video.namespace) { LinkedHashMap() }
+
+            // [file] is where it goes under `sounds/`, without `.ogg`; [source] the project file it's copied from.
+            fun sound(key: String, file: String, source: String) {
+                out["assets/${video.namespace}/sounds/$file.ogg"] = Entry.Copy(source)
+                events[key] = buildJsonObject {
+                    putJsonArray("sounds") {
+                        add(
+                            buildJsonObject {
+                                put("name", "${video.namespace}:$file")
+                                put("stream", true)
+                            }
+                        )
+                    }
+                }
+            }
+            val key = VideoFile.soundKey(video.id)
+            sound(key, key, video.projectPath)
+            video.chunks.forEachIndexed { index, source -> sound(VideoFile.chunkKey(video.id, index), "$key/$index", source) }
+        }
         for ((ns, events) in soundEvents) {
             out["assets/$ns/sounds.json"] =
                 json(JsonObject(events.entries.sortedBy { it.key }.associate { it.key to it.value }))

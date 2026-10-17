@@ -564,6 +564,7 @@ An item stack as a plain table: what `menu:item` returns and what `menu:set_item
 | `color` | `string?` | `#RRGGBB`, for dyed leather, potions and maps. |
 | `profile` | `string?` | Whose head, for a player head: a name or a UUID. |
 | `max_stack_size` | `integer?` | How many fit in one stack, 1 to 99, instead of the kind's own. More than 1 on an item that takes damage (a sword, armour) is an error. |
+| `map` | `integer?` | The map a filled map shows, by its number: a screen's (`screen:item`), or any of the game's. Only a `minecraft:filled_map` draws it. |
 | `rarity` | `"common"\|"uncommon"\|"rare"\|"epic"?` | The colour of its name when it has no colour of its own: white, yellow, aqua or light purple. |
 | `attribute_modifiers` | [`ItemAttributeModifier`](types.md#itemattributemodifier)`[]?` | What it changes about whoever wears or holds it: `{ { attribute = "minecraft:attack_damage", amount = 6, operation = "add_value", slot = "main_hand" } }`. These replace the kind's own (a sword's damage) rather than adding to them. |
 | `can_break` | `string[]?` | The blocks a player in adventure mode can break with it: the project's by id (`"ruby_ore"`, a package's `"acme:gem_ore"`), the game's with their namespace (`"minecraft:stone"`), `#tags` of blocks (`"#minecraft:logs"`, or one a project datapack defines), or `"*"` for any block: `{ "ruby_ore", "#minecraft:logs" }`. A project block it names that the project doesn't have is an error. |
@@ -714,6 +715,153 @@ Has the fields and methods of [Event](#event) too.
 | `cutscene` | [`Cutscene`](cutscene.md) | The cutscene. |
 | `player` | [`Player`](player.md) | Who is watching. |
 | `cue` | `string` | The cue's `event` name in the cutscene's file. |
+
+## Screens
+
+### ScreenOptions {#screenoptions}
+
+A screen `nf.screens.create` makes: `width` and `height` are required; a key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `width` | `integer` | Maps across, 1 to 16. |
+| `height` | `integer` | Maps down, 1 to 16. |
+| `key` | `string?` | Keeps its maps' numbers for good, across restarts (see `nf.screens.create`): any name, unique among the screens this package's scripts make. Making one with a key a screen that's still there has is an error. |
+| `background` | `string?` | What it starts filled with. A colour, `#rrggbb` (drawn as the nearest of the colours a map can show), or `"clear"` for none: the map shows through. Default `"clear"`. |
+| `viewers` | `("near"\|"script")?` | `"near"` (the default): every player near where it hangs, or everyone online while it hangs nowhere. `"script"`: only those `show_to` shows it to. |
+| `range` | `integer?` | How near is near, in blocks: 1 to 256 (default 64). |
+| `glowing` | `boolean?` | Whether its frames glow, drawing it at full brightness (default true). |
+| `click_range` | `number?` | How far a click reaches it from, in blocks: 0 to 64 (default 24). Within the game's reach a click on a frame always counts. |
+
+### ShapeStyle {#shapestyle}
+
+How a shape is drawn: `fill`, `outline`, or both (neither is an error).
+
+| Field | Type | |
+| --- | --- | --- |
+| `fill` | `string?` | Its inside. A colour, `#rrggbb` (drawn as the nearest of the colours a map can show), or `"clear"` for none: the map shows through. |
+| `outline` | `string?` | Its edge. A colour, `#rrggbb` (drawn as the nearest of the colours a map can show), or `"clear"` for none: the map shows through. |
+| `thickness` | `integer?` | The outline's width, in pixels: 1 to 32 (default 1). |
+| `radius` | `integer?` | A rectangle's rounded corners, in pixels (default 0). |
+
+### ScreenTextOptions {#screentextoptions}
+
+How text is drawn on a screen. Every key is optional.
+
+| Field | Type | |
+| --- | --- | --- |
+| `font` | `string?` | `"default"` (the game's own map font, the default) or one of the project's (`screen_fonts/<id>/`). |
+| `color` | `string?` | Its colour where the text sets none, `#rrggbb` (default white). |
+| `scale` | `integer?` | Each pixel of the font drawn this many pixels a side: 1 to 8 (default 1). |
+| `align` | `("left"\|"center"\|"right")?` | Where `x` is: its left (the default), its middle or its right, line by line. |
+| `width` | `integer?` | Breaks lines at spaces so none is wider than this, in pixels. |
+| `shadow` | `string?` | Draws a shadow a pixel down and right of every pixel, in this colour. |
+| `line_height` | `integer?` | Pixels from one line's top to the next's (default the font's). |
+
+### ScreenTextSize {#screentextsize}
+
+How big text is drawn, in pixels.
+
+| Field | Type | |
+| --- | --- | --- |
+| `width` | `integer` | Its widest line. |
+| `height` | `integer` | All its lines. |
+
+### ScreenImageOptions {#screenimageoptions}
+
+How a picture is drawn on a screen. Every key is optional.
+
+| Field | Type | |
+| --- | --- | --- |
+| `width` | `integer?` | Drawn this wide, in pixels (default its own width, or kept in shape with `height`). |
+| `height` | `integer?` | Drawn this tall, in pixels (default its own height, or kept in shape with `width`). |
+| `dither` | `("none"\|"floyd_steinberg"\|"ordered")?` | How its colours become map colours: `"floyd_steinberg"` (the default) spreads each pixel's error to its neighbours, best for photos; `"ordered"` uses a fixed pattern; `"none"` takes each pixel's nearest. |
+
+### VideoPlayOptions {#videoplayoptions}
+
+How `screen:play` plays a video. Every key is optional.
+
+| Field | Type | |
+| --- | --- | --- |
+| `loop` | `boolean?` | Starts it again when it ends (default false). |
+| `speed` | `number?` | How fast: 0.25 to 4 (default 1). Its sound plays only at 1. |
+| `start` | `number?` | Where to start, in seconds (default 0). |
+| `volume` | `number?` | Its sound's volume, 0 to 1 (default 1); 0 plays it silent. |
+| `x` | `integer?` | Where its left is on the screen, in pixels (default 0). |
+| `y` | `integer?` | Where its top is on the screen, in pixels (default 0). |
+| `audio_range` | `number?` | How near where the screen hangs a player must be to hear it, in blocks (default 32). A screen that hangs nowhere plays its sound to everyone it's drawn for. |
+
+### ScreenPoint {#screenpoint}
+
+A pixel of a screen a player aims at.
+
+| Field | Type | |
+| --- | --- | --- |
+| `screen` | [`Screen`](screen.md) | The screen: the player's own view of it, when they have one. |
+| `x` | `integer` | From its left edge. |
+| `y` | `integer` | From its top edge. |
+| `distance` | `number` | From the player's eyes, in blocks. |
+
+### ScreenClickEvent {#screenclickevent}
+
+A player clicked a screen.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `screen` | [`Screen`](screen.md) | The screen clicked: the player's own view of it, when they have one. |
+| `player` | [`Player`](player.md) | Who clicked. |
+| `x` | `integer` | The pixel aimed at, from the left edge. |
+| `y` | `integer` | From the top edge. |
+| `click` | `"left"\|"right"` | Which button. |
+
+### ScreenHoverEvent {#screenhoverevent}
+
+The pixel a player aims at on a screen moved.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `screen` | [`Screen`](screen.md) | The screen: the player's own view of it, when they have one. |
+| `player` | [`Player`](player.md) | Who. |
+| `x` | `integer` | The pixel aimed at now, from the left edge. |
+| `y` | `integer` | From the top edge. |
+
+### ScreenLeaveEvent {#screenleaveevent}
+
+A player stopped aiming at a screen.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `screen` | [`Screen`](screen.md) | The screen. |
+| `player` | [`Player`](player.md) | Who. |
+
+### PlaybackEndEvent {#playbackendevent}
+
+A video stopped playing.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `playback` | [`Playback`](playback.md) | The playback. |
+| `reason` | `"finished"\|"stopped"\|"replaced"\|"removed"\|"unloaded"` | Why: it played to its end (and doesn't loop); `stop()` was called; another video was played on the screen; the screen went; or the script that played it unloaded. |
+
+### PlaybackFrameEvent {#playbackframeevent}
+
+A frame of a video was drawn.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `playback` | [`Playback`](playback.md) | The playback. |
+| `frame` | `integer` | Which frame, 0 first. |
+| `time` | `number` | Its time in the video, in seconds. |
 
 ## Players and entities
 
@@ -2322,6 +2470,7 @@ A partial `Item` that picks stacks: a stack matches when every field given match
 | `color` | `string?` | `#RRGGBB`, for dyed leather, potions and maps. |
 | `profile` | `string?` | Whose head, for a player head: a name or a UUID. |
 | `max_stack_size` | `integer?` | How many fit in one stack, 1 to 99, instead of the kind's own. More than 1 on an item that takes damage (a sword, armour) is an error. |
+| `map` | `integer?` | The map a filled map shows, by its number: a screen's (`screen:item`), or any of the game's. Only a `minecraft:filled_map` draws it. |
 | `rarity` | `"common"\|"uncommon"\|"rare"\|"epic"?` | The colour of its name when it has no colour of its own: white, yellow, aqua or light purple. |
 | `attribute_modifiers` | [`ItemAttributeModifier`](types.md#itemattributemodifier)`[]?` | What it changes about whoever wears or holds it: `{ { attribute = "minecraft:attack_damage", amount = 6, operation = "add_value", slot = "main_hand" } }`. These replace the kind's own (a sword's damage) rather than adding to them. |
 | `can_break` | `string[]?` | The blocks a player in adventure mode can break with it: the project's by id (`"ruby_ore"`, a package's `"acme:gem_ore"`), the game's with their namespace (`"minecraft:stone"`), `#tags` of blocks (`"#minecraft:logs"`, or one a project datapack defines), or `"*"` for any block: `{ "ruby_ore", "#minecraft:logs" }`. A project block it names that the project doesn't have is an error. |

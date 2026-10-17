@@ -36,6 +36,7 @@ interface LuaApi {
     val nfPlaceholders: NfPlaceholdersApi
     val nfParticles: NfParticlesApi
     val nfCutscenes: NfCutscenesApi
+    val nfScreens: NfScreensApi
     val nfFiles: NfFilesApi
     val nfText: NfTextApi
     val nfLooks: NfLooksApi
@@ -78,6 +79,8 @@ interface LuaApi {
     val webResponse: WebResponseApi
     val oAuthFlow: OAuthFlowApi
     val cutscene: CutsceneApi
+    val screen: ScreenApi
+    val playback: PlaybackApi
     val file: FileApi
     val schedule: ScheduleApi
     val hud: HudApi
@@ -89,8 +92,9 @@ interface LuaApi {
  * `nf.commands`, `nf.players`, `nf.bots`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`,
  * `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`,
  * `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`,
- * `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.web`, `nf.time`, `nf.random`, `nf.math`
- * and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
+ * `nf.screens`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.web`, `nf.time`,
+ * `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot:
+ * `nf.players.online()`.
  */
 interface NfApi {
     /**
@@ -734,6 +738,56 @@ interface NfCutscenesApi {
 
     /** The cutscene a player is watching now. */
     fun current(caller: Caller, player: LuaHandle.Player): LuaHandle.Cutscene?
+}
+
+/**
+ * Screens: walls of maps, 128 by 128 pixels each, that scripts draw on (pixels, shapes, text,
+ * pictures) and play videos on. The project's own are its `screens/<id>/screen.json` files; a script
+ * can make more. What a screen shows is sent to each player who can see it, a change at a time, so
+ * drawing every tick costs only what changed.
+ */
+interface NfScreensApi {
+    /**
+     * One of the project's screens (`screens/<id>/screen.json`). A screen the project doesn't have, or one
+     * whose file has errors and never had a good version, is an error.
+     */
+    fun get(caller: Caller, screen: String): LuaHandle.Screen
+
+    /** Every one of the project's screens, and every screen a script made that's still there. */
+    fun all(caller: Caller): List<LuaHandle.Screen>
+
+    /**
+     * Makes a screen. It belongs to the script that made it: when that script unloads, the screen goes,
+     * its frames taken down. With a `key`, the screen's maps keep their numbers for good (a map item
+     * handed out, or a frame someone hung, still shows it after a restart, once a script makes it again
+     * with the same key); without one, they're new each time. A size outside 1 to 16 maps is an error.
+     */
+    fun create(caller: Caller, options: ScreenOptions): LuaHandle.Screen
+
+    /**
+     * The fonts text can be drawn in: `default` (the game's own map font) and every font of the project's
+     * (`screen_fonts/<id>/`).
+     */
+    fun fonts(caller: Caller): List<String>
+
+    /**
+     * How big `text` would be drawn with `options`, in pixels, without drawing it. An unknown font is an
+     * error.
+     */
+    fun measureText(caller: Caller, text: String, options: ScreenTextOptions?): ScreenTextSize
+
+    /**
+     * The colour a map would really draw for `color`: the nearest it can show, as `#rrggbb`, or `"clear"`
+     * for `"clear"`. A colour that isn't written `#rrggbb` is an error.
+     */
+    fun mapColor(caller: Caller, color: String): String
+
+    /**
+     * The screen a player is looking at and the pixel at the middle of their view, within `distance`
+     * blocks; `nil` when they look at none, or something solid is in the way. Screens hidden from the
+     * player are looked through.
+     */
+    fun lookingAt(caller: Caller, player: LuaHandle.Player, distance: Double?): ScreenPoint?
 }
 
 /**
@@ -4828,6 +4882,236 @@ interface CutsceneApi {
 
     /** Ends it now, with reason `"stopped"`, and puts the player back. */
     fun stop(self: LuaHandle.Cutscene): Boolean
+}
+
+/**
+ * A screen: maps (each 128 by 128 pixels) side by side, which scripts draw on and play videos on,
+ * shown in item frames (`place`, or the file's `place`) or as map items in players' hands (`item`).
+ * Pixel `0, 0` is its top left. What it shows is the server's to send and isn't saved: draw it
+ * whenever its script starts. Once a screen is gone (a script's screen whose script unloaded, a
+ * project screen whose file was deleted) its drawing does nothing and its getters answer `nil` or
+ * `false`. A screen is drawn for every player near it (`viewers = "near"`), or only for those a script
+ * shows it to. `for_player` gives a player a view of their own: the same maps, drawn differently for
+ * them alone.
+ */
+interface ScreenApi {
+    /**
+     * The project's screen it is (its folder name under `screens/`), or the `key` a script made it with;
+     * `nil` for a script's screen made without one.
+     */
+    fun name(self: LuaHandle.Screen): String?
+
+    /** Whether it's still there. */
+    fun exists(self: LuaHandle.Screen): Boolean
+
+    /** How wide it is, in pixels: 128 a map. */
+    fun width(self: LuaHandle.Screen): Long
+
+    /** How tall it is, in pixels: 128 a map. */
+    fun height(self: LuaHandle.Screen): Long
+
+    /** Fills the whole screen with one colour. Nothing happens once the screen is gone. */
+    fun clear(self: LuaHandle.Screen, color: String?)
+
+    /**
+     * One pixel's colour, as the map draws it: `#rrggbb`, or `"clear"`. `nil` for a pixel off the screen,
+     * or once the screen is gone.
+     */
+    fun pixel(self: LuaHandle.Screen, x: Long, y: Long): String?
+
+    /** Sets one pixel. One off the screen is left alone. Nothing happens once the screen is gone. */
+    fun setPixel(self: LuaHandle.Screen, x: Long, y: Long, color: String?)
+
+    /**
+     * A block of pixels' colours, row by row (`#rrggbb`, or `"clear"`): what `set_pixels` takes. Pixels
+     * off the screen are `"clear"`; an empty list once the screen is gone. A block of more than 65536
+     * pixels is an error.
+     */
+    fun pixels(self: LuaHandle.Screen, x: Long, y: Long, width: Long, height: Long): List<String>
+
+    /**
+     * Sets a block of pixels from a list of colours, row by row, `width` to a row: the quick way to draw
+     * many pixels at once. What's off the screen is left alone. Nothing happens once the screen is gone.
+     */
+    fun setPixels(self: LuaHandle.Screen, x: Long, y: Long, width: Long, colors: List<String>)
+
+    /** Fills a rectangle with one colour. Nothing happens once the screen is gone. */
+    fun fill(self: LuaHandle.Screen, x: Long, y: Long, width: Long, height: Long, color: String)
+
+    /**
+     * Draws a rectangle: filled, outlined, or both, with rounded corners if `style.radius` says. Nothing
+     * happens once the screen is gone.
+     */
+    fun rectangle(self: LuaHandle.Screen, x: Long, y: Long, width: Long, height: Long, style: ShapeStyle)
+
+    /** Draws a straight line between two pixels, both included. Nothing happens once the screen is gone. */
+    fun line(self: LuaHandle.Screen, x1: Long, y1: Long, x2: Long, y2: Long, color: String, thickness: Long?)
+
+    /** Draws a circle round a pixel: filled, outlined, or both. Nothing happens once the screen is gone. */
+    fun circle(self: LuaHandle.Screen, x: Long, y: Long, radius: Long, style: ShapeStyle)
+
+    /** Draws an ellipse round a pixel. Nothing happens once the screen is gone. */
+    fun ellipse(self: LuaHandle.Screen, x: Long, y: Long, radiusX: Long, radiusY: Long, style: ShapeStyle)
+
+    /**
+     * Draws a closed shape through points, `{ x1, y1, x2, y2, … }` (at least three points). Fewer than
+     * three, or an odd count of numbers, is an error. Nothing happens once the screen is gone.
+     */
+    fun polygon(self: LuaHandle.Screen, points: List<Long>, style: ShapeStyle)
+
+    /**
+     * Writes text with its top left at a pixel. Lines break at `\n`, and at spaces past `options.width`
+     * when it's given. MiniMessage colours, `<b>`, `<u>` and `<st>` are drawn; glyphs and other tags
+     * aren't. An unknown font is an error. Returns how big it was, as `nf.screens.measure_text` would say
+     * (`0` by `0` once the screen is gone).
+     */
+    fun text(self: LuaHandle.Screen, x: Long, y: Long, text: String, options: ScreenTextOptions?): ScreenTextSize
+
+    /**
+     * Draws a picture: a texture of a resource pack, as `<pack>/<path>` (`ui/logo` is
+     * `resource_packs/ui/textures/logo.png`). Its colours become map colours as `options.dither` says;
+     * pixels less than half opaque draw nothing. A picture the project doesn't have is an error. Returns
+     * `false` when the picture can't be read. Nothing happens once the screen is gone.
+     */
+    fun image(self: LuaHandle.Screen, x: Long, y: Long, image: String, options: ScreenImageOptions?): Boolean
+
+    /**
+     * Copies a rectangle of the screen to another place on it (overlapping is fine): a quick way to
+     * scroll. What's off the screen is left alone. Nothing happens once the screen is gone.
+     */
+    fun copy(self: LuaHandle.Screen, x: Long, y: Long, width: Long, height: Long, toX: Long, toY: Long)
+
+    /**
+     * Hangs it on a wall: an invisible, fixed item frame a map, its top left map at `location`'s block
+     * (the air in front of the wall) and the rest going right and down as a player facing it sees them.
+     * The frames need no wall behind them. A screen already hanging somewhere is moved. A project screen
+     * hangs where its file says again when the server restarts. Returns `false` when the world isn't
+     * loaded.
+     */
+    fun place(self: LuaHandle.Screen, location: LuaLocation, facing: String): Boolean
+
+    /** Takes its frames down. It can still be drawn on, and its map items still show it. */
+    fun takeDown(self: LuaHandle.Screen): Boolean
+
+    /** Where its top left map hangs; `nil` when it hangs nowhere. */
+    fun location(self: LuaHandle.Screen): LuaLocation?
+
+    /** Which way it faces where it hangs; `nil` when it hangs nowhere. */
+    fun facing(self: LuaHandle.Screen): String?
+
+    /**
+     * A map item showing one of its maps, to give a player or put in a frame: `column` and `row` count
+     * from 0 at its top left. A map off the screen is an error. A screen made without a `key` gets new map
+     * numbers each time it's made, so its items show nothing after a restart.
+     */
+    fun item(self: LuaHandle.Screen, column: Long?, row: Long?): ItemData
+
+    /**
+     * Draws it for a player, whoever it's drawn for otherwise (a `viewers = "script"` screen is drawn only
+     * for those it's shown to). Lasts until `hide_from`, or the screen goes.
+     */
+    fun showTo(self: LuaHandle.Screen, player: LuaHandle.Player): Boolean
+
+    /** Stops drawing it for a player (they see blank maps, and can't click it), until `show_to`. */
+    fun hideFrom(self: LuaHandle.Screen, player: LuaHandle.Player): Boolean
+
+    /**
+     * Whether it is drawn for a player now: shown to them, or near them on a `"near"` screen, and not
+     * hidden from them.
+     */
+    fun isShownTo(self: LuaHandle.Screen, player: LuaHandle.Player): Boolean
+
+    /** Everyone it is drawn for now. */
+    fun viewers(self: LuaHandle.Screen): List<LuaHandle.Player>
+
+    /**
+     * A player's own view of the screen: drawing on it changes what they see alone (the same maps, the
+     * same frames), starting from what everyone sees now. It lasts until `release`, they leave, or the
+     * screen goes; drawing on the shared screen meanwhile doesn't reach them. Called on a player's own
+     * view, it's that view.
+     */
+    fun forPlayer(self: LuaHandle.Screen, player: LuaHandle.Player): LuaHandle.Screen
+
+    /** Whose own view this is; `nil` for the screen everyone sees. */
+    fun player(self: LuaHandle.Screen): LuaHandle.Player?
+
+    /** Ends a player's own view (see `for_player`): they see what everyone sees again. */
+    fun release(self: LuaHandle.Screen): Boolean
+
+    /**
+     * Plays a video (`videos/<id>/`) on the screen, from its top left (`options.x`, `options.y` move it),
+     * replacing any video playing on it (that one ends, reason `"replaced"`). Its sound plays to the
+     * players it's drawn for who are near where it hangs. It belongs to the script that played it: when
+     * that script unloads, it ends. A video the project doesn't have is an error; one not yet converted in
+     * the editor gives `nil`.
+     */
+    fun play(self: LuaHandle.Screen, video: String, options: VideoPlayOptions?): LuaHandle.Playback?
+
+    /** The video playing on it now; `nil` when none is. */
+    fun playback(self: LuaHandle.Screen): LuaHandle.Playback?
+
+    /**
+     * Takes a script's screen away for good: its frames come down, and its video ends. A project screen
+     * can't be removed (its file says it's there): that's an error.
+     */
+    fun remove(self: LuaHandle.Screen): Boolean
+}
+
+/**
+ * A video playing on a screen, from `screen:play`. Once it has ended its methods answer `nil` or
+ * `false`, except `video()` and `length()`; `exists()` says whether it has.
+ */
+interface PlaybackApi {
+    /** Which video it is: its folder name under `videos/`, even after it has ended. */
+    fun video(self: LuaHandle.Playback): String
+
+    /** The screen it plays on; `nil` once it has ended. */
+    fun screen(self: LuaHandle.Playback): LuaHandle.Screen?
+
+    /** How long the video lasts, in seconds, even after it has ended. */
+    fun length(self: LuaHandle.Playback): Double
+
+    /** Whether it hasn't ended: paused counts. */
+    fun exists(self: LuaHandle.Playback): Boolean
+
+    /** Whether it is paused. */
+    fun isPaused(self: LuaHandle.Playback): Boolean
+
+    /** Holds it on the frame it shows, its sound stopped. */
+    fun pause(self: LuaHandle.Playback): Boolean
+
+    /** Plays it on from where it was paused, its sound from there too. */
+    fun resume(self: LuaHandle.Playback): Boolean
+
+    /** Ends it now, with reason `"stopped"`. The screen keeps its last frame. */
+    fun stop(self: LuaHandle.Playback): Boolean
+
+    /** Where it is, in seconds from the video's start; `nil` once it has ended. */
+    fun time(self: LuaHandle.Playback): Double?
+
+    /**
+     * Jumps to a time in the video, in seconds (held to 0 and its length); its sound starts again from
+     * there.
+     */
+    fun seek(self: LuaHandle.Playback, seconds: Double): Boolean
+
+    /** How fast it plays: 1 is as recorded. `nil` once it has ended. */
+    fun speed(self: LuaHandle.Playback): Double?
+
+    /** Plays it faster or slower, 0.25 to 4 (held to that). Its sound plays only at speed 1. */
+    fun setSpeed(self: LuaHandle.Playback, speed: Double?): Boolean
+
+    /** Its sound's volume, 0 to 1; `nil` once it has ended. */
+    fun volume(self: LuaHandle.Playback): Double?
+
+    /** Changes its sound's volume, 0 to 1 (held to that); its sound starts again at the new volume. */
+    fun setVolume(self: LuaHandle.Playback, volume: Double?): Boolean
+
+    /** Whether it starts again when it reaches its end. */
+    fun isLooping(self: LuaHandle.Playback): Boolean
+
+    /** Whether it starts again when it reaches its end. */
+    fun setLooping(self: LuaHandle.Playback, looping: Boolean): Boolean
 }
 
 /**

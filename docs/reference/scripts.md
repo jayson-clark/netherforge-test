@@ -49,3 +49,11 @@ A project block's script (`blocks/<id>/*.lua`, named by `script` in `block.json`
 | Global | Type | |
 | --- | --- | --- |
 | `this` | [`ProjectBlock`](projectblock.md) | The project block this script belongs to. |
+
+## Screen scripts
+
+A screen's script (`screens/<id>/*.lua`, named by `script` in `screen.json`). There's one of each screen, so its script runs once, from load until the screen is reloaded. Its body draws the screen (what a screen shows isn't saved, so this is where it's drawn after every restart) and registers handlers: `this:on("click", ...)`, `this:on("hover", ...)`.
+
+| Global | Type | |
+| --- | --- | --- |
+| `this` | [`Screen`](screen.md) | The screen this script belongs to. |

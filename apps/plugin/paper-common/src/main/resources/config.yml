@@ -85,6 +85,14 @@ structures:
   blocks-per-tick: 8192
   max-jobs-per-package: 4
 
+# Screens (walls of maps scripts draw on and play videos on) are sent to each
+# player a change at a time. bytes-per-tick is the most of their pixels a player
+# is sent each tick (a whole map is 16384): what doesn't fit waits, merged with
+# what changes meanwhile, so a big video skips frames for a slow connection
+# rather than falling behind. Read when the server starts; dev servers read it too.
+screens:
+  bytes-per-tick: 65536
+
 # What nf.http.request (a script's web requests, to the hosts its package
 # declares in netherforge.json) may reach and do. Requests reach public addresses
 # only: a name that leads to loopback, a private, link-local, shared (CGNAT) or

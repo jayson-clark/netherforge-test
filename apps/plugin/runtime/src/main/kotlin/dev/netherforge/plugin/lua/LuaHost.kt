@@ -588,6 +588,31 @@ class LuaHost(
         }
     }
 
+    /**
+     * The scope whose code is running now (the innermost budget frame's), or null when no script's is: who a
+     * handle method that makes something belongs to, as a handle's `:on` does.
+     */
+    fun runningScope(): Int? {
+        owned("runningScope")
+        if (closed) return null
+        val lua = current
+        val top = lua.top
+        depth++
+        try {
+            lua.refGet(hostRef)
+            lua.getField(-1, "running_scope")
+            lua.remove(-2)
+            lua.pCall(0, 1)
+            return if (lua.isNumber(-1)) lua.toInteger(-1).toInt() else null
+        } catch (e: LuaException) {
+            return null
+        } finally {
+            lua.setTop(top)
+            depth--
+            if (depth == 0 && closeWanted) close()
+        }
+    }
+
     /** Fires [scope]'s own `nf.on("unload")` handlers. */
     fun unload(scope: Int) {
         owned("unload")

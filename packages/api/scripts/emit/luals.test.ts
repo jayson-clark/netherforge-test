@@ -6,7 +6,9 @@ import { luals, lualsSurfaces } from './luals.ts'
 describe('the LuaLS stubs', () => {
   it('declare `this` once, as the union of every surface that has one', () => {
     const stub = luals(api)
-    expect(stub).toContain('---@type Centity|Menu|Dialog|ProjectItem|ProjectBlock\nthis = nil')
+    expect(stub).toContain(
+      '---@type Centity|Menu|Dialog|ProjectItem|ProjectBlock|Screen\nthis = nil',
+    )
     expect(stub.match(/^this = nil$/gm)).toHaveLength(1)
     // The line that narrows it is named where LuaLS shows the global's doc.
     expect(stub).toContain('`local this = this --[[@as Centity]]`')
@@ -22,10 +24,12 @@ describe('the LuaLS stubs', () => {
       'dialog.lua',
       'item.lua',
       'menu.lua',
+      'screen.lua',
     ])
     expect(files.get('centity.lua')).toContain('---@type Centity\nthis = nil')
     expect(files.get('menu.lua')).toContain('---@type Menu\nthis = nil')
     expect(files.get('dialog.lua')).toContain('---@type Dialog\nthis = nil')
+    expect(files.get('screen.lua')).toContain('---@type Screen\nthis = nil')
     for (const text of files.values()) expect(text.startsWith('---@meta\n')).toBe(true)
   })
 

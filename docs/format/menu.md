@@ -112,6 +112,7 @@ with `<glyph:<pack>/<key>>` (see [Glyphs](resource-pack.md#glyphs)):
 | `color`                   | `#RRGGBB`, for dyed leather, potions and maps.                                                                                                                               |
 | `profile`                 | Whose head, for `minecraft:player_head`: a name or a UUID.                                                                                                                   |
 | `maxStackSize`            | How many stack, 1–99. More than 1 can't go with durability.                                                                                                                  |
+| `map`                     | The map a `minecraft:filled_map` shows, by its number: a [screen](screen.md)'s (`screen:item`), or the game's.                                                               |
 | `rarity`                  | `common`, `uncommon`, `rare` or `epic`: the colour of its name.                                                                                                              |
 | `attributeModifiers`      | What wearing or holding it changes. See below.                                                                                                                               |
 | `canBreak`                | The blocks it can break in adventure mode. See below.                                                                                                                        |

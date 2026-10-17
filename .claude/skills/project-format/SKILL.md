@@ -15,7 +15,7 @@ is how the implementation is put together and how to change it.
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/format/src/commonMain/.../json/CanonicalJson.kt` | strict parsing (with path + line), the canonical printer, number formatting                                                                                                                                                                                                                                                                                            |
 | `.../project/Kinds.kt`, `KindSpec.kt`                      | the registry of resource kinds (`Kinds.all`) and `Kinds.classify`; `KindSpec` (layout, main file, `validate`/`crossCheck`, compiler, script, template), `ResourceContext`/`KindContext`, `Loaded`                                                                                                                                                                      |
-| `.../project/<Kind>Kind.kt`, `WorldKinds.kt`               | one `KindSpec` per kind: `CentityKind`, `MenuKind`, `DialogKind`, `ItemKind`, `RecipeKind`, `LootTableKind`, `BlockKind`, `ParticleEffectKind`, `CutsceneKind`, `ResourcePackKind`, `ModuleKind`, `StructureKind`, `MapKind`, `BiomeKind`, `DimensionTypeKind`, `TerrainKind`                                                                                          |
+| `.../project/<Kind>Kind.kt`, `WorldKinds.kt`               | one `KindSpec` per kind: `CentityKind`, `MenuKind`, `DialogKind`, `ItemKind`, `RecipeKind`, `LootTableKind`, `BlockKind`, `ParticleEffectKind`, `CutsceneKind`, `ResourcePackKind`, `ModuleKind`, `StructureKind`, `MapKind`, `BiomeKind`, `DimensionTypeKind`, `TerrainKind`, and `ScreenKind`, `ScreenFontKind`, `VideoKind` (`ScreenKinds.kt`)                      |
 | `.../project/DocumentKind.kt`                              | `DocumentKind` (serializer, `$schema` ref, `canonical()` ordering), and the two project documents: `ManifestKind`, `DefaultFontKind`                                                                                                                                                                                                                                   |
 | `.../project/Project.kt`, `ProjectCache.kt`                | `ProjectSource` (text, and `image` pixel facts), `Projects.load` → `ProjectSnapshot` (every kind's resources, by the registry, and the packages it depends on), `ProjectCache` (what a load keeps for the next)                                                                                                                                                        |
 | `.../project/Packages.kt`, `PackageFiles.kt`               | packages: `PackageSources` (where dependencies are found), `Packages.resolve` → `Resolution`, the lock check; `LockFile`/`PackageSource` (`netherforge.lock`), `BundleManifest`, `PackageHash` (the content hash)                                                                                                                                                      |
@@ -672,6 +672,22 @@ that doesn't follow the one before, the first included (`migration.gap`).
 (`exports` can't list `migrations`), and `sampleId` is `001_sample` because
 `KindsTest` makes every kind with one. Spec: `docs/format/migrations.md`.
 
+## Screens, screen fonts and videos
+
+`screens/<id>/screen.json` (`ScreenKind`, `screen/ScreenFile.kt`, docs/format/screen.md): size in maps (1 to
+`MapScreen.MAX_TILES`), background, `place` (world, the top left map's block, `ScreenFacing`: walls only; right is
+`(normalZ, -normalX)`), viewers, range, glowing, click range, an autoplay `video` (`@Ref(RefKind.VIDEO)`) and the
+one `script` (`this` a `Screen`). `crossCheck` warns two placed screens sharing a block (`screen.place`).
+`screen_fonts/<id>/font.json` (`ScreenFontKind`): `pixels` (glyphs as rows of `#`/`.`, the template's digits),
+`bitmap` (a PNG grid, `chars`; `screen_font.grid` from the picture's size, `crossCheck`) or `truetype`; `default`
+is the game's font, so no project font may be called that. `videos/<id>/video.json` (`VideoKind`): the source and
+how it's converted; `video.nfv`, `audio.ogg` and `audio/<n>.ogg` are files of the folder format never reads,
+only checks are there (`video.not-converted` when the source is there and nothing converted; nothing for a video
+with neither, which is being set up). `MapPalette` and `Dither` are the one colour matching (redmean, 15-bit cache;
+Floyd–Steinberg searches exactly), shared by the runtime and previews; the editor's Rust converter repeats them
+(`video/palette.rs`), and both pin the same distances in tests. `VideoSound.of` gives `PackLayout.build` each
+video's sounds. Items gained `map` (a stack's own field, `ItemFile.STACK_FIELDS`).
+
 ## Binary resources: maps and structures
 
 `maps/<id>/` (a Minecraft world folder, `level.dat` at its top) and
@@ -823,8 +839,8 @@ plugin-runtime). Cases: `CentitySpawningTest`, `invalid/centity-spawning`.
   file, JSON path and resolved target, and what each namespace defines),
   `namespace` its home.
 - **The order of `Kinds.all` is the reload order** (the hot-reload skill):
-  resource packs, particle effects, cutscenes, modules, structures, maps, items, recipes, loot tables,
-  blocks, biomes, terrains, advancements, menus, dialogs, centities.
+  resource packs, particle effects, cutscenes, screen fonts, videos, modules, structures, maps, items, recipes,
+  loot tables, blocks, biomes, terrains, advancements, menus, dialogs, screens, centities.
 
 ## Adding a resource kind
 

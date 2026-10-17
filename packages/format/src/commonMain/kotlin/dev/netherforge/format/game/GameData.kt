@@ -71,6 +71,13 @@ interface GameData {
 
     /** The particle with this id, or null if the game has no such particle. */
     fun particle(id: String): ParticleInfo?
+
+    /**
+     * The colours a map pixel can be, by the byte it holds (`base * 4 + shade`, 256 of them) as `0xAARRGGBB`: alpha 0
+     * for the game's "no colour" (indices 0 to 3) and for any index it has no colour for. Null when unknown. What
+     * screens match colours against ([dev.netherforge.format.screen.MapPalette]).
+     */
+    val mapColors: List<Int>? get() = null
 }
 
 /**
@@ -204,6 +211,8 @@ data class GameDataBundle(
     override val dataPackFormat: List<Int>? = null,
     /** Particle id → its data kind. */
     val particles: Map<String, ParticleDataKind> = emptyMap(),
+    /** Each map colour by its index, `0xAARRGGBB` (see [GameData.mapColors]). */
+    override val mapColors: List<Int>? = null,
     @OptIn(ExperimentalSerializationApi::class)
     @EncodeDefault
     val schema: Int = SCHEMA
@@ -234,6 +243,6 @@ data class GameDataBundle(
 
     companion object {
         /** The shape the export writes today; see [schema]. */
-        const val SCHEMA = 2
+        const val SCHEMA = 3
     }
 }

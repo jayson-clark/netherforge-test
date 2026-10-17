@@ -19,6 +19,7 @@ import org.bukkit.entity.AbstractArrow
 import org.bukkit.entity.Arrow
 import org.bukkit.entity.Display
 import org.bukkit.entity.Interaction
+import org.bukkit.entity.ItemFrame
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
@@ -32,6 +33,7 @@ import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.event.entity.EntityPickupItemEvent
 import org.bukkit.event.entity.EntityShootBowEvent
 import org.bukkit.event.entity.PlayerDeathEvent
+import org.bukkit.event.hanging.HangingBreakEvent
 import org.bukkit.event.inventory.ClickType
 import org.bukkit.event.inventory.DragType
 import org.bukkit.event.inventory.InventoryAction
@@ -348,6 +350,12 @@ class PaperEvents(
         lastRightClick = null
     }
 
+    /** A screen's frame is never broken: not by a player, an explosion, a projectile, or the wall behind it going. */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun onHangingBreak(event: HangingBreakEvent) {
+        if (platform.entities.tagOf(event.entity) != null) event.isCancelled = true
+    }
+
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     fun onLeftClickEntity(event: PrePlayerAttackEntityEvent) {
         val entity = event.attacked
@@ -418,7 +426,11 @@ class PaperEvents(
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     fun onDamage(event: EntityDamageEvent) {
         val entity = event.entity
-        if (platform.entities.tagOf(entity) != null) return
+        if (platform.entities.tagOf(entity) != null) {
+            // A screen's frame: nothing knocks it down or its map out.
+            if (entity is ItemFrame) event.isCancelled = true
+            return
+        }
         val attacker = event.damageSource.causingEntity ?: (event as? EntityDamageByEntityEvent)?.damager
         val amount = event.damage
         val answer = runtime.entityDamaged(entity.uniqueId, amount, event.cause.name.lowercase(), attacker?.uniqueId)
@@ -491,7 +503,7 @@ class PaperEvents(
         val tagged = HashMap<UUID, EntityTag>()
         val untagged = ArrayList<UUID>()
         for (entity in event.entities) {
-            val tag = if (entity is Display || entity is Interaction) platform.entities.tagOf(entity) else null
+            val tag = if (entity is Display || entity is Interaction || entity is ItemFrame) platform.entities.tagOf(entity) else null
             if (tag != null) tagged[entity.uniqueId] = tag else untagged += entity.uniqueId
         }
         if (tagged.isNotEmpty() || untagged.isNotEmpty()) runtime.entitiesLoaded(tagged, untagged)

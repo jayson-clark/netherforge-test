@@ -64,6 +64,8 @@ local Route_is = accepts.Route
 local WebResponse_is = accepts.WebResponse
 local OAuthFlow_is = accepts.OAuthFlow
 local Cutscene_is = accepts.Cutscene
+local Screen_is = accepts.Screen
+local Playback_is = accepts.Playback
 local File_is = accepts.File
 local Subscription_is = accepts.Subscription
 local Task_is = accepts.Task
@@ -6615,6 +6617,490 @@ do
   end
 end
 
+-- Screen --------------------------------------------------------------------
+
+do
+  local Screen = class("Screen")
+
+  function new.Screen(id, player)
+    return prim["handles.new"]("Screen", id, player)
+  end
+
+  ---@param handle table
+  ---@return string id
+  ---@return string player
+  function keys.Screen(handle)
+    return prim["handles.key"](handle)
+  end
+
+  function Screen.name(self)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.name"](self_key)
+  end
+
+  function Screen.exists(self)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.exists"](self_key)
+  end
+
+  function Screen.width(self)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.width"](self_key)
+  end
+
+  function Screen.height(self)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.height"](self_key)
+  end
+
+  function Screen.clear(self, color)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    prim["Screen.clear"](self_key, color)
+  end
+
+  function Screen.pixel(self, x, y)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.pixel"](self_key, x, y)
+  end
+
+  function Screen.set_pixel(self, x, y, color)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    prim["Screen.set_pixel"](self_key, x, y, color)
+  end
+
+  function Screen.pixels(self, x, y, width, height)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.pixels"](self_key, x, y, width, height)
+  end
+
+  function Screen.set_pixels(self, x, y, width, colors)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    prim["Screen.set_pixels"](self_key, x, y, width, colors)
+  end
+
+  function Screen.fill(self, x, y, width, height, color)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    prim["Screen.fill"](self_key, x, y, width, height, color)
+  end
+
+  function Screen.rectangle(self, x, y, width, height, style)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    prim["Screen.rectangle"](self_key, x, y, width, height, style)
+  end
+
+  function Screen.line(self, x1, y1, x2, y2, color, thickness)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    prim["Screen.line"](self_key, x1, y1, x2, y2, color, thickness)
+  end
+
+  function Screen.circle(self, x, y, radius, style)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    prim["Screen.circle"](self_key, x, y, radius, style)
+  end
+
+  function Screen.ellipse(self, x, y, radius_x, radius_y, style)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    prim["Screen.ellipse"](self_key, x, y, radius_x, radius_y, style)
+  end
+
+  function Screen.polygon(self, points, style)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    prim["Screen.polygon"](self_key, points, style)
+  end
+
+  function Screen.text(self, x, y, text, options)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.text"](self_key, x, y, text, options)
+  end
+
+  function Screen.image(self, x, y, image, options)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.image"](self_key, x, y, image, options)
+  end
+
+  function Screen.copy(self, x, y, width, height, to_x, to_y)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    prim["Screen.copy"](self_key, x, y, width, height, to_x, to_y)
+  end
+
+  function Screen.place(self, location, facing)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.place"](self_key, location, facing)
+  end
+
+  function Screen.take_down(self)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.take_down"](self_key)
+  end
+
+  function Screen.location(self)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.location"](self_key)
+  end
+
+  function Screen.facing(self)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.facing"](self_key)
+  end
+
+  function Screen.item(self, column, row)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.item"](self_key, column, row)
+  end
+
+  function Screen.show_to(self, player)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.show_to"](self_key, player)
+  end
+
+  function Screen.hide_from(self, player)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.hide_from"](self_key, player)
+  end
+
+  function Screen.is_shown_to(self, player)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.is_shown_to"](self_key, player)
+  end
+
+  function Screen.viewers(self)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.viewers"](self_key)
+  end
+
+  function Screen.for_player(self, player)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.for_player"](self_key, player)
+  end
+
+  function Screen.player(self)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.player"](self_key)
+  end
+
+  function Screen.release(self)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.release"](self_key)
+  end
+
+  function Screen.play(self, video, options)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.play"](self_key, video, options)
+  end
+
+  function Screen.playback(self)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.playback"](self_key)
+  end
+
+  function Screen.remove(self)
+    local self_key = ids[self]
+    if self_key == nil or not Screen_is[class_of(self)] then
+      self_key = self_of(self, "Screen")
+    end
+    return prim["Screen.remove"](self_key)
+  end
+
+  function Screen.on(self, event, handler, options)
+    if ids[self] == nil or not Screen_is[class_of(self)] then
+      self_of(self, "Screen")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.Screen.on(self, event, handler, options)
+  end
+
+  function Screen.once(self, event, handler)
+    if ids[self] == nil or not Screen_is[class_of(self)] then
+      self_of(self, "Screen")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.Screen.once(self, event, handler)
+  end
+end
+
+-- Playback ------------------------------------------------------------------
+
+do
+  local Playback = class("Playback")
+
+  function new.Playback(number, video)
+    return prim["handles.new"]("Playback", number, video)
+  end
+
+  ---@param handle table
+  ---@return integer number
+  ---@return string video
+  function keys.Playback(handle)
+    return prim["handles.key"](handle)
+  end
+
+  function Playback.video(self)
+    local self_key = ids[self]
+    if self_key == nil or not Playback_is[class_of(self)] then
+      self_key = self_of(self, "Playback")
+    end
+    return prim["Playback.video"](self_key)
+  end
+
+  function Playback.screen(self)
+    local self_key = ids[self]
+    if self_key == nil or not Playback_is[class_of(self)] then
+      self_key = self_of(self, "Playback")
+    end
+    return prim["Playback.screen"](self_key)
+  end
+
+  function Playback.length(self)
+    local self_key = ids[self]
+    if self_key == nil or not Playback_is[class_of(self)] then
+      self_key = self_of(self, "Playback")
+    end
+    return prim["Playback.length"](self_key)
+  end
+
+  function Playback.exists(self)
+    local self_key = ids[self]
+    if self_key == nil or not Playback_is[class_of(self)] then
+      self_key = self_of(self, "Playback")
+    end
+    return prim["Playback.exists"](self_key)
+  end
+
+  function Playback.is_paused(self)
+    local self_key = ids[self]
+    if self_key == nil or not Playback_is[class_of(self)] then
+      self_key = self_of(self, "Playback")
+    end
+    return prim["Playback.is_paused"](self_key)
+  end
+
+  function Playback.pause(self)
+    local self_key = ids[self]
+    if self_key == nil or not Playback_is[class_of(self)] then
+      self_key = self_of(self, "Playback")
+    end
+    return prim["Playback.pause"](self_key)
+  end
+
+  function Playback.resume(self)
+    local self_key = ids[self]
+    if self_key == nil or not Playback_is[class_of(self)] then
+      self_key = self_of(self, "Playback")
+    end
+    return prim["Playback.resume"](self_key)
+  end
+
+  function Playback.stop(self)
+    local self_key = ids[self]
+    if self_key == nil or not Playback_is[class_of(self)] then
+      self_key = self_of(self, "Playback")
+    end
+    return prim["Playback.stop"](self_key)
+  end
+
+  function Playback.time(self)
+    local self_key = ids[self]
+    if self_key == nil or not Playback_is[class_of(self)] then
+      self_key = self_of(self, "Playback")
+    end
+    return prim["Playback.time"](self_key)
+  end
+
+  function Playback.seek(self, seconds)
+    local self_key = ids[self]
+    if self_key == nil or not Playback_is[class_of(self)] then
+      self_key = self_of(self, "Playback")
+    end
+    return prim["Playback.seek"](self_key, seconds)
+  end
+
+  function Playback.speed(self)
+    local self_key = ids[self]
+    if self_key == nil or not Playback_is[class_of(self)] then
+      self_key = self_of(self, "Playback")
+    end
+    return prim["Playback.speed"](self_key)
+  end
+
+  function Playback.set_speed(self, speed)
+    local self_key = ids[self]
+    if self_key == nil or not Playback_is[class_of(self)] then
+      self_key = self_of(self, "Playback")
+    end
+    return prim["Playback.set_speed"](self_key, speed)
+  end
+
+  function Playback.volume(self)
+    local self_key = ids[self]
+    if self_key == nil or not Playback_is[class_of(self)] then
+      self_key = self_of(self, "Playback")
+    end
+    return prim["Playback.volume"](self_key)
+  end
+
+  function Playback.set_volume(self, volume)
+    local self_key = ids[self]
+    if self_key == nil or not Playback_is[class_of(self)] then
+      self_key = self_of(self, "Playback")
+    end
+    return prim["Playback.set_volume"](self_key, volume)
+  end
+
+  function Playback.is_looping(self)
+    local self_key = ids[self]
+    if self_key == nil or not Playback_is[class_of(self)] then
+      self_key = self_of(self, "Playback")
+    end
+    return prim["Playback.is_looping"](self_key)
+  end
+
+  function Playback.set_looping(self, looping)
+    local self_key = ids[self]
+    if self_key == nil or not Playback_is[class_of(self)] then
+      self_key = self_of(self, "Playback")
+    end
+    return prim["Playback.set_looping"](self_key, looping)
+  end
+
+  function Playback.on(self, event, handler, options)
+    if ids[self] == nil or not Playback_is[class_of(self)] then
+      self_of(self, "Playback")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.Playback.on(self, event, handler, options)
+  end
+
+  function Playback.once(self, event, handler)
+    if ids[self] == nil or not Playback_is[class_of(self)] then
+      self_of(self, "Playback")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.Playback.once(self, event, handler)
+  end
+end
+
 -- File ----------------------------------------------------------------------
 
 do
@@ -7711,6 +8197,36 @@ namespaces["nf.cutscenes"] = function(scope, ns)
 
   function ns.current(player)
     return prim["nf.cutscenes.current"](scope, player)
+  end
+end
+
+namespaces["nf.screens"] = function(scope, ns)
+  function ns.get(screen)
+    return prim["nf.screens.get"](scope, screen)
+  end
+
+  function ns.all()
+    return prim["nf.screens.all"](scope)
+  end
+
+  function ns.create(options)
+    return prim["nf.screens.create"](scope, options)
+  end
+
+  function ns.fonts()
+    return prim["nf.screens.fonts"](scope)
+  end
+
+  function ns.measure_text(text, options)
+    return prim["nf.screens.measure_text"](scope, text, options)
+  end
+
+  function ns.map_color(color)
+    return prim["nf.screens.map_color"](scope, color)
+  end
+
+  function ns.looking_at(player, distance)
+    return prim["nf.screens.looking_at"](scope, player, distance)
   end
 end
 

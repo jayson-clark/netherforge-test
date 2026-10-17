@@ -151,6 +151,7 @@ class Scripts internal constructor(
             is ScopeOwner.DialogScript -> LuaHandle.Dialog(owner.dialog)
             is ScopeOwner.ItemScript -> LuaHandle.ProjectItem(owner.item)
             is ScopeOwner.BlockScript -> LuaHandle.ProjectBlock(owner.block)
+            is ScopeOwner.ScreenScript -> LuaHandle.Screen(owner.screen, "")
             is ScopeOwner.TestScript -> null
         }
         host.newEnv(scope.id, budget, self, scope.namespace)

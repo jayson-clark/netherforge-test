@@ -240,6 +240,7 @@ object PaperItems {
     /** The fields that are data components with no `ItemMeta` side: written onto the stack itself. */
     private fun components(def: ItemDef, stack: ItemStack) {
         def.maxStackSize?.let { stack.setData(DataComponentTypes.MAX_STACK_SIZE, it) }
+        def.map?.let { stack.setData(DataComponentTypes.MAP_ID, io.papermc.paper.datacomponent.item.MapId.mapId(it)) }
         def.rarity?.let { stack.setData(DataComponentTypes.RARITY, ItemRarity.valueOf(it.name)) }
         def.attributeModifiers?.let { modifiers ->
             val builder = ItemAttributeModifiers.itemAttributes()
@@ -613,6 +614,7 @@ object PaperItems {
                 ?.getData(DataComponentTypes.MAX_STACK_SIZE),
             rarity = stack.takeIf { it.isDataOverridden(DataComponentTypes.RARITY) }?.getData(DataComponentTypes.RARITY)
                 ?.let { rarity -> dev.netherforge.format.item.ItemRarity.valueOf(rarity.name) },
+            map = stack.takeIf { it.isDataOverridden(DataComponentTypes.MAP_ID) }?.getData(DataComponentTypes.MAP_ID)?.id(),
             attributeModifiers = modifiersOf(stack),
             canBreak = adventure?.canBreak ?: blocksOf(stack, DataComponentTypes.CAN_BREAK),
             canPlaceOn = adventure?.canPlaceOn ?: blocksOf(stack, DataComponentTypes.CAN_PLACE_ON),

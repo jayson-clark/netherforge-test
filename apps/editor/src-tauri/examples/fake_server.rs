@@ -20,6 +20,11 @@
 //! - `exit <code>`: prints one line and exits with `<code>`.
 //! - `sleep <seconds> [anything…]`: waits (an orphaned server: the rest of its
 //!   command line is what a leftover is recognised by).
+//! - `-nostdin …` (ffmpeg converting a video, `video/`): with `-f rawvideo`, six
+//!   frames of RGBA at the `scale=` the `-vf` asks for, a red one then grey ones,
+//!   after saying the source lasts 0.3 seconds; with `-vn`, the sound: a source
+//!   whose name has `silent` in it has none (ffmpeg's words for that), else a
+//!   byte to the output, or two pieces for a `%d.ogg` segment pattern.
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
@@ -54,6 +59,10 @@ fn main() {
         }
         return;
     }
+    if first == "-nostdin" {
+        ffmpeg(&args);
+        return;
+    }
     if args.iter().any(|a| a.starts_with("--metapath=")) {
         language_server();
         return;
@@ -73,6 +82,53 @@ fn main() {
             eprintln!("fake_server: what should I play? {args:?}");
             std::process::exit(2);
         }
+    }
+}
+
+fn ffmpeg(args: &[String]) {
+    let value = |flag: &str| {
+        args.iter()
+            .position(|a| a == flag)
+            .and_then(|i| args.get(i + 1))
+            .cloned()
+    };
+    let source = value("-i").unwrap_or_default();
+    if args.iter().any(|a| a == "-vn") {
+        if source.contains("silent") {
+            eprintln!("Output file does not contain any stream");
+            std::process::exit(1);
+        }
+        let out = args.last().expect("an output");
+        if out.contains("%d") {
+            for i in 0..2 {
+                std::fs::write(out.replace("%d", &i.to_string()), [i as u8]).unwrap();
+            }
+        } else {
+            std::fs::write(out, [9u8]).unwrap();
+        }
+        return;
+    }
+    let filter = value("-vf").unwrap_or_default();
+    let size = filter
+        .split(',')
+        .find_map(|part| part.strip_prefix("scale="))
+        .and_then(|scale| {
+            let mut it = scale.split(':');
+            Some((
+                it.next()?.parse::<usize>().ok()?,
+                it.next()?.parse::<usize>().ok()?,
+            ))
+        })
+        .expect("a scale");
+    eprintln!("  Duration: 00:00:00.30, start: 0.000000, bitrate: 1 kb/s");
+    let mut out = std::io::stdout().lock();
+    for frame in 0..6 {
+        let pixel: [u8; 4] = if frame == 0 {
+            [255, 0, 0, 255]
+        } else {
+            [128, 128, 128, 255]
+        };
+        out.write_all(&pixel.repeat(size.0 * size.1)).unwrap();
     }
 }
 

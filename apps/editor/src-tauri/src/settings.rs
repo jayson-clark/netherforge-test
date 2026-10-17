@@ -19,6 +19,8 @@ pub struct Settings {
     /// The MCP server for coding agents (`mcp/`), on 127.0.0.1.
     pub mcp_enabled: bool,
     pub mcp_port: u16,
+    /// ffmpeg, for converting videos for screens (`video/`): a path to it, or empty to find it on `PATH`.
+    pub ffmpeg_path: String,
 }
 
 /// Fixed, so a project's `.mcp.json` keeps working across restarts.
@@ -32,6 +34,7 @@ impl Default for Settings {
             server_port: 25565,
             mcp_enabled: true,
             mcp_port: DEFAULT_MCP_PORT,
+            ffmpeg_path: String::new(),
         }
     }
 }
@@ -113,6 +116,7 @@ mod tests {
             server_port: 25570,
             mcp_enabled: false,
             mcp_port: 4000,
+            ffmpeg_path: "/opt/ffmpeg/bin/ffmpeg".into(),
         };
         save(&path, &changed).unwrap();
         assert_eq!(load::<Settings>(&path), changed);

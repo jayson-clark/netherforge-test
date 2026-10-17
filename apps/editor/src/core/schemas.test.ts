@@ -24,10 +24,13 @@ describe('schemas', () => {
       'particle_effect.schema.json',
       'recipe.schema.json',
       'resource_pack.schema.json',
+      'screen.schema.json',
+      'screen_font.schema.json',
       'sky.schema.json',
       'structure_generation.schema.json',
       'terrain.schema.json',
       'vanilla.schema.json',
+      'video.schema.json',
     ])
     for (const text of Object.values(schemaFiles)) expect(() => JSON.parse(text)).not.toThrow()
   })

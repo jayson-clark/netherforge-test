@@ -43,6 +43,7 @@ import type {
   BridgeResult,
   CacheStatus,
   CaptureProgress,
+  ConvertProgress,
   ErrorCode,
   EulaStatus,
   FileEntry,
@@ -60,6 +61,8 @@ import type {
   ServerState,
   Settings,
   TestReport,
+  VideoConverted,
+  VideoInfo,
   TestStatus,
   Unlisten,
   UpdateInfo,
@@ -157,6 +160,8 @@ export interface MemoryBackendOptions {
    * (as most tests want a project that runs); the contract suite gives none, as the app starts.
    */
   trusted?: string[]
+  /** Whether "ffmpeg" is on this computer, for `convertVideo` (the contract suite's has none). */
+  ffmpeg?: boolean
 }
 
 /**
@@ -180,6 +185,7 @@ const DEFAULT_SETTINGS: Settings = {
   serverPort: 25565,
   mcpEnabled: true,
   mcpPort: 47615,
+  ffmpegPath: '',
 }
 
 /** A file as a `data:` URL, for `<img>` and textures. */
@@ -231,6 +237,8 @@ export class MemoryBackend implements Backend {
   /** Its loaded worlds, the main one first. */
   private worlds: LoadedWorld[] = [{ name: 'world', environment: 'normal', main: true }]
   private captureEvents = new Emitter<CaptureProgress>()
+  private videoEvents = new Emitter<ConvertProgress>()
+  private ffmpeg: boolean
   private pendingChanges = new Set<string>()
   private gitRepos: Record<string, MemoryGitRepo>
   /** The package cache's checkouts, by commit. */
@@ -298,6 +306,7 @@ export class MemoryBackend implements Backend {
     this.eula = options.eulaAccepted ?? false
     this.pickResults = [...(options.pickFolderResults ?? [])]
     this.serverDelay = options.serverDelayMs ?? 0
+    this.ffmpeg = options.ffmpeg ?? false
     this.profileEvery = options.profileEveryMs ?? 1000
     this.debounce = options.watchDebounceMs ?? 0
     this.gitRepos = options.gitRepos ?? {}
@@ -1094,6 +1103,130 @@ export class MemoryBackend implements Backend {
     return this.captureEvents.listen(listener)
   }
 
+  /** A video's folder and what its `video.json` says, as the Rust side checks them. */
+  private videoSettings(folder: string): {
+    source: string
+    width: number
+    height: number
+    fps: number
+    audio: boolean
+  } {
+    checkPath(folder)
+    const segments = folder.split('/')
+    if (segments[0] !== 'videos' || segments.length < 2)
+      fail('invalid', `${folder} isn't a video's folder`)
+    const text = this.files().get(`${folder}/video.json`)
+    if (text === undefined) fail('notFound', `${folder} has no video.json`)
+    try {
+      const json = JSON.parse(typeof text === 'string' ? text : textDecoder.decode(text))
+      return {
+        source: json.source,
+        width: json.width,
+        height: json.height,
+        fps: json.fps ?? 20,
+        audio: json.audio ?? true,
+      }
+    } catch {
+      fail('invalid', `${folder}/video.json can't be read`)
+    }
+  }
+
+  /**
+   * As the Rust side converts, without ffmpeg: one second of frames, a sound when the file keeps one, the files
+   * written (the frames' file a real header and nothing after) and the progress reported.
+   */
+  async convertVideo(folder: string): Promise<VideoConverted> {
+    this.trustedRoot()
+    const minecraft = this.state.minecraft
+    if (!minecraft)
+      fail(
+        'invalid',
+        "netherforge.json doesn't name a Minecraft release, so there are no map colours to convert to",
+      )
+    if (!this.ffmpeg) {
+      fail(
+        'unavailable',
+        "Converting a video needs ffmpeg, and there's none on PATH: install it, or set where it is in Settings",
+      )
+    }
+    const colors = this.game.get(minecraft)?.mapColors
+    if (!colors?.length) {
+      fail(
+        'unavailable',
+        `Converting a video needs Minecraft ${minecraft}'s map colours, which aren't exported yet`,
+      )
+    }
+    const settings = this.videoSettings(folder)
+    const files = this.files()
+    const source = files.get(`${folder}/${settings.source}`)
+    if (source === undefined)
+      fail('notFound', `${folder} has no ${settings.source}: put the video there first`)
+    const frames = settings.fps
+    this.videoEvents.emit({ folder, stage: 'audio', done: 0, total: 0 })
+    const removed = [...files.keys()].filter(
+      (it) => it === `${folder}/audio.ogg` || it.startsWith(`${folder}/audio/`),
+    )
+    for (const path of removed) files.delete(path)
+    this.videoEvents.emit({ folder, stage: 'frames', done: frames, total: frames })
+    const header = nfvHeader({
+      columns: settings.width,
+      rows: settings.height,
+      fps: settings.fps,
+      frames,
+      audio: settings.audio,
+      source: await sha256(source),
+    })
+    files.set(`${folder}/video.nfv`, header)
+    const written = [`${folder}/video.nfv`]
+    if (settings.audio) {
+      files.set(`${folder}/audio.ogg`, new Uint8Array([9]))
+      files.set(`${folder}/audio/0.ogg`, new Uint8Array([0]))
+      written.push(`${folder}/audio.ogg`, `${folder}/audio/0.ogg`)
+    }
+    this.videoEvents.emit({ folder, stage: 'writing', done: frames, total: frames })
+    this.changed([...removed, ...written])
+    return { frames, seconds: 1, audio: settings.audio, bytes: header.length }
+  }
+
+  onVideoProgress(listener: (event: ConvertProgress) => void): Promise<Unlisten> {
+    return this.videoEvents.listen(listener)
+  }
+
+  async videoInfo(folder: string): Promise<VideoInfo> {
+    const settings = this.videoSettings(folder)
+    const files = this.files()
+    const source = files.get(`${folder}/${settings.source}`)
+    const frames = files.get(`${folder}/video.nfv`)
+    const header =
+      frames === undefined
+        ? null
+        : readNfvHeader(typeof frames === 'string' ? new TextEncoder().encode(frames) : frames)
+    if (!header) {
+      return {
+        converted: false,
+        columns: 0,
+        rows: 0,
+        fps: 0,
+        frames: 0,
+        audio: false,
+        bytes: 0,
+        sourcePresent: source !== undefined,
+        sourceChanged: null,
+      }
+    }
+    return {
+      converted: true,
+      columns: header.columns,
+      rows: header.rows,
+      fps: header.fps,
+      frames: header.frames,
+      audio: header.audio,
+      bytes: frames!.length,
+      sourcePresent: source !== undefined,
+      sourceChanged: source === undefined ? null : !sameBytes(await sha256(source), header.source),
+    }
+  }
+
   private bot(name: string) {
     const bot = this.bots.get(name)
     if (!bot) fail('plugin', `no bot named "${name}"`)
@@ -1470,6 +1603,64 @@ function isNamed(segment: string, name: string): boolean {
 }
 
 /** As the Rust side's `scope::segments`. */
+/** A converted video's header (docs/format/video.md), as the Rust side writes one. */
+interface NfvHeader {
+  columns: number
+  rows: number
+  fps: number
+  frames: number
+  audio: boolean
+  /** The source's SHA-256. */
+  source: Uint8Array
+}
+
+const NFV_HEADER = 72
+
+function nfvHeader(header: NfvHeader): Uint8Array {
+  const bytes = new Uint8Array(NFV_HEADER)
+  const view = new DataView(bytes.buffer)
+  bytes.set([0x4e, 0x46, 0x56, 0x31])
+  view.setUint16(4, 1)
+  view.setUint16(6, header.columns)
+  view.setUint16(8, header.rows)
+  view.setUint16(10, header.fps)
+  view.setUint32(12, header.frames)
+  view.setUint16(16, header.fps * 2)
+  bytes[18] = 1
+  bytes[28] = header.audio ? 1 : 0
+  bytes.set(header.source, 32)
+  return bytes
+}
+
+function readNfvHeader(bytes: Uint8Array): NfvHeader | null {
+  if (
+    bytes.length < NFV_HEADER ||
+    !sameBytes(bytes.subarray(0, 4), new Uint8Array([0x4e, 0x46, 0x56, 0x31]))
+  )
+    return null
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  if (view.getUint16(4) !== 1) return null
+  return {
+    columns: view.getUint16(6),
+    rows: view.getUint16(8),
+    fps: view.getUint16(10),
+    frames: view.getUint32(12),
+    audio: bytes[28] !== 0,
+    source: bytes.slice(32, 64),
+  }
+}
+
+async function sha256(contents: FileContents): Promise<Uint8Array> {
+  // A copy, so it's a plain `ArrayBuffer`'s whatever the file's bytes are a view of.
+  const bytes =
+    typeof contents === 'string' ? new TextEncoder().encode(contents) : new Uint8Array(contents)
+  return new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))
+}
+
+function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
+  return a.length === b.length && a.every((value, i) => value === b[i])
+}
+
 function checkPath(path: string) {
   const parts = path.split('/')
   if (

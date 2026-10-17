@@ -196,6 +196,10 @@ Error. A reference names a placed feature the project's datapacks don't define. 
 
 Error. A reference names a dimension type that doesn't exist. See [references](references.md).
 
+### `reference.video` {#reference-video}
+
+Error. A reference names a video that doesn't exist. See [references](references.md).
+
 ### `reference.resource-pack` {#reference-resource-pack}
 
 Error. A reference to a skin, glyph, item model, tooltip, block model or sound names a resource pack that doesn't exist. See [references](references.md).
@@ -625,6 +629,10 @@ Error. `count` is outside 1 to 99, or above `maxStackSize`. See [items](item.md)
 ### `item.damage` {#item-damage}
 
 Error. `damage` is negative. See [items](item.md).
+
+### `item.map` {#item-map}
+
+Error. `map` is negative. See [items](item.md).
 
 ### `item.enchantment` {#item-enchantment}
 
@@ -1233,6 +1241,92 @@ Error. A sky's fade is outside 1 to 8 steps. See [format/sky.md](sky.md).
 ### `sky.night` {#sky-night}
 
 Warning. A sky that doesn't darken at night gives no sky or fog colour to hold. See [format/sky.md](sky.md).
+
+## screen
+
+### `screen.size` {#screen-size}
+
+Error. A screen's (or a video's) width or height isn't 1 to 16 maps. See [format/screen.md](screen.md).
+
+### `screen.color` {#screen-color}
+
+Error. A screen's colour isn't written `#rrggbb`. See [format/screen.md](screen.md).
+
+### `screen.world` {#screen-world}
+
+Error. Where a screen hangs names something that isn't a world name. See [format/screen.md](screen.md).
+
+### `screen.range` {#screen-range}
+
+Error. A screen's `range` or `clickRange` is outside what it may be. See [format/screen.md](screen.md).
+
+### `screen.volume` {#screen-volume}
+
+Error. A screen's video's `volume` isn't 0 to 1. See [format/screen.md](screen.md).
+
+### `screen.place` {#screen-place}
+
+Warning. Two screens hang in the same block, so one covers part of the other. See [format/screen.md](screen.md).
+
+## screen_font
+
+### `screen_font.id` {#screen_font-id}
+
+Error. A screen font is called `default`, which is the game's own map font. See [format/screen-font.md](screen-font.md).
+
+### `screen_font.file` {#screen_font-file}
+
+Error. A screen font's `file` isn't a picture or font file of the right kind in its folder. See [format/screen-font.md](screen-font.md).
+
+### `screen_font.missing` {#screen_font-missing}
+
+Error. A screen font's picture or font file isn't in its folder. See [format/screen-font.md](screen-font.md).
+
+### `screen_font.chars` {#screen_font-chars}
+
+Error. A bitmap screen font lists no characters, or rows of different lengths. See [format/screen-font.md](screen-font.md).
+
+### `screen_font.field` {#screen_font-field}
+
+Error. A screen font sets a field of the other type of font. See [format/screen-font.md](screen-font.md).
+
+### `screen_font.size` {#screen_font-size}
+
+Error. A screen font's size, spacing or line height is outside what it may be. See [format/screen-font.md](screen-font.md).
+
+### `screen_font.glyph` {#screen_font-glyph}
+
+Error. A pixels screen font's glyph isn't one character drawn in rows of `#` and `.`, all as tall. See [format/screen-font.md](screen-font.md).
+
+### `screen_font.grid` {#screen_font-grid}
+
+Error. A bitmap screen font's picture doesn't divide into its grid of characters. See [format/screen-font.md](screen-font.md).
+
+## video
+
+### `video.fps` {#video-fps}
+
+Error. A video's `fps` isn't 1 to 20. See [format/video.md](video.md).
+
+### `video.range` {#video-range}
+
+Error. A video's `start` or `end` isn't a time in it. See [format/video.md](video.md).
+
+### `video.source` {#video-source}
+
+Error. A video's `source` isn't a file in its folder. See [format/video.md](video.md).
+
+### `video.not-converted` {#video-not-converted}
+
+Warning. A video hasn't been converted for screens yet, so it can't play. See [format/video.md](video.md).
+
+### `video.audio-missing` {#video-audio-missing}
+
+Warning. A video keeps its sound, but its converted sound isn't there. See [format/video.md](video.md).
+
+### `video.stale` {#video-stale}
+
+Warning. A video's converted frames were made for other settings than its file has now: convert it again. See [format/video.md](video.md).
 
 ## datapack
 

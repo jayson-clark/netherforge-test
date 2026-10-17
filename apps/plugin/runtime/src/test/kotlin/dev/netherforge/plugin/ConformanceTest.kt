@@ -84,8 +84,16 @@ class ConformanceTest {
 
     private fun specClass(name: String): JsonObject = classes.single { it.name == name }
 
-    private class Scopes(val module: Scope, val centity: Scope, val menu: Scope, val dialog: Scope, val item: Scope, val block: Scope) {
-        val all get() = listOf(module, centity, menu, dialog, item, block)
+    private class Scopes(
+        val module: Scope,
+        val centity: Scope,
+        val menu: Scope,
+        val dialog: Scope,
+        val item: Scope,
+        val block: Scope,
+        val screen: Scope
+    ) {
+        val all get() = listOf(module, centity, menu, dialog, item, block, screen)
     }
 
     /** Each resource script logs what class its `this` is. */
@@ -104,7 +112,9 @@ class ConformanceTest {
                 "items/g/item.json" to """{ "kind": "minecraft:bread", "script": { "file": "script.lua" } }""",
                 "items/g/script.lua" to logThis,
                 "blocks/b/block.json" to """{ "script": { "file": "script.lua" } }""",
-                "blocks/b/script.lua" to logThis
+                "blocks/b/script.lua" to logThis,
+                "screens/s/screen.json" to """{ "width": 1, "height": 1, "script": { "file": "script.lua" } }""",
+                "screens/s/script.lua" to logThis
             )
         ).use { server ->
             server.runtime.session.centities.spawn("c", Location("world", 0.0, 64.0, 0.0))
@@ -117,7 +127,8 @@ class ConformanceTest {
                     scopes.single { it.owner is ScopeOwner.MenuScript },
                     scopes.single { it.owner is ScopeOwner.DialogScript },
                     scopes.single { it.owner is ScopeOwner.ItemScript },
-                    scopes.single { it.owner is ScopeOwner.BlockScript }
+                    scopes.single { it.owner is ScopeOwner.BlockScript },
+                    scopes.single { it.owner is ScopeOwner.ScreenScript }
                 ),
                 server
             )
@@ -135,6 +146,7 @@ class ConformanceTest {
         assertEquals(shared + surface("dialog").names("globals"), host.globals(scopes.dialog))
         assertEquals(shared + surface("item").names("globals"), host.globals(scopes.item))
         assertEquals(shared + surface("block").names("globals"), host.globals(scopes.block))
+        assertEquals(shared + surface("screen").names("globals"), host.globals(scopes.screen))
         for (gone in listOf("inventory", "dialog", "slot", "button")) {
             for (scope in scopes.all) assertTrue(gone !in host.globals(scope), "$gone in ${scope.owner.label}")
         }
@@ -143,9 +155,17 @@ class ConformanceTest {
     @Test
     fun `this is the class each surface declares`() = withScopes { _, _, server ->
         fun declared(name: String) = surface(name).list("globals").single { it.name == "this" }.getValue("type").jsonPrimitive.content
-        // Start order (the session's services): modules, items, menus, dialogs, blocks, then the spawned centity.
+        // Start order (the session's services): modules, items, menus, dialogs, screens, blocks, then the spawned centity.
         assertEquals(
-            listOf("nil", declared("item"), declared("menu"), declared("dialog"), declared("block"), declared("centity")),
+            listOf(
+                "nil",
+                declared("item"),
+                declared("menu"),
+                declared("dialog"),
+                declared("screen"),
+                declared("block"),
+                declared("centity")
+            ),
             server.logs
         )
     }
@@ -294,6 +314,8 @@ class ConformanceTest {
                 "dialog" -> "\"d\""
                 "particle_effect" -> "\"p\""
                 "cutscene" -> "\"cs\""
+                "screen" -> "\"s\""
+                "video" -> "\"v\""
                 "node" -> "\"root\""
                 // A custom event, as `emit` raises it.
                 else -> if (type == "nf.Event") {
@@ -398,6 +420,8 @@ class ConformanceTest {
         -- A request's response, which only a route's handler is handed: the test makes one request (everything).
         nf.web.route("GET", "/sample", function(_, response) h.WebResponse = response end)
         h.Cutscene = nf.cutscenes.play(h.Player, "cs")
+        h.Screen = nf.screens.get("s")
+        h.Playback = h.Screen:play("v", { loop = true })
         h.File = nf.files.get("smoke.txt")
         h.Subscription = nf.on("tick", function() end)
         h.Task = nf.after(100, function() end)
@@ -566,6 +590,9 @@ class ConformanceTest {
                 "particles/p/effect.json" to """{ "duration": 20, "emitters": { "e": { "particle": "minecraft:flame", "burst": 1 } } }""",
                 "cutscenes/cs.json" to
                     """{ "camera": { "position": [{ "time": 0, "value": [0, 64, 0] }, { "time": 5, "value": [0, 64, 9] }], "rotation": [{ "time": 0, "yaw": 0, "pitch": 0 }] } }""",
+                "screens/s/screen.json" to """{ "width": 1, "height": 1 }""",
+                "videos/v/video.json" to """{ "source": "source.mp4", "width": 1, "height": 1, "audio": false }""",
+                "videos/v/video.nfv" to NfvFiles.write(1, 1, 20, NfvFiles.solid(8, 4, 10)),
                 "modules/smoke/init.lua" to "-- started by the test, once a player is online"
             ),
             start = false,
@@ -821,6 +848,9 @@ class ConformanceTest {
                 "particles/p/effect.json" to """{ "duration": 20, "emitters": { "e": { "particle": "minecraft:flame", "burst": 1 } } }""",
                 "cutscenes/cs.json" to
                     """{ "camera": { "position": [{ "time": 0, "value": [0, 64, 0] }, { "time": 5, "value": [0, 64, 9] }], "rotation": [{ "time": 0, "yaw": 0, "pitch": 0 }] } }""",
+                "screens/s/screen.json" to """{ "width": 1, "height": 1 }""",
+                "videos/v/video.json" to """{ "source": "source.mp4", "width": 1, "height": 1, "audio": false }""",
+                "videos/v/video.nfv" to NfvFiles.write(1, 1, 20, NfvFiles.solid(8, 4, 10)),
                 "modules/samples/init.lua" to "-- written once a player is online"
             ),
             start = false
@@ -844,6 +874,8 @@ class ConformanceTest {
                 h.Route = nf.web.route("GET", "/smoke", function() end)
                 h.OAuthFlow = nf.web.oauth({ name = "smoke", authorize_url = "https://conformance.invalid/a", token_url = "https://conformance.invalid/t", client_id = "c" })
                 h.Cutscene = nf.cutscenes.play(h.Player, "cs")
+                h.Screen = nf.screens.get("s")
+                h.Playback = h.Screen:play("v", { loop = true })
                 h.World = nf.worlds.default()
                 h.Block = h.World:block(vec3(0, 64, 0))
                 h.CustomBlock = nf.blocks.get("b"):place(h.World:block(vec3(12, 64, 12)):location())

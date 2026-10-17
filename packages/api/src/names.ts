@@ -27,4 +27,6 @@ export const NAME_ALIASES: Record<NameKind, string> = {
   map: 'MapId',
   structure: 'StructureId',
   setting: 'SettingName',
+  screen: 'ScreenId',
+  video: 'VideoId',
 }

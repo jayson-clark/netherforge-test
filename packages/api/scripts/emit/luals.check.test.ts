@@ -41,6 +41,9 @@ const SURFACE_OF: Record<string, string> = {
   Button: 'dialog',
   ProjectItem: 'item',
   ProjectBlock: 'block',
+  Screen: 'screen',
+  Playback: 'screen',
+  'nf.screens': 'screen',
 }
 const SURFACE_CLASS: Record<string, string> = {
   centity: 'Centity',
@@ -48,6 +51,7 @@ const SURFACE_CLASS: Record<string, string> = {
   dialog: 'Dialog',
   item: 'ProjectItem',
   block: 'ProjectBlock',
+  screen: 'Screen',
 }
 
 /**

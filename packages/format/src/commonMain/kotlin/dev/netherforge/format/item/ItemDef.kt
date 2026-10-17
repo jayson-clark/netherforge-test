@@ -111,6 +111,11 @@ data class ItemDef(
      */
     val useEffects: UseEffectsDef? = null,
     /**
+     * The map a filled map shows (the `map_id` component): a screen's map (`screen:item`), or any of the game's, by
+     * its number. Only a `minecraft:filled_map` draws it.
+     */
+    val map: Int? = null,
+    /**
      * Script data saved on the stack (its persistent data container), JSON
      * values by key: `{ "coin": true }`. Scripts read it back as `item.data`.
      */

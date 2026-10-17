@@ -424,6 +424,21 @@ class ProjectSession internal constructor(
 
     val dialogs = service(Dialogs(platform.dialogs, scripts, source::read, ::placeOf, { namespace }) { log.warn(it) })
 
+    /** Screens (walls of maps), their fonts and the videos they play: after dialogs, before centities, whose scripts may draw on them. */
+    val screens = service(
+        dev.netherforge.plugin.screen.Screens(
+            platform,
+            scripts,
+            log,
+            runtime.store.screenMaps,
+            config.screens,
+            source::read,
+            source::readBytes,
+            source::resolve,
+            ::placeOf
+        ) { namespace }
+    )
+
     /** Every centity instance: started after everything a script may use, stopped before it. */
     val centities = service(
         Centities(

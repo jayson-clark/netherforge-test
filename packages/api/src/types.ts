@@ -41,6 +41,8 @@ export type NameKind =
   | 'map'
   | 'structure'
   | 'setting'
+  | 'screen'
+  | 'video'
 
 export interface Param {
   /** Its name; `...` (only as the last parameter) for any number of extra arguments, like `nf.task`'s. */

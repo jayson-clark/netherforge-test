@@ -25,6 +25,7 @@ import org.bukkit.NamespacedKey
 import org.bukkit.entity.Display
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Interaction
+import org.bukkit.entity.ItemFrame
 import org.bukkit.entity.Marker
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
@@ -61,7 +62,7 @@ class PaperEntities(private val plugin: Plugin) : EntityOps {
         return EntityTag(instance, node, role)
     }
 
-    private fun stamp(entity: Entity, tag: EntityTag) {
+    fun stamp(entity: Entity, tag: EntityTag) {
         val data = entity.persistentDataContainer
         data.set(instanceKey, PersistentDataType.STRING, tag.instance.toString())
         data.set(nodeKey, PersistentDataType.STRING, tag.node)
@@ -311,7 +312,7 @@ class PaperEntities(private val plugin: Plugin) : EntityOps {
     override fun loadedTagged(): Map<UUID, EntityTag> = buildMap {
         for (world in Bukkit.getWorlds()) {
             for (entity in world.entities) {
-                if (entity !is Display && entity !is Interaction) continue
+                if (entity !is Display && entity !is Interaction && entity !is ItemFrame) continue
                 tagOf(entity)?.let { put(entity.uniqueId, it) }
             }
         }

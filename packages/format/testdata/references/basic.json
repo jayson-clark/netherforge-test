@@ -468,6 +468,13 @@
     "target": "dialogs/welcome/script.lua"
   },
   {
+    "file": "screens/lobby_board/screen.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "screens/lobby_board/script.lua"
+  },
+  {
     "file": "centities/crate/centity.json",
     "path": "$.script.file",
     "kind": "script",

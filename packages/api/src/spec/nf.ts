@@ -3,6 +3,7 @@ import { DATA_SAVING, DATA_VALUES } from './data.ts'
 import { nfCommands } from './commands.ts'
 import { eventFunctions, nfEvents } from './events.ts'
 import { nfCutscenes } from './cutscenes.ts'
+import { nfScreens } from './screens.ts'
 import { nfParticles } from './particles.ts'
 import { nfStructures, nfWorlds } from './worlds.ts'
 import { nfBossbars } from './inventories.ts'
@@ -444,6 +445,7 @@ const namespaces = [
   nfPlaceholders,
   nfParticles,
   nfCutscenes,
+  nfScreens,
   nfFiles,
   nfText,
   nfLooks,
