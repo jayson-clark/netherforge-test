@@ -18,7 +18,12 @@
   object-fit: contain;
 }
 .skinPreview {
-  padding: 8px;
+  /*
+   * Out into the section's 12px sides: the window at 1.75x is 308px, and the
+   * inspector's 320px only fits it whole without them.
+   */
+  margin: 0 -12px;
+  padding: 8px 6px;
   overflow: auto;
 }
 .soundFiles {

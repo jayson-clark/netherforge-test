@@ -134,7 +134,8 @@ impl Palette {
         let mut out = vec![0u8; width * height];
         match dither {
             Dither::None => {
-                for (i, px) in rgba.chunks_exact(4).take(width * height).enumerate() {
+                let (pixels, _) = rgba.as_chunks::<4>();
+                for (i, px) in pixels.iter().take(width * height).enumerate() {
                     if px[3] >= 128 {
                         out[i] = self.nearest(rgb(px[0] as i32, px[1] as i32, px[2] as i32));
                     }

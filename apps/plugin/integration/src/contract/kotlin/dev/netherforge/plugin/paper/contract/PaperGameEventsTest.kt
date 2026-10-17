@@ -806,9 +806,11 @@ class PaperGameEventsTest : PlatformContract() {
     @Test
     @Order(Int.MAX_VALUE)
     fun `between them the suites saw the server raise every event the platform can`() {
-        val generated = GameEvents::class.java.declaredMethods.map { it.name }.toSet()
+        // Synthetic methods are Kotlin's default-argument bridges (menuDragged$default), not events.
+        fun names(type: Class<*>) = type.declaredMethods.filterNot { it.isSynthetic }.map { it.name }.toSet()
+        val generated = names(GameEvents::class.java)
         // The tick happens every tick and no suite reads it.
-        val handWritten = PlatformEvents::class.java.declaredMethods.map { it.name }.toSet() - setOf("tick", "getGame")
+        val handWritten = names(PlatformEvents::class.java) - setOf("tick", "getGame")
         val unseen = (generated + handWritten) - events.looked
         assertEquals(emptySet(), unseen, "no suite saw the server raise these on Paper")
     }

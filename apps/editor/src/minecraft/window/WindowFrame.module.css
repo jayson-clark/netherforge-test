@@ -2,7 +2,8 @@
 .wrap {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  /* Safe: a window wider than its panel overflows to the right, where it scrolls, not off the left edge. */
+  align-items: safe center;
   gap: 8px;
 }
 .frame {

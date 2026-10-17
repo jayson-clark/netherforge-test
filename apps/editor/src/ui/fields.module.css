@@ -6,7 +6,8 @@
 .row {
   --field-height: 24px;
   display: grid;
-  grid-template-columns: minmax(72px, 30%) minmax(0, 1fr);
+  /* Whole pixels, so a pixel-exact preview in the field column isn't drawn at a fraction of one. */
+  grid-template-columns: minmax(72px, round(down, 30%, 1px)) minmax(0, 1fr);
   align-items: start;
   column-gap: 10px;
   row-gap: 3px;
