@@ -1,12 +1,14 @@
 package dev.netherforge.plugin.screen
 
-import dev.netherforge.plugin.api.LuaHandle
+import dev.netherforge.format.screen.VideoFile
+import dev.netherforge.plugin.binding.LuaHandle
 import java.util.UUID
 import kotlin.math.floor
 
 /**
  * A video playing on a screen: [reader]'s frames drawn onto the canvas of [screen] it was played on ([viewer]'s
- * own view, or the screen everyone sees), with their top left at ([x], [y]).
+ * own view, or the screen everyone sees), with their top left at ([x], [y]). Its [feed] reads them ahead, off the
+ * main thread.
  *
  * [position] is where it is in seconds; each tick moves it by [speed] / 20 and draws the frames it passed (from
  * the key frame before when it jumped). Its sound is [Audio]'s.
@@ -19,6 +21,7 @@ class Playback(
     /** Whose own view it plays on; null for the screen everyone sees. */
     val viewer: UUID?,
     val reader: NfvReader,
+    val feed: FrameFeed,
     /** The scope that played it, or null for the screen's file (`video` in `screen.json`). */
     val owner: Int?,
     val x: Int,
@@ -33,7 +36,7 @@ class Playback(
     /** The video's sounds in the resource pack: [whole] from its start, and [chunks] pieces of [Audio.CHUNK] seconds each. */
     class Audio(val whole: String, val chunks: List<String>) {
         companion object {
-            const val CHUNK = dev.netherforge.format.screen.VideoFile.AUDIO_CHUNK_SECONDS.toDouble()
+            const val CHUNK = VideoFile.AUDIO_CHUNK_SECONDS.toDouble()
         }
     }
 
@@ -63,16 +66,30 @@ class Playback(
 
     /**
      * Draws every frame up to [target] onto [canvas]: on from the one shown when that's within a key interval,
-     * else from the key frame at or before [target]. The frames drawn, the last one last.
+     * else from the key frame at or before [target]. The frames drawn, the last one last; none while the feed
+     * hasn't read them yet (it's asked to), so the picture holds until they're there. What the feed couldn't read
+     * is thrown here, on the main thread.
      */
     fun drawTo(target: Int, canvas: Canvas): Int {
         if (header.frames == 0) return 0
+        feed.failure?.let { throw it }
         val last = target.coerceIn(0, header.frames - 1)
-        if (last == shown) return 0
+        if (last == shown) {
+            feed.want(last + 1, last + FrameFeed.AHEAD)
+            return 0
+        }
         val from = if (last > shown && last - shown <= header.keyInterval && shown >= 0) shown + 1 else reader.keyBefore(last)
-        for (index in from..last) reader.draw(reader.frame(index), canvas, x, y)
+        val frames = (from..last).map { index ->
+            feed.ready(index) ?: run {
+                feed.want(from, last + FrameFeed.AHEAD)
+                return 0
+            }
+        }
+        for (frame in frames) reader.draw(frame, canvas, x, y)
         shown = last
-        return last - from + 1
+        // What comes next, read while this tick goes on.
+        feed.want(last + 1, last + FrameFeed.AHEAD)
+        return frames.size
     }
 
     /** Moves to [seconds] (held to the video), as a jump: the sound picks up again at the next piece. */

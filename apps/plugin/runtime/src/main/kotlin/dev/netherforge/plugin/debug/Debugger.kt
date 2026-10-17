@@ -2,7 +2,7 @@ package dev.netherforge.plugin.debug
 
 import dev.netherforge.format.bridge.Bridge
 import dev.netherforge.plugin.NetherForgeRuntime
-import dev.netherforge.plugin.api.LuaHandle
+import dev.netherforge.plugin.binding.LuaHandle
 import dev.netherforge.plugin.lua.LuaHost
 import dev.netherforge.plugin.lua.Primitive
 import kotlinx.serialization.json.JsonElement

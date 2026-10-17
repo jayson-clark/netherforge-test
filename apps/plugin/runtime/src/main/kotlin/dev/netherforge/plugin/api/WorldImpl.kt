@@ -12,6 +12,45 @@ import dev.netherforge.format.project.CentityKind
 import dev.netherforge.format.project.SkyKind
 import dev.netherforge.format.project.SpawnCategory
 import dev.netherforge.plugin.async.WorkFailed
+import dev.netherforge.plugin.binding.BiomeSearchOptions
+import dev.netherforge.plugin.binding.BlockApi
+import dev.netherforge.plugin.binding.BlockBox
+import dev.netherforge.plugin.binding.BlockBoxOptions
+import dev.netherforge.plugin.binding.BlockPosition
+import dev.netherforge.plugin.binding.BlockSetOptions
+import dev.netherforge.plugin.binding.Caller
+import dev.netherforge.plugin.binding.CentityFilter
+import dev.netherforge.plugin.binding.EntityFilter
+import dev.netherforge.plugin.binding.EntitySpawnOptions
+import dev.netherforge.plugin.binding.ExplosionOptions
+import dev.netherforge.plugin.binding.FloodOptions
+import dev.netherforge.plugin.binding.FloodResult
+import dev.netherforge.plugin.binding.GradualFillOptions
+import dev.netherforge.plugin.binding.GradualPlaceOptions
+import dev.netherforge.plugin.binding.InventoryKeys
+import dev.netherforge.plugin.binding.LightningOptions
+import dev.netherforge.plugin.binding.LocationOrVec3
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.LuaLocation
+import dev.netherforge.plugin.binding.NfWorldsApi
+import dev.netherforge.plugin.binding.ParticleOptions
+import dev.netherforge.plugin.binding.QueryHit
+import dev.netherforge.plugin.binding.QueryOptions
+import dev.netherforge.plugin.binding.RaycastHit
+import dev.netherforge.plugin.binding.RaycastOptions
+import dev.netherforge.plugin.binding.SkyOptions
+import dev.netherforge.plugin.binding.SoundOptions
+import dev.netherforge.plugin.binding.StringOrIntegerOrBoolean
+import dev.netherforge.plugin.binding.StructurePlaceOptions
+import dev.netherforge.plugin.binding.StructureSaveOptions
+import dev.netherforge.plugin.binding.SweepOptions
+import dev.netherforge.plugin.binding.Vec3OrChoice
+import dev.netherforge.plugin.binding.WeatherOptions
+import dev.netherforge.plugin.binding.WorldApi
+import dev.netherforge.plugin.binding.WorldCreateOptions
+import dev.netherforge.plugin.binding.WorldUnloadOptions
+import dev.netherforge.plugin.binding.entityHandle
+import dev.netherforge.plugin.binding.place
 import dev.netherforge.plugin.centity.Found
 import dev.netherforge.plugin.centity.QueryFilter
 import dev.netherforge.plugin.centity.QueryShape
@@ -921,9 +960,6 @@ internal class BlockImpl(private val session: ProjectSession) : BlockApi {
         return session.blockData.table(self.world, at.x, at.y, at.z)
     }
 }
-
-/** Where a platform location's block is, for events that hand out a `Block`. */
-internal fun blockHandle(world: String, x: Int, y: Int, z: Int) = LuaHandle.Block(world, BlockPosition.pack(x, y, z))
 
 /** The neighbour each face names, as `block:relative("up")` takes it. */
 private val FACES = mapOf(

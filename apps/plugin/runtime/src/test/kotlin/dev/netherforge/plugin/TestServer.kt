@@ -11,13 +11,24 @@ import dev.netherforge.format.project.FormatVersion
 import dev.netherforge.format.project.ManifestKind
 import dev.netherforge.format.project.Packages
 import dev.netherforge.format.text.DefaultFontFile
-import dev.netherforge.plugin.api.VersionGates
+import dev.netherforge.plugin.binding.VersionGates
+import dev.netherforge.plugin.bots.BotsConfig
+import dev.netherforge.plugin.bridge.BridgeConfig
 import dev.netherforge.plugin.bridge.BridgeOutput
+import dev.netherforge.plugin.http.HttpConfig
 import dev.netherforge.plugin.lua.SandboxLimits
 import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.ItemData
+import dev.netherforge.plugin.schedule.ScheduleConfig
+import dev.netherforge.plugin.screen.ScreensConfig
+import dev.netherforge.plugin.script.PerformanceConfig
+import dev.netherforge.plugin.store.ConnectionConfig
+import dev.netherforge.plugin.store.DatabasesConfig
+import dev.netherforge.plugin.structure.StructuresConfig
 import dev.netherforge.plugin.testkit.FakePlatform
 import dev.netherforge.plugin.testkit.FakePlayer
+import dev.netherforge.plugin.wasm.WasmConfig
+import dev.netherforge.plugin.web.WebConfig
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.sql.DataSource
@@ -65,6 +76,8 @@ class TestServer(
     private val structures: StructuresConfig = StructuresConfig(),
     /** `wasm:` in `config.yml`, when not the defaults. */
     private val wasm: WasmConfig = WasmConfig(),
+    /** `screens:` in `config.yml`, when not the defaults. */
+    private val screens: ScreensConfig = ScreensConfig(),
     /** `databases:` in `config.yml`: the named connections `nf.db("name")` may open. */
     private val databases: DatabasesConfig = DatabasesConfig(),
     /** How a named connection's pool is made, when not HikariCP: tests give an embedded database. */
@@ -118,6 +131,7 @@ class TestServer(
                     bots = bots,
                     structures = structures,
                     wasm = wasm,
+                    screens = screens,
                     resolvesPackages = resolvesPackages,
                     packageCache = packageCache
                 )

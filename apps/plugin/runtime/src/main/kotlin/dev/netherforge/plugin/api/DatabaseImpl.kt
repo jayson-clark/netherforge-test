@@ -1,6 +1,10 @@
 package dev.netherforge.plugin.api
 
 import dev.netherforge.plugin.async.WorkFailed
+import dev.netherforge.plugin.binding.DatabaseApi
+import dev.netherforge.plugin.binding.DatabaseResult
+import dev.netherforge.plugin.binding.DatabaseStatement
+import dev.netherforge.plugin.binding.LuaHandle
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaValue
 import dev.netherforge.plugin.session.ProjectSession

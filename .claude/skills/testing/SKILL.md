@@ -24,7 +24,10 @@ quarantined the same day (see CI).
    - `apps/plugin/runtime`: JUnit against the **fake `Platform`**
      (`FakePlatform`, in `:plugin:testkit`'s main sources so a project's own
      script tests can use it too), running real Lua 5.4 scripts in a temp
-     project through `TestServer` (see the plugin-runtime skill). A Lua
+     project through `TestServer` (see the plugin-runtime skill). A test
+     lives in the package of what it tests (`screen/ScreenTest`,
+     `wasm/WasmModulesTest`, `binding/ConformanceTest`); the shared support
+     (`TestServer`, `LuaChecks`, `NfvFiles`) is at the root. A Lua
      check is written with `LuaChecks` (`runtime/src/test/.../LuaChecks.kt`),
      never a copy of its own: `check(label, got, want)`, `near(label, got,
 want[, tolerance])` and `fails(label, fn, message)` log `FAIL <label>: got
@@ -250,7 +253,7 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
    online (past Paper's watchdog warning and the keep-alive limit); its DAP
    is raw JSON over `Editor.notify`. `ScheduleScenario` runs its server with
    the test-only `-Dnetherforge.test.wall-clock-rate=60` (through
-   `PaperServer`'s `jvmProperties`; see plugin-runtime's "Schedules"), so a
+   `PaperServer`'s `jvmProperties`; see plugin-persistence's "Schedules"), so a
    cron schedule for every minute fires on the real tick every second.
    - **Scopes** (`-Pnetherforge.integration.scope=full|pr|quarantine`,
      `full` by default): a scenario whose checks don't change with the
@@ -338,7 +341,7 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
      with `next` (`MobScenario`, `ReloadScenario`). Servers run with
      `performance.warn-ms: 0`, so a slow-script warning is never one.
    - **Bots**: `BotScenario` joins bots (fake players, in the plugin; see
-     the plugin-runtime skill) on an online-mode server and checks
+     the plugin-bots skill) on an online-mode server and checks
      what only a player can do or see: the join, chat and commands, clicking
      centities, menus, items, recipes, dialogs, titles, the sidebar, boss
      bars, teams and the player list, the resource pack, per-player hiding,

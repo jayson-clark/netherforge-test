@@ -1,5 +1,8 @@
 package dev.netherforge.plugin.api
 
+import dev.netherforge.plugin.binding.FileApi
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.data.parseJson
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaValue
 import dev.netherforge.plugin.session.ProjectSession

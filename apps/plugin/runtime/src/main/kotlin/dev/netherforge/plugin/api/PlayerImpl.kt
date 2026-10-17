@@ -9,6 +9,30 @@ import dev.netherforge.format.project.Names
 import dev.netherforge.format.project.RecipeKind
 import dev.netherforge.format.project.SkyKind
 import dev.netherforge.format.ref.ResourceRef
+import dev.netherforge.plugin.binding.ActiveBuff
+import dev.netherforge.plugin.binding.AdvancementProgress
+import dev.netherforge.plugin.binding.BanOptions
+import dev.netherforge.plugin.binding.BlockPosition
+import dev.netherforge.plugin.binding.CONSOLE_SENDER
+import dev.netherforge.plugin.binding.DialogOpenOptions
+import dev.netherforge.plugin.binding.InventoryKeys
+import dev.netherforge.plugin.binding.LocationOrVec3
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.LuaLocation
+import dev.netherforge.plugin.binding.LuaPlace
+import dev.netherforge.plugin.binding.MenuOpenOptions
+import dev.netherforge.plugin.binding.ParticleOptions
+import dev.netherforge.plugin.binding.PlayerApi
+import dev.netherforge.plugin.binding.SenderApi
+import dev.netherforge.plugin.binding.SkyOptions
+import dev.netherforge.plugin.binding.SoundOptions
+import dev.netherforge.plugin.binding.StringOrDialog
+import dev.netherforge.plugin.binding.StringOrMenuTemplate
+import dev.netherforge.plugin.binding.StringOrNumberOrBoolean
+import dev.netherforge.plugin.binding.TitleOptions
+import dev.netherforge.plugin.binding.entityHandle
+import dev.netherforge.plugin.binding.notInProject
+import dev.netherforge.plugin.binding.place
 import dev.netherforge.plugin.data.ScriptData
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.AdvancementOps
@@ -21,7 +45,7 @@ import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.platform.RecipeOps
 import dev.netherforge.plugin.session.ProjectSession
-import dev.netherforge.plugin.world.StatSheets
+import dev.netherforge.plugin.stats.StatSheets
 import kotlinx.serialization.json.JsonPrimitive
 import java.util.UUID
 
@@ -671,9 +695,6 @@ internal fun ProjectSession.openDialog(dialog: String, player: LuaHandle.Player,
     val online = player.uuidOrNull()?.let { platform.players.get(it) } ?: return false
     return dialogs.show(dialog, online, file, options?.context?.keep())
 }
-
-/** The id a [LuaHandle.Sender] has when it's the console (or anything else that isn't a player). */
-internal const val CONSOLE_SENDER = "console"
 
 /** What the console is called, as `Sender:name` says it. */
 private const val CONSOLE_NAME = "CONSOLE"

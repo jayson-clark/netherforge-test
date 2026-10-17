@@ -2,12 +2,12 @@ package dev.netherforge.plugin.script
 
 import dev.netherforge.format.project.PackagePaths
 import dev.netherforge.format.script.ScriptDef
-import dev.netherforge.plugin.api.EventType
-import dev.netherforge.plugin.api.Events
-import dev.netherforge.plugin.api.LuaEvent
-import dev.netherforge.plugin.api.LuaHandle
-import dev.netherforge.plugin.api.TickEvent
-import dev.netherforge.plugin.api.partOf
+import dev.netherforge.plugin.binding.EventType
+import dev.netherforge.plugin.binding.Events
+import dev.netherforge.plugin.binding.LuaEvent
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.TickEvent
+import dev.netherforge.plugin.binding.partOf
 import dev.netherforge.plugin.lua.CallResult
 import dev.netherforge.plugin.lua.EventStage
 import dev.netherforge.plugin.lua.LuaCodec

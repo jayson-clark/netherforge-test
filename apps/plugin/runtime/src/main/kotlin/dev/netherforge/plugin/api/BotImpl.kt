@@ -5,6 +5,15 @@ import dev.netherforge.format.bridge.BotAction
 import dev.netherforge.format.bridge.BotClick
 import dev.netherforge.format.bridge.BotHand
 import dev.netherforge.plugin.async.WorkFailed
+import dev.netherforge.plugin.binding.BotApi
+import dev.netherforge.plugin.binding.BotInteractOptions
+import dev.netherforge.plugin.binding.BotJoinOptions
+import dev.netherforge.plugin.binding.BotWalkOptions
+import dev.netherforge.plugin.binding.Caller
+import dev.netherforge.plugin.binding.LocationOrVec3
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.NfBotsApi
+import dev.netherforge.plugin.binding.place
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.BotAim
 import dev.netherforge.plugin.platform.SkinTexture

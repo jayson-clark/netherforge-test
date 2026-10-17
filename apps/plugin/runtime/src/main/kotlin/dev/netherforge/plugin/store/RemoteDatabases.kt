@@ -1,8 +1,5 @@
 package dev.netherforge.plugin.store
 
-import dev.netherforge.plugin.ConnectionConfig
-import dev.netherforge.plugin.DatabaseType
-import dev.netherforge.plugin.DatabasesConfig
 import dev.netherforge.plugin.async.WorkFailed
 import dev.netherforge.plugin.async.Workers
 import java.sql.Connection

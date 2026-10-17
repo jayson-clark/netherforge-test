@@ -5,9 +5,10 @@ description: Centity node trees, transforms, animation and hitboxes as the serve
 
 # Entities and physics
 
-Spec: `docs/format/centity.md`. The tick pipeline, hitboxes and click routing
-are in the plugin-runtime skill; this one adds where shapes come from and
-physics.
+Spec: `docs/format/centity.md`. This skill is the runtime's side of
+centities: the tick pipeline, instances and their entities, natural
+spawning, hitboxes and click routing (the sections at the end), where
+shapes come from, and physics.
 
 ## Shapes the server can and can't know
 
@@ -133,7 +134,7 @@ are only turned into payloads when something listens (`Centities.listening`).
 
 Nodes a script adds (`add_node`/`add_child`) are bodies and hitboxes like
 declared ones (the snapshot, obstacle grid and click routing all read
-`Instance.definition`); see "Script-added nodes" in the plugin-runtime skill
+`Instance.definition`); see "Script-added nodes" below
 for how they're kept and dropped.
 
 Node poses aren't persisted: after a restart a body starts again from its
@@ -205,7 +206,7 @@ current yaw otherwise. The yaw is saved in `InstanceRecord.yaw` (the
 store's `instances.yaw`; non-finite reads as 0) and survives a reload because
 `redefine` keeps it. Like the anchor, it's kept in memory and written when the
 world saves, the anchor's chunk unloads or the session stops (the
-plugin-runtime skill's "Persistence"), so a centity turning every tick writes
+plugin-persistence skill's "Persistence"), so a centity turning every tick writes
 nothing.
 
 ## Walking (`centity:move_to`)
@@ -298,3 +299,208 @@ solver/collider → `docs/format/centity.md`.
 **Add a body API**: `packages/api/` (`nodeClass`), `pnpm generate`, the new
 `NodeApi` method in `api/NodeImpl.kt` using `centities.physics` /
 `Instance.body`, a test.
+
+## Centities: the tick pipeline
+
+After the centity pipeline, `ParticleEffects.tick()` makes one pass over
+every playing particle effect (so a centity moved this tick is where its
+effect plays this tick): follow its target (gone: it ends `target_gone`),
+step its `EffectSampler` (always: its time is the server's), find viewers
+(online, same world, within 32 blocks, 128 for a `force` emitter's spawns,
+of its `viewers` when given) and send one `ParticleOps.spawn` batch, within
+4096 points a tick across all effects (the rest wait, starting one effect
+further along each tick; a warning every 10 s). At most 1024 play at once.
+
+Per instance, each tick: a change in whether its chunk is loaded raises
+`chunk_load`/`chunk_unload`; then, when loaded: **animate** (clips advance,
+the pose is recomputed from rest + clips; `animation_end`), **path** (a
+walk `move_to` started moves the whole centity a step; see
+entities-and-physics), **physics**
+(bodies move and write their nodes' translation/rotation, then `collide`,
+`wake`, `sleep`; see entities-and-physics), **scripts** (`tick`, only when
+something listens; the rate is each handler's `every`: it runs where
+`(tick + phase) % every == 0`, the phase the centity's (`Scripts.phaseOf`, a
+hash of its handle, so a crowd spreads over the ticks) or the subscription's
+id on `nf`; the event core tells Kotlin each handler's rate and phase
+(`events.listening`), and `Scripts.due` raises `tick` only on ticks one is
+due), **sync** (compose world matrices,
+push only what changed).
+
+### Natural spawning (`centity/NaturalSpawner.kt`)
+
+A `RuntimeService` registered after `Centities` that runs a centity's
+`spawning` block (format's `SpawningDef`, carried on `CompiledCentity.spawning`)
+in `TickPhase.WORLD`. It spawns, keeps and removes through `Centities` and
+holds nothing that outlives the session (its per-player due times and the
+resolved rules are rebuilt).
+
+- **Budget.** Each player gets a pass every `PASS_INTERVAL` (20) ticks,
+  staggered by their UUID; at most `PLAYERS_PER_TICK` (2) passes run in a tick,
+  each looking at `ATTEMPTS` (4) places. A place is a column 24 to 48 blocks
+  away (`SpawningDef.MIN_DISTANCE`/`MAX_DISTANCE`), searched from near the
+  player's height for air over a solid block (`spotIn`: `BlockOps.get` reads,
+  bounded by `SEARCH`), so the block reads per tick have a fixed ceiling
+  whatever the player count. Nothing here loads a chunk.
+- **Rules.** `Rule.of` resolves a block's ids and `#tag`s against `Platform.game`
+  once per definition (cached by identity, so a reload re-resolves). A place
+  `fits` when world, height, light (`BlockSnapshot.light` of the feet block),
+  biome (`WorldOps.biome`) and the block stood on (the block under the feet,
+  id without properties) all match; one of the rules that fit is chosen by
+  weight, then a group, the first member at the found place and the rest within
+  three blocks where the rule still fits.
+- **Caps** are per player and per centity: the natural, un-kept instances of
+  that centity within its `despawnDistance` of the player. A script's spawn,
+  a kept instance and another player's neighbourhood don't count. They are the
+  project's own and unrelated to `WorldOps.spawnLimit` (vanilla's).
+- **The handler.** Each group member is first offered to
+  `nf.on("centity_natural_spawn")` (only built when something listens): a
+  cancel drops that member, `event.location` moves it (yaw is its facing).
+  The centity's own `spawn` runs afterwards, as for any instance.
+- **Temporary.** `Centities.spawn(..., natural = true)` sets `Instance.natural`
+  before anything is made: its entities are claimed with
+  `EntityOps.setPersistent(false)` (so a crash can't leave them in a chunk),
+  `flush`/`savePlacements` never write it to the store, and a restart doesn't
+  know it (its stray entities are removed by `entitiesLoaded`, as any tagged
+  entity nobody owns is). `InstanceRecord.natural` only carries it across a
+  full reload's `Handover`. `Centities.keep` clears the flag, makes the
+  entities persistent again and marks it dirty so the store gets it.
+  `spawning.keepOnInteract` calls it from `Centities.click`, once a click has
+  picked a node (a click through a `raycast` node's padding keeps nothing),
+  before scripts hear the click.
+  A natural instance whose centity is deleted is discarded, never made inert.
+- **Script-temporary** (`nf.centities.spawn(kind, place, { temporary, lifetime })`): `Instance.temporary`, with
+  `owner` (the spawning scope's id) and `expires` (a server tick). Persistence treats `Instance.transient`
+  (natural or temporary) alike: never staged, entities non-persistent. `Centities.scopeReleased` removes the
+  owner's, `pass()` removes the expired before anything ticks (unloaded ones too), and `stop()` removes every
+  temporary one before the scripts stop, so a full reload or a restart leaves nothing behind. `set_lifetime`
+  makes a normal instance temporary (the store forgets its row); `keep` ends both kinds. Tests: `TemporaryCentityTest`.
+  Every `NaturalSpawner.PASS_INTERVAL` ticks a sweep removes the natural
+  instances with no player within their `despawnDistance` (in their world).
+- **Tests.** `NaturalSpawningTest` runs it on the fake: `FakeWorlds.biomes`,
+  `defaultBiome`, `lights` and `defaultLight` set a place's biome and light,
+  `NaturalSpawner.random` takes a seed.
+
+## Instances: transforms, anchors, looks and loading
+
+- **Local transforms are the truth**, not matrices. A script's setter writes
+  the _rest_ pose (and the shown pose immediately); a clip owns the channels
+  its tracks drive while it plays and they fall back to rest when it ends.
+- Displays all **ride the anchor entity** (`Instance.anchorEntity`, role
+  `ANCHOR`, an empty text display at the anchor: `EntityOps.spawnAnchor`,
+  `mount`, `dismount`) and carry their offset in the transformation matrix,
+  so moving a centity is one teleport, of the anchor entity. A hitbox rides
+  it too while its bounds sit at the anchor (`Bounds.atAnchor`: centred, its
+  bottom at the anchor's height), since an interaction entity has no
+  transform to carry an offset in; any other hitbox stands on its own and is
+  teleported, getting off and on as it moves. `Instance.riders` is what
+  rides now (runtime state: a `forceSync` mounts again, and mounting is
+  idempotent); something that couldn't get on is teleported as before. A
+  killed anchor entity is respawned by reconcile and picks its riders up; an
+  instance stored before anchors existed gets one at its first reconcile.
+  The anchor's own facing is always zero: the centity's yaw is baked into
+  the matrices (`Instance.placed()`), so turning it is a pose update, never
+  an entity rotation.
+- **Following** (`Centities.follow`, `centity:follow(player)`): the anchor
+  entity is mounted on a player (`Instance.follower`), and each tick
+  (`followTick`, before the walk and sync) the anchor moves to their place and
+  the centity turns to their body: `LivingEntity.getBodyYaw()` through
+  `WorldEntityOps.bodyYaw`, not their look, since the body lags the head and
+  follows walking. While it rides them (`followMounted`) sync
+  never teleports the anchor, since a teleport would dismount it; if the
+  mount fails (other world) the anchor is teleported as usual. A teleport or
+  `move_to` ends a follow; physics bodies refuse one. Not persisted.
+  Hidden = zero-scale matrix. `cullSize` widens the client's culling box.
+  Interpolation is each node's `interpolation_ticks` (1 unless a script
+  changed it: smooth at 20 Hz), 0 when forced; the roots' least, capped at
+  59, is the anchor entity's teleport duration (`Instance.moveTicks`), so a
+  moving centity glides too.
+- **Clips as keyframes** (`centity/Keyframes.kt`). While only clips move a
+  node (`Instance.edited`: not it or a node above it set by a script or
+  physics, hidden, re-eased, the centity not turned, no clip started,
+  stopped or moved since the last sync: `AnimationPlayer.version`), sync
+  doesn't send its pose every tick: it sends the pose `h` ticks on with `h`
+  ticks of interpolation and nothing more until `Instance.due`, `h` being as
+  far as the client's easing (translation and scale straight, rotation the
+  short arc: Paper's decomposition, see the file) passes within a hundredth
+  of a block of the clip at each tick between (`Keyframes.reach`, at most
+  20, looking ahead with `Instance.placedAhead` / `AnimationPlayer.applyAhead`).
+  So a linear segment is one send, an eased one a few, a step one at the
+  step, and a child on a turning parent pieces short enough that the chord
+  stays near the arc. Shear, mirrors, a collapsed node or an uneven scale
+  that changes aren't planned. The server's own pose (hitboxes, physics,
+  `world_position`) is still every tick's.
+- **Looks.** What a script changes about how a display is drawn (glow and
+  its colour, brightness, a billboard, a text display's opacity, an item
+  display's whole item) is a per-node `DisplayLook` on the `Instance`, reset
+  by `redefine`; `shownLook` adds the centity's view range (blocks / 64) and
+  the teleport duration. Sync pushes it with `EntityOps.setLook` after the
+  content (so a look's billboard or item has the last word) whenever it or the
+  content changed. Text style other than opacity lives in the node's
+  `TextDisplay` content copy.
+- **Clickable.** An unclickable node's hitbox is collapsed like a hidden
+  one's and skipped by click picking; physics still treats it as solid.
+- **Per-player hiding** (`hide_from`): `Instance.hiddenFrom`
+  is the record (kept across reloads, not restarts). `Centities.setHidden`
+  hides every display and hitbox (`EntityOps.setHidden`, Paper's
+  `hideEntity`); a newly spawned entity is hidden as it's claimed; the server
+  forgets on quit and on unload, so `playerJoined` and `entitiesLoaded` hide
+  them again. A click from a player it's hidden from goes nowhere.
+- **Entities are held by node name.** `redefine` (a reload) resets per-node
+  state from the new definition; **reconcile** then removes entities whose
+  node or component is gone, updates every display's content, respawns one
+  whose kind changed, and spawns what's missing. Entities that couldn't be
+  removed wait as **orphans**, tried once more when the instance is next
+  loaded and then forgotten (one still out of reach goes as a stray when its
+  chunk loads).
+- **Script-added nodes** (`Centity:add_node`, `Node:add_child`, `Node:remove`):
+  `Instance.declared` is the file's `CompiledCentity`, `Instance.definition`
+  is `declared` plus the added nodes appended after it (so declared indices
+  never move, which clips rely on, and a parent always precedes its children).
+  `Instance.addNode` / `removeNode` (through `Centities.addNode` / `removeNode`,
+  which also drops handlers on removed nodes) rebuild the per-node arrays by
+  node name and renumber `BodyState.touching`; both set `needsReconcile`, so
+  the same tick's sync spawns or retires the entities. The table a script
+  passes is read by `nodeFrom` (`api/Definitions.kt`): Lua spelling to the
+  file's `NodeDef`, then format's `CentityValidator.validateNode` and
+  `CentityCompiler.compileNode` (the file's one node model, not a parallel
+  one). Added nodes are runtime state: `redefine` (any reload of the centity)
+  goes back to `declared`, and they aren't in `InstanceRecord`, so after a
+  restart reconcile retires their stale entities; only added nodes can be
+  removed (`Instance.isAdded`). Code that holds node **indices** across a
+  script call (a handler may remove nodes and renumber) must go by name, as
+  `Physics.report` does.
+- **Loaded is the anchor's chunk**, `WorldOps.entitiesLoaded(anchor)`, not
+  whether an entity answers (and an instance with no entities at all is
+  always loaded, so spawning anywhere puts them in the world): `isLoaded(id)` is false both for an entity in an
+  unloaded chunk and for one that's gone. With the chunk's entities loaded, an
+  entity of ours that doesn't answer was killed or removed by something else,
+  so `dropGone` forgets it and reconcile spawns it again.
+- **Unloaded instances do nothing.** On a Paper server nothing keeps chunks loaded
+  without players, so a centity far from everyone (or at spawn with nobody
+  online) is unloaded: no ticks, no sync, reconcile deferred until
+  `EntitiesLoadEvent` brings the entities back (`entitiesLoaded` →
+  `forceSync`). Don't force-load chunks from the plugin. The fake platform
+  unloads by chunk (`FakeWorlds.unloaded`), as Paper does.
+- **Inert instances**: a record whose centity is gone (deleted, or the
+  project refused) keeps its entities and comes back when the definition does.
+  A centity file with errors keeps its _old_ definition running.
+
+## Hitboxes and clicks
+
+Picking and ray tests are `CentityClicks` (`Centities.click`, `clickTarget`, `aim` and `raycast` hand them
+over): it reads who owns an entity, the instances' boxes and the obstacle grid, and never changes an instance
+but to keep a natural one a click reached.
+
+- An interaction entity is axis-aligned with a square footprint, so
+  `Hitboxes.bounds` spawns the extent of the node's transformed boxes. Boxes
+  are explicit `boxes`, or `shape: "collision"` → `GameData.collisionBoxes`
+  of the node's _current_ block (`set_display_block` reshapes it; `PaperGameData`
+  caches per state), or the unit cube.
+- A click names an entity; `Centities.click` re-picks among the instance's
+  hitbox nodes along the player's sight (narrow phase for `raycast` nodes,
+  the entity box otherwise), nearest wins. A ray through a `raycast` node's
+  padding hits nothing. The hit's point and face normal become the click's
+  `hit_position`/`hit_normal`. The click then goes along its path: the node's
+  `click` handlers, each ancestor's, the centity's, then `nf.on("centity_click")`,
+  until a handler calls `event:stop()`.
+- A click on any tagged entity is cancelled even when no script wants it.

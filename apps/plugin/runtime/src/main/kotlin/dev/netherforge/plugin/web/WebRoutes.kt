@@ -5,8 +5,7 @@ import dev.netherforge.format.ProblemCodes
 import dev.netherforge.format.project.PackagePaths
 import dev.netherforge.format.project.ProjectManifest
 import dev.netherforge.format.project.ProjectSnapshot
-import dev.netherforge.plugin.WebConfig
-import dev.netherforge.plugin.api.LuaHandle
+import dev.netherforge.plugin.binding.LuaHandle
 import dev.netherforge.plugin.lua.CallResult
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaFunction

@@ -18,8 +18,8 @@ import com.dylibso.chicory.wasm.types.FunctionType
 import com.dylibso.chicory.wasm.types.MemoryLimits
 import com.dylibso.chicory.wasm.types.ValType
 import dev.netherforge.format.wasm.WasmImports
-import dev.netherforge.plugin.api.WasmFunction
 import dev.netherforge.plugin.async.WorkFailed
+import dev.netherforge.plugin.binding.WasmFunction
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.SecureRandom

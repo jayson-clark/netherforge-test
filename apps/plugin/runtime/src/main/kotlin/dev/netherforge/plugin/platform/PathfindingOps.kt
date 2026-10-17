@@ -8,7 +8,7 @@ import java.util.UUID
  * them along, whoever started it (a script, or the mob's AI). Everything
  * answers null or false for an entity that isn't a mob, or isn't there now.
  * Paper has no event for a path ending, so the runtime watches [hasPath]
- * each tick for the walks scripts started (`world/MobPaths.kt`).
+ * each tick for the walks scripts started (`mob/MobPaths.kt`).
  */
 interface PathfindingOps {
     /**

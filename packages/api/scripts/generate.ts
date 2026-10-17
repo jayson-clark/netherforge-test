@@ -86,7 +86,7 @@ const raised = raisedEvents(api, bound)
 write(`${runtime}/lua/dev/netherforge/plugin/lua/bindings.lua`, bindingsLua(classes, api))
 write(`${runtime}/lua/dev/netherforge/plugin/lua/prelude/schema.lua`, schemaLua(api))
 writeDir(
-  `${runtime}/kotlin/dev/netherforge/plugin/api`,
+  `${runtime}/kotlin/dev/netherforge/plugin/binding`,
   new Map([
     ['LuaHandle.kt', handlesKotlin(classes)],
     ['LuaApi.kt', apiKotlin(classes)],

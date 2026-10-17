@@ -1,6 +1,6 @@
 ---
 name: lua-api
-description: Adding or changing anything a NetherForge Lua script can call - the spec in packages/api/ comes first, then pnpm generate (api.json, LuaLS stubs, docs/reference, and the runtime's bindings - bindings.lua, the Kotlin LuaApi interfaces, primitives, the event registry and typed payloads), then implementing the generated interface (or the prelude, for impl lua), then the conformance test. The type grammar, the binding model, events on classes, and the API's naming, error and nil-vs-error conventions. Read before touching packages/api/, the prelude (lua/prelude.lua and lua/prelude/*.lua), the runtime's api/ package or src/generated/.
+description: Adding or changing anything a NetherForge Lua script can call - the spec in packages/api/ comes first, then pnpm generate (api.json, LuaLS stubs, docs/reference, and the runtime's bindings - bindings.lua, the Kotlin LuaApi interfaces, primitives, the event registry and typed payloads), then implementing the generated interface (or the prelude, for impl lua), then the conformance test. The type grammar, the binding model, events on classes, and the API's naming, error and nil-vs-error conventions. Read before touching packages/api/, the prelude (lua/prelude.lua and lua/prelude/*.lua), the runtime's api/ (implementations) or binding/ (generated bindings and their support) packages, or src/generated/.
 ---
 
 # The Lua API
@@ -10,13 +10,13 @@ description: Adding or changing anything a NetherForge Lua script can call - the
 `packages/api/src/spec/` (TypeScript, typed by `packages/api/src/types.ts`) declares every
 global, namespace, handle class, event (on the class it's about) and payload shape.
 
-| Consumer                    | How it gets the spec                                                  |
-| --------------------------- | --------------------------------------------------------------------- |
-| the editor's Lua features   | its lua-language-server reads `nf.lua` (see editor-ui)                |
-| LuaLS users (VS Code, nvim) | `packages/api/generated/luals/nf.lua` (`---@meta` stubs), `surfaces/` |
-| the docs                    | `docs/reference/*.md`                                                 |
-| the plugin's bindings       | `apps/plugin/runtime/src/generated/` (`bindings.lua` and `api/*.kt`)  |
-| the conformance test        | `packages/api/generated/api.json`                                     |
+| Consumer                    | How it gets the spec                                                     |
+| --------------------------- | ------------------------------------------------------------------------ |
+| the editor's Lua features   | its lua-language-server reads `nf.lua` (see editor-ui)                   |
+| LuaLS users (VS Code, nvim) | `packages/api/generated/luals/nf.lua` (`---@meta` stubs), `surfaces/`    |
+| the docs                    | `docs/reference/*.md`                                                    |
+| the plugin's bindings       | `apps/plugin/runtime/src/generated/` (`bindings.lua` and `binding/*.kt`) |
+| the conformance test        | `packages/api/generated/api.json`                                        |
 
 **Terrain scripts have an API of their own** (W5.6): `packages/api/src/terrain.ts` (`terrainApi`:
 `Terrain`, `Noise`, `Chunk`, the `TerrainStages` a script returns, what the sandbox removes). It isn't `nf`'s and
@@ -41,8 +41,15 @@ something undeclared.
 ## Where the API is implemented
 
 - **The generated bindings** (`scripts/emit/bindings.ts` works out one codec
-  per node of each type, `lua.ts` and `kotlin.ts` write the two halves). For
-  every function not marked `impl: "lua"`:
+  per node of each type, `lua.ts` and `kotlin.ts` write the two halves). The
+  Kotlin half is package `dev.netherforge.plugin.binding`
+  (`src/generated/kotlin/.../binding/`), beside the hand-written support it
+  calls in `src/main/kotlin/.../binding/`: `Marshal.kt` (`Marshal`, `Caller`),
+  `EventSession.kt`, `Locations.kt` (`LuaLocation`, `LuaPlace`,
+  `BlockPosition`), `Handles.kt` (the handle for an entity, a block, an
+  inventory or the console) and `Messages.kt` (`notInProject`,
+  `luaSpelling`). Services use `binding`, never `api`. For every function
+  not marked `impl: "lua"`:
   - `bindings.lua`: the method on its class (or the function on `nf` or a
     namespace under it), the `:` check (inline: the handle's key in the
     handle table, `ids[self]`, and its metatable's name in the class's
@@ -134,11 +141,14 @@ something undeclared.
   (`Location|Vec3` → `LocationOrVec3`, which the runtime turns into a
   `LuaPlace` with `.place`), a shape → its data class. Several returns are a
   `Pair`/`Triple`/`Quadruple`, null for "a single nil".
-- **The runtime's implementations** live in `apps/plugin/runtime/.../api/`
-  (`RuntimeApi` holds them and implements `Marshal`; `NfImpl`, `CentityImpl`,
-  ...). A missing or mistyped implementation doesn't compile.
+- **The runtime's implementations** live in `apps/plugin/runtime/.../api/`,
+  every one whatever its area (`RuntimeApi` holds them and implements
+  `Marshal`; `NfImpl`, `CentityImpl`, `ScreenImpls`, `WasmImpls`,
+  `NfTestImpl`, ...): a file per class, or `<Area>Impls.kt` for an area's
+  few. They call the services; no service imports them. A missing or
+  mistyped implementation doesn't compile.
 - **The prelude** is a set of modules, `resources/.../lua/prelude/<name>.lua`
-  (the entry `prelude.lua` loads them; see plugin-runtime, "The prelude's
+  (the entry `prelude.lua` loads them; see plugin-sandbox, "The prelude's
   modules"), each a chunk that `require`s what it uses and returns what it
   exports. It keeps the core: `guard` (the hook: budget, time, memory; error
   locations; `invoke`), `sandbox`, `handles` (`class`, `self_of`, the cache),
@@ -184,7 +194,7 @@ definition)`). So a body holds only logic: it takes `self` and the arguments
   `handles.refine`. A hand-written function's own string and table work calls
   the library's originals (`raw.match(s, p)`, `format(...)`, `raw.sort(t)`,
   from `std`), never `s:match(p)` or `table.sort`: those are the sandbox's
-  caps, for scripts (plugin-runtime skill, "The sandbox"). The tables a
+  caps, for scripts (plugin-sandbox skill, "The sandbox"). The tables a
   hand-written function takes are checked from the spec: the generated
   `schema.lua` (the data the prelude reads: `events`, `custom_events`,
   `event_functions`, `shapes`, `saved_handles`) has `shapes`, every shape
@@ -242,7 +252,7 @@ definition)`). So a body holds only logic: it takes `self` and the arguments
   script test runner, plugin-runtime's "Testing"). The conformance test leaves
   it out of "exactly the declared functions" and checks a server has none.
   `nf.test.raise`'s `event` parameter is a union of every non-local `nf` event,
-  and `emit/raisable.ts` writes `api/RaisableEvents.kt` from the same registry
+  and `emit/raisable.ts` writes `binding/RaisableEvents.kt` from the same registry
   (an `EventType`, plus the one on the handle in `raised.first`, and a lambda
   finding that handle in the payload): a new event is raisable with no list to
   keep. Only `nf` events; a handle's own events (a node's click) aren't.
@@ -370,7 +380,7 @@ definition)`). So a body holds only logic: it takes `self` and the arguments
   in the docs and stubs (`REQUIREMENTS[kind].declared`: how a package declares it in its
   `netherforge.json`'s `requires`), and an entry in `generated/luals/gates.json` (with `since`)
   that the editor reads (`granted`: what a manifest declares). The check lands in the runtime's
-  one entry point, `session.requirements.check(requirement, what)` (plugin-runtime's "Declared
+  one entry point, `session.requirements.check(requirement, what)` (plugin-capabilities' "Declared
   capabilities"), held to the calling package. A function that knows a narrower requirement once
   it has its arguments calls that entry point itself with format's `Requirement`
   (`nf.http.request`: `Requirement.Http(host)` for each host it connects to), keeping the spec's
@@ -429,7 +439,7 @@ the connection is `""` for the package's own SQLite file, else a name from
 `config.yml`'s `databases:`, W2.3), the model for a handle whose thing lives
 for the plugin's life rather than a session. One class, one `DatabaseImpl`,
 whichever it is: what differs is the `SqlDatabase` behind it (see the
-plugin-runtime skill). `NfImpl.db(caller, name)` checks the name exists and
+plugin-persistence skill). `NfImpl.db(caller, name)` checks the name exists and
 lists the calling package (`RemoteDatabases.problem`), an error at the line;
 the `db` requirement is the generated primitive's, as for `nf.db()`. Its three functions are `asyncFunction`s (`spec/db.ts`), so the
 Kotlin interface (`DatabaseApi`) returns `CompletionStage`s: `DatabaseImpl`
@@ -452,7 +462,7 @@ happens later is events on it (`open`, `message`, `end`), so `nf.wait_for(socket
 in a task and a handler needs none. The handle is keyed by number and URL (`url()` answers after
 the end, like `Effect:kind()`); the rest answers as ended (`state()` `"ended"`, `status()` nil,
 `send`/`close` false). An owner's limit is never an error at the call: the connection ends
-`"limit"` at the next tick (plugin-runtime, "Streams and WebSockets"). `nf.test`'s
+`"limit"` at the next tick (plugin-capabilities, "Streams and WebSockets"). `nf.test`'s
 `connections`, `accept`, `receive`, `sent` and `disconnect` take these same handles, the far
 end being the test's.
 
@@ -670,7 +680,7 @@ restarts it by; a script that listens for `setting_changed` (events.ts: `setting
   the error (`type_of(x) ~= "number"`, a handle's set, a choice set's `has`, `genuine_mt(v) ~=
 Vec3_mt`), and a namespace under `nf` is filled when a script first reaches it
   (`namespaces[path]`, the prelude's `scopes.lazy`): a scope is made for every centity spawned.
-  JSON a script hands over is read in Kotlin (`LuaHost.plainJson`, exactly as the codec would
+  JSON a script hands over is read in Kotlin (`PlainJson`, exactly as the codec would
   write it, floats through `CodecNumbers`), the codec only for what Kotlin can't say the same.
 - `BindingBenchmark` times the hot bindings (a node's transform, a handle back,
   a handle and a union as arguments, an option table); run it before and after

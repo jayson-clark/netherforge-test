@@ -1,161 +1,19 @@
 package dev.netherforge.plugin.lua
 
 import dev.netherforge.format.Vec3
-import dev.netherforge.plugin.api.LuaEvent
-import dev.netherforge.plugin.api.LuaHandle
-import dev.netherforge.plugin.api.LuaLocation
+import dev.netherforge.plugin.binding.LuaEvent
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.LuaLocation
 import dev.netherforge.plugin.platform.ItemData
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.longOrNull
 import party.iroiro.luajava.JFunction
 import party.iroiro.luajava.Lua
 import party.iroiro.luajava.LuaException
 import party.iroiro.luajava.lua54.Lua54
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicInteger
-
-/** A Kotlin function scripts reach through the prelude. Reads its arguments from [lua]'s stack from 1, pushes results, returns how many. */
-fun interface Primitive {
-    fun call(lua: Lua): Int
-}
-
-/** A Lua function a primitive was given, kept in the registry by [ref] until [LuaHost.unref]. */
-@JvmInline
-value class LuaFunction(val ref: LuaRef)
-
-/**
- * A Lua value kept in the registry until [LuaHost.unref]: a function the
- * runtime calls later (a timer's, a command's dispatcher, a mob goal's
- * callback), a menu window's context, a dialog opening's, a `data()` table.
- * Pushed back to Lua as the very value it was, not a copy, so every script
- * that asks gets the same table.
- *
- * It carries the [generation] of the [LuaHost] that kept it, and the host
- * checks it on every use ([LuaHost.pushValue], [LuaHost.invoke],
- * [LuaHost.unref]): a full reload starts a new host, and a registry slot
- * number from the old one names something else (or nothing) in the new one,
- * where using it would corrupt the Lua heap. Such a use is a bug, and throws
- * [StaleLuaRef].
- */
-@JvmInline
-value class LuaRef private constructor(private val packed: Long) {
-    /** Which [LuaHost] kept it: [LuaHost.generation]. */
-    val generation: Int get() = (packed ushr 32).toInt()
-
-    /** Its slot in that host's registry. */
-    internal val slot: Int get() = packed.toInt()
-
-    override fun toString(): String = "LuaRef($generation:$slot)"
-
-    companion object {
-        internal fun of(generation: Int, slot: Int) = LuaRef((generation.toLong() shl 32) or (slot.toLong() and 0xffffffffL))
-    }
-}
-
-/** A [LuaRef] used with a [LuaHost] other than the one that kept it. */
-class StaleLuaRef(ref: LuaRef, generation: Int) :
-    IllegalStateException("$ref was kept by Lua state ${ref.generation}, not this one ($generation): a session held it past its end")
-
-/**
- * A [LuaHost] entered from a thread other than the one that owns it. A bug:
- * work off the main thread hands its result back through the runtime's
- * completions (`AsyncWork`), and only there calls into Lua.
- */
-class WrongThread(entry: String, owner: Thread, caller: Thread) :
-    IllegalStateException(
-        "LuaHost.$entry was called on thread \"${caller.name}\", but this Lua state belongs to thread \"${owner.name}\": " +
-            "Lua can't be used from two threads. Hand the result to the main thread (AsyncWork, Completions) and call Lua there."
-    )
-
-/** A value encoded for saving: its JSON text (null when the value itself can't be saved), and what in it couldn't be, by key path. */
-data class EncodedData(val text: String?, val problems: List<String>)
-
-/** An argument of any type, read only if the primitive asks, and only while it runs. */
-class LuaValue(private val host: LuaHost, private val lua: Lua, private val index: Int) {
-    /**
-     * As JSON, by the one Lua↔JSON codec ([LuaHost.json]): typed values tagged.
-     * What JSON can't hold is a [LuaApiException] naming where it is, from
-     * [root]. A table's keys in [skip] are left out (read them with [field]).
-     */
-    fun json(root: String = "value", skip: Set<String> = emptySet()): JsonElement = host.json(lua, index, root, skip)
-
-    /** Reads it as [codec] would read an argument, named [where] in a mistake. */
-    fun <T> read(codec: LuaCodec<T>, where: String): T = codec.read(LuaCall(host, lua), index, where)
-
-    /** Pushes the very value again (onto the same state's stack). */
-    fun push(onto: Lua) = onto.pushValue(index)
-
-    /** The field [key] of this table, or null when it's nil. */
-    fun field(key: String): LuaValue? {
-        lua.getField(index, key)
-        if (lua.isNil(-1)) {
-            lua.pop(1)
-            return null
-        }
-        return LuaValue(host, lua, lua.top)
-    }
-
-    /** Keeps the value alive past this call, as itself; release it with [LuaHost.unref]. */
-    fun keep(): LuaRef = host.ref(lua, index)
-
-    /** Encodes it as saved data (see [LuaHost.encodeData]). */
-    fun data(root: String): EncodedData = host.encodeData(lua, index, root)
-
-    /** Reads it with a conversion that works on the stack (`Marshal.itemsByIndex`): [read] gets the state and its index. */
-    fun <T> read(read: (Lua, Int) -> T): T = read(lua, index)
-}
-
-/** Why a call into Lua failed, located in the project when Lua could say where. */
-data class ScriptFailure(val message: String, val file: String?, val line: Int?, val traceback: String?)
-
-sealed interface CallResult {
-    /** The call returned; [value] is its first result as a Kotlin Boolean, Double, String or null. */
-    data class Ok(val value: Any?) : CallResult
-
-    data class Failed(val failure: ScriptFailure) : CallResult
-
-    /** Nothing was called: the scope isn't live, or there's no Lua state. */
-    data object Absent : CallResult
-}
-
-/** What one scope's code cost since the host last asked: [nanos] of its own time over [calls] calls in. */
-data class ScopeCost(val nanos: Long, val calls: Int)
-
-/**
- * What one function a scope ran cost, as the profiler kept it: [kind] is the
- * event a handler is for, or `load`, `timer`, `task`, `command`, `complete`,
- * `goal`, `callback`; [file] and [line] where the function starts (no line
- * for a script's body; neither for code that isn't the project's).
- */
-data class CallCost(val scope: Int, val kind: String, val file: String?, val line: Int?, val nanos: Long, val calls: Int, val max: Long)
-
-/** One step of an event's path: the handlers for [event] on [target] (null for `nf`). */
-data class EventStage(val event: String, val target: LuaHandle?)
-
-/**
- * How an event ended: whether it's cancelled, and why any writable field a
- * handler left couldn't be read back (an item put into a list in place, which
- * nothing checked): such a field is left as it was.
- */
-data class EmitOutcome(val cancelled: Boolean, val problems: List<String> = emptyList())
-
-/**
- * Thrown by a primitive for a mistake in the script calling it. Lua sees the
- * message alone: luajava turns a thrown exception into a Lua error carrying
- * its `toString()`, which for anything else is prefixed with the class name.
- */
-open class LuaApiException(message: String) : RuntimeException(message) {
-    override fun toString(): String = message ?: "error"
-
-    override fun fillInStackTrace(): Throwable = this
-}
 
 /**
  * One Lua 5.4 state running a whole project: every module and every node
@@ -233,6 +91,9 @@ class LuaHost(
 
     /** The handle classes a saved table may keep, each with its tag (`Entity` → `entity`): the JSON codec's `saved_handles`. */
     private val savedHandles: Map<String, String>
+
+    /** Plain data read straight off the stack, as the codec would write it. */
+    private val plain by lazy { PlainJson(this, savedHandles) }
 
     /** Each handle class's metatable, by name (`host.metatables`), each kept on first use. */
     private val metatablesRef: Int
@@ -1131,9 +992,9 @@ class LuaHost(
         // Plain data is read here, as the codec would write it, costing the script nothing ([plainJson]).
         val at = if (index < 0) lua.top + index + 1 else index
         val plain = if (lua.type(at) == Lua.LuaType.TABLE) {
-            plainTable(lua, at, 0, exact = true, skip = skip)
+            plain.table(lua, at, 0, exact = true, skip = skip)
         } else {
-            plainJson(lua, at, 0, exact = true)
+            plain.value(lua, at, 0, exact = true)
         }
         if (plain != null) return plain
         val encoded = encodeData(lua, at, root, "written as JSON", skip)
@@ -1153,11 +1014,11 @@ class LuaHost(
     fun fieldsJson(lua: Lua, index: Int, root: String, kept: String): JsonElement {
         owned("fieldsJson")
         val at = if (index < 0) lua.top + index + 1 else index
-        val fields = plainObject(lua, at, 0, exact = false, skip = setOf(kept)) ?: return saved(lua, at, root)
+        val fields = plain.fields(lua, at, 0, exact = false, skip = setOf(kept)) ?: return saved(lua, at, root)
         lua.getField(at, kept)
         try {
             if (lua.isNil(-1)) return JsonObject(fields)
-            val value = plainJson(lua, -1, 1, exact = true) ?: saved(lua, -1, "$root.$kept")
+            val value = plain.value(lua, -1, 1, exact = true) ?: saved(lua, -1, "$root.$kept")
             return JsonObject(fields + (kept to value))
         } finally {
             lua.pop(1)
@@ -1169,179 +1030,6 @@ class LuaHost(
         val encoded = encodeData(lua, index, root)
         encoded.problems.firstOrNull()?.let { throw LuaApiException(it) }
         return Json.parseToJsonElement(requireNotNull(encoded.text))
-    }
-
-    /**
-     * The value at [index] as JSON when it's plain data: a string, a boolean,
-     * a finite number, or a table without a metatable that is a list numbered
-     * from 1 without holes or an object keyed by strings none of which starts
-     * with "$", of plain data in turn. Null for anything else, which only the
-     * codec writes (or reports) right.
-     *
-     * [exact] is for JSON whose text is seen, which must be the codec's
-     * very text: its objects' keys in the codec's order (Lua's own `<`, which
-     * is the C library's collation, asked of Lua) and ASCII (so they're the
-     * same string back in Lua to be compared), its floats spelled as the
-     * codec spells them ([CodecNumbers]).
-     */
-    private fun plainJson(lua: Lua, index: Int, depth: Int, exact: Boolean): JsonElement? = when (lua.type(index)) {
-        Lua.LuaType.STRING -> JsonPrimitive(lua.toString(index))
-        Lua.LuaType.BOOLEAN -> JsonPrimitive(lua.toBoolean(index))
-        Lua.LuaType.NUMBER -> when {
-            lua.isInteger(index) -> JsonPrimitive(lua.toInteger(index))
-            // Parsed from the codec's text, so its content is that text.
-            exact -> CodecNumbers.json(lua.toNumber(index))?.let(Json::parseToJsonElement)
-            else -> lua.toNumber(index).takeIf { it.isFinite() }?.let { JsonPrimitive(it) }
-        }
-        Lua.LuaType.TABLE -> plainTable(lua, if (index < 0) lua.top + index + 1 else index, depth, exact)
-        else -> null
-    }
-
-    /** A table of plain data ([plainJson]), its keys in [skip] left out when it's an object; null when it isn't one. */
-    private fun plainTable(lua: Lua, at: Int, depth: Int, exact: Boolean, skip: Set<String> = emptySet()): JsonElement? {
-        if (depth >= MAX_PLAIN_DEPTH) return null
-        if (lua.getMetatable(at) != 0) {
-            lua.pop(1)
-            return if (exact && skip.isEmpty()) typedJson(lua, at) else null
-        }
-        // A list has a first item; a table without one is an object (the empty table too, as the codec has it).
-        lua.push(1L)
-        lua.rawGet(at)
-        val list = !lua.isNil(-1)
-        lua.pop(1)
-        if (!list) return plainObject(lua, at, depth, exact, skip)?.let(::JsonObject)
-        // The codec leaves [skip]'s keys out of whatever table it's given; a list with them is its to write.
-        if (skip.isNotEmpty()) return null
-        val items = HashMap<Long, JsonElement>()
-        lua.checkStack(3)
-        lua.pushNil()
-        while (lua.next(at) != 0) {
-            val position = if (lua.type(-2) == Lua.LuaType.NUMBER && lua.isInteger(-2)) lua.toInteger(-2) else 0
-            val item = if (position > 0) plainJson(lua, -1, depth + 1, exact) else null
-            if (item == null) {
-                lua.pop(2)
-                return null
-            }
-            items[position] = item
-            lua.pop(1)
-        }
-        // As many positions as the highest of them: no holes.
-        return JsonArray(List(items.size) { items[it + 1L] ?: return null })
-    }
-
-    /**
-     * A typed value as the JSON codec tags it: `{"$vec3":[x,y,z]}`,
-     * `{"$location":[world,x,y,z,yaw,pitch]}` (the world by its name, a facing
-     * left out as null), and a handle whose class (or one up its chain) a saved
-     * table may keep as `{"$<tag>":[key]}`. Null for anything else (a handle
-     * nothing may keep, a vector holding NaN): the codec says what's wrong.
-     */
-    private fun typedJson(lua: Lua, at: Int): JsonElement? {
-        fun numbers(table: Int, count: Int, from: Int = 1): List<JsonElement>? = (from until from + count).map { i ->
-            lua.rawGetI(table, i)
-            val number = when {
-                lua.isNil(-1) -> JsonNull
-                lua.isInteger(-1) -> JsonPrimitive(lua.toInteger(-1))
-                else -> CodecNumbers.json(lua.toNumber(-1))?.let(Json::parseToJsonElement)
-            }
-            lua.pop(1)
-            number ?: return null
-        }
-
-        fun tagged(tag: String, parts: List<JsonElement>) = JsonObject(mapOf(tag to JsonArray(parts)))
-
-        // A handle the runtime no longer knows is the codec's to report.
-        fun keyOf(index: Int): List<Any>? = try {
-            handleAt(lua, index).keyValues
-        } catch (_: LuaApiException) {
-            null
-        }
-        return when (val kind = kindAt(lua, at)) {
-            null -> null
-            "Vec3" -> numbers(at, 3)?.let { tagged("\$vec3", it) }
-            "Location" -> {
-                lua.checkStack(3)
-                lua.rawGetI(at, 1)
-                val world = keyOf(-1)?.first()?.toString()
-                lua.pop(1)
-                lua.rawGetI(at, 2)
-                val position = numbers(lua.top, 3)
-                lua.pop(1)
-                val facing = numbers(at, 2, from = 3)
-                if (world == null || position == null || facing == null) {
-                    null
-                } else {
-                    tagged("\$location", listOf(JsonPrimitive(world)) + position + facing)
-                }
-            }
-            else -> {
-                var name: String? = kind
-                while (name != null && name !in savedHandles) name = LuaHandle.PARENTS[name]
-                val tag = name?.let(savedHandles::get) ?: return null
-                val key = (keyOf(at) ?: return null).map { part ->
-                    when (part) {
-                        is String -> JsonPrimitive(part)
-                        is Long -> JsonPrimitive(part)
-                        else -> return null
-                    }
-                }
-                tagged("\$$tag", key)
-            }
-        }
-    }
-
-    /** The table at [at] as an object of plain data ([plainJson]), its keys in [skip] left out; null when it isn't one. */
-    private fun plainObject(lua: Lua, at: Int, depth: Int, exact: Boolean, skip: Set<String>): Map<String, JsonElement>? {
-        if (lua.type(at) != Lua.LuaType.TABLE) return null
-        if (depth == 0 && lua.getMetatable(at) != 0) {
-            lua.pop(1)
-            return null
-        }
-        val fields = HashMap<String, JsonElement>()
-        lua.checkStack(3)
-        lua.pushNil()
-        while (lua.next(at) != 0) {
-            val key = if (lua.type(-2) == Lua.LuaType.STRING) lua.toString(-2) else null
-            if (key != null && key in skip) {
-                lua.pop(1)
-                continue
-            }
-            val usable = key != null && !key.startsWith("$") && (!exact || key.all { it.code < 0x80 })
-            val value = if (usable) plainJson(lua, -1, depth + 1, exact) else null
-            if (value == null) {
-                lua.pop(2)
-                return null
-            }
-            fields[key!!] = value
-            lua.pop(1)
-        }
-        if (!exact || fields.size < 2) return fields
-        val keys = fields.keys.toMutableList()
-        var tied = false
-        lua.checkStack(2)
-        keys.sortWith { a, b ->
-            when {
-                a == b -> 0
-                luaLess(lua, a, b) -> -1
-                luaLess(lua, b, a) -> 1
-                else -> {
-                    tied = true
-                    0
-                }
-            }
-        }
-        // Two keys Lua can't tell apart: whichever order its sort leaves them in is its own.
-        if (tied) return null
-        return keys.associateWithTo(LinkedHashMap()) { fields.getValue(it) }
-    }
-
-    /** Whether Lua's `<` puts [a] before [b], as `table.sort` would. */
-    private fun luaLess(lua: Lua, a: String, b: String): Boolean {
-        lua.push(a)
-        lua.push(b)
-        val less = lua.lessThan(-2, -1)
-        lua.pop(2)
-        return less
     }
 
     private inline fun encode(lua: Lua, root: String, verb: String, skip: Set<String>, push: Lua.() -> Unit): EncodedData {
@@ -1380,47 +1068,12 @@ class LuaHost(
      * nothing for the codec to do, so it's made here, costing the script nothing.
      */
     private fun pushJson(lua: Lua, element: JsonElement) {
-        if (!tagged(element)) return pushPlainJson(lua, element)
+        if (!PlainJson.tagged(element)) return PlainJson.push(lua, element)
         lua.refGet(hostRef)
         lua.getField(-1, "json_decode")
         lua.remove(-2)
-        pushPlainJson(lua, element)
+        PlainJson.push(lua, element)
         lua.pCall(1, 1)
-    }
-
-    /** Whether [element] has a key starting with "$" anywhere: a tagged value, or a key of a script's written with one more "$". */
-    private fun tagged(element: JsonElement): Boolean = when (element) {
-        is JsonObject -> element.any { (key, value) -> key.startsWith("$") || tagged(value) }
-        is JsonArray -> element.any(::tagged)
-        else -> false
-    }
-
-    /** JSON as plain Lua values, for `host.json_decode` to type: objects and arrays as tables. */
-    private fun pushPlainJson(lua: Lua, element: JsonElement) {
-        lua.checkStack(3)
-        when (element) {
-            is JsonNull -> lua.pushNil()
-            is JsonPrimitive -> when {
-                element.isString -> lua.push(element.content)
-                element.booleanOrNull != null -> lua.push(element.booleanOrNull!!)
-                element.longOrNull != null -> lua.push(element.longOrNull!!)
-                else -> lua.push((element.doubleOrNull ?: 0.0) as Number)
-            }
-            is JsonArray -> {
-                lua.createTable(element.size, 0)
-                element.forEachIndexed { k, item ->
-                    pushPlainJson(lua, item)
-                    lua.rawSetI(-2, k + 1)
-                }
-            }
-            is JsonObject -> {
-                lua.createTable(0, element.size)
-                for ((key, item) in element) {
-                    pushPlainJson(lua, item)
-                    lua.setField(-2, key)
-                }
-            }
-        }
     }
 
     /**
@@ -1705,7 +1358,6 @@ class LuaHost(
         const val SAVED = "saved"
 
         /** How deep [plainJson] goes before leaving a table to the codec, which saves no deeper (`MAX_DATA_DEPTH`). */
-        private const val MAX_PLAIN_DEPTH = 64
 
         private val GENERATIONS = AtomicInteger()
 

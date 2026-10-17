@@ -1,8 +1,8 @@
 package dev.netherforge.plugin.world
 
 import dev.netherforge.plugin.RuntimeLog
-import dev.netherforge.plugin.api.parseJson
 import dev.netherforge.plugin.data.ScriptData
+import dev.netherforge.plugin.data.parseJson
 import dev.netherforge.plugin.lua.LuaHost
 import dev.netherforge.plugin.lua.LuaRef
 import dev.netherforge.plugin.platform.BlockVector

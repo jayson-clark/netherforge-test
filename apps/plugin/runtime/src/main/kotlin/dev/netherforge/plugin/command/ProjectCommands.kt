@@ -1,8 +1,8 @@
 package dev.netherforge.plugin.command
 
-import dev.netherforge.plugin.api.CONSOLE_SENDER
-import dev.netherforge.plugin.api.CommandDefinition
-import dev.netherforge.plugin.api.LuaHandle
+import dev.netherforge.plugin.binding.CONSOLE_SENDER
+import dev.netherforge.plugin.binding.CommandDefinition
+import dev.netherforge.plugin.binding.LuaHandle
 import dev.netherforge.plugin.lua.CallResult
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaCodecs

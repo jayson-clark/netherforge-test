@@ -1,7 +1,5 @@
 package dev.netherforge.plugin.http
 
-import dev.netherforge.plugin.ConnectionLimits
-import dev.netherforge.plugin.HttpConfig
 import dev.netherforge.plugin.async.WorkFailed
 import okhttp3.Call
 import okhttp3.Dispatcher

@@ -1,5 +1,11 @@
 package dev.netherforge.plugin.api
 
+import dev.netherforge.plugin.binding.InventoryApi
+import dev.netherforge.plugin.binding.InventoryKeys
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.StringOrItemMatch
+import dev.netherforge.plugin.binding.blockHandle
+import dev.netherforge.plugin.binding.entityHandle
 import dev.netherforge.plugin.item.ItemMatch
 import dev.netherforge.plugin.item.ItemSlots
 import dev.netherforge.plugin.item.LuaItems
@@ -10,47 +16,6 @@ import dev.netherforge.plugin.session.ProjectSession
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import java.util.UUID
-
-/**
- * An `Inventory` handle's one key value, where the inventory is:
- * `player/<uuid>`, `ender_chest/<uuid>`, `storage/<uuid>/<size>/<ns:name>`,
- * `entity/<uuid>` or `block/<x>/<y>/<z>/<world>` (the world last, so its name
- * may hold anything).
- */
-internal object InventoryKeys {
-    fun of(ref: InventoryRef): LuaHandle.Inventory = LuaHandle.Inventory(
-        when (ref) {
-            is InventoryRef.Player -> "player/${ref.player}"
-            is InventoryRef.EnderChest -> "ender_chest/${ref.player}"
-            is InventoryRef.Storage -> "storage/${ref.player}/${ref.size}/${ref.name}"
-            is InventoryRef.Entity -> "entity/${ref.entity}"
-            is InventoryRef.Block -> "block/${ref.x}/${ref.y}/${ref.z}/${ref.world}"
-        }
-    )
-
-    fun ref(handle: LuaHandle.Inventory): InventoryRef? {
-        val parts = handle.holder.split('/', limit = 5)
-        fun uuid() = parts.getOrNull(1)?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-        return when (parts[0]) {
-            "player" -> uuid()?.let { InventoryRef.Player(it) }
-            "ender_chest" -> uuid()?.let { InventoryRef.EnderChest(it) }
-            "storage" -> {
-                val size = parts.getOrNull(2)?.toIntOrNull()
-                val name = handle.holder.split('/', limit = 4).getOrNull(3)
-                if (size == null || name == null) null else uuid()?.let { InventoryRef.Storage(it, name, size) }
-            }
-            "entity" -> uuid()?.let { InventoryRef.Entity(it) }
-            "block" -> if (parts.size == 5) {
-                val (x, y, z) = parts.subList(1, 4).map { it.toIntOrNull() ?: return null }
-                InventoryRef.Block(parts[4], x, y, z)
-            } else {
-                null
-            }
-            else -> null
-        }
-    }
-}
 
 /**
  * `Inventory`: a real inventory, read live. Everything answers nil, false or

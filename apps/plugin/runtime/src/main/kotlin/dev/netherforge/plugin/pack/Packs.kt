@@ -13,7 +13,6 @@ import dev.netherforge.format.resourcepack.CompiledResourcePack
 import dev.netherforge.format.resourcepack.PackLayout
 import dev.netherforge.format.resourcepack.VideoSound
 import dev.netherforge.format.resourcepack.pngSize
-import dev.netherforge.plugin.PackConfig
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.platform.PackOffer
 import dev.netherforge.plugin.platform.Platform

@@ -1,5 +1,8 @@
 package dev.netherforge.plugin.api
 
+import dev.netherforge.plugin.binding.HttpStreamApi
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.WebSocketApi
 import dev.netherforge.plugin.http.Connection
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.session.ProjectSession

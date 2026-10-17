@@ -15,7 +15,7 @@
 --  - a string it makes: refused over `max_string` bytes (and `string.rep`'s
 --    count too: `(""):rep(n)` loops n times making nothing);
 --  - its work, in steps of about a nanosecond (measured: see the
---    plugin-runtime skill): refused over `max_work`, so one call can't stall
+--    plugin-sandbox skill): refused over `max_work`, so one call can't stall
 --    the server for more than about a tenth of a second;
 --  - and either is spent (`spend`) against the running call's next deadline
 --    and memory checks, so a loop of calls each under the caps is still
@@ -47,7 +47,7 @@ local MAX_WORK = limits.max_work
 local SPEND_FROM = 4096
 
 -- What each library function's work costs per unit, in steps (about a
--- nanosecond each), from the measurements in the plugin-runtime skill.
+-- nanosecond each), from the measurements in the plugin-sandbox skill.
 local STEPS_PER_MOVE = 10 -- table.move, per element
 local STEPS_PER_SHIFT = 8 -- table.insert and table.remove, per element shifted
 local STEPS_PER_COMPARE = 15 -- table.sort, per comparison of numbers

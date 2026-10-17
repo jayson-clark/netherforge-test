@@ -9,7 +9,26 @@ import dev.netherforge.format.project.MenuKind
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.resourcepack.PackFonts
+import dev.netherforge.plugin.binding.Caller
+import dev.netherforge.plugin.binding.CentityFilter
+import dev.netherforge.plugin.binding.CentitySpawnOptions
+import dev.netherforge.plugin.binding.LocationOrVec3
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.Marshal
+import dev.netherforge.plugin.binding.NfApi
+import dev.netherforge.plugin.binding.NfCentitiesApi
+import dev.netherforge.plugin.binding.NfDialogsApi
+import dev.netherforge.plugin.binding.NfFilesApi
+import dev.netherforge.plugin.binding.NfJsonApi
+import dev.netherforge.plugin.binding.NfLooksApi
+import dev.netherforge.plugin.binding.NfMenusApi
+import dev.netherforge.plugin.binding.NfPlayersApi
+import dev.netherforge.plugin.binding.NfServerApi
+import dev.netherforge.plugin.binding.NfTextApi
+import dev.netherforge.plugin.binding.notInProject
+import dev.netherforge.plugin.binding.place
 import dev.netherforge.plugin.data.ScriptData
+import dev.netherforge.plugin.data.parseJson
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaCodecs
 import dev.netherforge.plugin.lua.LuaMap
@@ -19,14 +38,8 @@ import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.script.Scope
 import dev.netherforge.plugin.script.ScopeOwner
 import dev.netherforge.plugin.session.ProjectSession
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.doubleOrNull
 import kotlin.math.sqrt
 
 /** `nf.server`. */
@@ -264,21 +277,6 @@ internal class NfJsonImpl : NfJsonApi {
 
     /** Text that isn't JSON is a condition (it may come from a player or a file), so nil. */
     override fun decode(caller: Caller, text: String): Any? = parseJson(text)
-}
-
-/**
- * [text] as JSON, or null when it isn't. Stricter than kotlinx's parser, which
- * takes a bare word (`nope`) as a literal: only `true`, `false`, `null` and
- * numbers go unquoted.
- */
-internal fun parseJson(text: String): JsonElement? {
-    val element = runCatching { Json.parseToJsonElement(text) }.getOrNull() ?: return null
-    fun valid(element: JsonElement): Boolean = when (element) {
-        is JsonObject -> element.values.all(::valid)
-        is JsonArray -> element.all(::valid)
-        is JsonPrimitive -> element.isString || element is JsonNull || element.booleanOrNull != null || element.doubleOrNull != null
-    }
-    return element.takeIf(::valid)
 }
 
 internal fun playerHandle(player: PlayerRef) = LuaHandle.Player(player.uuid.toString())

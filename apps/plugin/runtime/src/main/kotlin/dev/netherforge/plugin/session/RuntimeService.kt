@@ -4,7 +4,7 @@ import dev.netherforge.format.Problem
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Loaded
 import dev.netherforge.format.project.ProjectSnapshot
-import dev.netherforge.plugin.api.LuaHandle
+import dev.netherforge.plugin.binding.LuaHandle
 import dev.netherforge.plugin.platform.EntityTag
 import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.platform.StructureMarker

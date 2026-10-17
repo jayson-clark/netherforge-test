@@ -21,7 +21,7 @@ import dev.netherforge.format.item.UseEffectsDef
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.format.validate.Rules
-import dev.netherforge.plugin.api.luaSpelling
+import dev.netherforge.plugin.binding.luaSpelling
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.ItemData
 import kotlinx.serialization.json.JsonArray

@@ -22,14 +22,14 @@ import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.text.TextWidth
 import dev.netherforge.plugin.NetherForgeRuntime
 import dev.netherforge.plugin.advancement.Advancements
-import dev.netherforge.plugin.api.EntityPathEndEvent
-import dev.netherforge.plugin.api.Events
-import dev.netherforge.plugin.api.GameEventDispatch
-import dev.netherforge.plugin.api.LuaHandle
 import dev.netherforge.plugin.api.RuntimeApi
-import dev.netherforge.plugin.api.entityHandle
-import dev.netherforge.plugin.api.mobHandle
 import dev.netherforge.plugin.async.AsyncWork
+import dev.netherforge.plugin.binding.EntityPathEndEvent
+import dev.netherforge.plugin.binding.Events
+import dev.netherforge.plugin.binding.GameEventDispatch
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.entityHandle
+import dev.netherforge.plugin.binding.mobHandle
 import dev.netherforge.plugin.block.CustomBlocks
 import dev.netherforge.plugin.bots.ScriptBots
 import dev.netherforge.plugin.centity.Centities
@@ -52,6 +52,8 @@ import dev.netherforge.plugin.item.Recipes
 import dev.netherforge.plugin.loot.LootTables
 import dev.netherforge.plugin.lua.LuaHost
 import dev.netherforge.plugin.menu.Menus
+import dev.netherforge.plugin.mob.MobGoals
+import dev.netherforge.plugin.mob.MobPaths
 import dev.netherforge.plugin.module.Modules
 import dev.netherforge.plugin.pack.PackService
 import dev.netherforge.plugin.particle.ParticleEffects
@@ -62,31 +64,29 @@ import dev.netherforge.plugin.platform.WatchedEvent
 import dev.netherforge.plugin.profile.ScriptProfile
 import dev.netherforge.plugin.project.Resource
 import dev.netherforge.plugin.schedule.Schedules
+import dev.netherforge.plugin.scoreboard.BossBars
+import dev.netherforge.plugin.scoreboard.PlayerListings
+import dev.netherforge.plugin.scoreboard.Sidebars
+import dev.netherforge.plugin.scoreboard.Teams
 import dev.netherforge.plugin.script.Scope
 import dev.netherforge.plugin.script.ScriptCosts
 import dev.netherforge.plugin.script.Scripts
 import dev.netherforge.plugin.settings.OwnerSettings
 import dev.netherforge.plugin.store.PackageSchemas
+import dev.netherforge.plugin.structure.GradualJobs
+import dev.netherforge.plugin.structure.StructureSpawns
+import dev.netherforge.plugin.structure.StructureStore
+import dev.netherforge.plugin.terrain.WorldGenerators
 import dev.netherforge.plugin.testing.ScriptTests
 import dev.netherforge.plugin.wasm.WasmModules
 import dev.netherforge.plugin.web.OAuthFlows
 import dev.netherforge.plugin.web.WebRoutes
 import dev.netherforge.plugin.world.BlockData
-import dev.netherforge.plugin.world.BossBars
 import dev.netherforge.plugin.world.Daylight
 import dev.netherforge.plugin.world.Effects
 import dev.netherforge.plugin.world.EntityData
-import dev.netherforge.plugin.world.GradualJobs
 import dev.netherforge.plugin.world.HiddenEntities
 import dev.netherforge.plugin.world.ManagedWorlds
-import dev.netherforge.plugin.world.MobGoals
-import dev.netherforge.plugin.world.MobPaths
-import dev.netherforge.plugin.world.PlayerListings
-import dev.netherforge.plugin.world.Sidebars
-import dev.netherforge.plugin.world.StructureSpawns
-import dev.netherforge.plugin.world.StructureStore
-import dev.netherforge.plugin.world.Teams
-import dev.netherforge.plugin.world.WorldGenerators
 import dev.netherforge.plugin.world.WorldSpawnRates
 import java.util.EnumMap
 import java.util.UUID
@@ -242,7 +242,19 @@ class ProjectSession internal constructor(
     val oauth = service(OAuthFlows(scripts, web, async, { http.fetcher }, { ticks }, testing = config.testing != null))
 
     /** The project's WebAssembly modules, compiled as it loads, and the instances and programs scripts run of them. */
-    val wasm = service(WasmModules(this))
+    val wasm = service(
+        WasmModules(
+            config.wasm,
+            scripts,
+            log,
+            names,
+            async.mainThread,
+            { source.readBytes(it) },
+            { source.resolve(it) },
+            ::placeOf,
+            ::problemsChanged
+        )
+    )
 
     /** The other plugins packages declared, whether the server has them (a problem for each it doesn't), and the check before a call into one. */
     /** The bots scripts join (`nf.bots`): they leave with the scope that joined them. */
@@ -386,25 +398,25 @@ class ProjectSession internal constructor(
 
     /** Players' and centities' stats: the modifiers scripts set and the buffs they give, counted down. */
     val stats = service(
-        dev.netherforge.plugin.world.StatSheets(
+        dev.netherforge.plugin.stats.StatSheets(
             scripts,
             { holder ->
                 when (holder) {
-                    is dev.netherforge.plugin.world.StatSheets.Holder.Player ->
+                    is dev.netherforge.plugin.stats.StatSheets.Holder.Player ->
                         if (platform.players.get(holder.id) !=
                             null
                         ) {
-                            dev.netherforge.plugin.world.StatSheets.Presence.ACTIVE
+                            dev.netherforge.plugin.stats.StatSheets.Presence.ACTIVE
                         } else {
-                            dev.netherforge.plugin.world.StatSheets.Presence.WAITING
+                            dev.netherforge.plugin.stats.StatSheets.Presence.WAITING
                         }
-                    is dev.netherforge.plugin.world.StatSheets.Holder.Centity ->
+                    is dev.netherforge.plugin.stats.StatSheets.Holder.Centity ->
                         if (centities.find(holder.id)?.removed ==
                             false
                         ) {
-                            dev.netherforge.plugin.world.StatSheets.Presence.ACTIVE
+                            dev.netherforge.plugin.stats.StatSheets.Presence.ACTIVE
                         } else {
-                            dev.netherforge.plugin.world.StatSheets.Presence.GONE
+                            dev.netherforge.plugin.stats.StatSheets.Presence.GONE
                         }
                 }
             }
@@ -436,6 +448,7 @@ class ProjectSession internal constructor(
             log,
             runtime.store.screenMaps,
             config.screens,
+            runtime.workers.lane("videos"),
             source::read,
             source::readBytes,
             source::resolve,

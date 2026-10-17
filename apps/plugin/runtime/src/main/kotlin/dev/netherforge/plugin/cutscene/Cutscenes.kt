@@ -15,11 +15,11 @@ import dev.netherforge.format.project.PackagePaths
 import dev.netherforge.format.project.PathRole
 import dev.netherforge.format.project.ProjectSnapshot
 import dev.netherforge.plugin.RuntimeLog
-import dev.netherforge.plugin.api.CutsceneCueEvent
-import dev.netherforge.plugin.api.CutsceneEndEvent
-import dev.netherforge.plugin.api.Events
-import dev.netherforge.plugin.api.LuaHandle
-import dev.netherforge.plugin.api.notInProject
+import dev.netherforge.plugin.binding.CutsceneCueEvent
+import dev.netherforge.plugin.binding.CutsceneEndEvent
+import dev.netherforge.plugin.binding.Events
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.notInProject
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.DisplayLook
 import dev.netherforge.plugin.platform.DisplayPose

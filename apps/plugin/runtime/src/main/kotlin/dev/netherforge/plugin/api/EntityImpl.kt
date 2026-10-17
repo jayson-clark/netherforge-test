@@ -1,8 +1,18 @@
 package dev.netherforge.plugin.api
 
 import dev.netherforge.format.Vec3
+import dev.netherforge.plugin.binding.DroppedItemApi
+import dev.netherforge.plugin.binding.EntityApi
+import dev.netherforge.plugin.binding.InventoryKeys
+import dev.netherforge.plugin.binding.LocationOrVec3
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.LuaLocation
+import dev.netherforge.plugin.binding.RaycastOptions
+import dev.netherforge.plugin.binding.blockHandle
+import dev.netherforge.plugin.binding.directionOf
+import dev.netherforge.plugin.binding.entityHandle
+import dev.netherforge.plugin.binding.place
 import dev.netherforge.plugin.lua.LuaApiException
-import dev.netherforge.plugin.platform.EntityCategory
 import dev.netherforge.plugin.platform.EntityFlag
 import dev.netherforge.plugin.platform.EntityInfo
 import dev.netherforge.plugin.platform.EntityNumber
@@ -16,41 +26,6 @@ import kotlin.math.sqrt
 
 /** A handle's UUID, or null for one that doesn't parse (which never names anything). */
 internal fun LuaHandle.Entity.uuidOrNull(): UUID? = runCatching { UUID.fromString(id) }.getOrNull()
-
-/**
- * The handle for the entity [id], as the class it is: a `Bot` for a bot online, a `Player` for
- * anyone who has played here (online or not), a `Mob`, a `Mannequin`, a `Living`, a
- * `DroppedItem`, or a plain `Entity` for anything else and for an entity that isn't in the world
- * now (its handle becomes its class when it's back).
- */
-internal fun ProjectSession.entityHandle(id: UUID): LuaHandle.Entity {
-    platform.worldEntities.info(id)?.let { return entityHandle(it) }
-    if (platform.players.get(id) != null || platform.players.known(id.toString()) != null) return LuaHandle.Player(id.toString())
-    return LuaHandle.Entity(id.toString())
-}
-
-/** The handle for what [info] describes, as the class it is. */
-internal fun ProjectSession.entityHandle(info: EntityInfo): LuaHandle.Entity {
-    val id = info.id.toString()
-    return when {
-        info.player != null -> if (platform.bots.isBot(info.id)) LuaHandle.Bot(id) else LuaHandle.Player(id)
-        info.category == EntityCategory.MOB -> LuaHandle.Mob(id)
-        info.category == EntityCategory.MANNEQUIN -> LuaHandle.Mannequin(id)
-        info.category == EntityCategory.LIVING -> LuaHandle.Living(id)
-        info.category == EntityCategory.DROPPED_ITEM -> LuaHandle.DroppedItem(id)
-        else -> LuaHandle.Entity(id)
-    }
-}
-
-/**
- * The handle for [id], which an event says is living (it died, it healed): the class it is,
- * or a `Living` when there's no more to know.
- */
-internal fun ProjectSession.livingHandle(id: UUID): LuaHandle.Living =
-    entityHandle(id) as? LuaHandle.Living ?: LuaHandle.Living(id.toString())
-
-/** The handle for [id], which an event says is a mob (it picked a target): a `Mob`. */
-internal fun ProjectSession.mobHandle(id: UUID): LuaHandle.Mob = entityHandle(id) as? LuaHandle.Mob ?: LuaHandle.Mob(id.toString())
 
 /** What the platform knows of [self]'s entity, or null while it isn't in the world. */
 internal fun ProjectSession.entityInfo(self: LuaHandle.Entity): EntityInfo? = self.uuidOrNull()?.let(platform.worldEntities::info)

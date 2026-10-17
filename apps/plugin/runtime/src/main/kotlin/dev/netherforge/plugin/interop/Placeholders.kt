@@ -1,7 +1,7 @@
 package dev.netherforge.plugin.interop
 
 import dev.netherforge.plugin.RuntimeLog
-import dev.netherforge.plugin.api.LuaHandle
+import dev.netherforge.plugin.binding.LuaHandle
 import dev.netherforge.plugin.lua.CallResult
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaFunction

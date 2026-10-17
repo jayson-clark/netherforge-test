@@ -12,10 +12,10 @@ import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.project.BiomeKind
 import dev.netherforge.format.project.Names
 import dev.netherforge.plugin.RuntimeLog
-import dev.netherforge.plugin.api.CentityNaturalSpawnEvent
-import dev.netherforge.plugin.api.Events
-import dev.netherforge.plugin.api.LuaHandle
-import dev.netherforge.plugin.api.LuaLocation
+import dev.netherforge.plugin.binding.CentityNaturalSpawnEvent
+import dev.netherforge.plugin.binding.Events
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.LuaLocation
 import dev.netherforge.plugin.lua.CallResult
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaFunction

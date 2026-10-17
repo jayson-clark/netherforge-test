@@ -1,6 +1,5 @@
 package dev.netherforge.plugin.script
 
-import dev.netherforge.plugin.PerformanceConfig
 import dev.netherforge.plugin.lua.LuaHost
 import dev.netherforge.plugin.lua.ScopeCost
 import dev.netherforge.plugin.session.RuntimeService

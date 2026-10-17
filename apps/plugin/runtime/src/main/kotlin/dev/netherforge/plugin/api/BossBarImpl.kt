@@ -1,10 +1,17 @@
 package dev.netherforge.plugin.api
 
 import dev.netherforge.format.ref.RefKind
+import dev.netherforge.plugin.binding.BossBarApi
+import dev.netherforge.plugin.binding.BossBarAttachOptions
+import dev.netherforge.plugin.binding.BossBarOptions
+import dev.netherforge.plugin.binding.Caller
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.NfBossbarsApi
+import dev.netherforge.plugin.binding.SidebarApi
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.BossBarLook
+import dev.netherforge.plugin.scoreboard.BossBars
 import dev.netherforge.plugin.session.ProjectSession
-import dev.netherforge.plugin.world.BossBars
 import java.util.UUID
 
 private fun checkProgress(progress: Double, name: String) {

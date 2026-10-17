@@ -2,9 +2,9 @@ package dev.netherforge.plugin.world
 
 import dev.netherforge.format.centity.DayPeriod
 import dev.netherforge.format.centity.SpawnTime
-import dev.netherforge.plugin.api.DaylightEvent
-import dev.netherforge.plugin.api.Events
-import dev.netherforge.plugin.api.LuaHandle
+import dev.netherforge.plugin.binding.DaylightEvent
+import dev.netherforge.plugin.binding.Events
+import dev.netherforge.plugin.binding.LuaHandle
 import dev.netherforge.plugin.platform.Platform
 import dev.netherforge.plugin.script.Scripts
 import dev.netherforge.plugin.session.RuntimeService

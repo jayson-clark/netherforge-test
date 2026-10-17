@@ -17,10 +17,10 @@ import dev.netherforge.format.project.ParticleEffectKind
 import dev.netherforge.format.project.PathRole
 import dev.netherforge.format.project.ProjectSnapshot
 import dev.netherforge.plugin.RuntimeLog
-import dev.netherforge.plugin.api.EffectEndEvent
-import dev.netherforge.plugin.api.Events
-import dev.netherforge.plugin.api.LuaHandle
-import dev.netherforge.plugin.api.notInProject
+import dev.netherforge.plugin.binding.EffectEndEvent
+import dev.netherforge.plugin.binding.Events
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.notInProject
 import dev.netherforge.plugin.centity.Centities
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.Location

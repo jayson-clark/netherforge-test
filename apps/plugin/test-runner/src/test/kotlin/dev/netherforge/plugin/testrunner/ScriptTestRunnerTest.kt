@@ -886,6 +886,17 @@ class ScriptTestRunnerTest {
                       assert(got.name == "stub", tostring(got.name))
                       assert(got.missing:find("has no function"), tostring(got.missing))
                       assert(got.run.exit_code == 7 and got.run.stdout == "in")
+
+                      -- Stand-ins count against the owner's limits as the modules they stand in for do.
+                      local refused
+                      nf.task(function()
+                        for _ = 1, 9 do
+                          local instance, err = nf.wasm.instantiate("math")
+                          if not instance then refused = err break end
+                        end
+                      end)
+                      nf.test.advance(20)
+                      assert(refused and refused:find("max%-instances%-per%-package"), tostring(refused))
                     end)
                 """
             )

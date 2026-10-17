@@ -297,7 +297,7 @@ preventFocusOnPress`), and a chosen item runs a frame after its menu
 ## The debugger
 
 The dev server's plugin is a Debug Adapter Protocol adapter (the hot-reload
-and plugin-runtime skills); the editor is its client. Every DAP message rides
+and plugin-sandbox skills); the editor is its client. Every DAP message rides
 one `dap` notification on the bridge, both ways: `backend.dapSend(message)`
 (`BridgeClient.notify` in Tauri) and `onBridgeEvent('dap')`. Rust passes them
 through like any frame. Message types are `@vscode/debugprotocol`'s

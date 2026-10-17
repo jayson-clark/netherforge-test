@@ -11,8 +11,8 @@ import dev.netherforge.format.particle.ColorData
 import dev.netherforge.format.particle.DustData
 import dev.netherforge.format.particle.DustTransitionData
 import dev.netherforge.format.particle.SpawnData
-import dev.netherforge.plugin.api.ParticleOptions
-import dev.netherforge.plugin.api.SoundOptions
+import dev.netherforge.plugin.binding.ParticleOptions
+import dev.netherforge.plugin.binding.SoundOptions
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.ParticleSpawn
 import dev.netherforge.plugin.platform.Platform

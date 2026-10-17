@@ -2,13 +2,12 @@ package dev.netherforge.plugin.centity
 
 import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.Channel
-import dev.netherforge.plugin.api.BlockPosition
-import dev.netherforge.plugin.api.Events
-import dev.netherforge.plugin.api.FlightBlockEvent
-import dev.netherforge.plugin.api.FlightEndEvent
-import dev.netherforge.plugin.api.FlightHitEvent
-import dev.netherforge.plugin.api.LuaHandle
-import dev.netherforge.plugin.api.lookRotation
+import dev.netherforge.plugin.binding.BlockPosition
+import dev.netherforge.plugin.binding.Events
+import dev.netherforge.plugin.binding.FlightBlockEvent
+import dev.netherforge.plugin.binding.FlightEndEvent
+import dev.netherforge.plugin.binding.FlightHitEvent
+import dev.netherforge.plugin.binding.LuaHandle
 import dev.netherforge.plugin.platform.BlockHit
 import dev.netherforge.plugin.platform.Platform
 import dev.netherforge.plugin.script.Scripts

@@ -1,5 +1,10 @@
 package dev.netherforge.plugin.api
 
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.MannequinApi
+import dev.netherforge.plugin.binding.Skin
+import dev.netherforge.plugin.binding.SkinParts
+import dev.netherforge.plugin.binding.StringOrSkin
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.MannequinLook
 import dev.netherforge.plugin.platform.MannequinPose

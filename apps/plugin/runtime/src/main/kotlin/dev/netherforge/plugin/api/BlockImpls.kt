@@ -2,6 +2,15 @@ package dev.netherforge.plugin.api
 
 import dev.netherforge.format.block.BlockFacing
 import dev.netherforge.format.project.BlockKind
+import dev.netherforge.plugin.binding.BlockPlaceOptions
+import dev.netherforge.plugin.binding.BlockPosition
+import dev.netherforge.plugin.binding.Caller
+import dev.netherforge.plugin.binding.CustomBlockApi
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.LuaLocation
+import dev.netherforge.plugin.binding.NfBlocksApi
+import dev.netherforge.plugin.binding.ProjectBlockApi
+import dev.netherforge.plugin.binding.place
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.session.ProjectSession
 import kotlinx.serialization.json.JsonObject

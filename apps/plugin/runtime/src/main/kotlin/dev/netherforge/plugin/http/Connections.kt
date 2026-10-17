@@ -1,15 +1,13 @@
 package dev.netherforge.plugin.http
 
-import dev.netherforge.plugin.ConnectionLimits
-import dev.netherforge.plugin.HttpConfig
-import dev.netherforge.plugin.api.Events
-import dev.netherforge.plugin.api.HttpStreamEndEvent
-import dev.netherforge.plugin.api.HttpStreamMessageEvent
-import dev.netherforge.plugin.api.HttpStreamOpenEvent
-import dev.netherforge.plugin.api.LuaHandle
-import dev.netherforge.plugin.api.WebSocketEndEvent
-import dev.netherforge.plugin.api.WebSocketMessageEvent
-import dev.netherforge.plugin.api.WebSocketOpenEvent
+import dev.netherforge.plugin.binding.Events
+import dev.netherforge.plugin.binding.HttpStreamEndEvent
+import dev.netherforge.plugin.binding.HttpStreamMessageEvent
+import dev.netherforge.plugin.binding.HttpStreamOpenEvent
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.WebSocketEndEvent
+import dev.netherforge.plugin.binding.WebSocketMessageEvent
+import dev.netherforge.plugin.binding.WebSocketOpenEvent
 import dev.netherforge.plugin.script.Scope
 import dev.netherforge.plugin.script.Scripts
 import dev.netherforge.plugin.session.RuntimeService

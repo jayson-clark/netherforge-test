@@ -11,10 +11,10 @@ import dev.netherforge.format.project.ProjectManifest
 import dev.netherforge.format.project.ProjectSnapshot
 import dev.netherforge.format.project.WorldConfig
 import dev.netherforge.plugin.RuntimeLog
-import dev.netherforge.plugin.api.LuaHandle
-import dev.netherforge.plugin.api.notInProject
 import dev.netherforge.plugin.async.AsyncWork
 import dev.netherforge.plugin.async.WorkFailed
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.notInProject
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.Platform
 import dev.netherforge.plugin.platform.WorldManagerOps

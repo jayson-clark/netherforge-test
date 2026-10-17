@@ -26,7 +26,7 @@ data class GoalInfo(val key: String, val priority: Int, val controls: Set<GoalCo
 
 /**
  * A goal written in Lua, as the mob's AI calls it (the runtime's
- * `world/MobGoals.kt`). Called on the main thread from inside the server's
+ * `mob/MobGoals.kt`). Called on the main thread from inside the server's
  * own goal loop, so none of these may change a mob's goals directly; and
  * none of them throws.
  */

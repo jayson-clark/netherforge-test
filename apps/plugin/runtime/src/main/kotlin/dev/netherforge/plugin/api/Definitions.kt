@@ -21,6 +21,7 @@ import dev.netherforge.format.project.Names
 import dev.netherforge.format.project.RecipeKind
 import dev.netherforge.format.recipe.RecipeFile
 import dev.netherforge.format.recipe.RecipeValidator
+import dev.netherforge.plugin.binding.luaSpelling
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaValue
 import dev.netherforge.plugin.platform.ItemData
@@ -268,14 +269,5 @@ internal fun luaPath(path: String): String {
 }
 
 private fun camel(key: String): String = key.replace(Regex("_([a-z0-9])")) { it.groupValues[1].uppercase() }
-
-/**
- * A format message as a script reads it: a file field named outside quotes
- * (`maxStackSize must be between 1 and 99`) in Lua's spelling (`max_stack_size`).
- * What's quoted is a value, and stays as it was.
- */
-internal fun luaSpelling(message: String): String = message.split('"').mapIndexed { index, part ->
-    if (index % 2 == 1) part else part.replace(Regex("\\b[a-z]+(?:[A-Z][a-z0-9]*)+\\b")) { snake(it.value) }
-}.joinToString("\"")
 
 private fun snake(key: String): String = key.replace(Regex("([a-z0-9])([A-Z])")) { "${it.groupValues[1]}_${it.groupValues[2].lowercase()}" }

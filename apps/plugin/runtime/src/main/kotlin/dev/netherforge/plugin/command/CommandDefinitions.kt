@@ -1,9 +1,9 @@
 package dev.netherforge.plugin.command
 
-import dev.netherforge.plugin.api.CommandArgument
-import dev.netherforge.plugin.api.CommandDefinition
-import dev.netherforge.plugin.api.Subcommand
-import dev.netherforge.plugin.api.codec
+import dev.netherforge.plugin.binding.CommandArgument
+import dev.netherforge.plugin.binding.CommandDefinition
+import dev.netherforge.plugin.binding.Subcommand
+import dev.netherforge.plugin.binding.codec
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaFunction
 import dev.netherforge.plugin.lua.LuaTypeMismatch

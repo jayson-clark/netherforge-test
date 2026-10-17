@@ -211,7 +211,7 @@ any other time is a `script_error` (rate-limited) and a `script.error` in
 `script_error` naming its slowest handler's file and line, and a
 `script.slow` **warning** problem (one per scope, identical ones shown once)
 until its scope closes. Costs travel on the `profiler` stream (the
-plugin-runtime skill's "The profiler"), once a second, not as problems. `problems` is
+plugin-sandbox skill's "The profiler"), once a second, not as problems. `problems` is
 sent again when one appears, and after every reload.
 
 A project the plugin can't run (no manifest, a format version other than

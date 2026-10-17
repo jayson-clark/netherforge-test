@@ -2,6 +2,13 @@ package dev.netherforge.plugin.api
 
 import dev.netherforge.format.project.Requirement
 import dev.netherforge.plugin.async.WorkFailed
+import dev.netherforge.plugin.binding.Caller
+import dev.netherforge.plugin.binding.HttpRequestOptions
+import dev.netherforge.plugin.binding.HttpResponse
+import dev.netherforge.plugin.binding.HttpStreamOptions
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.NfHttpApi
+import dev.netherforge.plugin.binding.WebSocketOptions
 import dev.netherforge.plugin.http.ConnectionRequest
 import dev.netherforge.plugin.http.HttpCall
 import dev.netherforge.plugin.http.HttpFetcher

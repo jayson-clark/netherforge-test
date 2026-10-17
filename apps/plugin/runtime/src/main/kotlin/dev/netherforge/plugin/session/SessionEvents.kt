@@ -1,10 +1,10 @@
 package dev.netherforge.plugin.session
 
-import dev.netherforge.plugin.api.EventType
-import dev.netherforge.plugin.api.LuaEvent
-import dev.netherforge.plugin.api.LuaHandle
-import dev.netherforge.plugin.api.LuaLocation
-import dev.netherforge.plugin.api.blockHandle
+import dev.netherforge.plugin.binding.EventType
+import dev.netherforge.plugin.binding.LuaEvent
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.LuaLocation
+import dev.netherforge.plugin.binding.blockHandle
 import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.Location

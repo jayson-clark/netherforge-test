@@ -15,11 +15,11 @@ import dev.netherforge.format.project.DialogKind
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.ref.ResourceRef
-import dev.netherforge.plugin.api.DialogEvent
-import dev.netherforge.plugin.api.DialogPressEvent
-import dev.netherforge.plugin.api.Events
-import dev.netherforge.plugin.api.LuaHandle
-import dev.netherforge.plugin.api.StringOrNumber
+import dev.netherforge.plugin.binding.DialogEvent
+import dev.netherforge.plugin.binding.DialogPressEvent
+import dev.netherforge.plugin.binding.Events
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.StringOrNumber
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaRef
 import dev.netherforge.plugin.platform.DialogAnswers

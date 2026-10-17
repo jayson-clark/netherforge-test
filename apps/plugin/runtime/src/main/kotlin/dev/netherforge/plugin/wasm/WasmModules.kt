@@ -7,23 +7,26 @@ import dev.netherforge.format.Problem
 import dev.netherforge.format.ProblemCodes
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Kinds
+import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.project.WasmModuleKind
 import dev.netherforge.format.wasm.WasmImports
 import dev.netherforge.format.wasm.WasmModuleFile
-import dev.netherforge.plugin.WasmConfig
-import dev.netherforge.plugin.api.Events
-import dev.netherforge.plugin.api.LuaHandle
-import dev.netherforge.plugin.api.TestWasmStub
-import dev.netherforge.plugin.api.WasmEndEvent
-import dev.netherforge.plugin.api.WasmFunction
-import dev.netherforge.plugin.api.WasmOutputEvent
-import dev.netherforge.plugin.api.WasmRunResult
-import dev.netherforge.plugin.api.notInProject
+import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.async.WorkFailed
+import dev.netherforge.plugin.binding.Events
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.TestWasmStub
+import dev.netherforge.plugin.binding.WasmEndEvent
+import dev.netherforge.plugin.binding.WasmFunction
+import dev.netherforge.plugin.binding.WasmOutputEvent
+import dev.netherforge.plugin.binding.WasmRunResult
+import dev.netherforge.plugin.binding.notInProject
 import dev.netherforge.plugin.lua.LuaApiException
+import dev.netherforge.plugin.lua.LuaValue
 import dev.netherforge.plugin.project.Resource
 import dev.netherforge.plugin.script.Scope
-import dev.netherforge.plugin.session.ProjectSession
+import dev.netherforge.plugin.script.Scripts
+import dev.netherforge.plugin.session.PackageNames
 import dev.netherforge.plugin.session.ReloadBatch
 import dev.netherforge.plugin.session.RuntimeService
 import dev.netherforge.plugin.session.SessionProject
@@ -31,9 +34,12 @@ import dev.netherforge.plugin.session.TickPhase
 import dev.netherforge.plugin.session.liveness
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
+import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionException
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executor
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -45,7 +51,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * - **Compiling.** Every module that read is compiled off the main thread as the session defines it (and again
  *   when its files change), on [WasmThreads.calls]: parsed, validated, its imports held to WASI's, turned into JVM
  *   classes by Chicory's compiler. A failure is the problem `runtime.wasm`, and running the module fails saying so.
- * - **Instances** (`nf.wasm.instantiate`): Chicory instances, each with its own memory and its own [WasmThreads.Lane]
+ * - **Instances** (`nf.wasm.instantiate`): Chicory instances, each with its own memory and its own lane
  *   of calls. A call that traps or runs out of time closes its instance (its memory may be half-written).
  * - **Runs** (`nf.wasm.run`): an instance made, run to its end with its input and thrown away.
  * - **Programs** (`nf.wasm.start`): an instance on a thread of its own ([WasmThreads.programs]), talking line by line
@@ -56,10 +62,20 @@ import java.util.concurrent.atomic.AtomicInteger
  * A module a script ran restarts that script when it reloads. In a test run a module can be stood in for
  * ([stub]), and [settle] is what the runner waits on before each tick.
  */
-class WasmModules(private val session: ProjectSession) : RuntimeService {
+class WasmModules(
+    /** The owner's limits (`wasm:` in `config.yml`). */
+    private val config: WasmConfig,
+    private val scripts: Scripts,
+    private val log: RuntimeLog,
+    private val names: PackageNames,
+    /** Back to the main thread, for what a module's threads hand over. */
+    private val mainThread: Executor,
+    private val readBytes: (String) -> ByteArray?,
+    private val resolveFile: (String) -> Path?,
+    private val placeOf: (KindSpec<*, *>, String) -> ResourcePlace,
+    private val problemsChanged: () -> Unit
+) : RuntimeService {
     override val name get() = "wasm"
-
-    private val config: WasmConfig get() = session.config.wasm
 
     private val threads by lazy { WasmThreads(config.threads) }
     private val budget by lazy { WasmMemoryBudget(config.maxMemoryTotalMb * CompiledModule.PAGES_PER_MB) }
@@ -83,8 +99,8 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
     /** Instantiations not yet done, by package: they count against `max-instances-per-package` (main thread). */
     private val instantiating = HashMap<String, Int>()
 
-    /** What stands in for a module in this test run, by the server's name. */
-    private val stubs = HashMap<String, Pair<Scope, TestWasmStub>>()
+    /** What stands in for modules in this test run. */
+    private val standIns by lazy { WasmStandIns(scripts, mainThread) }
 
     // ---- lifecycle ----------------------------------------------------------------
 
@@ -104,12 +120,12 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
             running[id]?.let { compile(id, it) }
             // The scripts that ran it start again on the new one, in their kinds' turns (which come after this one).
             for (scopeId in users.remove(id).orEmpty()) {
-                val resource = session.scripts.scope(scopeId)?.owner?.resource ?: continue
+                val resource = scripts.scope(scopeId)?.owner?.resource ?: continue
                 if (Kinds.all.indexOf(resource.kind) > order) batch.add(resource)
             }
             batch.data(Resource(WasmModuleKind, id))
         }
-        session.problemsChanged()
+        problemsChanged()
     }
 
     override fun stop() {
@@ -123,9 +139,7 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
         for (record in instances.values.filter { it.owner == scope.id }) close(record)
         instances.values.removeIf { it.owner == scope.id }
         for (scopes in users.values) scopes.remove(scope.id)
-        stubs.entries.removeIf { (_, held) ->
-            (held.first.id == scope.id).also { if (it) release(held.second) }
-        }
+        standIns.dropScope(scope)
     }
 
     override fun tick(phase: TickPhase) {
@@ -135,7 +149,7 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
     override fun problems(): List<Problem> = compiled.mapNotNull { (key, future) ->
         if (!future.isCompletedExceptionally) return@mapNotNull null
         val message = failure(future) ?: return@mapNotNull null
-        ProblemCodes.RUNTIME_WASM.at(session.placeOf(WasmModuleKind, key).path, "The server couldn't compile module \"$key\": $message")
+        ProblemCodes.RUNTIME_WASM.at(placeOf(WasmModuleKind, key).path, "The server couldn't compile module \"$key\": $message")
     }
 
     override fun costs(): Map<String, (Scope) -> Int> = mapOf(
@@ -161,7 +175,7 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
         val programsDeadline = start + TimeUnit.MILLISECONDS.toNanos(PROGRAM_SETTLE_MILLIS)
         while (true) {
             val now = System.nanoTime()
-            val programsQuiet = now > programsDeadline || programs.values.all { it.stubbed || it.quiet }
+            val programsQuiet = now > programsDeadline || programs.values.all { it.standIn || it.quiet }
             if (threads.idle && programsQuiet) return true
             if (now > deadline) return false
             Thread.sleep(1)
@@ -172,7 +186,7 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
 
     /** The module [name] names (resolved in the calling package), as the server names it; recorded as [scope]'s. */
     fun resolve(scope: Scope, name: String, what: String): String {
-        val key = session.names.resource(WasmModuleKind, name)
+        val key = names.resource(WasmModuleKind, name)
         if (key !in known) throw LuaApiException("$what: ${notInProject("WebAssembly module", name, known.keys.sorted())}")
         users.getOrPut(key, ::HashSet) += scope.id
         return key
@@ -185,7 +199,6 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
     private fun done(key: String): CompiledModule? = compiled[key]?.takeIf { it.isDone && !it.isCompletedExceptionally }?.join()
 
     fun instantiate(scope: Scope, key: String): CompletionStage<LuaHandle.WasmInstance> {
-        stubFor(key)?.let { return instantiateStub(scope, key) }
         val namespace = scope.namespace
         val held = instances.values.count { it.namespace == namespace && !it.closed } + instantiating.getOrDefault(namespace, 0)
         if (held >= config.maxInstancesPerPackage) {
@@ -199,7 +212,28 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
         val future = compiled[key]
         instantiating.merge(namespace, 1, Int::plus)
         val number = nextNumber++
-        val made = submit(namespace) {
+        val made = if (standIns.standingIn(key)) standIns.instantiate(number, scope, key) else live(number, scope, key, future)
+        return made.handleAsync({ record, failure ->
+            instantiating.merge(namespace, -1, Int::plus)
+            if (failure != null) throw unwrap(failure)
+            if (!scope.live || scripts.scope(scope.id) == null) {
+                record.close(budget)
+                throw WorkFailed("the script that made it has unloaded")
+            }
+            instances[number] = record
+            LuaHandle.WasmInstance(number)
+        }, mainThread)
+    }
+
+    /** A Chicory instance of [key] for [scope], made on the module threads once it has compiled. */
+    private fun live(
+        number: Long,
+        scope: Scope,
+        key: String,
+        future: CompletableFuture<CompiledModule>?
+    ): CompletionStage<WasmInstanceRecord> {
+        val namespace = scope.namespace
+        return submit(namespace) {
             val module = awaitCompiled(key, future)
             val pages = reserve()
             try {
@@ -215,22 +249,12 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
                         }
                     }
                 }
-                WasmInstanceRecord(number, scope.id, namespace, key, module, running, pages, threads)
+                WasmInstanceRecord.Live(number, scope.id, namespace, key, module, running, pages, threads)
             } catch (e: Throwable) {
                 budget.release(pages)
                 throw failed(e, "instantiating module \"$key\"")
             }
         }
-        return made.handleAsync({ record, failure ->
-            instantiating.merge(namespace, -1, Int::plus)
-            if (failure != null) throw unwrap(failure)
-            if (!scope.live || session.scripts.scope(scope.id) == null) {
-                record.close(budget)
-                throw WorkFailed("the script that made it has unloaded")
-            }
-            instances[number] = record
-            LuaHandle.WasmInstance(number)
-        }, session.async.mainThread)
     }
 
     /** The instance [number], open; null once it's closed. */
@@ -240,9 +264,12 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
     fun instanceModule(number: Long): String? = instances[number]?.key
 
     /** Calls [name] in [record] with [table] (the script's `args`); [text] for `call_text`. */
-    fun call(record: WasmInstanceRecord, name: String, table: dev.netherforge.plugin.lua.LuaValue?, text: Boolean): CompletionStage<Any?> {
+    fun call(record: WasmInstanceRecord, name: String, table: LuaValue?, text: Boolean): CompletionStage<Any?> {
         val what = if (text) "WasmInstance:call_text" else "WasmInstance:call"
-        if (record.stub != null) return callStub(record, name, table, text)
+        when (record) {
+            is WasmInstanceRecord.StandIn -> return standIns.call(record, name, table, text)
+            is WasmInstanceRecord.Live -> Unit
+        }
         val module = record.module
         val type = module.types[name]
             ?: throw LuaApiException(
@@ -291,7 +318,7 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
         arguments: List<String>,
         environment: Map<String, String>
     ): CompletionStage<WasmRunResult> {
-        stubFor(key)?.let { return runStub(it, stdin, arguments, environment) }
+        if (standIns.standingIn(key)) return standIns.run(key, stdin, arguments, environment)
         val future = compiled[key]
         val limit = config.maxOutputBytes
         return submit(scope.namespace) {
@@ -324,13 +351,20 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
     fun start(scope: Scope, key: String, arguments: List<String>, environment: Map<String, String>): LuaHandle.WasmProcess {
         val number = nextNumber++
         val handle = LuaHandle.WasmProcess(number, key)
-        val program = WasmProgram(number, handle, scope.id, scope.namespace, key, config.maxQueuedLines, config.maxLineBytes)
+        val program =
+            WasmProgram(
+                number,
+                handle,
+                scope.id,
+                scope.namespace,
+                key,
+                config.maxQueuedLines,
+                config.maxLineBytes,
+                standIns.standingIn(key)
+            )
         programs[number] = program
-        if (stubFor(key) != null) {
-            program.stubbed = true
-            return handle
-        }
-        val running = programs.values.filter { !it.ended && !it.stubbed && it !== program }
+        if (program.standIn) return handle
+        val running = programs.values.filter { !it.ended && !it.standIn && it !== program }
         val refusal = when {
             running.count { it.namespace == scope.namespace } >= config.maxProcessesPerPackage ->
                 "package \"${scope.namespace}\" already has ${config.maxProcessesPerPackage} WebAssembly programs running, the server's " +
@@ -361,14 +395,13 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
     /** A script sends [line] to [program]; false when it has ended or its input was closed. */
     fun send(program: WasmProgram, line: String): Boolean {
         if (program.ended || !program.input.open) return false
-        if (program.stubbed) program.stubLines += line else program.input.send(line)
+        program.input.send(line)
         return true
     }
 
     fun closeInput(program: WasmProgram): Boolean {
         if (program.ended || !program.input.open) return false
         program.input.finish()
-        if (program.stubbed) program.stubLines += STUB_END
         return true
     }
 
@@ -381,10 +414,9 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
     // ---- inside ---------------------------------------------------------------------
 
     private fun compile(key: String, file: WasmModuleFile) {
-        val place = session.placeOf(WasmModuleKind, key)
-        val source = session.source
-        val bytes = source.readBytes(place.path)
-        val data = WasmData(file.data.mapNotNull { name -> source.resolve(place.file(name))?.let { name to it } }.toMap())
+        val place = placeOf(WasmModuleKind, key)
+        val bytes = readBytes(place.path)
+        val data = WasmData(file.data.mapNotNull { name -> resolveFile(place.file(name))?.let { name to it } }.toMap())
         val future = CompletableFuture<CompiledModule>()
         compiled[key] = future
         if (bytes == null) {
@@ -394,7 +426,7 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
         val compile = config.compile
         val maxBytes = config.maxModuleMb * 1024L * 1024L
         // The log is the main thread's.
-        val warn = { message: String -> session.async.mainThread.execute { session.log.warn(message) } }
+        val warn = { message: String -> mainThread.execute { log.warn(message) } }
         try {
             threads.calls.execute {
                 try {
@@ -409,10 +441,10 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
         // A module that didn't compile is a problem the editor should hear about once it's known.
         future.whenCompleteAsync({ _, failure ->
             if (failure != null && compiled[key] === future) {
-                session.log.warn("WebAssembly module \"$key\" couldn't be compiled: ${failureText(failure)}")
-                session.problemsChanged()
+                log.warn("WebAssembly module \"$key\" couldn't be compiled: ${failureText(failure)}")
+                problemsChanged()
             }
-        }, session.async.mainThread)
+        }, mainThread)
     }
 
     private fun awaitCompiled(key: String, future: CompletableFuture<CompiledModule>?): CompiledModule {
@@ -442,7 +474,7 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
         "(wasm.max-memory-mb); close one"
 
     /** Runs [work] for [namespace] on [on], held to `max-queued-calls-per-package`. */
-    private fun <T> submit(namespace: String, on: java.util.concurrent.Executor = threads.calls, work: () -> T): CompletableFuture<T> {
+    private fun <T> submit(namespace: String, on: Executor = threads.calls, work: () -> T): CompletableFuture<T> {
         val count = synchronized(queued) { queued.getOrPut(namespace) { AtomicInteger() } }
         if (count.incrementAndGet() > config.maxQueuedCallsPerPackage) {
             count.decrementAndGet()
@@ -489,7 +521,7 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
                 pages = reserveOrNull() ?: return@running ProgramOutput.Ended(ProgramEnd.LIMIT, detail = memoryTaken())
                 val stdout = program.LineOutput("stdout")
                 val stderr = program.LineOutput("stderr")
-                val io = WasmIo(program.key, program.input, stdout, stderr, arguments, environment)
+                val io = WasmIo(program.key, program.input as WasmProgram.ProgramInput, stdout, stderr, arguments, environment)
                 module.instantiate(io, maxPages()).use { running ->
                     val code = try {
                         exitCode { running.instance.export(WasmImports.COMMAND_ENTRY).apply() }
@@ -512,18 +544,18 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
         program.finished = true
     }
 
-    /** Hands each program's lines to scripts, up to `lines-per-tick` each, then its end; and answers stubbed ones. */
+    /** Hands each program's lines to scripts, up to `lines-per-tick` each, then its end; and answers those a test stands in for. */
     private fun deliver() {
         val perTick = config.linesPerTick
         for (program in programs.values.toList()) {
-            if (program.stubbed) answerStub(program)
+            if (program.standIn) standIns.answer(program)
             var lines = 0
             while (!program.ended && lines < perTick) {
                 when (val item = program.output.poll() ?: break) {
                     is ProgramOutput.Line -> {
-                        if (!program.stubbed) program.room.release()
+                        if (!program.standIn) program.room.release()
                         lines++
-                        session.scripts.emit(
+                        scripts.emit(
                             Events.WASMPROCESS_OUTPUT,
                             program.handle,
                             WasmOutputEvent(program.handle, item.text, item.stream)
@@ -549,10 +581,10 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
         program.room.release(Int.MAX_VALUE / 2)
         val handle = program.handle
         try {
-            session.scripts.emit(Events.WASMPROCESS_END, handle, WasmEndEvent(handle, reason.luaName, exitCode?.toLong(), detail))
+            scripts.emit(Events.WASMPROCESS_END, handle, WasmEndEvent(handle, reason.luaName, exitCode?.toLong(), detail))
         } finally {
             programs.remove(program.number)
-            session.scripts.dropTarget(handle)
+            scripts.dropTarget(handle)
         }
     }
 
@@ -576,7 +608,7 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
     }
 
     private fun unwrap(failure: Throwable): Throwable =
-        if (failure is java.util.concurrent.CompletionException && failure.cause != null) failure.cause!! else failure
+        if (failure is CompletionException && failure.cause != null) failure.cause!! else failure
 
     private fun failure(future: CompletableFuture<*>): String? = try {
         future.join()
@@ -587,7 +619,7 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
 
     private fun failureText(e: Throwable?): String = when (e) {
         null -> "it failed"
-        is java.util.concurrent.CompletionException, is ExecutionException -> failureText(e.cause)
+        is CompletionException, is ExecutionException -> failureText(e.cause)
         is WorkFailed -> e.message.orEmpty()
         else -> e.message ?: e.javaClass.simpleName
     }
@@ -595,68 +627,7 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
     // ---- standing in for a module (test runs) -------------------------------------------
 
     /** Stands [stub] in for [key] for the rest of [scope] (a test), in place of any stand-in before it. */
-    fun stub(scope: Scope, key: String, stub: TestWasmStub) {
-        stubs.put(key, scope to stub)?.let { release(it.second) }
-    }
-
-    /** Lets go of the functions a stand-in kept. */
-    private fun release(stub: TestWasmStub) {
-        for (function in stub.functions.orEmpty().values + listOfNotNull(stub.run, stub.input)) session.scripts.unref(function.ref)
-    }
-
-    private fun stubFor(key: String): Pair<Scope, TestWasmStub>? = stubs[key]
-
-    private fun instantiateStub(scope: Scope, key: String): CompletionStage<LuaHandle.WasmInstance> {
-        val number = nextNumber++
-        return CompletableFuture.supplyAsync({
-            instances[number] = WasmInstanceRecord.stub(number, scope.id, scope.namespace, key, stubs.getValue(key).second, threads)
-            LuaHandle.WasmInstance(number)
-        }, session.async.mainThread)
-    }
-
-    private fun callStub(
-        record: WasmInstanceRecord,
-        name: String,
-        table: dev.netherforge.plugin.lua.LuaValue?,
-        text: Boolean
-    ): CompletionStage<Any?> {
-        val (scope, stub) = stubs[record.key]
-            ?: return CompletableFuture.failedFuture(WorkFailed("the stand-in for module \"${record.key}\" is gone"))
-        val function = stub.functions?.get(name)
-            ?: return CompletableFuture.failedFuture(WorkFailed("the stand-in for module \"${record.key}\" has no function \"$name\""))
-        val arguments = table?.json("args")
-        return CompletableFuture.supplyAsync({
-            val answer = WasmStubCalls.call(session.scripts, scope, function, listOf(arguments), "functions.$name")
-            if (text) WasmStubCalls.text(answer, name) else WasmStubCalls.values(answer, name)
-        }, session.async.mainThread)
-    }
-
-    private fun runStub(
-        stub: Pair<Scope, TestWasmStub>,
-        stdin: String?,
-        arguments: List<String>,
-        environment: Map<String, String>
-    ): CompletionStage<WasmRunResult> {
-        val (scope, functions) = stub
-        val run = functions.run ?: return CompletableFuture.failedFuture(WorkFailed("the stand-in has no run"))
-        val options = mapOf("stdin" to stdin, "arguments" to arguments, "environment" to environment).filterValues { it != null }
-        return CompletableFuture.supplyAsync({ WasmStubCalls.run(session.scripts, scope, run, options) }, session.async.mainThread)
-    }
-
-    private fun answerStub(program: WasmProgram) {
-        val (scope, stub) = stubs[program.key] ?: return
-        while (program.stubLines.isNotEmpty()) {
-            val line = program.stubLines.removeFirst()
-            if (line === STUB_END) {
-                program.output += ProgramOutput.Ended(ProgramEnd.EXITED, exitCode = 0)
-                continue
-            }
-            val input = stub.input ?: continue
-            for (printed in WasmStubCalls.lines(session.scripts, scope, input, line, program.handle)) {
-                program.output += ProgramOutput.Line(printed, "stdout")
-            }
-        }
-    }
+    fun stub(scope: Scope, key: String, stub: TestWasmStub) = standIns.stub(scope, key, stub)
 
     /** What a run printed to one stream, kept up to [limit] bytes. */
     private class CappedOutput(private val limit: Int) : OutputStream() {
@@ -676,8 +647,5 @@ class WasmModules(private val session: ProjectSession) : RuntimeService {
     private companion object {
         /** How long [settle] waits a tick for a program that's still computing. */
         const val PROGRAM_SETTLE_MILLIS = 1000L
-
-        /** What a stubbed program's queue holds where its input was closed. */
-        val STUB_END = String(charArrayOf('\u0000'))
     }
 }

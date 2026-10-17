@@ -1,6 +1,5 @@
 package dev.netherforge.plugin.http
 
-import dev.netherforge.plugin.HttpConfig
 import dev.netherforge.plugin.session.RuntimeService
 
 /**

@@ -1,8 +1,20 @@
 package dev.netherforge.plugin
 
 import dev.netherforge.format.bridge.Bridge
+import dev.netherforge.plugin.bots.BotsConfig
+import dev.netherforge.plugin.bridge.BridgeConfig
+import dev.netherforge.plugin.http.ConnectionLimits
+import dev.netherforge.plugin.http.HttpConfig
 import dev.netherforge.plugin.lua.SandboxLimits
+import dev.netherforge.plugin.pack.PackConfig
+import dev.netherforge.plugin.schedule.ScheduleConfig
+import dev.netherforge.plugin.screen.ScreensConfig
+import dev.netherforge.plugin.script.PerformanceConfig
+import dev.netherforge.plugin.store.DatabasesConfig
+import dev.netherforge.plugin.structure.StructuresConfig
 import dev.netherforge.plugin.testing.TestHarness
+import dev.netherforge.plugin.wasm.WasmConfig
+import dev.netherforge.plugin.web.WebConfig
 import java.nio.file.Path
 
 /**
@@ -264,7 +276,8 @@ data class RuntimeConfig(
                 maxProcessesPerPackage = positive("max-processes-per-package", defaults.maxProcessesPerPackage),
                 maxProcessesTotal = positive("max-processes-total", defaults.maxProcessesTotal),
                 maxOutputBytes = positive("max-output-bytes", defaults.maxOutputBytes),
-                maxLineBytes = positive("max-line-bytes", defaults.maxLineBytes),
+                // At least a character's four bytes, so a long line is cut between characters.
+                maxLineBytes = positive("max-line-bytes", defaults.maxLineBytes).coerceAtLeast(4),
                 maxQueuedLines = positive("max-queued-lines", defaults.maxQueuedLines),
                 linesPerTick = positive("lines-per-tick", defaults.linesPerTick)
             )
@@ -309,185 +322,3 @@ data class RuntimeConfig(
  * address it's bound to (`server-ip`, empty for every interface).
  */
 data class ServerAddress(val directory: Path, val ip: String)
-
-/**
- * When a script is slow enough to warn about (`performance:` in `config.yml`,
- * read on dev servers too): its average over the last [warnTicks] ticks
- * above [warnMillis] milliseconds a tick. 0 turns the warning off.
- */
-data class PerformanceConfig(val warnMillis: Double = 10.0, val warnTicks: Int = 20)
-
-/**
- * `screens:` in `config.yml`, read on dev servers too: at most [bytesPerTick] of screens' pixels go to each player a
- * tick (a whole map is 16 KiB). What doesn't fit waits for the next tick, merged with what changes meanwhile, so a
- * video someone can't keep up with skips frames for them rather than falling behind.
- */
-data class ScreensConfig(val bytesPerTick: Int = 64 * 1024) {
-    companion object {
-        /** A whole map has to fit in a tick. */
-        const val MIN_BYTES_PER_TICK = 16 * 1024
-        const val MAX_BYTES_PER_TICK = 4 * 1024 * 1024
-    }
-}
-
-/**
- * `schedules:` in `config.yml`, read on dev servers too: the IANA time zone
- * (`Europe/Paris`) or offset (`+02:00`) that `nf.schedule`'s times are in, or
- * null for the server's own zone. A zone Java doesn't know is reported when
- * the session starts, and the server's own is used instead.
- */
-data class ScheduleConfig(val timeZone: String? = null)
-
-/**
- * `http:` in `config.yml`, read on dev servers too: the server owner's limits
- * on `nf.http.request`. Public addresses only unless [allowPrivateAddresses]
- * (a service on this machine or network: loopback, private, link-local,
- * shared and unique-local addresses); a request or response body larger than
- * its limit fails; a request that takes longer than [timeoutSeconds]
- * (redirects included) fails; and each package may start [requestsPerMinute]
- * requests a minute.
- */
-data class HttpConfig(
-    val allowPrivateAddresses: Boolean = false,
-    val maxRequestBytes: Int = 1024 * 1024,
-    val maxResponseBytes: Int = 4 * 1024 * 1024,
-    val timeoutSeconds: Int = 15,
-    val requestsPerMinute: Int = 60,
-    /** What `nf.http.stream` and `nf.http.websocket` may hold open and move. */
-    val connections: ConnectionLimits = ConnectionLimits()
-) {
-    companion object {
-        /** Redirects one request follows before it fails. */
-        const val MAX_REDIRECTS = 5
-    }
-}
-
-/**
- * `http.connections:` in `config.yml`: the owner's limits on the connections
- * `nf.http.stream` and `nf.http.websocket` hold open (each also counts as a
- * request against `requests-per-minute` when it opens). [maxPerPackage] open
- * at once per package and [maxTotal] in all; one line, event or message (either
- * way) of at most [maxMessageBytes]; [bytesPerMinute] read from and written to
- * the network per package, counted on the wire; ended after [idleSeconds] with
- * nothing sent or received. While scripts haven't taken them, at most
- * [maxQueuedMessages] wait per connection, and the server stops reading until
- * they're taken; [messagesPerTick] are handed to scripts per connection a tick.
- */
-data class ConnectionLimits(
-    val maxPerPackage: Int = 4,
-    val maxTotal: Int = 32,
-    val maxMessageBytes: Int = 1024 * 1024,
-    val bytesPerMinute: Int = 16 * 1024 * 1024,
-    val idleSeconds: Int = 300,
-    val maxQueuedMessages: Int = 1000,
-    val messagesPerTick: Int = 100
-)
-
-/**
- * `web:` in `config.yml`, read on dev servers too: whether `nf.web` routes
- * are served ([enabled]; off by default), on the resource pack's listener
- * (`resource-pack.bind` and `.port`), and the owner's limits on them.
- * [publicUrl] is what `nf.web.url` builds on (the listener's own address
- * when unset); [trustProxyHeaders] makes `X-Forwarded-For` the client's
- * address, for a server behind the owner's own reverse proxy. A request
- * body over [maxBodyBytes] is `413`; an address past
- * [requestsPerMinutePerIp] is `429`; past [maxPending] waiting for the main
- * thread is `503`; a handler that hasn't answered after
- * [handlerTimeoutSeconds] is `504`.
- */
-data class WebConfig(
-    val enabled: Boolean = false,
-    val publicUrl: String? = null,
-    val trustProxyHeaders: Boolean = false,
-    val maxBodyBytes: Int = 64 * 1024,
-    val maxResponseBytes: Int = 1024 * 1024,
-    val requestsPerMinutePerIp: Int = 60,
-    val maxPending: Int = 64,
-    val handlerTimeoutSeconds: Int = 10
-)
-
-/**
- * `bots:` in `config.yml`: whether scripts may join bots (`nf.bots`, for a
- * package that declares `requires.bots`), off by default (the editor's dev
- * server always allows them), and at most [max] of them online at once
- * across every package. The dev bridge's own bots (tests, coding agents)
- * aren't held to either.
- */
-data class BotsConfig(val enabled: Boolean = false, val max: Int = 20)
-
-/**
- * `structures:` in `config.yml`, read on dev servers too: how fast `world:place_gradually` and
- * `world:fill_gradually` go. Every one going shares [blocksPerTick] blocks a tick, in turn, so two scripts can't
- * double the load; a package has at most [maxJobsPerPackage] going at once, past which one fails at once.
- */
-data class StructuresConfig(val blocksPerTick: Int = 8192, val maxJobsPerPackage: Int = 4)
-
-/**
- * `wasm:` in `config.yml`, read on dev servers too: how WebAssembly modules (`nf.wasm`) run. Calls, runs and
- * compiling share [threads] threads (each is at most one core); a started program holds a thread of its own while
- * it runs, at most [maxProcessesTotal] in all. An instance or program may use at most [maxMemoryMb] of memory, and
- * the ones running together at most [maxMemoryTotalMb] (each counted at the most it may grow to); a call or run is
- * stopped after [maxCallSeconds]. [compile] off runs every module in the interpreter, many times slower, for a JVM
- * where making classes is a problem.
- */
-data class WasmConfig(
-    val threads: Int = 2,
-    val compile: Boolean = true,
-    val maxModuleMb: Int = 64,
-    val maxMemoryMb: Int = 256,
-    val maxMemoryTotalMb: Int = 1024,
-    val maxCallSeconds: Int = 10,
-    val maxQueuedCallsPerPackage: Int = 64,
-    val maxInstancesPerPackage: Int = 8,
-    val maxProcessesPerPackage: Int = 2,
-    val maxProcessesTotal: Int = 4,
-    val maxOutputBytes: Int = 1_048_576,
-    val maxLineBytes: Int = 65_536,
-    val maxQueuedLines: Int = 1000,
-    val linesPerTick: Int = 100
-)
-
-data class BridgeConfig(
-    val port: Int,
-    val token: String,
-    /**
-     * How long a dev server keeps running without its editor before it stops
-     * itself. Every editor run listens on a new port, so a server whose
-     * editor quit, crashed or was killed can never reconnect: without this it
-     * would hold the port (and the world) until someone found and killed it.
-     */
-    val abandonAfterMillis: Long = DEFAULT_ABANDON_AFTER_MILLIS,
-    /**
-     * The server's folder, which the editor started it in: paths the bridge
-     * answers with (`save_world`) are relative to it, because the editor
-     * reads files from its dev server's folder and nowhere else.
-     */
-    val serverDirectory: Path = Path.of("").toAbsolutePath()
-) {
-    companion object {
-        const val DEFAULT_ABANDON_AFTER_MILLIS = 15_000L
-    }
-}
-
-/**
- * Where the resource pack is served from (`resource-pack:` in `config.yml`).
- *
- * By default the plugin serves it itself; [externalUrl] says the owner serves
- * it instead, and the plugin writes the zip for them to upload.
- */
-data class PackConfig(
-    /** Off: nothing is sent to players (the pack is still built, so glyphs and skins still resolve). */
-    val enabled: Boolean = true,
-    /** The address the built-in server listens on. */
-    val bind: String = "127.0.0.1",
-    /** Its port; 0 picks a free one. */
-    val port: Int = 0,
-    /** The base URL players fetch from, when it isn't `http://<bind>:<port>` (a public host name, a proxy). */
-    val publicUrl: String? = null,
-    /** Serve it yourself from this URL: the plugin writes `resource-pack.zip` to its folder and sends this with its hash. */
-    val externalUrl: String? = null,
-    /** Players who decline it are disconnected. */
-    val required: Boolean = false,
-    /** MiniMessage shown on the client's prompt. */
-    val prompt: String? = null
-)

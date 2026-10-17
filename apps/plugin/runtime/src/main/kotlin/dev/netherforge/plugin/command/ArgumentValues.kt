@@ -1,9 +1,9 @@
 package dev.netherforge.plugin.command
 
 import dev.netherforge.format.Vec3
-import dev.netherforge.plugin.api.LuaHandle
-import dev.netherforge.plugin.api.LuaLocation
-import dev.netherforge.plugin.api.entityHandle
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.LuaLocation
+import dev.netherforge.plugin.binding.entityHandle
 import dev.netherforge.plugin.lua.ResourceName
 import dev.netherforge.plugin.platform.ArgumentSyntax
 import dev.netherforge.plugin.platform.ArgumentType

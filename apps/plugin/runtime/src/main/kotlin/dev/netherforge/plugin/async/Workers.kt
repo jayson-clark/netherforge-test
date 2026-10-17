@@ -120,32 +120,7 @@ class Workers(
      * one lane by each name for the plugin's life. The standard serial executor
      * over this one.
      */
-    fun lane(name: String): Executor = lanes.computeIfAbsent(name) { Lane(this) }
-
-    private class Lane(private val workers: Executor) : Executor {
-        private val queue = ArrayDeque<Runnable>()
-        private var active: Runnable? = null
-
-        @Synchronized
-        override fun execute(command: Runnable) {
-            queue.addLast(
-                Runnable {
-                    try {
-                        command.run()
-                    } finally {
-                        next()
-                    }
-                }
-            )
-            if (active == null) next()
-        }
-
-        @Synchronized
-        private fun next() {
-            active = queue.removeFirstOrNull()
-            active?.let(workers::execute)
-        }
-    }
+    fun lane(name: String): Executor = lanes.computeIfAbsent(name) { SerialExecutor(this) }
 
     /** Waits until nothing given to the pool is running or waiting; false if [millis] passed first. */
     fun idle(millis: Long): Boolean {

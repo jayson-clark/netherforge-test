@@ -1,8 +1,8 @@
 package dev.netherforge.plugin.lua
 
 import dev.netherforge.format.Vec3
-import dev.netherforge.plugin.api.LuaHandle
-import dev.netherforge.plugin.api.LuaLocation
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.LuaLocation
 import dev.netherforge.plugin.item.ItemMatch
 import dev.netherforge.plugin.platform.ItemData
 import party.iroiro.luajava.Lua

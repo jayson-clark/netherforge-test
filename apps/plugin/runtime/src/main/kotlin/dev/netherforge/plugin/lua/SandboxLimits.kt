@@ -3,7 +3,7 @@ package dev.netherforge.plugin.lua
 /**
  * What the sandbox holds scripts to, beyond each script's instruction budget
  * (its file's `budget`). The prelude's hook enforces them; the defaults and
- * why they're those numbers are in the plugin-runtime skill ("Sandbox").
+ * why they're those numbers are in the plugin-sandbox skill ("The sandbox").
  */
 data class SandboxLimits(
     /** VM instructions between two count hooks, each of which charges the running call's budget. */

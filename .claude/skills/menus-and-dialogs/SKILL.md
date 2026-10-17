@@ -137,7 +137,7 @@ because the codec is Lua and its instructions are the script's: plain fields cos
 nothing, and plain `data` is written as the codec's very text (keys in Lua's `<`
 order, asked of Lua, floats spelled as it spells them, `CodecNumbers`); only typed
 values and odd keys fall back to the codec
-(`ItemTableCostTest`), and `LuaItems.write` hands it
+(`binding/ApiCostTest`'s item tables), and `LuaItems.write` hands it
 back as that JSON, which `pushValue` turns back into typed values. An item
 match (`ItemMatch`, a partial item) is read the same way. Reading is strict
 (`LuaItems.read`): unknown field, wrong type, something in `data` that can't

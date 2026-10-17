@@ -1,7 +1,6 @@
 package dev.netherforge.plugin.web
 
 import com.sun.net.httpserver.HttpExchange
-import dev.netherforge.plugin.WebConfig
 import java.io.IOException
 import java.io.InputStream
 import java.util.concurrent.ArrayBlockingQueue

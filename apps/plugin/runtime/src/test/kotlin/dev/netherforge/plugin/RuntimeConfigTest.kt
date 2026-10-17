@@ -1,6 +1,11 @@
 package dev.netherforge.plugin
 
 import dev.netherforge.format.bridge.Bridge
+import dev.netherforge.plugin.http.HttpConfig
+import dev.netherforge.plugin.pack.PackConfig
+import dev.netherforge.plugin.schedule.ScheduleConfig
+import dev.netherforge.plugin.script.PerformanceConfig
+import dev.netherforge.plugin.wasm.WasmConfig
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals

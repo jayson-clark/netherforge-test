@@ -1,5 +1,14 @@
 package dev.netherforge.plugin.api
 
+import dev.netherforge.plugin.binding.Caller
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.NfWasmApi
+import dev.netherforge.plugin.binding.WasmFunction
+import dev.netherforge.plugin.binding.WasmInstanceApi
+import dev.netherforge.plugin.binding.WasmProcessApi
+import dev.netherforge.plugin.binding.WasmRunOptions
+import dev.netherforge.plugin.binding.WasmRunResult
+import dev.netherforge.plugin.binding.WasmStartOptions
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaValue
 import dev.netherforge.plugin.session.ProjectSession

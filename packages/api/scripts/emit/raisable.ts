@@ -42,7 +42,7 @@ export function raisableKotlin(spec: ApiSpec, events: RaisedEvent[]): string {
   return finish([
     `// ${GENERATED_BY}`,
     '',
-    'package dev.netherforge.plugin.api',
+    'package dev.netherforge.plugin.binding',
     '',
     '/**',
     ' * An `nf` event a test can raise: [event], heard first on the handle [heardBy] finds in the',

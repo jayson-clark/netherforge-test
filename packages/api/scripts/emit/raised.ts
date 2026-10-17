@@ -555,7 +555,7 @@ export function dispatchKotlin(events: RaisedEvent[]): string {
   const lines = [
     `// ${GENERATED_BY}`,
     '',
-    'package dev.netherforge.plugin.api',
+    'package dev.netherforge.plugin.binding',
     '',
     'import dev.netherforge.plugin.platform.GameEvent',
     'import dev.netherforge.plugin.platform.GameEvents',

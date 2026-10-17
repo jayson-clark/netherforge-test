@@ -3,7 +3,6 @@ package dev.netherforge.plugin.centity
 import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.Channel
 import dev.netherforge.format.math.Matrix4
-import dev.netherforge.plugin.api.lookRotation
 import java.util.UUID
 import kotlin.math.ceil
 import kotlin.math.sqrt

@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.lua
 
-import dev.netherforge.plugin.api.LuaHandle
+import dev.netherforge.plugin.binding.LuaHandle
 
 /**
  * Every handle Lua holds, by its key: the integer a script's handle is in Lua.

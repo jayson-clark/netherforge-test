@@ -19,7 +19,6 @@ import dev.netherforge.format.bridge.RpcResponse
 import dev.netherforge.format.bridge.SavedStructure
 import dev.netherforge.format.bridge.SavedWorld
 import dev.netherforge.format.bridge.WorldSpawn
-import dev.netherforge.plugin.BridgeConfig
 import dev.netherforge.plugin.NetherForgeRuntime
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.BlockVector

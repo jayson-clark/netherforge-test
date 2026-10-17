@@ -9,6 +9,17 @@ import dev.netherforge.format.project.RecipeKind
 import dev.netherforge.format.recipe.Material
 import dev.netherforge.format.recipe.RecipeFile
 import dev.netherforge.format.recipe.RecipeValidator
+import dev.netherforge.plugin.binding.Caller
+import dev.netherforge.plugin.binding.Events
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.NfItemsApi
+import dev.netherforge.plugin.binding.NfRecipesApi
+import dev.netherforge.plugin.binding.ProjectItemApi
+import dev.netherforge.plugin.binding.RecipeAvailableOptions
+import dev.netherforge.plugin.binding.RecipeCraftEvent
+import dev.netherforge.plugin.binding.RecipeCraftOptions
+import dev.netherforge.plugin.binding.RecipeMaterial
+import dev.netherforge.plugin.binding.StationRecipe
 import dev.netherforge.plugin.item.StationCrafting
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.lua.LuaValue

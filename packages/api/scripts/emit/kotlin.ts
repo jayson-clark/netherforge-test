@@ -1,5 +1,5 @@
 /**
- * The Kotlin half of the bindings, in `dev.netherforge.plugin.api`:
+ * The Kotlin half of the bindings, in `dev.netherforge.plugin.binding`:
  *
  *  - `LuaHandle.kt`: one class per handle class, holding what identifies it, with its codec;
  *  - `LuaApi.kt`: one interface per class, which the runtime implements, so a
@@ -41,7 +41,7 @@ import {
   type ShapeBinding,
 } from './bindings.ts'
 
-const PACKAGE = 'dev.netherforge.plugin.api'
+const PACKAGE = 'dev.netherforge.plugin.binding'
 
 function header(imports: string[]): string[] {
   return [

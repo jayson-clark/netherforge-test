@@ -2,6 +2,13 @@ package dev.netherforge.plugin.api
 
 import dev.netherforge.format.project.LootTableKind
 import dev.netherforge.format.ref.ResourceRef
+import dev.netherforge.plugin.binding.Caller
+import dev.netherforge.plugin.binding.InventoryKeys
+import dev.netherforge.plugin.binding.LootContext
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.LuaPlace
+import dev.netherforge.plugin.binding.NfLootApi
+import dev.netherforge.plugin.binding.place
 import dev.netherforge.plugin.loot.LootRoll
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.InventoryRef

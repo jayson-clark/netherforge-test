@@ -67,7 +67,7 @@ export const RUNTIME_TYPES: Record<string, RuntimeType> = {
   Vec3: { kotlin: 'Vec3', qualified: 'dev.netherforge.format.Vec3', codec: 'LuaCodecs.VEC3' },
   Location: {
     kotlin: 'LuaLocation',
-    qualified: 'dev.netherforge.plugin.api.LuaLocation',
+    qualified: 'dev.netherforge.plugin.binding.LuaLocation',
     codec: 'LuaCodecs.LOCATION',
   },
   Item: {

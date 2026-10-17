@@ -19,7 +19,8 @@ import java.util.concurrent.atomic.AtomicLong
  * would hold up).
  *
  * - [calls]: [count] threads for compiling, instantiating, calls and runs, so at most [count] cores are ever busy
- *   with them. Each instance's calls go through a [Lane] over it, one at a time.
+ *   with them. Each instance's calls go through a
+ *   [dev.netherforge.plugin.async.SerialExecutor] over it, one at a time.
  * - [programs]: a thread for each started program while it runs (it blocks reading its input), bounded by the
  *   owner's `max-processes-total`, which [WasmModules] holds to before starting one.
  * - The watchdog: [limited] interrupts the thread running a call that's taken too long. Chicory's interpreter and
@@ -106,32 +107,6 @@ class WasmThreads(count: Int) : AutoCloseable {
         pool.shutdownNow()
         programs.shutdownNow()
         watchdog.shutdownNow()
-    }
-
-    /** Work given to it runs on [over] one piece at a time, in the order it was given: one instance's calls. */
-    class Lane(private val over: Executor) : Executor {
-        private val queue = ArrayDeque<Runnable>()
-        private var active: Runnable? = null
-
-        @Synchronized
-        override fun execute(command: Runnable) {
-            queue.addLast(
-                Runnable {
-                    try {
-                        command.run()
-                    } finally {
-                        next()
-                    }
-                }
-            )
-            if (active == null) next()
-        }
-
-        @Synchronized
-        private fun next() {
-            active = queue.removeFirstOrNull()
-            active?.let(over::execute)
-        }
     }
 
     private companion object {

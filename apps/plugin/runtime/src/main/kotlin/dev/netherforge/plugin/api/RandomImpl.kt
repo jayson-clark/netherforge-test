@@ -1,5 +1,8 @@
 package dev.netherforge.plugin.api
 
+import dev.netherforge.plugin.binding.Caller
+import dev.netherforge.plugin.binding.NfRandomApi
+import dev.netherforge.plugin.binding.NoiseOptions
 import dev.netherforge.plugin.lua.LuaApiException
 import java.util.SplittableRandom
 import java.util.UUID

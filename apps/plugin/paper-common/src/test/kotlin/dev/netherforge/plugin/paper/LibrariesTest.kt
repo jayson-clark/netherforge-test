@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.paper
 
-import dev.netherforge.plugin.DatabaseType
+import dev.netherforge.plugin.store.DatabaseType
 import java.net.URLClassLoader
 import java.nio.file.Path
 import kotlin.io.path.createTempDirectory

@@ -159,7 +159,7 @@ object WasmFixtures {
         bytes.copyOf().also { it[at] = 0x42 }
     }
 
-    /** `spin(n)`: n rounds of a 64-bit linear congruential generator, for [dev.netherforge.plugin.WasmBenchmark]. */
+    /** `spin(n)`: n rounds of a 64-bit linear congruential generator, for [dev.netherforge.plugin.wasm.WasmBenchmark]. */
     val loop: ByteArray by lazy {
         Wat2Wasm.parse(
             """

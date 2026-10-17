@@ -2,14 +2,16 @@ package dev.netherforge.plugin.api
 
 import dev.netherforge.format.game.MinecraftVersion
 import dev.netherforge.format.item.ItemDef
-import dev.netherforge.plugin.centity.NfSpawningImpl
-import dev.netherforge.plugin.command.NfCommandsImpl
-import dev.netherforge.plugin.cutscene.CutsceneImpl
-import dev.netherforge.plugin.cutscene.NfCutscenesImpl
+import dev.netherforge.plugin.binding.Caller
+import dev.netherforge.plugin.binding.Events
+import dev.netherforge.plugin.binding.LuaApi
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.Marshal
+import dev.netherforge.plugin.binding.codec
+import dev.netherforge.plugin.binding.entityHandle
+import dev.netherforge.plugin.binding.luaPrimitives
+import dev.netherforge.plugin.binding.notInProject
 import dev.netherforge.plugin.data.ScriptData
-import dev.netherforge.plugin.hud.HudImpl
-import dev.netherforge.plugin.interop.NfEconomyImpl
-import dev.netherforge.plugin.interop.NfPlaceholdersImpl
 import dev.netherforge.plugin.item.ItemMatch
 import dev.netherforge.plugin.item.LuaItems
 import dev.netherforge.plugin.lua.LuaApiException
@@ -21,16 +23,11 @@ import dev.netherforge.plugin.lua.LuaTypeMismatch
 import dev.netherforge.plugin.lua.LuaValue
 import dev.netherforge.plugin.lua.Primitive
 import dev.netherforge.plugin.lua.ScriptFailure
-import dev.netherforge.plugin.particle.EffectImpl
-import dev.netherforge.plugin.particle.NfParticlesImpl
+import dev.netherforge.plugin.mob.MobGoals
 import dev.netherforge.plugin.platform.ItemData
-import dev.netherforge.plugin.schedule.NfScheduleImpl
-import dev.netherforge.plugin.schedule.ScheduleImpl
 import dev.netherforge.plugin.script.Scope
 import dev.netherforge.plugin.script.Scripts
 import dev.netherforge.plugin.session.ProjectSession
-import dev.netherforge.plugin.testing.NfTestImpl
-import dev.netherforge.plugin.world.MobGoals
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -68,9 +65,9 @@ internal class RuntimeApi(private val session: ProjectSession) :
     override val nfLoot = NfLootImpl(session)
     override val nfParticles = NfParticlesImpl(session)
     override val nfCutscenes = NfCutscenesImpl(session)
-    override val nfScreens = dev.netherforge.plugin.screen.NfScreensImpl(session)
-    override val screen = dev.netherforge.plugin.screen.ScreenImpl(session)
-    override val playback = dev.netherforge.plugin.screen.PlaybackImpl(session)
+    override val nfScreens = dev.netherforge.plugin.api.NfScreensImpl(session)
+    override val screen = dev.netherforge.plugin.api.ScreenImpl(session)
+    override val playback = dev.netherforge.plugin.api.PlaybackImpl(session)
     override val nfCommands = NfCommandsImpl(session)
     override val nfFiles = NfFilesImpl(session)
     override val nfText = NfTextImpl(session)
@@ -432,26 +429,6 @@ private fun goalControls(json: JsonElement): List<String> {
     }
 }
 
-/** `no menu "x" in this project (did you mean "y"?)`. */
 /** [notInProject] with [known] (names as the server knows them) as the calling script's package writes them. */
 internal fun ProjectSession.notInProject(kind: String, name: String, known: List<String>): String =
-    dev.netherforge.plugin.api.notInProject(kind, name, known.map(names::spell))
-
-internal fun notInProject(kind: String, name: String, known: List<String>): String {
-    val close = known.minByOrNull { distance(it, name) }?.takeIf { distance(it, name) <= 2 }
-    return "no $kind \"$name\" in this project" + close?.let { " (did you mean \"$it\"?)" }.orEmpty()
-}
-
-private fun distance(a: String, b: String): Int {
-    val row = IntArray(b.length + 1) { it }
-    for (i in 1..a.length) {
-        var previous = row[0]
-        row[0] = i
-        for (j in 1..b.length) {
-            val saved = row[j]
-            row[j] = minOf(row[j] + 1, row[j - 1] + 1, previous + if (a[i - 1] == b[j - 1]) 0 else 1)
-            previous = saved
-        }
-    }
-    return row[b.length]
-}
+    dev.netherforge.plugin.binding.notInProject(kind, name, known.map(names::spell))

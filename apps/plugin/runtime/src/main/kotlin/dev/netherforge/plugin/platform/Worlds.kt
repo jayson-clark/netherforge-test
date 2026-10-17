@@ -2,7 +2,9 @@ package dev.netherforge.plugin.platform
 
 import dev.netherforge.format.Vec3
 import dev.netherforge.format.block.BlockCarrier
+import dev.netherforge.format.game.Box
 import dev.netherforge.format.particle.SpawnData
+import dev.netherforge.format.project.SpawnCategory
 import java.util.UUID
 
 /*
@@ -254,4 +256,143 @@ interface SoundOps {
 
     /** Stops [sound] for one player, or every sound for null. False when they're offline. */
     fun stop(player: UUID, sound: String?): Boolean
+}
+
+interface WorldOps {
+    fun names(): List<String>
+
+    /** The world things go in when nobody says which: the server's first. */
+    fun defaultWorld(): String
+
+    fun exists(world: String): Boolean
+
+    fun spawnLocation(world: String): Location?
+
+    /**
+     * Whether the entities of the chunk at [at] are loaded. While they are, an
+     * entity of ours that should stand there and can't be reached is gone
+     * (killed, removed by another plugin), not unloaded. Never loads anything.
+     */
+    fun entitiesLoaded(at: Location): Boolean
+
+    /**
+     * The collision boxes of every block overlapping the region from ([minX],
+     * [minY], [minZ]) to ([maxX], [maxY], [maxZ]), in world coordinates: what a
+     * physics body can land on. The live collision shape of each block (a body
+     * lands on a fence where a player would and falls past a torch). Blocks in
+     * chunks that aren't loaded are left out, never loaded for this.
+     */
+    fun collisionBoxes(world: String, minX: Double, minY: Double, minZ: Double, maxX: Double, maxY: Double, maxZ: Double): List<Box>
+
+    // The rest answers null (or false) for a world that doesn't exist.
+
+    /** `normal`, `nether` or `end` (a custom dimension is `normal`). */
+    fun environment(world: String): String?
+
+    /** Ticks since the world began: the time of day is this modulo 24000, the day count this over 24000. */
+    fun fullTime(world: String): Long?
+
+    fun setFullTime(world: String, ticks: Long): Boolean
+
+    /** `clear`, `rain` or `thunder`. */
+    fun weather(world: String): String?
+
+    /** Tonight's moon as the server works it out: 0 full, 1 waning gibbous, … 4 new, … 7 waxing gibbous. */
+    fun moonPhase(world: String): Int?
+
+    /** Changes the weather for [ticks], or for as long as the game picks when null. */
+    fun setWeather(world: String, weather: String, ticks: Int?): Boolean
+
+    fun setSpawnLocation(world: String, at: Location): Boolean
+
+    /** The lowest block y, and one above the highest. */
+    fun heights(world: String): Pair<Int, Int>?
+
+    /** Which value the game rule with this namespaced id takes, or null when the server has no such rule. */
+    fun gameRuleType(rule: String): GameRuleType?
+
+    /** A Boolean or an Int, as [gameRuleType] says. */
+    fun gameRule(world: String, rule: String): Any?
+
+    /** [value] is a Boolean or an Int, as [gameRuleType] says. */
+    fun setGameRule(world: String, rule: String, value: Any): Boolean
+
+    /**
+     * The mob cap per player for [category] in this world: its own setting, or the server's when it has none.
+     * Null when the world doesn't exist.
+     */
+    fun spawnLimit(world: String, category: SpawnCategory): Int?
+
+    /** Sets the world's own mob cap for [category]; a negative [limit] goes back to the server's. False when the world doesn't exist. */
+    fun setSpawnLimit(world: String, category: SpawnCategory, limit: Int): Boolean
+
+    /** Ticks between spawn attempts for [category] in this world: its own setting, or the server's. Null when the world doesn't exist. */
+    fun spawnInterval(world: String, category: SpawnCategory): Int?
+
+    /** Sets the world's own ticks between spawn attempts for [category]; a negative [ticks] goes back to the server's. False when the world doesn't exist. */
+    fun setSpawnInterval(world: String, category: SpawnCategory, ticks: Int): Boolean
+
+    /** Whether the chunk (in chunk coordinates) is loaded: whether its blocks can be read now. */
+    fun isChunkLoaded(world: String, chunkX: Int, chunkZ: Int): Boolean
+
+    /** Every chunk loaded in the world now, as (chunk x, chunk z); empty for a world that doesn't exist. */
+    fun loadedChunks(world: String): List<Pair<Int, Int>>
+
+    /** Loads (generating if need be) a chunk, now. */
+    fun loadChunk(world: String, chunkX: Int, chunkZ: Int): Boolean
+
+    /**
+     * Keeps a chunk loaded, its entities too, until it's released as many times as it was held: loaded (generated
+     * if need be) now if it isn't. [loadChunk] alone lasts the tick: the server unloads a chunk nothing holds. False
+     * when the world doesn't exist, and nothing is held then.
+     */
+    fun holdChunk(world: String, chunkX: Int, chunkZ: Int): Boolean
+
+    /** Lets go of one [holdChunk] of the chunk; the server unloads it as any other once nothing holds it. */
+    fun releaseChunk(world: String, chunkX: Int, chunkZ: Int)
+
+    /** The y of the highest block in a column that isn't air, or null when its chunk isn't loaded. */
+    fun highestBlockY(world: String, x: Int, z: Int): Int?
+
+    /** The biome at a block, namespaced (`minecraft:plains`); null when its chunk isn't loaded or the world doesn't exist. Never loads a chunk. */
+    fun biome(world: String, x: Int, y: Int, z: Int): String?
+
+    /**
+     * A search for the nearest place within [radius] blocks across of ([x], [y], [z]) where the world's
+     * generator puts [biome] (namespaced), as `/locate biome` does: out from there in a square spiral,
+     * every [BiomeSearch.ACROSS] blocks across and [BiomeSearch.UP] up and down, asking the world's
+     * biome source, so it never loads or generates a chunk. Made on the main thread: null when the world
+     * doesn't exist or the server has no such biome.
+     */
+    fun biomeSearch(world: String, x: Int, y: Int, z: Int, radius: Int, biome: String): BiomeSearch?
+
+    fun explode(world: String, position: Vec3, power: Double, fire: Boolean, breakBlocks: Boolean): Boolean
+
+    fun strikeLightning(world: String, position: Vec3, effectOnly: Boolean): Boolean
+
+    /**
+     * The first block whose collision shape a ray hits within [maxDistance],
+     * or null. [direction] is a unit vector. Water and lava are hit as solid
+     * only with [fluids]. Blocks in chunks that aren't loaded aren't hit.
+     */
+    fun raycastBlocks(world: String, origin: Vec3, direction: Vec3, maxDistance: Double, fluids: Boolean): BlockHit?
+}
+
+/**
+ * A biome search [WorldOps.biomeSearch] made: it reads only what the world's
+ * generator reads while it generates chunks on the server's own worker
+ * threads, so the runtime runs it off the main thread (it can take seconds
+ * when the biome is far or nowhere).
+ */
+fun interface BiomeSearch {
+    /** The block position it found the biome at, or null when there's none within the radius. */
+    fun run(): Vec3?
+
+    companion object {
+        /** Blocks between the columns it looks at: `/locate biome`'s. */
+        const val ACROSS = 32
+
+        /** Blocks between the heights it looks at in a column. */
+        const val UP = 64
+    }
 }

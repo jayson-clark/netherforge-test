@@ -2,7 +2,7 @@ package dev.netherforge.plugin.cutscene
 
 import dev.netherforge.format.Vec3
 import dev.netherforge.format.cutscene.CompiledCutscene
-import dev.netherforge.plugin.api.LuaHandle
+import dev.netherforge.plugin.binding.LuaHandle
 import dev.netherforge.plugin.platform.Location
 import java.util.UUID
 

@@ -6,6 +6,7 @@ import dev.netherforge.format.screen.ScreenFontType
 import dev.netherforge.format.screen.ScreenFontValidator
 import dev.netherforge.format.screen.ScreenFontValidator.codePointList
 import dev.netherforge.format.text.MiniMessagePass
+import dev.netherforge.plugin.api.layout
 import dev.netherforge.plugin.platform.MapFont
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
@@ -115,8 +116,6 @@ class ScreenFont(
         }
 
         private fun trueType(file: ScreenFontFile, bytes: ByteArray): ScreenFont {
-            // A server has no screen: AWT draws into pictures without one.
-            if (System.getProperty("java.awt.headless") == null) System.setProperty("java.awt.headless", "true")
             val base = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, ByteArrayInputStream(bytes))
             val font = base.deriveFont(file.sizeOrDefault.toFloat())
             val probe = BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB).createGraphics()

@@ -1,13 +1,13 @@
 package dev.netherforge.plugin.web
 
 import dev.netherforge.format.project.Requirement
-import dev.netherforge.plugin.api.Events
-import dev.netherforge.plugin.api.LuaHandle
-import dev.netherforge.plugin.api.OAuthCompleteEvent
-import dev.netherforge.plugin.api.OAuthFailEvent
-import dev.netherforge.plugin.api.OAuthOptions
 import dev.netherforge.plugin.async.AsyncWork
 import dev.netherforge.plugin.async.WorkFailed
+import dev.netherforge.plugin.binding.Events
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.OAuthCompleteEvent
+import dev.netherforge.plugin.binding.OAuthFailEvent
+import dev.netherforge.plugin.binding.OAuthOptions
 import dev.netherforge.plugin.http.HttpCall
 import dev.netherforge.plugin.http.HttpFetcher
 import dev.netherforge.plugin.lua.LuaApiException

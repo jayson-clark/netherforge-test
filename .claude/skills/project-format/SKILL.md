@@ -662,7 +662,7 @@ an unchanged datapack parses nothing again); every other kind reads only its mai
 `MigrationKind` (`migration/MigrationFile.kt`) is a `FilesKind` with
 `Contents.SQL`: one file per resource, the id `001_init`, never read by
 format (the runtime reads the SQL and applies it to the package's database,
-see plugin-runtime "Package databases"). Format checks what it can know from
+see plugin-persistence "Package databases"). Format checks what it can know from
 the names: `validate` reports a file not named `NNN_name` (`migration.name`);
 `crossCheck` (over `ctx.models(MigrationKind)`, so per package) reports a
 number used twice on the later file (`migration.duplicate`) and a number
@@ -783,7 +783,7 @@ doesn't have: `RegistryKey.BIOME` is `minecraft:worldgen/biome`), `-range`
 despawnDistance below 1) and the warning `-despawn` (a distance within the
 spawner's 48-block reach). The compiled centity carries the block as is
 (`CompiledCentity.spawning`); the runtime's `NaturalSpawner` resolves it (see
-plugin-runtime). Cases: `CentitySpawningTest`, `invalid/centity-spawning`.
+entities-and-physics, "Natural spawning"). Cases: `CentitySpawningTest`, `invalid/centity-spawning`.
 
 ## Adding a field to an existing kind
 

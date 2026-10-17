@@ -3,6 +3,16 @@ package dev.netherforge.plugin.api
 import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.ref.RefKind
+import dev.netherforge.plugin.binding.ButtonApi
+import dev.netherforge.plugin.binding.DialogApi
+import dev.netherforge.plugin.binding.DialogOpenOptions
+import dev.netherforge.plugin.binding.InventoryKeys
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.MenuApi
+import dev.netherforge.plugin.binding.MenuTemplateApi
+import dev.netherforge.plugin.binding.SlotApi
+import dev.netherforge.plugin.binding.SlotBinding
+import dev.netherforge.plugin.binding.SlotRule
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.menu.Menus
 import dev.netherforge.plugin.platform.InventoryRef

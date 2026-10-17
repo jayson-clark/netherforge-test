@@ -7,10 +7,10 @@ import dev.netherforge.format.game.Box
 import dev.netherforge.format.math.Matrix4
 import dev.netherforge.format.math.degreesToRadians
 import dev.netherforge.format.math.radiansToDegrees
-import dev.netherforge.plugin.api.CollideEvent
-import dev.netherforge.plugin.api.Events
-import dev.netherforge.plugin.api.LuaHandle
-import dev.netherforge.plugin.api.NodeEvent
+import dev.netherforge.plugin.binding.CollideEvent
+import dev.netherforge.plugin.binding.Events
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.NodeEvent
 import dev.netherforge.plugin.physics.BodyState
 import dev.netherforge.plugin.physics.PhysicsCollider
 import dev.netherforge.plugin.physics.PhysicsSolver

@@ -1,8 +1,8 @@
 package dev.netherforge.plugin.wasm
 
-import dev.netherforge.plugin.api.LuaHandle
-import dev.netherforge.plugin.api.WasmRunResult
 import dev.netherforge.plugin.async.WorkFailed
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.WasmRunResult
 import dev.netherforge.plugin.lua.CallResult
 import dev.netherforge.plugin.lua.LuaCall
 import dev.netherforge.plugin.lua.LuaCodec

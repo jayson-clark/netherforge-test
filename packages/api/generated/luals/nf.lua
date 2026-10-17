@@ -5504,7 +5504,7 @@ function Screen:play(video, options) end
 ---@return Playback?
 function Screen:playback() end
 
---- Takes a script's screen away for good: its frames come down, and its video ends. A project screen can't be removed (its file says it's there): that's an error.
+--- Takes a script's screen away for good: its frames come down, and its video ends. A screen made with a `key` gives up its maps' numbers too: one made again with that key gets new ones, and an item or frame of the old ones shows nothing. A project screen can't be removed (its file says it's there): that's an error.
 ---@return boolean # `false` when it was already gone.
 function Screen:remove() end
 

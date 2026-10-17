@@ -4,6 +4,11 @@ import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.game.has
 import dev.netherforge.format.item.AttributeOperation
+import dev.netherforge.plugin.binding.AttributeModifier
+import dev.netherforge.plugin.binding.EffectOptions
+import dev.netherforge.plugin.binding.LivingApi
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.StatusEffect
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.AttributeModifierData
 import dev.netherforge.plugin.platform.EntityInfo

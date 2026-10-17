@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit
  *
  * **When it measures** ([active]): always on a dev server (the editor's), and
  * on a production server only while `/nf profile` records, since it costs a
- * little on every call into a script (see the plugin-runtime skill for how
+ * little on every call into a script (see the plugin-sandbox skill for how
  * much).
  */
 class Profiler(

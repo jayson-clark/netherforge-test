@@ -14,14 +14,16 @@ import dev.netherforge.format.project.LockKind
 import dev.netherforge.format.project.ManifestKind
 import dev.netherforge.format.project.VanillaKind
 import dev.netherforge.format.resourcepack.PackFonts
-import dev.netherforge.plugin.api.VersionGates
+import dev.netherforge.plugin.admin.AdminCommand
 import dev.netherforge.plugin.async.Completions
 import dev.netherforge.plugin.async.MainThread
 import dev.netherforge.plugin.async.Workers
+import dev.netherforge.plugin.binding.VersionGates
 import dev.netherforge.plugin.bridge.BridgeService
 import dev.netherforge.plugin.centity.Instance
 import dev.netherforge.plugin.datapack.StartupDatapackCheck
 import dev.netherforge.plugin.debug.Debugger
+import dev.netherforge.plugin.events.ServerEvents
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.pack.Packs
 import dev.netherforge.plugin.particle.ActiveEffect
@@ -40,13 +42,14 @@ import dev.netherforge.plugin.script.ScriptFiles
 import dev.netherforge.plugin.session.Failures
 import dev.netherforge.plugin.session.Handover
 import dev.netherforge.plugin.session.ProjectSession
+import dev.netherforge.plugin.store.ConnectionConfig
 import dev.netherforge.plugin.store.Database
 import dev.netherforge.plugin.store.HikariSources
 import dev.netherforge.plugin.store.PackageDatabases
 import dev.netherforge.plugin.store.RemoteDatabases
 import dev.netherforge.plugin.store.Store
+import dev.netherforge.plugin.terrain.StartupGenerators
 import dev.netherforge.plugin.web.WebGate
-import dev.netherforge.plugin.world.StartupGenerators
 import javax.sql.DataSource
 import kotlin.math.cos
 import kotlin.math.floor
@@ -222,6 +225,9 @@ class NetherForgeRuntime(val platform: Platform, val config: RuntimeConfig) {
     fun defaultWorldGenerator(world: String): String? = startupGenerators.generatorFor(world)
 
     fun enable() {
+        // Screens draw text and pictures with AWT, into pictures: a server has no screen. Set before anything of AWT
+        // loads (it reads this once), and only when the server's owner didn't say otherwise.
+        if (System.getProperty(HEADLESS) == null) System.setProperty(HEADLESS, "true")
         val workers = Workers(uncaught = { e -> mainThread.execute { log.error("NetherForge's background work failed", e) } })
         pool = workers
         opened = Store.open(
@@ -533,6 +539,9 @@ class NetherForgeRuntime(val platform: Platform, val config: RuntimeConfig) {
 
         /** The workers' lane the store is written and read on. */
         private const val STORE_LANE = "store"
+
+        /** AWT's switch for drawing with no screen. */
+        private const val HEADLESS = "java.awt.headless"
 
         /** How far in front of a player's eyes the editor's "Play on server" plays an effect, in blocks. */
         private const val EFFECT_DISTANCE = 3.0

@@ -6,10 +6,10 @@ import dev.netherforge.format.centity.NodeDef
 import dev.netherforge.format.centity.ResolvedHealth
 import dev.netherforge.format.centity.TextDisplay
 import dev.netherforge.format.centity.Transform
-import dev.netherforge.plugin.api.CentityDamageEvent
-import dev.netherforge.plugin.api.CentityDeathEvent
-import dev.netherforge.plugin.api.Events
-import dev.netherforge.plugin.api.LuaHandle
+import dev.netherforge.plugin.binding.CentityDamageEvent
+import dev.netherforge.plugin.binding.CentityDeathEvent
+import dev.netherforge.plugin.binding.Events
+import dev.netherforge.plugin.binding.LuaHandle
 import dev.netherforge.plugin.script.Scripts
 import kotlin.math.ceil
 

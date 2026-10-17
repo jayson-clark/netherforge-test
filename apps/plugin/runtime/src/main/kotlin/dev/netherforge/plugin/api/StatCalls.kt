@@ -1,9 +1,10 @@
 package dev.netherforge.plugin.api
 
 import dev.netherforge.format.project.BuffKind
+import dev.netherforge.plugin.binding.ActiveBuff
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.session.ProjectSession
-import dev.netherforge.plugin.world.StatSheets
+import dev.netherforge.plugin.stats.StatSheets
 
 /** The stat and buff functions `Player` and `Centity` share, for a holder that's there ([holder] null once it's gone). */
 internal class StatCalls(private val session: ProjectSession) {

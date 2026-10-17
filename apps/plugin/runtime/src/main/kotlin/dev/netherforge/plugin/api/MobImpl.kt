@@ -2,12 +2,21 @@ package dev.netherforge.plugin.api
 
 import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.GameIds
+import dev.netherforge.plugin.binding.GoalClearOptions
+import dev.netherforge.plugin.binding.LocationOrVec3OrEntity
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.LuaPlace
+import dev.netherforge.plugin.binding.MobApi
+import dev.netherforge.plugin.binding.MobGoal
+import dev.netherforge.plugin.binding.PathOptions
+import dev.netherforge.plugin.binding.entityHandle
+import dev.netherforge.plugin.binding.place
 import dev.netherforge.plugin.lua.LuaApiException
+import dev.netherforge.plugin.mob.MobGoals
 import dev.netherforge.plugin.platform.EntityFlag
 import dev.netherforge.plugin.platform.GoalControl
 import dev.netherforge.plugin.script.Scope
 import dev.netherforge.plugin.session.ProjectSession
-import dev.netherforge.plugin.world.MobGoals
 
 /**
  * `Mob`: a mob's target, AI, walking (`move_to`) and goals. Everything

@@ -130,28 +130,27 @@ object WasmCalls {
     ): Any? {
         val type = module.types.getValue(name)
         val copied = ArrayList<Pair<Int, Int>>()
-        try {
-            val raw = ArrayList<Long>()
-            var at = 0
-            for (argument in arguments) {
-                when (argument) {
-                    is WasmArgument.Text -> {
-                        val bytes = argument.value.toByteArray(StandardCharsets.UTF_8)
-                        val pointer = copyIn(instance, module, bytes)
-                        copied += pointer to bytes.size
-                        raw += pointer.toLong()
-                        raw += bytes.size.toLong()
-                        at += 2
-                    }
-                    is WasmArgument.Whole -> raw += whole(type.params()[at++], argument.value)
-                    is WasmArgument.Real -> raw += real(type.params()[at++], argument.value)
+        val raw = ArrayList<Long>()
+        var at = 0
+        for (argument in arguments) {
+            when (argument) {
+                is WasmArgument.Text -> {
+                    val bytes = argument.value.toByteArray(StandardCharsets.UTF_8)
+                    val pointer = copyIn(instance, module, bytes)
+                    copied += pointer to bytes.size
+                    raw += pointer.toLong()
+                    raw += bytes.size.toLong()
+                    at += 2
                 }
+                is WasmArgument.Whole -> raw += whole(type.params()[at++], argument.value)
+                is WasmArgument.Real -> raw += real(type.params()[at++], argument.value)
             }
-            val results = instance.export(name).apply(*raw.toLongArray()) ?: LongArray(0)
-            return read(results, instance)
-        } finally {
-            for ((pointer, size) in copied) free(instance, module, pointer, size)
         }
+        val results = instance.export(name).apply(*raw.toLongArray()) ?: LongArray(0)
+        // Only after a call that returned: one that trapped or was stopped leaves its instance to be closed, and
+        // running its code again (its free, with no time limit left) could only fail or hide why it failed.
+        for ((pointer, size) in copied) free(instance, module, pointer, size)
+        return read(results, instance)
     }
 
     /** [results] of a call to a function of [type]: each `i32`/`i64` a `Long`, each `f32`/`f64` a `Double`. */
@@ -183,11 +182,10 @@ object WasmCalls {
                 "it answered ${Integer.toUnsignedString(size)} bytes of text, more than a call may (wasm.max-output-bytes, $maxBytes)"
             )
         }
-        try {
-            return String(instance.memory().readBytes(pointer, size), StandardCharsets.UTF_8)
-        } finally {
-            free(instance, module, pointer, size)
-        }
+        // Freed once read: a pointer its memory doesn't have fails the read, and isn't handed to its free.
+        val text = String(instance.memory().readBytes(pointer, size), StandardCharsets.UTF_8)
+        free(instance, module, pointer, size)
+        return text
     }
 
     private fun whole(type: ValType, value: Long): Long = when (type) {

@@ -9,7 +9,6 @@ import dev.netherforge.format.bridge.BotPosition
 import dev.netherforge.format.project.PackagePaths
 import dev.netherforge.format.project.ProjectManifest
 import dev.netherforge.format.project.ProjectSnapshot
-import dev.netherforge.plugin.BotsConfig
 import dev.netherforge.plugin.async.WorkFailed
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.BotAim

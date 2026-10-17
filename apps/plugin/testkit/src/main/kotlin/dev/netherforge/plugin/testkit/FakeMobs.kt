@@ -11,8 +11,6 @@ import dev.netherforge.plugin.platform.GoalControl
 import dev.netherforge.plugin.platform.GoalInfo
 import dev.netherforge.plugin.platform.MobGoalOps
 import dev.netherforge.plugin.platform.PathfindingOps
-import dev.netherforge.plugin.testkit.FakeBody
-import dev.netherforge.plugin.testkit.FakePlayer
 import java.util.UUID
 import kotlin.math.floor
 

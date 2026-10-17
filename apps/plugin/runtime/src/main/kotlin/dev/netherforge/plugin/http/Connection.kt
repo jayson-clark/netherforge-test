@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.http
 
-import dev.netherforge.plugin.api.LuaHandle
+import dev.netherforge.plugin.binding.LuaHandle
 import java.net.URI
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Semaphore

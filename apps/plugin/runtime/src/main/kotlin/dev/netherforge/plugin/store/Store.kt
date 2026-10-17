@@ -363,6 +363,28 @@ class Store private constructor(private val database: Database) : AutoCloseable 
             }
         }
 
+        /** The next map number to give: past every one ever given; null before the first. */
+        fun next(): Int? = database.read { connection ->
+            connection.query("SELECT next FROM screen_map_next WHERE id = 0") { rows -> if (rows.next()) rows.getInt(1) else null }
+        }
+
+        /** Every number below [next] has been given. */
+        fun setNext(next: Int) = database.stage(Key("screen_map_next", "0")) { connection ->
+            connection.update(
+                "INSERT INTO screen_map_next (id, next) VALUES (0, ?) ON CONFLICT (id) DO UPDATE SET next = excluded.next",
+                next
+            )
+        }
+
+        /**
+         * Map [tile] of [screen] (in [namespace]) gives up its number, which is never given again. Keyed as [put] is,
+         * so a screen made again with the key in the same tick keeps the numbers it gets then.
+         */
+        fun forget(namespace: String, screen: String, tile: Int) =
+            database.stage(Key("screen_maps", "$namespace:$screen:$tile")) { connection ->
+                connection.update("DELETE FROM screen_maps WHERE namespace = ? AND screen = ? AND tile = ?", namespace, screen, tile)
+            }
+
         /** Map [tile] of [screen] (in [namespace]) is [map], for good. */
         fun put(namespace: String, screen: String, tile: Int, map: Int) =
             database.stage(Key("screen_maps", "$namespace:$screen:$tile")) { connection ->
@@ -500,7 +522,8 @@ class Store private constructor(private val database: Database) : AutoCloseable 
                 "004_world_terrains.sql",
                 "005_world_dimension_types.sql",
                 "006_instance_anchors.sql",
-                "007_screen_maps.sql"
+                "007_screen_maps.sql",
+                "008_screen_map_next.sql"
             )
 
         private const val DISPLAY = "display"

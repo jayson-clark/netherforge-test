@@ -1,7 +1,7 @@
 package dev.netherforge.plugin.paper
 
-import dev.netherforge.plugin.DatabaseType
-import dev.netherforge.plugin.DatabasesConfig
+import dev.netherforge.plugin.store.DatabaseType
+import dev.netherforge.plugin.store.DatabasesConfig
 import io.papermc.paper.plugin.loader.PluginClasspathBuilder
 import io.papermc.paper.plugin.loader.PluginLoader
 import io.papermc.paper.plugin.loader.library.impl.MavenLibraryResolver

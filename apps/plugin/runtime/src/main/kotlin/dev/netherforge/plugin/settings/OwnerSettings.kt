@@ -12,8 +12,8 @@ import dev.netherforge.format.settings.SettingDef
 import dev.netherforge.format.settings.SettingRead
 import dev.netherforge.format.settings.SettingValues
 import dev.netherforge.plugin.RuntimeLog
-import dev.netherforge.plugin.api.Events
-import dev.netherforge.plugin.api.SettingChangedEvent
+import dev.netherforge.plugin.binding.Events
+import dev.netherforge.plugin.binding.SettingChangedEvent
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.project.Resource
 import dev.netherforge.plugin.script.Scope

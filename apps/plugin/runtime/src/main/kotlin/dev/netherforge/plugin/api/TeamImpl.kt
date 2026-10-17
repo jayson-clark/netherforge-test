@@ -1,9 +1,15 @@
 package dev.netherforge.plugin.api
 
+import dev.netherforge.plugin.binding.Caller
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.NfTeamsApi
+import dev.netherforge.plugin.binding.TeamApi
+import dev.netherforge.plugin.binding.TeamOptions
+import dev.netherforge.plugin.binding.entityHandle
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.TeamLook
+import dev.netherforge.plugin.scoreboard.Teams
 import dev.netherforge.plugin.session.ProjectSession
-import dev.netherforge.plugin.world.Teams
 import java.util.UUID
 
 /**

@@ -3,6 +3,16 @@ package dev.netherforge.plugin.api
 import dev.netherforge.format.Vec3
 import dev.netherforge.format.project.DimensionTypeKind
 import dev.netherforge.format.project.TerrainKind
+import dev.netherforge.plugin.binding.BorderDamage
+import dev.netherforge.plugin.binding.BorderSizeOptions
+import dev.netherforge.plugin.binding.BorderWarning
+import dev.netherforge.plugin.binding.Caller
+import dev.netherforge.plugin.binding.LocationOrVec3
+import dev.netherforge.plugin.binding.LuaHandle
+import dev.netherforge.plugin.binding.NfStructuresApi
+import dev.netherforge.plugin.binding.WorldBorderApi
+import dev.netherforge.plugin.binding.WorldCreateOptions
+import dev.netherforge.plugin.binding.place
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.BorderOwner
 import dev.netherforge.plugin.platform.BorderState
