@@ -28,6 +28,7 @@ import dev.netherforge.format.settings.SettingsValidator
 import dev.netherforge.format.terrain.TerrainValidator
 import dev.netherforge.format.text.DefaultFontFile
 import dev.netherforge.format.text.DefaultFontValidator
+import dev.netherforge.format.wasm.WasmInfo
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
@@ -68,6 +69,19 @@ interface ProjectSource {
 
     /** A PNG's `[width, height]` in pixels, or null where unknown; the pixel facts' size by default. */
     fun size(path: String): List<Int>? = image(path)?.let { listOf(it.width, it.height) }
+
+    /**
+     * Whether [wasm] reads WebAssembly modules at all. When it does, a null [wasm] for a module that exists means
+     * the file can't be read.
+     */
+    val readsWasm: Boolean get() = false
+
+    /**
+     * What a WebAssembly module (`wasm/<id>/module.wasm`) says about itself, read by [dev.netherforge.format.wasm.WasmReader.read], or null when
+     * this source doesn't read modules or the file isn't there. The plugin and the CLI read the file; the editor
+     * passes none, so its problems come from the dev server.
+     */
+    fun wasm(path: String): WasmInfo? = null
 }
 
 /**
@@ -95,13 +109,18 @@ data class ImageInfo(val width: Int, val height: Int, val opaqueWidth: Int, val 
 
 /**
  * A project from memory. With [images], it [readsImages] and answers from them; with [sizes] alone (a host that
- * only measured the pictures' headers) it [readsSizes].
+ * only measured the pictures' headers) it [readsSizes]; with [wasm], it [readsWasm].
  */
 class MapProjectSource(
     private val contents: Map<String, String?>,
     private val images: Map<String, ImageInfo>? = null,
-    private val sizes: Map<String, List<Int>>? = null
+    private val sizes: Map<String, List<Int>>? = null,
+    private val wasm: Map<String, WasmInfo>? = null
 ) : ProjectSource {
+    override val readsWasm: Boolean get() = wasm != null
+
+    override fun wasm(path: String): WasmInfo? = wasm?.get(path)
+
     override fun files(): Collection<String> = contents.keys
 
     override fun read(path: String): String? = contents[path]

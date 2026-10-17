@@ -32,6 +32,7 @@ import { databaseClass, databaseShapes } from './db.ts'
 import { botClass, botShapes } from './bots.ts'
 import { connectionShapes, httpShapes, httpStreamClass, webSocketClass } from './http.ts'
 import { oauthFlowClass, routeClass, webResponseClass, webShapes } from './web.ts'
+import { wasmInstanceClass, wasmProcessClass, wasmShapes } from './wasm.ts'
 import { blockShapes, customBlockClass, projectBlockClass } from './blocks.ts'
 import { lootShapes } from './loot.ts'
 import { hudClass, hudShapes } from './hud.ts'
@@ -124,6 +125,8 @@ const classes = [
   routeClass,
   webResponseClass,
   oauthFlowClass,
+  wasmInstanceClass,
+  wasmProcessClass,
   cutsceneClass,
   screenClass,
   playbackClass,
@@ -197,6 +200,7 @@ export const api: ApiSpec = {
     ...httpShapes,
     ...connectionShapes,
     ...webShapes,
+    ...wasmShapes,
     ...particleShapes,
     ...cutsceneShapes,
     ...screenShapes,

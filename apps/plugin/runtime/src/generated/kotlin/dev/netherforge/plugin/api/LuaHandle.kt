@@ -54,6 +54,8 @@ sealed interface LuaHandle {
             "Route" -> Route(keyValues[0] as Long)
             "WebResponse" -> WebResponse(keyValues[0] as Long)
             "OAuthFlow" -> OAuthFlow(keyValues[0] as Long)
+            "WasmInstance" -> WasmInstance(keyValues[0] as Long)
+            "WasmProcess" -> WasmProcess(keyValues[0] as Long, keyValues[1] as String)
             "Cutscene" -> Cutscene(keyValues[0] as Long, keyValues[1] as String)
             "Screen" -> Screen(keyValues[0] as String, keyValues[1] as String)
             "Playback" -> Playback(keyValues[0] as Long, keyValues[1] as String)
@@ -576,6 +578,44 @@ sealed interface LuaHandle {
 
         /** OAuthFlow handles. */
         object Codec : HandleCodec<OAuthFlow>("OAuthFlow", setOf("OAuthFlow"))
+    }
+
+    /**
+     * An instance of a WebAssembly module, from `nf.wasm.instantiate`: its own memory, kept from call to
+     * call, so a function can build state another reads.
+     */
+    class WasmInstance(val number: Long) : LuaHandle {
+        override val luaClass: String get() = "WasmInstance"
+
+        override val keyValues: List<Any> get() = listOf(number)
+
+        override fun equals(other: Any?): Boolean = other is WasmInstance && other.number == number
+
+        override fun hashCode(): Int = 31 * "WasmInstance".hashCode() + number.hashCode()
+
+        override fun toString(): String = "$luaClass($number)"
+
+        /** WasmInstance handles. */
+        object Codec : HandleCodec<WasmInstance>("WasmInstance", setOf("WasmInstance"))
+    }
+
+    /**
+     * A program started with `nf.wasm.start`: `send` it lines and hear each line it prints as `output`,
+     * then its one `end`.
+     */
+    class WasmProcess(val number: Long, val module: String) : LuaHandle {
+        override val luaClass: String get() = "WasmProcess"
+
+        override val keyValues: List<Any> get() = listOf(number, module)
+
+        override fun equals(other: Any?): Boolean = other is WasmProcess && other.number == number && other.module == module
+
+        override fun hashCode(): Int = 31 * (31 * "WasmProcess".hashCode() + number.hashCode()) + module.hashCode()
+
+        override fun toString(): String = "$luaClass($number, $module)"
+
+        /** WasmProcess handles. */
+        object Codec : HandleCodec<WasmProcess>("WasmProcess", setOf("WasmProcess"))
     }
 
     /** One cutscene playing for one player, from `nf.cutscenes.play`. */

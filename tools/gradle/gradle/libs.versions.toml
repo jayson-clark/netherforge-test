@@ -14,6 +14,8 @@ luajava = "4.1.0"
 sqlite-jdbc = "3.49.1.0"
 cron-utils = "9.2.1"
 okhttp = "5.5.0"
+# `nf.wasm`: a pure-JVM WebAssembly runtime (its compiler turns a module into JVM bytecode; wabt is tests' wat2wasm).
+chicory = "1.7.5"
 # Remote databases (`nf.db("name")`): the connection pool and the PostgreSQL driver, which the plugin's loader fetches
 # (Paper bundles MySQL's driver and SQLite's, not these); H2 stands in for either server in tests.
 hikari = "7.1.0"
@@ -47,6 +49,10 @@ cron-utils = { module = "com.cronutils:cron-utils", version.ref = "cron-utils" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version = "2.0.7" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okhttp-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver3", version.ref = "okhttp" }
+chicory-runtime = { module = "com.dylibso.chicory:runtime", version.ref = "chicory" }
+chicory-wasi = { module = "com.dylibso.chicory:wasi", version.ref = "chicory" }
+chicory-compiler = { module = "com.dylibso.chicory:compiler", version.ref = "chicory" }
+chicory-wabt = { module = "com.dylibso.chicory:wabt", version.ref = "chicory" }
 lsp4j-debug = { module = "org.eclipse.lsp4j:org.eclipse.lsp4j.debug", version.ref = "lsp4j" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }

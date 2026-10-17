@@ -41,6 +41,7 @@ import type {
   TextLayout,
   TextLine,
   Usages,
+  WasmInfo,
 } from '@netherforge/format/types'
 import type {
   DocumentKindId,
@@ -297,6 +298,9 @@ export type {
   Decoration,
   DecorationPlacement,
   TerrainStructureInput,
+  WasmExport,
+  WasmImport,
+  WasmInfo,
 } from '@netherforge/format/types'
 
 // Defaults, limits, naming rules and where each kind lives, generated from
@@ -447,6 +451,8 @@ export function loadProject(
     JSON.stringify(packages),
     gameData ? JSON.stringify(gameData) : null,
     sizes ? JSON.stringify(sizes) : null,
+    // The editor reads no module: the dev server reports what its modules import and export.
+    null,
   )
   return JSON.parse(raw) as ProjectOutline
 }
@@ -546,6 +552,16 @@ export const qualifyRefs = (path: string, text: string, namespace: string): stri
  * Every reference to [target] in the project (`{ path: text | null }`, as
  * [loadProject] takes it), from outside it: what deleting it would break.
  */
+/**
+ * What a WebAssembly module's bytes say about it, by format's own reader: what it imports and exports, its memory,
+ * or why it isn't a module format can read. The server checks the rest as it compiles it.
+ */
+export function readWasm(bytes: Uint8Array): WasmInfo {
+  return JSON.parse(
+    nf.readWasm(new Int8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)),
+  ) as WasmInfo
+}
+
 export function findUsages(files: Record<string, string | null>, target: RefTarget): RefUse[] {
   return (JSON.parse(nf.findUsages(JSON.stringify(files), JSON.stringify(target))) as Usages).uses
 }

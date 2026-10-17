@@ -277,11 +277,49 @@ export const nfTest = (nfEvents: EventSpec[]): LuaClass => ({
       returns: [],
       example: 'nf.test.disconnect(socket, { code = 4000, reason = "resume" })\nnf.test.advance(1)',
     },
+    {
+      name: 'stub_wasm',
+      doc: "Stands in for a WebAssembly module for the rest of this test, so a test needn't run a heavy one (a chess engine) to check the script around it. In a test modules really run, as on a server; once stubbed, nothing of the module runs: an instance's `call` and `call_text` answer with `stub.functions` (a function the stub doesn't have fails, `nil, err`), `run` with `stub.run`, and a program `start`ed answers each line it's sent with the lines `stub.input` returns, as `output` events at the next tick (closing its input ends it, exit code 0). Each stub function runs on the main thread as the test's code.",
+      params: [
+        {
+          name: 'module',
+          type: 'string',
+          doc: "The module, as `nf.wasm`'s functions name it.",
+        },
+        { name: 'stub', type: 'TestWasmStub', doc: 'What answers in its place.' },
+      ],
+      returns: [],
+      example:
+        'nf.test.case("the bot plays the engine\'s move", function()\n  nf.test.stub_wasm("stockfish", {\n    input = function(line)\n      if line:match("^go") then\n        return { "bestmove e7e5" }\n      end\n    end,\n  })\n  local game = require("chess").new_game()\n  game:play("e2e4")\n  nf.test.advance(2)\n  assert(game:last_move() == "e7e5")\nend)',
+    },
   ],
 })
 
 /** What `nf.test.raise` returns, and what `nf.test.click` and `nf.test.input` take. */
 export const testShapes: LuaClass[] = [
+  {
+    name: 'TestWasmStub',
+    doc: "What `nf.test.stub_wasm` answers a module with. Every key is optional; a key that isn't one of these is an error.",
+    methods: false,
+    functions: [],
+    fields: [
+      {
+        name: 'functions',
+        type: 'table<string, fun(arguments: any[]): any>?',
+        doc: "An instance's functions by name: each gets the call's `arguments` and returns its results, a list for `call` (`{ 5 }`) or a string for `call_text`.",
+      },
+      {
+        name: 'run',
+        type: '(fun(options: table): WasmRunResult)?',
+        doc: "What `module:run` gives: it gets the run's options (`stdin`, `arguments`, `environment`) and returns a result table.",
+      },
+      {
+        name: 'input',
+        type: '(fun(line: string, process: WasmProcess): string[]?)?',
+        doc: "A started program's answer to each line it's sent: the lines it prints (to its standard output), or `nil` for none.",
+      },
+    ],
+  },
   {
     name: 'TestShownOptions',
     doc: "Where `nf.test.shown` looks. A key that isn't one of these is an error.",

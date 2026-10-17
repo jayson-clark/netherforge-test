@@ -19,6 +19,7 @@ command report any mistake as a [problem](problems.md) with a stable code.
 | [Packages](packages.md)      | Using another project as a library, the lock file, bundles and templates.                |
 | [Settings](settings.md)      | Settings a server owner can change without touching scripts.                             |
 | [Migrations](migrations.md)  | A package's own SQLite database, set up by numbered SQL files.                           |
+| [WebAssembly](wasm.md)       | Modules scripts hand heavy computation to, and the data they read.                       |
 | [Problems](problems.md)      | Every problem the editor and the server can report, by code.                             |
 
 ## Centities and effects

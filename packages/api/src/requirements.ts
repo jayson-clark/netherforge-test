@@ -11,7 +11,7 @@
 import type { Requirement } from './types.ts'
 
 /** A requirement's kind: the word before any `:` (`plugin` for `plugin:vault`). */
-export type RequirementKind = 'moderation' | 'http' | 'db' | 'web' | 'bots' | 'plugin'
+export type RequirementKind = 'moderation' | 'http' | 'db' | 'web' | 'bots' | 'wasm' | 'plugin'
 
 export interface RequirementSpec {
   /** What it lets scripts do, as a phrase: `ban players and change the server's settings`. */
@@ -40,6 +40,10 @@ export const REQUIREMENTS: Record<RequirementKind, RequirementSpec> = {
   bots: {
     what: 'join fake players to the server and drive them, when the server owner allows bots',
     declared: () => '`"requires": { "bots": true }` in `netherforge.json`',
+  },
+  wasm: {
+    what: "run the package's WebAssembly modules, off the main thread within the server owner's limits",
+    declared: () => '`"requires": { "wasm": true }` in `netherforge.json`',
   },
   plugin: {
     what: 'use another plugin on the server',
@@ -76,6 +80,7 @@ export interface DeclaringManifest {
     db?: boolean | null
     web?: boolean | null
     bots?: boolean | null
+    wasm?: boolean | null
     http?: string[] | null
     plugins?: string[] | null
   } | null
@@ -94,6 +99,7 @@ export function granted(manifest: DeclaringManifest | null | undefined): Set<Req
   if (requires.db === true) out.add('db')
   if (requires.web === true) out.add('web')
   if (requires.bots === true) out.add('bots')
+  if (requires.wasm === true) out.add('wasm')
   if ((requires.http ?? []).length > 0) out.add('http')
   for (const name of requires.plugins ?? []) out.add(`plugin:${name}`)
   return out

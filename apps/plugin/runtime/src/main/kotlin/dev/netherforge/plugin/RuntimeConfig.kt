@@ -44,6 +44,8 @@ data class RuntimeConfig(
     val structures: StructuresConfig = StructuresConfig(),
     /** How much of screens' pictures each player is sent a tick. */
     val screens: ScreensConfig = ScreensConfig(),
+    /** How WebAssembly modules (`nf.wasm`) run: threads, memory, time, and how many a package may keep. */
+    val wasm: WasmConfig = WasmConfig(),
     /**
      * Whether the project's dependencies are found where `netherforge.json`'s
      * paths point: on the editor's dev server (and in tests). A production
@@ -109,6 +111,7 @@ data class RuntimeConfig(
             val databases = DatabasesConfig.read(settings.section("databases"))
             val structures = structures(settings.section("structures"))
             val screens = screens(settings.section("screens"))
+            val wasm = wasm(settings.section("wasm"))
             properties(Bridge.PROJECT_PROPERTY)?.takeIf { it.isNotBlank() }?.let { project ->
                 val port = properties(Bridge.PORT_PROPERTY)?.toIntOrNull()
                 return RuntimeConfig(
@@ -125,6 +128,7 @@ data class RuntimeConfig(
                     databases = databases,
                     structures = structures,
                     screens = screens,
+                    wasm = wasm,
                     packageCache = properties(Bridge.PACKAGE_CACHE_PROPERTY)?.takeIf {
                         it.isNotBlank()
                     }?.let { Path.of(it).toAbsolutePath().normalize() },
@@ -145,6 +149,7 @@ data class RuntimeConfig(
                 databases = databases,
                 structures = structures,
                 screens = screens,
+                wasm = wasm,
                 resolvesPackages = false
             )
         }
@@ -240,6 +245,28 @@ data class RuntimeConfig(
                         "bytes-per-tick"
                     ) ?: defaults.bytesPerTick
                     ).coerceIn(ScreensConfig.MIN_BYTES_PER_TICK, ScreensConfig.MAX_BYTES_PER_TICK)
+            )
+        }
+
+        /** `wasm:`: how WebAssembly modules run. Read on dev servers too; a value that isn't one (zero, negative) is the default. */
+        private fun wasm(section: Map<String, Any?>): WasmConfig {
+            val defaults = WasmConfig()
+            fun positive(key: String, default: Int) = section.int(key)?.takeIf { it > 0 } ?: default
+            return WasmConfig(
+                threads = positive("threads", defaults.threads),
+                compile = section.boolean("compile") ?: defaults.compile,
+                maxModuleMb = positive("max-module-mb", defaults.maxModuleMb),
+                maxMemoryMb = positive("max-memory-mb", defaults.maxMemoryMb),
+                maxMemoryTotalMb = positive("max-memory-total-mb", defaults.maxMemoryTotalMb),
+                maxCallSeconds = positive("max-call-seconds", defaults.maxCallSeconds),
+                maxQueuedCallsPerPackage = positive("max-queued-calls-per-package", defaults.maxQueuedCallsPerPackage),
+                maxInstancesPerPackage = positive("max-instances-per-package", defaults.maxInstancesPerPackage),
+                maxProcessesPerPackage = positive("max-processes-per-package", defaults.maxProcessesPerPackage),
+                maxProcessesTotal = positive("max-processes-total", defaults.maxProcessesTotal),
+                maxOutputBytes = positive("max-output-bytes", defaults.maxOutputBytes),
+                maxLineBytes = positive("max-line-bytes", defaults.maxLineBytes),
+                maxQueuedLines = positive("max-queued-lines", defaults.maxQueuedLines),
+                linesPerTick = positive("lines-per-tick", defaults.linesPerTick)
             )
         }
 
@@ -394,6 +421,31 @@ data class BotsConfig(val enabled: Boolean = false, val max: Int = 20)
  * double the load; a package has at most [maxJobsPerPackage] going at once, past which one fails at once.
  */
 data class StructuresConfig(val blocksPerTick: Int = 8192, val maxJobsPerPackage: Int = 4)
+
+/**
+ * `wasm:` in `config.yml`, read on dev servers too: how WebAssembly modules (`nf.wasm`) run. Calls, runs and
+ * compiling share [threads] threads (each is at most one core); a started program holds a thread of its own while
+ * it runs, at most [maxProcessesTotal] in all. An instance or program may use at most [maxMemoryMb] of memory, and
+ * the ones running together at most [maxMemoryTotalMb] (each counted at the most it may grow to); a call or run is
+ * stopped after [maxCallSeconds]. [compile] off runs every module in the interpreter, many times slower, for a JVM
+ * where making classes is a problem.
+ */
+data class WasmConfig(
+    val threads: Int = 2,
+    val compile: Boolean = true,
+    val maxModuleMb: Int = 64,
+    val maxMemoryMb: Int = 256,
+    val maxMemoryTotalMb: Int = 1024,
+    val maxCallSeconds: Int = 10,
+    val maxQueuedCallsPerPackage: Int = 64,
+    val maxInstancesPerPackage: Int = 8,
+    val maxProcessesPerPackage: Int = 2,
+    val maxProcessesTotal: Int = 4,
+    val maxOutputBytes: Int = 1_048_576,
+    val maxLineBytes: Int = 65_536,
+    val maxQueuedLines: Int = 1000,
+    val linesPerTick: Int = 100
+)
 
 data class BridgeConfig(
     val port: Int,

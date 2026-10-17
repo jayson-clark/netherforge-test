@@ -63,6 +63,8 @@ local WebSocket_is = accepts.WebSocket
 local Route_is = accepts.Route
 local WebResponse_is = accepts.WebResponse
 local OAuthFlow_is = accepts.OAuthFlow
+local WasmInstance_is = accepts.WasmInstance
+local WasmProcess_is = accepts.WasmProcess
 local Cutscene_is = accepts.Cutscene
 local Screen_is = accepts.Screen
 local Playback_is = accepts.Playback
@@ -6523,6 +6525,150 @@ do
   end
 end
 
+-- WasmInstance --------------------------------------------------------------
+
+do
+  local WasmInstance = class("WasmInstance")
+
+  function new.WasmInstance(number)
+    return prim["handles.new"]("WasmInstance", number)
+  end
+
+  ---@param handle table
+  ---@return integer number
+  function keys.WasmInstance(handle)
+    return prim["handles.key"](handle)
+  end
+
+  function WasmInstance.module(self)
+    local self_key = ids[self]
+    if self_key == nil or not WasmInstance_is[class_of(self)] then
+      self_key = self_of(self, "WasmInstance")
+    end
+    return prim["WasmInstance.module"](self_key)
+  end
+
+  function WasmInstance.call(self, name, arguments, callback)
+    local self_key = ids[self]
+    if self_key == nil or not WasmInstance_is[class_of(self)] then
+      self_key = self_of(self, "WasmInstance")
+    end
+    local waker, task, token, scope = async.begin("WasmInstance:call", callback)
+    local wait_id = prim["WasmInstance.call"](self_key, name, arguments, scope, waker)
+    if task ~= nil then
+      local value, err = async.wait(task, token, wait_id)
+      return value, err
+    end
+  end
+
+  function WasmInstance.call_text(self, name, arguments, callback)
+    local self_key = ids[self]
+    if self_key == nil or not WasmInstance_is[class_of(self)] then
+      self_key = self_of(self, "WasmInstance")
+    end
+    local waker, task, token, scope = async.begin("WasmInstance:call_text", callback)
+    local wait_id = prim["WasmInstance.call_text"](self_key, name, arguments, scope, waker)
+    if task ~= nil then
+      local value, err = async.wait(task, token, wait_id)
+      return value, err
+    end
+  end
+
+  function WasmInstance.close(self)
+    local self_key = ids[self]
+    if self_key == nil or not WasmInstance_is[class_of(self)] then
+      self_key = self_of(self, "WasmInstance")
+    end
+    return prim["WasmInstance.close"](self_key)
+  end
+end
+
+-- WasmProcess ---------------------------------------------------------------
+
+do
+  local WasmProcess = class("WasmProcess")
+
+  function new.WasmProcess(number, module)
+    return prim["handles.new"]("WasmProcess", number, module)
+  end
+
+  ---@param handle table
+  ---@return integer number
+  ---@return string module
+  function keys.WasmProcess(handle)
+    return prim["handles.key"](handle)
+  end
+
+  function WasmProcess.module(self)
+    local self_key = ids[self]
+    if self_key == nil or not WasmProcess_is[class_of(self)] then
+      self_key = self_of(self, "WasmProcess")
+    end
+    return prim["WasmProcess.module"](self_key)
+  end
+
+  function WasmProcess.state(self)
+    local self_key = ids[self]
+    if self_key == nil or not WasmProcess_is[class_of(self)] then
+      self_key = self_of(self, "WasmProcess")
+    end
+    return prim["WasmProcess.state"](self_key)
+  end
+
+  function WasmProcess.send(self, line)
+    local self_key = ids[self]
+    if self_key == nil or not WasmProcess_is[class_of(self)] then
+      self_key = self_of(self, "WasmProcess")
+    end
+    return prim["WasmProcess.send"](self_key, line)
+  end
+
+  function WasmProcess.close_input(self)
+    local self_key = ids[self]
+    if self_key == nil or not WasmProcess_is[class_of(self)] then
+      self_key = self_of(self, "WasmProcess")
+    end
+    return prim["WasmProcess.close_input"](self_key)
+  end
+
+  function WasmProcess.stop(self)
+    local self_key = ids[self]
+    if self_key == nil or not WasmProcess_is[class_of(self)] then
+      self_key = self_of(self, "WasmProcess")
+    end
+    return prim["WasmProcess.stop"](self_key)
+  end
+
+  function WasmProcess.on(self, event, handler, options)
+    if ids[self] == nil or not WasmProcess_is[class_of(self)] then
+      self_of(self, "WasmProcess")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    if options ~= nil then
+      check_shape(options, "options", "EventOptions")
+    end
+    return hand.WasmProcess.on(self, event, handler, options)
+  end
+
+  function WasmProcess.once(self, event, handler)
+    if ids[self] == nil or not WasmProcess_is[class_of(self)] then
+      self_of(self, "WasmProcess")
+    end
+    if type_of(event) ~= "string" then
+      want(event, "string", "event")
+    end
+    if type_of(handler) ~= "function" then
+      want(handler, "function", "handler")
+    end
+    return hand.WasmProcess.once(self, event, handler)
+  end
+end
+
 -- Cutscene ------------------------------------------------------------------
 
 do
@@ -8311,6 +8457,34 @@ namespaces["nf.web"] = function(scope, ns)
   end
 end
 
+namespaces["nf.wasm"] = function(scope, ns)
+  function ns.functions(module)
+    return prim["nf.wasm.functions"](scope, module)
+  end
+
+  function ns.instantiate(module, callback)
+    local waker, task, token = async.begin("nf.wasm.instantiate", callback)
+    local wait_id = prim["nf.wasm.instantiate"](scope, module, waker)
+    if task ~= nil then
+      local value, err = async.wait(task, token, wait_id)
+      return value, err
+    end
+  end
+
+  function ns.run(module, options, callback)
+    local waker, task, token = async.begin("nf.wasm.run", callback)
+    local wait_id = prim["nf.wasm.run"](scope, module, options, waker)
+    if task ~= nil then
+      local value, err = async.wait(task, token, wait_id)
+      return value, err
+    end
+  end
+
+  function ns.start(module, options)
+    return prim["nf.wasm.start"](scope, module, options)
+  end
+end
+
 namespaces["nf.time"] = function(scope, ns)
   function ns.format(time, pattern, options)
     return prim["nf.time.format"](scope, time, pattern, options)
@@ -8466,6 +8640,10 @@ namespaces["nf.test"] = function(scope, ns)
 
   function ns.disconnect(connection, options)
     prim["nf.test.disconnect"](scope, connection, options)
+  end
+
+  function ns.stub_wasm(module, stub)
+    prim["nf.test.stub_wasm"](scope, module, stub)
   end
 
   function ns.terrain(options)

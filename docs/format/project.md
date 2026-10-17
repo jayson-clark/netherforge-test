@@ -62,6 +62,10 @@ my-project/
       **/*.lua                 everything else, reached with require()
   migrations/
     <NNN>_<name>.sql           one step of the package's own database (nf.db()), applied in order
+  wasm/
+    <id>/
+      module.wasm              a WebAssembly module scripts run (nf.wasm): a chess engine, a solver
+      **/*                     the data it reads, never writes, from its root
   biomes/
     <id>.json                  a biome: climate, colours, sounds, mobs and the features it's decorated with; learnt at start
   skies/
@@ -306,6 +310,7 @@ projects on it may do, and a package can't use what it didn't ask for:
 | `web`        | `true`: answer web requests to the server under the package's own path, `/<namespace>/` ([`nf.web`](../reference/nf.web.md)), once the server owner has turned web routes on; until then it's a warning (`runtime.web-disabled`).                                                                                                                                                                                                                                                                 |
 | `bots`       | `true`: join fake players to the server and drive them ([`nf.bots`](../reference/nf.bots.md)), once the server owner allows bots; until then it's a warning (`runtime.bots-disabled`). The editor's dev server always does.                                                                                                                                                                                                                                                                       |
 | `db`         | `true`: keep a database of the package's own.                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `wasm`       | `true`: run the package's [WebAssembly modules](wasm.md) ([`nf.wasm`](../reference/nf.wasm.md)), off the main thread within the server owner's limits (see [WebAssembly](../guide/server-config.md#webassembly)).                                                                                                                                                                                                                                                                                 |
 | `http`       | Make HTTP requests to these hosts: a host name in lowercase (`discord.com`), or `*.` and a name with a dot in it for any host under it (`*.example.com` is `api.example.com`, not `example.com`) (`project.requires-host`). Any port. Kept in order. `nf.http.request` checks each request's host, and each redirect's, against the calling package's list; the server owner decides whether private addresses are reachable at all (see [Web requests](../guide/server-config.md#web-requests)). |
 | `plugins`    | Use these other plugins on the server, by name in lowercase (`vault`): letters, digits, `_` and `-`, at most 64 characters (`project.requires-plugin`). Kept in order.                                                                                                                                                                                                                                                                                                                            |
 
@@ -327,7 +332,7 @@ The editor shows the requirements of the whole tree (the project and every
 package it depends on, theirs included) in the project's settings, and the
 server logs them when it loads the project and lists them with
 `/nf requires`. In the API's terms a requirement is written `moderation`,
-`db`, `web`, `http:<host>` or `plugin:<name>`.
+`db`, `web`, `bots`, `wasm`, `http:<host>` or `plugin:<name>`.
 
 ## `fonts/default.json`
 

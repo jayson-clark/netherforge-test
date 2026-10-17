@@ -23,6 +23,7 @@ import {
   gameDataFile,
   hashPackage,
   pngSizes,
+  wasmFacts,
   listFiles,
   packageCache,
   packageDir,
@@ -154,6 +155,7 @@ function load(
       JSON.stringify(packages),
       gameData,
       JSON.stringify(pngSizes(root, Object.keys(input))),
+      JSON.stringify(wasmFacts(root, Object.keys(input))),
     ),
   ) as ProjectOutline
 }

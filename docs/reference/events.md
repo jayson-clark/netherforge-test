@@ -1056,6 +1056,25 @@ What [OAuthFlow](oauthflow.md) listens for.
 | `complete` | [OAuthCompleteEvent](types.md#oauthcompleteevent) | A player finished logging in: the service sent them back, and the server traded the code for a token. Their browser is shown a page saying they can go back to the game. |
 | `fail` | [OAuthFailEvent](types.md#oauthfailevent) | A player's login didn't finish: they declined, the service answered with an error, the token couldn't be had, or the login expired (10 minutes after `begin`). Their browser is shown a page saying so. A callback that matches no login of this flow (forged, or used twice) is refused with no event. |
 
+## On WasmProcess
+
+What [WasmProcess](wasmprocess.md) listens for.
+
+| Event | Payload | |
+| --- | --- | --- |
+| `output` | [WasmOutputEvent](types.md#wasmoutputevent) | The program printed a line (to its standard output or error), without its line ending. Lines come in order, on the main thread, at most `wasm.lines-per-tick` a tick per program; while scripts haven't taken them, at most `wasm.max-queued-lines` wait and the program is paused when it prints the next, so nothing is dropped. A line longer than `wasm.max-line-bytes` comes in pieces of that size. |
+| `end` | [WasmEndEvent](types.md#wasmendevent) | The program ended, for any reason (`event.reason` says which): heard once, after every line it printed before, while the handle still answers. After it, every handler on the program is gone; start it again to restart it. |
+
+#### Example: wasmprocess end
+
+```lua
+engine:on("end", function(event)
+  if event.reason ~= "unloaded" then
+    log("engine ended:", event.reason, event.exit_code, event.detail)
+  end
+end)
+```
+
 ## On Cutscene
 
 What [Cutscene](cutscene.md) listens for.

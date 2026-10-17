@@ -417,6 +417,10 @@ class ConformanceTest {
         h.WebSocket = nf.http.websocket({ url = "wss://conformance.invalid/socket" })
         h.Route = nf.web.route("GET", "/smoke", function() end)
         h.OAuthFlow = nf.web.oauth({ name = "smoke", authorize_url = "https://conformance.invalid/a", token_url = "https://conformance.invalid/t", client_id = "c" })
+        -- A program of a library (it has no _start) ends "failed" at the next tick; an instance takes a tick to make,
+        -- so another module made it before this one started (see everything).
+        h.WasmProcess = nf.wasm.start("w")
+        h.WasmInstance = require("wasm_sample").instance
         -- A request's response, which only a route's handler is handed: the test makes one request (everything).
         nf.web.route("GET", "/sample", function(_, response) h.WebResponse = response end)
         h.Cutscene = nf.cutscenes.play(h.Player, "cs")
@@ -579,6 +583,7 @@ class ConformanceTest {
                     allow = """{ "permissions": ["x"] }""",
                     requires =
                     """{ "moderation": true, "db": true, "http": ["example.com", "conformance.invalid"], "web": true, "bots": true, """ +
+                        """"wasm": true, """ +
                         """"plugins": ["vault", "placeholderapi"] }"""
                 ),
                 "centities/c/centity.json" to TestServer.scriptedCentity(),
@@ -593,6 +598,9 @@ class ConformanceTest {
                 "screens/s/screen.json" to """{ "width": 1, "height": 1 }""",
                 "videos/v/video.json" to """{ "source": "source.mp4", "width": 1, "height": 1, "audio": false }""",
                 "videos/v/video.nfv" to NfvFiles.write(1, 1, 20, NfvFiles.solid(8, 4, 10)),
+                "wasm/w/module.wasm" to WasmFixtures.library,
+                "modules/wasm_sample/init.lua" to
+                    "local sample = {}\nnf.wasm.instantiate(\"w\", function(instance) sample.instance = instance end)\nreturn sample",
                 "modules/smoke/init.lua" to "-- started by the test, once a player is online"
             ),
             start = false,
@@ -607,8 +615,12 @@ class ConformanceTest {
             // A bot online for `Bot`'s calls, as the bridge joins one.
             server.platform.bots.join(BotJoin("Botty")) {}
             server.platform.scheduler.runPending()
-            server.write("modules/smoke/init.lua", module)
+            // An instance of a module arrives a tick after it's asked for: made, and ticked for, before the harness
+            // starts, so nothing it makes (a connection, which a tick would end) is older than it was.
             server.start()
+            server.tick(2)
+            server.write("modules/smoke/init.lua", module)
+            server.reload("modules/smoke/init.lua")
             server.runtime.session.web.request(WebCall("GET", "/test/sample", null, emptyMap(), ByteArray(0), "127.0.0.1") { _, _ -> })
             check(server)
         }
@@ -839,7 +851,8 @@ class ConformanceTest {
         assertTrue(crossing.size > 50, "only ${crossing.size} shapes cross")
         val server = TestServer(
             mapOf(
-                TestServer.MANIFEST to TestServer.manifest(requires = """{ "http": ["conformance.invalid"], "web": true }"""),
+                TestServer.MANIFEST to TestServer.manifest(requires = """{ "http": ["conformance.invalid"], "web": true, "wasm": true }"""),
+                "wasm/w/module.wasm" to WasmFixtures.library,
                 "centities/c/centity.json" to TestServer.scriptedCentity(),
                 "centities/c/script.lua" to "-- nothing",
                 "menus/i/menu.json" to """{ "shared": true }""",
@@ -873,6 +886,7 @@ class ConformanceTest {
                 h.WebSocket = nf.http.websocket({ url = "wss://conformance.invalid/socket" })
                 h.Route = nf.web.route("GET", "/smoke", function() end)
                 h.OAuthFlow = nf.web.oauth({ name = "smoke", authorize_url = "https://conformance.invalid/a", token_url = "https://conformance.invalid/t", client_id = "c" })
+                h.WasmProcess = nf.wasm.start("w")
                 h.Cutscene = nf.cutscenes.play(h.Player, "cs")
                 h.Screen = nf.screens.get("s")
                 h.Playback = h.Screen:play("v", { loop = true })

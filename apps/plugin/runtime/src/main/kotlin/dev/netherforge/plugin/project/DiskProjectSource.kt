@@ -3,6 +3,8 @@ package dev.netherforge.plugin.project
 import dev.netherforge.format.project.ImageInfo
 import dev.netherforge.format.project.ProjectSource
 import dev.netherforge.format.resourcepack.PackFonts
+import dev.netherforge.format.wasm.WasmInfo
+import dev.netherforge.format.wasm.WasmReader
 import java.io.IOException
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
@@ -57,6 +59,11 @@ class DiskProjectSource(val root: Path) : ProjectSource {
     }
 
     override val readsImages: Boolean get() = true
+
+    override val readsWasm: Boolean get() = true
+
+    /** What a WebAssembly module says about itself, by format's reader; null when it's missing. */
+    override fun wasm(path: String): WasmInfo? = readBytes(path)?.let(WasmReader::read)
 
     /**
      * A PNG's size and opaque width, decoded with ImageIO: what a skin's title

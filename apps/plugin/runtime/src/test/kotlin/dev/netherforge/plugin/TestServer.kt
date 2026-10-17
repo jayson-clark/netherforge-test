@@ -63,6 +63,8 @@ class TestServer(
     private val bots: BotsConfig = BotsConfig(),
     /** `structures:` in `config.yml`, when not the defaults. */
     private val structures: StructuresConfig = StructuresConfig(),
+    /** `wasm:` in `config.yml`, when not the defaults. */
+    private val wasm: WasmConfig = WasmConfig(),
     /** `databases:` in `config.yml`: the named connections `nf.db("name")` may open. */
     private val databases: DatabasesConfig = DatabasesConfig(),
     /** How a named connection's pool is made, when not HikariCP: tests give an embedded database. */
@@ -115,6 +117,7 @@ class TestServer(
                     web = web,
                     bots = bots,
                     structures = structures,
+                    wasm = wasm,
                     resolvesPackages = resolvesPackages,
                     packageCache = packageCache
                 )
@@ -175,7 +178,7 @@ class TestServer(
 
     fun tick(times: Int = 1) = repeat(times) {
         // What scripts started off the main thread is done before the tick, so a test sees it land at a known tick.
-        check(runtime.workers.idle(IDLE_MILLIS)) { "the runtime's workers were still busy after ${IDLE_MILLIS}ms" }
+        check(runtime.settled(IDLE_MILLIS)) { "the runtime's workers or WebAssembly were still busy after ${IDLE_MILLIS}ms" }
         runtime.tick()
         platform.scheduler.runPending()
         // The server ticks the world (entities, their AI included) after plugins.

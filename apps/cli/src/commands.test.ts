@@ -306,6 +306,25 @@ describe('project files', () => {
     expect((await run(['check', project], env)).out.join('\n')).not.toContain('replace-size')
   })
 
+  it('reads each WebAssembly module and reports what it imports that the server lacks', async () => {
+    // A module importing env.teleport and exporting go(), byte by byte.
+    const module = Buffer.from([
+      0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x04, 0x01, 0x60, 0x00, 0x00, 0x02,
+      0x10, 0x01, 0x03, 0x65, 0x6e, 0x76, 0x08, 0x74, 0x65, 0x6c, 0x65, 0x70, 0x6f, 0x72, 0x74,
+      0x00, 0x00, 0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x01, 0x02, 0x67, 0x6f, 0x00, 0x01, 0x0a,
+      0x04, 0x01, 0x02, 0x00, 0x0b,
+    ])
+    mkdirSync(path.join(project, 'wasm/engine'), { recursive: true })
+    writeFileSync(path.join(project, 'wasm/engine/module.wasm'), module)
+    const outcome = await run(['check', project], env)
+    expect(outcome.code).not.toBe(0)
+    expect(outcome.out.join('\n')).toContain('[wasm.import]')
+    expect(outcome.out.join('\n')).toContain('env.teleport')
+    // Bytes that aren't a module say so.
+    writeFileSync(path.join(project, 'wasm/engine/module.wasm'), 'not a module')
+    expect((await run(['check', project], env)).out.join('\n')).toContain('[wasm.invalid]')
+  })
+
   it("reads a structure's generation file, which format owns, and reports what's wrong in it", async () => {
     const files: Record<string, string | Buffer> = {
       'structures/ruins.nbt': Buffer.from([0x1f, 0x8b, 1]),

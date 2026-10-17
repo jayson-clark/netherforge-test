@@ -1,10 +1,12 @@
 package dev.netherforge.plugin.testrunner
 
 import dev.netherforge.format.project.FormatVersion
+import dev.netherforge.plugin.WasmFixtures
 import dev.netherforge.plugin.testkit.FakePlatform
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
+import kotlin.io.path.writeBytes
 import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -25,18 +27,19 @@ class ScriptTestRunnerTest {
         }
     """.trimIndent()
 
-    private fun project(files: Map<String, String>): Path {
+    /** [files]: text by path, or a ByteArray for a binary file (a module). */
+    private fun project(files: Map<String, Any>): Path {
         val root = Files.createTempDirectory("netherforge-runner")
-        root.resolve("netherforge.json").writeText((files["netherforge.json"] ?: manifest) + "\n")
-        for ((path, text) in files - "netherforge.json") {
+        root.resolve("netherforge.json").writeText(((files["netherforge.json"] as String?) ?: manifest) + "\n")
+        for ((path, contents) in files - "netherforge.json") {
             val file = root.resolve(path)
             file.parent.createDirectories()
-            file.writeText(text.trimIndent() + "\n")
+            if (contents is ByteArray) file.writeBytes(contents) else file.writeText((contents as String).trimIndent() + "\n")
         }
         return root
     }
 
-    private fun run(files: Map<String, String>, filter: String? = null): Pair<List<TestEvent>, RunFinished> {
+    private fun run(files: Map<String, Any>, filter: String? = null): Pair<List<TestEvent>, RunFinished> {
         val root = project(files)
         try {
             val events = mutableListOf<TestEvent>()
@@ -818,5 +821,75 @@ class ScriptTestRunnerTest {
             )
         )
         expectStatuses(events, Status.PASSED, Status.PASSED, Status.PASSED)
+    }
+
+    @Test
+    fun `modules really run in a test, and a test can stand in for one`() {
+        val (events, _) = run(
+            mapOf(
+                "netherforge.json" to
+                    manifest.replace("\"minecraft\": \"26.3\"", "\"minecraft\": \"26.3\",\n  \"requires\": { \"wasm\": true }"),
+                "wasm/math/module.wasm" to WasmFixtures.library,
+                "wasm/echo/module.wasm" to WasmFixtures.echo,
+                "modules/engine/init.lua" to """
+                    local M = { said = {} }
+                    function M.start()
+                      M.program = nf.wasm.start("echo")
+                      M.program:on("output", function(event) table.insert(M.said, event.line) end)
+                      M.program:on("end", function(event) M.ended = event.reason .. " " .. tostring(event.exit_code) end)
+                    end
+                    return M
+                """,
+                "tests/engine_test.lua" to """
+                    local engine = require("engine")
+
+                    nf.test.case("a real module answers, a tick after it's asked", function()
+                      local answer
+                      nf.task(function()
+                        local math = nf.wasm.instantiate("math")
+                        answer = math:call("add", { 2, 3 })[1]
+                      end)
+                      nf.test.advance(3)
+                      assert(answer == 5, tostring(answer))
+                      engine.start()
+                      engine.program:send("hello")
+                      nf.test.advance(1)
+                      assert(engine.said[1] == "echo: hello", tostring(engine.said[1]))
+                    end)
+
+                    nf.test.case("a stand-in answers in its place", function()
+                      nf.test.stub_wasm("echo", {
+                        input = function(line) return { "stub: " .. line, "again" } end,
+                      })
+                      nf.test.stub_wasm("math", {
+                        functions = { add = function(arguments) return { arguments[1] * 100 } end, name = function() return "stub" end },
+                        run = function(options) return { exit_code = 7, stdout = options.stdin, stderr = "" } end,
+                      })
+                      engine.start()
+                      engine.program:send("hello")
+                      nf.test.advance(2)
+                      assert(engine.said[1] == "stub: hello" and engine.said[2] == "again", table.concat(engine.said, "|"))
+                      engine.program:close_input()
+                      nf.test.advance(2)
+                      assert(engine.ended == "exited 0", tostring(engine.ended))
+
+                      local got = {}
+                      nf.task(function()
+                        local math = nf.wasm.instantiate("math")
+                        got.sum = math:call("add", { 2, 3 })[1]
+                        got.name = math:call_text("name")
+                        got.missing = select(2, math:call("nope"))
+                        got.run = nf.wasm.run("math", { stdin = "in" })
+                      end)
+                      nf.test.advance(6)
+                      assert(got.sum == 200, tostring(got.sum))
+                      assert(got.name == "stub", tostring(got.name))
+                      assert(got.missing:find("has no function"), tostring(got.missing))
+                      assert(got.run.exit_code == 7 and got.run.stdout == "in")
+                    end)
+                """
+            )
+        )
+        expectStatuses(events, Status.PASSED, Status.PASSED)
     }
 }

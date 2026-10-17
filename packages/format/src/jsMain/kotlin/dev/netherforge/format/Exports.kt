@@ -113,6 +113,8 @@ import dev.netherforge.format.terrain.TerrainValidator
 import dev.netherforge.format.text.MiniMessagePass
 import dev.netherforge.format.text.TextMetrics
 import dev.netherforge.format.text.TextStyle
+import dev.netherforge.format.wasm.WasmInfo
+import dev.netherforge.format.wasm.WasmReader
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
@@ -208,16 +210,27 @@ fun packagesNeeded(filesJson: String, packagesJson: String?): String {
  * returns its [ProjectOutline]. [gameDataJson] is a [GameDataBundle], or null
  * when the target version hasn't been imported yet. [sizesJson] is `{ path: [width, height] }` for the PNGs the host
  * measured (the CLI reads their headers), which holds a resource pack's `textures` to the game's sizes; null for none.
+ * [wasmJson] is `{ path: WasmInfo }` for the WebAssembly modules the host read ([readWasm]), which checks what they
+ * import and export; null for none.
  */
-fun loadProject(filesJson: String, packagesJson: String?, gameDataJson: String?, sizesJson: String?): String {
+fun loadProject(filesJson: String, packagesJson: String?, gameDataJson: String?, sizesJson: String?, wasmJson: String?): String {
     val files = CanonicalJson.json.decodeFromString<Map<String, String?>>(filesJson)
     val snapshot = Projects.load(
-        MapProjectSource(files, sizes = sizesJson?.let(::sizes)),
+        MapProjectSource(
+            files,
+            sizes = sizesJson?.let(::sizes),
+            wasm = wasmJson?.let {
+                CanonicalJson.json.decodeFromString<Map<String, WasmInfo>>(it)
+            }
+        ),
         gameDataJson?.let(::gameData),
         MapPackages(packagesJson)
     )
     return encode(ProjectOutline.serializer(), outlineOf(snapshot))
 }
+
+/** What a WebAssembly module's [bytes] say about it, as a `WasmInfo`: what a host passes [loadProject] for it. */
+fun readWasm(bytes: ByteArray): String = encode(WasmInfo.serializer(), WasmReader.read(bytes))
 
 /**
  * An open project validated again and again as it changes: the editor's

@@ -29,7 +29,7 @@
   "classes": [
     {
       "name": "nf",
-      "doc": "Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.bots`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.screens`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.web`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.",
+      "doc": "Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.bots`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.screens`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.web`, `nf.wasm`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.",
       "methods": false,
       "fields": [
         {
@@ -171,6 +171,11 @@
           "name": "web",
           "type": "nf.web",
           "doc": "Web requests to the server: webhooks from stores, CI and chat services, \"log in with…\" callbacks, small pages and JSON for a companion site. A package declares `\"requires\": { \"web\": true }` in its `netherforge.json`, and its routes live under its own path, `/<namespace>/`, so packages can't collide. They're served only once the server owner turns web routes on (`web.enabled` in `config.yml`), on the port the resource pack is served from, usually behind a reverse proxy that adds HTTPS; until then a package that declares them has a warning (`runtime.web-disabled`). Every request waits for the main thread: handlers run there, under the script's budget, like any handler, and the owner limits how large a request may be, how many each address may make a minute and how many may wait (`web:` in `config.yml`). `/nf requires` lists every route."
+        },
+        {
+          "name": "wasm",
+          "type": "nf.wasm",
+          "doc": "Heavy computation in WebAssembly: a chess engine, pathfinding over a big grid, noise, compression, a library compiled from C, C++ or Rust. A module is `wasm/<id>/module.wasm` in the project (or a package's, exported), built for WASI preview 1 and single-threaded (`wasm32-wasip1`); every other file in its folder is data it can read, never write, as files from its root (`/`). It runs off the main thread, with no access to the server, the network or any file but its own data: it can only answer the script that asked. A package declares it runs modules with `\"requires\": { \"wasm\": true }`, and the server owner sees that (`/nf requires`) and limits it in `config.yml`'s `wasm:` section: how many threads run modules, how much memory each may use, how long a call may take, and how many instances and programs a package may keep. There are three ways to run one: `nf.wasm.instantiate` for a library whose functions you call (`instance:call`), `nf.wasm.run` for a program that reads its input and prints its answer, and `nf.wasm.start` for a program that keeps running and talks line by line (a UCI chess engine). The server compiles every module off the main thread as the project loads; one that couldn't be compiled fails when it's run, saying why (and the problem `runtime.wasm` says so too). A module the project doesn't have is an error at the script's line. A script that runs a module restarts when the module changes."
         },
         {
           "name": "time",
@@ -1562,7 +1567,7 @@
         {
           "name": "task",
           "impl": "lua",
-          "doc": "Starts a task: `callback` runs now, with the extra arguments, until it first waits (`nf.wait`, `nf.wait_until`, `nf.wait_for`, `dialog:ask` or an asynchronous function like `nf.bots.join`, `nf.worlds.copy`, `nf.http.request`, `bot:walk_to`, `bot:break_block`, `world:fill_gradually`, `world:locate_biome`, `world:place_gradually`, `database:query`, `database:execute` or `database:transaction` called without its callback), and carries on from there when the wait is over. Only a task can wait; event handlers can't, because whether an event is cancelled or stopped has to be known when it returns, so a handler that needs to wait starts a task. Each time a task carries on it gets the script's whole instruction budget again. A task belongs to the script that started it and ends when that script unloads, when `cancel()` is called, or when the handle it waits on goes. One that errors is logged with its file and line and ends; the code that started it carries on either way.",
+          "doc": "Starts a task: `callback` runs now, with the extra arguments, until it first waits (`nf.wait`, `nf.wait_until`, `nf.wait_for`, `dialog:ask` or an asynchronous function like `nf.bots.join`, `nf.worlds.copy`, `nf.http.request`, `nf.wasm.instantiate`, `nf.wasm.run`, `bot:walk_to`, `bot:break_block`, `world:fill_gradually`, `world:locate_biome`, `world:place_gradually`, `database:query`, `database:execute`, `database:transaction`, `wasminstance:call` or `wasminstance:call_text` called without its callback), and carries on from there when the wait is over. Only a task can wait; event handlers can't, because whether an event is cancelled or stopped has to be known when it returns, so a handler that needs to wait starts a task. Each time a task carries on it gets the script's whole instruction budget again. A task belongs to the script that started it and ends when that script unloads, when `cancel()` is called, or when the handle it waits on goes. One that errors is logged with its file and line and ends; the code that started it carries on either way.",
           "params": [
             {
               "name": "callback",
@@ -1632,7 +1637,7 @@
           "params": [
             {
               "name": "handle",
-              "type": "Centity|Node|Entity|World|ProjectBlock|Menu|Slot|MenuTemplate|Dialog|Button|ProjectItem|Effect|HttpStream|WebSocket|OAuthFlow|Cutscene|Screen|Playback|nf",
+              "type": "Centity|Node|Entity|World|ProjectBlock|Menu|Slot|MenuTemplate|Dialog|Button|ProjectItem|Effect|HttpStream|WebSocket|OAuthFlow|WasmProcess|Cutscene|Screen|Playback|nf",
               "doc": "What the event happens to, as for `handle:on`; `nf` for a server-wide event."
             },
             {
@@ -3617,6 +3622,123 @@
       ]
     },
     {
+      "name": "nf.wasm",
+      "doc": "Heavy computation in WebAssembly: a chess engine, pathfinding over a big grid, noise, compression, a library compiled from C, C++ or Rust. A module is `wasm/<id>/module.wasm` in the project (or a package's, exported), built for WASI preview 1 and single-threaded (`wasm32-wasip1`); every other file in its folder is data it can read, never write, as files from its root (`/`). It runs off the main thread, with no access to the server, the network or any file but its own data: it can only answer the script that asked. A package declares it runs modules with `\"requires\": { \"wasm\": true }`, and the server owner sees that (`/nf requires`) and limits it in `config.yml`'s `wasm:` section: how many threads run modules, how much memory each may use, how long a call may take, and how many instances and programs a package may keep. There are three ways to run one: `nf.wasm.instantiate` for a library whose functions you call (`instance:call`), `nf.wasm.run` for a program that reads its input and prints its answer, and `nf.wasm.start` for a program that keeps running and talks line by line (a UCI chess engine). The server compiles every module off the main thread as the project loads; one that couldn't be compiled fails when it's run, saying why (and the problem `runtime.wasm` says so too). A module the project doesn't have is an error at the script's line. A script that runs a module restarts when the module changes.",
+      "methods": false,
+      "fields": [],
+      "functions": [
+        {
+          "name": "functions",
+          "doc": "The functions a module exports, with their parameters' and results' types, in the order it exports them: a program (a WASI command) exports `_start`. Empty until the server has compiled it, and for one that couldn't be.",
+          "requires": "wasm",
+          "params": [
+            {
+              "name": "module",
+              "type": "string",
+              "doc": "Its folder name under `wasm/`, or `namespace:id` for one a package it depends on exports (see [Names across packages](packages.md))."
+            }
+          ],
+          "returns": [
+            {
+              "type": "WasmFunction[]"
+            }
+          ],
+          "example": "for _, fn in ipairs(nf.wasm.functions(\"noise\")) do\n  log(fn.name, table.concat(fn.params, \", \"), \"->\", table.concat(fn.results, \", \"))\nend"
+        },
+        {
+          "name": "instantiate",
+          "doc": "Makes an instance of a library module: its own memory, kept between calls, which `instance:call` calls functions in. Its start function (and a reactor's `_initialize`) runs first. It fails when the module couldn't be compiled, it needs more memory than `wasm.max-memory-mb`, the server's modules together would hold more than `wasm.max-memory-total-mb`, or the package already holds `wasm.max-instances-per-package` instances. The instance belongs to the script that made it. It works off the main thread, so its instance arrives later: give `callback`, which is called with `instance, err` once it's done, or call it inside a task (`nf.task`) without one, and it waits and returns `instance, err`. Without a callback outside a task, it's an error. When it fails, `instance` is `nil` and `err` says why.",
+          "requires": "wasm",
+          "params": [
+            {
+              "name": "module",
+              "type": "string",
+              "doc": "Its folder name under `wasm/`, or `namespace:id` for one a package it depends on exports (see [Names across packages](packages.md))."
+            },
+            {
+              "name": "callback",
+              "type": "fun(instance: WasmInstance?, err: string?)",
+              "doc": "Called on the main thread once it's done, as this script's code, with the instance (or `nil` and why not). Not called if the script has stopped by then.",
+              "optional": true
+            }
+          ],
+          "example": "nf.task(function()\n  local noise, err = nf.wasm.instantiate(\"noise\")\n  if not noise then\n    log(\"no noise: \" .. err)\n    return\n  end\n  local values = noise:call(\"sample\", { 12.5, 40.25 })\n  if values then\n    log(\"noise here:\", values[1])\n  end\nend)",
+          "returns": [
+            {
+              "type": "WasmInstance?",
+              "doc": "Only without a callback, in a task: the instance, or `nil`."
+            },
+            {
+              "type": "string?",
+              "doc": "Why it failed, when it did; `nil` when it worked."
+            }
+          ],
+          "async": true
+        },
+        {
+          "name": "run",
+          "doc": "Runs a program to its end with `options.stdin` as its input, and gives what it printed and its exit code: for a tool that reads a question and prints the answer. It's stopped (`nil, err`) past `wasm.max-call-seconds`, and what it prints is kept up to `wasm.max-output-bytes` of each stream. A program that exits with a code other than 0 has still run: check `result.exit_code`. It works off the main thread, so its result arrives later: give `callback`, which is called with `result, err` once it's done, or call it inside a task (`nf.task`) without one, and it waits and returns `result, err`. Without a callback outside a task, it's an error. When it fails, `result` is `nil` and `err` says why.",
+          "requires": "wasm",
+          "params": [
+            {
+              "name": "module",
+              "type": "string",
+              "doc": "Its folder name under `wasm/`, or `namespace:id` for one a package it depends on exports (see [Names across packages](packages.md))."
+            },
+            {
+              "name": "options",
+              "type": "WasmRunOptions",
+              "doc": "Its input, arguments and environment.",
+              "optional": true
+            },
+            {
+              "name": "callback",
+              "type": "fun(result: WasmRunResult?, err: string?)",
+              "doc": "Called on the main thread once it's done, as this script's code, with its exit code and what it printed (or `nil` and why not). Not called if the script has stopped by then.",
+              "optional": true
+            }
+          ],
+          "example": "nf.task(function()\n  local result, err = nf.wasm.run(\"solver\", { stdin = \"3 1 2\", arguments = { \"--fast\" } })\n  if result and result.exit_code == 0 then\n    log(\"solved:\", result.stdout)\n  end\nend)",
+          "returns": [
+            {
+              "type": "WasmRunResult?",
+              "doc": "Only without a callback, in a task: its exit code and what it printed, or `nil`."
+            },
+            {
+              "type": "string?",
+              "doc": "Why it failed, when it did; `nil` when it worked."
+            }
+          ],
+          "async": true
+        },
+        {
+          "name": "start",
+          "doc": "Starts a program that keeps running: each `send` is a line of its input, each line it prints is an `output` event, on the main thread, in order, and it ends once, with its `end` event. It returns at once; the program starts off the main thread, on a thread of its own while it runs, and belongs to the script that started it. A limit the owner set (`wasm.max-processes-per-package`, `wasm.max-processes-total`, memory) ends it at the next tick with reason `\"limit\"`; a module that couldn't be compiled ends it `\"failed\"`.",
+          "requires": "wasm",
+          "params": [
+            {
+              "name": "module",
+              "type": "string",
+              "doc": "Its folder name under `wasm/`, or `namespace:id` for one a package it depends on exports (see [Names across packages](packages.md))."
+            },
+            {
+              "name": "options",
+              "type": "WasmStartOptions",
+              "doc": "Its arguments and environment.",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "WasmProcess",
+              "doc": "The program: listen to its `output` and `end`, and `send` it lines."
+            }
+          ],
+          "example": "local engine = nf.wasm.start(\"stockfish\")\nengine:on(\"output\", function(event)\n  local move = event.line:match(\"^bestmove (%S+)\")\n  if move then\n    nf.server.broadcast(\"The engine plays \" .. move)\n  end\nend)\nengine:send(\"position startpos moves e2e4\")\nengine:send(\"go movetime 1000\")"
+        }
+      ]
+    },
+    {
       "name": "nf.time",
       "doc": "Dates and durations as text, in the same unit as `nf.server.unix_time()`: milliseconds. For timers, use ticks (`nf.after`, `nf.wait`); this is for showing and reading clock times and lengths of time.",
       "methods": false,
@@ -4260,6 +4382,24 @@
           ],
           "returns": [],
           "example": "nf.test.disconnect(socket, { code = 4000, reason = \"resume\" })\nnf.test.advance(1)"
+        },
+        {
+          "name": "stub_wasm",
+          "doc": "Stands in for a WebAssembly module for the rest of this test, so a test needn't run a heavy one (a chess engine) to check the script around it. In a test modules really run, as on a server; once stubbed, nothing of the module runs: an instance's `call` and `call_text` answer with `stub.functions` (a function the stub doesn't have fails, `nil, err`), `run` with `stub.run`, and a program `start`ed answers each line it's sent with the lines `stub.input` returns, as `output` events at the next tick (closing its input ends it, exit code 0). Each stub function runs on the main thread as the test's code.",
+          "params": [
+            {
+              "name": "module",
+              "type": "string",
+              "doc": "The module, as `nf.wasm`'s functions name it."
+            },
+            {
+              "name": "stub",
+              "type": "TestWasmStub",
+              "doc": "What answers in its place."
+            }
+          ],
+          "returns": [],
+          "example": "nf.test.case(\"the bot plays the engine's move\", function()\n  nf.test.stub_wasm(\"stockfish\", {\n    input = function(line)\n      if line:match(\"^go\") then\n        return { \"bestmove e7e5\" }\n      end\n    end,\n  })\n  local game = require(\"chess\").new_game()\n  game:play(\"e2e4\")\n  nf.test.advance(2)\n  assert(game:last_move() == \"e7e5\")\nend)"
         }
       ]
     },
@@ -16402,6 +16542,259 @@
       ]
     },
     {
+      "name": "WasmInstance",
+      "doc": "An instance of a WebAssembly module, from `nf.wasm.instantiate`: its own memory, kept from call to call, so a function can build state another reads. Its calls run off the main thread one at a time, in the order they were made. It belongs to the script that made it and is closed when that script unloads. Ephemeral: it can't be saved in a `data()` table.",
+      "methods": true,
+      "handle": {
+        "key": [
+          {
+            "name": "number",
+            "type": "integer"
+          }
+        ]
+      },
+      "fields": [],
+      "functions": [
+        {
+          "name": "module",
+          "doc": "The module it is an instance of, as the calling script names it.",
+          "params": [],
+          "returns": [
+            {
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "call",
+          "doc": "Calls one of the functions the module exports and gives its results. It's stopped past `wasm.max-call-seconds`; a call that traps (an out-of-bounds read, `unreachable`, a division by zero) or is stopped fails with `nil, err`, and the instance is closed after it (its memory may be half-written). It works off the main thread, so its results arrives later: give `callback`, which is called with `results, err` once it's done, or call it inside a task (`nf.task`) without one, and it waits and returns `results, err`. Without a callback outside a task, it's an error. When it fails, `results` is `nil` and `err` says why.",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "doc": "The exported function: `\"sample\"`."
+            },
+            {
+              "name": "arguments",
+              "type": "table",
+              "doc": "The arguments, in order, one for each of the function's parameters: an `integer` for an `i32` or `i64`, a `number` for an `f32` or `f64`. A `string` is copied into the module's memory and passed as two `i32`s, where it starts and how many bytes it is (UTF-8): the module must export its `memory` and an `alloc(size) -> pointer` (or `malloc`) to copy it into, and the server frees it after the call with the module's `dealloc(pointer, size)` (or `free(pointer)`) when it exports one, so a function that keeps the text copies it. A count or type that doesn't match the function is an error at the script's line.",
+              "optional": true
+            },
+            {
+              "name": "callback",
+              "type": "fun(results: any[]?, err: string?)",
+              "doc": "Called on the main thread once it's done, as this script's code, with its results in order (an `i32` or `i64` as an `integer`, an `f32` or `f64` as a `number`), empty for a function that returns nothing (or `nil` and why not). Not called if the script has stopped by then.",
+              "optional": true
+            }
+          ],
+          "example": "nf.task(function()\n  local results, err = instance:call(\"add\", { 2, 3 })\n  assert(results and results[1] == 5, err)\nend)",
+          "returns": [
+            {
+              "type": "any[]?",
+              "doc": "Only without a callback, in a task: its results in order (an `i32` or `i64` as an `integer`, an `f32` or `f64` as a `number`), empty for a function that returns nothing, or `nil`."
+            },
+            {
+              "type": "string?",
+              "doc": "Why it failed, when it did; `nil` when it worked."
+            }
+          ],
+          "async": true
+        },
+        {
+          "name": "call_text",
+          "doc": "Calls a function that answers with text: it returns two `i32`s (where the text starts and how many bytes it is) or one `i64` holding both (the start in its high 32 bits). The text is read from the module's memory as UTF-8, then freed as `call` frees a string argument. Otherwise as `call`: for text in and text out, JSON included. It works off the main thread, so its text arrives later: give `callback`, which is called with `text, err` once it's done, or call it inside a task (`nf.task`) without one, and it waits and returns `text, err`. Without a callback outside a task, it's an error. When it fails, `text` is `nil` and `err` says why.",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "doc": "The exported function: `\"plan\"`."
+            },
+            {
+              "name": "arguments",
+              "type": "table",
+              "doc": "The arguments, in order, one for each of the function's parameters: an `integer` for an `i32` or `i64`, a `number` for an `f32` or `f64`. A `string` is copied into the module's memory and passed as two `i32`s, where it starts and how many bytes it is (UTF-8): the module must export its `memory` and an `alloc(size) -> pointer` (or `malloc`) to copy it into, and the server frees it after the call with the module's `dealloc(pointer, size)` (or `free(pointer)`) when it exports one, so a function that keeps the text copies it. A count or type that doesn't match the function is an error at the script's line.",
+              "optional": true
+            },
+            {
+              "name": "callback",
+              "type": "fun(text: string?, err: string?)",
+              "doc": "Called on the main thread once it's done, as this script's code, with the text it answered (or `nil` and why not). Not called if the script has stopped by then.",
+              "optional": true
+            }
+          ],
+          "example": "nf.task(function()\n  local answer, err = instance:call_text(\"plan\", { nf.json.encode({ from = 1, to = 9 }) })\n  if answer then\n    local plan = nf.json.decode(answer)\n    log(\"the plan has\", #plan.steps, \"steps\")\n  end\nend)",
+          "returns": [
+            {
+              "type": "string?",
+              "doc": "Only without a callback, in a task: the text it answered, or `nil`."
+            },
+            {
+              "type": "string?",
+              "doc": "Why it failed, when it did; `nil` when it worked."
+            }
+          ],
+          "async": true
+        },
+        {
+          "name": "close",
+          "doc": "Closes it now, freeing its memory: calls still waiting fail, and later ones do at once. Unloading the script that made it closes it too.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` when it was already closed."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "WasmProcess",
+      "doc": "A program started with `nf.wasm.start`: `send` it lines and hear each line it prints as `output`, then its one `end`. It runs on a thread of its own, waiting while it reads input nobody has sent. It belongs to the script that started it and ends with reason `\"unloaded\"` when that script unloads (a reload, the server stopping). Once it has ended its methods answer as an ended program does rather than erroring. Ephemeral: it can't be saved in a `data()` table.",
+      "methods": true,
+      "handle": {
+        "key": [
+          {
+            "name": "number",
+            "type": "integer"
+          },
+          {
+            "name": "module",
+            "type": "string"
+          }
+        ]
+      },
+      "fields": [],
+      "events": [
+        {
+          "name": "output",
+          "doc": "The program printed a line (to its standard output or error), without its line ending. Lines come in order, on the main thread, at most `wasm.lines-per-tick` a tick per program; while scripts haven't taken them, at most `wasm.max-queued-lines` wait and the program is paused when it prints the next, so nothing is dropped. A line longer than `wasm.max-line-bytes` comes in pieces of that size.",
+          "payload": "WasmOutputEvent"
+        },
+        {
+          "name": "end",
+          "doc": "The program ended, for any reason (`event.reason` says which): heard once, after every line it printed before, while the handle still answers. After it, every handler on the program is gone; start it again to restart it.",
+          "payload": "WasmEndEvent",
+          "example": "engine:on(\"end\", function(event)\n  if event.reason ~= \"unloaded\" then\n    log(\"engine ended:\", event.reason, event.exit_code, event.detail)\n  end\nend)"
+        }
+      ],
+      "functions": [
+        {
+          "name": "module",
+          "doc": "The module it runs, as the calling script names it, even after it has ended.",
+          "params": [],
+          "returns": [
+            {
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "state",
+          "doc": "`\"running\"` until its `end` event, then `\"ended\"`.",
+          "params": [],
+          "returns": [
+            {
+              "type": "\"running\"|\"ended\""
+            }
+          ]
+        },
+        {
+          "name": "send",
+          "doc": "Writes a line to its input, with a line ending after it: the program reads it when it next reads. A line over `wasm.max-line-bytes` is an error at the script's line.",
+          "params": [
+            {
+              "name": "line",
+              "type": "string",
+              "doc": "The line, without its line ending: `\"go movetime 500\"`."
+            }
+          ],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` when it has ended or its input was closed, so nothing was sent."
+            }
+          ],
+          "example": "engine:send(\"position startpos moves e2e4 e7e5\")"
+        },
+        {
+          "name": "close_input",
+          "doc": "Ends its input: once it has read what was sent, it reads the end of the file, which most programs answer by finishing what they were doing and exiting.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` when it had already ended or its input was closed."
+            }
+          ]
+        },
+        {
+          "name": "stop",
+          "doc": "Ends it now, with reason `\"stopped\"`: lines it printed that weren't handed over yet are thrown away.",
+          "params": [],
+          "returns": [
+            {
+              "type": "boolean",
+              "doc": "`false` when it had already ended."
+            }
+          ]
+        },
+        {
+          "name": "on",
+          "impl": "lua",
+          "doc": "Calls `handler` every time `event` happens to this, until the subscription is cancelled or its script unloads, or this goes away. A handler lives as long as both the script that registered it and the handle it's on. Handlers run in the order they were registered, each with the event object; what one returns means nothing. A handler that errors is logged and the rest still run; after 20 errors in a row it's cancelled. An event this class doesn't have is an error, so a typo is caught where it was made.",
+          "params": [
+            {
+              "name": "event",
+              "type": "WasmProcess.Event",
+              "doc": "The event's name."
+            },
+            {
+              "name": "handler",
+              "type": "fun(event: Event)",
+              "doc": "Called with the event: its payload, plus `stop()`, `cancel()` and the rest of `Event`."
+            },
+            {
+              "name": "options",
+              "type": "EventOptions",
+              "doc": "How to listen: `{ every = n }` for `tick`.",
+              "optional": true
+            }
+          ],
+          "returns": [
+            {
+              "type": "Subscription",
+              "doc": "Call `:cancel()` on it to stop listening."
+            }
+          ],
+          "example": "local engine = nf.wasm.start(\"stockfish\")\nengine:on(\"output\", function(event)\n  log(\"engine says:\", event.line)\nend)"
+        },
+        {
+          "name": "once",
+          "impl": "lua",
+          "doc": "Like `engine:on`, but the handler runs only the next time the event happens, then stops listening.",
+          "params": [
+            {
+              "name": "event",
+              "type": "WasmProcess.Event",
+              "doc": "The event's name."
+            },
+            {
+              "name": "handler",
+              "type": "fun(event: Event)",
+              "doc": "Called with the event."
+            }
+          ],
+          "returns": [
+            {
+              "type": "Subscription",
+              "doc": "Call `:cancel()` on it to stop waiting before then."
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Cutscene",
       "doc": "One cutscene playing for one player, from `nf.cutscenes.play`. Once it has ended (it finished, was stopped or skipped, was replaced by another, its player left, or the script that played it unloaded) its methods answer `nil` or `false` rather than erroring, except `kind()` and `length()`. A cutscene is ephemeral: it has no `id()` and can't be saved in a `data()` table.",
       "methods": true,
@@ -25045,6 +25438,146 @@
       "extends": "Event"
     },
     {
+      "name": "WasmFunction",
+      "doc": "A function a module exports, from `nf.wasm.functions`.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "doc": "Its name: `\"sample\"`."
+        },
+        {
+          "name": "params",
+          "type": "string[]",
+          "doc": "Its parameters' types in order: `\"i32\"`, `\"i64\"`, `\"f32\"`, `\"f64\"` (a `\"v128\"` or a reference can't be passed)."
+        },
+        {
+          "name": "results",
+          "type": "string[]",
+          "doc": "Its results' types in order."
+        }
+      ]
+    },
+    {
+      "name": "WasmRunOptions",
+      "doc": "What `nf.wasm.run` takes.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "stdin",
+          "type": "string?",
+          "doc": "Its whole input; after it, the program reads the end of the file. None when left out."
+        },
+        {
+          "name": "arguments",
+          "type": "string[]?",
+          "doc": "Its arguments, after its name (the module's id, `argv[0]`)."
+        },
+        {
+          "name": "environment",
+          "type": "table<string, string>?",
+          "doc": "Its environment variables; none when left out (it never sees the server's)."
+        }
+      ]
+    },
+    {
+      "name": "WasmStartOptions",
+      "doc": "What `nf.wasm.start` takes.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "arguments",
+          "type": "string[]?",
+          "doc": "Its arguments, after its name (the module's id, `argv[0]`)."
+        },
+        {
+          "name": "environment",
+          "type": "table<string, string>?",
+          "doc": "Its environment variables; none when left out (it never sees the server's)."
+        }
+      ]
+    },
+    {
+      "name": "WasmRunResult",
+      "doc": "What a program `nf.wasm.run` ran did.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "exit_code",
+          "type": "integer",
+          "doc": "Its exit code: `0` when it says it worked, as programs do."
+        },
+        {
+          "name": "stdout",
+          "type": "string",
+          "doc": "What it printed to its standard output, up to `wasm.max-output-bytes`."
+        },
+        {
+          "name": "stderr",
+          "type": "string",
+          "doc": "What it printed to its standard error, up to the same."
+        }
+      ]
+    },
+    {
+      "name": "WasmOutputEvent",
+      "doc": "A program printed a line.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "process",
+          "type": "WasmProcess",
+          "doc": "The program."
+        },
+        {
+          "name": "line",
+          "type": "string",
+          "doc": "The line, without its line ending (UTF-8)."
+        },
+        {
+          "name": "stream",
+          "type": "\"stdout\"|\"stderr\"",
+          "doc": "Which it printed it to: its standard output or its standard error."
+        }
+      ],
+      "extends": "Event"
+    },
+    {
+      "name": "WasmEndEvent",
+      "doc": "A program ended.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "process",
+          "type": "WasmProcess",
+          "doc": "The program."
+        },
+        {
+          "name": "reason",
+          "type": "\"exited\"|\"stopped\"|\"failed\"|\"limit\"|\"unloaded\"",
+          "doc": "Why: it exited (`exit_code` says how), `stop()` was called, it failed (it trapped, or the module couldn't be compiled or started: `detail` says why), an owner's limit in `config.yml`'s `wasm:` section was reached, or the script that started it unloaded."
+        },
+        {
+          "name": "exit_code",
+          "type": "integer?",
+          "doc": "Its exit code, when it exited; `nil` otherwise."
+        },
+        {
+          "name": "detail",
+          "type": "string?",
+          "doc": "What went wrong, in words, for `\"failed\"` and `\"limit\"`; `nil` otherwise."
+        }
+      ],
+      "extends": "Event"
+    },
+    {
       "name": "ParticlePlayOptions",
       "doc": "How `nf.particles.play` plays an effect. Every key is optional; a key that isn't one of these is an error.",
       "methods": false,
@@ -25546,6 +26079,29 @@
           "name": "scale",
           "type": "number?",
           "doc": "What the coordinates are multiplied by first: smaller is smoother and wider (0.05 changes over about 20 blocks). Default 1."
+        }
+      ]
+    },
+    {
+      "name": "TestWasmStub",
+      "doc": "What `nf.test.stub_wasm` answers a module with. Every key is optional; a key that isn't one of these is an error.",
+      "methods": false,
+      "functions": [],
+      "fields": [
+        {
+          "name": "functions",
+          "type": "table<string, fun(arguments: any[]): any>?",
+          "doc": "An instance's functions by name: each gets the call's `arguments` and returns its results, a list for `call` (`{ 5 }`) or a string for `call_text`."
+        },
+        {
+          "name": "run",
+          "type": "(fun(options: table): WasmRunResult)?",
+          "doc": "What `module:run` gives: it gets the run's options (`stdin`, `arguments`, `environment`) and returns a result table."
+        },
+        {
+          "name": "input",
+          "type": "(fun(line: string, process: WasmProcess): string[]?)?",
+          "doc": "A started program's answer to each line it's sent: the lines it prints (to its standard output), or `nil` for none."
         }
       ]
     },

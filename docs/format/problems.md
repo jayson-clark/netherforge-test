@@ -986,6 +986,28 @@ Error. A build has more parts along an axis than a build may. See [format/worlds
 
 Error. A build has the id of one of the project's structures. See [format/worlds.md](worlds.md).
 
+## wasm
+
+### `wasm.invalid` {#wasm-invalid}
+
+Error. A module's `module.wasm` isn't a WebAssembly module the server can run. See [format/wasm.md](wasm.md).
+
+### `wasm.import` {#wasm-import}
+
+Error. A module imports something the server doesn't provide: a module may import WASI's preview 1 functions and nothing else. See [format/wasm.md](wasm.md).
+
+### `wasm.threads` {#wasm-threads}
+
+Error. A module was built for threads (shared memory, `wasi.thread-spawn`), which the server doesn't run. See [format/wasm.md](wasm.md).
+
+### `wasm.memory` {#wasm-memory}
+
+Error. A module's memory is addressed by 64-bit numbers, which the server doesn't run. See [format/wasm.md](wasm.md).
+
+### `wasm.exports` {#wasm-exports}
+
+Warning. A module exports no function, so nothing can call it. See [format/wasm.md](wasm.md).
+
 ## Particle effects
 
 ### `particle.duration` {#particle-duration}
@@ -1633,6 +1655,10 @@ Warning. Something the server learns only at start (advancements, biomes, dimens
 ### `runtime.datapack` {#runtime-datapack}
 
 Error. The server refused the project's datapacks as it started (its own message says why), so it runs without them until they change. See [format/datapack.md](datapack.md).
+
+### `runtime.wasm` {#runtime-wasm}
+
+Error. The server couldn't compile a WebAssembly module (its own message says why: it's invalid, too large for the owner's limits, or uses something the server doesn't run), so scripts can't load it until it changes. See [format/wasm.md](wasm.md).
 
 ## settings
 

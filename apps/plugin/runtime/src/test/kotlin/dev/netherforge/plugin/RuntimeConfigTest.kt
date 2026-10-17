@@ -137,4 +137,14 @@ class RuntimeConfigTest {
         assertEquals(HttpConfig(), read(mapOf("project" to "p"))!!.http)
         assertFalse(HttpConfig().allowPrivateAddresses)
     }
+
+    @Test
+    fun `the wasm section is read on a production and a dev server, and what isn't a positive number is the default`() {
+        val section = mapOf("threads" to 4, "compile" to false, "max-memory-mb" to "64", "max-call-seconds" to 0, "lines-per-tick" to -3)
+        val expected = WasmConfig(threads = 4, compile = false, maxMemoryMb = 64)
+        assertEquals(expected, read(mapOf("project" to "p", "wasm" to section))!!.wasm)
+        val properties = mapOf(Bridge.PROJECT_PROPERTY to project.toString())
+        assertEquals(expected, read(mapOf("wasm" to section), properties)!!.wasm)
+        assertEquals(WasmConfig(), read(mapOf("project" to "p"))!!.wasm)
+    }
 }

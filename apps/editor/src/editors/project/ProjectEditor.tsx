@@ -461,6 +461,16 @@ function Requirements({
         Lets scripts join fake players to the server and drive them (opponents, teammates, crowds),
         once the server owner allows bots. The dev server always does.
       </Hint>
+      <CheckField
+        label="WebAssembly"
+        dataPath="requires.wasm"
+        value={requires?.wasm === true}
+        onChange={(on) => onFlag('wasm', on)}
+      />
+      <Hint>
+        Lets scripts run the project&apos;s WebAssembly modules (<Mono>wasm/</Mono>): heavy
+        computation off the main thread, within the server owner&apos;s limits.
+      </Hint>
       <Hint>
         Hosts scripts may make HTTP requests to. <Mono>*.example.com</Mono> covers every host under{' '}
         <Mono>example.com</Mono>, not <Mono>example.com</Mono> itself.

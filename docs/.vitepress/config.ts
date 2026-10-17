@@ -82,7 +82,15 @@ function formatSidebar(): DefaultTheme.SidebarItem[] {
   const sections: [string, string[]][] = [
     [
       'The project',
-      ['project.md', 'references.md', 'packages.md', 'settings.md', 'migrations.md', 'problems.md'],
+      [
+        'project.md',
+        'references.md',
+        'packages.md',
+        'settings.md',
+        'migrations.md',
+        'wasm.md',
+        'problems.md',
+      ],
     ],
     ['Centities and effects', ['centity.md', 'particle-effect.md', 'cutscene.md']],
     [
@@ -149,6 +157,7 @@ const guide: DefaultTheme.SidebarItem[] = [
       { text: 'Players, entities and inventories', link: '/guide/players-and-entities' },
       { text: 'The world', link: '/guide/world' },
       { text: 'Web services', link: '/guide/web' },
+      { text: 'WebAssembly', link: '/guide/wasm' },
       { text: 'Limits and performance', link: '/guide/performance' },
       { text: 'Testing your scripts', link: '/guide/testing' },
       { text: 'Debugging scripts', link: '/guide/debugging' },

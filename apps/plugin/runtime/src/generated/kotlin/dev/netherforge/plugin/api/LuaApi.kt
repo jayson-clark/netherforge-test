@@ -43,6 +43,7 @@ interface LuaApi {
     val nfJson: NfJsonApi
     val nfHttp: NfHttpApi
     val nfWeb: NfWebApi
+    val nfWasm: NfWasmApi
     val nfTime: NfTimeApi
     val nfRandom: NfRandomApi
     val nfTest: NfTestApi
@@ -78,6 +79,8 @@ interface LuaApi {
     val route: RouteApi
     val webResponse: WebResponseApi
     val oAuthFlow: OAuthFlowApi
+    val wasmInstance: WasmInstanceApi
+    val wasmProcess: WasmProcessApi
     val cutscene: CutsceneApi
     val screen: ScreenApi
     val playback: PlaybackApi
@@ -92,8 +95,8 @@ interface LuaApi {
  * `nf.commands`, `nf.players`, `nf.bots`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`,
  * `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`,
  * `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`,
- * `nf.screens`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.web`, `nf.time`,
- * `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot:
+ * `nf.screens`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.web`, `nf.wasm`,
+ * `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot:
  * `nf.players.online()`.
  */
 interface NfApi {
@@ -1015,6 +1018,67 @@ interface NfWebApi {
 }
 
 /**
+ * Heavy computation in WebAssembly: a chess engine, pathfinding over a big grid, noise, compression, a
+ * library compiled from C, C++ or Rust. A module is `wasm/<id>/module.wasm` in the project (or a
+ * package's, exported), built for WASI preview 1 and single-threaded (`wasm32-wasip1`); every other
+ * file in its folder is data it can read, never write, as files from its root (`/`). It runs off the
+ * main thread, with no access to the server, the network or any file but its own data: it can only
+ * answer the script that asked. A package declares it runs modules with `"requires": { "wasm": true
+ * }`, and the server owner sees that (`/nf requires`) and limits it in `config.yml`'s `wasm:` section:
+ * how many threads run modules, how much memory each may use, how long a call may take, and how many
+ * instances and programs a package may keep. There are three ways to run one: `nf.wasm.instantiate`
+ * for a library whose functions you call (`instance:call`), `nf.wasm.run` for a program that reads its
+ * input and prints its answer, and `nf.wasm.start` for a program that keeps running and talks line by
+ * line (a UCI chess engine). The server compiles every module off the main thread as the project
+ * loads; one that couldn't be compiled fails when it's run, saying why (and the problem `runtime.wasm`
+ * says so too). A module the project doesn't have is an error at the script's line. A script that runs
+ * a module restarts when the module changes.
+ */
+interface NfWasmApi {
+    /**
+     * The functions a module exports, with their parameters' and results' types, in the order it exports
+     * them: a program (a WASI command) exports `_start`. Empty until the server has compiled it, and for
+     * one that couldn't be.
+     */
+    fun functions(caller: Caller, module: String): List<WasmFunction>
+
+    /**
+     * Makes an instance of a library module: its own memory, kept between calls, which `instance:call`
+     * calls functions in. Its start function (and a reactor's `_initialize`) runs first. It fails when the
+     * module couldn't be compiled, it needs more memory than `wasm.max-memory-mb`, the server's modules
+     * together would hold more than `wasm.max-memory-total-mb`, or the package already holds
+     * `wasm.max-instances-per-package` instances. The instance belongs to the script that made it. It
+     * works off the main thread, so its instance arrives later: give `callback`, which is called with
+     * `instance, err` once it's done, or call it inside a task (`nf.task`) without one, and it waits and
+     * returns `instance, err`. Without a callback outside a task, it's an error. When it fails, `instance`
+     * is `nil` and `err` says why.
+     */
+    fun instantiate(caller: Caller, module: String): CompletionStage<LuaHandle.WasmInstance>
+
+    /**
+     * Runs a program to its end with `options.stdin` as its input, and gives what it printed and its exit
+     * code: for a tool that reads a question and prints the answer. It's stopped (`nil, err`) past
+     * `wasm.max-call-seconds`, and what it prints is kept up to `wasm.max-output-bytes` of each stream. A
+     * program that exits with a code other than 0 has still run: check `result.exit_code`. It works off
+     * the main thread, so its result arrives later: give `callback`, which is called with `result, err`
+     * once it's done, or call it inside a task (`nf.task`) without one, and it waits and returns `result,
+     * err`. Without a callback outside a task, it's an error. When it fails, `result` is `nil` and `err`
+     * says why.
+     */
+    fun run(caller: Caller, module: String, options: WasmRunOptions?): CompletionStage<WasmRunResult>
+
+    /**
+     * Starts a program that keeps running: each `send` is a line of its input, each line it prints is an
+     * `output` event, on the main thread, in order, and it ends once, with its `end` event. It returns at
+     * once; the program starts off the main thread, on a thread of its own while it runs, and belongs to
+     * the script that started it. A limit the owner set (`wasm.max-processes-per-package`,
+     * `wasm.max-processes-total`, memory) ends it at the next tick with reason `"limit"`; a module that
+     * couldn't be compiled ends it `"failed"`.
+     */
+    fun start(caller: Caller, module: String, options: WasmStartOptions?): LuaHandle.WasmProcess
+}
+
+/**
  * Dates and durations as text, in the same unit as `nf.server.unix_time()`: milliseconds. For timers,
  * use ticks (`nf.after`, `nf.wait`); this is for showing and reading clock times and lengths of time.
  */
@@ -1205,6 +1269,17 @@ interface NfTestApi {
      * one that has ended does nothing.
      */
     fun disconnect(caller: Caller, connection: LuaHandle, options: TestDisconnectOptions?)
+
+    /**
+     * Stands in for a WebAssembly module for the rest of this test, so a test needn't run a heavy one (a
+     * chess engine) to check the script around it. In a test modules really run, as on a server; once
+     * stubbed, nothing of the module runs: an instance's `call` and `call_text` answer with
+     * `stub.functions` (a function the stub doesn't have fails, `nil, err`), `run` with `stub.run`, and a
+     * program `start`ed answers each line it's sent with the lines `stub.input` returns, as `output`
+     * events at the next tick (closing its input ends it, exit code 0). Each stub function runs on the
+     * main thread as the test's code.
+     */
+    fun stubWasm(caller: Caller, module: String, stub: TestWasmStub)
 }
 
 /**
@@ -4853,6 +4928,75 @@ interface OAuthFlowApi {
 
     /** Ends the flow: its callback route goes and logins under way are forgotten. */
     fun remove(self: LuaHandle.OAuthFlow): Boolean
+}
+
+/**
+ * An instance of a WebAssembly module, from `nf.wasm.instantiate`: its own memory, kept from call to
+ * call, so a function can build state another reads. Its calls run off the main thread one at a time,
+ * in the order they were made. It belongs to the script that made it and is closed when that script
+ * unloads. Ephemeral: it can't be saved in a `data()` table.
+ */
+interface WasmInstanceApi {
+    /** The module it is an instance of, as the calling script names it. */
+    fun module(self: LuaHandle.WasmInstance): String
+
+    /**
+     * Calls one of the functions the module exports and gives its results. It's stopped past
+     * `wasm.max-call-seconds`; a call that traps (an out-of-bounds read, `unreachable`, a division by
+     * zero) or is stopped fails with `nil, err`, and the instance is closed after it (its memory may be
+     * half-written). It works off the main thread, so its results arrives later: give `callback`, which is
+     * called with `results, err` once it's done, or call it inside a task (`nf.task`) without one, and it
+     * waits and returns `results, err`. Without a callback outside a task, it's an error. When it fails,
+     * `results` is `nil` and `err` says why.
+     */
+    fun call(self: LuaHandle.WasmInstance, name: String, arguments: LuaValue?): CompletionStage<List<Any?>>
+
+    /**
+     * Calls a function that answers with text: it returns two `i32`s (where the text starts and how many
+     * bytes it is) or one `i64` holding both (the start in its high 32 bits). The text is read from the
+     * module's memory as UTF-8, then freed as `call` frees a string argument. Otherwise as `call`: for
+     * text in and text out, JSON included. It works off the main thread, so its text arrives later: give
+     * `callback`, which is called with `text, err` once it's done, or call it inside a task (`nf.task`)
+     * without one, and it waits and returns `text, err`. Without a callback outside a task, it's an error.
+     * When it fails, `text` is `nil` and `err` says why.
+     */
+    fun callText(self: LuaHandle.WasmInstance, name: String, arguments: LuaValue?): CompletionStage<String>
+
+    /**
+     * Closes it now, freeing its memory: calls still waiting fail, and later ones do at once. Unloading
+     * the script that made it closes it too.
+     */
+    fun close(self: LuaHandle.WasmInstance): Boolean
+}
+
+/**
+ * A program started with `nf.wasm.start`: `send` it lines and hear each line it prints as `output`,
+ * then its one `end`. It runs on a thread of its own, waiting while it reads input nobody has sent. It
+ * belongs to the script that started it and ends with reason `"unloaded"` when that script unloads (a
+ * reload, the server stopping). Once it has ended its methods answer as an ended program does rather
+ * than erroring. Ephemeral: it can't be saved in a `data()` table.
+ */
+interface WasmProcessApi {
+    /** The module it runs, as the calling script names it, even after it has ended. */
+    fun module(self: LuaHandle.WasmProcess): String
+
+    /** `"running"` until its `end` event, then `"ended"`. */
+    fun state(self: LuaHandle.WasmProcess): String
+
+    /**
+     * Writes a line to its input, with a line ending after it: the program reads it when it next reads. A
+     * line over `wasm.max-line-bytes` is an error at the script's line.
+     */
+    fun send(self: LuaHandle.WasmProcess, line: String): Boolean
+
+    /**
+     * Ends its input: once it has read what was sent, it reads the end of the file, which most programs
+     * answer by finishing what they were doing and exiting.
+     */
+    fun closeInput(self: LuaHandle.WasmProcess): Boolean
+
+    /** Ends it now, with reason `"stopped"`: lines it printed that weren't handed over yet are thrown away. */
+    fun stop(self: LuaHandle.WasmProcess): Boolean
 }
 
 /**

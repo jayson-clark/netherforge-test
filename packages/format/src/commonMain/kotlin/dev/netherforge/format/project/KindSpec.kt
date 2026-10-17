@@ -13,6 +13,7 @@ import dev.netherforge.format.module.ModuleRequires
 import dev.netherforge.format.ref.ReferenceIndex
 import dev.netherforge.format.script.ScriptDef
 import dev.netherforge.format.text.DefaultFontFile
+import dev.netherforge.format.wasm.WasmInfo
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.JsonElement
 
@@ -42,7 +43,10 @@ enum class Contents {
     /** Lua, which the server runs and format only checks the names of. */
     LUA,
 
-    /** Minecraft's own binary files, which only the server reads: format checks where they are, never what's in them. */
+    /**
+     * Binary files (Minecraft's own, WebAssembly modules) which only the server reads: format checks where they are,
+     * never reads them, and knows of a module only what its host says ([ProjectSource.wasm]).
+     */
     BINARY,
 
     /** SQL the server runs and format only checks the names of. */
@@ -347,6 +351,12 @@ class KindContext internal constructor(
 
     /** A PNG's `[width, height]` by project path (see [ProjectSource.size]). */
     fun size(path: String): List<Int>? = project.source.size(path)
+
+    /** Whether [wasm] reads WebAssembly modules at all (see [ProjectSource.readsWasm]). */
+    val readsWasm: Boolean get() = project.source.readsWasm
+
+    /** What a WebAssembly module says about itself, by project path (see [ProjectSource.wasm]). */
+    fun wasm(path: String): WasmInfo? = project.source.wasm(path)
 }
 
 /**

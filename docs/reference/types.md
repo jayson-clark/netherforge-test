@@ -2613,7 +2613,7 @@ Which noise `nf.random.noise2` and `noise3` give. A key that isn't one of these 
 | `seed` | `integer?` | Which noise: each seed is a different pattern. Default 0. |
 | `scale` | `number?` | What the coordinates are multiplied by first: smaller is smoother and wider (0.05 changes over about 20 blocks). Default 1. |
 
-## Files, data and the web
+## Files, data, the web and computation
 
 ### DatabaseStatement {#databasestatement}
 
@@ -2821,7 +2821,81 @@ Has the fields and methods of [Event](#event) too.
 | `player` | [`Player`](player.md) | Who was logging in. |
 | `error` | `string` | What went wrong, in words. |
 
+### WasmFunction {#wasmfunction}
+
+A function a module exports, from `nf.wasm.functions`.
+
+| Field | Type | |
+| --- | --- | --- |
+| `name` | `string` | Its name: `"sample"`. |
+| `params` | `string[]` | Its parameters' types in order: `"i32"`, `"i64"`, `"f32"`, `"f64"` (a `"v128"` or a reference can't be passed). |
+| `results` | `string[]` | Its results' types in order. |
+
+### WasmRunOptions {#wasmrunoptions}
+
+What `nf.wasm.run` takes.
+
+| Field | Type | |
+| --- | --- | --- |
+| `stdin` | `string?` | Its whole input; after it, the program reads the end of the file. None when left out. |
+| `arguments` | `string[]?` | Its arguments, after its name (the module's id, `argv[0]`). |
+| `environment` | `table<string, string>?` | Its environment variables; none when left out (it never sees the server's). |
+
+### WasmStartOptions {#wasmstartoptions}
+
+What `nf.wasm.start` takes.
+
+| Field | Type | |
+| --- | --- | --- |
+| `arguments` | `string[]?` | Its arguments, after its name (the module's id, `argv[0]`). |
+| `environment` | `table<string, string>?` | Its environment variables; none when left out (it never sees the server's). |
+
+### WasmRunResult {#wasmrunresult}
+
+What a program `nf.wasm.run` ran did.
+
+| Field | Type | |
+| --- | --- | --- |
+| `exit_code` | `integer` | Its exit code: `0` when it says it worked, as programs do. |
+| `stdout` | `string` | What it printed to its standard output, up to `wasm.max-output-bytes`. |
+| `stderr` | `string` | What it printed to its standard error, up to the same. |
+
+### WasmOutputEvent {#wasmoutputevent}
+
+A program printed a line.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `process` | [`WasmProcess`](wasmprocess.md) | The program. |
+| `line` | `string` | The line, without its line ending (UTF-8). |
+| `stream` | `"stdout"\|"stderr"` | Which it printed it to: its standard output or its standard error. |
+
+### WasmEndEvent {#wasmendevent}
+
+A program ended.
+
+Has the fields and methods of [Event](#event) too.
+
+| Field | Type | |
+| --- | --- | --- |
+| `process` | [`WasmProcess`](wasmprocess.md) | The program. |
+| `reason` | `"exited"\|"stopped"\|"failed"\|"limit"\|"unloaded"` | Why: it exited (`exit_code` says how), `stop()` was called, it failed (it trapped, or the module couldn't be compiled or started: `detail` says why), an owner's limit in `config.yml`'s `wasm:` section was reached, or the script that started it unloaded. |
+| `exit_code` | `integer?` | Its exit code, when it exited; `nil` otherwise. |
+| `detail` | `string?` | What went wrong, in words, for `"failed"` and `"limit"`; `nil` otherwise. |
+
 ## Testing
+
+### TestWasmStub {#testwasmstub}
+
+What `nf.test.stub_wasm` answers a module with. Every key is optional; a key that isn't one of these is an error.
+
+| Field | Type | |
+| --- | --- | --- |
+| `functions` | `table<string, fun(arguments: any[]): any>?` | An instance's functions by name: each gets the call's `arguments` and returns its results, a list for `call` (`{ 5 }`) or a string for `call_text`. |
+| `run` | `(fun(options: table): `[`WasmRunResult`](types.md#wasmrunresult)`)?` | What `module:run` gives: it gets the run's options (`stdin`, `arguments`, `environment`) and returns a result table. |
+| `input` | `(fun(line: string, process: `[`WasmProcess`](wasmprocess.md)`): string[]?)?` | A started program's answer to each line it's sent: the lines it prints (to its standard output), or `nil` for none. |
 
 ### TestShownOptions {#testshownoptions}
 

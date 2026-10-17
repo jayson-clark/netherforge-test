@@ -147,7 +147,7 @@ class ScriptTestRunner(
                 repeat(ticks) {
                     val runtime = checkNotNull(runtime)
                     // What scripts started off the main thread is done before the tick, so a test sees it land at a known tick.
-                    check(runtime.workers.idle(IDLE_MILLIS)) { "the runtime's workers were still busy after ${IDLE_MILLIS}ms" }
+                    check(runtime.settled(IDLE_MILLIS)) { "the runtime's workers or WebAssembly were still busy after ${IDLE_MILLIS}ms" }
                     runtime.tick()
                     platform.scheduler.runPending()
                     // The server ticks the world (entities, their AI included) after plugins.

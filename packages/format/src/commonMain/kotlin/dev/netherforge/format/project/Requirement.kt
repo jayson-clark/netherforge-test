@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
  * Something a package's scripts can do only when its `netherforge.json`
  * declares it (`"requires"`, [ProjectRequires]): the capabilities "Trust" in
  * PLAN.md's decisions is about. Its [id] is how the API spec's `requires`
- * names it (`moderation`, `db`, `web`, `bots`, `http`, `plugin:vault`) and how the editor,
+ * names it (`moderation`, `db`, `web`, `bots`, `wasm`, `http`, `plugin:vault`) and how the editor,
  * the server's log and `/nf requires` show it (`http:discord.com`).
  *
  * The one place a declaration is read: the runtime's check
@@ -60,6 +60,17 @@ sealed class Requirement {
     }
 
     /**
+     * Running the package's WebAssembly modules (`nf.wasm`): heavy computation off the main thread, within the
+     * server owner's limits on threads, memory and time.
+     */
+    data object Wasm : Requirement() {
+        override val id = "wasm"
+        override val declaration = "\"requires\": { \"wasm\": true }"
+
+        override fun grantedBy(requires: ProjectRequires?) = requires?.wasm == true
+    }
+
+    /**
      * HTTP requests to [host] (lowercase), or, with none, to any host the
      * package declares: what the spec's `requires: "http"` checks before the
      * function knows its URL. A request then checks its own host.
@@ -89,6 +100,7 @@ sealed class Requirement {
             id == Db.id -> Db
             id == Web.id -> Web
             id == Bots.id -> Bots
+            id == Wasm.id -> Wasm
             id == "http" -> Http()
             id.startsWith("http:") -> id.removePrefix("http:").takeIf(Names::isHostName)?.let(::Http)
             id.startsWith("plugin:") -> id.removePrefix("plugin:").takeIf(Names::isPluginName)?.let(::Plugin)
@@ -108,7 +120,7 @@ sealed class Requirement {
 
         /**
          * What [requires] declares, one requirement each, in the order they're
-         * shown: moderation, db, web, bots, each host, each plugin. A host or plugin name
+         * shown: moderation, db, web, bots, wasm, each host, each plugin. A host or plugin name
          * that isn't one (a problem in the manifest) declares nothing.
          */
         fun declared(requires: ProjectRequires?): List<Requirement> = buildList {
@@ -117,6 +129,7 @@ sealed class Requirement {
             if (requires.db == true) add(Db)
             if (requires.web == true) add(Web)
             if (requires.bots == true) add(Bots)
+            if (requires.wasm == true) add(Wasm)
             requires.http.orEmpty().filter(Names::isHttpHost).distinct().sorted().forEach { add(Http(it)) }
             requires.plugins.orEmpty().filter(Names::isPluginName).distinct().sorted().forEach { add(Plugin(it)) }
         }
@@ -142,8 +155,9 @@ sealed class Requirement {
                     Db -> 1
                     Web -> 2
                     Bots -> 3
-                    is Http -> 4
-                    is Plugin -> 5
+                    Wasm -> 4
+                    is Http -> 5
+                    is Plugin -> 6
                 }
             }
             return by.entries.sortedWith(compareBy({ order(it.key) }, { it.key.id })).map { (requirement, packages) ->

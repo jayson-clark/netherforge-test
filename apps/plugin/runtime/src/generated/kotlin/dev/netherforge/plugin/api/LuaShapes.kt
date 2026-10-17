@@ -7144,6 +7144,192 @@ data class OAuthFailEvent(val flow: LuaHandle.OAuthFlow, val player: LuaHandle.P
     }
 }
 
+/** A function a module exports, from `nf.wasm.functions`. */
+data class WasmFunction(val name: String, val params: List<String>, val results: List<String>) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<WasmFunction>("WasmFunction") {
+        val nameCodec = LuaCodecs.STRING
+        val paramsCodec = LuaList(LuaCodecs.STRING)
+        val resultsCodec = LuaList(LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "name" to nameCodec,
+            "params" to paramsCodec,
+            "results" to resultsCodec
+        )
+
+        override fun read(fields: ShapeReader) = WasmFunction(
+            name = fields.field("name", nameCodec),
+            params = fields.field("params", paramsCodec),
+            results = fields.field("results", resultsCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: WasmFunction) {
+            fields.field("name", value.name, nameCodec)
+            fields.field("params", value.params, paramsCodec)
+            fields.field("results", value.results, resultsCodec)
+        }
+    }
+}
+
+/** What `nf.wasm.run` takes. */
+data class WasmRunOptions(val stdin: String? = null, val arguments: List<String>? = null, val environment: Map<String, String>? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<WasmRunOptions>("WasmRunOptions") {
+        val stdinCodec = LuaOptional(LuaCodecs.STRING)
+        val argumentsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val environmentCodec = LuaOptional(LuaMap(LuaCodecs.STRING, LuaCodecs.STRING))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "stdin" to stdinCodec,
+            "arguments" to argumentsCodec,
+            "environment" to environmentCodec
+        )
+
+        override fun read(fields: ShapeReader) = WasmRunOptions(
+            stdin = fields.field("stdin", stdinCodec),
+            arguments = fields.field("arguments", argumentsCodec),
+            environment = fields.field("environment", environmentCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: WasmRunOptions) {
+            fields.field("stdin", value.stdin, stdinCodec)
+            fields.field("arguments", value.arguments, argumentsCodec)
+            fields.field("environment", value.environment, environmentCodec)
+        }
+    }
+}
+
+/** What `nf.wasm.start` takes. */
+data class WasmStartOptions(val arguments: List<String>? = null, val environment: Map<String, String>? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<WasmStartOptions>("WasmStartOptions") {
+        val argumentsCodec = LuaOptional(LuaList(LuaCodecs.STRING))
+        val environmentCodec = LuaOptional(LuaMap(LuaCodecs.STRING, LuaCodecs.STRING))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "arguments" to argumentsCodec,
+            "environment" to environmentCodec
+        )
+
+        override fun read(fields: ShapeReader) = WasmStartOptions(
+            arguments = fields.field("arguments", argumentsCodec),
+            environment = fields.field("environment", environmentCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: WasmStartOptions) {
+            fields.field("arguments", value.arguments, argumentsCodec)
+            fields.field("environment", value.environment, environmentCodec)
+        }
+    }
+}
+
+/** What a program `nf.wasm.run` ran did. */
+data class WasmRunResult(val exitCode: Long, val stdout: String, val stderr: String) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<WasmRunResult>("WasmRunResult") {
+        val exitCodeCodec = LuaCodecs.INTEGER
+        val stdoutCodec = LuaCodecs.STRING
+        val stderrCodec = LuaCodecs.STRING
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "exit_code" to exitCodeCodec,
+            "stdout" to stdoutCodec,
+            "stderr" to stderrCodec
+        )
+
+        override fun read(fields: ShapeReader) = WasmRunResult(
+            exitCode = fields.field("exit_code", exitCodeCodec),
+            stdout = fields.field("stdout", stdoutCodec),
+            stderr = fields.field("stderr", stderrCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: WasmRunResult) {
+            fields.field("exit_code", value.exitCode, exitCodeCodec)
+            fields.field("stdout", value.stdout, stdoutCodec)
+            fields.field("stderr", value.stderr, stderrCodec)
+        }
+    }
+}
+
+/** A program printed a line. */
+data class WasmOutputEvent(val process: LuaHandle.WasmProcess, val line: String, val stream: String) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<WasmOutputEvent>("WasmOutputEvent") {
+        val processCodec = LuaHandle.WasmProcess.Codec
+        val lineCodec = LuaCodecs.STRING
+        val streamCodec = LuaChoice(listOf("stdout", "stderr"))
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "process" to processCodec,
+            "line" to lineCodec,
+            "stream" to streamCodec
+        )
+
+        override fun read(fields: ShapeReader) = WasmOutputEvent(
+            process = fields.field("process", processCodec),
+            line = fields.field("line", lineCodec),
+            stream = fields.field("stream", streamCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: WasmOutputEvent) {
+            fields.field("process", value.process, processCodec)
+            fields.field("line", value.line, lineCodec)
+            fields.field("stream", value.stream, streamCodec)
+        }
+    }
+}
+
+/** A program ended. */
+data class WasmEndEvent(val process: LuaHandle.WasmProcess, val reason: String, val exitCode: Long? = null, val detail: String? = null) : LuaEvent {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<WasmEndEvent>("WasmEndEvent") {
+        val processCodec = LuaHandle.WasmProcess.Codec
+        val reasonCodec = LuaChoice(listOf("exited", "stopped", "failed", "limit", "unloaded"))
+        val exitCodeCodec = LuaOptional(LuaCodecs.INTEGER)
+        val detailCodec = LuaOptional(LuaCodecs.STRING)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "process" to processCodec,
+            "reason" to reasonCodec,
+            "exit_code" to exitCodeCodec,
+            "detail" to detailCodec
+        )
+
+        override fun read(fields: ShapeReader) = WasmEndEvent(
+            process = fields.field("process", processCodec),
+            reason = fields.field("reason", reasonCodec),
+            exitCode = fields.field("exit_code", exitCodeCodec),
+            detail = fields.field("detail", detailCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: WasmEndEvent) {
+            fields.field("process", value.process, processCodec)
+            fields.field("reason", value.reason, reasonCodec)
+            fields.field("exit_code", value.exitCode, exitCodeCodec)
+            fields.field("detail", value.detail, detailCodec)
+        }
+    }
+}
+
 /**
  * How `nf.particles.play` plays an effect. Every key is optional; a key that isn't one of these is an
  * error.
@@ -7789,6 +7975,40 @@ data class NoiseOptions(val seed: Long? = null, val scale: Double? = null) : Lua
         override fun write(fields: ShapeWriter, value: NoiseOptions) {
             fields.field("seed", value.seed, seedCodec)
             fields.field("scale", value.scale, scaleCodec)
+        }
+    }
+}
+
+/**
+ * What `nf.test.stub_wasm` answers a module with. Every key is optional; a key that isn't one of these
+ * is an error.
+ */
+data class TestWasmStub(val functions: Map<String, LuaFunction>? = null, val run: LuaFunction? = null, val input: LuaFunction? = null) : LuaShape {
+    override fun push(call: LuaCall) = Codec.push(call, this)
+
+    object Codec : ShapeCodec<TestWasmStub>("TestWasmStub") {
+        val functionsCodec = LuaOptional(LuaMap(LuaCodecs.STRING, LuaCodecs.FUNCTION))
+        val runCodec = LuaOptional(LuaCodecs.FUNCTION)
+        val inputCodec = LuaOptional(LuaCodecs.FUNCTION)
+
+        override val pinned = false
+
+        override val fields: Map<String, LuaCodec<*>> = mapOf(
+            "functions" to functionsCodec,
+            "run" to runCodec,
+            "input" to inputCodec
+        )
+
+        override fun read(fields: ShapeReader) = TestWasmStub(
+            functions = fields.field("functions", functionsCodec),
+            run = fields.field("run", runCodec),
+            input = fields.field("input", inputCodec)
+        )
+
+        override fun write(fields: ShapeWriter, value: TestWasmStub) {
+            fields.field("functions", value.functions, functionsCodec)
+            fields.field("run", value.run, runCodec)
+            fields.field("input", value.input, inputCodec)
         }
     }
 }
