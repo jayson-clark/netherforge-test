@@ -196,6 +196,11 @@ data class ProjectRequires(
      */
     val bots: Boolean? = null,
     /**
+     * Whether scripts may run the package's WebAssembly modules (`nf.wasm`, `wasm/<id>/`), off the main thread
+     * within the server owner's limits.
+     */
+    val wasm: Boolean? = null,
+    /**
      * The hosts scripts may make HTTP requests to: a host name
      * (`discord.com`), or `*.` and one for any name under it
      * (`*.example.com`, not `example.com` itself). Kept in order.

@@ -89,6 +89,23 @@ export function pngSizes(root: string, files: string[]): Record<string, [number,
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 
+/**
+ * What each WebAssembly module in [files] (a `wasm/<id>/module.wasm`) says about itself, read by format's own reader,
+ * which is what checks what it imports and exports (the server says the rest when it compiles it).
+ */
+export function wasmFacts(root: string, files: string[]): Record<string, unknown> {
+  const facts: Record<string, unknown> = {}
+  for (const file of files) {
+    const classified = JSON.parse(nf.classify(file)) as ClassifiedPath | null
+    if (classified?.kind !== 'wasm' || classified.role !== 'main') continue
+    const bytes = readFileSync(path.join(root, file))
+    facts[file] = JSON.parse(
+      nf.readWasm(new Int8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)),
+    )
+  }
+  return facts
+}
+
 const sha256 = (data: Buffer | string) => createHash('sha256').update(data).digest('hex')
 
 /**

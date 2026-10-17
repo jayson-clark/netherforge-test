@@ -456,6 +456,17 @@ the end, like `Effect:kind()`); the rest answers as ended (`state()` `"ended"`, 
 `connections`, `accept`, `receive`, `sent` and `disconnect` take these same handles, the far
 end being the test's.
 
+## WebAssembly: namespace functions make, handles run (`WasmInstance`, `WasmProcess`)
+
+What `nf.wasm` makes belongs to the scope that made it, and only a namespace function knows that scope (a
+`Caller`); a sync handle method gets none (its binding never calls `marshal.caller`). So the module is a string
+every `nf.wasm` function takes (`instantiate`, `run`, `start`, `functions`: each with `requires: 'wasm'`), not a
+handle whose methods would make things. `WasmInstance` (keyed by number) and `WasmProcess` (number and the module's
+server name, spelled for the reader by `module()`) are what they make. A call's `args` is a `table`, read in Kotlin
+like `Database`'s params so integers stay 64-bit; results are `any[]` (integers and numbers as they are). A program is
+like a WebSocket: returned at once, events after (`output`, `end`), limits ending it rather than erroring. The
+naming rules made `args`/`env` `arguments`/`environment`.
+
 **`bindings.lua`'s top-level locals.** Each handle class's section is a `do … end` block
 (`emit/lua.ts`), its class table a local of the block, so the chunk stays far from Lua's 200
 locals (`PreludeModulesTest` warns past 100); only the `<Class>_is` sets the inline checks read

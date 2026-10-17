@@ -83,6 +83,8 @@ const FREE_NAMES: Record<string, string> = {
   socket: 'WebSocket',
   flow: 'OAuthFlow',
   response: 'WebResponse',
+  instance: 'WasmInstance',
+  engine: 'WasmProcess',
   replay_id: 'string',
   sequence: 'integer',
   v: 'Vec3',

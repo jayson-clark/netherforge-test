@@ -197,6 +197,13 @@ class NetherForgeRuntime(val platform: Platform, val config: RuntimeConfig) {
     /** The project's run now: every service, its scripts and its Lua state. */
     val session: ProjectSession get() = current ?: error("NetherForge isn't enabled")
 
+    /**
+     * Waits (up to [millis] each) until what scripts started off the main thread has gone as far as it can on its
+     * own: the workers idle, and the session's WebAssembly settled (calls done, programs waiting for input). What a
+     * test run's tick waits on, so a test sees work land at a known tick. False if it didn't in time.
+     */
+    fun settled(millis: Long): Boolean = workers.idle(millis) && current?.wasm?.settle(millis) != false
+
     /** Server ticks since enable; what `nf.server.tick()` reads. */
     var ticks: Long = 0
         private set

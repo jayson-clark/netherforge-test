@@ -12,6 +12,7 @@ A table of functions: call them with a dot.
 | [Players and their input](#players-and-their-input) | [`player`](#player) [`raise`](#raise) [`click`](#click) [`release`](#release) [`input`](#input) [`shown`](#shown) |
 | [Worldgen](#worldgen) | [`terrain`](#terrain) |
 | [The network](#the-network) | [`connections`](#connections) [`accept`](#accept) [`receive`](#receive) [`sent`](#sent) [`disconnect`](#disconnect) [`request`](#request) [`oauth_token`](#oauth_token) |
+| [WebAssembly](#webassembly) | [`stub_wasm`](#stub_wasm) |
 
 ## Tests and time {#tests-and-time}
 
@@ -276,4 +277,31 @@ What a login flow's token endpoint answers in this test: in a test the server do
 
 ```lua
 nf.test.oauth_token(flow, { access_token = "abc", refresh_token = "def", expires_in = 3600 })
+```
+
+## WebAssembly {#webassembly}
+
+### `nf.test.stub_wasm(module, stub)` {#stub_wasm}
+
+Stands in for a WebAssembly module for the rest of this test, so a test needn't run a heavy one (a chess engine) to check the script around it. In a test modules really run, as on a server; once stubbed, nothing of the module runs: an instance's `call` and `call_text` answer with `stub.functions` (a function the stub doesn't have fails, `nil, err`), `run` with `stub.run`, and a program `start`ed answers each line it's sent with the lines `stub.input` returns, as `output` events at the next tick (closing its input ends it, exit code 0). Each stub function runs on the main thread as the test's code.
+
+| Parameter | Type | |
+| --- | --- | --- |
+| `module` | `string` | The module, as `nf.wasm`'s functions name it. |
+| `stub` | [`TestWasmStub`](types.md#testwasmstub) | What answers in its place. |
+
+```lua
+nf.test.case("the bot plays the engine's move", function()
+  nf.test.stub_wasm("stockfish", {
+    input = function(line)
+      if line:match("^go") then
+        return { "bestmove e7e5" }
+      end
+    end,
+  })
+  local game = require("chess").new_game()
+  game:play("e2e4")
+  nf.test.advance(2)
+  assert(game:last_move() == "e7e5")
+end)
 ```

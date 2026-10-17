@@ -16,7 +16,8 @@ object Kinds {
      * Every resource kind, in the order one reload batch reloads them (the
      * hot-reload skill): resource packs first (menus' skins and scripts' glyphs read
      * the new build), particle effects and cutscenes (data the restarting
-     * scripts may play at once), modules (which find what required them), the data kinds,
+     * scripts may play at once), WebAssembly modules (which the restarting scripts may load at once), modules (which
+     * find what required them), the data kinds,
      * items (the looks menus' slots take), recipes (built from those looks),
      * loot tables (data scripts roll), blocks (their drops are loot tables; the
      * world's blocks are drawn as the pack says), the game's blocks' rules (which refuse the blocks' carriers), biomes and dimension types (the server learns them only at start), terrains (the ores' blocks are blocks), advancements (which the server
@@ -27,6 +28,7 @@ object Kinds {
         ResourcePackKind,
         ParticleEffectKind,
         CutsceneKind,
+        WasmModuleKind,
         ModuleKind,
         MigrationKind,
         StructureKind,

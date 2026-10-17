@@ -85,6 +85,7 @@ object ProblemCodes {
     private const val SKY = "format/sky.md"
     private const val BUFF = "format/buff.md"
     private const val DATAPACK = "format/datapack.md"
+    private const val WASM = "format/wasm.md"
     private const val DIMENSION_TYPE = "format/dimension-type.md"
     private const val RESOURCE_PACK = "format/resource-pack.md"
     private const val GUIDE_DEV_LOOP = "guide/dev-loop.md"
@@ -550,6 +551,20 @@ object ProblemCodes {
     val BUILD_SIZE = error("build.size", WORLDS, "A build has more parts along an axis than a build may.")
     val BUILD_ID_TAKEN = error("build.id-taken", WORLDS, "A build has the id of one of the project's structures.")
 
+    // ---- WebAssembly modules ----------------------------------------------------
+
+    val WASM_INVALID = error("wasm.invalid", WASM, "A module's `module.wasm` isn't a WebAssembly module the server can run.")
+    val WASM_IMPORT =
+        error(
+            "wasm.import",
+            WASM,
+            "A module imports something the server doesn't provide: a module may import WASI's preview 1 functions and nothing else."
+        )
+    val WASM_THREADS =
+        error("wasm.threads", WASM, "A module was built for threads (shared memory, `wasi.thread-spawn`), which the server doesn't run.")
+    val WASM_MEMORY = error("wasm.memory", WASM, "A module's memory is addressed by 64-bit numbers, which the server doesn't run.")
+    val WASM_EXPORTS = warning("wasm.exports", WASM, "A module exports no function, so nothing can call it.")
+
     // ---- particle effects -------------------------------------------------------
 
     val PARTICLE_DURATION = error("particle.duration", PARTICLE, "`duration` is outside the ticks an effect may last.")
@@ -1012,6 +1027,13 @@ object ProblemCodes {
             DATAPACK,
             "The server refused the project's datapacks as it started (its own message says why), so it runs without them until " +
                 "they change."
+        )
+    val RUNTIME_WASM =
+        error(
+            "runtime.wasm",
+            WASM,
+            "The server couldn't compile a WebAssembly module (its own message says why: it's invalid, too large for the owner's " +
+                "limits, or uses something the server doesn't run), so scripts can't load it until it changes."
         )
     val SCRIPT_ERROR = error("script.error", GUIDE_DEV_LOOP, "A script raised an error.")
     val SCRIPT_SLOW = warning("script.slow", GUIDE_DEV_LOOP, "A script takes more of a tick than the server's warning threshold.")

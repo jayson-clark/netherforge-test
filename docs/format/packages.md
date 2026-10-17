@@ -57,7 +57,7 @@ A package decides what other projects may use of it:
 
 `exports` lists resources by the folder their kind lives in (`modules`,
 `items`, `dialogs`, `resource_packs`, `centities`, `menus`, `particles`, `recipes`,
-`loot`, `advancements`, `structures`, `worlds`); an exported resource pack exports every skin, glyph, item
+`loot`, `advancements`, `structures`, `wasm`, `worlds`); an exported resource pack exports every skin, glyph, item
 model, tooltip and sound in it. Every id must be one the package has
 (`package.export-missing`) and every key a kind's folder
 (`package.export-kind`). Lists are kept in id order.

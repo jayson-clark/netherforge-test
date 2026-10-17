@@ -14,6 +14,11 @@ dependencies {
     implementation(libs.cron.utils)
     // `nf.http.request`: the client, given a Dns that resolves once and returns only checked addresses.
     implementation(libs.okhttp)
+    // `nf.wasm`: WebAssembly on the JVM, nothing native. The compiler makes JVM classes of a module (with ASM, which a
+    // server that bundles it lends its own of), the interpreter running what it can't; WASI is what programs import.
+    implementation(libs.chicory.runtime)
+    implementation(libs.chicory.wasi)
+    implementation(libs.chicory.compiler)
     implementation(libs.luajava)
     implementation(libs.luajava.lua54)
     runtimeOnly(variantOf(libs.luajava.natives) { classifier("natives-desktop") })
@@ -42,6 +47,8 @@ dependencies {
     testImplementation(project(":plugin:testkit"))
     testImplementation(kotlin("test"))
     testImplementation(libs.okhttp.mockwebserver)
+    // Test modules (WasmFixtures) are written as WebAssembly text and built by wabt's wat2wasm, itself WebAssembly on Chicory.
+    testFixturesImplementation(libs.chicory.wabt)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.launcher)

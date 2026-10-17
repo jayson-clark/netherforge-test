@@ -154,6 +154,7 @@ branch in `run`, and its completions in `options`.
 | `kotlin/.../interop/`                                                 | `Plugins` (declared plugins: the missing-plugin problem and the check before a call), `Placeholders` (PlaceholderAPI expansions), `nf.economy`/`nf.placeholders` impls (see "Plugin interop")                        |
 | `kotlin/.../particle/`                                                | `ParticleEffects` (definitions, playing effects, the pass, budgets), `ActiveEffect`, impls                                                                                                                           |
 | `kotlin/.../cutscene/`                                                | `Cutscenes` (definitions, the cutscenes playing, the pass, what's put back and when), `ActiveCutscene`, impls                                                                                                        |
+| `kotlin/.../wasm/`                                                    | `WasmModules` (`nf.wasm`: compiling, instances, runs, programs, limits, stubs), `CompiledModule`, `WasmCalls`, `WasmFiles` (the read-only WASI file system), `WasmProgram`, `WasmThreads` (see "WebAssembly")        |
 
 ## Lua: one state, a scope per script
 
@@ -1132,6 +1133,69 @@ Inbound requests, off by default (`web.enabled`; `WebConfig`). Two halves:
   a trusted certificate), as HTTPS isn't for `nf.http.request`. The conformance harness gets a
   `WebResponse` from a `/sample` route the test requests once before the calls.
 
+## WebAssembly (`nf.wasm`)
+
+`wasm/WasmModules` (`session.wasm`, a `RuntimeService` reloading `WasmModuleKind`) runs the project's modules on
+[Chicory](https://chicory.dev) (pure JVM: `runtime`, `wasi`, `compiler`, shaded like okhttp; the compiler's ASM is
+the server's own where it bundles one, which Paper 1.21.11 and 26.x do at the same 9.9.1).
+
+- **Compiling** (`CompiledModule.compile`, on `WasmThreads.calls`) as the session defines the project and again
+  when a module reloads: parsed with validation, its imports held to WASI preview 1's functions (format's
+  `WasmImports`, so `check` and the server agree), SIMD refused (neither Chicory's compiler nor its interpreter runs
+  it; the opcode names give it away), then `MachineFactoryCompiler` (interpreter fallback for a function too big
+  for one JVM method; a `LinkageError` from an old ASM leaves the module to the interpreter with a warning).
+  `wasm.compile: false` skips the compiler. A failure is `runtime.wasm` at `module.wasm` (`problems()`; the
+  completion calls `session.problemsChanged()`), and running it fails saying why. One compile per load, shared by
+  every instance.
+- **Instances** (`CompiledModule.instantiate`): Chicory's WASI (stdin, stdout, stderr, arguments with `argv[0]` the
+  module's name, environment, the system clock, `SecureRandom`; **no directories**), with `WasmFiles` put in place of
+  every WASI function that takes a descriptor or a path: fd 3 is the module's data at `/` (`WasmData`, its files'
+  disk paths worked out once), read by positional `FileChannel` reads as the module reads, never loaded whole;
+  writing, making and removing are `EROFS`, a path climbing out is `ENOTCAPABLE`, and no host path ever reaches
+  Chicory (whose WASI checks neither rights nor `..`). Memory is `ByteArrayMemory` (half again faster than the
+  default `ByteBufferMemory` on Stockfish) capped at `max-memory-mb` through `withMemoryFactory`; `withStart(false)`,
+  because Chicory otherwise runs a command's `_start` as the instance is built: the start section runs, `_start` is
+  ours to call inside a time limit. A reactor's `_initialize` runs once.
+- **Calls** (`WasmCalls`): arguments read from the script's `args` table on the main thread like `Database`'s
+  params (integers stay `Long`, so an `i64` is exact) and checked against the export's type there (a mistake is an
+  error at the line); strings copied in with the module's `alloc`/`malloc` and freed after with
+  `dealloc`/`free`; `call_text` reads `(ptr, len)` or an `i64` packing both. Each instance's calls run on its own
+  `WasmThreads.Lane`; a trap or a timeout closes it (`WasmInstanceRecord.close`: interrupt the running call, then
+  on the lane let go of its WASI state and memory reservation; the record stays, so `module()` answers, until its
+  scope goes).
+- **Time limits** (`WasmThreads.limited`): a watchdog interrupts the calling thread past `max-call-seconds`;
+  Chicory's compiled code and interpreter check for it and throw `ChicoryInterruptedException`; the interrupt is
+  always cleared after, so a pool thread is never left interrupted. A host function's exception comes out of
+  compiled code wrapped, so a WASI exit is found in the cause chain (`exitCode`).
+- **Programs** (`WasmProgram`, `nf.wasm.start`): a thread of its own from `WasmThreads.programs` (a program blocks
+  reading its input; the pools are bounded by `max-processes-total`, held to before starting). Input is a queue of
+  lines (`ProgramInput`; `finish()` is the end of the file); output is cut into lines (`LineOutput`, pieces of
+  `max-line-bytes`) and queued, each taking a permit of `room` (`max-queued-lines`) and waiting for one:
+  **backpressure, not dropping**, as for WebSockets. `tick(ASYNC)` hands out at most `lines-per-tick` per program,
+  releasing a permit each, and ends one from its queued `Ended`. Ending from the main thread (stop, unload, limit)
+  marks it, finishes its input, interrupts its thread, frees its room, drops what's queued, emits `end` while the
+  handle answers, then removes it and `dropTarget`s.
+- **Limits** (`WasmConfig`): memory through one `WasmMemoryBudget` (each instance or program reserves
+  `max-memory-mb` while it lives, so together they can't pass `max-memory-total-mb` whatever each grows to: Chicory's
+  `MemAllocStrategy` can't refuse a growth, so the cap is per instance and the budget an upper bound); instances
+  per package (held and in flight, main thread); programs per package and in all (a refused one ends `"limit"` at
+  the next tick, as connections do); queued calls per package (`submit`, from any thread). Threads run at
+  `MIN_PRIORITY`.
+- **Scope and reload**: everything is filed under its scope and ends in `scopeReleased` (instances closed,
+  programs `"unloaded"`, stubs released). `resolve` records each scope that names a module; reloading a module
+  `batch.add`s those scopes' resources (their kinds come after `WasmModuleKind` in `Kinds.all`), so they restart on
+  the new one. Don't call `batch.first` there: it marks the resource reloaded and the restart never happens.
+- **Test runs**: modules really run. `settle(millis)` is what a test's tick waits on (`NetherForgeRuntime.settled`,
+  beside the workers' `idle`): no call or compile pending, and every program `quiet` (done, waiting for room, or
+  reading with nothing queued; a line just sent it hasn't woken for doesn't count), a busy one at most a second a
+  tick. `nf.test.stub_wasm` stands a test's functions in for a module (`WasmStubCalls`): instances, calls and runs
+  completed on `session.async.mainThread`, a stubbed program's lines answered in `tick`.
+- Tests: `WasmModulesTest` (real modules from `WasmFixtures`, WAT built by wabt's wat2wasm in the test fixtures: a
+  library, an echo program, a data reader, an invalid module, SIMD), `ScriptTestRunnerTest` for stubs, the
+  conformance harness (an instance made by a module started before the harness, so the ticks it takes leave the
+  harness's connections fresh), and `WasmBenchmark` (by hand: a loop compiled and interpreted, and Stockfish's
+  `bench` from `NETHERFORGE_STOCKFISH`).
+
 ## Plugin interop (Vault and PlaceholderAPI)
 
 `nf.economy` (`balance`, `deposit`, `withdraw`: Vault, `requires:
@@ -1234,6 +1298,11 @@ sends).
   `http.allow-private-addresses`); size, time and rate limits from the owner's
   `http:` section, and for open connections how many, how many bytes a minute on the wire, how
   large a message and how long idle (`http.connections`); the owner's proxy settings never used.
+- **WebAssembly** (`nf.wasm`, see "WebAssembly" above): behind `requires.wasm`; a module imports WASI preview 1
+  and nothing else (no host function reaches the server), its only files are its own data, read-only, through
+  `WasmFiles` (never a host path); off the main thread on bounded threads at the lowest priority, its memory capped
+  per instance and in all, each call held to a time limit, counts per package; traps and timeouts close the
+  instance.
 - **Not yet here** (later items): remote databases named only by the owner
   (W2.3), plugin interop without a general escape hatch (W2.4).
 - **Plugin interop** (W2.4) has no general escape hatch: only the typed
@@ -2333,7 +2402,8 @@ goes to the runtime's workers, and comes back through one of two queues;
 nothing else makes a thread or an executor of its own (the bridge's socket
 threads, the resource pack's HTTP server (which also reads and answers web
 routes' requests) and open streams and WebSockets (`OkHttpConnections`) excepted: they block on sockets for their whole life,
-which would starve the pool). All of it is in
+which would starve the pool; and WebAssembly's `WasmThreads`, whose calls are computation that would hold up files and
+sockets, and whose programs block on their input for their whole life: see "WebAssembly"). All of it is in
 `kotlin/.../async/`.
 
 - **The Lua state is single-threaded, and checks.** `LuaHost` remembers the
@@ -2440,7 +2510,7 @@ watched), the way the real server would, and tests may call them on
   modules and the files beside it), collects its `nf.test.case`s while the body
   runs, and `run(name)` calls one as the file's code. **`advance` is
   synchronous and nested**: the test's Lua call asks Kotlin to run whole ticks
-  (workers idle, `runtime.tick()`, the fake's later-queue, `tickWorld()`), and
+  (`runtime.settled`: workers idle and WebAssembly settled; `runtime.tick()`, the fake's later-queue, `tickWorld()`), and
   handlers run inside it as they do for `nf.emit`; the runner raises the call's
   time limit (`SandboxLimits.deadlineMillis`), since it includes every tick.
   `nf.test.raise` emits along the path `RaisableEvents` (generated from the
@@ -2482,7 +2552,7 @@ watched), the way the real server would, and tests may call them on
   `server.runtime.session.x`, the server's events `server.runtime.events.x`), which records entities, poses,
   messages and commands. `server.logs` are script `log()` lines;
   `server.errors` are `ScriptError`s. `server.tick()` first waits for the
-  runtime's workers to be idle (so work a script started off the main
+  runtime to settle (`runtime.settled`: its workers idle and WebAssembly's calls done; so work a script started off the main
   thread lands on a known tick, through `Completions` in that tick's
   `ASYNC` phase), then ticks, then runs the fake's own later-queue
   (`platform.scheduler`: a bot's join) and the mobs' AI; `server.runMain()`

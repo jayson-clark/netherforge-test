@@ -2,7 +2,7 @@
 
 # nf
 
-Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.bots`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.web`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
+Everything outside the script itself. The core verbs (events, timers, tasks and waiting, saved data, the budget) are on `nf`; everything else is grouped into namespaces under it: `nf.server`, `nf.commands`, `nf.players`, `nf.bots`, `nf.worlds`, `nf.structures`, `nf.centities`, `nf.spawning`, `nf.menus`, `nf.dialogs`, `nf.items`, `nf.blocks`, `nf.recipes`, `nf.loot`, `nf.bossbars`, `nf.teams`, `nf.schedule`, `nf.economy`, `nf.placeholders`, `nf.particles`, `nf.cutscenes`, `nf.files`, `nf.text`, `nf.looks`, `nf.json`, `nf.http`, `nf.web`, `nf.wasm`, `nf.time`, `nf.random`, `nf.math` and `nf.test`. Plain functions on tables, so call them with a dot: `nf.players.online()`.
 
 A table of functions: call them with a dot.
 
@@ -43,6 +43,7 @@ A table of functions: call them with a dot.
 | [`nf.json`](nf.json.md) | JSON text to and from Lua values. |
 | [`nf.http`](nf.http.md) | Requests to web services (a Discord webhook, a status API). |
 | [`nf.web`](nf.web.md) | Web requests to the server: webhooks from stores, CI and chat services, "log in with…" callbacks, small pages and JSON for a companion site. |
+| [`nf.wasm`](nf.wasm.md) | Heavy computation in WebAssembly: a chess engine, pathfinding over a big grid, noise, compression, a library compiled from C, C++ or Rust. |
 | [`nf.time`](nf.time.md) | Dates and durations as text, in the same unit as `nf.server.unix_time()`: milliseconds. |
 | [`nf.random`](nf.random.md) | Randomness `math.random` doesn't give: generators of your own that repeat for a seed, smooth noise, and random ids. |
 | [`nf.math`](nf.math.md) | Small arithmetic `math` doesn't have, for animating by hand: blending, clamping, rescaling and easing. |
@@ -80,7 +81,7 @@ end)
 
 ### `nf.task(callback, ...)` {#task}
 
-Starts a task: `callback` runs now, with the extra arguments, until it first waits (`nf.wait`, `nf.wait_until`, `nf.wait_for`, `dialog:ask` or an asynchronous function like `nf.bots.join`, `nf.worlds.copy`, `nf.http.request`, `bot:walk_to`, `bot:break_block`, `world:fill_gradually`, `world:locate_biome`, `world:place_gradually`, `database:query`, `database:execute` or `database:transaction` called without its callback), and carries on from there when the wait is over. Only a task can wait; event handlers can't, because whether an event is cancelled or stopped has to be known when it returns, so a handler that needs to wait starts a task. Each time a task carries on it gets the script's whole instruction budget again. A task belongs to the script that started it and ends when that script unloads, when `cancel()` is called, or when the handle it waits on goes. One that errors is logged with its file and line and ends; the code that started it carries on either way.
+Starts a task: `callback` runs now, with the extra arguments, until it first waits (`nf.wait`, `nf.wait_until`, `nf.wait_for`, `dialog:ask` or an asynchronous function like `nf.bots.join`, `nf.worlds.copy`, `nf.http.request`, `nf.wasm.instantiate`, `nf.wasm.run`, `bot:walk_to`, `bot:break_block`, `world:fill_gradually`, `world:locate_biome`, `world:place_gradually`, `database:query`, `database:execute`, `database:transaction`, `wasminstance:call` or `wasminstance:call_text` called without its callback), and carries on from there when the wait is over. Only a task can wait; event handlers can't, because whether an event is cancelled or stopped has to be known when it returns, so a handler that needs to wait starts a task. Each time a task carries on it gets the script's whole instruction budget again. A task belongs to the script that started it and ends when that script unloads, when `cancel()` is called, or when the handle it waits on goes. One that errors is logged with its file and line and ends; the code that started it carries on either way.
 
 | Parameter | Type | |
 | --- | --- | --- |
@@ -149,7 +150,7 @@ Pauses the task until `event` next happens on `handle` (or, for `nf`, anywhere o
 
 | Parameter | Type | |
 | --- | --- | --- |
-| `handle` | [`Centity`](centity.md)`\|`[`Node`](node.md)`\|`[`Entity`](entity.md)`\|`[`World`](world.md)`\|`[`ProjectBlock`](projectblock.md)`\|`[`Menu`](menu.md)`\|`[`Slot`](slot.md)`\|`[`MenuTemplate`](menutemplate.md)`\|`[`Dialog`](dialog.md)`\|`[`Button`](button.md)`\|`[`ProjectItem`](projectitem.md)`\|`[`Effect`](effect.md)`\|`[`HttpStream`](httpstream.md)`\|`[`WebSocket`](websocket.md)`\|`[`OAuthFlow`](oauthflow.md)`\|`[`Cutscene`](cutscene.md)`\|`[`nf`](nf.md) | What the event happens to, as for `handle:on`; `nf` for a server-wide event. |
+| `handle` | [`Centity`](centity.md)`\|`[`Node`](node.md)`\|`[`Entity`](entity.md)`\|`[`World`](world.md)`\|`[`ProjectBlock`](projectblock.md)`\|`[`Menu`](menu.md)`\|`[`Slot`](slot.md)`\|`[`MenuTemplate`](menutemplate.md)`\|`[`Dialog`](dialog.md)`\|`[`Button`](button.md)`\|`[`ProjectItem`](projectitem.md)`\|`[`Effect`](effect.md)`\|`[`HttpStream`](httpstream.md)`\|`[`WebSocket`](websocket.md)`\|`[`OAuthFlow`](oauthflow.md)`\|`[`WasmProcess`](wasmprocess.md)`\|`[`Cutscene`](cutscene.md)`\|`[`nf`](nf.md) | What the event happens to, as for `handle:on`; `nf` for a server-wide event. |
 | `event` | `string` | The event's name, as `handle:on` takes it. |
 | `filter` (optional) | `fun(event: `[`Event`](types.md#event)`): boolean` | Waits for the first event this returns `true` for; the others pass by. Run as the task's code, so an error in it ends the task. |
 

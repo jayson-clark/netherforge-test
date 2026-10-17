@@ -398,6 +398,16 @@ export const KIND_CONTRIBUTIONS = {
     message:
       "Name it NNN_name, like 001_init: they run in order on the package's own database, nf.db().",
   },
+  wasm: {
+    title: 'WebAssembly',
+    one: 'WebAssembly module',
+    group: 'code',
+    icon: 'atom',
+    tone: 'amber',
+    message:
+      'Scripts run it by this id, e.g. nf.wasm.instantiate("noise"). Copy its module.wasm (built for wasm32-wasip1) into the folder next.',
+    view: lazy(() => import('@/editors/wasm/WasmEditor').then((m) => ({ default: m.WasmEditor }))),
+  },
 } satisfies KindEntries
 
 /** The explorer's sections, in order: every kind is in one (its entry's `group`). */

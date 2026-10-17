@@ -37,6 +37,7 @@ import dev.netherforge.format.project.ImageInfo
 import dev.netherforge.format.project.Kinds
 import dev.netherforge.format.recipe.Ingredient
 import dev.netherforge.format.ref.RefTarget
+import dev.netherforge.format.wasm.WasmInfo
 import kotlinx.serialization.descriptors.PolymorphicKind
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -97,6 +98,7 @@ private val EDITOR_RESULTS = listOf(
     TerrainPreviewResult.serializer().descriptor,
     ResourcePacksPreview.serializer().descriptor,
     ImageInfo.serializer().descriptor,
+    WasmInfo.serializer().descriptor,
     FitResult.serializer().descriptor,
     LootPreview.serializer().descriptor,
     SettingValueResult.serializer().descriptor,

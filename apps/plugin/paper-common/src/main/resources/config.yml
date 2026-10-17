@@ -113,6 +113,34 @@ http:
     max-queued-messages: 1000
     messages-per-tick: 100
 
+# How WebAssembly modules (nf.wasm, a package's wasm/<id>/, for packages that
+# declare "requires": { "wasm": true }) run. They run off the main thread with no
+# access to the server, the network or files but their own data. `threads` runs
+# every call, run and compile, each using at most one core; a started program holds
+# a thread of its own while it runs, at most max-processes-total. An instance or
+# program may use max-memory-mb of memory, and all of them together
+# max-memory-total-mb (each counted at the most it may grow to). A call or run is
+# stopped after max-call-seconds. A program's output waits for scripts, at most
+# max-queued-lines lines (it's paused past that), handed over lines-per-tick a tick.
+# compile: false runs every module in the interpreter, many times slower, for a
+# JVM where making classes is a problem. Read when the server starts; dev servers
+# read it too.
+wasm:
+  threads: 2
+  compile: true
+  max-module-mb: 64
+  max-memory-mb: 256
+  max-memory-total-mb: 1024
+  max-call-seconds: 10
+  max-queued-calls-per-package: 64
+  max-instances-per-package: 8
+  max-processes-per-package: 2
+  max-processes-total: 4
+  max-output-bytes: 1048576
+  max-line-bytes: 65536
+  max-queued-lines: 1000
+  lines-per-tick: 100
+
 # MySQL and PostgreSQL servers that scripts may use, each under a name:
 # nf.db("network"). A script names a connection and never sees its host or
 # password. A connection opens only to the packages (by namespace) listed under

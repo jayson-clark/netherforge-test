@@ -11,6 +11,7 @@ import { nfBlocks } from './blocks.ts'
 import { nfRecipes } from './recipes.ts'
 import { nfHttp } from './http.ts'
 import { nfWeb } from './web.ts'
+import { nfWasm } from './wasm.ts'
 import { nfBots } from './bots.ts'
 import { nfLoot } from './loot.ts'
 import { nfTeams } from './teams.ts'
@@ -450,6 +451,7 @@ const namespaces = [
   nfJson,
   nfHttp,
   nfWeb,
+  nfWasm,
   nfTime,
   nfRandom,
   nfMath,

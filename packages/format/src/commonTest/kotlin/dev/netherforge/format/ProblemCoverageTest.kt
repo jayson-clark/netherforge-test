@@ -29,6 +29,7 @@ class ProblemCoverageTest {
     private fun plugin(test: String) = Elsewhere("$runtime/$test.kt", "the plugin's runtime reports it, not a project load")
 
     private val gameData = "it needs the game's data, and goldens load without any"
+    private val wasmFacts = "it needs what a host read of a module (WasmInfo), and goldens read no module"
 
     private val testedElsewhere: Map<String, Elsewhere> = mapOf(
         // The real feature table may gate nothing a project could rely on; FeaturesTest uses a table of its own.
@@ -72,6 +73,12 @@ class ProblemCoverageTest {
         "resource_pack.picture-size" to unit("ResourcePackTest", "it needs a picture's size, which goldens don't read"),
         "resource_pack.too-many" to unit("ResourcePackTest", "it takes thousands of skins, too many for a golden file"),
         "resource_pack.too-many-glyphs" to unit("ResourcePackTest", "it takes thousands of glyphs, too many for a golden file"),
+        "wasm.invalid" to unit("WasmTest", wasmFacts),
+        "wasm.import" to unit("WasmTest", wasmFacts),
+        "wasm.threads" to unit("WasmTest", wasmFacts),
+        "wasm.memory" to unit("WasmTest", wasmFacts),
+        "wasm.exports" to unit("WasmTest", wasmFacts),
+        "runtime.wasm" to plugin("WasmModulesTest"),
         "terrain.script-failed" to plugin("TerrainTest"),
         "migration.failed" to plugin("PackageDatabaseTest"),
         "runtime.minecraft-unsupported" to plugin("ReloadTest"),

@@ -68,6 +68,22 @@
     "requires": "web"
   },
   {
+    "function": "nf.wasm.functions",
+    "requires": "wasm"
+  },
+  {
+    "function": "nf.wasm.instantiate",
+    "requires": "wasm"
+  },
+  {
+    "function": "nf.wasm.run",
+    "requires": "wasm"
+  },
+  {
+    "function": "nf.wasm.start",
+    "requires": "wasm"
+  },
+  {
     "function": "Player:ban",
     "requires": "moderation"
   },

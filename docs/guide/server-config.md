@@ -19,6 +19,9 @@ http:
 web:
   enabled: false
 
+wasm:
+  threads: 2
+
 databases: {}
 
 schedules:
@@ -184,6 +187,55 @@ structures:
 A placement reads a build one part at a time, so a big build is never all in
 memory. A job stops when the script that started it unloads (what it placed
 stays). `/nf scripts` counts each script's under `gradual`.
+
+## WebAssembly
+
+A package that declares `"requires": { "wasm": true }` runs its
+[WebAssembly modules](./wasm.md) (`nf.wasm`). They run off the main thread,
+with no access to the server, the network or any file but their own data, and
+this section holds what they may take of the machine:
+
+```yaml
+wasm:
+  threads: 2
+  compile: true
+  max-module-mb: 64
+  max-memory-mb: 256
+  max-memory-total-mb: 1024
+  max-call-seconds: 10
+  max-queued-calls-per-package: 64
+  max-instances-per-package: 8
+  max-processes-per-package: 2
+  max-processes-total: 4
+  max-output-bytes: 1048576
+  max-line-bytes: 65536
+  max-queued-lines: 1000
+  lines-per-tick: 100
+```
+
+| Key                            | Meaning                                                                                                                                                                   | Default   |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `threads`                      | Threads that compile modules and run every call and run, one core each at most: what all of them together can take of the CPU. Calls past them wait their turn.           | `2`       |
+| `compile`                      | Whether modules are compiled into Java classes. Off, they run in the interpreter, tens of times slower, for a JVM where making classes is a problem.                      | `true`    |
+| `max-module-mb`                | The largest `module.wasm` the server compiles.                                                                                                                            | `64`      |
+| `max-memory-mb`                | The most memory one instance or program may grow to. A module that starts with more can't be run; one that asks for more past it is refused it (its `memory.grow` fails). | `256`     |
+| `max-memory-total-mb`          | The most all instances and programs together may hold, each counted at `max-memory-mb` while it lives. Past it, a new one fails at once (`nil, err`) or ends `"limit"`.   | `1024`    |
+| `max-call-seconds`             | How long one call or run may take. Past it, it's stopped, `nil, err`, and the instance is closed.                                                                         | `10`      |
+| `max-queued-calls-per-package` | Calls and runs one package may have waiting or running at once; past it, a new one fails at once.                                                                         | `64`      |
+| `max-instances-per-package`    | Instances one package may hold.                                                                                                                                           | `8`       |
+| `max-processes-per-package`    | Programs (`nf.wasm.start`) one package may have running. Each holds a thread of its own while it runs.                                                                    | `2`       |
+| `max-processes-total`          | Programs running on the server, whichever package's.                                                                                                                      | `4`       |
+| `max-output-bytes`             | What a run keeps of each stream it prints to, and the most text `call_text` may answer.                                                                                   | `1048576` |
+| `max-line-bytes`               | The longest line a program may be sent, and the longest it prints in one `output` event (a longer one comes in pieces).                                                   | `65536`   |
+| `max-queued-lines`             | Lines a program printed that scripts haven't taken yet; past it, the program is paused until they do, so nothing is dropped.                                              | `1000`    |
+| `lines-per-tick`               | Lines handed to scripts per program each tick.                                                                                                                            | `100`     |
+
+A program runs on a thread of its own and keeps it while it waits for input,
+so `max-processes-total` is also how many threads programs may hold. Modules'
+threads run at the lowest priority, so where the operating system honours it
+the server's own threads come first. Everything a script made of a module ends
+when the script unloads. `/nf scripts` counts each script's under
+`wasm instances` and `wasm programs`.
 
 ## Web routes
 

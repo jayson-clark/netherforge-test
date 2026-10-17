@@ -21,6 +21,7 @@ import dev.netherforge.format.project.ProjectManifest
 import dev.netherforge.format.project.ProjectSnapshot
 import dev.netherforge.format.project.ProjectSource
 import dev.netherforge.format.project.Projects
+import dev.netherforge.format.wasm.WasmInfo
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
@@ -176,6 +177,10 @@ class ProjectFiles(private val configured: Path, private val resolves: Boolean, 
     override val readsImages: Boolean get() = true
 
     override fun image(path: String): ImageInfo? = sourceOf(path)?.let { (source, local) -> source.image(local) }
+
+    override val readsWasm: Boolean get() = true
+
+    override fun wasm(path: String): WasmInfo? = sourceOf(path)?.let { (source, local) -> source.wasm(local) }
 
     fun readBytes(path: String): ByteArray? = sourceOf(path)?.let { (source, local) -> source.readBytes(local) }
 

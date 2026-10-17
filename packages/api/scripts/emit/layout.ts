@@ -111,8 +111,8 @@ export const CATEGORIES: Category[] = [
     ],
   },
   {
-    title: 'Files, data and the web',
-    doc: 'Files, databases, web requests both ways and other plugins.',
+    title: 'Files, data, the web and computation',
+    doc: 'Files, databases, web requests both ways, other plugins and WebAssembly modules.',
     pages: [
       'nf.files',
       'File',
@@ -126,6 +126,9 @@ export const CATEGORIES: Category[] = [
       'OAuthFlow',
       'nf.economy',
       'nf.placeholders',
+      'nf.wasm',
+      'WasmInstance',
+      'WasmProcess',
     ],
   },
   {
@@ -159,6 +162,7 @@ export const FUNCTION_GROUPS: Record<string, Group[]> = {
     group('Players and their input', 'player raise click release input shown'),
     group('Worldgen', 'terrain'),
     group('The network', 'connections accept receive sent disconnect request oauth_token'),
+    group('WebAssembly', 'stub_wasm'),
   ],
   nf: [
     group('Timers and tasks', 'after every task wait wait_until wait_for instructions_left'),

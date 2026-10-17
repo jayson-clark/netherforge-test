@@ -214,7 +214,7 @@ another field) and `exports` (kind folder → ids).
 
 ## Requirements (declared capabilities)
 
-`netherforge.json`'s `requires` (`ProjectRequires`: `moderation`, `db`,
+`netherforge.json`'s `requires` (`ProjectRequires`: `moderation`, `db`, `web`, `bots`, `wasm`,
 `http` hosts, `plugins`; docs/format/project.md#requirements) is what a
 package's scripts need that a package must ask for. `project/Requirement.kt`
 is the model every reader shares: `Requirement` (`Moderation`, `Db`,
@@ -696,6 +696,22 @@ gap in the grid; `build.size`, past `Builds.MAX_PARTS` along an axis); `crossChe
 which `@netherforge/terrain-preview/parts` repeats in TS from the generated `BUILD_LIMITS`. `EmptyBlocks.IDS` (generated
 `EMPTY_BLOCKS`) is the one list of blocks that mean "nothing here": a terrain's decorations leave them out and the
 structure pictures don't draw them. Cases: `BuildTest`.
+
+**WebAssembly modules** (`wasm/<id>/`, `WasmModuleKind`, `wasm/WasmModuleFile.kt`): a `FilesKind`
+(`Contents.BINARY`, `Layout.Folder("module.wasm")`) whose other files are its `data`, read by the module from its
+root at run time. Format still never reads a binary file: what checking needs of the module comes from the host
+as **facts** (`WasmInfo`: imports, exports with their types, memory, or why it isn't a module), through
+`ProjectSource.wasm(path)` / `readsWasm`, the way pixels come through `image`. The facts are made by format's own
+`WasmReader.read(bytes)` (common code: the header, then each section by its size, reading only types, imports,
+functions, memory, exports and start; vectors' counts held to their sections' bytes so a forged count can't make a
+huge list), which the plugin's `DiskProjectSource` calls and the CLI calls through the JS export `readWasm` before
+`loadProject(..., wasmJson)`; the editor passes none (its screen calls `readWasm` itself), so its problems come from
+the dev server. `crossCheck` (facts are `KindContext`'s) reports `wasm.invalid`, `wasm.import` (anything but
+`WasmImports.FUNCTIONS` from `wasi_snapshot_preview1`), `wasm.threads` (a memory import, `wasi.thread-spawn`, shared
+memory), `wasm.memory` (memory64) and `wasm.exports` (a warning: no function). `WasmImports` is the one list the
+runtime's compile holds imports to as well. Goldens hold no facts, so these are `WasmTest`'s (ProblemCoverageTest's
+`testedElsewhere`). It's exportable; it reloads before modules (`Kinds.all`), so a script restarted by it finds it
+compiled.
 
 **Structures that generate (W5.1).** `structures/<id>.json` beside the `.nbt`
 is the one document in a binary folder: `Layout.SingleFile(".nbt", companion =

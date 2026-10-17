@@ -144,7 +144,7 @@ describe('the examples in docs/format', () => {
       const files: Record<string, string> = { 'netherforge.json': MANIFEST }
       files[file] = block.text
       const outline = JSON.parse(
-        nf.loadProject(JSON.stringify(files), null, null, null),
+        nf.loadProject(JSON.stringify(files), null, null, null, null),
       ) as ProjectOutline
       const problems = outline.problems.filter(
         (it) => !NEIGHBOURS.some((prefix) => it.code?.startsWith(prefix)),

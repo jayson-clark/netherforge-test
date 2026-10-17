@@ -393,6 +393,10 @@ local events = {
     ["complete"] = { owner = "OAuthFlow", cancellable = false, options = {}, writable = {} },
     ["fail"] = { owner = "OAuthFlow", cancellable = false, options = {}, writable = {} },
   },
+  ["WasmProcess"] = {
+    ["output"] = { owner = "WasmProcess", cancellable = false, options = {}, writable = {} },
+    ["end"] = { owner = "WasmProcess", cancellable = false, options = {}, writable = {} },
+  },
   ["Cutscene"] = {
     ["end"] = { owner = "Cutscene", cancellable = false, options = {}, writable = {} },
     ["cue"] = { owner = "Cutscene", cancellable = false, options = {}, writable = {} },
@@ -426,6 +430,7 @@ local event_functions = {
   HttpStream = { "on", "once" },
   WebSocket = { "on", "once" },
   OAuthFlow = { "on", "once" },
+  WasmProcess = { "on", "once" },
   Cutscene = { "on", "once" },
 }
 

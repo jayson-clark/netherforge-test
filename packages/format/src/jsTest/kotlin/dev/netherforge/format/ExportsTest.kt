@@ -122,6 +122,7 @@ class ExportsTest {
                 ),
                 null,
                 null,
+                null,
                 null
             )
         )
@@ -159,7 +160,7 @@ class ExportsTest {
         assertEquals(emptyList<JsonElement>(), second.getValue("locations").jsonArray.toList())
         assertEquals(emptyList<JsonElement>(), second.getValue("git").jsonArray.toList())
         // A fetch that failed is the problem it gives, at the dependency.
-        val outline = obj(loadProject(app, inputs, null, null))
+        val outline = obj(loadProject(app, inputs, null, null, null))
         assertTrue("package.git" in codes(outline["problems"]), outline["problems"].toString())
         assertTrue("lib" in outline.getValue("packages").jsonObject)
     }
@@ -416,7 +417,7 @@ class ExportsTest {
         assertFailsWith<Exception> { readSetting("{}", "1", typed = true) }
         assertNull(obj(classify("netherforge.json"))["kind"], "a project file is no resource kind")
         assertTrue(
-            obj(loadProject(files(), null, null, null)).getValue("problems").jsonArray.isNotEmpty(),
+            obj(loadProject(files(), null, null, null, null)).getValue("problems").jsonArray.isNotEmpty(),
             "no manifest is a problem, not a throw"
         )
     }
@@ -429,10 +430,21 @@ class ExportsTest {
             "resource_packs/skin/pack.json" to """{"textures":{"gui/container/inventory":"gui/inventory.png"}}""",
             "resource_packs/skin/textures/gui/inventory.png" to null
         )
-        fun problemsFor(sizes: String?) = codes(obj(loadProject(project, null, null, sizes))["problems"])
+        fun problemsFor(sizes: String?) = codes(obj(loadProject(project, null, null, sizes, null))["problems"])
         assertEquals(listOf("resource_pack.replace-size"), problemsFor("""{"resource_packs/skin/textures/gui/inventory.png":[128,128]}"""))
         assertEquals(emptyList(), problemsFor("""{"resource_packs/skin/textures/gui/inventory.png":[256,256]}"""))
         // Sizes the host didn't measure aren't a problem the host can be told about.
+        assertEquals(emptyList(), problemsFor(null))
+    }
+
+    @Test
+    fun readWasmGivesAModulesFactsWhichLoadProjectChecks() {
+        val junk = readWasm("not wasm".encodeToByteArray())
+        assertTrue(obj(junk).getValue("error").jsonPrimitive.content.startsWith("it isn't a WebAssembly module"))
+        val project = files("netherforge.json" to manifest, "wasm/engine/module.wasm" to null)
+        fun problemsFor(wasm: String?) = codes(obj(loadProject(project, null, null, null, wasm))["problems"])
+        assertEquals(listOf("wasm.invalid"), problemsFor("""{"wasm/engine/module.wasm":$junk}"""))
+        // A module no one read (the editor's case) is the dev server's to check.
         assertEquals(emptyList(), problemsFor(null))
     }
 }

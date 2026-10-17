@@ -156,6 +156,20 @@ rewritten (`examples/basic` shows the new shape of every kind of script).
   They're served on the resource pack's port, behind the owner's reverse proxy
   for HTTPS. `/nf requires` lists every route. In a test, `nf.test.request`
   makes requests and `nf.test.oauth_token` stands in for a token endpoint.
+- **WebAssembly modules.** A package that declares `"requires": { "wasm": true }`
+  runs heavy computation in WebAssembly (`wasm/<id>/module.wasm`, built for
+  WASI preview 1, single-threaded) off the main thread: `nf.wasm.instantiate`
+  for a library whose functions it calls (`instance:call`, `call_text`, text
+  through the module's own `alloc`), `nf.wasm.run` for a program run to its end
+  with its input, and `nf.wasm.start` for one that keeps running and talks line
+  by line (`send`, `output` events: a UCI chess engine). Modules run on
+  Chicory, compiled into Java classes as the project loads, nothing native; a
+  module imports WASI and nothing else, and reads, never writes, the data files
+  beside it. The owner limits threads, memory, time per call, instances and
+  programs in `config.yml`'s `wasm:`. `netherforge check` and the dev server
+  report a module the server can't run (`wasm.*`, `runtime.wasm`), the editor
+  shows what a module exports, and `nf.test.stub_wasm` stands in for one in a
+  test. Stockfish runs at about 20,000 nodes a second.
 
 - **Bots say what they're looking at.** `bot_state` has a `target`: the block
   (with its face and state) or entity in the bot's crosshair within reach,

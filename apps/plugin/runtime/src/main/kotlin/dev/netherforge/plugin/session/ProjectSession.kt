@@ -68,6 +68,7 @@ import dev.netherforge.plugin.script.Scripts
 import dev.netherforge.plugin.settings.OwnerSettings
 import dev.netherforge.plugin.store.PackageSchemas
 import dev.netherforge.plugin.testing.ScriptTests
+import dev.netherforge.plugin.wasm.WasmModules
 import dev.netherforge.plugin.web.OAuthFlows
 import dev.netherforge.plugin.web.WebRoutes
 import dev.netherforge.plugin.world.BlockData
@@ -239,6 +240,9 @@ class ProjectSession internal constructor(
 
     /** "Log in with…" flows (`nf.web.oauth`), each with a route of its own (after [web], so they end before it). */
     val oauth = service(OAuthFlows(scripts, web, async, { http.fetcher }, { ticks }, testing = config.testing != null))
+
+    /** The project's WebAssembly modules, compiled as it loads, and the instances and programs scripts run of them. */
+    val wasm = service(WasmModules(this))
 
     /** The other plugins packages declared, whether the server has them (a problem for each it doesn't), and the check before a call into one. */
     /** The bots scripts join (`nf.bots`): they leave with the scope that joined them. */

@@ -17,6 +17,7 @@ import dev.netherforge.plugin.api.TestDisconnectOptions
 import dev.netherforge.plugin.api.TestInputKeys
 import dev.netherforge.plugin.api.TestRequestOptions
 import dev.netherforge.plugin.api.TestShownOptions
+import dev.netherforge.plugin.api.TestWasmStub
 import dev.netherforge.plugin.api.TestWebResponse
 import dev.netherforge.plugin.api.uuidOrNull
 import dev.netherforge.plugin.http.Connection
@@ -181,6 +182,12 @@ internal class NfTestImpl(private val session: ProjectSession) : NfTestApi {
     override fun oauthToken(caller: Caller, flow: LuaHandle.OAuthFlow, response: LuaValue) {
         val found = session.oauth.find(flow.number) ?: throw LuaApiException("bad argument 'flow' (it has gone)")
         found.testToken = response.json() as? JsonObject ?: throw LuaApiException("bad argument 'response' (a table of fields expected)")
+    }
+
+    override fun stubWasm(caller: Caller, module: String, stub: TestWasmStub) {
+        harness
+        val scope = caller.scope
+        session.wasm.stub(scope, session.wasm.resolve(scope, module, "nf.test.stub_wasm"), stub)
     }
 
     /** The connection [handle] names, from `nf.test.connections`. */

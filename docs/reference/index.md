@@ -112,9 +112,9 @@ Vectors and locations, text, looks, time, randomness and maths.
 - [nf.math](nf.math.md): Small arithmetic `math` doesn't have, for animating by hand: blending, clamping, rescaling and easing
 - [nf.json](nf.json.md): JSON text to and from Lua values
 
-## Files, data and the web
+## Files, data, the web and computation
 
-Files, databases, web requests both ways and other plugins.
+Files, databases, web requests both ways, other plugins and WebAssembly modules.
 
 - [nf.files](nf.files.md): Files in the one directory scripts may keep things in: the only state a script has that survives a restart
 - [File](file.md): A path in the scripts' data directory (`plugins/NetherForge/data/`, on the editor's dev server too)
@@ -128,6 +128,9 @@ Files, databases, web requests both ways and other plugins.
 - [OAuthFlow](oauthflow.md): A "log in with…" flow, from `nf.web.oauth`: `begin` a login for a player, and hear its `complete` or `fail`
 - [nf.economy](nf.economy.md): Players' money, as the server's economy plugin keeps it, through [Vault](https://www.spigotmc.org/resources/vault.34315/): whichever economy is registered with it (EssentialsX, CMI, …) answers, so a project never names one
 - [nf.placeholders](nf.placeholders.md): Placeholders, through [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/): fill in the `%player_name%`-style placeholders every plugin offers, and offer your own as `%<namespace>_<key>%` to every plugin that reads them (scoreboards, chat formats, holograms)
+- [nf.wasm](nf.wasm.md): Heavy computation in WebAssembly: a chess engine, pathfinding over a big grid, noise, compression, a library compiled from C, C++ or Rust
+- [WasmInstance](wasminstance.md): An instance of a WebAssembly module, from `nf.wasm.instantiate`: its own memory, kept from call to call, so a function can build state another reads
+- [WasmProcess](wasmprocess.md): A program started with `nf.wasm.start`: `send` it lines and hear each line it prints as `output`, then its one `end`
 
 ## Testing
 
@@ -182,6 +185,7 @@ Some functions only work once the project has declared that it uses them, so who
 | `plugin:placeholderapi` | use another plugin on the server | `"requires": { "plugins": ["placeholderapi"] }` in `netherforge.json` | [`nf.placeholders.parse`](nf.placeholders.md#parse), [`nf.placeholders.register`](nf.placeholders.md#register) |
 | `http` | make requests to other servers, only to the hosts the package lists | each host it calls in `"requires": { "http": [...] }` in `netherforge.json` | [`nf.http.request`](nf.http.md#request), [`nf.http.stream`](nf.http.md#stream), [`nf.http.websocket`](nf.http.md#websocket) |
 | `web` | answer web requests to the server under the package's own path | `"requires": { "web": true }` in `netherforge.json` | [`nf.web.route`](nf.web.md#route), [`nf.web.url`](nf.web.md#url), [`nf.web.oauth`](nf.web.md#oauth) |
+| `wasm` | run the package's WebAssembly modules, off the main thread within the server owner's limits | `"requires": { "wasm": true }` in `netherforge.json` | [`nf.wasm.functions`](nf.wasm.md#functions), [`nf.wasm.instantiate`](nf.wasm.md#instantiate), [`nf.wasm.run`](nf.wasm.md#run), [`nf.wasm.start`](nf.wasm.md#start) |
 
 ## Editor support
 
