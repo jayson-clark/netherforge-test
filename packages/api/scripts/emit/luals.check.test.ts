@@ -212,12 +212,16 @@ describe.skipIf(!binary)(
 
     // The project templates (what the editor's "Add template" offers) and the showcase with its
     // library are what users learn from: their scripts and their tests stay clean as the stubs change.
-    it.each(['lumen_vale', 'vale_lore', 'template_minigame', 'template_shop', 'template_rpg_mob'])(
-      'finds nothing wrong with examples/%s',
-      (name) => {
-        expect(check(path.join(root, 'examples', name))).toEqual([])
-      },
-    )
+    it.each([
+      'lumen_vale',
+      'vale_lore',
+      'cinema',
+      'template_minigame',
+      'template_shop',
+      'template_rpg_mob',
+    ])('finds nothing wrong with examples/%s', (name) => {
+      expect(check(path.join(root, 'examples', name))).toEqual([])
+    })
 
     it('finds nothing wrong with a script using every class', () => {
       expect(check(probe)).toEqual([])

@@ -334,4 +334,40 @@ class ScreenTest {
             assertEquals(LuaChecks.DONE, server.runChecks())
         }
     }
+
+    @Test
+    fun `the cinema example, a player who joins is seated, presses Play on the controls, and the video plays`() {
+        TestServer(TestServer.example("cinema"), start = false).use { server ->
+            val alex = server.player("Alex")
+            server.start()
+            assertEquals(emptyList(), server.errors.map { it.message })
+            assertEquals(emptyList(), server.runtime.session.problems().filter { it.severity == dev.netherforge.format.Severity.ERROR })
+            server.platform.raise.playerJoin(dev.netherforge.plugin.platform.GameEvent.PlayerJoin(alex.ref, false, null))
+            server.tick(25)
+            assertEquals(Location("world", 0.5, 65.0, 1.5), alex.location.copy(yaw = 0.0, pitch = 0.0))
+            val screens = server.runtime.session.screens
+            assertEquals(12 + 4, server.platform.screens.frames.size, "a frame a map: 4 by 3 and 2 by 2")
+            assertEquals(null, screens.find("cinema")!!.playbacks[null])
+
+            // Aim at the middle of Play (pixel 68, 84 of the controls, hung facing east at -6 68 7) and swing.
+            val target = doubleArrayOf(-5.9375, 69.0 - 84.0 / 128, 8.0 - 68.0 / 128)
+            val eye = doubleArrayOf(0.5, 65.0 + 1.62, 1.5)
+            val d = DoubleArray(3) { target[it] - eye[it] }
+            val length = kotlin.math.sqrt(d.sumOf { it * it })
+            val yaw = Math.toDegrees(kotlin.math.atan2(-d[0], d[2]))
+            val pitch = -Math.toDegrees(kotlin.math.asin(d[1] / length))
+            alex.location = alex.location.copy(yaw = yaw, pitch = pitch)
+            assertTrue(server.runtime.events.playerInteract(alex.ref, ClickButton.LEFT, null, null, null, "main_hand"))
+            val show = assertNotNullOrFail(screens.find("cinema")!!.playbacks[null])
+            assertEquals("intro", show.video)
+            assertEquals(60, show.header.frames)
+            server.tick(100)
+            assertEquals(show, screens.find("cinema")!!.playbacks[null], "still playing at five seconds")
+            server.tick(30)
+            // Sixty frames at 10 a second is six seconds: done, and the poster's back.
+            assertEquals(null, screens.find("cinema")!!.playbacks[null])
+        }
+    }
+
+    private fun <T : Any> assertNotNullOrFail(value: T?): T = value ?: throw AssertionError("expected a value")
 }

@@ -335,6 +335,10 @@ class FakePlatform(
                 "minecraft:chest" to BlockInfo(),
                 "minecraft:barrel" to BlockInfo(),
                 "minecraft:dark_oak_planks" to BlockInfo(),
+                // What examples/cinema's plaza and hall are made of.
+                "minecraft:smooth_stone" to BlockInfo(),
+                "minecraft:polished_blackstone_bricks" to BlockInfo(),
+                "minecraft:red_carpet" to BlockInfo(),
                 "minecraft:dark_oak_log" to BlockInfo(
                     properties = mapOf("axis" to listOf("x", "y", "z")),
                     defaults = mapOf("axis" to "y")
