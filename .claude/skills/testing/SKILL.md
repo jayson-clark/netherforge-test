@@ -58,7 +58,7 @@ test` and the editor's Tests panel run them with `:plugin:test-runner`
      the example is exercised, and `nf.test` is checked on the real project).
      The **project templates** (`examples/template_minigame`, `template_shop`,
      `template_rpg_mob`, what the editor's Add template puts into a project,
-     see editor-ui) are run the same way (`ExampleTestsTest`, each on its own),
+     see editor-packages) are run the same way (`ExampleTestsTest`, each on its own),
      are loaded clean and canonical by `GoldenTest` like every example (and
      `templatesExportWhatTheyHaveAndHaveTests` holds each to exporting every
      resource it has and having `*_test.lua` tests), are checked by LuaLS

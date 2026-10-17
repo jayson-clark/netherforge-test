@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
+import { MemoryBackend } from '@/testing/backend/memory'
 import { createUpdates } from './updates'
 
 const update = { version: '9.9.9', currentVersion: '0.1.0', notes: 'New', date: null }

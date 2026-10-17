@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AppInfo } from '@/core/backend/types'
 import { AppProvider } from '@/state/providers'
 import { openExampleApp, type ExampleOptions } from '@/testing/workspace'
-import { useAppMenus } from '../menus/useAppMenus'
+import { useAppMenus } from '@/workbench/menus/useAppMenus'
 import { titleBarOf } from './TitleBar'
 import { Toolbar } from './Toolbar'
 

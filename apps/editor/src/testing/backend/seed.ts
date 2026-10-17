@@ -5,7 +5,8 @@
  * files come in raw; PNGs and structures (`.nbt`) as data URLs (`?inline`),
  * decoded to bytes.
  */
-import { base64ToBytes, type FileContents } from './memory'
+import { base64ToBytes } from '@/core/backend/base64'
+import type { FileContents } from './memory'
 
 const texts = import.meta.glob(
   [

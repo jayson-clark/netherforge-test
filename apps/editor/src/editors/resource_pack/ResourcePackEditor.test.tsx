@@ -1,7 +1,7 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { MemoryBackend } from '@/core/backend/memory'
+import type { MemoryBackend } from '@/testing/backend/memory'
 import { modelOf } from '@/core/store/documents'
 import type { ResourcePackFile } from '@/core/format'
 import { AppProvider, type AppStores } from '@/state/providers'

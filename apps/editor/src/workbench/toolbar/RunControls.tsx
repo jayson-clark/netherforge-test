@@ -4,18 +4,18 @@
  * contribute for the active resource (Spawn at me for a centity).
  */
 import { useState } from 'react'
-import { create } from 'zustand'
 import type { ServerPhase } from '@/core/backend/types'
-import { useApp, useRun, useWorkspace, type AppStores } from '@/state/providers'
+import { useApp, useRun, useWorkspace } from '@/state/providers'
 import { Button } from '@/ui/Button'
 import { cx } from '@/ui/cx'
 import { Modal } from '@/ui/dialogs'
 import { Check } from '@/ui/fields'
 import { Spacer } from '@/ui/layout'
-import { IS_MAC } from '../shortcuts'
-import { runCommand, TOOLBAR_COMMANDS, type CommandContext } from '../menus/commands'
-import { askToTrust } from '../TrustBanner'
+import { IS_MAC } from '@/workbench/shortcuts'
+import type { CommandContext } from '@/workbench/menus/commands'
+import { runCommand, TOOLBAR_COMMANDS } from '@/workbench/menus/runCommand'
 import styles from './RunControls.module.css'
+import { startServer, useEulaPrompt } from './startServer'
 
 const PHASE_LABEL: Record<ServerPhase, string> = {
   stopped: 'Stopped',
@@ -24,21 +24,6 @@ const PHASE_LABEL: Record<ServerPhase, string> = {
   running: 'Running',
   stopping: 'Stopping',
   crashed: 'Crashed',
-}
-
-/** Whether the EULA is being asked for, which the Run menu's Start can do too. */
-const useEulaPrompt = create<{ open: boolean }>(() => ({ open: false }))
-
-/**
- * Starts the dev server, asking to trust the project first if it isn't (the backend refuses an
- * untrusted project's server), then for the Minecraft EULA if it isn't accepted.
- */
-export async function startServer(app: Pick<AppStores, 'run' | 'workspace'>) {
-  const { run } = app
-  if (!(await askToTrust(app.workspace))) return
-  const eula = await run.getState().refreshEula()
-  if (!eula.accepted) useEulaPrompt.setState({ open: true })
-  else await run.getState().start()
 }
 
 export function RunControls() {

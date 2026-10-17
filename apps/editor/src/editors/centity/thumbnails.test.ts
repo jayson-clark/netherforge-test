@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { MemoryBackend } from '@/core/backend/memory'
+import type { MemoryBackend } from '@/testing/backend/memory'
 import { EXAMPLE_ROOT } from '@/testing/fixtures'
 import { exampleBackend } from '@/testing/workspace'
 import {

@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { createBackend } from '@/core/backend'
+import { createBackend } from './backend'
 import './styles/tokens.css'
 import './styles/base.css'
 import { App } from './App'

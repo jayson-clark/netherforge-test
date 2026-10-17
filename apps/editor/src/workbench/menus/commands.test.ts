@@ -3,13 +3,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { AppStores } from '@/state/providers'
 import type { AppMenu, MenuEntry } from '@/core/backend/types'
 import { parseShortcut } from '@/core/shortcut'
-import {
-  buildMenus,
-  commandForKey,
-  paletteCommands,
-  runCommand,
-  type CommandContext,
-} from './commands'
+import { buildMenus } from './buildMenus'
+import type { CommandContext } from './commands'
+import { paletteCommands } from './palette'
+import { commandForKey, runCommand } from './runCommand'
 import { openExampleApp } from '@/testing/workspace'
 
 const TOWER = 'centities/tower/centity.json'

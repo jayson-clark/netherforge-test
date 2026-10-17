@@ -6,7 +6,7 @@
  * a case or excluded below, with why.
  */
 import { describe, expect, it } from 'vitest'
-import { bytesToBase64, MemoryBackend, type MemoryGitRepo } from './memory'
+import { bytesToBase64, MemoryBackend, type MemoryGitRepo } from '@/testing/backend/memory'
 import { runCase, suite, type ContractCase, type ContractWorld } from './contractRunner'
 import { TauriBackend } from './tauri'
 import type { Backend, MinecraftInstall, TestReport } from './types'

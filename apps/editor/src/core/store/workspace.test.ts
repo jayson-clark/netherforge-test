@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MEMORY_MCP_TOKEN, MemoryBackend } from '@/core/backend/memory'
+import { MEMORY_MCP_TOKEN, MemoryBackend } from '@/testing/backend/memory'
 import { canonicalizeModel, type CentityFile, type RecipeFile } from '@/core/format'
 import { EXAMPLE_ROOT, exampleFiles, exampleProject, exampleProjects } from '@/testing/fixtures'
 import { exampleBackend, openExampleWorkspace, settle } from '@/testing/workspace'

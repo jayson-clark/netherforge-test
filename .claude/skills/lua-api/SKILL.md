@@ -12,7 +12,7 @@ global, namespace, handle class, event (on the class it's about) and payload sha
 
 | Consumer                    | How it gets the spec                                                     |
 | --------------------------- | ------------------------------------------------------------------------ |
-| the editor's Lua features   | its lua-language-server reads `nf.lua` (see editor-ui)                   |
+| the editor's Lua features   | its lua-language-server reads `nf.lua` (see editor-lua)                  |
 | LuaLS users (VS Code, nvim) | `packages/api/generated/luals/nf.lua` (`---@meta` stubs), `surfaces/`    |
 | the docs                    | `docs/reference/*.md`                                                    |
 | the plugin's bindings       | `apps/plugin/runtime/src/generated/` (`bindings.lua` and `binding/*.kt`) |

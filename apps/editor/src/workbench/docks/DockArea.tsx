@@ -26,7 +26,7 @@ import { IconButton } from '@/ui/Button'
 import { openMenu, type MenuItem } from '@/ui/ContextMenu'
 import { cx } from '@/ui/cx'
 import { Splitter } from '@/ui/Splitter'
-import { panelById } from '../contributions'
+import { panelById } from '@/workbench/contributions'
 import styles from './DockArea.module.css'
 
 export const AREA_LABEL: Record<DockArea, string> = {

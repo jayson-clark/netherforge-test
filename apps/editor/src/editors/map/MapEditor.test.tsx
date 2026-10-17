@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { writeNbt, type NbtRoot } from '@netherforge/terrain-preview/nbt'
 import { bytesToBase64 } from '@/core/backend/base64'
-import type { MemoryBackend } from '@/core/backend/memory'
+import type { MemoryBackend } from '@/testing/backend/memory'
 import { AppProvider, type AppStores } from '@/state/providers'
 import { DialogHost } from '@/ui/dialogs'
 import { gameRulesRoot, levelRoot, worldGenRoot } from '@/testing/nbtFixtures'

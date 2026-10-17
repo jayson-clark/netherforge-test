@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Message } from 'vscode-jsonrpc'
-import { MemoryBackend } from '@/core/backend/memory'
+import { MemoryBackend } from '@/testing/backend/memory'
 import type { Backend, LualsExit, LualsMessage } from '@/core/backend/types'
 import { connectLuals } from './transport'
 

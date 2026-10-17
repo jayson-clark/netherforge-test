@@ -168,7 +168,8 @@ function MenuWindow({
           index === selected && styles.selected,
           index === over && styles.over,
         )}
-        aria-label={`Slot ${index}${item ? `: ${item.kind}` : ', empty'}`}
+        // A project item's stack names it (`ruby`) and may leave the kind to it.
+        aria-label={`Slot ${index}${item ? `: ${item.kind ?? item.item}` : ', empty'}`}
         aria-pressed={index === selected}
         onPointerEnter={(event) => {
           setHovered(index)

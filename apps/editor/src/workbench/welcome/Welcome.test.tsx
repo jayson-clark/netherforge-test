@@ -1,9 +1,10 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
+import { MemoryBackend } from '@/testing/backend/memory'
 import { MANIFEST_FILE } from '@/core/format'
 import { AppProvider, createApp } from '@/state/providers'
-import { Welcome, useWelcome } from './Welcome'
+import { Welcome } from './Welcome'
+import { useWelcome } from './welcomeState'
 
 afterEach(() => {
   cleanup()

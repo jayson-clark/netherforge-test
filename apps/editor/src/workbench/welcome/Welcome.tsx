@@ -1,7 +1,6 @@
 /** The first screen: recent projects, open a folder, or create a project. */
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import { Label, Radio, RadioGroup } from 'react-aria-components'
-import { create } from 'zustand'
 import type { Backend, RecentProject } from '@/core/backend/types'
 import { TEMPLATES } from '@/core/templates'
 import type { WorkspaceStore } from '@/core/store/workspace'
@@ -13,27 +12,7 @@ import { Icon, type IconName } from '@/ui/Icon'
 import { Logo } from '@/ui/Logo'
 import { BareTitleBar } from '@/workbench/toolbar/TitleBar'
 import styles from './Welcome.module.css'
-
-/**
- * What the welcome screen shows besides the recent list, kept outside it so
- * the File menu can ask for the create form or report a project that
- * wouldn't open.
- */
-export const useWelcome = create<{ creating: boolean; error: string | null }>(() => ({
-  creating: false,
-  error: null,
-}))
-
-/** Opens [root], showing why on the welcome screen if it won't open. */
-export async function openProjectAt(workspace: WorkspaceStore, root: string) {
-  useWelcome.setState({ error: null })
-  try {
-    await workspace.getState().openProject(root)
-    useWelcome.setState({ creating: false })
-  } catch (e) {
-    useWelcome.setState({ error: e instanceof Error ? e.message : String(e) })
-  }
-}
+import { openProjectAt, useWelcome } from './welcomeState'
 
 /** Asks for a project folder and opens it. */
 async function pickAndOpenProject(backend: Backend, workspace: WorkspaceStore) {

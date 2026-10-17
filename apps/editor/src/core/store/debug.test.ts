@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { MemoryBackend } from '@/core/backend/memory'
+import type { MemoryBackend } from '@/testing/backend/memory'
 import { createApp, type AppStores } from '@/state/providers'
 import { EXAMPLE_ROOT } from '@/testing/fixtures'
 import { exampleBackend, openExampleApp, settle } from '@/testing/workspace'

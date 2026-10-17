@@ -4,7 +4,7 @@
  * it is restart.test.ts's; the MCP tools on top of it are tools.test.ts's.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { MemoryBackend, MemoryBackendOptions } from '@/core/backend/memory'
+import type { MemoryBackend, MemoryBackendOptions } from '@/testing/backend/memory'
 import { EXAMPLE_ROOT } from '@/testing/fixtures'
 import { exampleBackend, settle } from '@/testing/workspace'
 import { createRun, describeReload, type RunStore } from './run'

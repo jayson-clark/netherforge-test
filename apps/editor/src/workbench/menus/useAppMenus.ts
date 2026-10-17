@@ -9,8 +9,10 @@ import { useEffect } from 'react'
 import { create } from 'zustand'
 import type { AppStores } from '@/state/providers'
 import type { AppMenu, RecentProject } from '@/core/backend/types'
-import { IS_MAC } from '../shortcuts'
-import { buildMenus, commandForKey, runCommand, type CommandContext } from './commands'
+import { IS_MAC } from '@/workbench/shortcuts'
+import { buildMenus } from './buildMenus'
+import type { CommandContext } from './commands'
+import { commandForKey, runCommand } from './runCommand'
 
 const NO_MENUS: AppMenu[] = []
 

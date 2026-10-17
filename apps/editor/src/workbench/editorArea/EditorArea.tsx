@@ -18,7 +18,7 @@ import { Keys } from '@/ui/Keys'
 import { Spacer } from '@/ui/layout'
 import { Empty } from '@/ui/text'
 import styles from './EditorArea.module.css'
-import { TAB_VIEWS } from '../contributions'
+import { TAB_VIEWS } from '@/workbench/contributions'
 import { TabStrip } from './TabStrip'
 
 // Monaco is a large part of the bundle: load it with the first diff.

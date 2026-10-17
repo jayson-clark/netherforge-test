@@ -29,7 +29,7 @@ import type { MenuCommandEntry, MenuEntry } from '@/core/backend/types'
 import { cx } from '@/ui/cx'
 import { Icon } from '@/ui/Icon'
 import { Keys } from '@/ui/Keys'
-import { IS_MAC } from '../shortcuts'
+import { IS_MAC } from '@/workbench/shortcuts'
 import styles from './MenuBar.module.css'
 import { useMenus } from './useAppMenus'
 

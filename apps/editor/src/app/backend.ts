@@ -1,8 +1,6 @@
-import type { MemoryBackend } from './memory'
-import { TauriBackend } from './tauri'
-import type { Backend } from './types'
-
-export type { Backend } from './types'
+import { TauriBackend } from '@/core/backend/tauri'
+import type { Backend } from '@/core/backend/types'
+import type { MemoryBackend } from '@/testing/backend/memory'
 
 declare global {
   interface Window {
@@ -22,7 +20,7 @@ declare global {
 /** The backend for this page: the seeded memory backend in the e2e build, otherwise Tauri. */
 export async function createBackend(): Promise<Backend> {
   if (__MEMORY_BACKEND__) {
-    const { memoryBackendFor } = await import('./seeded')
+    const { memoryBackendFor } = await import('@/testing/backend/seeded')
     return memoryBackendFor(new URLSearchParams(window.location.search))
   }
   if (!window.__TAURI_INTERNALS__) {

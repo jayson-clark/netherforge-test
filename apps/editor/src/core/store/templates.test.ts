@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
+import { MemoryBackend } from '@/testing/backend/memory'
 import { MANIFEST_FILE, newProjectFiles, type ProjectManifest } from '@/core/format'
 import { TEMPLATES, templateById } from '@/core/templates'
 import { mergeRequires } from './packages'

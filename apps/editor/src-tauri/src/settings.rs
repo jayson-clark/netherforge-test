@@ -53,7 +53,7 @@ impl Settings {
         if self.mcp_enabled && self.mcp_port == self.server_port {
             bail!(Invalid, "The MCP port can't be the dev server's port");
         }
-        crate::jvm_args::check_all(&self.server_jvm_args)?;
+        crate::server::jvm_args::check_all(&self.server_jvm_args)?;
         Ok(())
     }
 }

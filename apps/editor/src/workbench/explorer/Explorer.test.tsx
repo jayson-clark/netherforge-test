@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { MemoryBackend } from '@/core/backend/memory'
+import type { MemoryBackend } from '@/testing/backend/memory'
 import { AppProvider, type AppStores } from '@/state/providers'
 import { openExampleApp } from '@/testing/workspace'
 import { closeMenu, ContextMenuHost } from '@/ui/ContextMenu'

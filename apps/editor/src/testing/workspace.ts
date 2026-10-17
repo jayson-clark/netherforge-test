@@ -10,7 +10,11 @@
  * `vi.waitFor` / Testing Library's `findBy…` on the state).
  */
 import { vi } from 'vitest'
-import { MemoryBackend, type FileContents, type MemoryBackendOptions } from '@/core/backend/memory'
+import {
+  MemoryBackend,
+  type FileContents,
+  type MemoryBackendOptions,
+} from '@/testing/backend/memory'
 import {
   createWorkspace,
   type Workspace,
