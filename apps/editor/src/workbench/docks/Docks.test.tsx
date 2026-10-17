@@ -9,7 +9,7 @@ import {
   within,
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { MemoryBackend } from '@/core/backend/memory'
+import type { MemoryBackend } from '@/testing/backend/memory'
 import { DEFAULT_DOCKS, findPanel } from '@/core/store/docks'
 import { InspectorTarget } from '@/editors/shared/docks'
 import { AppProvider, type AppStores } from '@/state/providers'

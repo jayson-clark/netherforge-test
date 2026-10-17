@@ -292,7 +292,7 @@ params)` is typed by the generated `BridgeRequests`, times out after 30 s,
 - The debugger's DAP messages go out through `backend.dapSend` (a `dap`
   notification, `BridgeClient.notify`) and come back through
   `onBridgeEvent('dap')`; `core/debug/client.ts` pairs requests with
-  responses (see the editor-ui skill's "The debugger").
+  responses (see the editor-lua skill's "The debugger").
 - On save: write through format, then, if the bridge is connected, send
   `reload` with the saved path, one request per saved file. While the
   debugger has the server paused the paths wait (`RunHooks.holdReload`) and

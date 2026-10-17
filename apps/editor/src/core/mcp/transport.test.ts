@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { LATEST_PROTOCOL_VERSION } from '@modelcontextprotocol/sdk/types.js'
-import { MemoryBackend } from '@/core/backend/memory'
+import { MemoryBackend } from '@/testing/backend/memory'
 import { createApp } from '@/state/providers'
 
 /** An app whose MCP server is connected, as the editor starts it. */

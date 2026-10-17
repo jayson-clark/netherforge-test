@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MEMORY_MCP_TOKEN, MemoryBackend } from '@/core/backend/memory'
+import { MEMORY_MCP_TOKEN, MemoryBackend } from '@/testing/backend/memory'
 import {
   MCP_SERVER_NAME,
   OPENCODE_CONFIG_FILE,

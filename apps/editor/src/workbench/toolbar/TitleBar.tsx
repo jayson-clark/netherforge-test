@@ -6,7 +6,7 @@
  */
 import type { AppInfo } from '@/core/backend/types'
 import { useApp, useWorkspace } from '@/state/providers'
-import { MenuBar } from '../menus/MenuBar'
+import { MenuBar } from '@/workbench/menus/MenuBar'
 import styles from './TitleBar.module.css'
 
 export type TitleBarKind = 'overlay' | 'custom' | 'native'

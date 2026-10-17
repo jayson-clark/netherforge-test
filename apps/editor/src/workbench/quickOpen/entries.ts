@@ -5,8 +5,8 @@
  */
 import { basename, dirname } from '@/core/paths'
 import type { IconName } from '@/ui/Icon'
-import { EXPLORER_FOLDERS, type ExplorerFolder } from '../explorer/folders'
-import type { PaletteCommand } from '../menus/commands'
+import { EXPLORER_FOLDERS, type ExplorerFolder } from '@/workbench/explorer/folders'
+import type { PaletteCommand } from '@/workbench/menus/palette'
 import { fuzzyMatch } from './fuzzy'
 
 export interface QuickEntry {

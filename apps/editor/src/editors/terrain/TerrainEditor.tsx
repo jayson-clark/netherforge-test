@@ -46,7 +46,7 @@ import {
   structuresNamed,
 } from '@netherforge/terrain-preview'
 import { heightChoices, pickHeights, type HeightChoice } from './heights'
-import { TerrainInspector } from './Inspector'
+import { TerrainInspector } from './inspector/Inspector'
 import { MapView, type SliceLine } from './MapView'
 import { SliceView } from './SliceView'
 import { TileScheduler, type MapCamera } from './tiles'

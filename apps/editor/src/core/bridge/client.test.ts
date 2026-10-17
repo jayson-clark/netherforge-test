@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+// eslint-disable-next-line no-restricted-imports -- format's shared fixture, outside src/
 import session from '../../../../../packages/format/testdata/bridge/session.ndjson?raw'
 import { BackendError } from '@/core/backend/types'
 import { BridgeClient, type BridgeTransport } from './client'

@@ -1,6 +1,6 @@
 import { MemoryBackend } from './memory'
 import { EXAMPLE_ROOT, LIBRARY_ROOT, exampleProject, libraryProject } from './seed'
-import type { UpdateInfo } from './types'
+import type { UpdateInfo } from '@/core/backend/types'
 
 /** A memory backend holding `examples/basic`, as Playwright uses it. */
 export function seededMemoryBackend(

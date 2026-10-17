@@ -5,7 +5,7 @@
  */
 import { focusedCode } from '@/editors/script/focusedCode'
 import { isEditableTarget } from '@/ui/editable'
-import { undoesDocument } from '../shortcuts'
+import { undoesDocument } from '@/workbench/shortcuts'
 
 export type TextAction = 'undo' | 'redo' | 'cut' | 'copy' | 'paste' | 'selectAll'
 

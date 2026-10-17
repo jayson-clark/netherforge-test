@@ -49,15 +49,15 @@ export default tseslint.config(
         ...LAYERS.map((layer) => ({ type: layer, pattern: `src/${layer}`, partialMatch: false })),
         { type: 'testing', pattern: 'src/testing', partialMatch: false },
       ],
-      'boundaries/files': [
-        { category: 'test', pattern: '**/*.test.{ts,tsx}' },
-        // The memory backend plays the outside world for vitest and Playwright
-        // (a captured structure is a fixture's NBT): test support that lives
-        // beside the Backend contract it's held to.
-        { category: 'fake', pattern: 'src/core/backend/{memory,seed,seeded}.ts' },
-      ],
+      'boundaries/files': [{ category: 'test', pattern: '**/*.test.{ts,tsx}' }],
     },
     rules: {
+      // Across folders, imports name their target from src/ (`@/core/paths`), so
+      // a file reads the same wherever it moves and the layers are plain to see.
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ group: ['../*'], message: "Import across folders with '@/…'." }] },
+      ],
       'boundaries/dependencies': [
         'error',
         {
@@ -75,9 +75,11 @@ export default tseslint.config(
                 to: { element: { types: { anyOf: ['core', 'state', 'minecraft', 'testing'] } } },
               },
             },
+            // Playwright's build (`--mode e2e`) runs on the seeded memory backend,
+            // which app/backend.ts loads behind __MEMORY_BACKEND__.
             {
-              from: { file: { categories: 'fake' } },
-              allow: { to: { element: { types: { anyOf: ['minecraft', 'testing'] } } } },
+              from: { element: { type: 'app' } },
+              allow: { to: { element: { types: { anyOf: ['testing'] } } } },
             },
             // A test may make the whole app and use any fixture.
             {

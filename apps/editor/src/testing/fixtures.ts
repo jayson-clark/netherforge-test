@@ -1,6 +1,6 @@
 import type { PackageInputs } from '@/core/format'
-import type { FileContents } from '@/core/backend/memory'
-import { EXAMPLE_ROOT, LIBRARY_ROOT, exampleProject, libraryProject } from '@/core/backend/seed'
+import type { FileContents } from '@/testing/backend/memory'
+import { EXAMPLE_ROOT, LIBRARY_ROOT, exampleProject, libraryProject } from '@/testing/backend/seed'
 
 export {
   EXAMPLE_ROOT,
@@ -8,7 +8,7 @@ export {
   exampleFiles,
   exampleProject,
   libraryProject,
-} from '@/core/backend/seed'
+} from '@/testing/backend/seed'
 
 /**
  * `examples/basic`'s one dependency, `examples/library`, as `loadProject`

@@ -71,6 +71,7 @@ const plans = {
     // The prelude's modules, type-checked by the pinned LuaLS (the editor's own; fetched, cached).
     ['Lua: lua-language-server (the plugin)', ['node', 'tools/lint-prelude.mjs']],
     ['Generated files are up to date', ['node', 'tools/generated-check.mjs']],
+    ['Editor skills name files that exist', ['node', 'tools/skill-paths.mjs']],
     ['Versions agree with VERSION', ['node', 'tools/release.mjs', '--check']],
   ],
   format: [

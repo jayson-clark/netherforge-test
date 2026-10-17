@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { MemoryBackend } from '@/core/backend/memory'
+import type { MemoryBackend } from '@/testing/backend/memory'
 import type { CentityFile, MenuFile, ResourcePackFile, RecipeFile } from '@/core/format'
 import { openExampleWorkspace, settle } from '@/testing/workspace'
 import { modelOf } from './documents'

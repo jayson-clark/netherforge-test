@@ -8,7 +8,6 @@ pub mod bridge;
 pub mod commands;
 pub mod error;
 pub mod fs;
-pub mod jvm_args;
 pub mod luals;
 pub mod mcp;
 pub mod minecraft;

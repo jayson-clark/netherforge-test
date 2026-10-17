@@ -13,7 +13,7 @@ import {
   Submenu,
   type PredefinedMenuItemOptions,
 } from '@tauri-apps/api/menu'
-import { acceleratorOf, parseShortcut } from '../shortcut'
+import { acceleratorOf, parseShortcut } from '@/core/shortcut'
 import type { AppMenu, MenuCommandEntry, MenuEntry, NativeMenuRole } from './types'
 
 const PREDEFINED: Record<NativeMenuRole, PredefinedMenuItemOptions['item']> = {

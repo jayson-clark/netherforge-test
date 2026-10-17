@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { MemoryBackend, MemoryBackendOptions } from '@/core/backend/memory'
+import type { MemoryBackend, MemoryBackendOptions } from '@/testing/backend/memory'
 import { BackendError } from '@/core/backend/types'
 import type { AppStores } from '@/state/providers'
 import { advanceUntil, openExampleApp, settle } from '@/testing/workspace'

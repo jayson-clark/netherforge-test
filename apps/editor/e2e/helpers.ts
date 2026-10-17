@@ -62,7 +62,7 @@ export function outside<T, A>(
   ) as Promise<T>
 }
 
-/** The memory backend's test surface (see src/core/backend/memory.ts). */
+/** The memory backend's test surface (see src/testing/backend/memory.ts). */
 export interface MemoryBackendHandle {
   testFiles(): Record<string, string>
   testBytes(path: string): string | null

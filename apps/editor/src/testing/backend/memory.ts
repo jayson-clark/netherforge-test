@@ -13,25 +13,12 @@
  * The `test*` methods are the "outside world" for tests: a git checkout or an
  * agent editing a file, the plugin sending a message.
  */
-import type {
-  BridgeRequests,
-  BotEvent,
-  BotInfo,
-  GameDataBundle,
-  HandlerTime,
-  LoadedWorld,
-  PlayerPosition,
-  ProfileSample,
-  ProfileTick,
-} from '@netherforge/format/types'
-import { classify, readSetting, type ServerSettings, type SettingDef } from '@/core/format'
-import { writeNbt } from '@netherforge/terrain-preview/nbt'
-import { structureRoot } from '@/testing/nbtFixtures'
+import type { GameDataBundle } from '@netherforge/format/types'
 import { sha256Hex } from '@/core/sha256'
 import type { DebugProtocol } from '@vscode/debugprotocol'
-import { base64ToBytes, bytesToBase64 } from './base64'
+import { base64ToBytes, bytesToBase64 } from '@/core/backend/base64'
 import { FakeDebugAdapter, type FakeStop } from './memoryDebug'
-import { BackendError } from './types'
+import { FakePlugin, fail, manifestField, type BridgeCall } from './memoryPlugin'
 import type {
   AppMenu,
   AppInfo,
@@ -44,7 +31,6 @@ import type {
   CacheStatus,
   CaptureProgress,
   ConvertProgress,
-  ErrorCode,
   EulaStatus,
   FileEntry,
   PackageFiles,
@@ -67,20 +53,18 @@ import type {
   Unlisten,
   UpdateInfo,
   UpdateProgress,
-} from './types'
+} from '@/core/backend/types'
+import { jvmArgumentProblem } from './jvmArgs'
+import { nfvHeader, readNfvHeader, sameBytes } from './nfv'
 
 type Listener<T> = (value: T) => void
-
-function fail(code: ErrorCode, message: string): never {
-  throw new BackendError(code, message)
-}
 
 /** A file's contents: text, or bytes for binary files (PNGs). */
 export type FileContents = string | Uint8Array
 
 const textDecoder = new TextDecoder('utf-8', { fatal: true })
 
-export { base64ToBytes, bytesToBase64 } from './base64'
+export { base64ToBytes, bytesToBase64 } from '@/core/backend/base64'
 
 const MIME: Record<string, string> = {
   png: 'image/png',
@@ -108,10 +92,7 @@ class Emitter<T> {
   }
 }
 
-/** A bridge request as `bridgeLog` records it: its method, and its params when it takes any. */
-export type BridgeCall = {
-  [M in BridgeMethod]: { method: M; params: BridgeRequests[M]['params'] }
-}[BridgeMethod]
+export type { BridgeCall } from './memoryPlugin'
 
 /** The MCP token `mcpStatus` reports in memory. */
 export const MEMORY_MCP_TOKEN = 'memory-mcp-token'
@@ -176,7 +157,9 @@ export interface MemoryGitRepo {
 
 /** What the Rust side's `git::is_url` accepts: https, ssh, file, or user@host:path. */
 const GIT_URL = /^(?:(?:https|ssh|file):\/\/\S+|[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:[^/\s]\S*)$/
+
 const GIT_REV = /^[A-Za-z0-9_][A-Za-z0-9_./+-]*$/
+
 const COMMIT = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/
 
 const DEFAULT_SETTINGS: Settings = {
@@ -211,9 +194,6 @@ export class MemoryBackend implements Backend {
   private eula: boolean
   private pickResults: (string | null)[]
   private serverDelay: number
-  private profileEvery: number
-  private profileTimer: ReturnType<typeof setInterval> | null = null
-  private profileTick = 0
   private debounce: number
   private state: ServerState = {
     phase: 'stopped',
@@ -222,20 +202,8 @@ export class MemoryBackend implements Backend {
     bridgeConnected: false,
     message: null,
   }
-  private instances: {
-    uuid: string
-    centity: string
-    world: string
-    x: number
-    y: number
-    z: number
-  }[] = []
   /** The dev server's folder. */
   private serverFiles: Map<string, FileContents>
-  /** Players online on the fake server, where they stand. */
-  private players: PlayerPosition[] = []
-  /** Its loaded worlds, the main one first. */
-  private worlds: LoadedWorld[] = [{ name: 'world', environment: 'normal', main: true }]
   private captureEvents = new Emitter<CaptureProgress>()
   private videoEvents = new Emitter<ConvertProgress>()
   private ffmpeg: boolean
@@ -249,20 +217,17 @@ export class MemoryBackend implements Backend {
 
   /** Every bridge request the UI sent, for assertions. */
   readonly bridgeLog: BridgeCall[] = []
-  /** Whether the fake plugin says a reload needs the server restarted (what it learns only as it starts changed). */
-  private reloadRestarts = false
+  /** Every console command the UI sent. */
+  get commandLog(): readonly string[] {
+    return this.plugin.commandLog
+  }
   /** What the test runner answers, when a test sets it (`testTestReport`): there is no Lua here to run. */
   private testReport: TestReport | null = null
-  /** Every console command the UI sent. */
-  readonly commandLog: string[] = []
   /** The plugin's debug adapter, on the bridge's `dap` channel. */
   private debugAdapter = new FakeDebugAdapter((message) => this.testBridgeEvent('dap', message))
+  /** The plugin on the fake server: what it answers on the bridge. */
+  private plugin: FakePlugin
 
-  /** The values the fake server's owner set for the project's settings (`set_setting`), by name. */
-  private settingValues = new Map<string, unknown>()
-
-  /** Bots online, with what they were sent. An action records itself; `chat` is heard back as a chat line. */
-  private bots = new Map<string, { info: BotInfo; events: BotEvent[] }>()
   /** How many times the UI asked to open the Minecraft launcher. */
   launcherOpened = 0
   /** Versions the UI installed (it would have restarted after each). */
@@ -307,7 +272,17 @@ export class MemoryBackend implements Backend {
     this.pickResults = [...(options.pickFolderResults ?? [])]
     this.serverDelay = options.serverDelayMs ?? 0
     this.ffmpeg = options.ffmpeg ?? false
-    this.profileEvery = options.profileEveryMs ?? 1000
+    this.plugin = new FakePlugin(
+      {
+        connected: () => this.state.bridgeConnected,
+        paused: () => this.debugAdapter.paused,
+        manifest: () => this.manifest(),
+        gameData: () => this.game.get(this.state.minecraft ?? '') ?? null,
+        files: () => this.files(),
+        emit: (event, params) => this.testBridgeEvent(event, params),
+      },
+      options.profileEveryMs ?? 1000,
+    )
     this.debounce = options.watchDebounceMs ?? 0
     this.gitRepos = options.gitRepos ?? {}
     this.trustedRoots = new Set(options.trusted ?? Object.keys(options.projects ?? {}))
@@ -725,11 +700,11 @@ export class MemoryBackend implements Backend {
 
   async stopServer(): Promise<void> {
     if (this.state.phase === 'stopped') return
-    this.profiling(false)
+    this.plugin.profiling(false)
     this.setState({ phase: 'stopping', bridgeConnected: false })
     await this.wait()
     this.output('stdout', '[Server] Stopping server')
-    this.instances = []
+    this.plugin.instances = []
     this.setState({ phase: 'stopped', port: null, message: null })
   }
 
@@ -754,7 +729,7 @@ export class MemoryBackend implements Backend {
   async serverCommand(line: string): Promise<void> {
     if (this.state.phase !== 'starting' && this.state.phase !== 'running')
       fail('notConnected', "The dev server isn't running")
-    this.commandLog.push(line)
+    this.plugin.commandLog.push(line)
     this.output('stdout', `> ${line}`)
   }
 
@@ -763,7 +738,11 @@ export class MemoryBackend implements Backend {
     ...params: BridgeParamsArg<M>
   ): Promise<BridgeResult<M>> {
     // The switch below can't narrow a generic, so the answer is typed here.
-    return this.answer({ method, params: params[0] } as BridgeCall) as Promise<BridgeResult<M>>
+    const request = { method, params: params[0] } as BridgeCall
+    this.bridgeLog.push(
+      request.params === undefined ? ({ method: request.method } as BridgeCall) : request,
+    )
+    return this.plugin.answer(request) as Promise<BridgeResult<M>>
   }
 
   async dapSend(message: DebugProtocol.ProtocolMessage): Promise<void> {
@@ -785,275 +764,6 @@ export class MemoryBackend implements Backend {
   /** A breakpoint (or a step, a pause, an error) holds the fake server (see `FakeDebugAdapter`). */
   testDebugStop(options: FakeStop = {}) {
     this.debugAdapter.stop(options)
-  }
-
-  /** What the plugin answers; a method it doesn't have is `unknownMethod`, as the real one's JSON-RPC error is. */
-  private async answer(request: BridgeCall): Promise<unknown> {
-    this.bridgeLog.push(
-      request.params === undefined ? ({ method: request.method } as BridgeCall) : request,
-    )
-    if (!this.state.bridgeConnected)
-      fail('notConnected', "The NetherForge plugin isn't connected to the editor yet")
-    // As the plugin: a breakpoint holds the main thread, so only the bridge thread's requests answer.
-    if (
-      this.debugAdapter.paused &&
-      request.method !== 'ping' &&
-      request.method !== 'profiler_subscribe'
-    )
-      fail('plugin', 'the dev server is paused at a breakpoint; continue it first')
-    switch (request.method) {
-      case 'reload': {
-        // Each path's resource, named as the plugin names it; a project file is the whole package.
-        const pkg = this.manifestField('namespace') ?? 'project'
-        return {
-          resources: request.params.paths.map((path) => {
-            const found = classify(path)
-            return found?.kind && found.id
-              ? { package: pkg, kind: found.kind, id: found.id, ok: true, reattached: 0 }
-              : { package: pkg, ok: true, reattached: 0 }
-          }),
-          ...(this.reloadRestarts ? { restart: true } : {}),
-        }
-      }
-      case 'spawn': {
-        const instance = {
-          uuid: `00000000-0000-4000-8000-${String(this.instances.length + 1).padStart(12, '0')}`,
-          centity: request.params.centity,
-          world: 'world',
-          x: 0,
-          y: 64,
-          z: 0,
-        }
-        this.instances.push(instance)
-        return instance
-      }
-      case 'instances':
-        return [...this.instances]
-      case 'export_game_data':
-        return this.game.get(this.state.minecraft ?? '') ?? null
-      case 'command':
-        this.commandLog.push(request.params.line)
-        return null
-      case 'play_particle_effect':
-      case 'stop_particle_effects':
-        // Nothing to draw: the request itself is what tests look at (`bridgeLog`).
-        return null
-      case 'bots/join': {
-        if (this.bots.has(request.params.name))
-          fail('plugin', `${request.params.name} is already online`)
-        const info: BotInfo = {
-          name: request.params.name,
-          uuid: `00000000-0000-3000-8000-${String(this.bots.size + 1).padStart(12, '0')}`,
-          world: request.params.at?.world ?? 'world',
-          x: request.params.at?.x ?? 0,
-          y: request.params.at?.y ?? 64,
-          z: request.params.at?.z ?? 0,
-          events: 1,
-        }
-        this.bots.set(request.params.name, {
-          info,
-          events: [{ type: 'chat', seq: 0, text: `${request.params.name} joined the game` }],
-        })
-        return info
-      }
-      case 'bots/list':
-        return [...this.bots.values()].map((it) => ({ ...it.info, events: it.events.length }))
-      case 'bots/leave':
-        this.bot(request.params.name)
-        this.bots.delete(request.params.name)
-        return null
-      case 'bots/act': {
-        const bot = this.bot(request.params.name)
-        const since = bot.events.length
-        if (request.params.action.type === 'chat') {
-          bot.events.push({
-            type: 'chat',
-            seq: since,
-            text: `<${request.params.name}> ${request.params.action.message}`,
-          })
-        }
-        const { world, x, y, z } = bot.info
-        return { world, x, y, z, since }
-      }
-      case 'bots/state': {
-        const { info, events } = this.bot(request.params.name)
-        return {
-          ...info,
-          yaw: 0,
-          pitch: 0,
-          onGround: true,
-          health: 20,
-          food: 20,
-          gameMode: 'survival',
-          dead: false,
-          sneaking: false,
-          sprinting: false,
-          selectedSlot: 0,
-          inventory: [],
-          events: events.length,
-        }
-      }
-      case 'bots/events': {
-        const { events } = this.bot(request.params.name)
-        return {
-          events: events.filter((it) => it.seq >= (request.params.since ?? 0)),
-          next: events.length,
-        }
-      }
-      case 'player_position': {
-        const found = request.params.player
-          ? this.players.find((it) => it.player === request.params.player)
-          : this.players[0]
-        if (!found) {
-          fail(
-            'plugin',
-            request.params.player
-              ? `no player "${request.params.player}" online`
-              : 'nobody is online',
-          )
-        }
-        return { ...found }
-      }
-      case 'worlds':
-        return this.worlds.map((it) => ({ ...it }))
-      case 'save_structure': {
-        this.world(request.params.world)
-        const lo = (axis: 'x' | 'y' | 'z') =>
-          Math.min(request.params.from[axis], request.params.to[axis])
-        const side = (axis: 'x' | 'y' | 'z') =>
-          Math.abs(request.params.from[axis] - request.params.to[axis]) + 1
-        const size: [number, number, number] = [side('x'), side('y'), side('z')]
-        // The fake world: stone bricks at y 64 and below, air above.
-        const blocks = []
-        for (let x = 0; x < size[0]; x += 1)
-          for (let y = 0; y < size[1]; y += 1)
-            for (let z = 0; z < size[2]; z += 1)
-              blocks.push({
-                pos: [x, y, z] as [number, number, number],
-                state: lo('y') + y <= 64 ? 0 : 1,
-              })
-        const nbt = await writeNbt(
-          structureRoot({
-            size,
-            palette: [{ Name: 'minecraft:stone_bricks' }, { Name: 'minecraft:air' }],
-            blocks,
-            entities: request.params.entities ? 1 : 0,
-          }),
-        )
-        return { nbt: bytesToBase64(nbt), size: { x: size[0], y: size[1], z: size[2] } }
-      }
-      case 'save_world': {
-        const world = this.world(request.params.world)
-        const dimension = world.main ? 'overworld' : world.name
-        return {
-          level: 'world/level.dat',
-          dimension: `world/dimensions/minecraft/${dimension}`,
-          main: world.main,
-          spawn: { x: 0, y: 64, z: 0, yaw: 0, pitch: 0 },
-        }
-      }
-      case 'settings':
-        return this.serverSettings()
-      case 'set_setting': {
-        const { namespace, setting, value } = request.params
-        const settings = this.serverSettings()
-        const definition = settings.packages.find((it) => it.namespace === namespace)?.settings[
-          setting
-        ]?.definition
-        if (!definition) fail('plugin', `there's no setting "${setting}" in ${namespace}`)
-        if (value === undefined || value === null) {
-          this.settingValues.delete(setting)
-        } else {
-          const read = readSetting(definition, JSON.stringify(value), false)
-          if (read.error !== undefined) fail('plugin', `${setting}: ${read.error}`)
-          this.settingValues.set(setting, read.value)
-        }
-        const now = this.serverSettings()
-        this.testBridgeEvent('settings_changed', now)
-        return now
-      }
-      case 'ping':
-        return null
-      case 'profiler_subscribe':
-        this.profiling(request.params.on)
-        return null
-      default:
-        fail('unknownMethod', `Unknown method "${(request as { method: string }).method}"`)
-    }
-  }
-
-  /**
-   * The fake profiler: while subscribed, a batch every `profileEveryMs` of
-   * twenty ticks, timing a handler for each `on("<event>", …)` the project's
-   * scripts register, at its line, with numbers that follow from where it is
-   * (so tests can count on them).
-   */
-  private profiling(on: boolean) {
-    if (this.profileTimer !== null) clearInterval(this.profileTimer)
-    this.profileTimer = null
-    if (!on) return
-    this.profileTimer = setInterval(() => {
-      if (!this.state.bridgeConnected) return this.profiling(false)
-      this.testBridgeEvent('profiler', { items: [this.profileSample()] })
-    }, this.profileEvery)
-  }
-
-  private profileSample(): ProfileSample {
-    const handlers: HandlerTime[] = []
-    for (const [path, contents] of this.files()) {
-      // The project's own scripts (not .netherforge/'s docs and stubs).
-      if (typeof contents !== 'string' || !path.endsWith('.lua') || path.startsWith('.')) continue
-      const [folder, id] = path.split('/')
-      const script =
-        folder === 'modules'
-          ? `module ${id}`
-          : `${folder?.replace(/ies$/, 'y').replace(/s$/, '')} ${id}`
-      contents.split('\n').forEach((text, i) => {
-        const event = /\bon\(\s*"([a-z_:]+)"/.exec(text)?.[1]
-        if (!event) return
-        const line = i + 1
-        const each = 20_000 + 7_000 * ((handlers.length * 3 + line) % 11)
-        handlers.push({
-          script,
-          kind: event,
-          source: { file: path, line },
-          calls: 20,
-          nanos: each * 20,
-          max: each * 2,
-        })
-      })
-    }
-    const first = this.profileTick + 1
-    this.profileTick += 20
-    const scripts = handlers.reduce((sum, it) => sum + it.nanos, 0) / 20
-    const ticks: ProfileTick[] = Array.from({ length: 20 }, (_, i) => {
-      // A spike now and then, so the timeline has something to show.
-      const world = 150_000 + ((first + i) % 37 === 0 ? 2_000_000 : 0)
-      const phases = {
-        timers: 20_000,
-        async: 5_000,
-        events: scripts,
-        world,
-        effects: 30_000,
-        upkeep: 10_000,
-        accounts: 15_000,
-        save: 5_000,
-      }
-      const nanos = Object.values(phases).reduce((sum, it) => sum + it, 0)
-      return { tick: first + i, nanos, phases, scripts }
-    })
-    const scopes = [...new Set(handlers.map((it) => it.script))].map((scope) => {
-      const own = handlers.filter((it) => it.script === scope)
-      const nanos = own.reduce((sum, it) => sum + it.nanos, 0)
-      return { scope, nanos, calls: own.reduce((sum, it) => sum + it.calls, 0), max: nanos / 10 }
-    })
-    return { ticks, scopes, handlers }
-  }
-
-  private world(name: string): LoadedWorld {
-    const world = this.worlds.find((it) => it.name === name)
-    if (!world) fail('plugin', `no world "${name}" is loaded`)
-    return world
   }
 
   async captureMap(
@@ -1225,12 +935,6 @@ export class MemoryBackend implements Backend {
       sourcePresent: source !== undefined,
       sourceChanged: source === undefined ? null : !sameBytes(await sha256(source), header.source),
     }
-  }
-
-  private bot(name: string) {
-    const bot = this.bots.get(name)
-    if (!bot) fail('plugin', `no bot named "${name}"`)
-    return bot
   }
 
   onServerState(listener: (state: ServerState) => void): Promise<Unlisten> {
@@ -1463,7 +1167,7 @@ export class MemoryBackend implements Backend {
 
   /** From now on the plugin's answer to a reload says the server must restart. */
   testReloadRestarts(on = true) {
-    this.reloadRestarts = on
+    this.plugin.reloadRestarts = on
   }
 
   /** The server prints a line. */
@@ -1473,16 +1177,16 @@ export class MemoryBackend implements Backend {
 
   /** A player joins the fake server, standing at a block position (or moves there). */
   testPlayer(player: string, world: string, x: number, y: number, z: number) {
-    this.players = [
-      ...this.players.filter((it) => it.player !== player),
+    this.plugin.players = [
+      ...this.plugin.players.filter((it) => it.player !== player),
       { player, world, x, y, z },
     ]
   }
 
   /** The fake server loads another world. */
   testWorld(name: string, environment = 'normal') {
-    if (!this.worlds.some((it) => it.name === name)) {
-      this.worlds = [...this.worlds, { name, environment, main: false }]
+    if (!this.plugin.worlds.some((it) => it.name === name)) {
+      this.plugin.worlds = [...this.plugin.worlds, { name, environment, main: false }]
     }
   }
 
@@ -1522,58 +1226,15 @@ export class MemoryBackend implements Backend {
   }
 
   private projectMinecraft(): string | null {
-    return this.manifestField('minecraft')
+    return manifestField(this.manifest(), 'minecraft')
   }
 
-  /**
-   * The fake server's settings: the project's own (as its netherforge.json
-   * declares them now), each with what `set_setting` set, else its default.
-   * Its packages' aren't there: a real dev server has those too.
-   */
-  private serverSettings(): ServerSettings {
-    const namespace = this.manifestField('namespace') ?? 'project'
+  /** The open project's `netherforge.json`, as text. */
+  private manifest(): string | null {
     const manifest = this.openRoot
       ? this.projects.get(this.openRoot)?.get('netherforge.json')
       : null
-    let declared: Record<string, SettingDef> = {}
-    let name = namespace
-    try {
-      const parsed = JSON.parse(typeof manifest === 'string' ? manifest : '{}') as {
-        name?: string
-        settings?: Record<string, SettingDef>
-      }
-      declared = parsed.settings ?? {}
-      name = parsed.name ?? namespace
-    } catch {
-      // A manifest that doesn't parse declares nothing.
-    }
-    if (Object.keys(declared).length === 0) return { packages: [] }
-    const settings = Object.fromEntries(
-      Object.entries(declared).map(([key, definition]) => {
-        const set = this.settingValues.has(key)
-        return [
-          key,
-          { definition, value: set ? this.settingValues.get(key) : definition.default, set },
-        ]
-      }),
-    )
-    return {
-      packages: [
-        { namespace, name, file: `plugins/NetherForge/settings/${namespace}.json`, settings },
-      ],
-    }
-  }
-
-  private manifestField(field: 'minecraft' | 'namespace'): string | null {
-    const manifest = this.openRoot
-      ? this.projects.get(this.openRoot)?.get('netherforge.json')
-      : null
-    if (typeof manifest !== 'string') return null
-    try {
-      return (JSON.parse(manifest) as Record<string, string | undefined>)[field] ?? null
-    } catch {
-      return null
-    }
+    return typeof manifest === 'string' ? manifest : null
   }
 }
 
@@ -1602,63 +1263,11 @@ function isNamed(segment: string, name: string): boolean {
   return segment.replace(/[. ]+$/, '').toLowerCase() === name
 }
 
-/** As the Rust side's `scope::segments`. */
-/** A converted video's header (docs/format/video.md), as the Rust side writes one. */
-interface NfvHeader {
-  columns: number
-  rows: number
-  fps: number
-  frames: number
-  audio: boolean
-  /** The source's SHA-256. */
-  source: Uint8Array
-}
-
-const NFV_HEADER = 72
-
-function nfvHeader(header: NfvHeader): Uint8Array {
-  const bytes = new Uint8Array(NFV_HEADER)
-  const view = new DataView(bytes.buffer)
-  bytes.set([0x4e, 0x46, 0x56, 0x31])
-  view.setUint16(4, 1)
-  view.setUint16(6, header.columns)
-  view.setUint16(8, header.rows)
-  view.setUint16(10, header.fps)
-  view.setUint32(12, header.frames)
-  view.setUint16(16, header.fps * 2)
-  bytes[18] = 1
-  bytes[28] = header.audio ? 1 : 0
-  bytes.set(header.source, 32)
-  return bytes
-}
-
-function readNfvHeader(bytes: Uint8Array): NfvHeader | null {
-  if (
-    bytes.length < NFV_HEADER ||
-    !sameBytes(bytes.subarray(0, 4), new Uint8Array([0x4e, 0x46, 0x56, 0x31]))
-  )
-    return null
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
-  if (view.getUint16(4) !== 1) return null
-  return {
-    columns: view.getUint16(6),
-    rows: view.getUint16(8),
-    fps: view.getUint16(10),
-    frames: view.getUint32(12),
-    audio: bytes[28] !== 0,
-    source: bytes.slice(32, 64),
-  }
-}
-
 async function sha256(contents: FileContents): Promise<Uint8Array> {
   // A copy, so it's a plain `ArrayBuffer`'s whatever the file's bytes are a view of.
   const bytes =
     typeof contents === 'string' ? new TextEncoder().encode(contents) : new Uint8Array(contents)
   return new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))
-}
-
-function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
-  return a.length === b.length && a.every((value, i) => value === b[i])
 }
 
 function checkPath(path: string) {
@@ -1731,117 +1340,4 @@ function validateSettings(settings: Settings) {
     const why = jvmArgumentProblem(arg)
     if (why) fail('jvmArgument', `JVM argument ${JSON.stringify(arg)} isn't allowed: ${why}`)
   }
-}
-
-const JVM_BOOLEAN_FLAGS = new Set([
-  'UseG1GC',
-  'UseZGC',
-  'ZGenerational',
-  'UseShenandoahGC',
-  'UseParallelGC',
-  'UseSerialGC',
-  'AlwaysPreTouch',
-  'DisableExplicitGC',
-  'ParallelRefProcEnabled',
-  'UseStringDeduplication',
-  'PerfDisableSharedMem',
-  'UseNUMA',
-  'UseTransparentHugePages',
-  'UseLargePages',
-  'UnlockExperimentalVMOptions',
-  'HeapDumpOnOutOfMemoryError',
-  'ExitOnOutOfMemoryError',
-  'CrashOnOutOfMemoryError',
-  'OmitStackTraceInFastThrow',
-  'UseCompressedOops',
-  'UseCompressedClassPointers',
-  'AlwaysActAsServerClassMachine',
-  'UseFastUnorderedTimeStamps',
-])
-const JVM_NUMBER_FLAGS = new Set([
-  'MaxGCPauseMillis',
-  'G1NewSizePercent',
-  'G1MaxNewSizePercent',
-  'G1HeapRegionSize',
-  'G1ReservePercent',
-  'G1HeapWastePercent',
-  'G1MixedGCCountTarget',
-  'G1MixedGCLiveThresholdPercent',
-  'G1RSetUpdatingPauseTimePercent',
-  'InitiatingHeapOccupancyPercent',
-  'SurvivorRatio',
-  'MaxTenuringThreshold',
-  'ParallelGCThreads',
-  'ConcGCThreads',
-  'MaxRAMPercentage',
-  'MinRAMPercentage',
-  'InitialRAMPercentage',
-  'MaxMetaspaceSize',
-  'ReservedCodeCacheSize',
-  'SoftMaxHeapSize',
-  'ZCollectionInterval',
-  'MaxInlineLevel',
-])
-const JVM_BLOCKED_PROPERTY_PREFIXES = [
-  'java.',
-  'javax.',
-  'jdk',
-  'sun.',
-  'com.sun.',
-  'user.',
-  'os.',
-  'file.separator',
-  'path.separator',
-  'line.separator',
-  'netherforge.',
-  'log4j',
-  'org.apache.logging.',
-  'jna.',
-  'polyglot.',
-  'org.graalvm.',
-]
-
-/** As the Rust side's `jvm_args::check` (the list and its rules are documented there): why [arg] isn't allowed, or null. */
-function jvmArgumentProblem(arg: string): string | null {
-  const size = (text: string) => /^[0-9]{1,12}[kKmMgG]?$/.test(text)
-  if (new TextEncoder().encode(arg).length > 1024) return "it's too long"
-  if (!arg || arg.trim() !== arg) return "it's empty or has spaces around it"
-  const memory = /^-X(?:mx|ms|mn|ss)(.*)$/s.exec(arg)
-  if (memory) return size(memory[1]!) ? null : 'give a size such as 4G, 512m or 2048'
-  if (arg.startsWith('-XX:')) {
-    const flag = arg.slice(4)
-    if (/^[+-]/.test(flag)) {
-      return JVM_BOOLEAN_FLAGS.has(flag.slice(1))
-        ? null
-        : "that -XX switch isn't on the editor's list"
-    }
-    const eq = flag.indexOf('=')
-    const name = eq < 0 ? '' : flag.slice(0, eq)
-    if (!JVM_NUMBER_FLAGS.has(name)) return "that -XX option isn't on the editor's list"
-    const value = flag.slice(eq + 1)
-    const ok = name.endsWith('Percentage')
-      ? /^[0-9]{1,12}(\.[0-9]{1,6})?$/.test(value)
-      : size(value)
-    return ok ? null : 'the value must be a number (with k, m or g for a size)'
-  }
-  if (arg.startsWith('-D')) {
-    const eq = arg.indexOf('=')
-    const name = eq < 0 ? arg.slice(2) : arg.slice(2, eq)
-    const value = eq < 0 ? '' : arg.slice(eq + 1)
-    if (!/^[A-Za-z][A-Za-z0-9_.-]*$/.test(name))
-      return 'a property name is letters, digits, `_`, `.` and `-`, starting with a letter'
-    const lower = name.toLowerCase()
-    if (JVM_BLOCKED_PROPERTY_PREFIXES.some((it) => lower.startsWith(it)))
-      return 'that property belongs to the JVM, its libraries or the editor'
-    // eslint-disable-next-line no-control-regex
-    if (/[\u0000-\u001f\u007f-\u009f]/.test(value)) return 'the value has a control character'
-    return null
-  }
-  if (
-    ['-server', '-Xshare:auto', '-Xshare:off', '-verbose:gc', '-Xlog:gc', '-Xlog:gc*'].includes(arg)
-  )
-    return null
-  return /^(-javaagent|-agent|-Xrun|-Xbootclasspath|-cp|-classpath|--|@)/.test(arg)
-    ? 'agents, class paths, module options and argument files can run or load code'
-    : "it isn't an allowed memory, -XX or -D argument"
 }

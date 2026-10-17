@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { MemoryBackend, type FileContents } from '@/core/backend/memory'
+import { MemoryBackend, type FileContents } from '@/testing/backend/memory'
 import { LOCK_FILE, MANIFEST_FILE, type ItemFile } from '@/core/format'
 import { EXAMPLE_ROOT, exampleProject, libraryProject } from '@/testing/fixtures'
 import { exampleWorkspace, settle } from '@/testing/workspace'

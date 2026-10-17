@@ -4,6 +4,7 @@
 
 pub mod download;
 pub mod java;
+pub mod jvm_args;
 pub mod leftover;
 pub mod paper;
 pub mod process;

@@ -24,7 +24,7 @@ import {
   askGitDependency,
   type DependencyChoice,
 } from '@/editors/project/dependencyPrompts'
-import { copyId, idProblem } from '../resourceActions'
+import { copyId, idProblem } from '@/workbench/resourceActions'
 import styles from './Explorer.module.css'
 import { EXPLORER_FOLDERS, isFileFolder, type ExplorerFolder } from './folders'
 import { FolderIcon } from './Thumbnail'

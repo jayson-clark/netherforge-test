@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { MemoryBackend } from '@/core/backend/memory'
+import { MemoryBackend } from '@/testing/backend/memory'
 import { MANIFEST_FILE, newProjectFiles } from '@/core/format'
 import { createWorkspace } from '@/core/store/workspace'
 import { LIBRARY_ROOT, libraryProject } from '@/testing/fixtures'
