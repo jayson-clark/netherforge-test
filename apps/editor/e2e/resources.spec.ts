@@ -284,10 +284,14 @@ test('a migration opens as SQL, highlighted', async ({ page }) => {
   const code = page.locator('.monaco-editor .view-lines')
   await expect(code).toContainText('CREATE TABLE visits')
   // Keywords, types and comments each get a token style of their own (plain text has one).
-  const styles = await code.evaluate(
-    (lines) =>
-      new Set([...lines.querySelectorAll('span[class^="mtk"]')].map((it) => it.className)).size,
-  )
-  expect(styles).toBeGreaterThan(2)
+  // Monaco tokenizes after the text shows, so on a slow runner the first look sees plain text.
+  await expect
+    .poll(() =>
+      code.evaluate(
+        (lines) =>
+          new Set([...lines.querySelectorAll('span[class^="mtk"]')].map((it) => it.className)).size,
+      ),
+    )
+    .toBeGreaterThan(2)
   expect(errors).toEqual([])
 })

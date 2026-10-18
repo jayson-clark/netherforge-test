@@ -81,5 +81,8 @@ export default defineConfig(({ mode }) => ({
     setupFiles: ['@vitest/web-worker'],
     // The dev bridge's JSON-RPC runs on vscode-jsonrpc's browser runtime in the app; tests run in Node.
     alias: { 'vscode-jsonrpc/browser': 'vscode-jsonrpc/node' },
+    // A test that types into the inspector takes under a second here and several on a busy
+    // Windows runner (the terrain inspector's ore test ran 8s there), past vitest's 5s default.
+    testTimeout: 20_000,
   },
 }))
