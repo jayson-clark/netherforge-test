@@ -284,7 +284,7 @@ banner.
 - **Plugin jars**: one per supported Minecraft version (the
   minecraft-versions skill lists them); `unzip -p NetherForge-1.2.3-paper-26.3.jar paper-plugin.yml`
   shows `version: '1.2.3'` and `api-version: '26.3'`. Drop it on a Paper server with
-  `project:` set to `examples/basic` and `/nf spawn tower`.
+  `project:` set to `examples/showcase` and `/nf spawn tower`.
 - **macOS**: `codesign -dv --verbose=4 NetherForge.app` (Authority = Developer
   ID, or `Signature=adhoc`), `spctl -a -vv NetherForge.app` (accepted,
   "Notarized Developer ID"), `xcrun stapler validate NetherForge.app`. Then open

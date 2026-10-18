@@ -1,5 +1,5 @@
 package dev.netherforge.plugin.world
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.particle.BlockData
 import dev.netherforge.format.particle.DustData
 import dev.netherforge.plugin.LuaChecks

@@ -13,8 +13,8 @@
  * as numbers. Pure, and free of three.js and the DOM, so it runs in a worker
  * and is tested without textures or WebGL.
  */
-import type { BakedFace } from './geometry'
-import { FACE_NAMES, type FaceName } from './model'
+import type { BakedFace } from '@netherforge/models/geometry'
+import { FACE_NAMES, type FaceName } from '@netherforge/models/model'
 
 /** What one block state draws. */
 export interface BakedState {

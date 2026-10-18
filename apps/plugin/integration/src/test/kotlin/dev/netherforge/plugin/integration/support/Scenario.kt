@@ -18,7 +18,7 @@ import kotlin.test.fail
 
 /**
  * One integration scenario: a class whose tests are its steps, in `@Order`,
- * against one server running a copy of `examples/basic` with [fixtures]
+ * against one server running a copy of `examples/showcase` with [fixtures]
  * added. The server starts before the first step and stops (cleanly, or the
  * scenario fails) after the last. A step that fails skips the steps after it,
  * which build on it; other scenarios run on regardless.
@@ -55,7 +55,7 @@ abstract class Scenario(private vararg val fixtures: String) {
     /** Script errors a run that has stopped left, checked with the current run's after the step. */
     private val left = mutableListOf<ScriptError>()
 
-    /** Makes the project this scenario runs: a copy of `examples/basic` with its fixtures, by default. */
+    /** Makes the project this scenario runs: a copy of `examples/showcase` with its fixtures, by default. */
     open fun makeProject(): TestProject = TestProject(*fixtures)
 
     /** Where the scenario runs at all: JUnit assumptions, checked before anything starts (a failed one skips it). */

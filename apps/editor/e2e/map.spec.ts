@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test'
-import { writeNbt, type NbtRoot } from '@netherforge/terrain-preview/nbt'
+import { writeNbt, type NbtRoot } from '@netherforge/structures/nbt'
 import { gameRulesRoot, levelRoot, worldGenRoot } from '../src/testing/nbtFixtures'
 import {
   chunkRoot,

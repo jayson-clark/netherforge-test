@@ -2,7 +2,7 @@ import { MemoryBackend } from './memory'
 import { EXAMPLE_ROOT, LIBRARY_ROOT, exampleProject, libraryProject } from './seed'
 import type { UpdateInfo } from '@/core/backend/types'
 
-/** A memory backend holding `examples/basic`, as Playwright uses it. */
+/** A memory backend holding `examples/showcase`, as Playwright uses it. */
 export function seededMemoryBackend(
   options: {
     serverDelayMs?: number
@@ -15,7 +15,9 @@ export function seededMemoryBackend(
 ): MemoryBackend {
   return new MemoryBackend({
     projects: { [EXAMPLE_ROOT]: exampleProject, [LIBRARY_ROOT]: libraryProject },
-    recent: [{ root: EXAMPLE_ROOT, name: 'Basic example', openedAt: '2026-01-01T00:00:00Z' }],
+    recent: [
+      { root: EXAMPLE_ROOT, name: 'NetherForge Showcase', openedAt: '2026-01-01T00:00:00Z' },
+    ],
     installs: [
       {
         launcher: 'vanilla',

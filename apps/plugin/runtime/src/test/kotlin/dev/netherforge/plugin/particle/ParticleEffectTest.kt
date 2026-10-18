@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.particle
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.bridge.ScriptError
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.LuaChecks
 import dev.netherforge.plugin.TestServer
 import dev.netherforge.plugin.platform.Location

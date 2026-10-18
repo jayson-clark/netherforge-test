@@ -1,8 +1,8 @@
 package dev.netherforge.plugin.item
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.game.RegistryKey
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.recipe.Ingredient
 import dev.netherforge.format.recipe.Material
 import dev.netherforge.format.recipe.RecipeFile

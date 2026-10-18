@@ -69,7 +69,9 @@ class PaperServer(
         // The slow-script warning is wall-clock time, so a loaded machine raises it in any scenario (as a script message
         // their "no script errors" checks see): it's off here, and the runtime's own tests cover it.
         Files.createDirectories(folder.resolve("plugins/NetherForge"))
-        folder.resolve("plugins/NetherForge/config.yml").writeText("performance:\n  warn-ms: 0\n")
+        // Web routes are on, as a server owner turns them on: examples/showcase declares some, which would otherwise be a
+        // warning (`runtime.web-disabled`) on a project every scenario expects to load clean.
+        folder.resolve("plugins/NetherForge/config.yml").writeText("performance:\n  warn-ms: 0\nweb:\n  enabled: true\n")
         val port = ServerSocket(0).use { it.localPort }
         // The server writes its defaults into a bukkit.yml that isn't there: a scenario's routing never outlives it.
         Files.deleteIfExists(folder.resolve("bukkit.yml"))

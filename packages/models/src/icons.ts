@@ -6,18 +6,19 @@
  * whatever else a texture id names (a project's own files).
  */
 import * as THREE from 'three'
-import { bakeFaces, displayMatrix, placementMatrix, tintFor, type BakedFace } from './geometry'
+import { bakeFaces, displayMatrix, placementMatrix, tintFor, type BakedFace } from './geometry.ts'
 import {
-  blockPlacements,
+  cubeModel,
   isSpriteModel,
-  itemModelRef,
-  resolveModel,
+  itemModel,
+  packModel,
+  placedModels,
   spriteLayers,
   type AssetLoader,
   type RawModel,
   type ResolvedModel,
-} from './model'
-import { layered, rasterize, type Picture } from './raster'
+} from './model.ts'
+import { layered, rasterize, type Picture } from './raster.ts'
 
 /** The client's JSON (`AssetLoader`), and the picture a texture id names: a client texture, or any other the caller's. */
 export interface IconAssets extends AssetLoader {
@@ -69,55 +70,36 @@ export async function itemGeometry(
   kind: string,
   context: string,
 ): Promise<LookGeometry | null> {
-  const model = await resolveModel(assets, await itemModelRef(assets, kind))
+  const model = await itemModel(assets, kind)
   return model ? modelGeometry(model, context, tintFor(kind)) : null
 }
 
-/**
- * A resource pack's own model file as an item in display [context]: its parent chain from the client's assets, as
- * the game resolves one, with [bound] (texture variable → a texture id [assets] gives, the pack's files) on top.
- */
+/** A resource pack's own model file as an item in display [context] ([packModel]). */
 export async function packModelGeometry(
   assets: IconAssets,
   model: RawModel,
   bound: Record<string, string>,
   context: string,
 ): Promise<LookGeometry> {
-  const parent = model.parent ? await resolveModel(assets, model.parent) : null
-  return modelGeometry(
-    {
-      chain: parent?.chain ?? [],
-      textures: { ...parent?.textures, ...model.textures, ...bound },
-      elements: model.elements ?? parent?.elements ?? [],
-      display: { ...parent?.display, ...model.display },
-    },
-    context,
-  )
+  return modelGeometry(await packModel(assets, model, bound), context)
 }
 
-/** A pack block's look as its item: the game's `block/cube` with [faces] (face → texture id) bound. */
+/** A pack block's look as its item ([cubeModel]). */
 export async function cubeGeometry(
   assets: IconAssets,
   faces: Record<string, string>,
   context: string,
 ): Promise<LookGeometry | null> {
-  const cube = await resolveModel(assets, 'minecraft:block/cube')
-  return cube ? modelGeometry({ ...cube, textures: { ...cube.textures, ...faces } }, context) : null
+  const cube = await cubeModel(assets, faces)
+  return cube ? modelGeometry(cube, context) : null
 }
 
 /** A block state as a block display holds it: the block's cube from its corner, rotated as its state says. */
 export async function blockStateGeometry(assets: IconAssets, state: string): Promise<LookGeometry> {
-  const faces: BakedFace[] = []
-  for (const placement of await blockPlacements(assets, state)) {
-    const model = await resolveModel(assets, placement.model)
-    if (model)
-      faces.push(
-        ...bakeFaces(model.elements, model.textures, {
-          tint: tintFor(state),
-          transform: placementMatrix(placement),
-        }),
-      )
-  }
+  const tint = tintFor(state)
+  const faces = (await placedModels(assets, state)).flatMap(({ model, placement }) =>
+    bakeFaces(model.elements, model.textures, { tint, transform: placementMatrix(placement) }),
+  )
   return { faces, matrix: new THREE.Matrix4() }
 }
 

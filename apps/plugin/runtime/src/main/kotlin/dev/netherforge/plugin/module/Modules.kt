@@ -1,8 +1,8 @@
 package dev.netherforge.plugin.module
 
 import dev.netherforge.format.module.ModuleInfo
+import dev.netherforge.format.module.ModuleKind
 import dev.netherforge.format.project.KindSpec
-import dev.netherforge.format.project.ModuleKind
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.project.PackagePaths
 import dev.netherforge.format.project.ProjectManifest

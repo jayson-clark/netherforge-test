@@ -14,6 +14,7 @@ import dev.netherforge.format.editor.TerrainFailed
 import dev.netherforge.format.editor.TerrainMap
 import dev.netherforge.format.editor.TerrainPreviewResult
 import dev.netherforge.format.json.CanonicalJson
+import dev.netherforge.format.math.Vec3
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -32,7 +33,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * The JS facade (`Exports.kt`) as the editor and the CLI call it: JSON strings in, JSON strings out, each answer's
+ * The JS facade (jsMain's `*Exports.kt`) as the editor and the CLI call it: JSON strings in, JSON strings out, each answer's
  * shape (the `type` of a sealed result, which fields are there, `null` for "not one of these") and how a failure is
  * reported (problems in the answer, not a throw). What each answer means is tested in `commonTest`; this is the
  * contract across the boundary.

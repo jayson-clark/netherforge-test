@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { occludedSides, type BakedState, type BakedStates } from '@/minecraft/client/blockMesh'
-import { bakeFaces } from '@/minecraft/client/geometry'
-import { writeNbt } from '@netherforge/terrain-preview/nbt'
+import { bakeFaces } from '@netherforge/models/geometry'
+import { writeNbt } from '@netherforge/structures/nbt'
 import {
   chunkRoot,
   regionFile,

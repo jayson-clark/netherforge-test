@@ -1,7 +1,35 @@
 package dev.netherforge.format.project
 
+import dev.netherforge.format.advancement.AdvancementKind
+import dev.netherforge.format.biome.BiomeKind
+import dev.netherforge.format.block.BlockKind
+import dev.netherforge.format.block.GameBlockKind
 import dev.netherforge.format.block.VanillaFile
+import dev.netherforge.format.buff.BuffKind
+import dev.netherforge.format.centity.CentityKind
+import dev.netherforge.format.cutscene.CutsceneKind
+import dev.netherforge.format.datapack.DatapackKind
+import dev.netherforge.format.dialog.DialogKind
+import dev.netherforge.format.dimensiontype.DimensionTypeKind
+import dev.netherforge.format.item.ItemKind
+import dev.netherforge.format.loot.LootTableKind
+import dev.netherforge.format.menu.MenuKind
+import dev.netherforge.format.migration.MigrationKind
+import dev.netherforge.format.module.ModuleKind
+import dev.netherforge.format.particle.ParticleEffectKind
+import dev.netherforge.format.recipe.RecipeKind
+import dev.netherforge.format.resourcepack.ResourcePackKind
+import dev.netherforge.format.screen.ScreenFontKind
+import dev.netherforge.format.screen.ScreenKind
+import dev.netherforge.format.screen.VideoKind
+import dev.netherforge.format.sky.SkyKind
+import dev.netherforge.format.terrain.TerrainKind
 import dev.netherforge.format.text.DefaultFontFile
+import dev.netherforge.format.wasm.WasmModuleKind
+import dev.netherforge.format.world.BuildKind
+import dev.netherforge.format.world.MapKind
+import dev.netherforge.format.world.StructureGenerationKind
+import dev.netherforge.format.world.StructureKind
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 

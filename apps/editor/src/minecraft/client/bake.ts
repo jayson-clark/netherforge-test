@@ -8,8 +8,8 @@
  */
 import type { ClientAssets } from './assets'
 import { occludedSides, type BakedState, type BakedStates } from './blockMesh'
-import { bakeFaces, placementMatrix } from './geometry'
-import { blockPlacements, parseBlockState, resolveModel } from './model'
+import { bakeFaces, placementMatrix } from '@netherforge/models/geometry'
+import { blockPlacements, parseBlockState, resolveModel } from '@netherforge/models/model'
 import { tintFor } from './render'
 import { loadImageInfo } from '@/core/image'
 

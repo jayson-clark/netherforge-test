@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
 
 /**
  * The project's advancements on a real server: the start-up datapack the
- * plugin builds before the worlds load (`examples/basic`'s quest tree, and the
+ * plugin builds before the worlds load (`examples/showcase`'s quest tree, and the
  * library's tab under its own namespace), granted and read by the example's
  * scripts for a player, and a change to one asking for the restart that
  * brings it in.
@@ -37,15 +37,15 @@ class AdvancementScenario : Scenario("advancements") {
     @Test
     @Order(1)
     fun `the server starts with the project's advancements and its package's`() {
-        val hunt = datapack("data/basic/advancement/treasure_hunter.json")
-        assertTrue("\"parent\": \"basic:adventurer\"" in hunt, hunt)
-        assertTrue("\"minecraft:item_model\": \"basic:ui/ruby\"" in hunt, hunt)
+        val hunt = datapack("data/showcase/advancement/treasure_hunter.json")
+        assertTrue("\"parent\": \"showcase:adventurer\"" in hunt, hunt)
+        assertTrue("\"minecraft:item_model\": \"showcase:ui/ruby\"" in hunt, hunt)
         val collector = datapack("data/library/advancement/gem_collector.json")
         assertTrue("\"minecraft:item_model\": \"library:gems/gem\"" in collector, collector)
         // The welcome dialog is on the pause screen: the same datapack holds it, and the server loaded it (it would refuse to start otherwise).
-        val welcome = datapack("data/basic/dialog/welcome.json")
-        assertTrue("\"id\": \"basic:dialog/welcome/press/0\"" in welcome, welcome)
-        assertTrue("basic:welcome" in datapack("data/minecraft/tags/dialog/pause_screen_additions.json"))
+        val welcome = datapack("data/showcase/dialog/welcome.json")
+        assertTrue("\"id\": \"showcase:dialog/welcome/press/0\"" in welcome, welcome)
+        assertTrue("showcase:welcome" in datapack("data/minecraft/tags/dialog/pause_screen_additions.json"))
         editor.run("difficulty peaceful")
         val (joined, _) = editor.request(BotsExtension.join, BotJoinParams("Quester"))
         assertTrue(joined.ok, joined.error)
@@ -91,7 +91,7 @@ class AdvancementScenario : Scenario("advancements") {
     @Order(4)
     fun `a restart brings the change in`() {
         restart()
-        assertTrue("Treasure Seeker" in datapack("data/basic/advancement/treasure_hunter.json"))
+        assertTrue("Treasure Seeker" in datapack("data/showcase/advancement/treasure_hunter.json"))
         assertFalse(editor.reload("advancements/treasure_hunter.json").restart)
         // Progress is the player's, kept in the world across the restart.
         val (joined, _) = editor.request(BotsExtension.join, BotJoinParams("Quester"))

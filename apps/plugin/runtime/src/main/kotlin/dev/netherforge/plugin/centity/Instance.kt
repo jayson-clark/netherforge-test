@@ -1,12 +1,12 @@
 package dev.netherforge.plugin.centity
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.Channel
 import dev.netherforge.format.centity.CompiledCentity
 import dev.netherforge.format.centity.DisplayDef
 import dev.netherforge.format.centity.Easing
 import dev.netherforge.format.centity.Transform
 import dev.netherforge.format.math.Matrix4
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.math.degreesToRadians
 import dev.netherforge.plugin.physics.BodyState
 import dev.netherforge.plugin.physics.Quat

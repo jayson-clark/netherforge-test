@@ -57,14 +57,14 @@ class BlockScenario : Scenario("blocks") {
             .jsonObject.getValue("variants").jsonObject
         val models = states.values.map { it.jsonObject.getValue("model").jsonPrimitive.content }
         // Two blocks (the ore, and the lamp a centity draws, which shows nothing of its own), each in a state of its own.
-        assertEquals(1, models.count { it == "basic:block/ui/ruby_ore" })
-        assertEquals(1, models.count { it == "basic:block/hidden" })
+        assertEquals(1, models.count { it == "showcase:block/ui/ruby_ore" })
+        assertEquals(1, models.count { it == "showcase:block/hidden" })
         assertEquals(states.size - 2, models.count { it == "minecraft:block/note_block" })
         // Every state of the note block is there, whatever the game version has.
         assertEquals(0, states.size % 50)
-        val model = files.getValue("assets/basic/models/block/ui/ruby_ore.json").decodeToString()
-        assertTrue("\"parent\": \"minecraft:block/cube\"" in model && "\"up\": \"basic:ui/block/ruby_ore\"" in model, model)
-        assertTrue("assets/basic/textures/ui/block/ruby_ore.png" in files)
+        val model = files.getValue("assets/showcase/models/block/ui/ruby_ore.json").decodeToString()
+        assertTrue("\"parent\": \"minecraft:block/cube\"" in model && "\"up\": \"showcase:ui/block/ruby_ore\"" in model, model)
+        assertTrue("assets/showcase/textures/ui/block/ruby_ore.png" in files)
     }
 
     @Test

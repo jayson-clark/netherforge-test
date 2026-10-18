@@ -18,7 +18,7 @@ class AdminCommandTest {
 
     @Test
     fun `spawn, list, find, tp and kill`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val alex = server.player("Alex")
             val commands = server.platform.commands
             assertTrue(commands.run(alex, "nf spawn tower").single().startsWith("<green>Spawned tower"))
@@ -43,17 +43,22 @@ class AdminCommandTest {
 
     @Test
     fun `reload reports each resource and modules shows what's running`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val alex = server.player("Alex")
             val commands = server.platform.commands
             assertEquals(listOf("<green>centity:tower: reloaded"), commands.run(alex, "nf reload centities/tower/script.lua"))
-            assertEquals(listOf("<green>basic: reloaded"), commands.run(alex, "nf reload"))
+            assertEquals(listOf("<green>showcase: reloaded"), commands.run(alex, "nf reload"))
+            // Every booth of the expo has a module of its own (`modules/(booths)/<id>_booth`), with no commands.
+            val modules = commands.run(alex, "nf modules")
+            assertEquals(32, modules.count { "_booth <white>running" in it })
             assertEquals(
                 listOf(
+                    "<green>altar <white>running",
                     "<green>companion <white>running <gray>/companion",
+                    "<green>expo <white>running <gray>/tour /expo",
                     "<green>flyby <white>running <gray>/flyby",
                     "<green>greeter <white>running <gray>/tower /shop /visits",
-                    // The library's, which examples/basic depends on, run beside its own.
+                    // The library's, which examples/showcase depends on, run beside its own.
                     "<green>library:greetings <white>running",
                     "<green>library:phrases <white>running",
                     "<green>milestones <white>running <gray>/milestones",
@@ -62,20 +67,26 @@ class AdminCommandTest {
                     "<green>rewards <white>running <gray>/treasure",
                     "<green>seasons <white>running <gray>/wisps"
                 ),
-                commands.run(alex, "nf modules")
+                modules.filterNot { "_booth <white>running" in it }
             )
         }
     }
 
     @Test
     fun `completion offers subcommands, centities and players`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val alex = server.player("Alex")
             val commands = server.platform.commands
             // Completion, like the server's, only offers what they may use.
             alex.permissions += NetherForgeRuntime.PERMISSION
             assertEquals(listOf("spawn"), commands.complete(alex, "nf sp"))
-            assertEquals(listOf("crate", "crystal", "door", "lamp", "pool", "tower", "wisp"), commands.complete(alex, "nf spawn "))
+            assertEquals(
+                listOf(
+                    "bouncer", "crate", "crystal", "dart", "display_item", "door", "dummy", "kiosk", "lamp", "placard", "pool", "runner",
+                    "shrine_keeper", "tortoise", "tower", "wisp"
+                ),
+                commands.complete(alex, "nf spawn ")
+            )
             assertEquals(listOf("Alex"), commands.complete(alex, "nf spawn tower A"))
         }
     }

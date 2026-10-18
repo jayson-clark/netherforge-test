@@ -28,6 +28,7 @@ import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.item.ItemFile
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.menu.MenuType
+import dev.netherforge.format.module.ModuleKind
 import dev.netherforge.format.noise.NoiseDef
 import dev.netherforge.format.particle.EmitterDef
 import dev.netherforge.format.particle.ParticleEffectFile
@@ -36,7 +37,6 @@ import dev.netherforge.format.project.BundleManifest
 import dev.netherforge.format.project.Kinds
 import dev.netherforge.format.project.Layout
 import dev.netherforge.format.project.LockFile
-import dev.netherforge.format.project.ModuleKind
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.project.ProjectManifest
 import dev.netherforge.format.project.Templates

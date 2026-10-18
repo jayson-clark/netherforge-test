@@ -8,7 +8,7 @@ test('an untrusted project edits in restricted mode, and runs once trusted', asy
 
   // Starting the server asks to trust it first; cancelling leaves it stopped and restricted.
   await page.getByRole('button', { name: 'Start server' }).click()
-  const ask = page.getByRole('dialog', { name: 'Trust "Basic example"?' })
+  const ask = page.getByRole('dialog', { name: 'Trust "NetherForge Showcase"?' })
   await expect(ask).toContainText('Only trust a project whose authors you trust.')
   await ask.getByRole('button', { name: 'Cancel' }).click()
   await expect(page.getByRole('status', { name: 'Server status' })).toContainText('Stopped')
@@ -53,7 +53,7 @@ test('a trusted project can be untrusted, from the Run menu and from the Server 
 
   // Cancelling leaves it trusted.
   await chooseMenu(page, 'Run', 'Untrust Project')
-  const ask = page.getByRole('dialog', { name: 'Stop trusting "Basic example"?' })
+  const ask = page.getByRole('dialog', { name: 'Stop trusting "NetherForge Showcase"?' })
   await ask.getByRole('button', { name: 'Cancel' }).click()
   await expect(banner).toBeHidden()
 

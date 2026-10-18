@@ -11,7 +11,7 @@
     "./icons": "./src/icons.ts"
   },
   "scripts": {
-    "lint": "tsc --noEmit -p .",
+    "lint": "tsc --noEmit -p . && eslint .",
     "test": "vitest run"
   },
   "dependencies": {

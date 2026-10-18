@@ -1,11 +1,11 @@
 package dev.netherforge.plugin.centity
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.CentityCompiler
 import dev.netherforge.format.centity.NodeDef
 import dev.netherforge.format.centity.ResolvedHealth
 import dev.netherforge.format.centity.TextDisplay
 import dev.netherforge.format.centity.Transform
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.binding.CentityDamageEvent
 import dev.netherforge.plugin.binding.CentityDeathEvent
 import dev.netherforge.plugin.binding.Events

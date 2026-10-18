@@ -182,7 +182,7 @@ const guide: DefaultTheme.SidebarItem[] = [
   },
   {
     text: 'Examples',
-    items: [{ text: 'A whole game: Lumen Vale', link: '/guide/showcase' }],
+    items: [{ text: 'The showcase', link: '/guide/showcase' }],
   },
 ]
 

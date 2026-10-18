@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.screen
 
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.binding.Events
 import dev.netherforge.plugin.binding.LuaHandle
 import dev.netherforge.plugin.binding.ScreenClickEvent

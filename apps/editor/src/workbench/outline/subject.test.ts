@@ -49,8 +49,8 @@ describe('subjectOf', () => {
       pkg: 'library',
       main: 'library:resource_packs/gems/pack.json',
     })
-    expect(subjectOf('vale_lore:terrain/vale.json')).toMatchObject({
-      companion: 'vale_lore:terrain/vale.lua',
+    expect(subjectOf('library:terrain/hills.json')).toMatchObject({
+      companion: 'library:terrain/hills.lua',
     })
   })
 })

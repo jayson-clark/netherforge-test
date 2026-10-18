@@ -1,10 +1,10 @@
 package dev.netherforge.plugin.paper.contract
 
+import dev.netherforge.format.datapack.DatapackKind
 import dev.netherforge.format.datapack.DatapackLayout
 import dev.netherforge.format.datapack.DatapackValidator
 import dev.netherforge.format.datapack.WorldgenReferences
 import dev.netherforge.format.json.CanonicalJson
-import dev.netherforge.format.project.DatapackKind
 import dev.netherforge.format.project.FormatVersion
 import dev.netherforge.format.project.MapProjectSource
 import dev.netherforge.format.project.Projects

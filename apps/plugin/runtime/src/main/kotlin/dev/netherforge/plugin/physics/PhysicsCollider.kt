@@ -1,10 +1,10 @@
 package dev.netherforge.plugin.physics
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.PhysicsShape
 import dev.netherforge.format.centity.ResolvedPhysics
 import dev.netherforge.format.game.Box
 import dev.netherforge.format.math.Matrix4
+import dev.netherforge.format.math.Vec3
 import kotlin.math.PI
 
 /**

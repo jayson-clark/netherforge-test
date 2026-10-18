@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.particle
 
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.particle.EffectSampler
 import dev.netherforge.plugin.binding.LuaHandle
 import java.util.UUID

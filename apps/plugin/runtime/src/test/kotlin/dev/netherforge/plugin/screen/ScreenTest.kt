@@ -391,22 +391,31 @@ class ScreenTest {
     }
 
     @Test
-    fun `the cinema example, a player who joins is seated, presses Play on the controls, and the video plays`() {
-        TestServer(TestServer.example("cinema"), start = false).use { server ->
+    fun `the showcase's video booth, a player presses Play on the controls, and the video plays`() {
+        TestServer(TestServer.example("showcase"), start = false).use { server ->
             val alex = server.player("Alex")
             server.start()
             assertEquals(emptyList(), server.errors.map { it.message })
             assertEquals(emptyList(), server.runtime.session.problems().filter { it.severity == dev.netherforge.format.Severity.ERROR })
-            server.platform.raise.playerJoin(dev.netherforge.plugin.platform.GameEvent.PlayerJoin(alex.ref, false, null))
-            server.tick(25)
-            assertEquals(Location("world", 0.5, 65.0, 1.5), alex.location.copy(yaw = 0.0, pitch = 0.0))
+            server.platform.raise.playerJoin(dev.netherforge.plugin.platform.GameEvent.PlayerJoin(alex.ref, true, null))
+            // The expo builds its booths a step at a time from a second after it loads (how many ticks that takes goes by
+            // how long each step took), and the video booth hangs its two screens on its back wall.
             val screens = server.runtime.session.screens
-            assertEquals(12 + 4, server.platform.screens.frames.size, "a frame a map: 4 by 3 and 2 by 2")
+            var waited = 0
+            while (screens.find("cinema")!!.placement == null || screens.find("controls")!!.placement == null) {
+                server.tick()
+                assertTrue(++waited < 20 * 60, "the video booth wasn't built within a minute")
+            }
+            assertEquals(Location("world", 0.5, 65.0, 0.5), alex.location.copy(yaw = 0.0, pitch = 0.0), "a first join is at the hub")
             assertEquals(null, screens.find("cinema")!!.playbacks[null])
 
-            // Aim at the middle of Play (pixel 68, 84 of the controls, hung facing east at -6 68 7) and swing.
-            val target = doubleArrayOf(-5.9375, 69.0 - 84.0 / 128, 8.0 - 68.0 / 128)
-            val eye = doubleArrayOf(0.5, 65.0 + 1.62, 1.5)
+            // The video booth is the 13th: west of the avenue, its row starting at z 104. Its controls (2 by 2) hang facing
+            // east with their top-left map at -16 68 114. Stand in the booth, aim at the middle of Play (pixel 68, 84) and swing.
+            alex.location = Location("world", -9.5, 65.0, 113.5)
+            // Screens show to whoever is near: a moment for the booth's to find Alex there.
+            server.tick(20)
+            val target = doubleArrayOf(-15.9375, 69.0 - 84.0 / 128, 115.0 - 68.0 / 128)
+            val eye = doubleArrayOf(-9.5, 65.0 + 1.62, 113.5)
             val d = DoubleArray(3) { target[it] - eye[it] }
             val length = kotlin.math.sqrt(d.sumOf { it * it })
             val yaw = Math.toDegrees(kotlin.math.atan2(-d[0], d[2]))

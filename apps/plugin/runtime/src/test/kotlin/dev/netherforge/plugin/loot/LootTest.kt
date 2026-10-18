@@ -127,7 +127,7 @@ class LootTest {
 
     @Test
     fun `the example's treasure command rolls its loot table into the player's inventory`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val alex = server.player("Alex")
             val told = server.platform.commands.run(alex, "treasure").single()
             val stacks = Regex("<gold>You found (\\d+) stacks of treasure.").matchEntire(told)?.groupValues?.get(1)?.toInt()

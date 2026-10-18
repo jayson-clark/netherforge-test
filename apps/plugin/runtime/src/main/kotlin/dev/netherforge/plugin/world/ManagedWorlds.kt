@@ -2,14 +2,14 @@ package dev.netherforge.plugin.world
 
 import dev.netherforge.format.Problem
 import dev.netherforge.format.ProblemCodes
+import dev.netherforge.format.dimensiontype.DimensionTypeKind
 import dev.netherforge.format.json.CanonicalJson
-import dev.netherforge.format.project.DimensionTypeKind
 import dev.netherforge.format.project.KindSpec
-import dev.netherforge.format.project.MapKind
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.project.ProjectManifest
 import dev.netherforge.format.project.ProjectSnapshot
 import dev.netherforge.format.project.WorldConfig
+import dev.netherforge.format.world.MapKind
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.async.AsyncWork
 import dev.netherforge.plugin.async.WorkFailed

@@ -27,7 +27,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * `examples/basic` on headless Paper, hot-reloaded over the bridge the way the
+ * `examples/showcase` on headless Paper, hot-reloaded over the bridge the way the
  * editor does on save: modules starting on real stacks, each kind of resource
  * reloading, typed commands as Brigadier nodes swapped by a reload, the
  * resource pack served at its hash, a live centity reattached to a new script

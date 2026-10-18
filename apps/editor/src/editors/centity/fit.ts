@@ -13,7 +13,7 @@ import {
   TEXT_DEFAULTS,
 } from '@/core/format'
 import { modelBoxes, type Aabb } from '@/minecraft/client/boxes'
-import { blockPlacements, resolveModel, type AssetLoader } from '@/minecraft/client/model'
+import { blockPlacements, resolveModel, type AssetLoader } from '@netherforge/models/model'
 
 // The canonical block state and what a fitted hitbox records are format's
 // (`BlockState`, `CentityValidator.fitKey`): the validator compares them.

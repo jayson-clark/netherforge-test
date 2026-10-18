@@ -687,7 +687,7 @@ Vec3_mt`), and a namespace under `nf` is filled when a script first reaches it
   changing the codecs or the prelude's handles (it's skipped unless
   `NETHERFORGE_BENCH=1`).
 - **The LuaLS stubs are checked by running LuaLS.** `scripts/emit/luals.check.test.ts`
-  runs `lua-language-server --check` over `examples/basic` and
+  runs `lua-language-server --check` over `examples/showcase` and
   `scripts/emit/luals-probe/` (events on every class, `Vec3` maths both ways,
   tasks, commands, data, worlds and blocks, entities and players, inventories,
   boss bars and sidebars) and every spec `example` (each in the kind of

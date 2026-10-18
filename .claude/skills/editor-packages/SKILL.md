@@ -106,5 +106,5 @@ project file may name of a kind: the project's ids and what its direct
 dependencies (`directDependencies`) export (`exportedIds`, as `ns:id`);
 `useProjectItemIds` is its items'. The
 memory backend serves `examples/library` at `/memory/library`
-beside `/memory/basic`; tests take both from `exampleProjects()` and
+beside `/memory/showcase`; tests take both from `exampleProjects()` and
 `examplePackages` (`testing/fixtures.ts`).

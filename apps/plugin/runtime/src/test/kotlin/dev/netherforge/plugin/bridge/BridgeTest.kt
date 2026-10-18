@@ -176,7 +176,7 @@ class BridgeTest {
     @Test
     fun `the plugin says hello, then answers every request with its id`() {
         ServerSocket(0).use { listener ->
-            TestServer(TestServer.example("basic"), bridge = BridgeConfig(listener.localPort, "secret")).use { server ->
+            TestServer(TestServer.example("showcase"), bridge = BridgeConfig(listener.localPort, "secret")).use { server ->
                 val editor = connect(listener, server)
                 val hello = editor.next<HelloParams>()
                 assertEquals("secret", hello.token)
@@ -193,7 +193,7 @@ class BridgeTest {
                 assertEquals(listOf(spawned.result), editor.request(Bridge.instances, Unit).result)
 
                 val reload = editor.request(Bridge.reload, ReloadParams(listOf("centities/tower/script.lua"))).result!!.resources.single()
-                assertEquals(listOf("basic", "centity", "tower"), listOf(reload.pkg, reload.kind, reload.id))
+                assertEquals(listOf("showcase", "centity", "tower"), listOf(reload.pkg, reload.kind, reload.id))
                 assertEquals(1, reload.reattached)
 
                 val game = editor.request(Bridge.exportGameData, Unit)
@@ -221,7 +221,7 @@ class BridgeTest {
     @Test
     fun `an unknown method, unreadable params and a broken frame are answered as JSON-RPC says`() {
         ServerSocket(0).use { listener ->
-            TestServer(TestServer.example("basic"), bridge = BridgeConfig(listener.localPort, "secret")).use { server ->
+            TestServer(TestServer.example("showcase"), bridge = BridgeConfig(listener.localPort, "secret")).use { server ->
                 val editor = connect(listener, server)
                 editor.next<HelloParams>()
 
@@ -255,7 +255,7 @@ class BridgeTest {
     @Test
     fun `a request marked for the bridge's thread is answered while the main thread is busy`() {
         ServerSocket(0).use { listener ->
-            TestServer(TestServer.example("basic"), bridge = BridgeConfig(listener.localPort, "secret")).use { server ->
+            TestServer(TestServer.example("showcase"), bridge = BridgeConfig(listener.localPort, "secret")).use { server ->
                 val editor = connect(listener, server)
                 editor.next<HelloParams>()
                 // The test doesn't run main-thread tasks from here on: `instances` waits, `ping` doesn't.
@@ -277,7 +277,7 @@ class BridgeTest {
     @Test
     fun `a subscribed editor gets the profiler's samples once a second, and none after it stops`() {
         ServerSocket(0).use { listener ->
-            TestServer(TestServer.example("basic"), bridge = BridgeConfig(listener.localPort, "secret")).use { server ->
+            TestServer(TestServer.example("showcase"), bridge = BridgeConfig(listener.localPort, "secret")).use { server ->
                 val editor = connect(listener, server)
                 editor.next<HelloParams>()
                 assertTrue(editor.request(Bridge.profilerSubscribe, ProfilerSubscribeParams(on = true)).ok)
@@ -302,7 +302,7 @@ class BridgeTest {
     @Test
     fun `a burst of log lines goes out in a few batches, in order`() {
         ServerSocket(0).use { listener ->
-            TestServer(TestServer.example("basic"), bridge = BridgeConfig(listener.localPort, "secret")).use { server ->
+            TestServer(TestServer.example("showcase"), bridge = BridgeConfig(listener.localPort, "secret")).use { server ->
                 val editor = connect(listener, server)
                 editor.next<HelloParams>()
                 editor.next<Status>()
@@ -320,7 +320,7 @@ class BridgeTest {
     @Test
     fun `an editor that refuses the hello is final, and the console says why`() {
         ServerSocket(0).use { listener ->
-            TestServer(TestServer.example("basic"), bridge = BridgeConfig(listener.localPort, "secret")).use { server ->
+            TestServer(TestServer.example("showcase"), bridge = BridgeConfig(listener.localPort, "secret")).use { server ->
                 val why = "This server's NetherForge plugin speaks dev bridge protocol 1 and the editor speaks 2"
                 val editor = connect(listener, server, refuse = why)
                 editor.next<HelloParams>()
@@ -336,29 +336,31 @@ class BridgeTest {
     @Test
     fun `the editor plays a particle effect in front of a player, and stops what it played`() {
         ServerSocket(0).use { listener ->
-            TestServer(TestServer.example("basic"), start = false, bridge = BridgeConfig(listener.localPort, "secret")).use { server ->
+            TestServer(TestServer.example("showcase"), start = false, bridge = BridgeConfig(listener.localPort, "secret")).use { server ->
                 // Facing east (yaw -90): three blocks in front of the eyes is +X.
                 server.platform.players.add("Steve", Location("world", 10.0, 64.0, 0.0, -90.0, 0.0))
                 server.start()
                 val editor = connect(listener, server)
                 editor.next<HelloParams>()
 
+                // What the editor played: the runtime's own (the expo's booths play effects of their own, a script's).
+                fun editorEffects() = server.runtime.session.particles.all().filter { it.owner == null }
                 val played = editor.request(Bridge.playParticleEffect, PlayParticleEffectParams("sparkle", "Steve", loop = true))
                 assertTrue(played.ok, "${played.error}")
                 assertTrue(server.platform.log.lines.any { "Playing particle effect sparkle" in it }, "${server.platform.log.lines}")
-                val effect = server.runtime.session.particles.all().single()
+                val effect = editorEffects().single()
                 assertEquals(null, effect.owner, "the runtime's, not a script's")
                 assertEquals(13.0, effect.origin.x, 1e-9)
                 assertEquals(65.62, effect.origin.y, 1e-9)
                 assertEquals(90.0, effect.yaw, 1e-9, "facing the player")
                 server.tick(30)
-                assertEquals(1, server.runtime.session.particles.all().size, "the timeline's loop toggle loops it")
+                assertEquals(1, editorEffects().size, "the timeline's loop toggle loops it")
 
                 val broken = editor.request(Bridge.playParticleEffect, PlayParticleEffectParams("nope"))
                 assertTrue("no particle effect \"nope\"" in broken.error!!.message, "${broken.error}")
 
                 assertTrue(editor.request(Bridge.stopParticleEffects, Unit).ok)
-                assertEquals(emptyList(), server.runtime.session.particles.all())
+                assertEquals(emptyList(), editorEffects())
             }
         }
     }
@@ -366,7 +368,7 @@ class BridgeTest {
     @Test
     fun `bot requests reach the platform's bots, a centity named by node aimed at its hitbox`() {
         ServerSocket(0).use { listener ->
-            TestServer(TestServer.example("basic"), bridge = BridgeConfig(listener.localPort, "secret")).use { server ->
+            TestServer(TestServer.example("showcase"), bridge = BridgeConfig(listener.localPort, "secret")).use { server ->
                 val editor = connect(listener, server)
                 editor.next<HelloParams>()
 
@@ -418,7 +420,7 @@ class BridgeTest {
         ServerSocket(0).use { listener ->
             val serverFolder = kotlin.io.path.createTempDirectory("nf-server")
             val config = BridgeConfig(listener.localPort, "secret", serverDirectory = serverFolder)
-            TestServer(TestServer.example("basic"), start = false, bridge = config).use { server ->
+            TestServer(TestServer.example("showcase"), start = false, bridge = config).use { server ->
                 server.platform.worldManager.storage = serverFolder.resolve("world")
                 server.start()
                 val editor = connect(listener, server)
@@ -490,7 +492,7 @@ class BridgeTest {
     @Test
     fun `a dropped connection is retried, and the editor gets a fresh hello`() {
         ServerSocket(0).use { listener ->
-            TestServer(TestServer.example("basic"), bridge = BridgeConfig(listener.localPort, "t")).use { server ->
+            TestServer(TestServer.example("showcase"), bridge = BridgeConfig(listener.localPort, "t")).use { server ->
                 listener.soTimeout = 10_000
                 val first = listener.accept()
                 Editor(first, server).next<HelloParams>()
@@ -506,7 +508,7 @@ class BridgeTest {
     fun `a dev server whose editor is gone stops itself`() {
         ServerSocket(0).use { listener ->
             val config = BridgeConfig(listener.localPort, "t", abandonAfterMillis = 500)
-            TestServer(TestServer.example("basic"), bridge = config).use { server ->
+            TestServer(TestServer.example("showcase"), bridge = config).use { server ->
                 listener.soTimeout = 10_000
                 val editor = listener.accept()
                 Editor(editor, server).next<HelloParams>()
@@ -522,7 +524,7 @@ class BridgeTest {
     @Test
     fun `a dev server that never reaches its editor stops itself too`() {
         val port = ServerSocket(0).use { it.localPort }
-        TestServer(TestServer.example("basic"), bridge = BridgeConfig(port, "t", abandonAfterMillis = 500)).use { server ->
+        TestServer(TestServer.example("showcase"), bridge = BridgeConfig(port, "t", abandonAfterMillis = 500)).use { server ->
             assertTrue(eventually(server) { server.platform.shutdownReason != null }, "the server should have stopped itself")
         }
     }

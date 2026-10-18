@@ -19,7 +19,7 @@ import {
   type Placement,
   type RawElement,
   type V3,
-} from './model'
+} from './model.ts'
 
 const SHADE: Record<FaceName, number> = {
   down: 0.5,

@@ -25,7 +25,7 @@ import {
 } from '@/core/format'
 import type { PosedNode } from '@/core/format'
 import { type ClientAssets } from '@/minecraft/client/assets'
-import { parseBlockState } from '@/minecraft/client/model'
+import { parseBlockState } from '@netherforge/models/model'
 import { BlockModel, ItemModel, PackLookModel } from '@/minecraft/client/models'
 import { resourcePackItemLook } from '@/minecraft/item/icon'
 import {

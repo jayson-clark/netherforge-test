@@ -1,7 +1,7 @@
 package dev.netherforge.plugin.testkit
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.Box
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.platform.EntityBox
 import dev.netherforge.plugin.platform.EntityCategory
 import dev.netherforge.plugin.platform.EntityFlag

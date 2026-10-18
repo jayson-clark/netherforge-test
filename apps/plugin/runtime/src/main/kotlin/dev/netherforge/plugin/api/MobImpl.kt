@@ -1,7 +1,7 @@
 package dev.netherforge.plugin.api
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.GameIds
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.binding.GoalClearOptions
 import dev.netherforge.plugin.binding.LocationOrVec3OrEntity
 import dev.netherforge.plugin.binding.LuaHandle

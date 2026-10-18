@@ -70,7 +70,7 @@ describe('the title bar', () => {
 describe('the toolbar', () => {
   it('names the project, and opens quick open and the settings', async () => {
     const { toolbar, onQuickOpen, onSettings } = await show()
-    expect(toolbar.textContent).toContain('Basic example')
+    expect(toolbar.textContent).toContain('NetherForge Showcase')
     fireEvent.click(within(toolbar).getByRole('button', { name: 'Search or run a command' }))
     fireEvent.click(within(toolbar).getByRole('button', { name: 'Settings' }))
     expect(onQuickOpen).toHaveBeenCalledOnce()

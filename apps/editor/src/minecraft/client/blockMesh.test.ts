@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { buildStructureMesh } from '@/minecraft/structure/mesh'
-import { parseStructure, type Structure } from '@netherforge/terrain-preview/structure'
+import { parseStructure, type Structure } from '@netherforge/structures/structure'
 import { filledBlocks, structureRoot } from '@/testing/nbtFixtures'
 import { occludedSides, type BakedState } from './blockMesh'
-import { bakeFaces, placementMatrix } from './geometry'
-import type { RawElement } from './model'
+import { bakeFaces, placementMatrix } from '@netherforge/models/geometry'
+import type { RawElement } from '@netherforge/models/model'
 
 const all = (texture: string, cull = true) =>
   Object.fromEntries(

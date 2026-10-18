@@ -1,8 +1,8 @@
-import js from '@eslint/js'
 import boundaries from 'eslint-plugin-boundaries'
 import reactHooks from 'eslint-plugin-react-hooks'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
+import { typescript } from '../../eslint.config.js'
 
 /**
  * `src/`'s layers, top to bottom (the editor-ui skill's "Where things are"):
@@ -21,23 +21,18 @@ export default tseslint.config(
       'src/core/backend/generated',
     ],
   },
+  // The repo's rules for every TypeScript project, with React's hooks on top.
   {
-    files: ['**/*.{ts,tsx}'],
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    ...typescript,
     languageOptions: {
       globals: globals.browser,
-      // Type-aware rules: a promise nobody awaits or handles is a bug here.
-      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+      parserOptions: {
+        ...typescript.languageOptions.parserOptions,
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     plugins: { 'react-hooks': reactHooks },
-    rules: {
-      ...reactHooks.configs.recommended.rules,
-      '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': [
-        'error',
-        { checksVoidReturn: { attributes: false } },
-      ],
-    },
+    rules: { ...typescript.rules, ...reactHooks.configs.recommended.rules },
   },
   {
     files: ['src/**/*.{ts,tsx}'],

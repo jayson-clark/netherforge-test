@@ -1,8 +1,8 @@
 package dev.netherforge.plugin.centity
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.Box
 import dev.netherforge.format.game.RegistryKey
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.pathing.BlockShapes
 import dev.netherforge.plugin.platform.Platform
 

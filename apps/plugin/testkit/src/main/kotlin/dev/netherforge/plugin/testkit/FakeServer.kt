@@ -1,8 +1,8 @@
 package dev.netherforge.plugin.testkit
 
+import dev.netherforge.format.advancement.AdvancementKind
 import dev.netherforge.format.datapack.GameDatapack
 import dev.netherforge.format.json.CanonicalJson
-import dev.netherforge.format.project.AdvancementKind
 import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.datapack.DatapackRefusal

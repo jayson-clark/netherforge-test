@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Float32 } from 'nbtify'
-import { nbtAt, nbtRoot, nbtVec3, readNbt, writeNbt } from '@netherforge/terrain-preview/nbt'
+import { nbtAt, nbtRoot, nbtVec3, readNbt, writeNbt } from '@netherforge/structures/nbt'
 import { gameRulesRoot, levelRoot, nbt, worldGenRoot } from '@/testing/nbtFixtures'
 import { dimensionsOf, readWorldInfo, withSpawn } from './level'
 

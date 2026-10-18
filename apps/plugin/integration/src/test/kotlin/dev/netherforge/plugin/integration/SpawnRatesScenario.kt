@@ -5,8 +5,6 @@ import dev.netherforge.plugin.integration.support.TestProject
 import dev.netherforge.plugin.integration.support.VersionIndependent
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
-import kotlin.io.path.readText
-import kotlin.io.path.writeText
 
 /**
  * Mob spawn rates per world on a real server: the main world's come from
@@ -17,17 +15,8 @@ import kotlin.io.path.writeText
 @VersionIndependent
 class SpawnRatesScenario : Scenario("spawnrates") {
     override fun prepare(project: TestProject) {
-        val manifest = project.file("netherforge.json")
-        val text = manifest.readText()
-        check("\"worlds\": {" in text) { "examples/basic names no worlds" }
-        manifest.writeText(
-            text.replace(
-                "\"worlds\": {",
-                """"worlds": {
-    "world": { "spawnLimits": { "monster": 30 }, "spawnIntervals": { "monster": 2 } },
-    "it_spawn": { "spawnLimits": { "water_ambient": 3 } },"""
-            )
-        )
+        project.setWorld("world", """{ "spawnLimits": { "monster": 30 }, "spawnIntervals": { "monster": 2 } }""")
+        project.setWorld("it_spawn", """{ "spawnLimits": { "water_ambient": 3 } }""")
     }
 
     @Test

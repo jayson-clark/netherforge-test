@@ -40,7 +40,7 @@ describe('Settings › Server-owner settings', () => {
   it("shows the dev server's values and sets one, a typed one read as the server reads it", async () => {
     show()
     act(() => backend.testConnect())
-    const form = await screen.findByRole('region', { name: 'Basic example settings' })
+    const form = await screen.findByRole('region', { name: 'NetherForge Showcase settings' })
     const rolls = within(form).getByRole('textbox', { name: 'treasure_rolls' })
     expect((rolls as HTMLInputElement).value).toBe('1')
 
@@ -55,16 +55,22 @@ describe('Settings › Server-owner settings', () => {
     fireEvent.change(rolls, { target: { value: '3' } })
     fireEvent.keyDown(rolls, { key: 'Enter' })
     await waitFor(() =>
-      expect(setRequests()).toEqual([{ namespace: 'basic', setting: 'treasure_rolls', value: 3 }]),
+      expect(setRequests()).toEqual([
+        { namespace: 'showcase', setting: 'treasure_rolls', value: 3 },
+      ]),
     )
     fireEvent.click(within(form).getByRole('checkbox', { name: 'show_welcome' }))
     await waitFor(() => expect(setRequests()).toHaveLength(2))
-    expect(setRequests()[1]).toEqual({ namespace: 'basic', setting: 'show_welcome', value: false })
+    expect(setRequests()[1]).toEqual({
+      namespace: 'showcase',
+      setting: 'show_welcome',
+      value: false,
+    })
 
     // Set ones offer their default back.
     fireEvent.click(await within(form).findByRole('button', { name: 'Reset to 1' }))
     await waitFor(() =>
-      expect(setRequests()[2]).toEqual({ namespace: 'basic', setting: 'treasure_rolls' }),
+      expect(setRequests()[2]).toEqual({ namespace: 'showcase', setting: 'treasure_rolls' }),
     )
     await waitFor(() => expect((rolls as HTMLInputElement).value).toBe('1'))
   })

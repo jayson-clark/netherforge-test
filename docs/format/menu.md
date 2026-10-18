@@ -152,7 +152,7 @@ item, the tool system of an adventure server. Each is a list of:
 - **the game's blocks**, with their namespace (`minecraft:stone`), and
   **`#tags`** of them (`#minecraft:logs`; a bare `#logs` is the game's);
 - **a tag a project datapack defines**, as `#<namespace>:<path>`
-  (`#basic:soft`, in a [datapack's](datapack.md) `data/basic/tags/block/soft.json`);
+  (`#showcase:soft`, in a [datapack's](datapack.md) `data/showcase/tags/block/soft.json`);
 - **`*`**: any block. `"canPlaceOn": ["*"]` lets the item be placed
   anywhere.
 

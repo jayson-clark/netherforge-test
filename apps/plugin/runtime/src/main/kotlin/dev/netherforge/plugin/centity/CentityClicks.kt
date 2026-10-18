@@ -1,7 +1,7 @@
 package dev.netherforge.plugin.centity
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.Box
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.binding.ClickEvent
 import dev.netherforge.plugin.binding.EventType
 import dev.netherforge.plugin.binding.Events

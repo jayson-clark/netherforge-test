@@ -379,6 +379,17 @@ export interface TypeAlias {
   doc: string
 }
 
+/**
+ * A number the docs quote that the runtime owns (a limit, a default): [runtime] names each Kotlin constant it is
+ * (`<class>#<field>`, the JVM's names), which the runtime's `ConformanceTest` holds it to.
+ */
+export interface Constant {
+  name: string
+  value: number
+  doc: string
+  runtime: string[]
+}
+
 export interface ApiSpec {
   /** Globals every surface gets (`nf`, `require`, `log`, …). */
   globals: Field[]
@@ -394,4 +405,6 @@ export interface ApiSpec {
   removed: string[]
   /** What a command argument's `type` can be. Optional so hand-written specs (tests) can leave it out. */
   commandArguments?: CommandArgumentType[]
+  /** The runtime's numbers the docs quote. Optional so hand-written specs (tests) can leave it out. */
+  constants?: Constant[]
 }

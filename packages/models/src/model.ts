@@ -293,3 +293,54 @@ export function spriteLayers(model: ResolvedModel): string[] {
   }
   return layers
 }
+
+/** The client's own item [itemId]'s model; null when it has none. */
+export async function itemModel(
+  loader: AssetLoader,
+  itemId: string,
+): Promise<ResolvedModel | null> {
+  return resolveModel(loader, await itemModelRef(loader, itemId))
+}
+
+/**
+ * One of a resource pack's own model files (`models/<path>.json`, as written), resolved as the game resolves one:
+ * its parent chain from the client's assets, with [bound] (texture variable → a texture the caller draws: the pack's
+ * files) on top.
+ */
+export async function packModel(
+  loader: AssetLoader,
+  model: RawModel,
+  bound: Record<string, string>,
+): Promise<ResolvedModel> {
+  const parent = model.parent ? await resolveModel(loader, model.parent) : null
+  return {
+    chain: parent?.chain ?? [],
+    textures: { ...parent?.textures, ...model.textures, ...bound },
+    elements: model.elements ?? parent?.elements ?? [],
+    display: { ...parent?.display, ...model.display },
+  }
+}
+
+/** A pack block's look as its item: the game's `block/cube` with [faces] (face → texture) bound; null without it. */
+export async function cubeModel(
+  loader: AssetLoader,
+  faces: Record<string, string>,
+): Promise<ResolvedModel | null> {
+  const cube = await resolveModel(loader, 'minecraft:block/cube')
+  return cube ? { ...cube, textures: { ...cube.textures, ...faces } } : null
+}
+
+/** Every model that draws [state] ([blockPlacements]), resolved, with where it's placed; one that isn't known is left out. */
+export async function placedModels(
+  loader: AssetLoader,
+  state: string,
+  defaults: Record<string, string> = {},
+): Promise<{ model: ResolvedModel; placement: Placement }[]> {
+  const placed = await Promise.all(
+    (await blockPlacements(loader, state, defaults)).map(async (placement) => {
+      const model = await resolveModel(loader, placement.model)
+      return model ? { model, placement } : null
+    }),
+  )
+  return placed.filter((it) => it !== null)
+}

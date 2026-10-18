@@ -1,6 +1,6 @@
 package dev.netherforge.format.centity
 
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.math.Vec3
 
 /**
  * Builds a [CompiledCentity] from a file [CentityValidator] passed without

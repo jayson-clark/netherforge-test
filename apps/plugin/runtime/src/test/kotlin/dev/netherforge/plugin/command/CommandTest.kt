@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
  * on a definition.
  */
 class CommandTest {
-    private fun module(source: String) = TestServer.example("basic") + mapOf("modules/t/init.lua" to source.trimIndent())
+    private fun module(source: String) = TestServer.example("showcase") + mapOf("modules/t/init.lua" to source.trimIndent())
 
     @Test
     fun `arguments arrive typed by their declaration`() {
@@ -126,7 +126,7 @@ class CommandTest {
             assertEquals(listOf("<red>Missing <what>."), commands.run(alex, "need"))
             // What only the runtime knows (the project's names) it answers with the usage.
             assertEquals(
-                listOf("<red><where>: no world called \"moon\" (worlds: world, nether).", "<gray>Usage: /go <where>"),
+                listOf("<red><where>: no world called \"moon\" (worlds: world, nether, hills, sky).", "<gray>Usage: /go <where>"),
                 commands.run(alex, "go moon")
             )
             assertEquals(3, server.logs.size, "nothing ran for the mistakes")

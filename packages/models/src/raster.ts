@@ -4,7 +4,7 @@
  * culling), so the netherforge command draws the same pictures. Orthographic only: what the GUI and a gallery need.
  */
 import * as THREE from 'three'
-import type { BakedFace } from './geometry'
+import type { BakedFace } from './geometry.ts'
 
 /** An RGBA picture, rows top to bottom. */
 export interface Picture {

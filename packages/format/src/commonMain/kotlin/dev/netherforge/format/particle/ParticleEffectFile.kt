@@ -1,9 +1,9 @@
 package dev.netherforge.format.particle
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.Easing
 import dev.netherforge.format.game.ParticleDataKind
 import dev.netherforge.format.item.ItemDef
+import dev.netherforge.format.math.Vec3
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 

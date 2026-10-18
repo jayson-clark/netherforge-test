@@ -2,32 +2,24 @@ import { buffEvents, statFunctions } from './stats.ts'
 import type { EventSpec, Fn, LuaClass } from '../types.ts'
 import { DATA_SAVING, DATA_VALUES } from './data.ts'
 import { eventFunctions } from './events.ts'
+import {
+  DEFAULT_MAX_DROP,
+  DEFAULT_RANGE,
+  DEFAULT_SPEED,
+  DEFAULT_STEP_HEIGHT,
+  MAX_HEIGHT,
+  MAX_RANGE,
+  MAX_SPEED,
+  MAX_WIDTH,
+  NODE_LIMIT,
+  PATH_REACH,
+  REPATH_TICKS,
+  START_DROP,
+} from './constants.ts'
 
 /** Where a centity's own space is explained, for docs that take or give a point in it. */
 const CENTITY_SPACE =
   "The centity's own space has its origin at the centity's position (`centity:position()`) and is turned by its yaw (`centity:yaw()`): its +Z is the way the centity faces, its Y is the world's. It's the space a root node's translation is in."
-
-/** How close a walk after something has to come to count as reached: `PATH_REACH` in the runtime's `CentityPaths.kt`. */
-const PATH_REACH = 2
-
-/** How often a walk after something looks for a new path to where it is: `REPATH_TICKS` in `CentityPaths.kt`. */
-const REPATH_TICKS = 10
-
-/** The defaults and limits of `CentityPathOptions`: the constants of the same names in `CentityPaths.kt`. */
-const DEFAULT_SPEED = 4.3
-const MAX_SPEED = 20
-const DEFAULT_STEP_HEIGHT = 1
-const DEFAULT_MAX_DROP = 3
-const DEFAULT_RANGE = 48
-const MAX_RANGE = 128
-const MAX_WIDTH = 8
-const MAX_HEIGHT = 16
-
-/** How far below its feet a walk looks for ground to start from: `START_DROP` in `CentityPaths.kt`. */
-const START_DROP = 64
-
-/** How many places one search may look at: `NODE_LIMIT` in the runtime's `pathing/PathSearch.kt`. */
-const NODE_LIMIT = 4096
 
 /** What a walk is measured by: the bottom middle of the centity's hitboxes. */
 const FEET =
@@ -37,7 +29,7 @@ const FEET =
 const pathFunctions: Fn[] = [
   {
     name: 'move_to',
-    doc: `Makes the whole centity walk somewhere, finding its way round the blocks in the way: to a place in its own world, or after an entity or another centity, looking for a new path to wherever that is every ${REPATH_TICKS} ticks. When it stops, its \`path_end\` handlers hear whether it got there. ${FEET} The way is found over the blocks' collision shapes, sized to its hitboxes (other centities aren't in the way), and walked a little each tick, before physics and scripts: it steps up and drops down as the options allow, falls when nothing holds it up, and finds another way when a block appears across its path. With \`fly = true\` it flies instead, through the air in any direction. A new \`move_to\`, \`stop_pathing\` and \`teleport\` end the walk it was on, and so does a reload of its centity (its script's body can set off again). Walks aren't saved, and a centity whose chunk unloads waits where it is until it loads again. Its physics bodies are carried along with it.`,
+    doc: `Makes the whole centity walk somewhere, finding its way round the blocks in the way: to a place in its own world, or after an entity or another centity, looking for a new path to wherever that is every ${REPATH_TICKS.value} ticks. When it stops, its \`path_end\` handlers hear whether it got there. ${FEET} The way is found over the blocks' collision shapes, sized to its hitboxes (other centities aren't in the way), and walked a little each tick, before physics and scripts: it steps up and drops down as the options allow, falls when nothing holds it up, and finds another way when a block appears across its path. With \`fly = true\` it flies instead, through the air in any direction. A new \`move_to\`, \`stop_pathing\` and \`teleport\` end the walk it was on, and so does a reload of its centity (its script's body can set off again). Walks aren't saved, and a centity whose chunk unloads waits where it is until it loads again. Its physics bodies are carried along with it.`,
     params: [
       {
         name: 'target',
@@ -49,7 +41,7 @@ const pathFunctions: Fn[] = [
     returns: [
       {
         type: 'boolean',
-        doc: `Whether it found a way and set off, which may only take it as close as it can get: \`false\` when it can't get any closer than it is (walking, it needs ground under it, within ${START_DROP} blocks), for a target further away than \`range\`, in another world or gone, or once it's removed.`,
+        doc: `Whether it found a way and set off, which may only take it as close as it can get: \`false\` when it can't get any closer than it is (walking, it needs ground under it, within ${START_DROP.value} blocks), for a target further away than \`range\`, in another world or gone, or once it's removed.`,
       },
     ],
     example:
@@ -192,7 +184,7 @@ const centityEvents: EventSpec[] = [
   },
   {
     name: 'path_end',
-    doc: `It stopped walking where \`move_to\` sent it: it got there (to the end of its path, or within ${PATH_REACH} blocks of what it went after), or gave up (no way further, its way blocked with no other way round, or what it went after has gone or left its world). Not after \`stop_pathing\`, a new \`move_to\`, \`teleport\` or a reload of its centity.`,
+    doc: `It stopped walking where \`move_to\` sent it: it got there (to the end of its path, or within ${PATH_REACH.value} blocks of what it went after), or gave up (no way further, its way blocked with no other way round, or what it went after has gone or left its world). Not after \`stop_pathing\`, a new \`move_to\`, \`teleport\` or a reload of its centity.`,
     payload: 'CentityPathEndEvent',
     example:
       'this:on("path_end", function(event)\n  if not event.reached then\n    this:move_to(vec3(0, 64, 0))\n  end\nend)',
@@ -1372,7 +1364,7 @@ export const centityShapes: LuaClass[] = [
       {
         name: 'speed',
         type: 'number?',
-        doc: `How fast, in blocks a second: more than 0, at most ${MAX_SPEED}. Default ${DEFAULT_SPEED}, a player's walk.`,
+        doc: `How fast, in blocks a second: more than 0, at most ${MAX_SPEED.value}. Default ${DEFAULT_SPEED.value}, a player's walk.`,
       },
       {
         name: 'fly',
@@ -1387,22 +1379,22 @@ export const centityShapes: LuaClass[] = [
       {
         name: 'width',
         type: 'number?',
-        doc: `How wide a gap it needs, in blocks: more than 0, at most ${MAX_WIDTH}. Default: its hitboxes' wider side, as they're placed when it sets off (1 without hitboxes). It's taken as square, whichever way it faces.`,
+        doc: `How wide a gap it needs, in blocks: more than 0, at most ${MAX_WIDTH.value}. Default: its hitboxes' wider side, as they're placed when it sets off (1 without hitboxes). It's taken as square, whichever way it faces.`,
       },
       {
         name: 'height',
         type: 'number?',
-        doc: `How tall a gap it needs, in blocks: more than 0, at most ${MAX_HEIGHT}. Default: its hitboxes' height (1 without hitboxes).`,
+        doc: `How tall a gap it needs, in blocks: more than 0, at most ${MAX_HEIGHT.value}. Default: its hitboxes' height (1 without hitboxes).`,
       },
       {
         name: 'step_height',
         type: 'number?',
-        doc: `Walking: how high a step it goes straight up, in blocks: at least 0. Default ${DEFAULT_STEP_HEIGHT}, a block, as a mob jumps one.`,
+        doc: `Walking: how high a step it goes straight up, in blocks: at least 0. Default ${DEFAULT_STEP_HEIGHT.value}, a block, as a mob jumps one.`,
       },
       {
         name: 'max_drop',
         type: 'number?',
-        doc: `Walking: how far down it will drop off an edge, in blocks: at least 0. Default ${DEFAULT_MAX_DROP}.`,
+        doc: `Walking: how far down it will drop off an edge, in blocks: at least 0. Default ${DEFAULT_MAX_DROP.value}.`,
       },
       {
         name: 'open_doors',
@@ -1412,7 +1404,7 @@ export const centityShapes: LuaClass[] = [
       {
         name: 'range',
         type: 'number?',
-        doc: `How far from where it sets off it looks for a way, in blocks: more than 0, at most ${MAX_RANGE}. A target further away than this is \`false\`. Default ${DEFAULT_RANGE}. One search looks at no more than ${NODE_LIMIT} places, so a long way round may only take it part of the way.`,
+        doc: `How far from where it sets off it looks for a way, in blocks: more than 0, at most ${MAX_RANGE.value}. A target further away than this is \`false\`. Default ${DEFAULT_RANGE.value}. One search looks at no more than ${NODE_LIMIT.value} places, so a long way round may only take it part of the way.`,
       },
     ],
   },
@@ -1427,7 +1419,7 @@ export const centityShapes: LuaClass[] = [
       {
         name: 'reached',
         type: 'boolean',
-        doc: `Whether it got there: to the end of its path, within ${PATH_REACH} blocks of where it was sent (or of what it went after, which it stops short of); \`false\` when it gave up.`,
+        doc: `Whether it got there: to the end of its path, within ${PATH_REACH.value} blocks of where it was sent (or of what it went after, which it stops short of); \`false\` when it gave up.`,
       },
     ],
   },
@@ -1588,7 +1580,7 @@ export const centityShapes: LuaClass[] = [
       {
         name: 'lifetime',
         type: 'integer?',
-        doc: 'Ticks from launch before it ends (`flight_end`, `\"lifetime\"`), flying, stuck or lying still. At least 1. Default 600: half a minute.',
+        doc: 'Ticks from launch before it ends (`flight_end`, `"lifetime"`), flying, stuck or lying still. At least 1. Default 600: half a minute.',
       },
       {
         name: 'aim',

@@ -30,6 +30,9 @@ const hasEditor = existsSync(path.join(root, cargoManifest))
  */
 const formatJs = ['Kotlin: format JS library and contract', gradle(':format:jsLibrary')]
 
+/** Where our Lua is: stylua formats it all. */
+const luaDirs = ['examples', 'apps/plugin', 'packages/format/src']
+
 /** Each step: a label and a command. Steps whose `when` is false are skipped. */
 const plans = {
   build: [
@@ -67,9 +70,9 @@ const plans = {
       ],
       hasEditor,
     ],
-    ['Lua: stylua', ['pnpm', 'exec', 'stylua', '--check', 'examples', 'apps/plugin']],
-    // The prelude's modules, type-checked by the pinned LuaLS (the editor's own; fetched, cached).
-    ['Lua: lua-language-server (the plugin)', ['node', 'tools/lint-prelude.mjs']],
+    ['Lua: stylua', ['pnpm', 'exec', 'stylua', '--check', ...luaDirs]],
+    // The prelude's modules and format's terrain glue, type-checked by the pinned LuaLS (the editor's own; fetched, cached).
+    ['Lua: lua-language-server (the plugin, format)', ['node', 'tools/lint-prelude.mjs']],
     ['Generated files are up to date', ['node', 'tools/generated-check.mjs']],
     ['Editor skills name files that exist', ['node', 'tools/skill-paths.mjs']],
     ['Versions agree with VERSION', ['node', 'tools/release.mjs', '--check']],
@@ -78,7 +81,7 @@ const plans = {
     ['Kotlin: ktlint', gradle('ktlintFormat')],
     ['Prettier', ['pnpm', 'exec', 'prettier', '--write', '.']],
     ['Rust: rustfmt', ['cargo', 'fmt', '--manifest-path', cargoManifest], hasEditor],
-    ['Lua: stylua', ['pnpm', 'exec', 'stylua', 'examples', 'apps/plugin']],
+    ['Lua: stylua', ['pnpm', 'exec', 'stylua', ...luaDirs]],
   ],
   generate: [
     // The Lua API's `since` names features in format's table (its generated constants).

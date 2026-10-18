@@ -37,5 +37,5 @@ change to the Lua API that would break a template is caught there, and the
 templates are kept working as the API changes. Read the tests beside the code to
 see how to test your own copy; they are the best examples of `nf.test` there are.
 
-For everything at once, a world, its creatures, a quest and a library, see
-[A whole game: Lumen Vale](showcase.md).
+For everything at once, a booth for every feature and worlds of its own, see
+[The showcase](showcase.md).

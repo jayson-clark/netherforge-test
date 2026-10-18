@@ -1,9 +1,9 @@
 package dev.netherforge.format.cutscene
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.Easing
 import dev.netherforge.format.centity.Keyframe
 import dev.netherforge.format.math.Angles
+import dev.netherforge.format.math.Vec3
 
 /**
  * A cutscene ready to play or draw: keys sorted, the length decided, cues in

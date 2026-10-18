@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.centity
 
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.math.Vec3
 import kotlin.math.sqrt
 
 /** A vector's length. */

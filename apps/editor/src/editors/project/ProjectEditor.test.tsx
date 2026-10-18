@@ -84,7 +84,7 @@ describe('project settings: what scripts need', () => {
         .getAllByRole('row')
         .slice(1)
         .map((row) => row.textContent),
-    ).toEqual(['moderationbasic', 'http:api.example.comlibrary'])
+    ).toEqual(['moderationshowcase', 'http:api.example.comlibrary'])
   })
 
   it('adds permissions in order, refusing bad and repeated ones, and removes them', async () => {
@@ -217,6 +217,10 @@ describe('project settings: server-owner settings', () => {
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove setting treasure_rolls' }))
-    expect(Object.keys((await saved()).settings).sort()).toEqual(['greeting', 'show_welcome'])
+    expect(Object.keys((await saved()).settings).sort()).toEqual([
+      'greeting',
+      'show_welcome',
+      'tour_bossbar',
+    ])
   })
 })

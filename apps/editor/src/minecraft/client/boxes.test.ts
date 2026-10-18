@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { elementBox, modelBoxes } from './boxes'
-import type { RawElement } from './model'
+import type { RawElement } from '@netherforge/models/model'
 
 const el = (
   from: [number, number, number],

@@ -15,7 +15,7 @@ import {
   nbtString,
   nbtVec3,
   type NbtRoot,
-} from '@netherforge/terrain-preview/nbt'
+} from '@netherforge/structures/nbt'
 
 /**
  * The dimension `nf.worlds.copy` makes a world from: Paper imports a world

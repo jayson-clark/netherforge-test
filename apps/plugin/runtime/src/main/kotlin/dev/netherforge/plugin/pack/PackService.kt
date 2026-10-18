@@ -2,12 +2,12 @@ package dev.netherforge.plugin.pack
 
 import dev.netherforge.format.Problem
 import dev.netherforge.format.Severity
+import dev.netherforge.format.block.BlockKind
 import dev.netherforge.format.bridge.PackBuild
-import dev.netherforge.format.project.BlockKind
 import dev.netherforge.format.project.KindSpec
-import dev.netherforge.format.project.ResourcePackKind
 import dev.netherforge.format.project.VanillaKind
-import dev.netherforge.format.project.VideoKind
+import dev.netherforge.format.resourcepack.ResourcePackKind
+import dev.netherforge.format.screen.VideoKind
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.project.Resource

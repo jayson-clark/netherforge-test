@@ -1,7 +1,7 @@
 package dev.netherforge.plugin.pathing
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.Box
+import dev.netherforge.format.math.Vec3
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.sqrt

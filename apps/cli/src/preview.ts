@@ -31,8 +31,8 @@ import {
   type Rgb,
 } from '@netherforge/terrain-preview'
 import { loadNodeLua } from '@netherforge/terrain-preview/lua.node'
-import { readNbt } from '@netherforge/terrain-preview/nbt'
-import { parseStructure } from '@netherforge/terrain-preview/structure'
+import { readNbt } from '@netherforge/structures/nbt'
+import { parseStructure } from '@netherforge/structures/structure'
 import { formatProblem, type Outcome } from './commands.ts'
 
 /** What `netherforge preview` takes besides the file; the defaults are the editor's preview's. */

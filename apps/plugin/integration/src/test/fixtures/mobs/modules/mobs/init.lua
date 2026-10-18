@@ -103,7 +103,7 @@ nf.commands.register("it-goals", function()
       return
     end
     done = true
-    local walk = has_goal(golem, "basic:it_walk")
+    local walk = has_goal(golem, "showcase:it_walk")
     log(
       "goal run",
       walked,
@@ -111,7 +111,7 @@ nf.commands.register("it-goals", function()
       ticked > 0,
       walk ~= nil and walk.priority == 0,
       target_started,
-      has_goal(golem, "basic:it_broken") == nil
+      has_goal(golem, "showcase:it_broken") == nil
     )
     golem:remove()
   end

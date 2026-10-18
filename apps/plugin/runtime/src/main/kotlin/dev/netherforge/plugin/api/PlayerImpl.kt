@@ -1,14 +1,14 @@
 package dev.netherforge.plugin.api
 
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.advancement.AdvancementKind
+import dev.netherforge.format.dialog.DialogKind
 import dev.netherforge.format.game.GameIds
-import dev.netherforge.format.project.AdvancementKind
-import dev.netherforge.format.project.DialogKind
-import dev.netherforge.format.project.MenuKind
+import dev.netherforge.format.math.Vec3
+import dev.netherforge.format.menu.MenuKind
 import dev.netherforge.format.project.Names
-import dev.netherforge.format.project.RecipeKind
-import dev.netherforge.format.project.SkyKind
+import dev.netherforge.format.recipe.RecipeKind
 import dev.netherforge.format.ref.ResourceRef
+import dev.netherforge.format.sky.SkyKind
 import dev.netherforge.plugin.binding.ActiveBuff
 import dev.netherforge.plugin.binding.AdvancementProgress
 import dev.netherforge.plugin.binding.BanOptions

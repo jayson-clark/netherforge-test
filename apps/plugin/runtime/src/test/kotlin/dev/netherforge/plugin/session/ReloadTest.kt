@@ -46,7 +46,7 @@ class ReloadTest {
 
     @Test
     fun `editing the definition adds, removes and respawns entities to match`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val tower = server.runtime.session.centities.spawn("tower", at)!!
             val root = server.platform.entities.display(tower.id, "root").id
             server.write(
@@ -178,11 +178,11 @@ class ReloadTest {
 
     @Test
     fun `saving the manifest restarts everything`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             server.runtime.session.centities.spawn("tower", at)
             val result = server.reload("netherforge.json")
             val project = result.resources.single()
-            assertEquals(Triple("basic", null, null), Triple(project.pkg, project.kind, project.id), "the whole package")
+            assertEquals(Triple("showcase", null, null), Triple(project.pkg, project.kind, project.id), "the whole package")
             assertTrue(project.ok)
             assertEquals(1, project.reattached)
             assertTrue("tower" in server.platform.commands.registered)
@@ -201,7 +201,7 @@ class ReloadTest {
 
     @Test
     fun `a project in a newer format is refused, naming its version`() {
-        TestServer(TestServer.example("basic") + mapOf(TestServer.MANIFEST to TestServer.manifest(formatVersion = 2))).use { server ->
+        TestServer(TestServer.example("showcase") + mapOf(TestServer.MANIFEST to TestServer.manifest(formatVersion = 2))).use { server ->
             assertFalse(server.runtime.session.running)
             val problem = server.runtime.currentProblems().single { it.code == "project.format-version" }
             assertTrue("uses format 2" in problem.message, problem.message)
@@ -212,7 +212,7 @@ class ReloadTest {
 
     @Test
     fun `a project for another Minecraft version is refused, and runs once it's fixed`() {
-        val example = TestServer.example("basic")
+        val example = TestServer.example("showcase")
         val manifest = example.getValue(TestServer.MANIFEST) as String
         TestServer(example + mapOf(TestServer.MANIFEST to manifest.replace("\"26.3\"", "\"26.4\""))).use { server ->
             assertFalse(server.runtime.session.running)

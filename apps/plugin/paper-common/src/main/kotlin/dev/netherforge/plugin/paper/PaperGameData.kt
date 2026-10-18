@@ -1,6 +1,5 @@
 package dev.netherforge.plugin.paper
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.BlockInfo
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.Box
@@ -8,6 +7,7 @@ import dev.netherforge.format.game.GameData
 import dev.netherforge.format.game.GameDataBundle
 import dev.netherforge.format.game.ParticleDataKind
 import dev.netherforge.format.game.ParticleInfo
+import dev.netherforge.format.math.Vec3
 import io.papermc.paper.datacomponent.DataComponentTypes
 import io.papermc.paper.registry.RegistryAccess
 import io.papermc.paper.registry.RegistryKey

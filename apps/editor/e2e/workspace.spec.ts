@@ -273,7 +273,7 @@ test('a project opens again as it was left: its tabs, the active one, and its do
   await page.keyboard.press('Enter')
   await page
     .getByRole('list', { name: 'Recent projects' })
-    .getByRole('button', { name: /Basic example/ })
+    .getByRole('button', { name: /NetherForge Showcase/ })
     .click()
   await expect(tab(page, 'tower')).toHaveAttribute('aria-selected', 'true')
   await expect(tab(page, 'shop')).toBeVisible()
@@ -406,7 +406,7 @@ test('leaving a project with unsaved edits asks first, and Open Recent brings it
     .hover()
   await page
     .getByRole('menu', { name: 'Open Recent' })
-    .getByRole('menuitem', { name: /Basic example/ })
+    .getByRole('menuitem', { name: /NetherForge Showcase/ })
     .click()
   await expect(tab(page, 'tower')).toBeVisible()
   expect(JSON.parse((await files(page))[TOWER]!).nodes.top.transform.translation).toEqual([0, 1, 0])

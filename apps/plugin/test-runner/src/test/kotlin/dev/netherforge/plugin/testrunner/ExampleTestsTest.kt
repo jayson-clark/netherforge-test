@@ -11,28 +11,19 @@ import kotlin.test.assertTrue
  * The examples run on the testkit's small game-data fixture (CI has no real game data, which only a live server exports),
  * so every block, item and entity type they name is in it.
  *
- * `examples/basic`'s own tests (`tests/`) pass: the example is exercised by the runner, and shows how a project tests itself.
- * So do the showcase's (`examples/lumen_vale`, a whole game built on every kind) and its library's (`examples/vale_lore`),
- * and the project templates' (`examples/template_*`, what the editor's "Add template" offers): each is a
- * package whose tests use the newer APIs, so an API change that breaks what users learn from breaks this.
+ * `examples/showcase`'s own tests (`tests/`) pass: the example (every booth of its expo, built on the fake server) is
+ * exercised by the runner, and shows how a project tests itself. So do the project templates' (`examples/template_*`,
+ * what the editor's "Add template" offers): each is a package whose tests use the newer APIs, so an API change that
+ * breaks what users learn from breaks this.
  */
 class ExampleTestsTest {
     private val repo = Path.of(System.getenv("NETHERFORGE_REPO") ?: error("NETHERFORGE_REPO isn't set; run through Gradle"))
 
     @Test
-    fun `examples-basic's tests pass`() {
+    fun `examples-showcase's tests pass`() {
         // The project and the package it depends on, side by side as `../library` finds it.
-        assertTestsPass("basic", listOf("basic", "library"), minimum = 4)
+        assertTestsPass("showcase", listOf("showcase", "library"), minimum = 14)
     }
-
-    @Test
-    fun `examples-lumen_vale's tests pass`() {
-        // The showcase, with the vale_lore library it depends on beside it as `../vale_lore` finds it.
-        assertTestsPass("lumen_vale", listOf("lumen_vale", "vale_lore"), minimum = 20)
-    }
-
-    @Test
-    fun `examples-vale_lore's tests pass`() = assertTestsPass("vale_lore", minimum = 7)
 
     @Test
     fun `the minigame template's tests pass`() = assertTestsPass("template_minigame", minimum = 5)

@@ -31,7 +31,7 @@ test('declares a server-owner setting in the project settings and sees it on the
     .getByRole('treegrid', { name: 'Settings pages' })
     .getByRole('row', { name: 'Server-owner settings' })
     .click()
-  const row = page.locator('[data-setting="basic:max_players"]')
+  const row = page.locator('[data-setting="showcase:max_players"]')
   await expect(row).toBeVisible()
   await row.getByRole('textbox').fill('20')
   await row.getByRole('textbox').press('Enter')
@@ -39,6 +39,6 @@ test('declares a server-owner setting in the project settings and sees it on the
     .poll(() => outside(page, (backend) => backend.bridgeLog, null))
     .toContainEqual({
       method: 'set_setting',
-      params: { namespace: 'basic', setting: 'max_players', value: 20 },
+      params: { namespace: 'showcase', setting: 'max_players', value: 20 },
     })
 })

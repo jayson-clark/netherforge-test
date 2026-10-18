@@ -1,7 +1,7 @@
 package dev.netherforge.plugin.contract
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.Box
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.platform.EntityFlag
 import dev.netherforge.plugin.platform.EntityNumber
 import dev.netherforge.plugin.platform.GameEvent

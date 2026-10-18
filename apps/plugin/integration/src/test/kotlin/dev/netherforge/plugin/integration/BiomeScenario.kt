@@ -1,8 +1,8 @@
 package dev.netherforge.plugin.integration
 
 import dev.netherforge.format.json.CanonicalJson
-import dev.netherforge.format.project.TerrainKind
 import dev.netherforge.format.terrain.TerrainCompiler
+import dev.netherforge.format.terrain.TerrainKind
 import dev.netherforge.plugin.integration.support.Scenario
 import dev.netherforge.plugin.integration.support.TestProject
 import dev.netherforge.plugin.integration.support.eventually
@@ -19,7 +19,7 @@ import kotlin.test.fail
  * The project's own biomes on a real server (W5.7): the example's `biomes/ruby_grove.json` is in the start-up datapack
  * in the game's format, a world `netherforge.json` makes with `terrain/ruby_hills.json` has it where the generator's
  * grove area is, the game decorates it with exactly its features (cherry trees and petals, and the boulders its
- * datapack's placed feature makes, nothing of the plains' around it), `/locate biome basic:ruby_grove` finds it, and changing it asks for a restart.
+ * datapack's placed feature makes, nothing of the plains' around it), `/locate biome showcase:ruby_grove` finds it, and changing it asks for a restart.
  */
 class BiomeScenario : Scenario("grove") {
     private val seed = 20260714L
@@ -84,7 +84,7 @@ class BiomeScenario : Scenario("grove") {
     @Test
     @Order(1)
     fun `the start-up datapack has the biome in the game's format`() {
-        val biome = server.folder.resolve("plugins/NetherForge/datapack/data/basic/worldgen/biome/ruby_grove.json").readText()
+        val biome = server.folder.resolve("plugins/NetherForge/datapack/data/showcase/worldgen/biome/ruby_grove.json").readText()
         val json = CanonicalJson.json.parseToJsonElement(biome).toString()
         assertTrue("\"minecraft:trees_cherry\"" in json, json)
         assertTrue("\"carvers\":[]" in json, json)
@@ -116,11 +116,11 @@ class BiomeScenario : Scenario("grove") {
     @Test
     @Order(3)
     fun `locate biome finds it`() {
-        editor.run("execute in minecraft:$world run locate biome basic:ruby_grove")
+        editor.run("execute in minecraft:$world run locate biome showcase:ruby_grove")
         val log = server.folder.resolve("${javaClass.simpleName}.log")
-        val missing = "Could not find a biome of type \"basic:ruby_grove\""
-        val text = eventually("locate's answer about basic:ruby_grove in $log", poll = { Files.readString(log) }) {
-            missing in it || "The nearest basic:ruby_grove is at" in it
+        val missing = "Could not find a biome of type \"showcase:ruby_grove\""
+        val text = eventually("locate's answer about showcase:ruby_grove in $log", poll = { Files.readString(log) }) {
+            missing in it || "The nearest showcase:ruby_grove is at" in it
         }
         if (missing in text) fail("locate didn't find the grove")
     }
@@ -137,7 +137,7 @@ class BiomeScenario : Scenario("grove") {
         assertTrue(result.restart, "the server learns biomes only as it starts")
         restart()
         assertNotNull(
-            server.folder.resolve("plugins/NetherForge/datapack/data/basic/worldgen/biome/ruby_grove.json").readText().takeIf {
+            server.folder.resolve("plugins/NetherForge/datapack/data/showcase/worldgen/biome/ruby_grove.json").readText().takeIf {
                 "#a7c3f2" in
                     it
             }

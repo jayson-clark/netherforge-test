@@ -30,19 +30,20 @@ test('a datapack lists its files by overlay, opens one as JSON, and what format 
       .getByRole('tablist', { name: 'Open files' })
       .getByRole('tab', { name: 'ruby_boulders.json' }),
   ).toHaveAttribute('aria-selected', 'true')
-  await expect(page.locator('.monaco-editor .view-lines')).toContainText('basic:ruby_boulder')
+  await expect(page.locator('.monaco-editor .view-lines')).toContainText('showcase:ruby_boulder')
 
   // Naming an entry the project doesn't have is a problem on that file.
   await outside(
     page,
-    (backend, path) => backend.testWrite(path, '{ "feature": "basic:nothing", "placement": [] }\n'),
+    (backend, path) =>
+      backend.testWrite(path, '{ "feature": "showcase:nothing", "placement": [] }\n'),
     `${FOLDER}/${PLACED}`,
   )
   await showPanel(page, 'Problems')
   await expect(
     page
       .getByRole('list', { name: 'Problems' })
-      .getByRole('button', { name: /The project has no configured feature "basic:nothing"/ }),
+      .getByRole('button', { name: /The project has no configured feature "showcase:nothing"/ }),
   ).toBeVisible()
   expect(errors).toEqual([])
 })

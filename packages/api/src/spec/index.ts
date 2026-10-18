@@ -1,6 +1,7 @@
 import type { ApiSpec, Surface } from '../types.ts'
 import { centityClass, centityShapes, nodeClass } from './centity.ts'
 import { ARGUMENT_TYPES, commandShapes } from './commands.ts'
+import { constants } from './constants.ts'
 import { shapes } from './events.ts'
 import { gameShapes } from './gameEvents.ts'
 import {
@@ -221,4 +222,5 @@ export const api: ApiSpec = {
     'java',
   ],
   commandArguments: ARGUMENT_TYPES,
+  constants,
 }

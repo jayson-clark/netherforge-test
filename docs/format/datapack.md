@@ -13,15 +13,15 @@ datapack here is laid out exactly as the game's are:
 datapacks/
   ruby_boulders/
     pack.mcmeta
-    data/basic/worldgen/placed_feature/ruby_boulders.json
-    mc1_21/data/basic/worldgen/configured_feature/ruby_boulder.json
-    mc26_1/data/basic/worldgen/configured_feature/ruby_boulder.json
-    mc26_3/data/basic/worldgen/feature/ruby_boulder.json
+    data/showcase/worldgen/placed_feature/ruby_boulders.json
+    mc1_21/data/showcase/worldgen/configured_feature/ruby_boulder.json
+    mc26_1/data/showcase/worldgen/configured_feature/ruby_boulder.json
+    mc26_3/data/showcase/worldgen/feature/ruby_boulder.json
 ```
 
 Each folder of `datapacks/` is one datapack: its `pack.mcmeta`, and its files
 under `data/` and in its overlays' folders. Its id is only the folder's name:
-what's in it is named as the game names it (`basic:ruby_boulders`). Copy a
+what's in it is named as the game names it (`showcase:ruby_boulders`). Copy a
 datapack you have into `datapacks/`, or make an empty one in the editor (New
 datapack): its `pack.mcmeta` is written for your server's data pack format
 alone, which the editor knows once the dev server has run. The editor lists a
@@ -100,8 +100,8 @@ Only worldgen, and tags of blocks, pass through:
 | Where                                                   | What                                                                                            |
 | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `data/<namespace>/worldgen/<registry>/<path>.json`      | An entry of one of the game's worldgen registries: `worldgen/noise_settings`, `worldgen/biome`… |
-| `data/<namespace>/tags/worldgen/<registry>/<path>.json` | A tag of one: `{ "values": ["basic:caves/deep", "#minecraft:is_overworld"] }`.                  |
-| `data/<namespace>/tags/block/<path>.json`               | A tag of the game's blocks, which an item's `canBreak` and `canPlaceOn` name: `#basic:soft`.    |
+| `data/<namespace>/tags/worldgen/<registry>/<path>.json` | A tag of one: `{ "values": ["showcase:caves/deep", "#minecraft:is_overworld"] }`.               |
+| `data/<namespace>/tags/block/<path>.json`               | A tag of the game's blocks, which an item's `canBreak` and `canPlaceOn` name: `#showcase:soft`. |
 
 A block tag holds the game's blocks and tags (`minecraft:dirt`,
 `#minecraft:logs`), not the project's own blocks: an item names those
@@ -120,7 +120,7 @@ NetherForge's own kinds are how a project has those.
 
 ### Namespaces
 
-- **The project's own** (`basic`): new entries. Their paths are ids, in
+- **The project's own** (`showcase`): new entries. Their paths are ids, in
   folders (`caves/deep`), so the project's files can name them.
 - **`minecraft`**: replacing one of the game's own entries, such as
   `data/minecraft/worldgen/noise_settings/overworld.json`. It must be one the
@@ -143,7 +143,7 @@ Inside the files, ids are the game's: a bare id is the game's (`stone` is
 The project's own files name a datapack's entries like their own resources:
 
 - A [biome](biome.md#features) lists a placed feature by id: `"ruby_boulders"`
-  for one of the project's datapacks (`basic:ruby_boulders`), `minecraft:…` for
+  for one of the project's datapacks (`showcase:ruby_boulders`), `minecraft:…` for
   the game's.
 - A [terrain](terrain.md#biomes)'s area, a centity's
   [`spawning`](centity.md#spawning) and a structure that generates name a
@@ -153,7 +153,7 @@ The project's own files name a datapack's entries like their own resources:
 
 A datapack's files name the project's biomes, structures and
 [dimension types](dimension-type.md), and each other's entries, as the game names
-them: `basic:ruby_grove`, a world preset's dimension of type `basic:deep`.
+them: `showcase:ruby_grove`, a world preset's dimension of type `showcase:deep`.
 
 ### The main world, and the game's generators
 
@@ -166,10 +166,10 @@ Replacing a biome, a feature or a structure set changes it in every world that
 has it. A world that's already there keeps the chunks it has: only chunks
 generated afterwards follow the new files.
 
-A world preset or noise settings of the project's own (`basic:floating`) is
+A world preset or noise settings of the project's own (`showcase:floating`) is
 used by the game where something names it, such as a world preset of
 `minecraft`'s replaced to name it, or `level-type` in `server.properties`
-(`level-type=basic:my_preset`, for a main world the server makes anew).
+(`level-type=showcase:my_preset`, for a main world the server makes anew).
 `nf.worlds.create` doesn't take one: its `generator` is one of the game's types,
 and its `terrain` one of the project's.
 

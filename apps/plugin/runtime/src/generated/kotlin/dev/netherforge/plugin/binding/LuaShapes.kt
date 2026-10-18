@@ -2,7 +2,7 @@
 
 package dev.netherforge.plugin.binding
 
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.lua.LuaCall
 import dev.netherforge.plugin.lua.LuaChoice
 import dev.netherforge.plugin.lua.LuaCodec

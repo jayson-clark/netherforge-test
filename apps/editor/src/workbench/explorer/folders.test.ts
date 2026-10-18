@@ -64,7 +64,11 @@ describe("the explorer's folders", () => {
 
   it("pick a group's tile pictures: up to four, those right in it before its own groups'", () => {
     const items = folderByKey('item')
-    expect(groupPreview(items, files, '(tools)')).toEqual(['ruby_pick', 'ruby_wand'])
+    expect(groupPreview(items, files, '(tools)')).toEqual([
+      'glow_pickaxe',
+      'ruby_pick',
+      'ruby_wand',
+    ])
     const nested = [
       ...files,
       ...['a', 'b', 'c'].map((id) => `items/(gear)/(deep)/${id}/item.json`),

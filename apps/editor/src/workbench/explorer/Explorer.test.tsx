@@ -44,7 +44,7 @@ describe('the project explorer', () => {
       within(menus)
         .getAllByRole('option')
         .map((it) => it.getAttribute('aria-label')),
-    ).toEqual(['shop'])
+    ).toEqual(['altar', 'backpack', 'board', 'shop'])
     expect(
       within(kinds()).getByRole('option', { name: 'Menus' }).getAttribute('aria-selected'),
     ).toBe('true')
@@ -214,7 +214,7 @@ describe('group folders in the explorer', () => {
     expect(shown()).toContain('ruby')
 
     fireEvent.doubleClick(within(items()).getByRole('option', { name: 'Group tools' }))
-    expect(shown()).toEqual(['ruby_pick', 'ruby_wand'])
+    expect(shown()).toEqual(['glow_pickaxe', 'ruby_pick', 'ruby_wand'])
     expect(screen.getByRole('navigation', { name: 'Group folders' }).textContent).toContain('tools')
 
     // The breadcrumb goes back up, and so does Backspace.
@@ -222,7 +222,7 @@ describe('group folders in the explorer', () => {
     expect(shown()[0]).toBe('Group tools')
     fireEvent.click(within(items()).getByRole('option', { name: 'Group tools' }))
     fireEvent.keyDown(items(), { key: 'Enter' })
-    expect(shown()).toEqual(['ruby_pick', 'ruby_wand'])
+    expect(shown()).toEqual(['glow_pickaxe', 'ruby_pick', 'ruby_wand'])
     fireEvent.keyDown(items(), { key: 'Backspace' })
     expect(shown()[0]).toBe('Group tools')
     expect(

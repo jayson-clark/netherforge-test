@@ -1,6 +1,5 @@
 package dev.netherforge.plugin.testkit
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.BlockInfo
 import dev.netherforge.format.game.Box
 import dev.netherforge.format.game.GameDataBundle
@@ -8,6 +7,7 @@ import dev.netherforge.format.game.ParticleDataKind
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.game.has
 import dev.netherforge.format.item.ProjectItems
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.platform.GameEventDelivery
 import dev.netherforge.plugin.platform.GameEvents
 import dev.netherforge.plugin.platform.ItemData
@@ -241,6 +241,8 @@ class FakePlatform(
         val KINDS = mapOf(
             "minecraft:player" to Kind(0.6, 1.8, 20.0, mob = false),
             "minecraft:pig" to Kind(0.9, 0.9, 10.0, mob = true),
+            // examples/showcase's mobs booth gives one a goal.
+            "minecraft:sheep" to Kind(0.9, 1.3, 8.0, mob = true),
             "minecraft:zombie" to Kind(0.6, 1.95, 20.0, mob = true),
             "minecraft:creeper" to Kind(0.6, 1.7, 20.0, mob = true),
             "minecraft:armor_stand" to Kind(0.5, 1.975, 20.0, mob = false),
@@ -273,12 +275,20 @@ class FakePlatform(
             "waterlogged" to listOf("true", "false")
         )
 
-        /** What examples/lumen_vale is built from: its terrains, its centities' displays and its scripts' blocks. */
-        private val LUMEN_VALE_BLOCKS = listOf(
-            "minecraft:allium", "minecraft:amethyst_block", "minecraft:black_concrete", "minecraft:calcite",
-            "minecraft:cobblestone", "minecraft:cornflower", "minecraft:gravel", "minecraft:green_terracotta",
-            "minecraft:light_gray_wool", "minecraft:moss_block", "minecraft:mossy_cobblestone",
-            "minecraft:purple_stained_glass", "minecraft:purple_wool", "minecraft:tuff"
+        /**
+         * What examples/showcase's expo, booths, sky islands and structures are built from: its terrains, its centities'
+         * displays and its scripts' blocks.
+         */
+        private val SHOWCASE_BLOCKS = listOf(
+            "minecraft:allium", "minecraft:amethyst_block", "minecraft:black_concrete", "minecraft:blast_furnace",
+            "minecraft:calcite", "minecraft:carved_pumpkin", "minecraft:chiseled_stone_bricks", "minecraft:cobbled_deepslate",
+            "minecraft:cobblestone", "minecraft:cornflower", "minecraft:crafting_table", "minecraft:deepslate_bricks",
+            "minecraft:diamond_block", "minecraft:end_stone", "minecraft:furnace", "minecraft:gravel",
+            "minecraft:green_terracotta", "minecraft:hay_block", "minecraft:lantern", "minecraft:light_gray_wool",
+            "minecraft:magenta_glazed_terracotta", "minecraft:moss_block", "minecraft:mossy_cobblestone", "minecraft:oak_fence",
+            "minecraft:oak_log", "minecraft:polished_andesite", "minecraft:polished_diorite", "minecraft:purple_stained_glass",
+            "minecraft:purple_wool", "minecraft:red_terracotta", "minecraft:slime_block", "minecraft:smithing_table",
+            "minecraft:smoker", "minecraft:smooth_quartz", "minecraft:stonecutter", "minecraft:tuff"
         ).associateWith { BlockInfo() } + mapOf(
             "minecraft:amethyst_cluster" to BlockInfo(FACING, mapOf("facing" to "up", "waterlogged" to "false")),
             "minecraft:small_amethyst_bud" to BlockInfo(FACING, mapOf("facing" to "up", "waterlogged" to "false")),
@@ -314,7 +324,7 @@ class FakePlatform(
             mapColors = MAP_COLORS,
             blocks = mapOf(
                 "minecraft:air" to BlockInfo(),
-                // What examples/basic's terrain is made of.
+                // What examples/showcase's terrain is made of.
                 "minecraft:grass_block" to BlockInfo(),
                 "minecraft:dirt" to BlockInfo(),
                 "minecraft:sand" to BlockInfo(),
@@ -335,7 +345,7 @@ class FakePlatform(
                 "minecraft:chest" to BlockInfo(),
                 "minecraft:barrel" to BlockInfo(),
                 "minecraft:dark_oak_planks" to BlockInfo(),
-                // What examples/cinema's plaza and hall are made of.
+                // What examples/showcase's plaza (the expo's main world) and booths are made of.
                 "minecraft:smooth_stone" to BlockInfo(),
                 "minecraft:polished_blackstone_bricks" to BlockInfo(),
                 "minecraft:red_carpet" to BlockInfo(),
@@ -387,7 +397,7 @@ class FakePlatform(
                     ),
                     defaults = mapOf("facing" to "north", "half" to "lower", "hinge" to "left", "open" to "false", "powered" to "false")
                 )
-            ) + CONCRETE.associateWith { BlockInfo() } + LUMEN_VALE_BLOCKS,
+            ) + CONCRETE.associateWith { BlockInfo() } + SHOWCASE_BLOCKS,
             registries = mapOf(
                 RegistryKey.ITEM.id to listOf(
                     "minecraft:red_banner",
@@ -399,26 +409,26 @@ class FakePlatform(
                     "minecraft:barrier",
                     "minecraft:gold_ingot",
                     "minecraft:written_book",
-                    // What examples/basic's recipes take and make.
+                    // What examples/showcase's recipes take and make.
                     "minecraft:redstone_block",
                     "minecraft:emerald",
                     "minecraft:redstone",
                     "minecraft:stick",
                     "minecraft:iron_sword",
-                    // examples/basic's ruby pick.
+                    // examples/showcase's ruby pick.
                     "minecraft:iron_pickaxe",
                     // A bow: what a project item with `drawWithoutAmmo` is built on, and what the game events shoot.
                     "minecraft:bow",
-                    // What examples/basic's loot tables give and ask for.
+                    // What examples/showcase's loot tables give and ask for.
                     "minecraft:diamond_sword",
-                    // What examples/basic's advancements show, and a new one's template.
+                    // What examples/showcase's advancements show, and a new one's template.
                     "minecraft:compass",
                     "minecraft:book",
                     // What the project templates (examples/template_*) are built from.
                     "minecraft:rabbit_foot",
                     "minecraft:rotten_flesh",
                     "minecraft:gold_nugget",
-                    // What examples/lumen_vale's items are built on, its recipes take and its scripts hand out.
+                    // What examples/showcase's items are built on, its recipes take, its scripts hand out and its tour menu shows.
                     "minecraft:amethyst_block",
                     "minecraft:amethyst_cluster",
                     "minecraft:amethyst_shard",
@@ -430,7 +440,41 @@ class FakePlatform(
                     "minecraft:iron_helmet",
                     "minecraft:iron_ingot",
                     "minecraft:iron_pickaxe",
-                    "minecraft:sweet_berries"
+                    "minecraft:sweet_berries",
+                    "minecraft:torch",
+                    "minecraft:arrow",
+                    "minecraft:coal",
+                    "minecraft:diamond_pickaxe",
+                    "minecraft:cobbled_deepslate",
+                    "minecraft:glowstone",
+                    "minecraft:gray_stained_glass_pane",
+                    "minecraft:filled_map",
+                    "minecraft:armor_stand",
+                    "minecraft:slime_ball",
+                    "minecraft:note_block",
+                    "minecraft:crafting_table",
+                    "minecraft:chest",
+                    "minecraft:barrel",
+                    "minecraft:writable_book",
+                    "minecraft:blaze_powder",
+                    "minecraft:spyglass",
+                    "minecraft:painting",
+                    "minecraft:name_tag",
+                    "minecraft:potion",
+                    "minecraft:sheep_spawn_egg",
+                    "minecraft:player_head",
+                    "minecraft:zombie_head",
+                    "minecraft:spawner",
+                    "minecraft:knowledge_book",
+                    "minecraft:bookshelf",
+                    "minecraft:command_block",
+                    "minecraft:chest_minecart",
+                    "minecraft:ender_eye",
+                    "minecraft:grass_block",
+                    "minecraft:structure_block",
+                    "minecraft:clock",
+                    "minecraft:tripwire_hook",
+                    "minecraft:oak_door"
                 ),
                 RegistryKey.TRIGGER_TYPE.id to listOf("minecraft:impossible", "minecraft:inventory_changed", "minecraft:tick"),
                 RegistryKey.ENTITY_TYPE.id to listOf(
@@ -439,11 +483,11 @@ class FakePlatform(
                     "minecraft:chest_minecart",
                     "minecraft:armor_stand",
                     "minecraft:mannequin",
-                    // What examples/basic's biome spawns.
+                    // What examples/showcase's biome spawns.
                     "minecraft:skeleton",
                     "minecraft:sheep",
                     "minecraft:rabbit",
-                    // And examples/lumen_vale's.
+                    // And its glow grove's.
                     "minecraft:bat",
                     "minecraft:spider"
                 ),
@@ -467,13 +511,16 @@ class FakePlatform(
                     "minecraft:block.note_block.hat",
                     "minecraft:block.note_block.pling",
                     "minecraft:ui.button.click",
-                    // examples/basic's biome's music.
+                    // examples/showcase's biome's music.
                     "minecraft:music.overworld.cherry_grove",
-                    // examples/lumen_vale's biomes' and scripts' sounds.
+                    // examples/showcase's scripts' sounds, and its sky islands' biome's.
                     "minecraft:ambient.cave",
                     "minecraft:block.amethyst_block.chime",
                     "minecraft:block.amethyst_block.hit",
-                    // examples/lumen_vale's resource pack replaces it.
+                    "minecraft:block.note_block.chime",
+                    "minecraft:block.slime_block.fall",
+                    "minecraft:block.stone_button.click_on",
+                    // examples/showcase's resource pack replaces it.
                     "minecraft:block.deepslate_bricks.break",
                     "minecraft:entity.parrot.ambient",
                     "minecraft:music.overworld.deep_dark",
@@ -493,13 +540,12 @@ class FakePlatform(
                     "lib:grove",
                     "lib:secret",
                     "test:ruby_grove",
-                    // examples/lumen_vale's.
-                    "lumen_vale:ashen_ridge",
-                    "lumen_vale:crystal_grove",
-                    "lumen_vale:mossy_meadows"
+                    // examples/showcase's, as the start-up datapack gives them.
+                    "showcase:glow_grove",
+                    "showcase:ruby_grove"
                 ),
-                // examples/basic's and examples/lumen_vale's biomes' features, and the registries their datapacks (26.3's
-                // files) are in, with the game's features lumen_vale's datapack places.
+                // examples/showcase's biomes' features, and the registries datapacks (26.3's files) are in, with game features
+                // tests' datapacks place.
                 RegistryKey.PLACED_FEATURE.id to listOf(
                     "minecraft:flower_cherry",
                     "minecraft:flower_meadow",
@@ -535,7 +581,8 @@ class FakePlatform(
                 "minecraft:flame" to ParticleDataKind.NONE,
                 "minecraft:flash" to ParticleDataKind.NONE,
                 "minecraft:end_rod" to ParticleDataKind.NONE,
-                // What examples/lumen_vale's biomes, effects and scripts send.
+                // What examples/showcase's biomes, effects and scripts send.
+                "minecraft:damage_indicator" to ParticleDataKind.NONE,
                 "minecraft:enchant" to ParticleDataKind.NONE,
                 "minecraft:glow" to ParticleDataKind.NONE,
                 "minecraft:heart" to ParticleDataKind.NONE,

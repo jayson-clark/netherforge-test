@@ -24,7 +24,7 @@ class PackTest {
 
     @Test
     fun `the example's packs are built, served at their hash and sent to players as they join`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val built = assertNotNull(server.runtime.packs.built)
             val response = get(built.url!!)
             assertEquals(200, response.statusCode())
@@ -36,9 +36,9 @@ class PackTest {
                 generateSequence { zip.nextEntry?.name }.toList()
             }
             assertTrue("pack.mcmeta" in names)
-            assertTrue("assets/basic/font/ui/gui.json" in names)
+            assertTrue("assets/showcase/font/ui/gui.json" in names)
             assertTrue("assets/minecraft/font/default.json" in names)
-            assertTrue("assets/basic/textures/ui/gui/shop.png" in names)
+            assertTrue("assets/showcase/textures/ui/gui/shop.png" in names)
 
             val alex = server.player("Alex")
             server.platform.raise.playerJoin(GameEvent.PlayerJoin(alex.ref, false, null))
@@ -52,7 +52,7 @@ class PackTest {
     @Test
     fun `a server that doesn't say its resource pack format builds no pack, and says why (runtime pack-format)`() {
         val game = FakePlatform.GAME.copy(packFormat = null)
-        TestServer(TestServer.example("basic"), platform = FakePlatform(game = game)).use { server ->
+        TestServer(TestServer.example("showcase"), platform = FakePlatform(game = game)).use { server ->
             assertNull(server.runtime.packs.built, "nothing built")
             val problem = server.runtime.session.problems().single { it.code == "runtime.pack-format" }
             assertEquals("resource_packs", problem.file)
@@ -63,7 +63,7 @@ class PackTest {
 
     @Test
     fun `saving a texture rebuilds with a new hash and resends to everyone online, and the same content keeps its hash`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val alex = server.player("Alex")
             server.platform.raise.playerJoin(GameEvent.PlayerJoin(alex.ref, false, null))
             val before = server.runtime.packs.built!!.sha1
@@ -87,7 +87,7 @@ class PackTest {
 
     @Test
     fun `a pack with errors keeps the last good build`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val before = server.runtime.packs.built!!.sha1
             server.write("resource_packs/ui/pack.json", """{ "glyphs": { "coin": { "texture": "nope.png" } } }""")
             val result = server.reload("resource_packs/ui/pack.json").resources.single()
@@ -107,10 +107,10 @@ class PackTest {
     @Test
     fun `glyphs resolve for scripts, a typo is an error, and a project without packs builds nothing`() {
         TestServer(
-            TestServer.example("basic") + ("modules/g/init.lua" to "log(#nf.text.glyph('ui/coin'))\nnf.text.glyph('ui/coins')")
+            TestServer.example("showcase") + ("modules/g/init.lua" to "log(#nf.text.glyph('ui/coin'))\nnf.text.glyph('ui/coins')")
         ).use { server ->
             assertEquals(listOf("3"), server.logs, "one private-use character, three bytes of UTF-8")
-            assertTrue("resource pack \"ui\" has no glyph \"coins\" (it has: coin)" in server.errors.single().message)
+            assertTrue("resource pack \"ui\" has no glyph \"coins\" (it has: coin, spark, wisp)" in server.errors.single().message)
         }
         TestServer(mapOf("modules/g/init.lua" to "-- nothing")).use { server ->
             assertNull(server.runtime.packs.built)
@@ -119,9 +119,9 @@ class PackTest {
 
     @Test
     fun `glyph tags resolve to the glyph's character, and an unknown one is nothing, reported once`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val glyphs = server.platform.glyphs
-            val coin = server.runtime.packs.glyph(ResourceKey("basic", "ui/coin"))!!
+            val coin = server.runtime.packs.glyph(ResourceKey("showcase", "ui/coin"))!!
             assertEquals(coin, glyphs("ui/coin"))
             assertNull(glyphs("ui/gem"))
             assertNull(glyphs("ui/gem"))

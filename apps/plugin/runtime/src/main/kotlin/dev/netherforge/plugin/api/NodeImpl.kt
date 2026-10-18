@@ -1,6 +1,5 @@
 package dev.netherforge.plugin.api
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.Billboard
 import dev.netherforge.format.centity.BlockDisplay
 import dev.netherforge.format.centity.Channel
@@ -11,6 +10,7 @@ import dev.netherforge.format.centity.TextAlignment
 import dev.netherforge.format.centity.TextDisplay
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.item.ItemDef
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.math.degreesToRadians
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceRef

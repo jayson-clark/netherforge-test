@@ -3,10 +3,10 @@ package dev.netherforge.format.ref
 import dev.netherforge.format.Location
 import dev.netherforge.format.ProblemCode
 import dev.netherforge.format.ProblemCodes
+import dev.netherforge.format.datapack.DatapackKind
 import dev.netherforge.format.datapack.DatapackLayout
 import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.json.CanonicalJson
-import dev.netherforge.format.project.DatapackKind
 import dev.netherforge.format.project.DocumentKind
 import dev.netherforge.format.project.Kinds
 import dev.netherforge.format.project.PackagePaths

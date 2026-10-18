@@ -168,7 +168,7 @@ describe('MCP tools', () => {
     })
     const result = await advanceUntil(pending)
     expect(result.resources).toEqual([
-      { package: 'basic', kind: 'module', id: 'greeter', ok: true, reattached: 0 },
+      { package: 'showcase', kind: 'module', id: 'greeter', ok: true, reattached: 0 },
     ])
     expect(result.errors).toEqual([
       expect.objectContaining({

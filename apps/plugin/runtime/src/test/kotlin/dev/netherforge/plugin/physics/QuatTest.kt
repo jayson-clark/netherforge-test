@@ -1,7 +1,7 @@
 package dev.netherforge.plugin.physics
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.math.Matrix4
+import dev.netherforge.format.math.Vec3
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals

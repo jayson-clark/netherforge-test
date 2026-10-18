@@ -9,7 +9,7 @@ import dev.netherforge.format.game.RegistryKey
 /**
  * Checks a game block file on its own: its numbers, and that every entry of `blocks` is a block or tag the game has
  * (with game data), named once. Whether another file names one of its blocks, or the project's blocks are held in
- * one, is the project's to check ([dev.netherforge.format.project.GameBlockKind.crossCheck]).
+ * one, is the project's to check ([dev.netherforge.format.block.GameBlockKind.crossCheck]).
  */
 object GameBlockValidator {
     fun validate(file: GameBlockFile, sink: ProblemSink, game: GameData?) {

@@ -8,7 +8,7 @@ import dev.netherforge.format.validate.Rules
  * Checks a block on its own: its numbers and its script. That the model, loot
  * table, centity and sounds it names exist is the project's to check, as for
  * every reference, and whether the game has a state left to hold it is the
- * project's too ([dev.netherforge.format.project.BlockKind.crossCheck]).
+ * project's too ([dev.netherforge.format.block.BlockKind.crossCheck]).
  */
 object BlockValidator {
     /** What a game sound's block kind looks like: the `stone` of `block.stone.place`. */

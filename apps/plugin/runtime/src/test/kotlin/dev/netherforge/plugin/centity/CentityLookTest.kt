@@ -134,7 +134,7 @@ class CentityLookTest {
         server("this:node(\"base\"):set_interpolation_ticks(10)").use { server ->
             val sign = server.spawn()
             server.tick()
-            sign.set(0, dev.netherforge.format.centity.Channel.ROTATION, dev.netherforge.format.Vec3(0.0, 45.0, 0.0))
+            sign.set(0, dev.netherforge.format.centity.Channel.ROTATION, dev.netherforge.format.math.Vec3(0.0, 45.0, 0.0))
             server.tick()
             assertEquals(10, server.platform.entities.display(sign.id, "base").pose!!.interpolationTicks)
             assertEquals(1, server.platform.entities.display(sign.id, "sword").pose!!.interpolationTicks)

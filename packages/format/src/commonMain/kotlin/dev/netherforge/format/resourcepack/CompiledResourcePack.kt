@@ -7,8 +7,8 @@ import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.project.ImageInfo
 import dev.netherforge.format.project.PackagePaths
 import dev.netherforge.format.project.ProjectSnapshot
-import dev.netherforge.format.project.VideoKind
 import dev.netherforge.format.screen.VideoFile
+import dev.netherforge.format.screen.VideoKind
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive

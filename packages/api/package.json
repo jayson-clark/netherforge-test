@@ -11,7 +11,7 @@
   },
   "scripts": {
     "generate": "node --experimental-strip-types scripts/generate.ts",
-    "lint": "tsc --noEmit -p .",
+    "lint": "tsc --noEmit -p . && eslint .",
     "test": "vitest run"
   },
   "dependencies": {

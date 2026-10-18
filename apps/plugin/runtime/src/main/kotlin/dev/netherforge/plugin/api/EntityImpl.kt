@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.api
 
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.binding.DroppedItemApi
 import dev.netherforge.plugin.binding.EntityApi
 import dev.netherforge.plugin.binding.InventoryKeys
@@ -39,7 +39,7 @@ internal fun ProjectSession.setEntityFlag(self: LuaHandle.Entity, flag: EntityFl
 internal fun ProjectSession.entityNumber(self: LuaHandle.Entity, number: EntityNumber): Double? =
     self.uuidOrNull()?.let { platform.worldEntities.number(it, number) }
 
-/** How far the `target_*` raycasts reach when the script doesn't say: `TARGET_DISTANCE` in `spec/entities.ts`. */
+/** How far the `target_*` raycasts reach when the script doesn't say: `TARGET_DISTANCE` in `spec/constants.ts`. */
 internal const val TARGET_DISTANCE = 20.0
 
 /**

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { run } from './main.ts'
 import { readPng } from './render.ts'
 
-const example = path.resolve(import.meta.dirname, '../../../examples/basic')
+const example = path.resolve(import.meta.dirname, '../../../examples/showcase')
 
 let tmp: string
 let project: string

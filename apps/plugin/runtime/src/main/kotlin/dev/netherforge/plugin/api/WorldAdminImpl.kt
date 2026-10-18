@@ -1,8 +1,8 @@
 package dev.netherforge.plugin.api
 
-import dev.netherforge.format.Vec3
-import dev.netherforge.format.project.DimensionTypeKind
-import dev.netherforge.format.project.TerrainKind
+import dev.netherforge.format.dimensiontype.DimensionTypeKind
+import dev.netherforge.format.math.Vec3
+import dev.netherforge.format.terrain.TerrainKind
 import dev.netherforge.plugin.binding.BorderDamage
 import dev.netherforge.plugin.binding.BorderSizeOptions
 import dev.netherforge.plugin.binding.BorderWarning

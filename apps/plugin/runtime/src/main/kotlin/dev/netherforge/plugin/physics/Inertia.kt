@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.physics
 
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.math.Vec3
 
 /**
  * The inverse inertia tensor of a body, in its own frame.

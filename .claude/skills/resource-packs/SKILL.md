@@ -278,7 +278,7 @@ PackBuild(sha1, url, bytes)` and `reattached` = players it was sent to.
 
 Advancement text goes through the same MiniMessage pass as everything else,
 so `<glyph:ui/coin>` in a title is the resource pack's glyph character, and an icon's
-`itemModel` (`ui/ruby`) becomes `minecraft:item_model: basic:ui/ruby`. The
+`itemModel` (`ui/ruby`) becomes `minecraft:item_model: showcase:ui/ruby`. The
 datapack is built before the worlds load, from files alone, so it asks the
 resource packs only for what `compileResourcePacks` says from the files (no image facts the
 server would need to measure).

@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.paper
 
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.platform.AttributeModifierData
 import dev.netherforge.plugin.platform.AttributeOps
 import dev.netherforge.plugin.platform.PathfindingOps

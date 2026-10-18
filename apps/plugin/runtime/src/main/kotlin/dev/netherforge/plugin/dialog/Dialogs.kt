@@ -5,13 +5,13 @@ import dev.netherforge.format.dialog.BooleanInput
 import dev.netherforge.format.dialog.DialogFile
 import dev.netherforge.format.dialog.DialogInput
 import dev.netherforge.format.dialog.DialogJson
+import dev.netherforge.format.dialog.DialogKind
 import dev.netherforge.format.dialog.DialogType
 import dev.netherforge.format.dialog.ItemBody
 import dev.netherforge.format.dialog.MessageBody
 import dev.netherforge.format.dialog.OptionInput
 import dev.netherforge.format.dialog.RangeInput
 import dev.netherforge.format.dialog.TextInput
-import dev.netherforge.format.project.DialogKind
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.ref.ResourceRef

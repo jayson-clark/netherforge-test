@@ -8,18 +8,10 @@
  * custom block stands out), and the legend names each.
  */
 import type { TerrainMap, TerrainPaletteEntry, TerrainSlice } from '@netherforge/format/types'
+import { hsl, shadeOf, type Rgb } from '@netherforge/structures/color'
 
-export type Rgb = readonly [number, number, number]
-
-/** HSL (h in degrees, s and l 0 to 1) as 0 to 255 channels. */
-export function hsl(h: number, s: number, l: number): Rgb {
-  const a = s * Math.min(l, 1 - l)
-  const channel = (n: number) => {
-    const k = (n + h / 30) % 12
-    return Math.round((l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))) * 255)
-  }
-  return [channel(0), channel(8), channel(4)]
-}
+/** What the colours here are (the structures package's, which its pictures use too). */
+export type { Rgb }
 
 /** The hues biome areas take in turn: none of them blue, which is the sea's. */
 const AREA_HUES = [38, 110, 330, 12, 280, 160, 68, 350]
@@ -64,12 +56,6 @@ export function sliceColors(slice: TerrainSlice, fluid: string, stone: string): 
   const full = (id: string) => (id.includes(':') ? id : `minecraft:${id}`)
   return slice.palette.map((entry, index) => blockColor(index, entry, full(fluid), full(stone)))
 }
-
-export const shadeOf = (rgb: Rgb, factor: number): Rgb => [
-  Math.max(0, Math.min(255, Math.round(rgb[0] * factor))),
-  Math.max(0, Math.min(255, Math.round(rgb[1] * factor))),
-  Math.max(0, Math.min(255, Math.round(rgb[2] * factor))),
-]
 
 /**
  * RGBA pixels of the map, one per cell: sea where the ground is under it (deeper is darker), else the biome area's

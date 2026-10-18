@@ -1,5 +1,5 @@
 package dev.netherforge.plugin.structure
-import dev.netherforge.format.project.CentityKind
+import dev.netherforge.format.centity.CentityKind
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.centity.Centities

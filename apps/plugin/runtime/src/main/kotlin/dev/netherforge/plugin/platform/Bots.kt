@@ -1,6 +1,5 @@
 package dev.netherforge.plugin.platform
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.bridge.BotActResult
 import dev.netherforge.format.bridge.BotAction
 import dev.netherforge.format.bridge.BotEvents
@@ -8,6 +7,7 @@ import dev.netherforge.format.bridge.BotInfo
 import dev.netherforge.format.bridge.BotPackAnswer
 import dev.netherforge.format.bridge.BotPosition
 import dev.netherforge.format.bridge.BotState
+import dev.netherforge.format.math.Vec3
 import java.util.UUID
 
 /**

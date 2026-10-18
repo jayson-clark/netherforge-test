@@ -25,7 +25,8 @@ class PackageNamesTest {
     private fun manifest(namespace: String, more: String = "") =
         """{ "formatVersion": ${FormatVersion.CURRENT}, "name": "$namespace", "namespace": "$namespace", "version": "1.0.0", "minecraft": "26.3"$more }"""
 
-    private val png: ByteArray = Files.readAllBytes(TestServer.repo().resolve("examples/basic/resource_packs/ui/textures/glyph/coin.png"))
+    private val png: ByteArray =
+        Files.readAllBytes(TestServer.repo().resolve("examples/showcase/resource_packs/ui/textures/glyph/coin.png"))
 
     /** `lib` exports its coin, its `pick` dialog and its `api` module; its secret item, `quiet` dialog, `vault` menu and `gems` pack are its own. */
     private val lib = mapOf(

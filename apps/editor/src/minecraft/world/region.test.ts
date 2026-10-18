@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { TAG, type CompoundTag } from 'nbtify'
-import { nbtRoot, readNbt, type NbtRoot } from '@netherforge/terrain-preview/nbt'
+import { nbtRoot, readNbt, type NbtRoot } from '@netherforge/structures/nbt'
 import { nbt } from '@/testing/nbtFixtures'
 import {
   chunkRoot,

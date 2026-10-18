@@ -43,7 +43,7 @@ export interface ResourcePacks {
 }
 
 /**
- * One pack's model files, parsed (the game's JSON model, which `minecraft/client/model`'s
+ * One pack's model files, parsed (the game's JSON model, which `@netherforge/models/model`'s
  * `RawModel` reads), and its texture files, for drawing the models.
  */
 export interface PackModels {

@@ -7,10 +7,10 @@ import dev.netherforge.format.lua.LuaFailure
 import dev.netherforge.format.lua.LuaHostFunction
 import dev.netherforge.format.lua.LuaPlatform
 import dev.netherforge.format.lua.LuaState
+import dev.netherforge.format.module.ModuleKind
 import dev.netherforge.format.noise.FastNoiseLite
 import dev.netherforge.format.noise.TerrainSeeds
 import dev.netherforge.format.project.Kinds
-import dev.netherforge.format.project.ModuleKind
 import kotlin.concurrent.Volatile
 
 /**

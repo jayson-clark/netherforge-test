@@ -11,7 +11,7 @@ import {
   nbtVec3,
   readNbt,
   writeNbt,
-} from '@netherforge/terrain-preview/nbt'
+} from '@netherforge/structures/nbt'
 
 /** `TAG_Compound("hello world") { TAG_String("name"): "Bananrama" }`, byte by byte, as the NBT spec's own example. */
 // prettier-ignore

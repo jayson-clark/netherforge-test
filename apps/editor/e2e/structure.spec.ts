@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test'
-import { readNbt, writeNbt, type NbtRoot } from '@netherforge/terrain-preview/nbt'
-import { parseStructure } from '@netherforge/terrain-preview/structure'
+import { readNbt, writeNbt, type NbtRoot } from '@netherforge/structures/nbt'
+import { parseStructure } from '@netherforge/structures/structure'
 import { filledBlocks, structureRoot } from '../src/testing/nbtFixtures'
 import { files, openExampleWithAssets, openResource, outside, test } from './helpers'
 

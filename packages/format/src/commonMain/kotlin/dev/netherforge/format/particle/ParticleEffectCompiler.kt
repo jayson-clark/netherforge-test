@@ -2,7 +2,6 @@ package dev.netherforge.format.particle
 
 import dev.netherforge.format.Problem
 import dev.netherforge.format.ProblemSink
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.Easing
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.GameData
@@ -11,6 +10,7 @@ import dev.netherforge.format.game.ParticleDataKind
 import dev.netherforge.format.hasErrors
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.math.Matrix4
+import dev.netherforge.format.math.Vec3
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 

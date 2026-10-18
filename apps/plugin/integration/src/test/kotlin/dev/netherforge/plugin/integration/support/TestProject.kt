@@ -7,15 +7,15 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
 /**
- * A copy of an example (`examples/basic`, by default, and the
+ * A copy of an example (`examples/showcase`, by default, and the
  * [dependencies] it names by path, beside it: `examples/library`) in a temp
  * folder, with fixtures (folders of `src/test/fixtures`, laid over it file
  * by file) added. Scenarios change it as the editor would, then reload over
  * the bridge.
  */
 class TestProject(example: String, dependencies: List<String>, fixtures: List<String>) : AutoCloseable {
-    /** `examples/basic` with `examples/library`, and [fixtures]. */
-    constructor(vararg fixtures: String) : this("basic", listOf("library"), fixtures.toList())
+    /** `examples/showcase` with `examples/library`, and [fixtures]. */
+    constructor(vararg fixtures: String) : this("showcase", listOf("library"), fixtures.toList())
 
     private val work: Path = createTempDirectory("netherforge-it")
     val root: Path = work.resolve(example)
@@ -30,6 +30,36 @@ class TestProject(example: String, dependencies: List<String>, fixtures: List<St
             manifest.writeText(manifest.readText().replace(Regex("\"minecraft\": \"[^\"]*\""), "\"minecraft\": \"${Adapter.minecraft}\""))
         }
         fixtures.forEach(::add)
+        // The showcase's main world is its expo's plaza, which the server generates only when bukkit.yml routes the main
+        // world to NetherForge (as the editor's dev server does). A scenario that does names a terrain for it itself
+        // ([setWorld]); the rest run on the server's own world, as it comes, without the restart warning a terrain no one
+        // routes is.
+        if (example == "showcase") setWorld("world", "{}")
+    }
+
+    /** Makes [json] world [name]'s entry in `netherforge.json`'s `worlds`, in place of the one it has, if any. */
+    fun setWorld(name: String, json: String) {
+        val text = read("netherforge.json")
+        val worlds = text.indexOf("\"worlds\": {")
+        check(worlds >= 0) { "netherforge.json names no worlds" }
+        val key = text.indexOf("\"$name\": {", worlds)
+        if (key < 0) {
+            val at = worlds + "\"worlds\": {".length
+            write("netherforge.json", text.substring(0, at) + "\n    \"$name\": $json," + text.substring(at))
+            return
+        }
+        // The entry's object runs from its opening brace to the brace that closes it.
+        val open = text.indexOf('{', key)
+        var depth = 0
+        var end = open
+        while (true) {
+            when (text[end]) {
+                '{' -> depth++
+                '}' -> if (--depth == 0) break
+            }
+            end++
+        }
+        write("netherforge.json", text.substring(0, open) + json + text.substring(end + 1))
     }
 
     companion object {

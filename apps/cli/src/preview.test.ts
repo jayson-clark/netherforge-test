@@ -6,30 +6,30 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { WORLD_HEIGHT_OVERWORLD } from '@netherforge/format/constants'
 import type { TerrainMap } from '@netherforge/format/types'
 import { mapPixels, structureInput, terrainPreviewer } from '@netherforge/terrain-preview'
-import { readNbt } from '@netherforge/terrain-preview/nbt'
-import { parseStructure } from '@netherforge/terrain-preview/structure'
+import { readNbt } from '@netherforge/structures/nbt'
+import { parseStructure } from '@netherforge/structures/structure'
 import { run } from './main.ts'
 
-const example = path.resolve(import.meta.dirname, '../../../examples/basic')
+const example = path.resolve(import.meta.dirname, '../../../examples/showcase')
 
 /** Everything this file writes, removed after its last test. */
 let root: string
-/** A copy of examples/basic (and the library beside it) that no test changes, made once for the file. */
+/** A copy of examples/showcase (and the library beside it) that no test changes, made once for the file. */
 let shared: string
 /** The project the current test runs on: [shared], unless it asked for a copy of its own ([ownCopy]). */
 let project: string
 let out: string
 let made = 0
 
-/** examples/basic, with examples/library beside it where its netherforge.json finds it, in a new folder of [root]. */
+/** examples/showcase, with examples/library beside it where its netherforge.json finds it, in a new folder of [root]. */
 function copyExample(): string {
   const dir = path.join(root, `copy-${(made += 1)}`)
-  cpSync(example, path.join(dir, 'basic'), {
+  cpSync(example, path.join(dir, 'showcase'), {
     recursive: true,
     filter: (source) => path.relative(example, source) !== '.netherforge',
   })
   cpSync(path.resolve(example, '../library'), path.join(dir, 'library'), { recursive: true })
-  return path.join(dir, 'basic')
+  return path.join(dir, 'showcase')
 }
 
 /** For a test that changes the project's files: a copy of its own. */
@@ -262,7 +262,7 @@ describe('preview: slice', () => {
       {},
     )
     expect(outcome.code).toBe(0)
-    // examples/basic's `deep`: from y -128, 448 tall.
+    // examples/showcase's `deep`: from y -128, 448 tall.
     expect(outcome.out[1]).toMatch(/; y -128 to \d+;/)
     const json = JSON.parse(readFileSync(path.join(project, 'dimension_types/deep.json'), 'utf8'))
     expect(json).toMatchObject({ minY: -128, height: 448 })

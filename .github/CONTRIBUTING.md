@@ -29,10 +29,10 @@ pnpm test
 
 ```sh
 pnpm dev                    # the editor, with hot reload of the UI
-pnpm test:integration       # boots a headless Paper server with examples/basic
+pnpm test:integration       # boots a headless Paper server with examples/showcase
 ```
 
-To try the editor against real content, open `examples/basic`. The
+To try the editor against real content, open `examples/showcase`. The
 [run-netherforge](.claude/skills/run-netherforge/SKILL.md) guide covers starting a
 dev server and joining it.
 

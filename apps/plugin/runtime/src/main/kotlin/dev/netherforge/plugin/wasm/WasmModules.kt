@@ -8,9 +8,9 @@ import dev.netherforge.format.ProblemCodes
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Kinds
 import dev.netherforge.format.project.ResourcePlace
-import dev.netherforge.format.project.WasmModuleKind
 import dev.netherforge.format.wasm.WasmImports
 import dev.netherforge.format.wasm.WasmModuleFile
+import dev.netherforge.format.wasm.WasmModuleKind
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.async.WorkFailed
 import dev.netherforge.plugin.binding.Events

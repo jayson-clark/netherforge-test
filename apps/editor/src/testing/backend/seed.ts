@@ -1,8 +1,8 @@
 /**
- * The `examples/basic` project and `examples/library` (the package it depends
+ * The `examples/showcase` project and `examples/library` (the package it depends
  * on, at `../library`), bundled at build time so the memory backend (unit
  * tests, Playwright) opens a real project with no disk. Text
- * files come in raw; PNGs and structures (`.nbt`) as data URLs (`?inline`),
+ * files come in raw; PNGs, structures (`.nbt`) and sounds (`.ogg`) as data URLs (`?inline`),
  * decoded to bytes.
  */
 import { base64ToBytes } from '@/core/backend/base64'
@@ -10,16 +10,16 @@ import type { FileContents } from './memory'
 
 const texts = import.meta.glob(
   [
-    '../../../../../examples/{basic,library}/**/*',
-    '../../../../../examples/{basic,library}/**/.*',
-    '!../../../../../examples/{basic,library}/**/*.{png,nbt}',
+    '../../../../../examples/{showcase,library}/**/*',
+    '../../../../../examples/{showcase,library}/**/.*',
+    '!../../../../../examples/{showcase,library}/**/*.{png,nbt,ogg}',
     // Opening the example in the editor writes this from the client; it isn't committed.
-    '!../../../../../examples/{basic,library}/fonts/default.json',
+    '!../../../../../examples/{showcase,library}/fonts/default.json',
   ],
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>
 
-const binaries = import.meta.glob('../../../../../examples/{basic,library}/**/*.{png,nbt}', {
+const binaries = import.meta.glob('../../../../../examples/{showcase,library}/**/*.{png,nbt,ogg}', {
   query: '?inline',
   import: 'default',
   eager: true,
@@ -47,14 +47,14 @@ function project(example: string): Record<string, FileContents> {
 
 /** Project path → text. */
 export const exampleFiles: Record<string, string> = Object.fromEntries(
-  filesOf(texts, 'basic', (text) => text),
+  filesOf(texts, 'showcase', (text) => text),
 )
 
 /** Project path → contents, binary files included: what the memory backend serves. */
-export const exampleProject: Record<string, FileContents> = project('basic')
+export const exampleProject: Record<string, FileContents> = project('showcase')
 
-/** `examples/library`: the package `examples/basic` depends on (`../library`). */
+/** `examples/library`: the package `examples/showcase` depends on (`../library`). */
 export const libraryProject: Record<string, FileContents> = project('library')
 
-export const EXAMPLE_ROOT = '/memory/basic'
+export const EXAMPLE_ROOT = '/memory/showcase'
 export const LIBRARY_ROOT = '/memory/library'

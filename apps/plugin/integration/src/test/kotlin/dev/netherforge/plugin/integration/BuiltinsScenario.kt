@@ -14,13 +14,7 @@ import org.junit.jupiter.api.Test
 class BuiltinsScenario : Scenario("builtins") {
     override fun prepare(project: TestProject) {
         // A game rule netherforge.json sets on the main world.
-        val manifest = "netherforge.json"
-        val text = project.read(manifest)
-        check("\"worlds\": {" in text) { "examples/basic names no worlds" }
-        project.write(
-            manifest,
-            text.replace("\"worlds\": {", "\"worlds\": {\n    \"world\": { \"gameRules\": { \"keep_inventory\": true } },")
-        )
+        project.setWorld("world", """{ "gameRules": { "keep_inventory": true } }""")
     }
 
     @Test

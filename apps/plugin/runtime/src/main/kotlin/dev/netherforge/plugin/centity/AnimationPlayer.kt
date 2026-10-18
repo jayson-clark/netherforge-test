@@ -1,12 +1,12 @@
 package dev.netherforge.plugin.centity
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.AnimationBlend
 import dev.netherforge.format.centity.Channel
 import dev.netherforge.format.centity.CompiledAnimation
 import dev.netherforge.format.centity.LoopMode
 import dev.netherforge.format.centity.Transform
 import dev.netherforge.format.centity.posed
+import dev.netherforge.format.math.Vec3
 
 /**
  * The clips playing on one instance, and what they do to its pose.

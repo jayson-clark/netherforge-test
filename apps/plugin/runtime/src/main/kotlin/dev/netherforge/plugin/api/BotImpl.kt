@@ -1,9 +1,9 @@
 package dev.netherforge.plugin.api
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.bridge.BotAction
 import dev.netherforge.format.bridge.BotClick
 import dev.netherforge.format.bridge.BotHand
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.async.WorkFailed
 import dev.netherforge.plugin.binding.BotApi
 import dev.netherforge.plugin.binding.BotInteractOptions

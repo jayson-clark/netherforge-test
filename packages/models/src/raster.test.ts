@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { bakeFaces, displayMatrix } from './geometry'
-import { blankPicture, layered, MISSING, rasterize, type Picture } from './raster'
+import { bakeFaces, displayMatrix } from './geometry.ts'
+import { blankPicture, layered, MISSING, rasterize, type Picture } from './raster.ts'
 
 /** A [size]-pixel square of one colour. */
 function solid(size: number, rgba: number[]): Picture {

@@ -1,11 +1,11 @@
 package dev.netherforge.plugin.world
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.game.ParticleDataKind
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.game.has
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.particle.BlockData
 import dev.netherforge.format.particle.ColorData
 import dev.netherforge.format.particle.DustData

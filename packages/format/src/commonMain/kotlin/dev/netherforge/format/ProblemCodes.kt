@@ -1080,4 +1080,15 @@ object ProblemCodes {
             GUIDE_DEV_LOOP,
             "More particle points were due in one tick than the server sends, so some were skipped."
         )
+
+    /**
+     * The codes only the plugin reports, while a project runs on a server: loading a project never does, so no
+     * golden can hold one. The runtime's `ProblemCoverageTest` names the test that produces each.
+     */
+    val reportedAtRuntime: Set<ProblemCode> = setOf(
+        RUNTIME_WASM, TERRAIN_SCRIPT_FAILED, MIGRATION_FAILED, VIDEO_STALE, RUNTIME_MINECRAFT_UNSUPPORTED,
+        RUNTIME_UNBUNDLED, RUNTIME_BUNDLE_HASH, RUNTIME_PLUGIN_MISSING, RUNTIME_WEB_DISABLED, RUNTIME_BOTS_DISABLED,
+        RUNTIME_BLOCKS, RUNTIME_TERRAIN, RUNTIME_DIMENSION_TYPE, RUNTIME_RESTART, RUNTIME_DATAPACK, SETTINGS_FILE,
+        SETTINGS_VALUE, SETTINGS_UNKNOWN, SCRIPT_ERROR, SCRIPT_SLOW, PARTICLES_BUDGET, RUNTIME_PACK_FORMAT
+    )
 }

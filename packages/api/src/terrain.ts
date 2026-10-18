@@ -1,5 +1,5 @@
 /**
- * The API a terrain's script sees (`terrain/<id>.lua`, W5.6): not `nf`'s. A script hands the stages of
+ * The API a terrain's script sees (`terrain/<id>.lua`): not `nf`'s. A script hands the stages of
  * its terrain to Lua, and runs in Lua states of its own on the server's chunk threads (and in the editor's
  * preview), so it gets none of the server: what it's given is the world it shapes (`Terrain`, the script's `...`),
  * the chunk a stage fills (`Chunk`) and the noises its file declares (`Noise`).

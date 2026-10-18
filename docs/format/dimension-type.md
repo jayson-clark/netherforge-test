@@ -36,7 +36,7 @@ A world is made with a dimension type in three ways:
 As every [reference](references.md), the project's own is its id (`"deep"`)
 and a package's `ns:id` (`"acme:deep"`, if it exports it). One that doesn't
 exist is `reference.dimension-type`. On the server it's `<namespace>:<id>`
-(`basic:deep`).
+(`showcase:deep`).
 
 **A world keeps the dimension type it was made with**: it's saved with the world,
 so it loads the same after a restart. Naming another for a world the server

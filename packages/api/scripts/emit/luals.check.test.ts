@@ -1,6 +1,6 @@
 /**
  * Runs lua-language-server over real scripts with the stubs as they're generated now, configured
- * the way a project is (`examples/basic/.luarc.json`, with the stubs as its library), and expects
+ * the way a project is (`examples/showcase/.luarc.json`, with the stubs as its library), and expects
  * no diagnostics: the examples, plus `luals-probe/`, which touches events on every class, `Vec3`
  * maths both ways round, tasks, commands, saved data, worlds and blocks, entities and players,
  * inventories, boss bars and sidebars; and every `example` in the spec.
@@ -20,7 +20,7 @@ import { luals, lualsSurfaces } from './luals.ts'
 import { terrainStubs } from './terrain.ts'
 
 const root = path.resolve(import.meta.dirname, '../../../..')
-const example = path.join(root, 'examples/basic')
+const example = path.join(root, 'examples/showcase')
 const probe = path.join(import.meta.dirname, 'luals-probe')
 
 function findBinary(): string | undefined {
@@ -208,22 +208,18 @@ describe.skipIf(!binary)(
   'lua-language-server, with the generated stubs',
   { timeout: LUALS_TIMEOUT },
   () => {
-    it('finds nothing wrong with examples/basic', () => {
+    it('finds nothing wrong with examples/showcase', () => {
       expect(check(example)).toEqual([])
     })
 
-    // The project templates (what the editor's "Add template" offers) and the showcase with its
-    // library are what users learn from: their scripts and their tests stay clean as the stubs change.
-    it.each([
-      'lumen_vale',
-      'vale_lore',
-      'cinema',
-      'template_minigame',
-      'template_shop',
-      'template_rpg_mob',
-    ])('finds nothing wrong with examples/%s', (name) => {
-      expect(check(path.join(root, 'examples', name))).toEqual([])
-    })
+    // The project templates (what the editor's "Add template" offers) and the showcase's library
+    // are what users learn from: their scripts and their tests stay clean as the stubs change.
+    it.each(['library', 'template_minigame', 'template_shop', 'template_rpg_mob'])(
+      'finds nothing wrong with examples/%s',
+      (name) => {
+        expect(check(path.join(root, 'examples', name))).toEqual([])
+      },
+    )
 
     it('finds nothing wrong with a script using every class', () => {
       expect(check(probe)).toEqual([])

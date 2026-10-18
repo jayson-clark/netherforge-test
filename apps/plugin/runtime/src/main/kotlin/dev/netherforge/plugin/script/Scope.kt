@@ -1,12 +1,12 @@
 package dev.netherforge.plugin.script
 
-import dev.netherforge.format.project.BlockKind
-import dev.netherforge.format.project.CentityKind
-import dev.netherforge.format.project.DialogKind
-import dev.netherforge.format.project.ItemKind
-import dev.netherforge.format.project.MenuKind
-import dev.netherforge.format.project.ModuleKind
-import dev.netherforge.format.project.ScreenKind
+import dev.netherforge.format.block.BlockKind
+import dev.netherforge.format.centity.CentityKind
+import dev.netherforge.format.dialog.DialogKind
+import dev.netherforge.format.item.ItemKind
+import dev.netherforge.format.menu.MenuKind
+import dev.netherforge.format.module.ModuleKind
+import dev.netherforge.format.screen.ScreenKind
 import dev.netherforge.plugin.project.Resource
 import java.util.UUID
 

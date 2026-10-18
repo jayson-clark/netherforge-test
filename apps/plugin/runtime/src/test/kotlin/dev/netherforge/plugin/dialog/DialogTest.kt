@@ -209,7 +209,7 @@ class DialogTest {
 
     @Test
     fun `the welcome example greets a player with its dialog the first time only, even after a restart`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val alex = server.player("Alex")
             server.platform.raise.playerJoin(GameEvent.PlayerJoin(alex.ref, false, null))
             val shown = server.platform.dialogs.showing[alex.ref.uuid]

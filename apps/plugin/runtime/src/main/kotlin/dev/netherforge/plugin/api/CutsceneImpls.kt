@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.api
-import dev.netherforge.format.Vec3
-import dev.netherforge.format.project.CutsceneKind
+import dev.netherforge.format.cutscene.CutsceneKind
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.binding.Caller
 import dev.netherforge.plugin.binding.CutsceneApi
 import dev.netherforge.plugin.binding.CutscenePlayOptions

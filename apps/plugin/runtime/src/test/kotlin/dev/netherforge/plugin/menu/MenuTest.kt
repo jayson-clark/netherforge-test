@@ -37,7 +37,7 @@ class MenuTest {
 
     @Test
     fun `the shop example opens per player, fills from the file, and its script answers clicks`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val alex = server.player("Alex")
             val sam = server.player("Sam")
             server.platform.commands.run(alex, "shop")
@@ -53,13 +53,13 @@ class MenuTest {
             val shop = server.runtime.session.snapshot.compiledResourcePacks.getValue("ui").skins.getValue("shop")
             assertEquals(177, shop.advance, "read from the PNG: every column of the 176-wide art is opaque")
             val prefix = PackFonts.offset(-8) + shop.char + PackFonts.offset(8 - 177)
-            assertEquals("<white><font:basic:ui/gui>$prefix</font></white><dark_gray>Village shop", a.title)
+            assertEquals("<white><font:showcase:ui/gui>$prefix</font></white><dark_gray>Village shop", a.title)
 
             // Prices are written in the file with the coin glyph's tag; the adapter's MiniMessage resolves it.
             assertEquals(listOf("<gray><glyph:ui/coin> 2"), a.slots[11]!!.def.lore)
-            assertEquals(server.runtime.packs.glyph(ResourceKey("basic", "ui/coin")), server.platform.glyphs("ui/coin"))
+            assertEquals(server.runtime.packs.glyph(ResourceKey("showcase", "ui/coin")), server.platform.glyphs("ui/coin"))
             assertEquals(ResourceRef("ui/ruby"), a.slots[13]!!.def.itemModel)
-            // Slot 12 sells the library's gem (examples/library, a package basic depends on), in the library's look.
+            // Slot 12 sells the library's gem (examples/library, a package the showcase depends on), in the library's look.
             assertEquals(ResourceRef("library:gem"), a.slots[12]!!.def.item)
             assertEquals(ResourceRef("library:gems/gem"), a.slots[12]!!.def.itemModel)
             assertEquals("<aqua>Gem", a.slots[12]!!.def.name)
@@ -75,7 +75,7 @@ class MenuTest {
             assertTrue(windows.click(alex, 15))
             assertNull(windows.of(alex))
             server.tick()
-            assertEquals(1, server.runtime.session.menus.all().size, "only Sam's window is left")
+            assertEquals(1, server.runtime.session.menus.all().count { !it.definition.shared }, "only Sam's window is left")
         }
     }
 
@@ -678,11 +678,11 @@ class MenuTest {
         val font = mapOf("fonts/default.json" to """{ "minecraft": "26.3", "advances": { "65": 6, "66": 6 } }""")
         fun prefixOf(server: TestServer, shift: Int): String {
             val shop = server.runtime.session.snapshot.compiledResourcePacks.getValue("ui").skins.getValue("shop")
-            return "<white><font:basic:ui/gui>${PackFonts.offset(
+            return "<white><font:showcase:ui/gui>${PackFonts.offset(
                 -8 + shift
             ) + shop.char + PackFonts.offset(8 - shift - 177)}</font></white>"
         }
-        TestServer(TestServer.example("basic") + extra + font).use { server ->
+        TestServer(TestServer.example("showcase") + extra + font).use { server ->
             val drop = server.platform.menus.windows.getValue(server.runtime.session.menus.window("drop")!!.uuid)
             // "AB" is 12 wide: the game starts it at (176 - 12) / 2 = 82, so the skin moves back 74.
             assertEquals(prefixOf(server, -74) + "AB", drop.title)
@@ -690,7 +690,7 @@ class MenuTest {
             assertEquals(prefixOf(server, -80), bare.title, "no words: centred on nothing, no font needed")
             assertTrue(server.runtime.currentProblems().none { it.code == "font.needed" })
         }
-        TestServer(TestServer.example("basic") + extra).use { server ->
+        TestServer(TestServer.example("showcase") + extra).use { server ->
             val drop = server.platform.menus.windows.getValue(server.runtime.session.menus.window("drop")!!.uuid)
             assertEquals(prefixOf(server, 0) + "AB", drop.title, "without the font, left where it falls")
             assertEquals(

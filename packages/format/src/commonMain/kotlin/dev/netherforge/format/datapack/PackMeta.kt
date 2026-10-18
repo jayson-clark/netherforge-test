@@ -12,7 +12,7 @@ import kotlinx.serialization.json.intOrNull
  * game's file, in the game's spelling: [pack] says which data pack formats the pack's files are written for, and
  * [overlays] which of its folders replace files of `data/` for other formats (the game's own way of making one pack
  * work on several versions). The files themselves are `data/<namespace>/worldgen/…` beside it, which format reads
- * as JSON but doesn't model ([dev.netherforge.format.project.DatapackKind]).
+ * as JSON but doesn't model ([dev.netherforge.format.datapack.DatapackKind]).
  */
 @Serializable
 data class PackMeta(@SerialName("\$schema") val schema: String? = null, val pack: PackSection, val overlays: PackOverlays? = null) {

@@ -1,11 +1,11 @@
 package dev.netherforge.plugin.api
 
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.centity.CentityKind
+import dev.netherforge.format.dialog.DialogKind
 import dev.netherforge.format.item.ItemDef
+import dev.netherforge.format.math.Vec3
+import dev.netherforge.format.menu.MenuKind
 import dev.netherforge.format.menu.MenuValidator
-import dev.netherforge.format.project.CentityKind
-import dev.netherforge.format.project.DialogKind
-import dev.netherforge.format.project.MenuKind
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.resourcepack.PackFonts

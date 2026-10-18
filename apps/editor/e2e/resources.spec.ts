@@ -125,7 +125,7 @@ test('imports a texture into a pack and uses it as a menu skin', async ({ page }
   await openExample(page)
   await openResource(page, 'ui')
   const png = readFileSync(
-    new URL('../../../examples/basic/resource_packs/ui/textures/gui/shop.png', import.meta.url),
+    new URL('../../../examples/showcase/resource_packs/ui/textures/gui/shop.png', import.meta.url),
   )
   await page.getByLabel('PNG files to import').setInputFiles({
     name: 'Banner.png',

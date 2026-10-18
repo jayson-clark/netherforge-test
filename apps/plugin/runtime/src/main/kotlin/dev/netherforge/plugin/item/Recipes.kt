@@ -1,10 +1,10 @@
 package dev.netherforge.plugin.item
 
-import dev.netherforge.format.project.ItemKind
+import dev.netherforge.format.item.ItemKind
 import dev.netherforge.format.project.KindSpec
-import dev.netherforge.format.project.RecipeKind
 import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.recipe.RecipeFile
+import dev.netherforge.format.recipe.RecipeKind
 import dev.netherforge.format.recipe.RecipeValidator
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.RuntimeLog

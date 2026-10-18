@@ -5,6 +5,49 @@ plugins {
     kotlin("plugin.serialization")
 }
 
+/*
+ * Lua that format runs itself (`src/commonMain/lua/<name>.lua`), kept as Lua files so stylua formats them and
+ * lua-language-server checks them, and handed to the Kotlin as constants: `terrain-glue.lua` is
+ * `TERRAIN_GLUE_LUA` in `dev.netherforge.format.terrain`. Generated, so commonMain reads it on JVM and JS alike.
+ */
+val luaSources = layout.projectDirectory.dir("src/commonMain/lua")
+val generatedLua = layout.buildDirectory.dir("generated/lua-sources")
+
+val generateLuaSources by tasks.registering {
+    group = "build"
+    description = "Turns src/commonMain/lua/*.lua into Kotlin string constants"
+    val sources = luaSources
+    val out = generatedLua
+    inputs.dir(sources)
+    outputs.dir(out)
+    doLast {
+        val dir = out.get().asFile.resolve("dev/netherforge/format/terrain")
+        dir.deleteRecursively()
+        dir.mkdirs()
+        val constants = sources.asFile.listFiles { it: File -> it.extension == "lua" }!!.sortedBy { it.name }.joinToString("\n") {
+            val name = it.nameWithoutExtension.uppercase().replace('-', '_') + "_LUA"
+            // A raw string can't hold `$` or three quotes as written; neither is likely in Lua, but both stay exact.
+            val text = it.readText().replace("$", "\${'$'}").replace("\"\"\"", "\"\"\${'\"'}")
+            "/** `src/commonMain/lua/${it.name}`. */\ninternal val $name: String = \"\"\"$text\"\"\"\n"
+        }
+        dir.resolve(
+            "LuaSources.kt"
+        ).writeText(
+            "// Generated from src/commonMain/lua by generateLuaSources. Don't edit.\npackage dev.netherforge.format.terrain\n\n$constants"
+        )
+    }
+}
+
+val repoRoot: File by rootProject.extra
+
+/** wasmoon's version: `catalog:` in pnpm-workspace.yaml, the one place it's written. */
+val wasmoonVersion: String = run {
+    val workspace = repoRoot.resolve("pnpm-workspace.yaml").readText()
+    requireNotNull(Regex("""^\s+wasmoon:\s*(\S+)\s*$""", RegexOption.MULTILINE).find(workspace)) {
+        "pnpm-workspace.yaml's catalog has no wasmoon"
+    }.groupValues[1]
+}
+
 kotlin {
     jvmToolchain(25)
 
@@ -35,6 +78,9 @@ kotlin {
     }
 
     sourceSets {
+        commonMain {
+            kotlin.srcDir(generateLuaSources)
+        }
         commonMain.dependencies {
             implementation(libs.serialization.json)
         }
@@ -42,14 +88,14 @@ kotlin {
             implementation(kotlin("test"))
         }
         // Terrain scripts' Lua (`format/lua/`): luajava's Lua 5.4 on the JVM, the same as the plugin's own
-        // state (whose jar brings the natives), and wasmoon's Lua 5.4 in WebAssembly in JS. Keep wasmoon's version
-        // the same as packages/format/package.json's, which is what the editor and the CLI resolve.
+        // state (whose jar brings the natives), and wasmoon's Lua 5.4 in WebAssembly in JS, at the version the
+        // workspace's catalog gives everything else ([wasmoonVersion]).
         jvmMain.dependencies {
             implementation(libs.luajava)
             implementation(libs.luajava.lua54)
         }
         jsMain.dependencies {
-            implementation(npm("wasmoon", "1.16.0"))
+            implementation(npm("wasmoon", wasmoonVersion))
         }
     }
 
@@ -69,14 +115,11 @@ dependencies {
  * paths are handed to the test JVM and the test Node process through the
  * environment so commonTest can stay free of path logic.
  */
-val repoRoot: File by rootProject.extra
 
 val updateGolden = System.getenv("UPDATE_GOLDEN") ?: ""
 val goldenInputs = listOf(
     repoRoot.resolve("examples"),
-    layout.projectDirectory.dir("testdata").asFile,
-    // ProblemCoverageTest checks that the runtime tests it names for a problem code name that code.
-    repoRoot.resolve("apps/plugin/runtime/src/test")
+    layout.projectDirectory.dir("testdata").asFile
 )
 
 // TerrainScriptApiTest holds the terrain scripts' Lua to the API spec's JSON.

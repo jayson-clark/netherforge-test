@@ -1,9 +1,9 @@
 package dev.netherforge.format.text
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.Billboard
 import dev.netherforge.format.centity.TextDisplay
 import dev.netherforge.format.game.Box
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.resourcepack.PackFonts
 
 /**

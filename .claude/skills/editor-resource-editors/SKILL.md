@@ -122,7 +122,7 @@ are the generic ones. What's specific:
   a tool through the recipe editor's `IngredientPicker`). Selection is a
   `LootPick` (`{ pool, entry? }`) in the view, beside the preview's `seed`.
   "Roll" is format's own roller through `rollLoot`, over every loot table's
-  current text, the packages' as read, keyed by full name (`basic:treasure`,
+  current text, the packages' as read, keyed by full name (`showcase:treasure`,
   `library:gems`): format reads each in its own namespace, as the server
   does, so drops name items in full. No rolling rules in TypeScript. A table
   entry offers the project's tables and its dependencies' exported ones
@@ -223,8 +223,8 @@ are the generic ones. What's specific:
   block named one way, the stone, area filters), the pure pictures are `packages/terrain-preview` (`draw.ts`: `mapPixels`, `slicePixels`, `sliceColors`
   and the colours; `previewer.ts`: the typed `terrainPreviewer`, which `core/format.ts` re-exports; `structures.ts`:
   `structuresNamed`, `structureInput`), shared with `netherforge preview` (apps/cli), which draws exactly what this
-  does. NBT reading (`nbt.ts`, `structure.ts`) lives there too, for the same reason: the editor imports
-  `@netherforge/terrain-preview/nbt` and `/structure`. Tests: `ops.test.ts`,
+  does. NBT reading lives beside it in `packages/structures` (`nbt.ts`, `structure.ts`, and schematics, build
+  parts and structure pictures), for the same reason: the editor imports `@netherforge/structures/nbt` and `/structure`. Tests: `ops.test.ts`,
   `packages/terrain-preview/src/draw.test.ts` (against the real JS build), `worker/core.test.ts` (a structure linked from its input, other
   heights), `worker/client.test.ts` (newest slice wins, a lane sends its file once and restarts), `tiles.test.ts` (levels, what's wanted, the scheduler's generations and failures), `e2e/terrain.spec.ts` (the
   preview following a base height and a seed, the example's decorations marked (its tree read from the seed's

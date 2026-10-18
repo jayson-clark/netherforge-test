@@ -1,7 +1,7 @@
 package dev.netherforge.plugin.centity
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.Box
 import dev.netherforge.format.math.Matrix4
+import dev.netherforge.format.math.Vec3
 import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertEquals

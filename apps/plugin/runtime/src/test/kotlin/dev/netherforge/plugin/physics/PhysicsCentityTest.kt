@@ -62,7 +62,7 @@ class PhysicsCentityTest {
             server.tick(5)
             assertEquals(0.0, translation(server, crate.id).y, 0.02, "resting on the ledge")
             // Shove it two thirds of the way off.
-            crate.set(0, dev.netherforge.format.centity.Channel.TRANSLATION, dev.netherforge.format.Vec3(0.7, 0.0, 0.0))
+            crate.set(0, dev.netherforge.format.centity.Channel.TRANSLATION, dev.netherforge.format.math.Vec3(0.7, 0.0, 0.0))
             crate.body(0)!!.wake()
             server.tick(80)
             val fallen = translation(server, crate.id)
@@ -178,10 +178,10 @@ class PhysicsCentityTest {
         TestServer(crate() + table).use { server ->
             val centities = server.runtime.session.centities
             val table = centities.spawn("table", Location("world", 0.0, 64.0, 0.0))!!
-            table.set(0, dev.netherforge.format.centity.Channel.TRANSLATION, dev.netherforge.format.Vec3(20.0, 0.0, 0.0))
+            table.set(0, dev.netherforge.format.centity.Channel.TRANSLATION, dev.netherforge.format.math.Vec3(20.0, 0.0, 0.0))
             val crate = centities.spawn("crate", Location("world", 0.0, 64.0, 0.0))!!
             server.tick(2)
-            table.set(0, dev.netherforge.format.centity.Channel.TRANSLATION, dev.netherforge.format.Vec3.ZERO)
+            table.set(0, dev.netherforge.format.centity.Channel.TRANSLATION, dev.netherforge.format.math.Vec3.ZERO)
             server.tick(80)
             assertEquals(1.0, translation(server, crate.id).y, 0.02, "landed on the top slid under it")
         }
@@ -203,8 +203,9 @@ class PhysicsCentityTest {
 
     @Test
     fun `the crate example settles and says so`() {
-        TestServer(TestServer.example("basic")).use { server ->
-            server.runtime.session.centities.spawn("crate", Location("world", 0.0, 64.0, 0.0))
+        TestServer(TestServer.example("showcase")).use { server ->
+            // Away from where the showcase's expo builds (its hub floor is at the origin).
+            server.runtime.session.centities.spawn("crate", Location("world", 400.0, 64.0, -400.0))
             server.tick(120)
             val line = server.logs.single { it.startsWith("crate settled at") }
             assertEquals(0.0, line.substringAfter("at ").toDouble(), 0.02)
@@ -213,12 +214,12 @@ class PhysicsCentityTest {
 
     @Test
     fun `the pool example breaks away from the player and reracks`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             // Standing west of the cue ball, so the shot runs east into the pack.
             val alex = server.player("Alex")
-            alex.location = Location("world", -4.0, 64.0, 0.0)
-            // The skirt's underside on the ground.
-            val pool = server.runtime.session.centities.spawn("pool", Location("world", 0.0, 64.55, 0.0))!!
+            alex.location = Location("world", 396.0, 64.0, -400.0)
+            // The skirt's underside on the ground, away from where the showcase's expo builds.
+            val pool = server.runtime.session.centities.spawn("pool", Location("world", 400.0, 64.55, -400.0))!!
             fun at(node: String) = pool.get(pool.indexOf(node)!!, dev.netherforge.format.centity.Channel.TRANSLATION)
             server.tick(20)
             val cue = at("ball_cue")

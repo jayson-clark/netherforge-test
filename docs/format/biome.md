@@ -48,8 +48,8 @@ written in full, `"minecraft:plains"` (and a tag of them `"#minecraft:is_forest"
 A plain id that isn't one of the project's biomes is an error
 (`reference.biome`) that says how the game's are written.
 
-On the server it's `<namespace>:<id>` (`basic:ruby_grove`): what the F3 screen
-shows and what `/locate biome basic:ruby_grove` finds in a world that has it.
+On the server it's `<namespace>:<id>` (`showcase:ruby_grove`): what the F3 screen
+shows and what `/locate biome showcase:ruby_grove` finds in a world that has it.
 
 ## `climate`
 

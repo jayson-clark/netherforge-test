@@ -2,12 +2,12 @@
  * What the build screen works out, pure: a dev server's box cut into the part boxes it captures one at a time,
  * a build's size from its parts, and its picture made from them (`StructurePicture`, the same pixels as
  * `netherforge preview` draws). The grid's rules are format's (`BUILD_LIMITS`, `BuildKind`), through
- * `@netherforge/terrain-preview/parts`.
+ * `@netherforge/structures/parts`.
  */
 import { BUILD_LIMITS } from '@netherforge/format/constants'
-import { gridOf, gridOfFiles, partFile, partOf, partsOf } from '@netherforge/terrain-preview/parts'
-import { StructurePicture, type Picture, type View } from '@netherforge/terrain-preview/picture'
-import type { Structure } from '@netherforge/terrain-preview/structure'
+import { gridOf, gridOfFiles, partFile, partOf, partsOf } from '@netherforge/structures/parts'
+import { StructurePicture, type StructureImage, type View } from '@netherforge/structures/picture'
+import type { Structure } from '@netherforge/structures/structure'
 
 export type Corner = [number, number, number]
 
@@ -86,7 +86,7 @@ export async function drawBuild(
   names: readonly string[],
   view: View,
   read: (file: string) => Promise<Structure>,
-): Promise<Picture> {
+): Promise<StructureImage> {
   const picture = new StructurePicture(size, fitView(view, size))
   const side = BUILD_LIMITS.partSide
   for (const part of partsOf(gridOfFiles(names))) {

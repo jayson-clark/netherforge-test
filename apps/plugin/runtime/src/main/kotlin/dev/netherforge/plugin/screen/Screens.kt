@@ -4,14 +4,14 @@ import dev.netherforge.format.Problem
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.PackagePaths
 import dev.netherforge.format.project.ResourcePlace
-import dev.netherforge.format.project.ScreenFontKind
-import dev.netherforge.format.project.ScreenKind
-import dev.netherforge.format.project.VideoKind
 import dev.netherforge.format.screen.MapPalette
 import dev.netherforge.format.screen.MapScreen
 import dev.netherforge.format.screen.ScreenFile
 import dev.netherforge.format.screen.ScreenFontFile
+import dev.netherforge.format.screen.ScreenFontKind
+import dev.netherforge.format.screen.ScreenKind
 import dev.netherforge.format.screen.ScreenViewers
+import dev.netherforge.format.screen.VideoKind
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.binding.LuaHandle
 import dev.netherforge.plugin.binding.notInProject

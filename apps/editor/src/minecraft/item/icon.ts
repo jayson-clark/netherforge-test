@@ -15,12 +15,11 @@ import type { ItemDef, ResourcePackFile, ResourcePacksPreview } from '@/core/for
 import { lookOf, type BlockFace } from '@/minecraft/block/look'
 import {
   isSpriteModel,
-  itemModelRef,
-  resolveModel,
+  itemModel,
   spriteLayers,
   type AssetLoader,
   type RawModel,
-} from '@/minecraft/client/model'
+} from '@netherforge/models/model'
 import { resourcePackTexturePath } from '@/core/paths'
 import { splitResourcePackRef } from './item'
 import type { PackModels } from '@/core/store/resourcePacks'
@@ -122,7 +121,7 @@ export async function vanillaIconSource(
   assets: AssetLoader | null,
 ): Promise<IconSource> {
   if (!assets || !kind) return { kind: 'none' }
-  const model = await resolveModel(assets, await itemModelRef(assets, kind))
+  const model = await itemModel(assets, kind)
   if (!model) return { kind: 'none' }
   if (isSpriteModel(model)) {
     const textures = spriteLayers(model)

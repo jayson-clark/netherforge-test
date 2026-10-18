@@ -1,7 +1,7 @@
 package dev.netherforge.plugin.testkit
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.bridge.BotEvent
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.platform.Location
 import dev.netherforge.plugin.platform.PackOffer
 import dev.netherforge.plugin.platform.ParticleOps

@@ -1,11 +1,11 @@
 package dev.netherforge.plugin.testkit
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.block.BlockCarrier
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.Box
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.game.has
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.project.SpawnCategory
 import dev.netherforge.plugin.platform.BiomeSearch
 import dev.netherforge.plugin.platform.BlockHit

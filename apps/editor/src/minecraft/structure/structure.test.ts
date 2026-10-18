@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { base64ToBytes } from '@/core/backend/base64'
 import { TAG } from 'nbtify'
-import { nbtRoot, readNbt, writeNbt } from '@netherforge/terrain-preview/nbt'
+import { nbtRoot, readNbt, writeNbt } from '@netherforge/structures/nbt'
 import { exampleProject } from '@/testing/fixtures'
 import { nbt, structureRoot } from '@/testing/nbtFixtures'
 import {
@@ -9,7 +9,7 @@ import {
   kindOf,
   parseStructure,
   StructureError,
-} from '@netherforge/terrain-preview/structure'
+} from '@netherforge/structures/structure'
 
 describe('structure files', () => {
   it('reads size, palette, blocks, entities and the data version', async () => {

@@ -4,7 +4,7 @@ import dev.netherforge.format.Problem
 import dev.netherforge.format.ProblemCodes
 import dev.netherforge.format.bridge.ScriptError
 import dev.netherforge.format.bridge.SourceRef
-import dev.netherforge.format.project.ModuleKind
+import dev.netherforge.format.module.ModuleKind
 import dev.netherforge.plugin.lua.ScriptFailure
 import dev.netherforge.plugin.script.Scope
 import dev.netherforge.plugin.script.ScriptCosts

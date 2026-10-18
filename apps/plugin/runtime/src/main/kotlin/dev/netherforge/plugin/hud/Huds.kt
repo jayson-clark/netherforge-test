@@ -1,10 +1,10 @@
 package dev.netherforge.plugin.hud
 
-import dev.netherforge.format.project.ResourcePackKind
 import dev.netherforge.format.resourcepack.CompiledHud
 import dev.netherforge.format.resourcepack.HudLine
 import dev.netherforge.format.resourcepack.HudState
 import dev.netherforge.format.resourcepack.PackFonts
+import dev.netherforge.format.resourcepack.ResourcePackKind
 import dev.netherforge.plugin.platform.Platform
 import dev.netherforge.plugin.platform.PlayerRef
 import dev.netherforge.plugin.session.ReloadBatch

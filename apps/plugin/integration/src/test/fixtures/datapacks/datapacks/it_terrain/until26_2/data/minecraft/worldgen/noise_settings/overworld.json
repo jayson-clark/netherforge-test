@@ -28,7 +28,7 @@
     "depth": 0.0,
     "ridges": 0.0,
     "preliminary_surface_level": 0.0,
-    "final_density": "basic:it_shelf",
+    "final_density": "showcase:it_shelf",
     "vein_toggle": 0.0,
     "vein_ridged": 0.0,
     "vein_gap": 0.0

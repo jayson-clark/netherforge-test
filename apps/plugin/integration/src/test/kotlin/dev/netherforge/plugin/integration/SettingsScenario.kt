@@ -29,9 +29,9 @@ class SettingsScenario : Scenario("settings") {
     fun `a listener hears a change, a reader that doesn't listen is restarted with it`() {
         editor.run("nf settings set greeting Hello there")
         editor.logged("heard", "greeting", "Hello there", "Welcome")
-        editor.run("nf settings set basic:treasure_rolls 3")
+        editor.run("nf settings set showcase:treasure_rolls 3")
         editor.logged("reader starts", "3")
-        val saved = server.folder.resolve("plugins/NetherForge/settings/basic.json")
+        val saved = server.folder.resolve("plugins/NetherForge/settings/showcase.json")
         assertTrue(Files.readString(saved).contains("Hello there"), "the owner's values are kept on the server")
     }
 
@@ -41,9 +41,9 @@ class SettingsScenario : Scenario("settings") {
         editor.tryRun("nf settings set treasure_rolls 99") // the console says why; the value stays
         val (answer, state) = editor.request(Bridge.settings, Unit)
         assertTrue(answer.ok, answer.error)
-        val basic = state!!.packages.first { it.namespace == "basic" }
-        assertEquals("Hello there", basic.settings.getValue("greeting").value.toString().trim('"'))
-        assertTrue(basic.settings.getValue("greeting").set)
-        assertEquals("3", basic.settings.getValue("treasure_rolls").value.toString())
+        val showcase = state!!.packages.first { it.namespace == "showcase" }
+        assertEquals("Hello there", showcase.settings.getValue("greeting").value.toString().trim('"'))
+        assertTrue(showcase.settings.getValue("greeting").set)
+        assertEquals("3", showcase.settings.getValue("treasure_rolls").value.toString())
     }
 }

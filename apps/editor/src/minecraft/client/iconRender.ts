@@ -10,7 +10,7 @@
  */
 import * as THREE from 'three'
 import type { ClientAssets } from './assets'
-import type { RawModel } from './model'
+import type { RawModel } from '@netherforge/models/model'
 import {
   blockLookGeometry,
   isUrl,

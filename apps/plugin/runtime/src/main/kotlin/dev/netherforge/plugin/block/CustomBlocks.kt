@@ -2,22 +2,22 @@ package dev.netherforge.plugin.block
 
 import dev.netherforge.format.Problem
 import dev.netherforge.format.ProblemCodes
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.block.BlockCarrier
 import dev.netherforge.format.block.BlockCarriers
 import dev.netherforge.format.block.BlockFacing
 import dev.netherforge.format.block.BlockFile
+import dev.netherforge.format.block.BlockKind
 import dev.netherforge.format.block.GameBlockFile
+import dev.netherforge.format.block.GameBlockKind
 import dev.netherforge.format.block.GameBlocks
+import dev.netherforge.format.block.plan
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.json.CanonicalJson
-import dev.netherforge.format.project.BlockKind
-import dev.netherforge.format.project.GameBlockKind
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Loaded
 import dev.netherforge.format.project.ResourcePlace
-import dev.netherforge.format.project.plan
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.binding.BlockBreakEvent

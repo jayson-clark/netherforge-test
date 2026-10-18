@@ -46,7 +46,7 @@ class BotScenario : Scenario("bots") {
     override fun prepare(project: TestProject) {
         // Banning someone takes moderation, which the project declares it requires.
         val manifest = "netherforge.json"
-        check("\"requires\": {" in project.read(manifest)) { "examples/basic declares no requires" }
+        check("\"requires\": {" in project.read(manifest)) { "examples/showcase declares no requires" }
         project.write(manifest, project.read(manifest).replace("\"requires\": {", "\"requires\": {\n    \"moderation\": true,"))
     }
 
@@ -66,7 +66,7 @@ class BotScenario : Scenario("bots") {
         val near = abs(position.x - tester.x) <= 1 && abs(position.y - tester.y) <= 1 && abs(position.z - tester.z) <= 1
         assertTrue(near, "$position")
         bots.said("Tester", 0, "Welcome, Tester!")
-        // The greeter requires the library's greetings (examples/library, a package examples/basic depends on).
+        // The greeter requires the library's greetings (examples/library, a package examples/showcase depends on).
         bots.said("Tester", 0, "Well met, Tester!")
         val welcome = bots.heard("Tester", 0, BotEvent.Dialog::class.java).dialog
         assertEquals("Welcome!", welcome.title)
@@ -318,9 +318,9 @@ class BotScenario : Scenario("bots") {
         assertEquals(listOf("Milestones", "✘ Stone Age", "✘ Acquire Hardware", "✘ Diamonds!", "✘ Nether"), progress.take(5))
         assertTrue(progress[5].startsWith("Biomes visited: ") && " of " in progress[5], progress[5])
         assertEquals("You're a VIP.", progress.last())
-        editor.run("perm unset Tester basic.vip")
+        editor.run("perm unset Tester showcase.vip")
         assertEquals(6, milestones().size, "no longer a VIP")
-        editor.run("perm grant Tester basic.vip")
+        editor.run("perm grant Tester showcase.vip")
         assertEquals("You're a VIP.", milestones().last())
 
         // The example's rewards: /treasure rolls loot/treasure.json for them (its player pool, and the game's
@@ -432,7 +432,7 @@ class BotScenario : Scenario("bots") {
         // The greeter's join counted Tester once, in the project's own SQLite file; the command reads it back.
         since = bots.act("Tester", BotAction.Command("visits")).since
         bots.said("Tester", since, "You've joined 1 time(s).")
-        assertTrue(server.folder.resolve("plugins/NetherForge/databases/basic.db").toFile().isFile)
+        assertTrue(server.folder.resolve("plugins/NetherForge/databases/showcase.db").toFile().isFile)
     }
 
     @Test

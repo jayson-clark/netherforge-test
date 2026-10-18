@@ -1,5 +1,5 @@
 /**
- * What most of the editor's tests start from: `examples/basic` (and
+ * What most of the editor's tests start from: `examples/showcase` (and
  * `examples/library` beside it) on a `MemoryBackend`, open in a workspace
  * store or in the whole app; and `settle`, the one way a test lets timers run.
  *
@@ -25,7 +25,7 @@ import { createApp, type AppStores } from '@/state/providers'
 import { EXAMPLE_ROOT, exampleProjects } from './fixtures'
 
 export interface ExampleOptions {
-  /** The example's files, if not `examples/basic` as the repo has it. */
+  /** The example's files, if not `examples/showcase` as the repo has it. */
   project?: Record<string, FileContents>
   /** The memory backend's other options (its projects are the example and the library). */
   backend?: Omit<MemoryBackendOptions, 'projects'>

@@ -4,7 +4,7 @@
  * Pure: the states come baked (`mc/bake.ts`).
  */
 import { meshBlocks, type BakedStates, type BlockMesh } from '@/minecraft/client/blockMesh'
-import type { Structure } from '@netherforge/terrain-preview/structure'
+import type { Structure } from '@netherforge/structures/structure'
 
 /**
  * Merges every block's faces into one group per texture. [baked] has a

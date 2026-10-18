@@ -343,16 +343,16 @@ class SettingsTest {
     }
 
     @Test
-    fun `examples basic reads its settings and its library's, and a change restarts what read them`() {
-        TestServer(TestServer.example("basic")).use { server ->
+    fun `examples showcase reads its settings and its library's, and a change restarts what read them`() {
+        TestServer(TestServer.example("showcase")).use { server ->
             assertTrue(server.runtime.session.running, "${server.runtime.currentProblems()}")
-            assertEquals(listOf("basic", "library"), server.settings.namespaces())
+            assertEquals(listOf("showcase", "library"), server.settings.namespaces())
             val alex = server.player("Alex")
             server.platform.raise.playerJoin(GameEvent.PlayerJoin(alex.ref, false, null))
             assertEquals(listOf("<green>Welcome, Alex!", "<aqua>Well met, Alex!"), alex.messages.take(2))
 
             // The greeter listens, so it isn't restarted: the next join reads the new greeting.
-            server.settings.setText("basic", "greeting", "Hello")
+            server.settings.setText("showcase", "greeting", "Hello")
             // The library's phrases read its style as they loaded: they restart, and the modules that require them.
             server.settings.setText("library", "style", "casual")
             val bea = server.player("Bea")

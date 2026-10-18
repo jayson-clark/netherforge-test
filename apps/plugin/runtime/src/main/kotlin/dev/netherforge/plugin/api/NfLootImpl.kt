@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.api
 
-import dev.netherforge.format.project.LootTableKind
+import dev.netherforge.format.loot.LootTableKind
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.binding.Caller
 import dev.netherforge.plugin.binding.InventoryKeys

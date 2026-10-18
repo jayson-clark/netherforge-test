@@ -1,7 +1,7 @@
 package dev.netherforge.plugin.api
 
 import dev.netherforge.format.block.BlockFacing
-import dev.netherforge.format.project.BlockKind
+import dev.netherforge.format.block.BlockKind
 import dev.netherforge.plugin.binding.BlockPlaceOptions
 import dev.netherforge.plugin.binding.BlockPosition
 import dev.netherforge.plugin.binding.Caller

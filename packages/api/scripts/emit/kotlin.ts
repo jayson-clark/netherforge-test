@@ -365,7 +365,7 @@ export function apiKotlin(classes: ClassBinding[]): string {
   const withFunctions = classes.filter((it) => it.functions.length)
   const lines = [
     ...header([
-      'dev.netherforge.format.Vec3',
+      'dev.netherforge.format.math.Vec3',
       'dev.netherforge.plugin.item.ItemMatch',
       'dev.netherforge.plugin.lua.LuaFunction',
       'dev.netherforge.plugin.lua.LuaValue',
@@ -525,7 +525,7 @@ export function shapesKotlin(spec: ApiSpec, bindings: Bindings): string {
       }
   const lines = [
     ...header([
-      'dev.netherforge.format.Vec3',
+      'dev.netherforge.format.math.Vec3',
       'dev.netherforge.plugin.item.ItemMatch',
       'dev.netherforge.plugin.lua.LuaCall',
       'dev.netherforge.plugin.lua.LuaChoice',

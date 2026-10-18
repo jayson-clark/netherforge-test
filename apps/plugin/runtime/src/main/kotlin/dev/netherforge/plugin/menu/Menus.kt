@@ -1,11 +1,11 @@
 package dev.netherforge.plugin.menu
 
 import dev.netherforge.format.menu.CompiledMenu
+import dev.netherforge.format.menu.MenuKind
 import dev.netherforge.format.project.DefaultFontKind
 import dev.netherforge.format.project.KindSpec
-import dev.netherforge.format.project.MenuKind
-import dev.netherforge.format.project.ResourcePackKind
 import dev.netherforge.format.project.ResourcePlace
+import dev.netherforge.format.resourcepack.ResourcePackKind
 import dev.netherforge.plugin.binding.EventType
 import dev.netherforge.plugin.binding.Events
 import dev.netherforge.plugin.binding.LuaHandle

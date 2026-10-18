@@ -2,15 +2,15 @@ package dev.netherforge.plugin.pack
 
 import dev.netherforge.format.Problem
 import dev.netherforge.format.ProblemCodes
-import dev.netherforge.format.project.BlockKind
+import dev.netherforge.format.block.BlockKind
+import dev.netherforge.format.block.plan
 import dev.netherforge.format.project.ProjectSnapshot
-import dev.netherforge.format.project.ResourcePackKind
-import dev.netherforge.format.project.plan
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.format.resourcepack.CompiledResourcePack
 import dev.netherforge.format.resourcepack.PackLayout
+import dev.netherforge.format.resourcepack.ResourcePackKind
 import dev.netherforge.format.resourcepack.VideoSound
 import dev.netherforge.format.resourcepack.pngSize
 import dev.netherforge.plugin.RuntimeLog

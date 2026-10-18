@@ -301,7 +301,7 @@ class ServerEventTest {
             val alex = server.alex
             val runtime = server.runtime
             val bread = item("minecraft:bread", 3)
-            val dropped = server.platform.worldEntities.spawnItem("world", dev.netherforge.format.Vec3(0.0, 64.0, 0.0), bread)!!
+            val dropped = server.platform.worldEntities.spawnItem("world", dev.netherforge.format.math.Vec3(0.0, 64.0, 0.0), bread)!!
             assertTrue(runtime.events.playerDropItem(alex.ref, bread))
             assertTrue(runtime.events.playerPickupItem(alex.ref, bread, dropped))
             assertTrue(runtime.events.playerConsumeItem(alex.ref, bread))

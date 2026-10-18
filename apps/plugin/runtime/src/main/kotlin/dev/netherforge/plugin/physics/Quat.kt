@@ -1,7 +1,7 @@
 package dev.netherforge.plugin.physics
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.math.Matrix4
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.math.degreesToRadians
 import dev.netherforge.format.math.radiansToDegrees
 import kotlin.math.abs

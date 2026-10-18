@@ -1,8 +1,8 @@
 package dev.netherforge.plugin.integration
 
 import dev.netherforge.format.json.CanonicalJson
-import dev.netherforge.format.project.TerrainKind
 import dev.netherforge.format.terrain.TerrainCompiler
+import dev.netherforge.format.terrain.TerrainKind
 import dev.netherforge.plugin.integration.support.PaperServer
 import dev.netherforge.plugin.integration.support.Scenario
 import dev.netherforge.plugin.integration.support.TestProject
@@ -34,13 +34,7 @@ class DimensionTypeScenario : Scenario("mainworld", "dimension_type") {
                 .replace("\"biome\": \"minecraft:plains\"", "\"biome\": \"it_bare\"")
                 .replace("\"biome\": \"minecraft:snowy_plains\"", "\"biome\": \"it_bare_cold\"")
         )
-        project.write(
-            "netherforge.json",
-            project.read("netherforge.json").replace(
-                "\"worlds\": {",
-                "\"worlds\": {\n    \"world\": { \"terrain\": \"ruby_hills\", \"dimensionType\": \"deep\" },"
-            )
-        )
+        project.setWorld("world", """{ "terrain": "ruby_hills", "dimensionType": "deep" }""")
     }
 
     private fun step(command: String, line: String): List<String> {
@@ -53,7 +47,7 @@ class DimensionTypeScenario : Scenario("mainworld", "dimension_type") {
     fun `the main world has the dimension's limits, and the generator fills them from its bottom`() {
         val datapack = server.folder.resolve("plugins/NetherForge/datapack/data")
         val overworld = datapack.resolve("minecraft/dimension_type/overworld.json").toFile().readText()
-        assertEquals(overworld, datapack.resolve("basic/dimension_type/deep.json").toFile().readText())
+        assertEquals(overworld, datapack.resolve("showcase/dimension_type/deep.json").toFile().readText())
         assertEquals(listOf("-128", "320"), step("heights", "heights"))
         val parsed = TerrainKind.parse(project.read(file), file) as CanonicalJson.Parsed.Ok
         val compiled = TerrainCompiler.compile(parsed.value)

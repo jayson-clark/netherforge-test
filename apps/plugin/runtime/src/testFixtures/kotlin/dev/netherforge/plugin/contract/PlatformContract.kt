@@ -205,7 +205,7 @@ abstract class PlatformContract {
 
     /** Drops an item stack at [at], removed when the test ends. */
     protected fun drop(item: ItemData, at: Location = at(4, 1)): UUID {
-        val id = main { platform.worldEntities.spawnItem(at.world, dev.netherforge.format.Vec3(at.x, at.y, at.z), item) }
+        val id = main { platform.worldEntities.spawnItem(at.world, dev.netherforge.format.math.Vec3(at.x, at.y, at.z), item) }
             ?: fail("couldn't drop $item at $at")
         spawned += id
         return id

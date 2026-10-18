@@ -2,8 +2,8 @@ package dev.netherforge.plugin.item
 
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.item.ItemFile
+import dev.netherforge.format.item.ItemKind
 import dev.netherforge.format.item.ProjectItems
-import dev.netherforge.format.project.ItemKind
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.ref.ResourceRef

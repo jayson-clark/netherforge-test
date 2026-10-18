@@ -32,16 +32,16 @@ nf.commands.register(
   { description = "What the project granted me", players_only = true },
   function(event)
     local player = event.player
-    local before = player:has_permission("basic.builder")
-    player:unset_permission("basic.builder")
-    local unset = player:has_permission("basic.builder")
-    player:set_permission("basic.builder", true)
+    local before = player:has_permission("showcase.builder")
+    player:unset_permission("showcase.builder")
+    local unset = player:has_permission("showcase.builder")
+    player:set_permission("showcase.builder", true)
     local denied = not pcall(player.set_permission, player, "minecraft.command.op", true)
     player:send_message(
       ("perms %s %s %s %s"):format(
         tostring(before),
         tostring(unset),
-        tostring(player:has_permission("basic.builder")),
+        tostring(player:has_permission("showcase.builder")),
         tostring(denied)
       )
     )

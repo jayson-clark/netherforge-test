@@ -1,5 +1,5 @@
 package dev.netherforge.plugin.mob
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.LuaChecks
 import dev.netherforge.plugin.TestServer
 import java.util.UUID

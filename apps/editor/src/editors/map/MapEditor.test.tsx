@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { writeNbt, type NbtRoot } from '@netherforge/terrain-preview/nbt'
+import { writeNbt, type NbtRoot } from '@netherforge/structures/nbt'
 import { bytesToBase64 } from '@/core/backend/base64'
 import type { MemoryBackend } from '@/testing/backend/memory'
 import { AppProvider, type AppStores } from '@/state/providers'

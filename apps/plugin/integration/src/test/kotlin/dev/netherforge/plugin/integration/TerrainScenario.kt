@@ -5,11 +5,11 @@ import dev.netherforge.format.bridge.Bridge
 import dev.netherforge.format.bridge.Log
 import dev.netherforge.format.bridge.SaveStructureParams
 import dev.netherforge.format.json.CanonicalJson
-import dev.netherforge.format.project.TerrainKind
 import dev.netherforge.format.terrain.ChunkBuffer
 import dev.netherforge.format.terrain.TerrainBlock
 import dev.netherforge.format.terrain.TerrainCompiler
 import dev.netherforge.format.terrain.TerrainGenerator
+import dev.netherforge.format.terrain.TerrainKind
 import dev.netherforge.plugin.integration.support.Scenario
 import dev.netherforge.plugin.integration.support.TestProject
 import dev.netherforge.plugin.integration.support.VersionIndependent

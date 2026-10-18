@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.centity
 
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.biome.BiomeKind
 import dev.netherforge.format.centity.CompiledCentity
 import dev.netherforge.format.centity.SpawnTime
 import dev.netherforge.format.centity.SpawnWeather
@@ -9,7 +9,7 @@ import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.GameData
 import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.game.RegistryKey
-import dev.netherforge.format.project.BiomeKind
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.project.Names
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.binding.CentityNaturalSpawnEvent

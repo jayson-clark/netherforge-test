@@ -63,10 +63,10 @@ class StructureGenerationScenario : Scenario("structures") {
     @Order(2)
     fun `the server starts with it in its registries`() {
         restart()
-        val structure = datapack("data/basic/worldgen/structure/it_ruins.json")
+        val structure = datapack("data/showcase/worldgen/structure/it_ruins.json")
         assertTrue("\"type\": \"minecraft:jigsaw\"" in structure, structure)
-        assertTrue(Files.exists(server.folder.resolve("plugins/NetherForge/datapack/data/basic/structure/it_ruins.nbt")))
-        assertTrue("basic:it_ruins" in datapack("data/basic/worldgen/structure_set/it_ruins.json"))
+        assertTrue(Files.exists(server.folder.resolve("plugins/NetherForge/datapack/data/showcase/structure/it_ruins.nbt")))
+        assertTrue("showcase:it_ruins" in datapack("data/showcase/worldgen/structure_set/it_ruins.json"))
         assertFalse(editor.reload("structures/it_ruins.json").restart, "the datapack is what the server started with")
     }
 

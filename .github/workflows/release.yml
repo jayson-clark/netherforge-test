@@ -162,7 +162,7 @@ jobs:
         run: |
           node tools/gradle.mjs :format:jsLibrary
           pnpm --filter @netherforge/cli build
-          node apps/cli/dist/netherforge.mjs check examples/basic
+          node apps/cli/dist/netherforge.mjs check examples/showcase
       - name: Attach to the release
         env:
           GH_TOKEN: ${{ github.token }}

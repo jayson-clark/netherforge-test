@@ -307,16 +307,16 @@ library too) may only grant nodes its own `netherforge.json` lists under
 `allow.permissions`, so whoever runs the project can see what it hands out (see [the project file](../format/project.md)):
 
 ```json
-"allow": { "permissions": ["basic"] }
+"allow": { "permissions": ["showcase"] }
 ```
 
 A grant is kept, and given back every time the player joins, until the
 project takes it back:
 
 ```lua
-player:set_permission("basic.vip", true) -- or false to deny it
-player:unset_permission("basic.vip")
-player:permissions() --> { ["basic.vip"] = true }, what the project set
+player:set_permission("showcase.vip", true) -- or false to deny it
+player:unset_permission("showcase.vip")
+player:permissions() --> { ["showcase.vip"] = true }, what the project set
 ```
 
 `has_permission` answers everything the player has, not only what the project
@@ -328,7 +328,7 @@ Minecraft's advancements are there by key: `grant_advancement`,
 criteria met and left), and `nf.on("player_complete_advancement")` hears one
 completed, with the announcement it makes writable.
 
-The basic example has both: `modules/ranks` adds `/perm grant|deny|unset|list`
+The showcase example has both: `modules/ranks` adds `/perm grant|deny|unset|list`
 for operators, and `modules/milestones` makes whoever finds diamonds a VIP
 and adds `/milestones` to show a player's progress.
 

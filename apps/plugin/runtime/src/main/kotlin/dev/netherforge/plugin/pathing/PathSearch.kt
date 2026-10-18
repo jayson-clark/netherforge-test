@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.pathing
 
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.math.Vec3
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -24,7 +24,7 @@ class PathResult(val points: List<Vec3>, val complete: Boolean, val expanded: In
  */
 class SearchLimits(val range: Double, val nodes: Int = NODE_LIMIT)
 
-/** How many places one search may expand: `NODE_LIMIT` in `spec/centity.ts`. */
+/** How many places one search may expand: `NODE_LIMIT` in `spec/constants.ts`. */
 const val NODE_LIMIT = 4096
 
 /** How many grid points ahead smoothing looks for a straight line to. */

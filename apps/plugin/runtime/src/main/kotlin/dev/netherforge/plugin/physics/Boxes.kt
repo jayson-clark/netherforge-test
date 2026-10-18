@@ -1,8 +1,8 @@
 package dev.netherforge.plugin.physics
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.Box
 import dev.netherforge.format.math.Matrix4
+import dev.netherforge.format.math.Vec3
 
 /*
  * Axis-aligned box arithmetic, shared by the solver and by whoever builds its

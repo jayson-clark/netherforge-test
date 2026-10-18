@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.platform
 
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.math.Vec3
 import java.util.UUID
 
 /**

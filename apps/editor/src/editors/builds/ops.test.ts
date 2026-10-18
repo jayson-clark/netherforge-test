@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BUILD_LIMITS, EMPTY_BLOCKS } from '@netherforge/format/constants'
-import type { Structure } from '@netherforge/terrain-preview/structure'
+import type { Structure } from '@netherforge/structures/structure'
 import {
   boxSize,
   buildSize,

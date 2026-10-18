@@ -1,9 +1,9 @@
 package dev.netherforge.plugin.testkit
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.game.has
 import dev.netherforge.format.item.AttributeOperation
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.platform.AttributeModifierData
 import dev.netherforge.plugin.platform.AttributeOps
 import dev.netherforge.plugin.platform.GoalCallbacks

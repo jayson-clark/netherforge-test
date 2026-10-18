@@ -1,9 +1,9 @@
 package dev.netherforge.format.particle
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.ParticleDataKind
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.math.Matrix4
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.math.degreesToRadians
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

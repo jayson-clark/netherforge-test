@@ -1,7 +1,7 @@
 package dev.netherforge.plugin.centity
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.Channel
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.binding.BlockPosition
 import dev.netherforge.plugin.binding.Events
 import dev.netherforge.plugin.binding.FlightBlockEvent

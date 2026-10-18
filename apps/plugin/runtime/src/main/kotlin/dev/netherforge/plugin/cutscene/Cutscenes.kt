@@ -1,14 +1,14 @@
 package dev.netherforge.plugin.cutscene
 
 import dev.netherforge.format.Severity
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.TextDisplay
 import dev.netherforge.format.cutscene.CameraPose
 import dev.netherforge.format.cutscene.CompiledCue
 import dev.netherforge.format.cutscene.CompiledCutscene
+import dev.netherforge.format.cutscene.CutsceneKind
 import dev.netherforge.format.math.Angles
 import dev.netherforge.format.math.Matrix4
-import dev.netherforge.format.project.CutsceneKind
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Kinds
 import dev.netherforge.format.project.PackagePaths

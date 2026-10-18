@@ -1,7 +1,7 @@
 package dev.netherforge.plugin.session
 
+import dev.netherforge.format.biome.BiomeKind
 import dev.netherforge.format.item.ItemDef
-import dev.netherforge.format.project.BiomeKind
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Kinds
 import dev.netherforge.format.project.PackagePaths

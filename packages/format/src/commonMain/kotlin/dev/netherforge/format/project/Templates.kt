@@ -1,7 +1,9 @@
 package dev.netherforge.format.project
 
+import dev.netherforge.format.centity.CentityKind
 import dev.netherforge.format.game.GameData
 import dev.netherforge.format.json.CanonicalJson
+import dev.netherforge.format.module.ModuleKind
 
 /**
  * The files NetherForge creates. Generated through the canonical writers so a
@@ -173,7 +175,7 @@ object Templates {
      * waits (`---@async`) wait too, so `not-yieldable` flags one handed to
      * anything but `nf.task` (an event handler that waits). Written once, with
      * the project; it's the user's to change. The same as
-     * `examples/basic/.luarc.json`, which a test holds it to.
+     * `examples/showcase/.luarc.json`, which a test holds it to.
      */
     const val LUARC = """{
   "runtime.version": "Lua 5.4",

@@ -11,7 +11,7 @@ export {
 } from '@/testing/backend/seed'
 
 /**
- * `examples/basic`'s one dependency, `examples/library`, as `loadProject`
+ * `examples/showcase`'s one dependency, `examples/library`, as `loadProject`
  * takes it: JSON as text, everything else null, no hash (so the lock's
  * hashes aren't compared).
  */
@@ -31,8 +31,8 @@ export const examplePackages: PackageInputs = {
 }
 
 /**
- * `examples/basic` at [root] and `examples/library` beside it (`../library`,
- * as basic's manifest says), as `MemoryBackend`'s `projects` takes them.
+ * `examples/showcase` at [root] and `examples/library` beside it (`../library`,
+ * as the showcase's manifest says), as `MemoryBackend`'s `projects` takes them.
  */
 export function exampleProjects(
   root: string = EXAMPLE_ROOT,

@@ -2,11 +2,11 @@ package dev.netherforge.format.particle
 
 import dev.netherforge.format.ProblemCodes
 import dev.netherforge.format.ProblemSink
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.GameData
 import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.game.ParticleDataKind
 import dev.netherforge.format.json.CanonicalJson
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.validate.Rules
 import kotlin.math.ceil

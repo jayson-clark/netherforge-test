@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { loadProject, type CentityFile } from '@/core/format'
 import { isProjectJson } from '@/core/paths'
-import type { AssetLoader } from '@/minecraft/client/model'
+import type { AssetLoader } from '@netherforge/models/model'
 import { exampleFiles, exampleProject, examplePackages } from '@/testing/fixtures'
 import { blockModelBoxes, canonicalBlockState, fitKey, fittedHitbox } from './fit'
 

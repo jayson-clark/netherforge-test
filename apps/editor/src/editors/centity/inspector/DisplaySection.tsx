@@ -9,7 +9,7 @@ import {
   type NodeDef,
 } from '@/core/format'
 import { usePickerIds } from '@/minecraft/client/usePickerIds'
-import { parseBlockState } from '@/minecraft/client/model'
+import { parseBlockState } from '@netherforge/models/model'
 import { useWorkspace } from '@/state/providers'
 import { useResourcePackOutlines } from '@/state/useResourcePacks'
 import { Datalist, NumberField, Section, SelectField, TextField, TriStateField } from '@/ui/fields'

@@ -37,12 +37,12 @@ sealed interface IntegerOrChoice {
 /** A `Location|Vec3`: whichever it was. */
 sealed interface LocationOrVec3 {
     data class Location(val value: dev.netherforge.plugin.binding.LuaLocation) : LocationOrVec3
-    data class Vec3(val value: dev.netherforge.format.Vec3) : LocationOrVec3
+    data class Vec3(val value: dev.netherforge.format.math.Vec3) : LocationOrVec3
 
     object Codec : LuaCodec<LocationOrVec3> by LuaUnion(
         listOf(
             LuaUnion.Member<LocationOrVec3, dev.netherforge.plugin.binding.LuaLocation>(LuaCodecs.LOCATION, ::Location) { (it as? Location)?.value },
-            LuaUnion.Member<LocationOrVec3, dev.netherforge.format.Vec3>(LuaCodecs.VEC3, ::Vec3) { (it as? Vec3)?.value }
+            LuaUnion.Member<LocationOrVec3, dev.netherforge.format.math.Vec3>(LuaCodecs.VEC3, ::Vec3) { (it as? Vec3)?.value }
         )
     )
 }
@@ -50,13 +50,13 @@ sealed interface LocationOrVec3 {
 /** A `Location|Vec3|Entity`: whichever it was. */
 sealed interface LocationOrVec3OrEntity {
     data class Location(val value: dev.netherforge.plugin.binding.LuaLocation) : LocationOrVec3OrEntity
-    data class Vec3(val value: dev.netherforge.format.Vec3) : LocationOrVec3OrEntity
+    data class Vec3(val value: dev.netherforge.format.math.Vec3) : LocationOrVec3OrEntity
     data class Entity(val value: LuaHandle.Entity) : LocationOrVec3OrEntity
 
     object Codec : LuaCodec<LocationOrVec3OrEntity> by LuaUnion(
         listOf(
             LuaUnion.Member<LocationOrVec3OrEntity, dev.netherforge.plugin.binding.LuaLocation>(LuaCodecs.LOCATION, ::Location) { (it as? Location)?.value },
-            LuaUnion.Member<LocationOrVec3OrEntity, dev.netherforge.format.Vec3>(LuaCodecs.VEC3, ::Vec3) { (it as? Vec3)?.value },
+            LuaUnion.Member<LocationOrVec3OrEntity, dev.netherforge.format.math.Vec3>(LuaCodecs.VEC3, ::Vec3) { (it as? Vec3)?.value },
             LuaUnion.Member<LocationOrVec3OrEntity, LuaHandle.Entity>(LuaHandle.Entity.Codec, ::Entity) { (it as? Entity)?.value }
         )
     )
@@ -65,14 +65,14 @@ sealed interface LocationOrVec3OrEntity {
 /** A `Location|Vec3|Entity|Centity`: whichever it was. */
 sealed interface LocationOrVec3OrEntityOrCentity {
     data class Location(val value: dev.netherforge.plugin.binding.LuaLocation) : LocationOrVec3OrEntityOrCentity
-    data class Vec3(val value: dev.netherforge.format.Vec3) : LocationOrVec3OrEntityOrCentity
+    data class Vec3(val value: dev.netherforge.format.math.Vec3) : LocationOrVec3OrEntityOrCentity
     data class Entity(val value: LuaHandle.Entity) : LocationOrVec3OrEntityOrCentity
     data class Centity(val value: LuaHandle.Centity) : LocationOrVec3OrEntityOrCentity
 
     object Codec : LuaCodec<LocationOrVec3OrEntityOrCentity> by LuaUnion(
         listOf(
             LuaUnion.Member<LocationOrVec3OrEntityOrCentity, dev.netherforge.plugin.binding.LuaLocation>(LuaCodecs.LOCATION, ::Location) { (it as? Location)?.value },
-            LuaUnion.Member<LocationOrVec3OrEntityOrCentity, dev.netherforge.format.Vec3>(LuaCodecs.VEC3, ::Vec3) { (it as? Vec3)?.value },
+            LuaUnion.Member<LocationOrVec3OrEntityOrCentity, dev.netherforge.format.math.Vec3>(LuaCodecs.VEC3, ::Vec3) { (it as? Vec3)?.value },
             LuaUnion.Member<LocationOrVec3OrEntityOrCentity, LuaHandle.Entity>(LuaHandle.Entity.Codec, ::Entity) { (it as? Entity)?.value },
             LuaUnion.Member<LocationOrVec3OrEntityOrCentity, LuaHandle.Centity>(LuaHandle.Centity.Codec, ::Centity) { (it as? Centity)?.value }
         )
@@ -176,12 +176,12 @@ sealed interface StringOrSkin {
 
 /** A `Vec3|Choice`: whichever it was. */
 sealed interface Vec3OrChoice {
-    data class Vec3(val value: dev.netherforge.format.Vec3) : Vec3OrChoice
+    data class Vec3(val value: dev.netherforge.format.math.Vec3) : Vec3OrChoice
     data class Choice(val value: kotlin.String) : Vec3OrChoice
 
     object Codec : LuaCodec<Vec3OrChoice> by LuaUnion(
         listOf(
-            LuaUnion.Member<Vec3OrChoice, dev.netherforge.format.Vec3>(LuaCodecs.VEC3, ::Vec3) { (it as? Vec3)?.value },
+            LuaUnion.Member<Vec3OrChoice, dev.netherforge.format.math.Vec3>(LuaCodecs.VEC3, ::Vec3) { (it as? Vec3)?.value },
             LuaUnion.Member<Vec3OrChoice, kotlin.String>(LuaChoice(listOf("up", "down", "north", "south", "east", "west")), ::Choice) { (it as? Choice)?.value }
         )
     )
@@ -189,13 +189,13 @@ sealed interface Vec3OrChoice {
 
 /** A `Vec3|Node|Entity`: whichever it was. */
 sealed interface Vec3OrNodeOrEntity {
-    data class Vec3(val value: dev.netherforge.format.Vec3) : Vec3OrNodeOrEntity
+    data class Vec3(val value: dev.netherforge.format.math.Vec3) : Vec3OrNodeOrEntity
     data class Node(val value: LuaHandle.Node) : Vec3OrNodeOrEntity
     data class Entity(val value: LuaHandle.Entity) : Vec3OrNodeOrEntity
 
     object Codec : LuaCodec<Vec3OrNodeOrEntity> by LuaUnion(
         listOf(
-            LuaUnion.Member<Vec3OrNodeOrEntity, dev.netherforge.format.Vec3>(LuaCodecs.VEC3, ::Vec3) { (it as? Vec3)?.value },
+            LuaUnion.Member<Vec3OrNodeOrEntity, dev.netherforge.format.math.Vec3>(LuaCodecs.VEC3, ::Vec3) { (it as? Vec3)?.value },
             LuaUnion.Member<Vec3OrNodeOrEntity, LuaHandle.Node>(LuaHandle.Node.Codec, ::Node) { (it as? Node)?.value },
             LuaUnion.Member<Vec3OrNodeOrEntity, LuaHandle.Entity>(LuaHandle.Entity.Codec, ::Entity) { (it as? Entity)?.value }
         )

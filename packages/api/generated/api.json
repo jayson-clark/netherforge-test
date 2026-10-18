@@ -26428,5 +26428,113 @@
       "reading": "word",
       "names": true
     }
+  ],
+  "constants": [
+    {
+      "name": "TARGET_DISTANCE",
+      "value": 20,
+      "doc": "How far `target_block` and `target_entity` look by default, in blocks.",
+      "runtime": [
+        "dev.netherforge.plugin.api.EntityImplKt#TARGET_DISTANCE"
+      ]
+    },
+    {
+      "name": "PATH_REACH",
+      "value": 2,
+      "doc": "How close a mob's or a centity's walk has to come to its target to count as reached, in blocks.",
+      "runtime": [
+        "dev.netherforge.plugin.centity.CentityPaths#PATH_REACH",
+        "dev.netherforge.plugin.mob.MobPaths#PATH_REACH"
+      ]
+    },
+    {
+      "name": "REPATH_TICKS",
+      "value": 10,
+      "doc": "How often a walk after an entity or a centity looks for a new path to where it is, in ticks.",
+      "runtime": [
+        "dev.netherforge.plugin.centity.CentityPaths#REPATH_TICKS",
+        "dev.netherforge.plugin.mob.MobPaths#REPATH_TICKS"
+      ]
+    },
+    {
+      "name": "DEFAULT_SPEED",
+      "value": 4.3,
+      "doc": "`CentityPathOptions.speed`'s default.",
+      "runtime": [
+        "dev.netherforge.plugin.centity.CentityPaths#DEFAULT_SPEED"
+      ]
+    },
+    {
+      "name": "MAX_SPEED",
+      "value": 20,
+      "doc": "`CentityPathOptions.speed`'s most.",
+      "runtime": [
+        "dev.netherforge.plugin.centity.CentityPaths#MAX_SPEED"
+      ]
+    },
+    {
+      "name": "DEFAULT_STEP_HEIGHT",
+      "value": 1,
+      "doc": "`CentityPathOptions.step_height`'s default.",
+      "runtime": [
+        "dev.netherforge.plugin.centity.CentityPaths#DEFAULT_STEP_HEIGHT"
+      ]
+    },
+    {
+      "name": "DEFAULT_MAX_DROP",
+      "value": 3,
+      "doc": "`CentityPathOptions.max_drop`'s default.",
+      "runtime": [
+        "dev.netherforge.plugin.centity.CentityPaths#DEFAULT_MAX_DROP"
+      ]
+    },
+    {
+      "name": "DEFAULT_RANGE",
+      "value": 48,
+      "doc": "`CentityPathOptions.range`'s default.",
+      "runtime": [
+        "dev.netherforge.plugin.centity.CentityPaths#DEFAULT_RANGE"
+      ]
+    },
+    {
+      "name": "MAX_RANGE",
+      "value": 128,
+      "doc": "`CentityPathOptions.range`'s most.",
+      "runtime": [
+        "dev.netherforge.plugin.centity.CentityPaths#MAX_RANGE"
+      ]
+    },
+    {
+      "name": "MAX_WIDTH",
+      "value": 8,
+      "doc": "`CentityPathOptions.width`'s most.",
+      "runtime": [
+        "dev.netherforge.plugin.centity.CentityPaths#MAX_WIDTH"
+      ]
+    },
+    {
+      "name": "MAX_HEIGHT",
+      "value": 16,
+      "doc": "`CentityPathOptions.height`'s most.",
+      "runtime": [
+        "dev.netherforge.plugin.centity.CentityPaths#MAX_HEIGHT"
+      ]
+    },
+    {
+      "name": "START_DROP",
+      "value": 64,
+      "doc": "How far below a centity's feet a walk looks for ground to start from, in blocks.",
+      "runtime": [
+        "dev.netherforge.plugin.centity.CentityPaths#START_DROP"
+      ]
+    },
+    {
+      "name": "NODE_LIMIT",
+      "value": 4096,
+      "doc": "How many places one path search may look at.",
+      "runtime": [
+        "dev.netherforge.plugin.pathing.PathSearchKt#NODE_LIMIT"
+      ]
+    }
   ]
 }

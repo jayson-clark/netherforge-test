@@ -135,15 +135,16 @@ class AdvancementTest {
             assertFalse(result.resources.single().ok)
             assertTrue(result.restart, "hunt left the datapack")
         }
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val advancements = server.platform.datapacks.started.keys.filter { "/advancement/" in it }.sorted()
             assertEquals(
                 listOf(
-                    "data/basic/advancement/adventurer.json",
-                    "data/basic/advancement/diamonds.json",
-                    "data/basic/advancement/gem_hoarder.json",
-                    "data/basic/advancement/treasure_hunter.json",
-                    "data/library/advancement/gem_collector.json"
+                    "data/library/advancement/gem_collector.json",
+                    "data/showcase/advancement/adventurer.json",
+                    "data/showcase/advancement/diamonds.json",
+                    "data/showcase/advancement/gem_hoarder.json",
+                    "data/showcase/advancement/tour.json",
+                    "data/showcase/advancement/treasure_hunter.json"
                 ),
                 advancements
             )

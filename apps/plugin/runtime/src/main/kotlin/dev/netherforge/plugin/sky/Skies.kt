@@ -1,9 +1,9 @@
 package dev.netherforge.plugin.sky
 
 import dev.netherforge.format.project.KindSpec
-import dev.netherforge.format.project.SkyKind
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.format.sky.SkyFile
+import dev.netherforge.format.sky.SkyKind
 import dev.netherforge.format.sky.SkyNight
 import dev.netherforge.format.sky.SkyTwins
 import dev.netherforge.plugin.lua.LuaApiException

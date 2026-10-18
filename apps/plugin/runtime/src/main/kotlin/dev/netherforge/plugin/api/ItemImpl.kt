@@ -1,13 +1,13 @@
 package dev.netherforge.plugin.api
 
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.block.BlockKind
 import dev.netherforge.format.game.GameIds
-import dev.netherforge.format.project.BlockKind
-import dev.netherforge.format.project.ItemKind
+import dev.netherforge.format.item.ItemKind
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.project.Names
-import dev.netherforge.format.project.RecipeKind
 import dev.netherforge.format.recipe.Material
 import dev.netherforge.format.recipe.RecipeFile
+import dev.netherforge.format.recipe.RecipeKind
 import dev.netherforge.format.recipe.RecipeValidator
 import dev.netherforge.plugin.binding.Caller
 import dev.netherforge.plugin.binding.Events

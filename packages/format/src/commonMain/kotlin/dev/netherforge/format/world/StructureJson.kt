@@ -1,9 +1,8 @@
 package dev.netherforge.format.world
 
+import dev.netherforge.format.biome.BiomeKind
 import dev.netherforge.format.datapack.DatapackContext
 import dev.netherforge.format.datapack.DatapackEntry
-import dev.netherforge.format.project.BiomeKind
-import dev.netherforge.format.project.StructureKind
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.ref.ResourceRef

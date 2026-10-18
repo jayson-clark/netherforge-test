@@ -1,6 +1,6 @@
 // @vitest-environment node
 /**
- * The real lua-language-server against a copy of `examples/basic`, set up
+ * The real lua-language-server against a copy of `examples/showcase`, set up
  * the way the editor sets it up: the project's `.luarc.json`, the API's
  * stubs and the project's names (`stubs.ts`) where the editor writes them,
  * the client settings (`settings.ts`) with NetherForge's plugin
@@ -83,7 +83,7 @@ describe.skipIf(!binary)('lua-language-server, as the editor runs it', () => {
 
   beforeAll(async () => {
     // The project, plus what the editor writes into .netherforge/ for it.
-    cpSync(path.join(repo, 'examples/basic'), project, {
+    cpSync(path.join(repo, 'examples/showcase'), project, {
       recursive: true,
       filter: (source: string) => !source.includes(`${path.sep}.netherforge`),
     })

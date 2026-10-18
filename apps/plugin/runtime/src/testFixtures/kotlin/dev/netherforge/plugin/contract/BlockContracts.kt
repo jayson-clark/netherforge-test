@@ -1,8 +1,8 @@
 package dev.netherforge.plugin.contract
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.block.BlockCarrier
 import dev.netherforge.format.bridge.BotEvent
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.platform.BlockOps
 import dev.netherforge.plugin.platform.ParticleOps
 import dev.netherforge.plugin.platform.ParticleSpawn

@@ -35,7 +35,7 @@ tasks.withType<Test>().configureEach {
     jvmArgumentProviders.add(SystemPropertyPath("netherforge.runner.jar", built))
     // luajava loads Lua's native library; Java 25 warns unless that's allowed explicitly.
     jvmArgs("--enable-native-access=ALL-UNNAMED")
-    // The tests run examples/basic's own tests.
+    // The tests run examples/showcase's own tests.
     environment("NETHERFORGE_REPO", repoRoot.absolutePath)
     inputs.dir(repoRoot.resolve("examples")).withPathSensitivity(PathSensitivity.RELATIVE)
 }

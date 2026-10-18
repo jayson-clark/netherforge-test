@@ -1,6 +1,5 @@
 package dev.netherforge.plugin.testkit
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.bridge.BotActResult
 import dev.netherforge.format.bridge.BotAction
 import dev.netherforge.format.bridge.BotBossBar
@@ -30,6 +29,7 @@ import dev.netherforge.format.dialog.TextInput
 import dev.netherforge.format.game.Box
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.game.has
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.menu.MenuType
 import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.BotAim
@@ -586,7 +586,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
         if (creative) return
         val dropped = answer.drops ?: drops
         if (raise.blockDropItem(GameEvent.BlockDropItem(bot.ref, target, target.state) { dropped })) return
-        val middle = dev.netherforge.format.Vec3(mine.x + 0.5, mine.y + 0.5, mine.z + 0.5)
+        val middle = dev.netherforge.format.math.Vec3(mine.x + 0.5, mine.y + 0.5, mine.z + 0.5)
         for (stack in dropped) platform.worldEntities.spawnItem(world, middle, stack)
     }
 
@@ -630,7 +630,7 @@ class FakeBots(private val platform: FakePlatform) : BotOps {
         bot.inventorySlots[slot] = if (thrown < count) item.copy(def = item.def.copy(count = count - thrown)) else null
         val at = bot.location
         val yaw = Math.toRadians(at.yaw)
-        val ahead = dev.netherforge.format.Vec3(at.x - sin(yaw) * THROW, at.y + bot.eyeHeight - 0.3, at.z + cos(yaw) * THROW)
+        val ahead = dev.netherforge.format.math.Vec3(at.x - sin(yaw) * THROW, at.y + bot.eyeHeight - 0.3, at.z + cos(yaw) * THROW)
         platform.worldEntities.spawnItem(at.world, ahead, dropped)?.let { id ->
             platform.worldEntities.body(id)?.numbers?.set(EntityNumber.PICKUP_DELAY, PLAYER_DROP_DELAY)
         }

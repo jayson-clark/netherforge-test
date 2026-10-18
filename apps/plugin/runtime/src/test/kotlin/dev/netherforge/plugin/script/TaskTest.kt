@@ -180,19 +180,21 @@ class TaskTest {
 
     @Test
     fun `the example door plays its cutscene once per click, as a task`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             assertTrue(server.runtime.currentProblems().isEmpty(), "${server.runtime.currentProblems()}")
             val alex = server.player("Alex")
             val door = server.runtime.spawnNear("door", alex.ref)
             val panel = server.platform.entities.hitbox(door.id, "panel")
             server.runtime.events.entityClicked(panel.id, alex.ref, ClickButton.RIGHT, null)
             // The shockwave first: the door opens once it has played its 30 ticks.
-            assertEquals(listOf("shockwave"), server.runtime.session.particles.all().map { it.kind })
+            // (The expo's booths play effects of their own, a looping trail among them: only the door's are counted.)
+            fun shockwaves() = server.runtime.session.particles.all().filter { it.kind == "shockwave" }
+            assertEquals(listOf("shockwave"), shockwaves().map { it.kind })
             assertFalse(door.animations.isPlaying("open"))
             server.tick(30)
             val toAlex = server.platform.particles.sent.filter { (_, spawns, viewers) -> spawns.isNotEmpty() && alex.ref in viewers }
             assertTrue(toAlex.isNotEmpty(), "the shockwave reached Alex: ${server.platform.particles.sent}")
-            assertEquals(emptyList(), server.runtime.session.particles.all())
+            assertEquals(emptyList(), shockwaves())
             assertTrue(door.animations.isPlaying("open"))
             server.tick(20)
             assertEquals(listOf("<gray>The door creaks open."), alex.messages)

@@ -84,6 +84,6 @@ describe('the resource pack editor', () => {
     expect(within(create).getByRole('button', { name: 'Create' })).toHaveProperty('disabled', true)
     await user.clear(key)
     await user.type(key, 'gem{Enter}')
-    expect(Object.keys(pack().glyphs ?? {})).toEqual(['coin', 'gem'])
+    expect(Object.keys(pack().glyphs ?? {})).toEqual(['coin', 'spark', 'wisp', 'gem'])
   })
 })

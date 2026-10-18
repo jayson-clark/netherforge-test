@@ -171,7 +171,7 @@ test('fits a hitbox to a block model from the client assets', async ({ page }) =
   await page.goto('/?fast&assets=fixture')
   await page
     .getByRole('list', { name: 'Recent projects' })
-    .getByRole('button', { name: /Basic example/ })
+    .getByRole('button', { name: /NetherForge Showcase/ })
     .click()
   await openCentity(page, 'tower')
   await expect(page.getByText(/Blocks show as placeholders/)).toHaveCount(0)

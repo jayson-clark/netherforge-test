@@ -7,7 +7,7 @@
  * rotation (clockwise, about the block centre) are both applied to the
  * element's eight corners, and the box is their bounds.
  */
-import type { Placement, RawElement, V3 } from './model'
+import type { Placement, RawElement, V3 } from '@netherforge/models/model'
 
 export interface Aabb {
   min: V3

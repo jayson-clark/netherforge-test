@@ -1,21 +1,21 @@
 /**
  * Importing a WorldEdit (`.schem`) or Litematica (`.litematic`) schematic into a structure's one file or a
- * build's parts, read and cut by `@netherforge/terrain-preview` (`schematic.ts`, `parts.ts`), as
+ * build's parts, read and cut by `@netherforge/structures` (`schematic.ts`, `parts.ts`), as
  * `netherforge import` does. The schematic's data version goes into the files, so the server renames what an
  * older version called otherwise as it reads them; the blocks the imported game data doesn't know are named, and
  * entities, which an import doesn't carry, are counted.
  */
 import { useRef, useState } from 'react'
 import { BUILD_LIMITS } from '@netherforge/format/constants'
-import { readNbt } from '@netherforge/terrain-preview/nbt'
+import { readNbt } from '@netherforge/structures/nbt'
 import {
   buildParts,
   fitsOneFile,
   gridOf,
   structureFile,
   unknownBlocks,
-} from '@netherforge/terrain-preview/parts'
-import { readSchematic, type Volume } from '@netherforge/terrain-preview/schematic'
+} from '@netherforge/structures/parts'
+import { readSchematic, type Volume } from '@netherforge/structures/schematic'
 import { useApp, useWorkspace } from '@/state/providers'
 import { ask } from '@/ui/dialogs'
 import { Section } from '@/ui/fields'

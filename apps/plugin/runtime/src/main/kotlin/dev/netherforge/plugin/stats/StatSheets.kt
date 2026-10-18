@@ -1,7 +1,7 @@
 package dev.netherforge.plugin.stats
 import dev.netherforge.format.buff.BuffFile
+import dev.netherforge.format.buff.BuffKind
 import dev.netherforge.format.buff.BuffStacking
-import dev.netherforge.format.project.BuffKind
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.plugin.binding.BuffEndEvent
 import dev.netherforge.plugin.binding.BuffEvent

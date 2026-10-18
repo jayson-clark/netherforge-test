@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.centity
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.Channel
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.TestServer
 import dev.netherforge.plugin.platform.ClickButton
 import dev.netherforge.plugin.platform.Location

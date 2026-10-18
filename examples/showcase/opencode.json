@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "netherforge": {
+      "type": "remote",
+      "url": "http://127.0.0.1:47615/mcp",
+      "headers": {
+        "authorization": "Bearer b6764e363c3f9f2bc0a75eb495fbc342b800773437341b4cb73214c544c914a2"
+      }
+    }
+  }
+}

@@ -13,12 +13,12 @@
     "continents": 0.0,
     "depth": 0.0,
     "erosion": 0.0,
-    "final_density": "basic:it_shelf",
+    "final_density": "showcase:it_shelf",
     "ridges": 0.0,
     "temperature": 0.0,
     "vegetation": 0.0
   },
-  "material_rule": "basic:it_basalt",
+  "material_rule": "showcase:it_basalt",
   "spawn_target": [],
   "debug_functions": []
 }

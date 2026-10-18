@@ -1,5 +1,5 @@
 package dev.netherforge.plugin.mob
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.platform.Platform
 import dev.netherforge.plugin.session.RuntimeService
 import dev.netherforge.plugin.session.TickPhase
@@ -111,10 +111,10 @@ internal class MobPaths(private val platform: Platform, private val ended: (mob:
     }
 
     companion object {
-        /** How close to its target a walk has to end to count as reached: `PATH_REACH` in `spec/entities.ts`. */
+        /** How close to its target a walk has to end to count as reached: `PATH_REACH` in `spec/constants.ts`. */
         const val PATH_REACH = 2.0
 
-        /** How often a walk after an entity looks for a new path: `REPATH_TICKS` in `spec/entities.ts`. */
+        /** How often a walk after an entity looks for a new path: `REPATH_TICKS` in `spec/constants.ts`. */
         const val REPATH_TICKS = 10L
 
         /** How far a path's end may be from ours and still be ours (the game ends paths at block centres). */

@@ -1,6 +1,5 @@
 package dev.netherforge.format.math
 
-import dev.netherforge.format.Vec3
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin

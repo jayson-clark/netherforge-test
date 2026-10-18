@@ -88,7 +88,7 @@ docs and type checking for the whole NetherForge API from one stub file,
    matches your NetherForge version into `.netherforge/luals/` instead (it
    marks nothing deprecated: that's the editor's work for your project).
 
-`examples/basic` has exactly this `.luarc.json`.
+`examples/showcase` has exactly this `.luarc.json`.
 
 Now `nf.`, `this:`, `player:` and every event payload complete, and reading
 `event.playr` in a click handler is flagged before you ever run it.

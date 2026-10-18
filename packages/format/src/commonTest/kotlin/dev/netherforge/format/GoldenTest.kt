@@ -57,13 +57,13 @@ class GoldenTest {
 
     /**
      * An example with dependencies has the `netherforge.lock` resolving them
-     * gives (`examples/basic` depends on `examples/library`): its versions,
+     * gives (`examples/showcase` depends on `examples/library`): its versions,
      * paths and content hashes, as hashed on this platform.
      */
     @Test
     fun examplesAreLocked() {
         val locked = TestFiles.dirs("examples").filter { writeLock(it) != null }
-        assertTrue("basic" in locked, "examples/basic depends on a package")
+        assertTrue("showcase" in locked, "examples/showcase depends on a package")
     }
 
     /**

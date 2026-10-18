@@ -140,9 +140,9 @@ val downloadPaper = tasks.register<DownloadPaper>("downloadPaper") {
 configurations.consumable("pluginJar") { outgoing.artifact(pluginJar) }
 configurations.consumable("paperServer") { outgoing.artifact(downloadPaper.flatMap { it.jar }) { builtBy(downloadPaper) } }
 
-/** `node tools/gradle.mjs :plugin:paper-<minecraft>:runServer` for trying the plugin by hand against examples/basic. */
+/** `node tools/gradle.mjs :plugin:paper-<minecraft>:runServer` for trying the plugin by hand against examples/showcase. */
 tasks.named<xyz.jpenilla.runpaper.task.RunServer>("runServer") {
     minecraftVersion(minecraft)
     pluginJars(pluginJar.flatMap { it.archiveFile })
-    jvmArgs("-Dnetherforge.project=${repoRoot.resolve("examples/basic").absolutePath}")
+    jvmArgs("-Dnetherforge.project=${repoRoot.resolve("examples/showcase").absolutePath}")
 }

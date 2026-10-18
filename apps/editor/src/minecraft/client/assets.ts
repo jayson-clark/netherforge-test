@@ -5,7 +5,7 @@
  * serve most of the registry.
  */
 import type { Backend } from '@/core/backend/types'
-import { splitId, textureAssetPath, type AssetLoader } from './model'
+import { splitId, textureAssetPath, type AssetLoader } from '@netherforge/models/model'
 
 /** `index.json`, written by the import: ids for pickers, so nothing lists folders. */
 export interface ClientIndex {

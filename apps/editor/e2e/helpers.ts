@@ -28,14 +28,14 @@ export const test = base.extend<{ csp: void }>({
   ],
 })
 
-/** Opens the editor on the seeded examples/basic project; [query] adds to the page's (`&untrusted`). */
+/** Opens the editor on the seeded examples/showcase project; [query] adds to the page's (`&untrusted`). */
 export async function openExample(page: Page, query = '') {
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto(`/?fast${query}`)
   await page
     .getByRole('list', { name: 'Recent projects' })
-    .getByRole('button', { name: /Basic example/ })
+    .getByRole('button', { name: /NetherForge Showcase/ })
     .click()
   await expect(explorer(page)).toBeVisible()
   return errors
@@ -136,7 +136,7 @@ export async function openExampleWithAssets(page: Page) {
   await page.goto('/?fast&assets=fixture')
   await page
     .getByRole('list', { name: 'Recent projects' })
-    .getByRole('button', { name: /Basic example/ })
+    .getByRole('button', { name: /NetherForge Showcase/ })
     .click()
   await expect(explorer(page)).toBeVisible()
 }

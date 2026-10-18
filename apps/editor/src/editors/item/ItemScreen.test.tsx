@@ -74,7 +74,14 @@ describe('the item screen', () => {
       within(block)
         .getAllByRole('option')
         .map((it) => it.textContent)
-    expect(options()).toEqual(['(none)', 'floating_lamp', 'ruby_crystal', 'ruby_ore'])
+    expect(options()).toEqual([
+      '(none)',
+      'crystal_glass',
+      'floating_lamp',
+      'glow_lamp',
+      'ruby_crystal',
+      'ruby_ore',
+    ])
     fireEvent.change(block, { target: { value: 'ruby_ore' } })
     expect(ruby().block).toBe('ruby_ore')
     fireEvent.change(block, { target: { value: '' } })
@@ -103,7 +110,7 @@ describe('the item thumbnail', () => {
         <ItemThumbnail id="ruby" size={32} fallback={null} />
       </AppProvider>,
     )
-    // examples/basic's ruby has the pack's ui/ruby look, not paper's placeholder.
+    // examples/showcase's ruby has the pack's ui/ruby look, not paper's placeholder.
     await waitFor(() => expect(container.querySelector('img')).not.toBeNull())
     expect(container.textContent).toBe('')
   })

@@ -2,7 +2,7 @@ package dev.netherforge.format.advancement
 
 import dev.netherforge.format.datapack.DatapackContext
 import dev.netherforge.format.game.GameIds
-import dev.netherforge.format.project.ItemKind
+import dev.netherforge.format.item.ItemKind
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray

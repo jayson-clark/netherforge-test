@@ -1,8 +1,8 @@
 package dev.netherforge.plugin.centity
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.Box
 import dev.netherforge.format.math.Matrix4
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.math.degreesToRadians
 import dev.netherforge.format.math.radiansToDegrees
 import dev.netherforge.plugin.pathing.AirSearch
@@ -446,13 +446,13 @@ class CentityPaths(private val platform: Platform, private val centities: Centit
     }
 
     companion object {
-        /** How close it has to come to count as reached: `PATH_REACH` in `spec/centity.ts`. */
+        /** How close it has to come to count as reached: `PATH_REACH` in `spec/constants.ts`. */
         const val PATH_REACH = 2.0
 
-        /** How often a walk after something looks for a new path to it: `REPATH_TICKS` in `spec/centity.ts`. */
+        /** How often a walk after something looks for a new path to it: `REPATH_TICKS` in `spec/constants.ts`. */
         const val REPATH_TICKS = 10L
 
-        /** The defaults and limits of `CentityPathOptions`: the constants of the same names in `spec/centity.ts`. */
+        /** The defaults and limits of `CentityPathOptions`: the constants of the same names in `spec/constants.ts`. */
         const val DEFAULT_SPEED = 4.3
         const val MAX_SPEED = 20.0
         const val DEFAULT_STEP_HEIGHT = 1.0
@@ -462,7 +462,7 @@ class CentityPaths(private val platform: Platform, private val centities: Centit
         const val MAX_WIDTH = 8.0
         const val MAX_HEIGHT = 16.0
 
-        /** How far below its feet a walk looks for ground to start from: `START_DROP` in `spec/centity.ts`. */
+        /** How far below its feet a walk looks for ground to start from: `START_DROP` in `spec/constants.ts`. */
         const val START_DROP = 64.0
 
         /** Places the walks finding new paths on their own may search in one tick, together. */

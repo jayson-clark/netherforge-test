@@ -17,7 +17,7 @@ import java.security.MessageDigest
 /**
  * The server refused the start-up datapack: a file the game couldn't read as an entry of its registry, which only
  * the server checks, stops it loading every datapack, and so stops it starting. The entries are the project's
- * datapacks' ([dev.netherforge.format.project.DatapackKind]) or a sky's twin biomes ([SkyTwins]). The adapter keeps
+ * datapacks' ([dev.netherforge.format.datapack.DatapackKind]) or a sky's twin biomes ([SkyTwins]). The adapter keeps
  * the game's own report ([report]) with the [hash] of the start-up datapack it was about; the next start with the
  * same files starts without what it named ([leavesOut]: the skies it named, and the project's datapacks, and what
  * names them, when it named anything else), and says why as `runtime.datapack` problems, until they change.

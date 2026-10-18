@@ -2,10 +2,10 @@ package dev.netherforge.plugin.integration
 
 import dev.netherforge.format.bridge.Problems
 import dev.netherforge.format.json.CanonicalJson
-import dev.netherforge.format.project.TerrainKind
 import dev.netherforge.format.terrain.TerrainBlock
 import dev.netherforge.format.terrain.TerrainCompiler
 import dev.netherforge.format.terrain.TerrainGenerator
+import dev.netherforge.format.terrain.TerrainKind
 import dev.netherforge.plugin.integration.support.PaperServer
 import dev.netherforge.plugin.integration.support.Scenario
 import dev.netherforge.plugin.integration.support.TestProject
@@ -42,10 +42,7 @@ class MainWorldScenario : Scenario("mainworld") {
                 .replace("\"biome\": \"minecraft:snowy_plains\"", "\"biome\": \"it_bare_cold\"")
         )
         project.write(plateau, project.read(file).replace("\"base\": 66", "\"base\": 120"))
-        project.write(
-            "netherforge.json",
-            project.read("netherforge.json").replace("\"worlds\": {", "\"worlds\": {\n    \"world\": { \"terrain\": \"ruby_hills\" },")
-        )
+        project.setWorld("world", """{ "terrain": "ruby_hills" }""")
     }
 
     /**

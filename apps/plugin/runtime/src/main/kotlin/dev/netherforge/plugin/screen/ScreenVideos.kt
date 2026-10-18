@@ -6,8 +6,8 @@ import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Loaded
 import dev.netherforge.format.project.PackagePaths
 import dev.netherforge.format.project.ResourcePlace
-import dev.netherforge.format.project.VideoKind
 import dev.netherforge.format.screen.VideoFile
+import dev.netherforge.format.screen.VideoKind
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.binding.Events
 import dev.netherforge.plugin.binding.PlaybackEndEvent

@@ -7,7 +7,6 @@ import dev.netherforge.format.game.GameData
 import dev.netherforge.format.game.GameIds
 import dev.netherforge.format.game.RegistryKey
 import dev.netherforge.format.json.CanonicalJson
-import dev.netherforge.format.project.DatapackKind
 import dev.netherforge.format.project.KindContext
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Kinds

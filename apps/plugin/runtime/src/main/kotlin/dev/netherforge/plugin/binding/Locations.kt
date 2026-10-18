@@ -1,5 +1,5 @@
 package dev.netherforge.plugin.binding
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.math.degreesToRadians
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.Location

@@ -1,10 +1,10 @@
 /**
- * A picture of a structure or a build (`@netherforge/terrain-preview/picture`, the pixels `netherforge preview`
+ * A picture of a structure or a build (`@netherforge/structures/picture`, the pixels `netherforge preview`
  * writes), as big as its panel allows in whole pixels a block once there's room for two, with the blocks that
  * show named beside it.
  */
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import type { Picture } from '@netherforge/terrain-preview/picture'
+import type { StructureImage } from '@netherforge/structures/picture'
 import { Muted } from '@/ui/text'
 import styles from './BuildEditor.module.css'
 
@@ -19,7 +19,7 @@ export function PictureView({
   label,
   status,
 }: {
-  picture: Picture | null
+  picture: StructureImage | null
   label: string
   /** What's going on when there's no picture yet (reading, or why not). */
   status: ReactNode
@@ -46,11 +46,7 @@ export function PictureView({
     element.width = picture.width
     element.height = picture.height
     context.putImageData(
-      new ImageData(
-        picture.pixels as Uint8ClampedArray<ArrayBuffer>,
-        picture.width,
-        picture.height,
-      ),
+      new ImageData(picture.data as Uint8ClampedArray<ArrayBuffer>, picture.width, picture.height),
       0,
       0,
     )

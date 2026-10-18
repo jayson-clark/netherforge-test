@@ -1,10 +1,10 @@
 package dev.netherforge.plugin.centity
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.Channel
 import dev.netherforge.format.centity.ResolvedPhysics
 import dev.netherforge.format.game.Box
 import dev.netherforge.format.math.Matrix4
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.math.degreesToRadians
 import dev.netherforge.format.math.radiansToDegrees
 import dev.netherforge.plugin.binding.CollideEvent

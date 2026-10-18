@@ -46,9 +46,8 @@ This is a good moment to make it a git repository (`git init`); see
 
 To open an existing project, choose **Open folder…** and pick the folder that
 holds its `netherforge.json`. The example projects in the NetherForge repository
-are good ones to explore: `examples/basic` has a little of everything, and
-`examples/lumen_vale` is a whole game built on every kind of file (see
-[A whole game: Lumen Vale](showcase.md)).
+are good ones to explore: `examples/showcase` is a walk-through of everything
+NetherForge does, a booth for each feature (see [The showcase](showcase.md)).
 
 ## The editor's window
 

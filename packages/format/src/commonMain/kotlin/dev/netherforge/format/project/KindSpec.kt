@@ -6,6 +6,7 @@ import dev.netherforge.format.ProblemSink
 import dev.netherforge.format.block.VanillaFile
 import dev.netherforge.format.datapack.DatapackCollection
 import dev.netherforge.format.datapack.DatapackFiles
+import dev.netherforge.format.datapack.DatapackKind
 import dev.netherforge.format.game.FeatureTable
 import dev.netherforge.format.game.GameData
 import dev.netherforge.format.json.CanonicalJson

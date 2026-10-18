@@ -41,7 +41,7 @@ describe('askToUntrust', () => {
     act(() => {
       answer = askToUntrust(app.workspace)
     })
-    const dialog = screen.getByRole('dialog', { name: 'Stop trusting "Basic example"?' })
+    const dialog = screen.getByRole('dialog', { name: 'Stop trusting "NetherForge Showcase"?' })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
     expect(await answer).toBe(false)
     expect(trusted()).toBe(true)
@@ -50,10 +50,9 @@ describe('askToUntrust', () => {
       answer = askToUntrust(app.workspace)
     })
     fireEvent.click(
-      within(screen.getByRole('dialog', { name: 'Stop trusting "Basic example"?' })).getByRole(
-        'button',
-        { name: 'Untrust project' },
-      ),
+      within(
+        screen.getByRole('dialog', { name: 'Stop trusting "NetherForge Showcase"?' }),
+      ).getByRole('button', { name: 'Untrust project' }),
     )
     expect(await answer).toBe(true)
     expect(trusted()).toBe(false)
@@ -81,10 +80,9 @@ describe('the Untrust button in the Server settings', () => {
     const section = await screen.findByRole('region', { name: 'Project trust' })
     fireEvent.click(within(section).getByRole('button', { name: 'Untrust project…' }))
     fireEvent.click(
-      within(screen.getByRole('dialog', { name: 'Stop trusting "Basic example"?' })).getByRole(
-        'button',
-        { name: 'Untrust project' },
-      ),
+      within(
+        screen.getByRole('dialog', { name: 'Stop trusting "NetherForge Showcase"?' }),
+      ).getByRole('button', { name: 'Untrust project' }),
     )
     await within(section).findByRole('button', { name: 'Trust project…' })
     expect(trusted()).toBe(false)

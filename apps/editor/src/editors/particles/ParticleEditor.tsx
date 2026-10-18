@@ -28,7 +28,7 @@ import {
   type Vec3,
 } from '@/core/format'
 import { ItemEditor } from '@/minecraft/item/ItemForm'
-import { parseBlockState } from '@/minecraft/client/model'
+import { parseBlockState } from '@netherforge/models/model'
 import { usePickerIds } from '@/minecraft/client/usePickerIds'
 import { resourceOf } from '@/core/paths'
 import { useApp, useWorkspace } from '@/state/providers'

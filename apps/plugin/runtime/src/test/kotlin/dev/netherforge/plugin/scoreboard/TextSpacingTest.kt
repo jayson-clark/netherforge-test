@@ -12,7 +12,7 @@ class TextSpacingTest {
     @Test
     fun `spaces are the pack's characters, and nothing while there's no pack`() {
         TestServer(
-            TestServer.example("basic") + ("modules/s/init.lua" to "log(nf.text.space(37) == nf.text.space(40 - 3))")
+            TestServer.example("showcase") + ("modules/s/init.lua" to "log(nf.text.space(37) == nf.text.space(40 - 3))")
         ).use { server ->
             assertEquals(PackFonts.offset(-3), server.platform.spaces(-3))
             assertEquals(listOf("true"), server.logs)
@@ -25,7 +25,7 @@ class TextSpacingTest {
 
     @Test
     fun `an at becomes the moves around it, and one that can't be placed draws in line, reported once`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val coin = assertNotNull(server.runtime.packs.glyphAdvance("ui/coin"), "the coin's picture is measured")
             // Only glyphs inside: no font file needed.
             assertEquals(
@@ -54,7 +54,7 @@ class TextSpacingTest {
               log(tostring(pcall(bar.set_icon, bar, "ui/nothing")))
             end)
         """
-        TestServer(TestServer.example("basic") + ("modules/b/init.lua" to script)).use { server ->
+        TestServer(TestServer.example("showcase") + ("modules/b/init.lua" to script)).use { server ->
             val bars = server.platform.bossBars.bars
             assertEquals("<at:-92:from=center:align=right><glyph:ui/coin></at>Eye", bars.values.single().text)
             server.tick(1)

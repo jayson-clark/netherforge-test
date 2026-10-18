@@ -31,7 +31,7 @@ it, with the player's advancement functions
 (`player:grant_advancement("treasure_hunter", "first")`, see
 [`Player`](../reference/player.md)), and hear `player_complete_advancement`
 when one is completed. On the server it's `<namespace>:<id>`
-(`basic:treasure_hunter`), which is also what `event.advancement` says and
+(`showcase:treasure_hunter`), which is also what `event.advancement` says and
 what `/advancement grant` takes.
 
 | Key            | Meaning                                                                                                                                                                        |
@@ -112,7 +112,7 @@ needed (`runtime.restart`, a warning), and until then the server keeps the
 advancements it started with. An advancement with errors is left out.
 
 On the server, an advancement's id is `<namespace>:<id>`
-(`basic:treasure_hunter`): that's what `event.advancement` says, and what the
+(`showcase:treasure_hunter`): that's what `event.advancement` says, and what the
 game's `/advancement` command takes.
 
 ## In packages

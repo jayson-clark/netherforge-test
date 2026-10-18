@@ -798,7 +798,7 @@ watched), the way the real server would, and tests may call them on
   `PackagesTest` builds a bundle by hand.
 - The integration scenarios (`apps/plugin/integration`, `pnpm test:integration`;
   see the testing skill) boot each adapter's jar on its own headless Paper
-  with `examples/basic` (and `examples/library` beside it) and play the editor
+  with `examples/showcase` (and `examples/library` beside it) and play the editor
   over the bridge, including a restart. They also fetch the built resource
   pack over HTTP and check its SHA-1, rebuild it, and drop the example crate
   onto the real ground.
@@ -839,6 +839,6 @@ watched), the way the real server would, and tests may call them on
 ```sh
 node tools/gradle.mjs :plugin:runtime:test
 node tools/gradle.mjs :plugin:paper-26.3:assemble       # NetherForge-<version>-paper-26.3.jar and its bots in build/libs
-node tools/gradle.mjs :plugin:paper-26.3:runServer      # a local server running examples/basic, by hand
+node tools/gradle.mjs :plugin:paper-26.3:runServer      # a local server running examples/showcase, by hand
 pnpm test:integration                                   # every scenario on every adapter
 ```

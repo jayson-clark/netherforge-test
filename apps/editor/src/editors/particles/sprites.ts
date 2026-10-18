@@ -14,7 +14,7 @@ import {
   splitId,
   spriteLayers,
   type AssetLoader,
-} from '@/minecraft/client/model'
+} from '@netherforge/models/model'
 
 const namespaced = (id: string) => (id.includes(':') ? id : `minecraft:${id}`)
 

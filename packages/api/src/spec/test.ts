@@ -230,11 +230,11 @@ export const nfTest = (nfEvents: EventSpec[]): LuaClass => ({
       name: 'request',
       doc: "Makes a web request to the server, as a browser or a webhook sender would, and gives its answer: it goes through the routes scripts made with `nf.web.route` and the owner's limits (the defaults, in a test) exactly as a real one does, without a network, whether or not web routes are turned on. When the handler answers later (from a task, a callback), the server runs forward tick by tick until it does, as `nf.test.advance` would, up to `web.handler-timeout-seconds` (then it's `504`).",
       params: [
-        { name: 'method', type: 'string', doc: '`\"GET\"`, `\"POST\"`, …' },
+        { name: 'method', type: 'string', doc: '`"GET"`, `"POST"`, …' },
         {
           name: 'path',
           type: 'string',
-          doc: 'The path, namespace and all, with any query: `\"/shop/replays/12?full=1\"`.',
+          doc: 'The path, namespace and all, with any query: `"/shop/replays/12?full=1"`.',
         },
         {
           name: 'options',
@@ -417,7 +417,7 @@ export const testShapes: LuaClass[] = [
     fields: [
       { name: 'headers', type: 'table<string, string>?', doc: 'Request headers by name.' },
       { name: 'body', type: 'string?', doc: 'The body. Default none.' },
-      { name: 'ip', type: 'string?', doc: 'The address it comes from. Default `\"127.0.0.1\"`.' },
+      { name: 'ip', type: 'string?', doc: 'The address it comes from. Default `"127.0.0.1"`.' },
     ],
   },
   {

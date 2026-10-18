@@ -10,8 +10,8 @@ import * as THREE from 'three'
 import { Edges } from '@react-three/drei'
 import { useAsync } from '@/ui/useAsync'
 import type { ClientAssets } from './assets'
-import type { BuiltGroup } from './geometry'
-import { parseBlockState } from './model'
+import type { BuiltGroup } from '@netherforge/models/geometry'
+import { parseBlockState } from '@netherforge/models/model'
 import {
   blockGeometry,
   blockLookGeometry,

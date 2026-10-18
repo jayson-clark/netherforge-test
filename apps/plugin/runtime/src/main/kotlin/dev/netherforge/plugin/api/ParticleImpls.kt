@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.api
-import dev.netherforge.format.Vec3
-import dev.netherforge.format.project.ParticleEffectKind
+import dev.netherforge.format.math.Vec3
+import dev.netherforge.format.particle.ParticleEffectKind
 import dev.netherforge.plugin.binding.Caller
 import dev.netherforge.plugin.binding.EffectApi
 import dev.netherforge.plugin.binding.LocationOrVec3

@@ -1,8 +1,8 @@
 package dev.netherforge.format.centity
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.Box
 import dev.netherforge.format.json.CanonicalJson
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.ref.Ref
 import dev.netherforge.format.ref.RefKind

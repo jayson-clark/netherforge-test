@@ -4,7 +4,7 @@ import {
   type ResourcePackFile,
   type ResourcePacksPreview,
 } from '@/core/format'
-import type { AssetLoader } from '@/minecraft/client/model'
+import type { AssetLoader } from '@netherforge/models/model'
 import { iconSource, resourcePackBlockLook, resourcePackItemLook } from './icon'
 
 const loader = (files: Record<string, unknown>): AssetLoader => ({

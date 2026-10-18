@@ -1,8 +1,6 @@
 package dev.netherforge.format.codegen
 
 import dev.netherforge.format.Problem
-import dev.netherforge.format.TsName
-import dev.netherforge.format.VEC3_SERIAL_NAME
 import dev.netherforge.format.bridge.Bridge
 import dev.netherforge.format.bridge.BridgeEvent
 import dev.netherforge.format.bridge.BridgeMethod
@@ -32,6 +30,7 @@ import dev.netherforge.format.item.TooltipComponent
 import dev.netherforge.format.item.UseAnimation
 import dev.netherforge.format.json.CanonicalJson
 import dev.netherforge.format.loot.LootRange
+import dev.netherforge.format.math.VEC3_SERIAL_NAME
 import dev.netherforge.format.project.ClassifiedPath
 import dev.netherforge.format.project.ImageInfo
 import dev.netherforge.format.project.Kinds
@@ -87,7 +86,7 @@ fun main(args: Array<String>) {
     println("Wrote contract to ${out.path}")
 }
 
-/** What format's JS exports return (see jsMain's Exports.kt). */
+/** What format's JS exports return (see jsMain's *Exports.kt). */
 private val EDITOR_RESULTS = listOf(
     CanonicalResult.serializer().descriptor,
     ProjectOutline.serializer().descriptor,

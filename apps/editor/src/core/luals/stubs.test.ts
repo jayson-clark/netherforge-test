@@ -26,7 +26,12 @@ describe("the project's names for lua-language-server", () => {
     expect([...names.glyph.keys()]).toContain('ui/coin')
     expect([...names.glyph.keys()].every((it) => it.includes('/'))).toBe(true)
     // The project's own server-owner settings, for nf.config; the library's are the library's.
-    expect([...names.setting.keys()].sort()).toEqual(['greeting', 'show_welcome', 'treasure_rolls'])
+    expect([...names.setting.keys()].sort()).toEqual([
+      'greeting',
+      'show_welcome',
+      'tour_bossbar',
+      'treasure_rolls',
+    ])
   })
 
   it('see unsaved edits', async () => {

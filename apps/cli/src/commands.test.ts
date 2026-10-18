@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { run } from './main.ts'
 import { editorDataDir, hashPackage, listFiles } from './project.ts'
 
-const example = path.resolve(import.meta.dirname, '../../../examples/basic')
+const example = path.resolve(import.meta.dirname, '../../../examples/showcase')
 
 /** This test's folder (the project, the library beside it, the editor's data), removed after it. */
 let tmp: string
@@ -32,7 +32,7 @@ beforeEach(() => {
     recursive: true,
     filter: (source) => path.relative(example, source) !== '.netherforge',
   })
-  // The package examples/basic depends on, where its netherforge.json finds it.
+  // The package examples/showcase depends on, where its netherforge.json finds it.
   library = path.join(tmp, 'library')
   cpSync(path.resolve(example, '../library'), library, { recursive: true })
   env = { NETHERFORGE_DATA_DIR: data }
@@ -151,21 +151,21 @@ describe('build', () => {
     const out = path.join(project, '..', 'bundle')
     const outcome = await run(['build', project, '--out', out], env)
     expect(outcome).toMatchObject({ code: 0 })
-    expect(outcome.out[0]).toMatch(/: basic 0\.1\.0 with library\.$/)
+    expect(outcome.out[0]).toMatch(/: showcase 0\.1\.0 with library\.$/)
     const bundle = JSON.parse(readFileSync(path.join(out, 'netherforge-bundle.json'), 'utf8'))
     const lock = JSON.parse(readFileSync(path.join(project, 'netherforge.lock'), 'utf8'))
-    expect(bundle.project).toBe('basic')
+    expect(bundle.project).toBe('showcase')
     expect(bundle.packages.library).toEqual({ version: '0.1.0', hash: lock.packages.library.hash })
-    expect(bundle.packages.basic.hash).toBe(hashPackage(project))
+    expect(bundle.packages.showcase.hash).toBe(hashPackage(project))
     expect(listFiles(path.join(out, 'library'))).toEqual(
       listFiles(library).filter((it) => !it.startsWith('.')),
     )
     // Only what a package is: no lock, agent notes or editor settings.
-    const basic = listFiles(path.join(out, 'basic'))
-    expect(basic).toContain('modules/greeter/init.lua')
-    expect(basic).toContain('netherforge.json')
+    const showcase = listFiles(path.join(out, 'showcase'))
+    expect(showcase).toContain('modules/greeter/init.lua')
+    expect(showcase).toContain('netherforge.json')
     for (const left of ['netherforge.lock', 'AGENTS.md', '.luarc.json', '.gitignore'])
-      expect(basic).not.toContain(left)
+      expect(showcase).not.toContain(left)
 
     // Built again over itself: a bundle is replaced, anything else is left alone.
     expect((await run(['build', project, '--out', out], env)).code).toBe(0)
@@ -187,13 +187,15 @@ describe('build', () => {
     const bundle = JSON.parse(readFileSync(path.join(out, 'netherforge-bundle.json'), 'utf8'))
     const lock = JSON.parse(readFileSync(path.join(project, 'netherforge.lock'), 'utf8'))
     expect(bundle.packages.library.hash).toBe(lock.packages.library.hash)
-    for (const name of ['basic', 'library'])
+    for (const name of ['showcase', 'library'])
       expect(readFileSync(path.join(out, name, 'fonts/default.json'), 'utf8')).toBe(font)
   })
 
   it('builds into build/<namespace>-<version> by default', async () => {
     expect((await run(['build', project], env)).code).toBe(0)
-    expect(existsSync(path.join(project, 'build/basic-0.1.0/netherforge-bundle.json'))).toBe(true)
+    expect(existsSync(path.join(project, 'build/showcase-0.1.0/netherforge-bundle.json'))).toBe(
+      true,
+    )
   })
 
   it("refuses a project whose lock doesn't pin what its dependencies resolve to", async () => {

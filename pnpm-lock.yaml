@@ -4,6 +4,12 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    wasmoon:
+      specifier: 1.16.0
+      version: 1.16.0
+
 patchedDependencies:
   '@react-three/fiber@9.8.1':
     hash: 1743ed22170ebf269e775e95cc21db2377ec61264491a33d2291528e8588d274
@@ -16,12 +22,27 @@ importers:
 
   .:
     devDependencies:
+      '@eslint/js':
+        specifier: ^10.0.1
+        version: 10.0.1(eslint@10.11.0)
       '@johnnymorganz/stylua-bin':
         specifier: ^2.5.2
         version: 2.5.2
+      eslint:
+        specifier: ^10.11.0
+        version: 10.11.0
+      globals:
+        specifier: ^17.13.0
+        version: 17.13.0
       prettier:
         specifier: ^3.9.6
         version: 3.9.9
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      typescript-eslint:
+        specifier: ^8.71.0
+        version: 8.71.0(eslint@10.11.0)(typescript@6.0.3)
 
   apps/cli:
     dependencies:
@@ -31,6 +52,9 @@ importers:
       '@netherforge/models':
         specifier: workspace:*
         version: link:../../packages/models
+      '@netherforge/structures':
+        specifier: workspace:*
+        version: link:../../packages/structures
       '@netherforge/terrain-preview':
         specifier: workspace:*
         version: link:../../packages/terrain-preview
@@ -89,6 +113,9 @@ importers:
       '@netherforge/models':
         specifier: workspace:*
         version: link:../../packages/models
+      '@netherforge/structures':
+        specifier: workspace:*
+        version: link:../../packages/structures
       '@netherforge/terrain-preview':
         specifier: workspace:*
         version: link:../../packages/terrain-preview
@@ -162,9 +189,6 @@ importers:
         specifier: ^5.0.15
         version: 5.0.15(@types/react@19.3.0)(immer@10.2.0)(react@19.3.0)(use-sync-external-store@1.7.0(react@19.3.0))
     devDependencies:
-      '@eslint/js':
-        specifier: ^10.0.1
-        version: 10.0.1(eslint@10.11.0)
       '@netherforge/cli':
         specifier: workspace:*
         version: link:../cli
@@ -269,7 +293,7 @@ importers:
   packages/format:
     dependencies:
       wasmoon:
-        specifier: 1.16.0
+        specifier: 'catalog:'
         version: 1.16.0
 
   packages/models:
@@ -291,7 +315,7 @@ importers:
         specifier: ^5.0.3
         version: 5.0.3(@types/node@26.6.4)(jsdom@30.1.1)(vite@8.3.2(@types/node@26.6.4))
 
-  packages/terrain-preview:
+  packages/structures:
     dependencies:
       '@netherforge/format':
         specifier: workspace:*
@@ -299,8 +323,27 @@ importers:
       nbtify:
         specifier: 2.2.0
         version: 2.2.0(patch_hash=69b5b08e01cc2c13af3f7e5e315c1bd41d92c274ceda4732256f9cc7e7e3c14a)
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.4
+        version: 26.6.4
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/node@26.6.4)(jsdom@30.1.1)(vite@8.3.2(@types/node@26.6.4))
+
+  packages/terrain-preview:
+    dependencies:
+      '@netherforge/format':
+        specifier: workspace:*
+        version: link:../format
+      '@netherforge/structures':
+        specifier: workspace:*
+        version: link:../structures
       wasmoon:
-        specifier: 1.16.0
+        specifier: 'catalog:'
         version: 1.16.0
     devDependencies:
       '@types/node':

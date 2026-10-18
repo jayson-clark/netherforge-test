@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.api
 
-import dev.netherforge.format.project.BuffKind
+import dev.netherforge.format.buff.BuffKind
 import dev.netherforge.plugin.binding.ActiveBuff
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.session.ProjectSession

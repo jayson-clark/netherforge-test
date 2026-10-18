@@ -4,9 +4,9 @@ import dev.netherforge.format.Problem
 import dev.netherforge.format.ProblemCodes
 import dev.netherforge.format.Severity
 import dev.netherforge.format.migration.MigrationFile
+import dev.netherforge.format.migration.MigrationKind
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Loaded
-import dev.netherforge.format.project.MigrationKind
 import dev.netherforge.format.project.PackagePaths
 import dev.netherforge.plugin.RuntimeLog
 import dev.netherforge.plugin.project.Resource

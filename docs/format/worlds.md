@@ -202,7 +202,7 @@ list which pieces each of its jigsaw blocks may pick:
 ```
 
 A jigsaw block's **Target pool** names a pool as `<namespace>:<id>/<pool>`
-(`basic:village/houses`: `village` is the starting structure and `houses` a key
+(`showcase:village/houses`: `village` is the starting structure and `houses` a key
 of its `pools`). `<namespace>:<id>/start` is the pool holding the structure's
 own template, which is what it starts from (`start` is reserved). A pool picks
 one of its `elements` by `weight` (1 to 150, default 1), each a `structure` of

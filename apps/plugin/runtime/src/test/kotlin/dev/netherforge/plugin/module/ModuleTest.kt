@@ -14,7 +14,7 @@ class ModuleTest {
 
     @Test
     fun `the example's perm command grants, denies, lists and forgets what allow permissions lets it`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val alex = server.player("Alex")
             server.platform.raise.playerJoin(GameEvent.PlayerJoin(alex.ref, false, null))
             val commands = server.platform.commands
@@ -25,39 +25,39 @@ class ModuleTest {
                 assertEquals(emptyList(), commands.runAsConsole(line))
                 return server.platform.players.console.drop(before)
             }
-            // basic.admin: nobody is granted it, so the console (and ops, on Paper) use it.
+            // showcase.admin: nobody is granted it, so the console (and ops, on Paper) use it.
             assertEquals(listOf("<red>You don't have permission to use /perm."), commands.run(alex, "perm list Alex"))
 
-            assertEquals(listOf("<green>Granted basic.vip for Alex."), console("perm grant Alex basic.vip"))
-            assertEquals(listOf("<green>Denied basic.fly for Alex."), console("perm deny Alex basic.fly"))
-            assertEquals(mapOf("basic.vip" to true, "basic.fly" to false), alex.granted)
-            assertEquals(listOf("Alex: <red>-basic.fly<gray>, <green>+basic.vip"), console("perm list Alex"))
+            assertEquals(listOf("<green>Granted showcase.vip for Alex."), console("perm grant Alex showcase.vip"))
+            assertEquals(listOf("<green>Denied showcase.fly for Alex."), console("perm deny Alex showcase.fly"))
+            assertEquals(mapOf("showcase.vip" to true, "showcase.fly" to false), alex.granted)
+            assertEquals(listOf("Alex: <red>-showcase.fly<gray>, <green>+showcase.vip"), console("perm list Alex"))
 
             // Outside allow.permissions: refused, and the sender is told why.
             assertEquals(
                 listOf(
-                    "<red>Player:set_permission needs permission \"minecraft.command.op\", which package \"basic\" hasn't allowed: " +
-                        "add it (or a node above it) to allow.permissions in its netherforge.json (it lists: basic)"
+                    "<red>Player:set_permission needs permission \"minecraft.command.op\", which package \"showcase\" hasn't allowed: " +
+                        "add it (or a node above it) to allow.permissions in its netherforge.json (it lists: showcase)"
                 ),
                 console("perm grant Alex minecraft.command.op")
             )
 
-            assertEquals(listOf("<green>Alex no longer sets basic.fly."), console("perm unset Alex basic.fly"))
-            assertEquals(listOf("<gray>Nothing was set for basic.fly on Alex."), console("perm unset Alex basic.fly"))
-            assertEquals(mapOf("basic.vip" to true), alex.granted)
+            assertEquals(listOf("<green>Alex no longer sets showcase.fly."), console("perm unset Alex showcase.fly"))
+            assertEquals(listOf("<gray>Nothing was set for showcase.fly on Alex."), console("perm unset Alex showcase.fly"))
+            assertEquals(mapOf("showcase.vip" to true), alex.granted)
         }
     }
 
     @Test
     fun `the example's milestones make a diamond finder a VIP and show their progress`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val alex = server.player("Alex")
             server.platform.raise.playerJoin(GameEvent.PlayerJoin(alex.ref, false, null))
             val advancements = server.platform.advancements
             advancements.grant(alex.ref.uuid, "minecraft:story/mine_stone")
             assertEquals(emptyMap(), alex.granted)
             advancements.grant(alex.ref.uuid, "minecraft:story/mine_diamond")
-            assertEquals(mapOf("basic.vip" to true), alex.granted)
+            assertEquals(mapOf("showcase.vip" to true), alex.granted)
             advancements.met.getValue(alex.ref.uuid)["minecraft:adventure/adventuring_time"] = mutableSetOf("minecraft:plains")
 
             assertEquals(
@@ -79,7 +79,7 @@ class ModuleTest {
 
     @Test
     fun `the example's milestones announce diamonds their own way`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val alex = server.player("Alex")
             server.platform.raise.playerJoin(GameEvent.PlayerJoin(alex.ref, false, null))
             val diamonds = "minecraft:story/mine_diamond"
@@ -95,48 +95,49 @@ class ModuleTest {
 
     @Test
     fun `the example's quests are its own advancements, met by joining and rolling for treasure`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val alex = server.player("Alex")
             val advancements = server.platform.advancements
             server.platform.raise.playerJoin(GameEvent.PlayerJoin(alex.ref, false, null))
-            assertTrue(advancements.has(alex.ref.uuid, "basic:adventurer"))
+            assertTrue(advancements.has(alex.ref.uuid, "showcase:adventurer"))
             assertEquals(
                 listOf("<gold>Quests</gold>\n<green>✔ Adventurer\n<yellow>Treasure Hunter: 0 of 3 rolls"),
                 server.platform.commands.run(alex, "quests")
             )
             repeat(2) { server.platform.commands.run(alex, "treasure") }
-            assertEquals(listOf("first", "second") to listOf("third"), advancements.progress(alex.ref.uuid, "basic:treasure_hunter"))
-            assertFalse(advancements.has(alex.ref.uuid, "basic:diamonds"))
+            assertEquals(listOf("first", "second") to listOf("third"), advancements.progress(alex.ref.uuid, "showcase:treasure_hunter"))
+            assertFalse(advancements.has(alex.ref.uuid, "showcase:diamonds"))
             server.platform.commands.run(alex, "treasure")
-            assertTrue(advancements.has(alex.ref.uuid, "basic:treasure_hunter"))
+            assertTrue(advancements.has(alex.ref.uuid, "showcase:treasure_hunter"))
             // Completing it gives a diamond, and the diamonds advancement for being given one.
             assertTrue("<gold>Treasure Hunter! Here's a diamond for the road." in alex.messages)
-            assertTrue(advancements.has(alex.ref.uuid, "basic:diamonds"))
+            assertTrue(advancements.has(alex.ref.uuid, "showcase:diamonds"))
         }
     }
 
     @Test
     fun `the example greeter welcomes players and adds a tower command`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val alex = server.player("Alex")
             server.platform.raise.playerJoin(GameEvent.PlayerJoin(alex.ref, false, null))
-            // The second line is the library's: examples/basic requires its greetings module.
+            // The second line is the library's: examples/showcase requires its greetings module.
             assertEquals(listOf("<green>Welcome, Alex!", "<aqua>Well met, Alex!"), alex.messages)
 
-            // Building needs basic.builder, which the welcome dialog's Done grants.
+            // Building needs showcase.builder, which the welcome dialog's Done grants.
             assertEquals(listOf("<red>You don't have permission to use /tower."), server.platform.commands.run(alex, "tower"))
             server.platform.dialogs.press(alex, "done", mapOf("nickname" to "Al"))
-            assertEquals(mapOf("basic.builder" to true), alex.granted)
+            assertEquals(mapOf("showcase.builder" to true), alex.granted)
 
             // It answers through event.sender, whoever ran it.
             assertEquals(listOf("<gray>A tower rises 2 blocks ahead."), server.platform.commands.run(alex, "tower"))
             val tower = server.runtime.session.centities.all().single()
             assertEquals("tower", tower.centity)
-            assertEquals(Location("world", 2.5, 64.0, 0.5), tower.anchor)
+            // Their first arrival put them at the expo's hub, standing on its plaza (y 65).
+            assertEquals(Location("world", 2.5, 65.0, 0.5), tower.anchor)
 
             // The distance is an optional integer from 1 to 16.
             server.platform.commands.run(alex, "tower 5")
-            assertEquals(Location("world", 5.5, 64.0, 0.5), server.runtime.session.centities.all().last().anchor)
+            assertEquals(Location("world", 5.5, 65.0, 0.5), server.runtime.session.centities.all().last().anchor)
             assertEquals(
                 listOf("<red><distance> must be at most 16, not 40."),
                 server.platform.commands.run(alex, "tower 40")
@@ -311,7 +312,7 @@ class ModuleTest {
     @Test
     fun `nf reaches players, centities and the console`() {
         TestServer(
-            TestServer.example("basic") + mapOf(
+            TestServer.example("showcase") + mapOf(
                 "modules/t/init.lua" to """
                     nf.commands.register("probe", function(ctx)
                       local p = ctx.player

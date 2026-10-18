@@ -249,7 +249,7 @@ server asks in runtime tests (`TerrainTest`); `MainWorldScenario` (with `PaperSe
 which writes `bukkit.yml` each prepare) checks the real thing.
 
 **Biomes.** `ProjectGenerator.biomes` maps each area's biome as the file names it to the server's key
-(`BiomeKind.keyOf` in the project's namespace: `minecraft:plains`, a project biome's `basic:ruby_grove`); the service
+(`BiomeKind.keyOf` in the project's namespace: `minecraft:plains`, a project biome's `showcase:ruby_grove`); the service
 also `reloads` the biome kind (its file is start-up datapack data, so `StartupDatapackCheck` asks for the restart) and
 reports `runtime.terrain` at the generator for an area whose project biome isn't running (the adapter makes it
 plains). The natural spawner resolves `spawning.biomes` the same way (`NaturalSpawner`'s `home`), against
@@ -287,7 +287,7 @@ restart) are the tests; `TerrainTest` in the runtime is the fake's.
 ### Dimension types (W5.12)
 
 A world's dimension type (`dimension_types/<id>.json`, start-up datapack data) is `WorldSettings.dimensionType`, the server's key
-(`basic:deep`): `nf.worlds.create`'s `dimension_type` (`projectDimensionType` in `WorldAdminImpl`: named as the calling package
+(`showcase:deep`): `nf.worlds.create`'s `dimension_type` (`projectDimensionType` in `WorldAdminImpl`: named as the calling package
 names it, running, then `DimensionTypeKind.keyOf`) and `netherforge.json`'s `worlds.<name>.dimensionType` (`ManagedWorlds.ensureMade`,
 which makes the worlds naming a terrain or a dimension type). `WorldManagerOps.dimensionTypes()` is what the server has (Paper:
 the live `dimension_type` registry; the fake: the game's four plus the started datapack's files); one it lacks is a Lua

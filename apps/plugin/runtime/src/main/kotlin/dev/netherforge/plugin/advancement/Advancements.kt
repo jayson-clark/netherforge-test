@@ -1,6 +1,6 @@
 package dev.netherforge.plugin.advancement
 
-import dev.netherforge.format.project.AdvancementKind
+import dev.netherforge.format.advancement.AdvancementKind
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.project.Resource

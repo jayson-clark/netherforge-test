@@ -177,7 +177,7 @@ val integrationTests = adapters.map { (minecraft, adapter) ->
         jvmArgumentProviders.add(SystemPropertyPath("netherforge.it.paper", paperServer))
         jvmArgumentProviders.add(SystemPropertyPath("netherforge.it.contract", files(contractJar.flatMap { it.archiveFile })))
         systemProperty("netherforge.it.minecraft", minecraft)
-        systemProperty("netherforge.it.example", repoRoot.resolve("examples/basic").absolutePath)
+        systemProperty("netherforge.it.example", repoRoot.resolve("examples/showcase").absolutePath)
         systemProperty("netherforge.it.fixtures", layout.projectDirectory.dir("src/test/fixtures").asFile.absolutePath)
         // Paperclip's downloads and the Mojang jar are kept here between runs; the world is not.
         systemProperty("netherforge.it.server", layout.buildDirectory.dir("integration/$minecraft/server").get().asFile.absolutePath)

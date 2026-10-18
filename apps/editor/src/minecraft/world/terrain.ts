@@ -27,7 +27,7 @@ import {
   type BlockMesh,
   type BlockSource,
 } from '@/minecraft/client/blockMesh'
-import { readNbt } from '@netherforge/terrain-preview/nbt'
+import { readNbt } from '@netherforge/structures/nbt'
 import { blockIndex, parseChunk, SECTION_SIZE, type Chunk } from './chunk'
 import {
   chunkPayload,

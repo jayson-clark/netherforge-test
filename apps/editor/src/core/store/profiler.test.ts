@@ -93,7 +93,7 @@ describe('the profiler store', () => {
     await vi.advanceTimersByTimeAsync(2000)
     const state = app.profiler.getState()
     expect(state.measured).toBe(40)
-    // examples/basic's tower registers a click handler; the fake times it at its line.
+    // examples/showcase's tower registers a click handler; the fake times it at its line.
     const tower = [...state.handlers.values()].find((it) => it.script === 'centity tower')
     expect(tower?.source?.file).toBe('centities/tower/script.lua')
 

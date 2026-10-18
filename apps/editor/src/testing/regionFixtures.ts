@@ -4,7 +4,7 @@
  * drop into a memory project as a map's region files.
  */
 import { TAG, type Tag } from 'nbtify'
-import { nbtRoot, writeNbt, type NbtRoot } from '@netherforge/terrain-preview/nbt'
+import { nbtRoot, writeNbt, type NbtRoot } from '@netherforge/structures/nbt'
 import { nbt } from './nbtFixtures'
 
 /** A palette entry: a bare id, or an id with properties. */

@@ -1,7 +1,6 @@
 package dev.netherforge.format.module
 
 import dev.netherforge.format.project.Kinds
-import dev.netherforge.format.project.ModuleKind
 import dev.netherforge.format.project.ProjectSource
 
 /**

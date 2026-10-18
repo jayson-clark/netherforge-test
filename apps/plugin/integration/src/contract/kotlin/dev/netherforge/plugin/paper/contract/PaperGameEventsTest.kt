@@ -1,9 +1,9 @@
 package dev.netherforge.plugin.paper.contract
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.bridge.BotAction
 import dev.netherforge.format.bridge.BotClick
 import dev.netherforge.format.item.ItemDef
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.contract.PlatformContract
 import dev.netherforge.plugin.platform.BlockRef
 import dev.netherforge.plugin.platform.EntityNumber

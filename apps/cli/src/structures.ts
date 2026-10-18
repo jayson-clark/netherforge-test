@@ -4,7 +4,7 @@ import { encode } from 'fast-png'
 import * as nf from '@netherforge/format'
 import { BUILD_LIMITS, ID_PATTERN } from '@netherforge/format/constants'
 import type { ClassifiedPath } from '@netherforge/format/types'
-import { readNbt } from '@netherforge/terrain-preview/nbt'
+import { readNbt } from '@netherforge/structures/nbt'
 import {
   buildParts,
   fitsOneFile,
@@ -14,10 +14,10 @@ import {
   partsOf,
   structureFile,
   unknownBlocks,
-} from '@netherforge/terrain-preview/parts'
-import { StructurePicture, type View } from '@netherforge/terrain-preview/picture'
-import { readSchematic } from '@netherforge/terrain-preview/schematic'
-import { parseStructure } from '@netherforge/terrain-preview/structure'
+} from '@netherforge/structures/parts'
+import { StructurePicture, type View } from '@netherforge/structures/picture'
+import { readSchematic } from '@netherforge/structures/schematic'
+import { parseStructure } from '@netherforge/structures/structure'
 import { loadGameData, type Outcome } from './commands.ts'
 import { listFiles } from './project.ts'
 
@@ -162,7 +162,7 @@ export async function previewStructure(
   const png = encode({
     width: drawn.width,
     height: drawn.height,
-    data: drawn.pixels,
+    data: drawn.data,
     channels: 4,
     depth: 8,
   })

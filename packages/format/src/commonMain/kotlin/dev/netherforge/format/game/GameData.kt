@@ -1,6 +1,6 @@
 package dev.netherforge.format.game
 
-import dev.netherforge.format.Vec3
+import dev.netherforge.format.math.Vec3
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName

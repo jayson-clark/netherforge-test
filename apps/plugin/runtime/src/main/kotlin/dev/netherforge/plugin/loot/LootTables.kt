@@ -7,8 +7,8 @@ import dev.netherforge.format.loot.LootContext
 import dev.netherforge.format.loot.LootDrop
 import dev.netherforge.format.loot.LootRoller
 import dev.netherforge.format.loot.LootTableFile
+import dev.netherforge.format.loot.LootTableKind
 import dev.netherforge.format.project.KindSpec
-import dev.netherforge.format.project.LootTableKind
 import dev.netherforge.format.recipe.Ingredient
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.item.Items

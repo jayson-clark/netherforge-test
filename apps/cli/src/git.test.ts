@@ -46,7 +46,7 @@ const publish = (message: string, ...refs: string[]) => {
 const manifestPath = () => path.join(project, 'netherforge.json')
 const lockText = () => readFileSync(path.join(project, 'netherforge.lock'), 'utf8')
 
-/** basic's manifest, depending on the library through git at [rev] instead of by path. */
+/** The showcase's manifest, depending on the library through git at [rev] instead of by path. */
 const dependOnGit = (rev?: string) => {
   const json = JSON.parse(readFileSync(manifestPath(), 'utf8'))
   json.dependencies = { library: { git: url, ...(rev ? { rev } : {}) } }
@@ -80,7 +80,7 @@ beforeEach(() => {
   work = path.join(tmp, 'work')
   url = pathToFileURL(path.join(tmp, 'library.git')).href
   project = path.join(tmp, 'project')
-  cpSync(path.join(examples, 'basic'), project, {
+  cpSync(path.join(examples, 'showcase'), project, {
     recursive: true,
     filter: (source) => !source.includes(`${path.sep}.netherforge`),
   })

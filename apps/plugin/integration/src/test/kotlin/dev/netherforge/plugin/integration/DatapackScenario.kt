@@ -53,12 +53,12 @@ class DatapackScenario : Scenario("datapacks") {
             pack.resolve(settings).readText(),
             "the overlay for ${Adapter.minecraft}'s format replaces the overworld's noise settings"
         )
-        assertTrue(pack.resolve("data/basic/worldgen/density_function/it_shelf.json").exists())
-        assertEquals(readsMinecraft263, pack.resolve("data/basic/worldgen/material_rule/it_basalt.json").exists())
+        assertTrue(pack.resolve("data/showcase/worldgen/density_function/it_shelf.json").exists())
+        assertEquals(readsMinecraft263, pack.resolve("data/showcase/worldgen/material_rule/it_basalt.json").exists())
         // The example's boulders: the placed feature, and the configured feature in this version's own folder.
-        assertTrue(pack.resolve("data/basic/worldgen/placed_feature/ruby_boulders.json").exists())
+        assertTrue(pack.resolve("data/showcase/worldgen/placed_feature/ruby_boulders.json").exists())
         val feature = if (readsMinecraft263) "feature" else "configured_feature"
-        assertTrue(pack.resolve("data/basic/worldgen/$feature/ruby_boulder.json").exists())
+        assertTrue(pack.resolve("data/showcase/worldgen/$feature/ruby_boulder.json").exists())
     }
 
     @Test
@@ -75,7 +75,7 @@ class DatapackScenario : Scenario("datapacks") {
     @Test
     @Order(3)
     fun `a file the server refuses keeps the project's datapacks out until it changes`() {
-        val broken = "datapacks/it_terrain/data/basic/worldgen/placed_feature/it_broken.json"
+        val broken = "datapacks/it_terrain/data/showcase/worldgen/placed_feature/it_broken.json"
         // The game requires a placed feature's placement: only the server knows that.
         project.write(broken, "{ \"feature\": \"minecraft:forest_rock\" }\n")
         val result = editor.reload(broken)
@@ -89,7 +89,7 @@ class DatapackScenario : Scenario("datapacks") {
         // Started again, without them: the game's report is a problem on the file it named.
         val problems = (editor.next { it is Problems } as Problems).problems.filter { it.code == ProblemCodes.RUNTIME_DATAPACK.code }
         assertEquals(listOf(broken), problems.map { it.file }.distinct(), "$problems")
-        assertTrue("basic:it_broken" in problems.first().message, problems.first().message)
+        assertTrue("showcase:it_broken" in problems.first().message, problems.first().message)
         assertTrue(!pack.resolve("data/minecraft/worldgen/noise_settings/overworld.json").exists(), "the datapacks are left out")
         assertTrue(!editor.reload(broken).restart, "running as it started is no reason to restart")
 

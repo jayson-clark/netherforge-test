@@ -1,10 +1,10 @@
 package dev.netherforge.plugin.api
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.BodyDef
 import dev.netherforge.format.centity.LoopMode
 import dev.netherforge.format.centity.ResolvedBody
 import dev.netherforge.format.centity.TextDisplay
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.math.radiansToDegrees
 import dev.netherforge.plugin.binding.ActiveBuff
 import dev.netherforge.plugin.binding.AnimationOptions

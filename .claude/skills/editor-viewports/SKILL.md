@@ -24,11 +24,11 @@ base transform.
 ## Viewports (`editors/shared/viewport/`)
 
 **The build screen** (`editors/builds/`: not `build/`, which `.gitignore` leaves out): a build's parts are read through `readProjectBytes` and drawn as a 2D
-picture (`PictureView`, from `@netherforge/terrain-preview/picture`'s `StructurePicture`: from above, isometric, or a
+picture (`PictureView`, from `@netherforge/structures/picture`'s `StructurePicture`: from above, isometric, or a
 slice; the same pixels `netherforge preview` writes), never as a 3D mesh, so a big one stays quick; `ops.ts` cuts a
 capture's box into part boxes (each one bridge `save_structure`, all captured before any is written) and works out
 the size and gaps. `ImportSchematic` (shared with the structure screen, which takes only what fits in one file) reads
-a `.schem`/`.litematic` with `@netherforge/terrain-preview/schematic` and writes `parts.ts`'s files through
+a `.schem`/`.litematic` with `@netherforge/structures/schematic` and writes `parts.ts`'s files through
 `workspace.writeBinary`, deleting parts an old grid had past the new one.
 
 **The structure screen's generation section** (`editors/structure/Generation`):
@@ -140,13 +140,15 @@ it), `onDeleteKey`, `onSelectKey`, and wraps each drag in `gesture`.
 
 The import (Rust) copies the jar's `assets/minecraft/{blockstates,models,items,textures,font,particles}`
 into the per-user cache; `backend.assetUrl(version, 'assets/minecraft/…')` serves them.
-`minecraft/client/assets.ts` fetches and caches JSON per version; `minecraft/client/model.ts` resolves
+`minecraft/client/assets.ts` fetches and caches JSON per version; `packages/models` (`model.ts`, shared with
+the netherforge command's `render`) resolves
 block state → blockstate file (best variant match, or every matching
 multipart part; game-data defaults fill unspecified properties) → model
 parent chain (elements inherited, textures merged, `#vars` resolved);
-`minecraft/client/geometry.ts` bakes elements (UVs, face rotation, element rotation +
+its `geometry.ts` bakes elements (UVs, face rotation, element rotation +
 rescale, blockstate x/y about the centre, per-face shade) grouped by
-texture; `minecraft/client/render.ts` caches the bakes and loads textures nearest-filtered
+texture; `minecraft/client/render.ts` builds meshes from the same resolved models the package's `icons.ts`
+bakes for the command (`itemModel`, `packModel`, `cubeModel`, `placedModels`), caches them, and loads textures nearest-filtered
 (first frame of animated strips, magenta chequer if missing); `minecraft/client/models.tsx`
 draws them in a scene (`BlockModel`, `ItemModel`). No client
 assets → placeholder cubes, never an error. Items: block-like models render

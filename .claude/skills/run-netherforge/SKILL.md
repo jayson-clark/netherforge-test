@@ -1,6 +1,6 @@
 ---
 name: run-netherforge
-description: Launching the real editor (pnpm dev), opening examples/basic, starting the dev server, joining it from Minecraft, where every log lives, and how to check a change end to end rather than only in tests. Read when you need to see a change working for real.
+description: Launching the real editor (pnpm dev), opening examples/showcase, starting the dev server, joining it from Minecraft, where every log lives, and how to check a change end to end rather than only in tests. Read when you need to see a change working for real.
 ---
 
 # Running NetherForge for real
@@ -27,12 +27,12 @@ cross-cutting change (bridge, hot reload, server setup) done.
 pnpm dev          # repo root: tauri dev = Vite on :1420 + the Rust app, hot reloads the UI
 ```
 
-Open folder → `examples/basic`. Its `netherforge.json` targets `26.3`.
+Open folder → `examples/showcase`. Its `netherforge.json` targets `26.3`.
 The dev server and its world go in the data dir (table below), in
 `servers/<hash>/`: the first 16 hex digits of the SHA-256 of the project's
 canonical path, with `netherforge-project.txt` naming the project. Never in
 the project, so nothing a project ships can run on Start. Delete that folder
-for a fresh world; `grep -l basic <data>/servers/*/netherforge-project.txt`
+for a fresh world; `grep -l showcase <data>/servers/*/netherforge-project.txt`
 finds it.
 
 To keep a test run away from your real settings and caches:
@@ -75,7 +75,7 @@ before that fix, or one whose whitelist someone filled in. Run `whitelist off`
 ## Checking a change end to end
 
 - **Hot reload**: with the server running and you in game, edit
-  `examples/basic/centities/*/root.lua` in the editor (or any editor; the
+  `examples/showcase/centities/*/root.lua` in the editor (or any editor; the
   watcher sees external saves too), save, and watch the console for the
   reload result; `/nf spawn <centity>` to see it live.
 - **Server setup / lifecycle**: stop, change the port in Settings, start,

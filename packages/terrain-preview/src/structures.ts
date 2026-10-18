@@ -4,7 +4,7 @@
  * `netherforge` command from disk; what a file means is decided here, once.
  */
 import type { TerrainStructureInput } from '@netherforge/format/types'
-import type { Structure } from './structure.ts'
+import type { Structure } from '@netherforge/structures/structure'
 
 /**
  * The project structures a generator's [decorations] (the file's `decorations` object) place, by the name the file

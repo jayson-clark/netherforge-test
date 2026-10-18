@@ -4,7 +4,7 @@
  * Playwright to drop into a memory project.
  */
 import { Float32, Int16, Int32, Int8, TAG, TAG_TYPE, type CompoundTag, type Tag } from 'nbtify'
-import { nbtRoot, type NbtRoot } from '@netherforge/terrain-preview/nbt'
+import { nbtRoot, type NbtRoot } from '@netherforge/structures/nbt'
 
 /** NBTify's tag values, named by tag; a list carries its element type, so an empty one writes back as it was. */
 export const nbt = {

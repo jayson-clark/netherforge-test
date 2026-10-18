@@ -12,16 +12,17 @@ import {
   placementMatrix,
   tintFor,
   type BuiltGroup,
-} from './geometry'
+} from '@netherforge/models/geometry'
 import {
-  blockPlacements,
+  cubeModel,
   isSpriteModel,
-  itemModelRef,
-  resolveModel,
+  itemModel,
+  packModel,
+  placedModels,
   spriteLayers,
   type RawModel,
   type ResolvedModel,
-} from './model'
+} from '@netherforge/models/model'
 
 export { tintFor }
 
@@ -48,23 +49,28 @@ export function blockGeometry(
   let pending = cache.get(key)
   if (!pending) {
     pending = (async () => {
-      const placements = await blockPlacements(assets, state, defaults)
       const tint = tintFor(state)
-      const baked = await Promise.all(
-        placements.map(async (placement) => {
-          const model = await resolveModel(assets, placement.model)
-          if (!model) return []
-          return buildElements(model.elements, model.textures, {
-            tint,
-            transform: placementMatrix(placement),
-          })
+      return (await placedModels(assets, state, defaults)).flatMap(({ model, placement }) =>
+        buildElements(model.elements, model.textures, {
+          tint,
+          transform: placementMatrix(placement),
         }),
       )
-      return baked.flat()
     })()
     cache.set(key, pending)
   }
   return pending
+}
+
+/**
+ * [model] as an item in display [context]: a sprite's layers, or its elements; null when that draws nothing. The
+ * same models `@netherforge/models/icons` bakes for the netherforge command, built as meshes.
+ */
+function modelItem(model: ResolvedModel, context: string, tint?: THREE.Color): ItemGeometry | null {
+  const groups = isSpriteModel(model)
+    ? buildSprite(spriteLayers(model))
+    : buildElements(model.elements, model.textures, { tint })
+  return groups.length > 0 ? { groups, matrix: displayMatrix(model.display[context]) } : null
 }
 
 export interface ItemGeometry {
@@ -83,13 +89,8 @@ export function itemGeometry(
   let pending = cache.get(key)
   if (!pending) {
     pending = (async () => {
-      const model = await resolveModel(assets, await itemModelRef(assets, item))
-      if (!model) return null
-      const groups = isSpriteModel(model)
-        ? buildSprite(spriteLayers(model))
-        : buildElements(model.elements, model.textures, { tint: tintFor(item) })
-      if (groups.length === 0) return null
-      return { groups, matrix: displayMatrix(model.display[context]) }
+      const model = await itemModel(assets, item)
+      return model ? modelItem(model, context, tintFor(item)) : null
     })()
     cache.set(key, pending)
   }
@@ -111,11 +112,8 @@ export function blockLookGeometry(
   let pending = cache.get(key)
   if (!pending) {
     pending = (async () => {
-      const model = await resolveModel(assets, 'minecraft:block/cube')
-      if (!model) return null
-      const groups = buildElements(model.elements, { ...model.textures, ...faces })
-      if (groups.length === 0) return null
-      return { groups, matrix: displayMatrix(model.display[context]) }
+      const cube = await cubeModel(assets, faces)
+      return cube ? modelItem(cube, context) : null
     })()
     cache.set(key, pending)
   }
@@ -144,18 +142,7 @@ export function packModelGeometry(
   let pending = cache.get(key)
   if (!pending) {
     pending = (async () => {
-      const parent = model.parent ? await resolveModel(assets, model.parent) : null
-      const resolved: ResolvedModel = {
-        chain: parent?.chain ?? [],
-        textures: { ...parent?.textures, ...model.textures, ...bound },
-        elements: model.elements ?? parent?.elements ?? [],
-        display: { ...parent?.display, ...model.display },
-      }
-      const groups = isSpriteModel(resolved)
-        ? buildSprite(spriteLayers(resolved))
-        : buildElements(resolved.elements, resolved.textures)
-      if (groups.length === 0) return null
-      return { groups, matrix: displayMatrix(resolved.display[context]) }
+      return modelItem(await packModel(assets, model, bound), context)
     })()
     cache.set(key, pending)
   }

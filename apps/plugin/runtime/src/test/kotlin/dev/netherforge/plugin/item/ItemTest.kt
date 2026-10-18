@@ -1,9 +1,9 @@
 package dev.netherforge.plugin.item
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.item.EquipSlot
 import dev.netherforge.format.item.EquipmentDef
 import dev.netherforge.format.item.ItemDef
 import dev.netherforge.format.item.ProjectItems
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.ref.ResourceRef
 import dev.netherforge.plugin.LuaChecks
 import dev.netherforge.plugin.TestServer

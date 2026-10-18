@@ -1,0 +1,13 @@
+{
+  "$schema": "../../.netherforge/schema/centity.schema.json",
+  "name": "Dart",
+  "nodes": {
+    "nose": {
+      "display": {
+        "type": "item",
+        "item": "minecraft:arrow",
+        "itemTransform": "fixed"
+      }
+    }
+  }
+}

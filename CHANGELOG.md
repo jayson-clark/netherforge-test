@@ -12,9 +12,17 @@ The first public release is being prepared. Before it, the Lua API was
 redesigned from scratch: every name, file field and behaviour scripts rely on
 was reviewed against one set of naming rules, and nothing of the old API is
 kept as an alias. Projects written for the first API need their scripts
-rewritten (`examples/basic` shows the new shape of every kind of script).
+rewritten (`examples/showcase` shows the new shape of every kind of script).
 
 ### Changed (breaking)
+
+- **One example: the showcase.** `examples/basic` and `examples/cinema` are
+  merged into `examples/showcase` (namespace `showcase`), and
+  `examples/lumen_vale` and `examples/vale_lore` are gone. The showcase is a
+  walk-through: its main world is an expo with a booth for every feature of the
+  engine, each explaining itself, a tour guide to jump between them, and
+  portals to worlds of its own for terrain, biomes and terrain scripts. See
+  [The showcase](docs/guide/showcase.md).
 
 - **The bots are in the plugin.** There's no `NetherForgeBots` jar any more:
   the fake players the dev bridge and scripts drive are part of

@@ -1,16 +1,15 @@
 package dev.netherforge.format.datapack
 
 import dev.netherforge.format.biome.BiomeJson
+import dev.netherforge.format.biome.BiomeKind
 import dev.netherforge.format.json.CanonicalJson
-import dev.netherforge.format.project.BiomeKind
-import dev.netherforge.format.project.DatapackKind
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Kinds
 import dev.netherforge.format.project.ProjectSnapshot
-import dev.netherforge.format.project.SkyKind
 import dev.netherforge.format.ref.RefKind
 import dev.netherforge.format.ref.ResourceKey
 import dev.netherforge.format.ref.ResourceRef
+import dev.netherforge.format.sky.SkyKind
 import dev.netherforge.format.sky.SkyTwins
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -47,7 +46,7 @@ object StartupDatapack {
      * [text] turns MiniMessage into the game's JSON text. [mainWorld] is the
      * name of the server's main world (`level-name`), whose dimension type the
      * pack replaces when `netherforge.json` names one for it; null for none.
-     * Without [passThrough], the project's datapacks ([dev.netherforge.format.project.DatapackKind]) are left out,
+     * Without [passThrough], the project's datapacks ([dev.netherforge.format.datapack.DatapackKind]) are left out,
      * and so is everything of NetherForge's that names what they define: how a server that refused them starts
      * without them. The skies [leaveOut] says yes to have no twin biomes in it: how a server that refused theirs
      * starts with the others.

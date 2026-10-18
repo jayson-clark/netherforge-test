@@ -1,7 +1,7 @@
 package dev.netherforge.plugin.centity
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.BlockDisplay
 import dev.netherforge.format.centity.TextDisplay
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.plugin.TestServer
 import dev.netherforge.plugin.platform.ClickButton
 import dev.netherforge.plugin.platform.EntityRole
@@ -21,7 +21,7 @@ class CentityTest {
 
     @Test
     fun `the example tower spawns a display per drawn node and a hitbox per clickable one`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             assertTrue(server.runtime.currentProblems().isEmpty(), "${server.runtime.currentProblems()}")
             val alex = server.player("Alex")
             val tower = server.runtime.spawnNear("tower", alex.ref)
@@ -39,7 +39,7 @@ class CentityTest {
 
     @Test
     fun `clicking the tower's top bubbles to the root script, which spins it`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val alex = server.player("Alex")
             val tower = server.runtime.spawnNear("tower", alex.ref)
             val top = server.platform.entities.display(tower.id, "top")
@@ -62,7 +62,7 @@ class CentityTest {
 
     @Test
     fun `the lamp's autoplay clip moves it without any script`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val lamp = server.spawn("lamp")
             val light = server.platform.entities.display(lamp.id, "light")
             val start = light.pose!!.matrix.translation().y
@@ -338,7 +338,7 @@ class CentityTest {
 
     @Test
     fun `moving a centity moves every entity with it`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val tower = server.spawn("tower")
             server.runtime.session.centities.teleport(tower, Location("world", 100.0, 70.0, 100.0))
             val entities = server.platform.entities.of(tower.id)
@@ -349,7 +349,7 @@ class CentityTest {
 
     @Test
     fun `nothing is pushed for an instance that didn't change`() {
-        TestServer(TestServer.example("basic")).use { server ->
+        TestServer(TestServer.example("showcase")).use { server ->
             val tower = server.spawn("tower")
             server.tick()
             val before = server.platform.entities.of(tower.id).sumOf { it.poses }

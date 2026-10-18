@@ -15,7 +15,7 @@ import kotlinx.serialization.json.doubleOrNull
  * The server keeps the owner's values in `plugins/NetherForge/settings/<namespace>.json`
  * ([SettingValues]); a setting the owner never set has its [default].
  *
- * A sealed `type` per kind of value, so a new kind (a time zone, W1.6) is one
+ * A sealed `type` per kind of value, so a new kind (a time zone, say) is one
  * more subclass: its JSON, its checks ([read], [parse]) and its value as a
  * script gets it ([value]). Everything that edits a value (the editor's form,
  * the in-game dialog, `/nf settings set`) goes through those.

@@ -1,11 +1,11 @@
 package dev.netherforge.format.editor
 
 import dev.netherforge.format.Problem
-import dev.netherforge.format.TsName
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.centity.LoopMode
+import dev.netherforge.format.codegen.TsName
 import dev.netherforge.format.game.Box
 import dev.netherforge.format.item.ItemDef
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.particle.EffectSpawn
 import dev.netherforge.format.project.PackageSource
 import dev.netherforge.format.project.RequirementUse
@@ -16,7 +16,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
 /*
- * What the editor gets back from format's JS exports (jsMain's Exports.kt).
+ * What the editor gets back from format's JS exports (jsMain's *Exports.kt).
  * They live here, not beside the exports, so the contract generator can see
  * them: the editor's TypeScript types for them are generated, never written.
  */

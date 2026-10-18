@@ -1,8 +1,8 @@
 package dev.netherforge.plugin.contract
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.game.Box
 import dev.netherforge.format.game.RegistryKey
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.project.SpawnCategory
 import dev.netherforge.plugin.platform.GameRuleType
 import dev.netherforge.plugin.platform.Location

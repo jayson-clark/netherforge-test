@@ -1,14 +1,14 @@
 package dev.netherforge.plugin.centity
 
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.bridge.InstanceInfo
 import dev.netherforge.format.centity.BlockDisplay
+import dev.netherforge.format.centity.CentityKind
 import dev.netherforge.format.centity.CompiledCentity
 import dev.netherforge.format.centity.ModelDisplay
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.Box
 import dev.netherforge.format.math.Matrix4
-import dev.netherforge.format.project.CentityKind
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.ResourcePlace
 import dev.netherforge.format.ref.ResourceRef

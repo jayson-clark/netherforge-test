@@ -1,5 +1,6 @@
 import { buffEvents, statFunctions } from './stats.ts'
 import type { EventSpec, Field, Fn, LuaClass } from '../types.ts'
+import { PATH_REACH, REPATH_TICKS, TARGET_DISTANCE } from './constants.ts'
 import { DATA_SAVING, DATA_VALUES } from './data.ts'
 import { eventFunctions, nfEvents } from './events.ts'
 import { gameEntityEvents, gameLivingEvents, gameMobEvents } from './gameEvents.ts'
@@ -53,12 +54,10 @@ const setter = (name: string, doc: string, param: string, type: string, paramDoc
 /** The poses a mannequin can stand in. */
 const MANNEQUIN_POSE = '"standing"|"crouching"|"swimming"|"fall_flying"|"sleeping"'
 
-const TARGET_DISTANCE = 20
-
 const targetDistance = {
   name: 'max_distance',
   type: 'number',
-  doc: `How far to look, in blocks. Default ${TARGET_DISTANCE}.`,
+  doc: `How far to look, in blocks. Default ${TARGET_DISTANCE.value}.`,
   optional: true,
 }
 
@@ -166,17 +165,11 @@ const attributeFunctions: Fn[] = [
   },
 ]
 
-/** How close a walk has to end to its target to count as reached: `PATH_REACH` in the runtime's `MobPaths.kt`. */
-const PATH_REACH = 2
-
-/** How often a walk to an entity looks for a new path to where it is: `REPATH_TICKS` in `MobPaths.kt`. */
-const REPATH_TICKS = 10
-
 /** A mob's own walking: where it goes, and `path_end` when it gets there or gives up. */
 const pathFunctions: Fn[] = [
   {
     name: 'move_to',
-    doc: `Makes it walk somewhere, finding its way round what's in the way: to a place in its own world, or after an entity, looking for a new path to wherever that entity is every ${REPATH_TICKS} ticks. When it stops, its \`path_end\` handlers hear whether it got there. A new \`move_to\` replaces the walk it was on. Its own AI still runs, and can send it elsewhere (a zombie that sees a player goes for them), which ends the walk as given up; with \`set_ai(false)\` it doesn't walk at all.`,
+    doc: `Makes it walk somewhere, finding its way round what's in the way: to a place in its own world, or after an entity, looking for a new path to wherever that entity is every ${REPATH_TICKS.value} ticks. When it stops, its \`path_end\` handlers hear whether it got there. A new \`move_to\` replaces the walk it was on. Its own AI still runs, and can send it elsewhere (a zombie that sees a player goes for them), which ends the walk as given up; with \`set_ai(false)\` it doesn't walk at all.`,
     params: [
       {
         name: 'target',
@@ -303,7 +296,7 @@ const livingEvents: EventSpec[] = [
 const mobEvents: EventSpec[] = [
   {
     name: 'path_end',
-    doc: `It stopped walking where \`move_to\` sent it: it got there (within ${PATH_REACH} blocks), or gave up (no way further, its own AI sent it elsewhere, or the entity it went after has gone or left its world). Not after \`stop_pathing\` or a new \`move_to\`.`,
+    doc: `It stopped walking where \`move_to\` sent it: it got there (within ${PATH_REACH.value} blocks), or gave up (no way further, its own AI sent it elsewhere, or the entity it went after has gone or left its world). Not after \`stop_pathing\` or a new \`move_to\`.`,
     payload: 'EntityPathEndEvent',
     example:
       'zombie:on("path_end", function(event)\n  if not event.reached then\n    zombie:teleport(vec3(10, 64, 10))\n  end\nend)',
@@ -880,7 +873,7 @@ export const mannequinClass: LuaClass = {
     },
     getter(
       'description',
-      `The line of text under its name, as MiniMessage, or \`nil\` when it shows none (a new one shows \"NPC\"), and ${ONCE_GONE}.`,
+      `The line of text under its name, as MiniMessage, or \`nil\` when it shows none (a new one shows "NPC"), and ${ONCE_GONE}.`,
       'Text?',
     ),
     {
@@ -1733,7 +1726,7 @@ export const entityShapes: LuaClass[] = [
     {
       name: 'reached',
       type: 'boolean',
-      doc: `Whether it got there, within ${PATH_REACH} blocks; \`false\` when it gave up.`,
+      doc: `Whether it got there, within ${PATH_REACH.value} blocks; \`false\` when it gave up.`,
     },
   ]),
   payload(

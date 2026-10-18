@@ -16,7 +16,7 @@ import type {
   ProfileSample,
   ProfileTick,
 } from '@netherforge/format/types'
-import { writeNbt } from '@netherforge/terrain-preview/nbt'
+import { writeNbt } from '@netherforge/structures/nbt'
 import { bytesToBase64 } from '@/core/backend/base64'
 import {
   BackendError,

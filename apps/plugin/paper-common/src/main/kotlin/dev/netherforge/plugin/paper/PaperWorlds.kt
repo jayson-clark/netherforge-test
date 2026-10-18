@@ -1,11 +1,11 @@
 package dev.netherforge.plugin.paper
 
 import com.destroystokyo.paper.ParticleBuilder
-import dev.netherforge.format.Vec3
 import dev.netherforge.format.block.BlockCarrier
 import dev.netherforge.format.game.BlockState
 import dev.netherforge.format.game.Box
 import dev.netherforge.format.item.ItemDef
+import dev.netherforge.format.math.Vec3
 import dev.netherforge.format.particle.BlockData
 import dev.netherforge.format.particle.ColorData
 import dev.netherforge.format.particle.DustData

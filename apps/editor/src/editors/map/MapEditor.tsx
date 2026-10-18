@@ -16,7 +16,7 @@
  */
 import { useEffect, useState } from 'react'
 import type { CaptureProgress } from '@/core/backend/types'
-import { readNbt, writeNbt, type NbtRoot } from '@netherforge/terrain-preview/nbt'
+import { readNbt, writeNbt, type NbtRoot } from '@netherforge/structures/nbt'
 import { basename, mainFileOf, resourceOf } from '@/core/paths'
 import { useApp, useRun, useWorkspace } from '@/state/providers'
 import { ask } from '@/ui/dialogs'

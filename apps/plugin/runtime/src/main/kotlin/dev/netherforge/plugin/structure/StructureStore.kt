@@ -1,11 +1,11 @@
 package dev.netherforge.plugin.structure
-import dev.netherforge.format.project.BuildKind
 import dev.netherforge.format.project.KindSpec
 import dev.netherforge.format.project.Names
 import dev.netherforge.format.project.ProjectSnapshot
-import dev.netherforge.format.project.StructureKind
 import dev.netherforge.format.world.BuildGrid
+import dev.netherforge.format.world.BuildKind
 import dev.netherforge.format.world.Builds
+import dev.netherforge.format.world.StructureKind
 import dev.netherforge.plugin.binding.notInProject
 import dev.netherforge.plugin.lua.LuaApiException
 import dev.netherforge.plugin.platform.BlockVector

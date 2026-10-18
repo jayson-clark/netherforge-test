@@ -5,7 +5,7 @@
  * Runs nightly only (.github/workflows/nightly.yml), on Linux and Windows,
  * after `tauri build`, against the real bundled app rather than the web build
  * the Playwright flows use. The plan (see the testing skill): drive the app
- * through `tauri-driver` (WebDriver), open `examples/basic`, change a
+ * through `tauri-driver` (WebDriver), open `examples/showcase`, change a
  * centity, save, and check the file on disk is byte-for-byte canonical. On
  * macOS there's no WebDriver for WKWebView, so nightly only builds and
  * launches there.

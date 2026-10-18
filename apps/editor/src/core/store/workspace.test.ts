@@ -36,9 +36,9 @@ describe('workspace', () => {
     expect(ws().minecraft).toBe('26.3')
     expect(ws().problems).toEqual([])
     expect(ws().outline?.resources.centity).toEqual(expect.arrayContaining(['lamp', 'tower']))
-    expect(ws().outline?.resources.menu).toEqual(['shop'])
-    expect(ws().outline?.resources.dialog).toEqual(['welcome'])
-    expect(ws().outline?.resourcePacks.ui?.skins).toEqual(['shop'])
+    expect(ws().outline?.resources.menu).toEqual(['altar', 'backpack', 'board', 'shop'])
+    expect(ws().outline?.resources.dialog).toEqual(['guestbook', 'portal', 'survey', 'welcome'])
+    expect(ws().outline?.resourcePacks.ui?.skins).toEqual(['altar', 'shop'])
     // The schemas live in .netherforge/, which never shows up in the file list.
     expect(Object.keys(backend.testFiles())).toContain('.netherforge/schema/centity.schema.json')
     expect(ws().files.some((it) => it.startsWith('.netherforge/'))).toBe(false)
@@ -92,13 +92,22 @@ describe('workspace', () => {
     store = createWorkspace(backend)
     await ws().openProject('/worlds')
     const readPaths = read.mock.calls.map(([path]) => path)
+    // (A structure's generation file, `structures/<id>.json`, is the project's own JSON: that one is read.)
     expect(
-      readPaths.filter((path) => path.startsWith('maps/') || path.startsWith('structures/')),
+      readPaths.filter(
+        (path) =>
+          (path.startsWith('maps/') || path.startsWith('structures/')) && !path.endsWith('.json'),
+      ),
     ).toEqual([])
     expect(ws().problems).toEqual([])
     expect(ws().outline?.resources.map).toEqual(['arena'])
-    // The example's own tree (its terrain's decorations place it) beside the one this test adds.
-    expect(ws().outline?.resources.structure).toEqual(['house', 'oak_tree'])
+    // The example's own (its terrains' decorations place a tree and a spire; shrines generate) beside the one this test adds.
+    expect(ws().outline?.resources.structure).toEqual([
+      'crystal_spire',
+      'house',
+      'oak_tree',
+      'ruined_shrine',
+    ])
 
     // Opening one (from the explorer, or a problem's file) shows its screen; still nothing is read as text.
     await ws().openFile('structures/house.nbt')
@@ -545,11 +554,19 @@ describe('workspace', () => {
     await ws().validateNow()
     expect(ws().problems).toEqual([])
     expect(ws().outline?.resources.item).toEqual([
+      'candy',
+      'circlet',
       'crown',
+      'crystal_glass',
+      'glow_lamp',
+      'glow_pickaxe',
+      'guide',
+      'lantern',
       'ruby',
       'ruby_ore',
       'ruby_pick',
       'ruby_wand',
+      'shard',
       'wand',
     ])
   })
@@ -585,7 +602,9 @@ describe('workspace', () => {
     expect(ws().problems).toEqual([])
     expect(ws().outline?.resources.block).toEqual([
       'amethyst',
+      'crystal_glass',
       'floating_lamp',
+      'glow_lamp',
       'ruby_crystal',
       'ruby_ore',
     ])
@@ -594,8 +613,10 @@ describe('workspace', () => {
     expect(ws().activeTab).toBe('block:blocks/geode/block.json')
     await ws().validateNow()
     expect(ws().outline?.resources.block).toEqual([
+      'crystal_glass',
       'floating_lamp',
       'geode',
+      'glow_lamp',
       'ruby_crystal',
       'ruby_ore',
     ])
@@ -690,6 +711,7 @@ describe('workspace', () => {
     const users = ws().usagesOf({ type: 'resource', kind: 'item', id: 'ruby' })
     expect([...new Set(users.map((it) => it.file))].sort()).toEqual([
       'advancements/treasure_hunter.json',
+      'dialogs/survey/dialog.json',
       'loot/junk.json',
       'loot/ruby_crystal.json',
       'loot/ruby_ore.json',

@@ -14,6 +14,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.double
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -138,6 +139,21 @@ class ConformanceTest {
     }
 
     private fun LuaHost.globals(scope: Scope): Set<String> = (keys(emptyList(), scope.id) + keys(listOf("base"))).toSet() - standard
+
+    @Test
+    fun `every constant the docs quote is the runtime's`() {
+        val constants = spec.list("constants")
+        assertTrue(constants.isNotEmpty(), "api.json lists no constants")
+        for (constant in constants) {
+            val value = constant.getValue("value").jsonPrimitive.double
+            for (where in constant.getValue("runtime").jsonArray.map { it.jsonPrimitive.content }) {
+                val (owner, name) = where.split('#')
+                val field = Class.forName(owner).getDeclaredField(name).apply { isAccessible = true }
+                val actual = (field.get(null) as Number).toDouble()
+                assertEquals(value, actual, "${constant.name} is $value in the spec but $actual in $where")
+            }
+        }
+    }
 
     @Test
     fun `every surface has exactly the declared globals`() = withScopes { host, scopes, _ ->

@@ -12,8 +12,8 @@ import {
   nbtNumber,
   nbtString,
   type NbtRoot,
-} from '@netherforge/terrain-preview/nbt'
-import { stateOfTag } from '@netherforge/terrain-preview/structure'
+} from '@netherforge/structures/nbt'
+import { stateOfTag } from '@netherforge/structures/structure'
 
 /** Blocks along each side of a chunk section. */
 export const SECTION_SIZE = 16
