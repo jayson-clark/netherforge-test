@@ -56,6 +56,10 @@ class PaperServer(
             "it_dp",
             // The dimension scenario's world of a deep type, should a failed run leave it.
             "it_deep_mine",
+            // The worlds examples/showcase's netherforge.json makes (before 26.1, folders of their own): a kept one keeps
+            // the dimension type it was first made with, which another scenario's project may not have given it.
+            "hills",
+            "sky",
             // What a failed run of the bot scenario could leave: a ban it never lifted.
             "banned-players.json",
             "whitelist.json",
@@ -72,6 +76,10 @@ class PaperServer(
         // Web routes are on, as a server owner turns them on: examples/showcase declares some, which would otherwise be a
         // warning (`runtime.web-disabled`) on a project every scenario expects to load clean.
         folder.resolve("plugins/NetherForge/config.yml").writeText("performance:\n  warn-ms: 0\nweb:\n  enabled: true\n")
+        // examples/showcase's expo builds its booths over the main world's spawn, hands everyone a tour guide and shows them
+        // a boss bar: what a server whose main world isn't the expo's plaza turns off, as these scenarios' worlds aren't.
+        Files.createDirectories(folder.resolve("plugins/NetherForge/settings"))
+        folder.resolve("plugins/NetherForge/settings/showcase.json").writeText("{ \"expo\": false }\n")
         val port = ServerSocket(0).use { it.localPort }
         // The server writes its defaults into a bukkit.yml that isn't there: a scenario's routing never outlives it.
         Files.deleteIfExists(folder.resolve("bukkit.yml"))

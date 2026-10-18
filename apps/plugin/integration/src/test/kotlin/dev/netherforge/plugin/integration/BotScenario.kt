@@ -205,16 +205,18 @@ class BotScenario : Scenario("bots") {
         since = bots.act("Tester", BotAction.Command("tower 2")).since
         bots.said("Tester", since, "A tower rises 2 blocks ahead.")
         tower = editor.request(Bridge.instances, Unit).second!!.single()
-        // Its script counts turns in turns.lua, the file beside it that it requires: this tower's own copy.
+        // Its script counts turns in turns.lua, the file beside it that it requires: this tower's own copy. It says so on
+        // the action bar.
         for ((turn, click) in listOf(
-            BotAction.Interact(centity = tower.uuid, node = "top"),
+            BotAction.Interact(centity = tower.uuid, node = "cap"),
             BotAction.Attack(centity = tower.uuid),
             BotAction.Interact()
         ).withIndex()) {
             since = bots.act("Tester", click).since
             try {
-                bots.said("Tester", since, "The tower turns.")
-                bots.heard("Tester", since, BotEvent.ActionBar::class.java) { it.text == "Turns of this tower: ${turn + 1}" }
+                bots.heard("Tester", since, BotEvent.ActionBar::class.java) {
+                    it.text == "The tower turns. Turns of this tower: ${turn + 1}"
+                }
             } catch (e: AssertionError) {
                 throw AssertionError("click ${turn + 1}, $click: ${e.message}", e)
             }
@@ -241,7 +243,7 @@ class BotScenario : Scenario("bots") {
         bots.eventually("Tester") { state -> state.entities.none { it.type == "minecraft:interaction" } }
         assertTrue("doesn't know entity" in bots.refused("Tester", BotAction.Interact(centity = tower.uuid)))
         since = bots.act("Other", BotAction.Interact(centity = tower.uuid)).since
-        bots.said("Other", since, "The tower turns.")
+        bots.heard("Other", since, BotEvent.ActionBar::class.java) { it.text.startsWith("The tower turns.") }
     }
 
     @Test

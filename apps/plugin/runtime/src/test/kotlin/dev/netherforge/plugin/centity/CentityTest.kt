@@ -26,27 +26,29 @@ class CentityTest {
             val alex = server.player("Alex")
             val tower = server.runtime.spawnNear("tower", alex.ref)
             val entities = server.platform.entities.of(tower.id)
-            assertEquals(setOf("root", "top", "flag"), entities.filter { it.role == EntityRole.DISPLAY }.map { it.tag.node }.toSet())
-            assertEquals(setOf("root", "top"), entities.filter { it.role == EntityRole.HITBOX }.map { it.tag.node }.toSet())
+            // The turret is an empty pivot: nothing drawn, nothing to click.
+            val displays = entities.filter { it.role == EntityRole.DISPLAY }.map { it.tag.node }.toSet()
+            assertEquals(setOf("base", "keep", "cap", "flag"), displays)
+            assertEquals(setOf("base", "keep", "cap"), entities.filter { it.role == EntityRole.HITBOX }.map { it.tag.node }.toSet())
             // Two blocks in front of a player facing south (+z), on the grid.
             assertEquals(Location("world", 0.0, 64.0, 2.0), tower.anchor)
-            // Displays stand at the anchor and carry their offset in the matrix.
-            val top = server.platform.entities.display(tower.id, "top")
-            assertEquals(tower.anchor, top.location)
-            assertEquals(Vec3(0.0, 1.0, 0.0), top.pose!!.matrix.translation())
+            // Displays stand at the anchor and carry their offset in the matrix: the cap's own, and its turret's above it.
+            val cap = server.platform.entities.display(tower.id, "cap")
+            assertEquals(tower.anchor, cap.location)
+            assertEquals(Vec3(-0.5, 2.0, -0.5), cap.pose!!.matrix.translation())
         }
     }
 
     @Test
-    fun `clicking the tower's top bubbles to the root script, which spins it`() {
+    fun `clicking the tower's cap bubbles to the centity's script, which spins its turret`() {
         TestServer(TestServer.example("showcase")).use { server ->
             val alex = server.player("Alex")
             val tower = server.runtime.spawnNear("tower", alex.ref)
-            val top = server.platform.entities.display(tower.id, "top")
-            val hitbox = server.platform.entities.hitbox(tower.id, "top")
+            val top = server.platform.entities.display(tower.id, "cap")
+            val hitbox = server.platform.entities.hitbox(tower.id, "cap")
 
             assertTrue(server.runtime.events.entityClicked(hitbox.id, alex.ref, ClickButton.RIGHT, null))
-            assertEquals(listOf("<gold>The tower turns."), alex.messages)
+            assertEquals(listOf("<gold>The tower turns.</gold> <gray>Turns of this tower: 1"), alex.actionbars)
             assertTrue(tower.animations.isPlaying("spin"))
             assertEquals(listOf("sparkle"), server.runtime.session.particles.all().map { it.kind }, "with a sparkle")
 
@@ -350,7 +352,8 @@ class CentityTest {
     @Test
     fun `nothing is pushed for an instance that didn't change`() {
         TestServer(TestServer.example("showcase")).use { server ->
-            val tower = server.spawn("tower")
+            // The wisp: nothing animates it and no script moves it (the tower's flag flutters by itself).
+            val tower = server.spawn("wisp")
             server.tick()
             val before = server.platform.entities.of(tower.id).sumOf { it.poses }
             server.tick(20)

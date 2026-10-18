@@ -31,7 +31,8 @@ test('opens the seeded project clean', async ({ page }) => {
 test('edits a translation, undoes and redoes it, and saves canonically', async ({ page }) => {
   await openExample(page)
   await openCentity(page, 'tower')
-  await page.getByRole('row', { name: 'top' }).click()
+  // The turret: an empty pivot at the tower's top, at y 2.
+  await page.getByRole('row', { name: 'turret' }).click()
 
   const y = page.getByRole('textbox', { name: 'Translation Y' })
   await y.fill('2.5')
@@ -39,9 +40,9 @@ test('edits a translation, undoes and redoes it, and saves canonically', async (
   await expect(page.getByRole('tab', { name: 'tower (unsaved)' })).toBeVisible()
 
   // Out of the field, whose own undo Edit → Undo would otherwise be.
-  await page.getByRole('row', { name: 'top' }).click()
+  await page.getByRole('row', { name: 'turret' }).click()
   await chooseMenu(page, 'Edit', 'Undo')
-  await expect(y).toHaveValue('1')
+  await expect(y).toHaveValue('2')
   await expect(page.getByRole('tab', { name: 'tower', exact: true })).toBeVisible()
   await page.keyboard.press('ControlOrMeta+Shift+z')
   await expect(y).toHaveValue('2.5')
@@ -51,7 +52,7 @@ test('edits a translation, undoes and redoes it, and saves canonically', async (
 
   const written = (await files(page))[TOWER]!
   const model = JSON.parse(written)
-  expect(model.nodes.top.transform.translation).toEqual([0, 2.5, 0])
+  expect(model.nodes.turret.transform.translation).toEqual([0, 2.5, 0])
   // Byte-for-byte what format's canonical writer produces.
   const expected = JSON.parse(canonicalize('centity', TOWER, JSON.stringify(model))).text
   expect(written).toBe(expected)
@@ -60,7 +61,7 @@ test('edits a translation, undoes and redoes it, and saves canonically', async (
 test('an invalid edit shows in Problems, and clicking it focuses the field', async ({ page }) => {
   await openExample(page)
   await openCentity(page, 'tower')
-  await page.getByRole('row', { name: 'top' }).click()
+  await page.getByRole('row', { name: 'cap' }).click()
   const block = page.getByRole('textbox', { name: 'Block' })
   await block.fill('minecraft:oak_stairs[facing')
   await block.press('Enter')
@@ -76,10 +77,10 @@ test('an invalid edit shows in Problems, and clicking it focuses the field', asy
   )
 
   // Look somewhere else, then follow the problem back.
-  await page.getByRole('row', { name: 'root' }).click()
+  await page.getByRole('row', { name: 'base' }).click()
   await expect(page.getByRole('textbox', { name: 'Block' })).toHaveValue('minecraft:stone_bricks')
   await problem.click()
-  await expect(page.getByRole('row', { name: 'top' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('row', { name: 'cap' })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('textbox', { name: 'Block' })).toBeFocused()
 })
 
@@ -90,25 +91,25 @@ test('walks the outline with the keyboard, and moves a node by dragging it', asy
   const row = (name: string) => nodes.getByRole('row', { name })
 
   // The arrows select as they go (the inspector follows); Left and Right close and open.
-  await row('root').click()
+  await row('turret').click()
   await page.keyboard.press('ArrowDown')
-  await expect(row('top')).toHaveAttribute('aria-selected', 'true')
+  await expect(row('cap')).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('textbox', { name: 'Block' })).toHaveValue(
     'minecraft:oak_stairs[facing=east]',
   )
   await page.keyboard.press('ArrowUp')
   await page.keyboard.press('ArrowLeft')
-  await expect(row('top')).toBeHidden()
+  await expect(row('cap')).toBeHidden()
   await page.keyboard.press('ArrowRight')
-  await expect(row('flag')).toHaveAttribute('aria-level', '3')
-
-  // Onto root: flag becomes root's child, one undo step.
-  await row('flag').dragTo(row('root'))
   await expect(row('flag')).toHaveAttribute('aria-level', '2')
-  await save(page, 'tower')
-  expect(JSON.parse((await files(page))[TOWER]!).nodes.flag.parent).toBe('root')
-  await chooseMenu(page, 'Edit', 'Undo')
+
+  // Onto the cap: flag becomes the cap's child, one undo step.
+  await row('flag').dragTo(row('cap'))
   await expect(row('flag')).toHaveAttribute('aria-level', '3')
+  await save(page, 'tower')
+  expect(JSON.parse((await files(page))[TOWER]!).nodes.flag.parent).toBe('cap')
+  await chooseMenu(page, 'Edit', 'Undo')
+  await expect(row('flag')).toHaveAttribute('aria-level', '2')
 })
 
 test('creates a centity', async ({ page }) => {
@@ -175,14 +176,14 @@ test('fits a hitbox to a block model from the client assets', async ({ page }) =
     .click()
   await openCentity(page, 'tower')
   await expect(page.getByText(/Blocks show as placeholders/)).toHaveCount(0)
-  await page.getByRole('row', { name: 'top' }).click()
+  await page.getByRole('row', { name: 'cap' }).click()
   await page.getByRole('button', { name: 'Fit to display' }).click()
   await expect(page.getByText('Fitted to')).toBeVisible()
   await page.keyboard.press('ControlOrMeta+s')
   await expect(page.getByRole('tab', { name: 'tower', exact: true })).toBeVisible()
 
-  const top = JSON.parse((await files(page))[TOWER]!).nodes.top
-  expect(top.hitbox).toEqual({
+  const cap = JSON.parse((await files(page))[TOWER]!).nodes.cap
+  expect(cap.hitbox).toEqual({
     boxes: [
       { min: [0, 0, 0], max: [1, 0.5, 1] },
       { min: [0.5, 0.5, 0], max: [1, 1, 1] },
@@ -202,23 +203,24 @@ test('keys an animation in the timeline, with the pointer and the keyboard', asy
   await openExample(page)
   await openCentity(page, 'tower')
   await page.getByRole('combobox', { name: 'Animation' }).selectOption('spin')
-  const key = (n: number) => page.getByRole('slider', { name: `Keyframe top.rotation ${n}` })
-  await expect(key(2)).toHaveAttribute('aria-valuetext', '0.5s, linear')
+  // `spin` turns the turret, keyed at 0, 0.6, 0.9 and 1.5 seconds.
+  const key = (n: number) => page.getByRole('slider', { name: `Keyframe turret.rotation ${n}` })
+  await expect(key(2)).toHaveAttribute('aria-valuetext', '0.6s, linear')
 
   // Clicking a key selects it; the arrows move it a tick (a twentieth of a second) at a time.
   await key(2).click()
   const time = page.getByRole('textbox', { name: 'Keyframe time' })
-  await expect(time).toHaveValue('0.5')
-  await page.keyboard.press('ArrowRight')
-  await page.keyboard.press('ArrowRight')
   await expect(time).toHaveValue('0.6')
+  await page.keyboard.press('ArrowRight')
+  await page.keyboard.press('ArrowRight')
+  await expect(time).toHaveValue('0.7')
   await expect(key(2)).toBeFocused()
   await page.getByRole('combobox', { name: 'Easing' }).selectOption('step')
-  await expect(key(2)).toHaveAttribute('aria-valuetext', '0.6s, step')
+  await expect(key(2)).toHaveAttribute('aria-valuetext', '0.7s, step')
 
   // Delete on a focused key removes it (not the selected node).
   await key(3).focus()
-  await expect(time).toHaveValue('1')
+  await expect(time).toHaveValue('0.9')
   await page.keyboard.press('Delete')
   await expect(key(4)).toHaveCount(0)
 
@@ -241,9 +243,9 @@ test('keys an animation in the timeline, with the pointer and the keyboard', asy
   await page.keyboard.press('ControlOrMeta+s')
   await expect(page.getByRole('tab', { name: 'tower', exact: true })).toBeVisible()
   const model = JSON.parse((await files(page))[TOWER]!)
-  expect(model.nodes.top).toBeDefined()
-  const spin = model.animations.spin.tracks.top.rotation
-  expect(spin.map((k: { time: number }) => k.time)).toEqual([0, 0.6, 1.5])
+  expect(model.nodes.turret).toBeDefined()
+  const spin = model.animations.spin.tracks.turret.rotation
+  expect(spin.map((k: { time: number }) => k.time)).toEqual([0, 0.7, 1.5])
   expect(spin[1].easing).toBe('step')
 })
 
@@ -276,13 +278,14 @@ test("every 3D view draws in one canvas, which keeps each tab's scene and camera
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   await openExampleWithAssets(page)
-  await openCentity(page, 'tower')
+  // The pool table: plenty to see, and nothing in it animates by itself (the tower's flag flutters).
+  await openCentity(page, 'pool')
   const viewport = page.getByLabel('3D viewport')
   const canvas = viewport.locator('canvas')
   await expect(canvas).toBeVisible()
   await canvas.evaluate((it) => (it.dataset.mark = 'the one'))
 
-  // Orbit the tower, and remember what it looks like from there.
+  // Orbit the table, and remember what it looks like from there.
   const box = (await canvas.boundingBox())!
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
   await page.mouse.down()
@@ -296,8 +299,8 @@ test("every 3D view draws in one canvas, which keeps each tab's scene and camera
   await expect(particles.locator('canvas[data-mark="the one"]')).toBeVisible()
   await expect(page.locator('[data-viewport] canvas')).toHaveCount(1)
 
-  // Back on the tower: the same picture, from where the camera was left.
-  await page.getByRole('tab', { name: 'tower', exact: true }).click()
+  // Back on the table: the same picture, from where the camera was left.
+  await page.getByRole('tab', { name: 'pool', exact: true }).click()
   await expect(canvas).toHaveAttribute('data-mark', 'the one')
   expect((await settled(canvas)).equals(orbited)).toBe(true)
 

@@ -13,6 +13,9 @@ import dev.netherforge.plugin.integration.support.Adapter
 import dev.netherforge.plugin.integration.support.PaperServer
 import dev.netherforge.plugin.integration.support.Scenario
 import dev.netherforge.plugin.integration.support.eventually
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import java.net.URI
@@ -89,7 +92,10 @@ class ReloadScenario : Scenario("reload") {
         editor.logged("stackable sword", "false", "true")
 
         // the project's recipes and a script's, on the real server
-        editor.logged("recipes", "ruby,ruby_dust,ruby_sword,it_planks")
+        editor.logged(
+            "recipes",
+            "candy,crystal_glass,cut_crystal_glass,glow_lamp,glow_pickaxe,glow_shard,ruby,ruby_dust,ruby_sword,it_planks"
+        )
     }
 
     @Test
@@ -163,13 +169,15 @@ class ReloadScenario : Scenario("reload") {
         assertTrue(spawned.ok, spawned.error)
         assertEquals("tower", tower!!.centity)
         this.tower = tower
-        assertEquals(listOf(tower.uuid), instances())
+        // (The showcase's centities booth has a tower of its own, which reattaches with it.)
+        val towers = towers()
+        assertTrue(tower.uuid in towers, "$towers")
 
         project.write("centities/tower/script.lua", towerScript("v2"))
         val resource = editor.reload("centities/tower/script.lua").resources.single()
         assertEquals("centity:tower", resource.label)
         assertTrue(resource.ok, "${resource.problems}")
-        assertEquals(1, resource.reattached)
+        assertEquals(towers.size, resource.reattached)
         val log = editor.logged("tower v2 loaded")
         assertEquals(SourceRef("centities/tower/script.lua", 2), log.source)
     }
@@ -195,30 +203,33 @@ class ReloadScenario : Scenario("reload") {
         restart {
             // every node that draws or can be clicked got its entity, and the index remembers them
             saved = server.entities()
-            assertEquals(setOf("root", "top", "flag"), saved.displays.keys)
-            assertEquals(setOf("root", "top"), saved.hitboxes.keys)
+            assertEquals(setOf("base", "keep", "cap", "flag"), saved.displays.keys)
+            assertEquals(setOf("base", "keep", "cap"), saved.hitboxes.keys)
         }
         editor.logged("tower v3 loaded", seconds = 120)
         // a module's saved table came back from the first run, typed
         editor.logged("saved data", "2", "vec3(4, 5, 6)")
-        assertEquals(listOf(tower.uuid), instances())
+        assertTrue(tower.uuid in towers())
 
-        // and it found them: dropping the flag node removes the flag's entity
+        // and it found them: dropping the flag node (and `flutter`, the animation that waves it) removes the flag's entity
         val definition = "centities/tower/centity.json"
-        val flag = Regex("\"flag\": \\{.*?\n    },\n", RegexOption.DOT_MATCHES_ALL)
-        project.write(definition, project.read(definition).replaceFirst(flag, ""))
+        val file = Json.parseToJsonElement(project.read(definition)).jsonObject
+        val nodes = JsonObject(file.getValue("nodes").jsonObject - "flag")
+        val animations = JsonObject(file.getValue("animations").jsonObject - "flutter")
+        project.write(definition, JsonObject(file + ("nodes" to nodes) + ("animations" to animations)).toString())
         assertTrue(editor.reload(definition).resources.single().ok)
         // Nobody's online, so nothing has loaded the tower's chunk since the restart. Load it as a player walking up
         // would; the plugin reconciles once the entities come back with it.
         editor.run("forceload add ${tower.x.toInt()} ${tower.z.toInt()}")
         val after = eventually("the flag's entity gone from the store", poll = server::entities) { "flag" !in it.displays }
-        assertEquals(saved.displays - "flag", after.displays, "the same root and top displays; the flag's is gone")
+        assertEquals(saved.displays - "flag", after.displays, "the same base, keep and cap displays; the flag's is gone")
         assertEquals(saved.hitboxes, after.hitboxes)
     }
 
     private fun towerScript(version: String) = project.fixture("edits/tower.lua").replace("VERSION", version)
 
-    private fun instances(): List<String> = editor.request(Bridge.instances, Unit).second!!.map { it.uuid }
+    /** The live towers: the one this scenario spawned, and the showcase's expo's own. */
+    private fun towers(): List<String> = editor.request(Bridge.instances, Unit).second!!.filter { it.centity == "tower" }.map { it.uuid }
 
     /** Downloads [url] and answers the SHA-1 of what came back, failing on anything but a 200. */
     private fun fetchSha1(url: String): String {

@@ -14,7 +14,8 @@ import {
 
 async function makeDirty(page: Page) {
   await openCentity(page, 'tower')
-  await page.getByRole('row', { name: 'top' }).click()
+  // The turret: an empty pivot at the tower's top, at [0, 2, 0].
+  await page.getByRole('row', { name: 'turret' }).click()
   const z = page.getByRole('textbox', { name: 'Translation Z' })
   await z.fill('4')
   await z.press('Enter')
@@ -47,7 +48,7 @@ test('an external change while dirty: keep mine, or diff and take theirs', async
   await expect(page.getByRole('tab', { name: 'tower', exact: true })).toBeVisible()
   let saved = JSON.parse((await files(page))[TOWER]!)
   expect(saved.name).toBe('Stone tower')
-  expect(saved.nodes.top.transform.translation).toEqual([0, 1, 4])
+  expect(saved.nodes.turret.transform.translation).toEqual([0, 2, 4])
 
   // Again, this time looking at the diff and taking theirs.
   const z = page.getByRole('textbox', { name: 'Translation Z' })
@@ -324,7 +325,7 @@ test('Edit → Select All acts on the field being typed in, and on nothing outsi
 }) => {
   await openTower(page)
   // The menu never takes focus, so it acts on the field.
-  await page.getByRole('row', { name: 'top' }).click()
+  await page.getByRole('row', { name: 'turret' }).click()
   const y = page.getByRole('textbox', { name: 'Translation Y' })
   await y.fill('2.5')
   await chooseMenu(page, 'Edit', 'Select All')
@@ -335,7 +336,7 @@ test('Edit → Select All acts on the field being typed in, and on nothing outsi
   await expect(tab(page, 'tower (unsaved)')).toBeVisible()
 
   // Outside a field there is nothing to select all of, and the page itself isn't selected.
-  await page.getByRole('row', { name: 'top' }).click()
+  await page.getByRole('row', { name: 'turret' }).click()
   // (The field just left still reports its range, so start from no selection.)
   await page.evaluate('getSelection().removeAllRanges()')
   await page.keyboard.press('ControlOrMeta+a')
@@ -360,7 +361,9 @@ test("closing an unsaved tab asks first: cancel keeps it, Don't save closes it",
   await dirty.getByRole('button', { name: 'Close tower' }).click()
   await dialog.getByRole('button', { name: "Don't save" }).click()
   await expect(page.getByRole('tab', { name: /^tower/ })).toHaveCount(0)
-  expect(JSON.parse((await files(page))[TOWER]!).nodes.top.transform.translation).toEqual([0, 1, 0])
+  expect(JSON.parse((await files(page))[TOWER]!).nodes.turret.transform.translation).toEqual([
+    0, 2, 0,
+  ])
 })
 
 test('Cmd/Ctrl+W asks about unsaved edits, in an editor and in a script', async ({ page }) => {
@@ -409,7 +412,9 @@ test('leaving a project with unsaved edits asks first, and Open Recent brings it
     .getByRole('menuitem', { name: /NetherForge Showcase/ })
     .click()
   await expect(tab(page, 'tower')).toBeVisible()
-  expect(JSON.parse((await files(page))[TOWER]!).nodes.top.transform.translation).toEqual([0, 1, 0])
+  expect(JSON.parse((await files(page))[TOWER]!).nodes.turret.transform.translation).toEqual([
+    0, 2, 0,
+  ])
 })
 
 test('dock panels drag between docks, split a group, and the layout resets', async ({ page }) => {

@@ -4,10 +4,12 @@
   "nodes": {
     "nose": {
       "display": {
-        "type": "item",
-        "item": "minecraft:arrow",
-        "itemTransform": "fixed"
+        "type": "model",
+        "model": "ui/dart"
       }
     }
+  },
+  "script": {
+    "file": "script.lua"
   }
 }

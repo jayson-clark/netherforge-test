@@ -44,7 +44,9 @@ expo.booth({
     expo.world:fill_blocks(booth:cell(3, 1, 1), booth:cell(9, 1, 1), "minecraft:oak_fence")
     expo.world:fill_blocks(booth:cell(3, 1, 11), booth:cell(9, 1, 11), "minecraft:oak_fence")
     expo.world:fill_blocks(booth:cell(3, 1, 1), booth:cell(3, 1, 11), "minecraft:oak_fence")
-    expo.world:set_block(booth:cell(3, 1, 6), "minecraft:air")
+    -- The way in is a gate, which mobs can't open. It shuts itself behind visitors.
+    local gate = booth:cell(3, 1, 6)
+    expo.world:set_block(gate, "minecraft:oak_fence_gate[facing=east]")
 
     local sheep =
       booth:spawn_entity("minecraft:sheep", 6, 1, 3, { custom_name = "<white>Follows rubies" }) --[[@as Mob?]]
@@ -70,7 +72,7 @@ expo.booth({
     booth:caption(
       4,
       3,
-      "<white>Sheep\n<gray>A Lua goal: hold a ruby (from the items booth) near it.",
+      "<white>Sheep\n<gray>A Lua goal: hold a ruby (from the items booth) near it. Come in by the gate.",
       3
     )
 
@@ -95,5 +97,46 @@ expo.booth({
       })
     end
     booth:caption(4, 9, "<white>Pig\n<gray>clear_goals, then one goal: patrol between the logs.", 3)
+
+    -- Every couple of seconds: shut the gate if nobody is standing in it, and bring back a mob
+    -- that got out anyway (through the gate while it stood open), to where it started.
+    local homes = {}
+    if sheep then
+      homes[#homes + 1] = { mob = sheep, home = booth:at(6, 1, 3) }
+    end
+    if pig then
+      homes[#homes + 1] = { mob = pig, home = booth:at(6.5, 1, 9) }
+    end
+    local inside_low, inside_high = booth:cell(4, 1, 2), booth:cell(9, 1, 10)
+    local function in_pen(at)
+      local x0, x1 =
+        math.min(inside_low.x, inside_high.x), math.max(inside_low.x, inside_high.x) + 1
+      return at.x >= x0 and at.x < x1 and at.z >= inside_low.z and at.z < inside_high.z + 1
+    end
+    local keeper
+    keeper = nf.every(40, function()
+      local block = expo.world:block(gate)
+      if block and block:property("open") == "true" then
+        local near = false
+        for _, player in ipairs(expo.world:players()) do
+          local at = player:position()
+          if at and at:distance(gate + vec3(0.5, 0, 0.5)) < 1.5 then
+            near = true
+          end
+        end
+        if not near then
+          block:set_property("open", "false")
+        end
+      end
+      for _, entry in ipairs(homes) do
+        local at = entry.mob:exists() and entry.mob:position()
+        if at and not in_pen(at) then
+          entry.mob:teleport(entry.home)
+        end
+      end
+      if not (sheep and sheep:exists()) and not (pig and pig:exists()) then
+        keeper:cancel()
+      end
+    end)
   end,
 })

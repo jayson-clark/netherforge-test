@@ -10,41 +10,55 @@ expo.booth({
   lines = {
     "<gold>Centities</gold> are the project's own entities (centities/<id>/centity.json).",
     "",
-    "<white>Nodes</white> <gray>are a tree of displays: blocks, items, models from the resource pack,",
-    "<gray>and text. Each has a transform and a hitbox players can click.",
-    "<white>Animations</white> <gray>are keyframed tracks per node, with easing; some autoplay.",
+    "<white>Nodes</white> <gray>are a tree of displays: blocks, items, the resource pack's own",
+    "<gray>3D models, and text. A node turns about its own origin, so empty",
+    "<gray>pivot nodes put hinges and axles where they belong.",
+    "<white>Animations</white> <gray>are keyframed tracks per node, with easing: `once`, `loop`",
+    "<gray>or `hold`, some autoplay, some `additive` on top of the rest.",
     "<white>Scripts</white> <gray>(script.lua beside the file) run once per instance, with `this`.",
     "",
-    "<gray>Try each one: they all answer a click.",
+    "<gray>Click each one.",
   },
   build = function(booth)
-    booth:spawn("tower", 4, 1, 2)
+    booth:spawn("tower", 4, 1, 1.5)
     booth:caption(
       4,
-      2,
-      "<white>Stone tower\n<gray>Three nodes; click to play its `spin` animation. turns.lua beside the script counts each tower's own turns.",
-      3.6
+      1.5,
+      "<white>Tower\n<gray>`spin` turns an empty pivot node, so the turret turns about its middle. turns.lua counts this tower's turns.",
+      4.4,
+      150
     )
-    booth:spawn("lamp", 4, 1.5, 5)
+    booth:spawn("lamp", 4, 1, 4)
     booth:caption(
       4,
-      5,
-      "<white>Floating lamp\n<gray>A `bob` animation that autoplays and loops, with a text node riding along.",
-      3.4
+      4,
+      "<white>Floating lamp\n<gray>`bob` autoplays and loops. A click swaps its block and plays `squash`, additive, on top.",
+      3.3,
+      150
     )
-    booth:spawn("crystal", 4, 1, 8)
+    booth:spawn("crystal", 4, 1, 6.5)
     booth:caption(
       4,
-      8,
-      "<white>Model flipbook\n<gray>One model display; the script swaps its model every 10 ticks while `spin` turns it.",
-      3.2
+      6.5,
+      "<white>Model flipbook\n<gray>One model display: `spin` turns it, the script swaps its model every 10 ticks. Click to speed it up.",
+      3,
+      150
     )
-    booth:spawn("door", 6, 1, 10.5)
+    booth:spawn("owl", 4, 1, 9)
     booth:caption(
       4,
-      10.5,
-      "<white>Swinging door\n<gray>Click: a task plays a particle effect, waits for it, opens, waits 2s, closes. Written top to bottom.",
-      3.4
+      9,
+      "<white>Clockwork owl\n<gray>Four models of the pack's own, one per part. It watches you, blinks, breathes; click it to flap.",
+      4.4,
+      150
+    )
+    booth:spawn("door", 4, 1, 11.2)
+    booth:caption(
+      4,
+      11.2,
+      "<white>Hinged door\n<gray>`open` holds its last pose until `close` plays. A task shuts it after 3s.",
+      3.5,
+      150
     )
   end,
 })

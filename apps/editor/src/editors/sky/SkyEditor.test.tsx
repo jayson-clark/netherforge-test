@@ -47,11 +47,15 @@ describe('the sky editor', () => {
 
   it("holds the sky at night only as `darkens: false`, and rounds the fade's steps", async () => {
     const user = userEvent.setup()
+    // The example's blood moon holds through the night: the box is ticked, as `darkens: false`.
     const held = inspector().getByRole('checkbox', { name: 'Holds its sky and fog at night' })
-    await user.click(held)
     expect(sky().darkens).toBe(false)
+    expect(held).toHaveProperty('checked', true)
+    // Unticked, the key goes (darkening is the default); ticked again, it's back.
     await user.click(held)
     expect(sky()).not.toHaveProperty('darkens')
+    await user.click(held)
+    expect(sky().darkens).toBe(false)
 
     await user.type(inspector().getByRole('textbox', { name: 'Steps' }), '12.6{Enter}')
     expect(sky().fade).toBe(13)

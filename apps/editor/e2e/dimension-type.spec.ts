@@ -1,14 +1,6 @@
 import { expect, type Page } from '@playwright/test'
 import { canonicalize } from '@netherforge/format'
-import {
-  files,
-  openExample,
-  openResource,
-  save,
-  showPanel,
-  test,
-  showKind,
-} from './helpers'
+import { files, openExample, openResource, save, showPanel, test, showKind } from './helpers'
 
 const sliceHeight = async (page: Page) =>
   (await page.getByTestId('terrain-slice').boundingBox())?.height ?? 0

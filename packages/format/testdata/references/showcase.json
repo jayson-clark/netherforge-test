@@ -50,6 +50,13 @@
   },
   {
     "file": "resource_packs/ui/pack.json",
+    "path": "$.items.crown.texture",
+    "kind": "texture",
+    "text": "item/crown.png",
+    "target": "resource_packs/ui/textures/item/crown.png"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
     "path": "$.items.crystal.model",
     "kind": "model",
     "text": "crystal.json",
@@ -71,6 +78,13 @@
   },
   {
     "file": "resource_packs/ui/pack.json",
+    "path": "$.items.dart.model",
+    "kind": "model",
+    "text": "dart.json",
+    "target": "resource_packs/ui/models/dart.json"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
     "path": "$.items.glow_lamp.block",
     "kind": "block_model",
     "text": "ui/glow_lamp",
@@ -89,6 +103,34 @@
     "kind": "texture",
     "text": "item/lantern.png",
     "target": "resource_packs/ui/textures/item/lantern.png"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
+    "path": "$.items.owl_body.model",
+    "kind": "model",
+    "text": "owl_body.json",
+    "target": "resource_packs/ui/models/owl_body.json"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
+    "path": "$.items.owl_head.model",
+    "kind": "model",
+    "text": "owl_head.json",
+    "target": "resource_packs/ui/models/owl_head.json"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
+    "path": "$.items.owl_head_blink.model",
+    "kind": "model",
+    "text": "owl_head_blink.json",
+    "target": "resource_packs/ui/models/owl_head_blink.json"
+  },
+  {
+    "file": "resource_packs/ui/pack.json",
+    "path": "$.items.owl_wing.model",
+    "kind": "model",
+    "text": "owl_wing.json",
+    "target": "resource_packs/ui/models/owl_wing.json"
   },
   {
     "file": "resource_packs/ui/pack.json",
@@ -271,6 +313,13 @@
     "kind": "equipment",
     "text": "ui/circlet",
     "target": "showcase:ui/circlet"
+  },
+  {
+    "file": "items/crown/item.json",
+    "path": "$.itemModel",
+    "kind": "item_model",
+    "text": "ui/crown",
+    "target": "showcase:ui/crown"
   },
   {
     "file": "items/crown/item.json",
@@ -1100,6 +1149,20 @@
     "target": "centities/crystal/script.lua"
   },
   {
+    "file": "centities/dart/centity.json",
+    "path": "$.nodes.nose.display.model",
+    "kind": "item_model",
+    "text": "ui/dart",
+    "target": "showcase:ui/dart"
+  },
+  {
+    "file": "centities/dart/centity.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "centities/dart/script.lua"
+  },
+  {
     "file": "centities/door/centity.json",
     "path": "$.script.file",
     "kind": "script",
@@ -1112,6 +1175,48 @@
     "kind": "script",
     "text": "script.lua",
     "target": "centities/dummy/script.lua"
+  },
+  {
+    "file": "centities/lamp/centity.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "centities/lamp/script.lua"
+  },
+  {
+    "file": "centities/owl/centity.json",
+    "path": "$.nodes.body.display.model",
+    "kind": "item_model",
+    "text": "ui/owl_body",
+    "target": "showcase:ui/owl_body"
+  },
+  {
+    "file": "centities/owl/centity.json",
+    "path": "$.nodes.head.display.model",
+    "kind": "item_model",
+    "text": "ui/owl_head",
+    "target": "showcase:ui/owl_head"
+  },
+  {
+    "file": "centities/owl/centity.json",
+    "path": "$.nodes.wing_l.display.model",
+    "kind": "item_model",
+    "text": "ui/owl_wing",
+    "target": "showcase:ui/owl_wing"
+  },
+  {
+    "file": "centities/owl/centity.json",
+    "path": "$.nodes.wing_r.display.model",
+    "kind": "item_model",
+    "text": "ui/owl_wing",
+    "target": "showcase:ui/owl_wing"
+  },
+  {
+    "file": "centities/owl/centity.json",
+    "path": "$.script.file",
+    "kind": "script",
+    "text": "script.lua",
+    "target": "centities/owl/script.lua"
   },
   {
     "file": "centities/pool/centity.json",

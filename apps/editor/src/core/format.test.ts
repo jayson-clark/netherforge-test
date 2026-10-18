@@ -72,11 +72,11 @@ describe('format wrapper', () => {
   it('poses a centity through the shared composer', () => {
     const pose = poseCentity('tower', exampleFiles[towerPath]!, null, 0)
     if (pose.type !== 'posed') throw new Error('expected a pose')
-    const top = pose.nodes.find((node) => node.name === 'top')!
-    expect(top.parent).toBe('root')
-    // translation [0, 1, 0] lands in the matrix's last column
-    expect(top.matrix.slice(12, 15)).toEqual([0, 1, 0])
-    expect(pose.animations.map((it) => it.name)).toEqual(['spin'])
+    const cap = pose.nodes.find((node) => node.name === 'cap')!
+    expect(cap.parent).toBe('turret')
+    // its translation [-0.5, 0, -0.5], under the turret's [0, 2, 0], lands in the matrix's last column
+    expect(cap.matrix.slice(12, 15)).toEqual([-0.5, 2, -0.5])
+    expect(pose.animations.map((it) => it.name)).toEqual(['flutter', 'spin'])
   })
 
   it('refuses to pose a centity with errors', () => {

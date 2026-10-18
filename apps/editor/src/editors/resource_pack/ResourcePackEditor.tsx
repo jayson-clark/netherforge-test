@@ -199,7 +199,8 @@ export function ResourcePackEditor({ path }: { path: string }) {
   const sounds = soundEvents(model, soundFiles)
 
   const add = async (kind: EntryKind, texture?: string) => {
-    const from = texture ?? unusedTextures(model, textures)[0] ?? textures[0]
+    const from =
+      texture ?? unusedTextures(model, textures, packModels[pack]?.files)[0] ?? textures[0]
     if (!from) {
       ws().notify('error', 'Import a PNG first: every entry is drawn from a texture.')
       return
@@ -500,7 +501,9 @@ export function ResourcePackEditor({ path }: { path: string }) {
             caption: (
               <>
                 {texture}
-                {unusedTextures(model, [texture]).length > 0 && <Muted> (unused)</Muted>}
+                {unusedTextures(model, [texture], packModels[pack]?.files).length > 0 && (
+                  <Muted> (unused)</Muted>
+                )}
               </>
             ),
             picture: <img src={textureUrl(texture)} alt="" />,

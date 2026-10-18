@@ -286,7 +286,9 @@ class FakePlatform(
             "minecraft:diamond_block", "minecraft:end_stone", "minecraft:furnace", "minecraft:gravel",
             "minecraft:green_terracotta", "minecraft:hay_block", "minecraft:lantern", "minecraft:light_gray_wool",
             "minecraft:magenta_glazed_terracotta", "minecraft:moss_block", "minecraft:mossy_cobblestone", "minecraft:oak_fence",
-            "minecraft:oak_log", "minecraft:polished_andesite", "minecraft:polished_diorite", "minecraft:purple_stained_glass",
+            "minecraft:oak_log", "minecraft:ochre_froglight", "minecraft:pearlescent_froglight", "minecraft:polished_andesite",
+            "minecraft:polished_blackstone", "minecraft:polished_diorite", "minecraft:purple_stained_glass", "minecraft:spruce_planks",
+            "minecraft:verdant_froglight",
             "minecraft:purple_wool", "minecraft:red_terracotta", "minecraft:slime_block", "minecraft:smithing_table",
             "minecraft:smoker", "minecraft:smooth_quartz", "minecraft:stonecutter", "minecraft:tuff"
         ).associateWith { BlockInfo() } + mapOf(
@@ -295,6 +297,16 @@ class FakePlatform(
             "minecraft:soul_lantern" to BlockInfo(
                 mapOf("hanging" to listOf("true", "false"), "waterlogged" to listOf("true", "false")),
                 mapOf("hanging" to "false", "waterlogged" to "false")
+            ),
+            // The mobs booth's gate, which its script opens and shuts.
+            "minecraft:oak_fence_gate" to BlockInfo(
+                mapOf(
+                    "facing" to listOf("north", "south", "west", "east"),
+                    "in_wall" to listOf("true", "false"),
+                    "open" to listOf("true", "false"),
+                    "powered" to listOf("true", "false")
+                ),
+                mapOf("facing" to "north", "in_wall" to "false", "open" to "false", "powered" to "false")
             ),
             "minecraft:stripped_dark_oak_log" to BlockInfo(
                 properties = mapOf("axis" to listOf("x", "y", "z")),
@@ -442,7 +454,6 @@ class FakePlatform(
                     "minecraft:iron_pickaxe",
                     "minecraft:sweet_berries",
                     "minecraft:torch",
-                    "minecraft:arrow",
                     "minecraft:coal",
                     "minecraft:diamond_pickaxe",
                     "minecraft:cobbled_deepslate",
@@ -520,6 +531,9 @@ class FakePlatform(
                     "minecraft:block.note_block.chime",
                     "minecraft:block.slime_block.fall",
                     "minecraft:block.stone_button.click_on",
+                    "minecraft:block.wooden_door.close",
+                    "minecraft:block.wooden_door.open",
+                    "minecraft:entity.parrot.fly",
                     // examples/showcase's resource pack replaces it.
                     "minecraft:block.deepslate_bricks.break",
                     "minecraft:entity.parrot.ambient",
@@ -583,6 +597,7 @@ class FakePlatform(
                 "minecraft:end_rod" to ParticleDataKind.NONE,
                 // What examples/showcase's biomes, effects and scripts send.
                 "minecraft:damage_indicator" to ParticleDataKind.NONE,
+                "minecraft:crit" to ParticleDataKind.NONE,
                 "minecraft:enchant" to ParticleDataKind.NONE,
                 "minecraft:glow" to ParticleDataKind.NONE,
                 "minecraft:heart" to ParticleDataKind.NONE,

@@ -32,29 +32,29 @@ describe("a centity's node tree", () => {
     )
     const view = viewOf(app.workspace, 'centity', TOWER)
 
-    await user.click(row('top'))
-    expect(view.selection()).toEqual(['top'])
+    await user.click(row('cap'))
+    expect(view.selection()).toEqual(['cap'])
     // Cmd-click on a Mac; jsdom isn't one, so it's Ctrl here.
     await user.keyboard('{Control>}')
     await user.click(row('flag'))
     await user.keyboard('{/Control}')
-    expect(view.selection()).toEqual(['top', 'flag'])
+    expect(view.selection()).toEqual(['cap', 'flag'])
     expect(view.primary()).toBe('flag')
-    expect(row('top').getAttribute('aria-selected')).toBe('true')
+    expect(row('cap').getAttribute('aria-selected')).toBe('true')
 
-    // Shift+arrows extend from the focused row (flag, under top, under root).
+    // Shift+arrows extend from the focused row (flag, after cap, both under turret).
     await user.keyboard('{Shift>}{ArrowUp}{ArrowUp}{/Shift}')
-    expect([...view.selection()].sort()).toEqual(['flag', 'root', 'top'])
-    expect(view.primary()).toBe('root')
+    expect([...view.selection()].sort()).toEqual(['cap', 'flag', 'turret'])
+    expect(view.primary()).toBe('turret')
 
     // Delete on a selected row deletes every selected node.
-    await user.click(row('top'))
+    await user.click(row('cap'))
     await user.keyboard('{Control>}')
     await user.click(row('flag'))
     await user.keyboard('{/Control}{Control>}{Backspace}{/Control}')
     const model = modelOf<CentityFile>(app.workspace.getState().docs[TOWER])!
     expect(Object.keys(model.nodes ?? {})).not.toContain('flag')
-    expect(Object.keys(model.nodes ?? {})).not.toContain('top')
+    expect(Object.keys(model.nodes ?? {})).not.toContain('cap')
     expect(view.selection()).toEqual([])
   })
 })

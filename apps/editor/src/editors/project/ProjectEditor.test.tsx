@@ -218,6 +218,7 @@ describe('project settings: server-owner settings', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove setting treasure_rolls' }))
     expect(Object.keys((await saved()).settings).sort()).toEqual([
+      'expo',
       'greeting',
       'show_welcome',
       'tour_bossbar',

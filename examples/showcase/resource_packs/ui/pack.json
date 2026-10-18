@@ -36,6 +36,9 @@
     "circlet": {
       "texture": "item/circlet.png"
     },
+    "crown": {
+      "texture": "item/crown.png"
+    },
     "crystal": {
       "model": "crystal.json"
     },
@@ -44,6 +47,9 @@
     },
     "crystal_lit": {
       "model": "crystal_lit.json"
+    },
+    "dart": {
+      "model": "dart.json"
     },
     "glow_lamp": {
       "block": "ui/glow_lamp"
@@ -54,6 +60,18 @@
     },
     "lantern": {
       "texture": "item/lantern.png"
+    },
+    "owl_body": {
+      "model": "owl_body.json"
+    },
+    "owl_head": {
+      "model": "owl_head.json"
+    },
+    "owl_head_blink": {
+      "model": "owl_head_blink.json"
+    },
+    "owl_wing": {
+      "model": "owl_wing.json"
     },
     "ruby": {
       "texture": "item/ruby.png"

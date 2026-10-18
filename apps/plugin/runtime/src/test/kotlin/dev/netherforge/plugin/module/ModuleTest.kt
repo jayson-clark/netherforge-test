@@ -132,12 +132,11 @@ class ModuleTest {
             assertEquals(listOf("<gray>A tower rises 2 blocks ahead."), server.platform.commands.run(alex, "tower"))
             val tower = server.runtime.session.centities.all().single()
             assertEquals("tower", tower.centity)
-            // Their first arrival put them at the expo's hub, standing on its plaza (y 65).
-            assertEquals(Location("world", 2.5, 65.0, 0.5), tower.anchor)
+            assertEquals(Location("world", 2.5, 64.0, 0.5), tower.anchor)
 
             // The distance is an optional integer from 1 to 16.
             server.platform.commands.run(alex, "tower 5")
-            assertEquals(Location("world", 5.5, 65.0, 0.5), server.runtime.session.centities.all().last().anchor)
+            assertEquals(Location("world", 5.5, 64.0, 0.5), server.runtime.session.centities.all().last().anchor)
             assertEquals(
                 listOf("<red><distance> must be at most 16, not 40."),
                 server.platform.commands.run(alex, "tower 40")

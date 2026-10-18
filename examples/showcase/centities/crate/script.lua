@@ -1,7 +1,8 @@
 local this = this --[[@as Centity]]
 
 -- A crate that drops from where it's spawned, bounces a little and settles.
--- Click it to shove it where you clicked: it topples rather than slides.
+-- Click it to shove it away from you, at the point you clicked: hit it high and
+-- it topples, low and it slides.
 local box = assert(this:node("box"))
 
 box:on("sleep", function()
@@ -14,5 +15,15 @@ box:on("click", function(event)
   if at == nil then
     return
   end
-  box:apply_impulse_at(vec3(0, 4, 3), at)
+  -- The shove runs along your line of sight, flattened so a click from above
+  -- doesn't just press it into the floor, with a little lift to unstick it.
+  local eye = event.player:eye_position()
+  if eye == nil then
+    return
+  end
+  local away = (at - eye):flat()
+  if away:length() < 1e-4 then
+    return
+  end
+  box:apply_impulse_at(away:normalized() * 3 + vec3(0, 1.5, 0), at)
 end)

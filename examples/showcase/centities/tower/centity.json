@@ -2,29 +2,20 @@
   "$schema": "../../.netherforge/schema/centity.schema.json",
   "name": "Stone tower",
   "nodes": {
-    "flag": {
-      "parent": "top",
+    "base": {
       "transform": {
-        "translation": [0.5, 1.2, 0.5],
-        "scale": [0.5, 0.5, 0.5]
+        "translation": [-0.5, 0, -0.5]
       },
-      "display": {
-        "type": "item",
-        "item": "minecraft:red_banner",
-        "itemTransform": "fixed"
-      }
-    },
-    "root": {
       "display": {
         "type": "block",
         "block": "minecraft:stone_bricks"
       },
       "hitbox": {}
     },
-    "top": {
-      "parent": "root",
+    "cap": {
+      "parent": "turret",
       "transform": {
-        "translation": [0, 1, 0]
+        "translation": [-0.5, 0, -0.5]
       },
       "display": {
         "type": "block",
@@ -33,26 +24,78 @@
       "hitbox": {
         "shape": "collision"
       }
+    },
+    "flag": {
+      "parent": "turret",
+      "transform": {
+        "translation": [0, 1.2, 0],
+        "scale": [0.5, 0.5, 0.5]
+      },
+      "display": {
+        "type": "item",
+        "item": "minecraft:red_banner",
+        "itemTransform": "fixed"
+      }
+    },
+    "keep": {
+      "transform": {
+        "translation": [-0.5, 1, -0.5]
+      },
+      "display": {
+        "type": "block",
+        "block": "minecraft:chiseled_stone_bricks"
+      },
+      "hitbox": {}
+    },
+    "turret": {
+      "transform": {
+        "translation": [0, 2, 0]
+      }
     }
   },
   "animations": {
+    "flutter": {
+      "loop": "loop",
+      "autoplay": true,
+      "tracks": {
+        "flag": {
+          "rotation": [
+            {
+              "time": 0,
+              "value": [0, -12, 0],
+              "easing": "ease_in_out"
+            },
+            {
+              "time": 0.8,
+              "value": [0, 12, 0],
+              "easing": "ease_in_out"
+            },
+            {
+              "time": 1.6,
+              "value": [0, -12, 0]
+            }
+          ]
+        }
+      }
+    },
     "spin": {
       "loop": "once",
       "tracks": {
-        "top": {
+        "turret": {
           "rotation": [
             {
               "time": 0,
               "value": [0, 0, 0],
-              "easing": "ease_in_out"
+              "easing": "ease_in"
             },
             {
-              "time": 0.5,
+              "time": 0.6,
               "value": [0, 120, 0]
             },
             {
-              "time": 1,
-              "value": [0, 240, 0]
+              "time": 0.9,
+              "value": [0, 240, 0],
+              "easing": "ease_out"
             },
             {
               "time": 1.5,

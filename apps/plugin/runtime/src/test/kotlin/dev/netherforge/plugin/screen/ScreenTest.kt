@@ -406,7 +406,6 @@ class ScreenTest {
                 server.tick()
                 assertTrue(++waited < 20 * 60, "the video booth wasn't built within a minute")
             }
-            assertEquals(Location("world", 0.5, 65.0, 0.5), alex.location.copy(yaw = 0.0, pitch = 0.0), "a first join is at the hub")
             assertEquals(null, screens.find("cinema")!!.playbacks[null])
 
             // The video booth is the 13th: west of the avenue, its row starting at z 104. Its controls (2 by 2) hang facing

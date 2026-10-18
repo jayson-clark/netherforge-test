@@ -816,7 +816,9 @@ class Centities(
                     val wasStanding = instance.pushedSpots.remove(entity) != null
                     if ((instance.forceSync || wasStanding) && vehicle != null) ride(instance, vehicle, entity)
                     // One that couldn't get on the anchor entity is moved on its own.
-                    if ((instance.moved || instance.forceSync || wasStanding) && entity !in instance.riders) entities.teleport(entity, anchor)
+                    if ((instance.moved || instance.forceSync || wasStanding) && entity !in instance.riders) {
+                        entities.teleport(entity, anchor)
+                    }
                 }
                 if (parts.active) parts.add(SYNC_DISPLAYS, parts.now() - from)
                 parts.time(SYNC_POSES) { syncPose(instance, index, entity, if (shown) world[index] else HIDDEN, shown, cull, ahead) }

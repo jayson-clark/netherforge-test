@@ -379,10 +379,10 @@ class BridgeTest {
                 assertEquals(listOf("Tester"), editor.request(BotsExtension.list, Unit).result!!.map { it.name })
 
                 val tower = server.runtime.spawnNear("tower", null)
-                val top = tower.hitboxes.getValue("top")
+                val top = tower.hitboxes.getValue("cap")
                 val clicked = editor.request(
                     BotsExtension.act,
-                    BotActParams("Tester", BotAction.Interact(centity = tower.id.toString(), node = "top"))
+                    BotActParams("Tester", BotAction.Interact(centity = tower.id.toString(), node = "cap"))
                 )
                 assertTrue(clicked.ok, "${clicked.error}")
                 val (_, _, aim) = server.platform.bots.acted.single()
@@ -390,7 +390,7 @@ class BridgeTest {
 
                 // Without a node: the first one that can be clicked.
                 assertTrue(editor.request(BotsExtension.act, BotActParams("Tester", BotAction.Attack(centity = tower.id.toString()))).ok)
-                assertEquals(tower.hitboxes.getValue("root"), server.platform.bots.acted.last().third!!.entity)
+                assertEquals(tower.hitboxes.getValue("base"), server.platform.bots.acted.last().third!!.entity)
 
                 val noNode = editor.request(
                     BotsExtension.act,
@@ -407,7 +407,7 @@ class BridgeTest {
                 val seen = editor.request(BotsExtension.state, BotParams("Tester")).result!!.target
                 assertEquals(top.toString(), seen?.entity, "$seen")
                 assertEquals(tower.id.toString(), seen?.centity)
-                assertEquals("top", seen?.node)
+                assertEquals("cap", seen?.node)
 
                 assertTrue(editor.request(BotsExtension.leave, BotParams("Tester")).ok)
                 assertEquals(emptyList(), server.platform.bots.list())

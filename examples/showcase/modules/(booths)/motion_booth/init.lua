@@ -28,7 +28,7 @@ expo.booth({
     booth:caption(
       6,
       6,
-      "<white>Training dummy\n<gray>Health 20 with a bar. Hit it (a sword hits harder) or fire darts at it.",
+      "<white>Training dummy\n<gray>Health 20 with a bar. Hit it (a sword hits harder) or fire darts at it: a model, aimed along its flight.",
       3.4
     )
     booth:kiosk(2, 6, "<yellow>Fire a dart", function(player)
@@ -46,12 +46,21 @@ expo.booth({
         lifetime = 60,
         aim = "nose",
         hits = { players = false, kinds = { "dummy" } },
+        -- Kept where it hit, point in, for a moment: then it goes.
+        remove_on_end = false,
       })
       dart:on("hit", function(event)
         local hit = event.target
         if hit then
           hit:damage(4, { source = player, cause = "dart" })
         end
+      end)
+      dart:on("flight_end", function()
+        nf.after(30, function()
+          if dart:exists() then
+            dart:remove()
+          end
+        end)
       end)
     end)
 

@@ -256,7 +256,7 @@ describe.skipIf(!binary)('lua-language-server, as the editor runs it', () => {
       position: { line: 1, character: 11 },
     })) as { items: { label: string }[] } | { label: string }[]
     const labels = ('items' in result ? result.items : result).map((it) => it.label)
-    expect(labels).toContain('"top"')
+    expect(labels).toContain('"cap"')
   }, 60_000)
 
   it("knows a module a package exports, by the name it's required by", async () => {

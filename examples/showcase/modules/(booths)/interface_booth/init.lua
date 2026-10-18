@@ -26,7 +26,7 @@ expo.booth({
         { fade_in = 10, stay = 40, fade_out = 20 }
       )
     end)
-    booth:kiosk(3, 4, "<yellow>Boss bar countdown", function(player)
+    booth:kiosk(3, 3.75, "<yellow>Boss bar countdown", function(player)
       local bar =
         nf.bossbars.create({ text = "<red>Ten seconds", color = "red", style = "notched_10" })
       bar:show_to(player)
@@ -42,7 +42,7 @@ expo.booth({
         end
       end)
     end)
-    booth:kiosk(3, 6.5, "<yellow>Player list", function(player)
+    booth:kiosk(3, 6, "<yellow>Player list", function(player)
       player:set_tab_header("<gold><bold>NetherForge Showcase</bold>\n<gray>set_tab_header")
       player:set_tab_footer("<gray>You're in the interface booth\n<dark_gray>set_tab_footer")
       player:set_tab_name("<gold>★ </gold>" .. player:name())
@@ -51,16 +51,17 @@ expo.booth({
         "<gray>Hold Tab to see the list; look at yourself in F5 for the line under your name."
       )
     end)
-    booth:kiosk(3, 9, "<yellow>Read a book", function(player)
+    booth:kiosk(3, 8.25, "<yellow>Read a book", function(player)
       player:open_book({
         "<gold><bold>The Showcase</bold></gold>\n\n<gray>A book opened by player:open_book, without giving you one.\n\nTurn the page.",
         "<dark_gray>Every booth along the avenue shows one part of NetherForge.\n\nUse your tour guide to jump between them.",
       })
     end)
-    booth:kiosk(3, 11.5, "<yellow>A block only you see", function(player)
-      local spot = booth:pos(7, 1, 11.5)
+    booth:kiosk(3, 10.5, "<yellow>A block only you see", function(player)
+      -- A whole block inside the booth, on the floor across from the kiosk.
+      local spot = booth:cell(6, 1, 10)
       player:send_block_change(spot, "minecraft:diamond_block")
-      player:set_compass_target(booth:at(7, 1, 11.5))
+      player:set_compass_target(expo.world:location(spot + vec3(0.5, 0, 0.5)))
       player:send_actionbar("<aqua>A diamond block, only for you. Your compass points at it.")
     end)
     booth:caption(

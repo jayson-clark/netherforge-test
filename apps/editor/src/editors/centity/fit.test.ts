@@ -69,7 +69,7 @@ describe('fit to display', () => {
   it('writes a hitbox the validator agrees is fresh', async () => {
     const path = 'centities/tower/centity.json'
     const tower = JSON.parse(exampleFiles[path]!) as CentityFile
-    const top = tower.nodes!.top!
+    const top = tower.nodes!.cap!
     const display = { type: 'block' as const, block: 'oak_stairs[half=top,facing=east]' }
     const boxes = (await blockModelBoxes(display.block, { assets: loader, gameData: null }))!
     top.display = display

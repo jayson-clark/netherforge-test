@@ -48,17 +48,17 @@ class ReloadTest {
     fun `editing the definition adds, removes and respawns entities to match`() {
         TestServer(TestServer.example("showcase")).use { server ->
             val tower = server.runtime.session.centities.spawn("tower", at)!!
-            val root = server.platform.entities.display(tower.id, "root").id
+            val base = server.platform.entities.display(tower.id, "base").id
             server.write(
                 "centities/tower/centity.json",
                 """
                 {
                   "nodes": {
-                    "root": {
+                    "base": {
                       "display": { "type": "text", "text": "now text" },
                       "hitbox": {}
                     },
-                    "extra": { "parent": "root", "display": { "type": "block", "block": "minecraft:glass" } }
+                    "extra": { "parent": "base", "display": { "type": "block", "block": "minecraft:glass" } }
                   },
                   "script": { "file": "script.lua" }
                 }
@@ -67,10 +67,10 @@ class ReloadTest {
             val result = server.reload("centities/tower/centity.json")
             assertTrue(result.resources.single().ok, "${result.resources}")
             val entities = server.platform.entities.of(tower.id)
-            assertEquals(setOf("root", "extra"), entities.filter { it.role == EntityRole.DISPLAY }.map { it.tag.node }.toSet())
-            assertEquals(setOf("root"), entities.filter { it.role == EntityRole.HITBOX }.map { it.tag.node }.toSet())
-            val newRoot = server.platform.entities.display(tower.id, "root")
-            assertTrue(newRoot.id != root, "a block display can't become a text display; it's respawned")
+            assertEquals(setOf("base", "extra"), entities.filter { it.role == EntityRole.DISPLAY }.map { it.tag.node }.toSet())
+            assertEquals(setOf("base"), entities.filter { it.role == EntityRole.HITBOX }.map { it.tag.node }.toSet())
+            val newRoot = server.platform.entities.display(tower.id, "base")
+            assertTrue(newRoot.id != base, "a block display can't become a text display; it's respawned")
             assertEquals("now text", (newRoot.display as TextDisplay).text)
         }
     }

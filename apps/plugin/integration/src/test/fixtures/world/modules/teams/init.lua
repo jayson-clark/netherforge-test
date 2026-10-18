@@ -34,6 +34,14 @@ nf.commands.register("it-teams", function()
     zombie:team() == nil
   )
   red:add_member(zombie)
-  log("team removed", red:remove(), red:exists(), zombie:team() == nil, #nf.teams.all())
+  local removed = red:remove()
+  -- What's left of this module's teams: the showcase's teams booth keeps two of its own (expo_red, expo_blue).
+  local left = 0
+  for _, team in ipairs(nf.teams.all()) do
+    if team:name():sub(1, 5) ~= "expo_" then
+      left = left + 1
+    end
+  end
+  log("team removed", removed, red:exists(), zombie:team() == nil, left)
   zombie:remove()
 end)

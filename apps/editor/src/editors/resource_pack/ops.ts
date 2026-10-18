@@ -179,9 +179,32 @@ export function entryTextures(kind: EntryKind, def: EntryDef): string[] {
     .filter((it): it is string => typeof it === 'string')
 }
 
-/** Textures nothing in the pack refers to. */
-export function unusedTextures(pack: ResourcePackFile, textures: string[]): string[] {
-  const used = new Set<string>()
+/**
+ * The textures a pack's model files draw with: each plain path in a model's `textures` (`dart/steel`, the pack's
+ * `textures/dart/steel.png`). A `#variable` is another of the model's own, and a namespaced one (`minecraft:block/stone`)
+ * the game's, so neither is the pack's.
+ */
+export function modelTextures(
+  models: Record<string, { textures?: Record<string, unknown> }>,
+): string[] {
+  const out = new Set<string>()
+  for (const model of Object.values(models)) {
+    for (const value of Object.values(model.textures ?? {})) {
+      if (typeof value === 'string' && !value.startsWith('#') && !value.includes(':')) {
+        out.add(`${value}.png`)
+      }
+    }
+  }
+  return [...out]
+}
+
+/** Textures nothing in the pack refers to: no entry, no HUD element, no model file ([models], by path under `models/`). */
+export function unusedTextures(
+  pack: ResourcePackFile,
+  textures: string[],
+  models: Record<string, { textures?: Record<string, unknown> }> = {},
+): string[] {
+  const used = new Set<string>(modelTextures(models))
   for (const kind of ENTRY_KINDS) {
     for (const def of Object.values(pack[kind] ?? {})) {
       for (const texture of entryTextures(kind, def)) used.add(texture)

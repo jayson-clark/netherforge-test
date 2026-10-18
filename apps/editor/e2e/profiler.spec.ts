@@ -21,11 +21,11 @@ test('the profiler shows where the dev server’s ticks go and opens a handler a
   await expect(tower.first()).toBeVisible()
 
   // Sorting, the tick chart and the scopes are Profiler.test.tsx's; opening Monaco at a line is here.
-  await tower.first().getByRole('button', { name: 'Open centities/tower/script.lua:9' }).click()
+  await tower.first().getByRole('button', { name: 'Open centities/tower/script.lua:12' }).click()
   await expect(page.getByRole('tab', { name: 'script.lua' })).toHaveAttribute(
     'aria-selected',
     'true',
   )
-  await expect(page.locator('.monaco-editor .line-numbers.active-line-number')).toHaveText('9')
+  await expect(page.locator('.monaco-editor .line-numbers.active-line-number')).toHaveText('12')
   expect(errors).toEqual([])
 })

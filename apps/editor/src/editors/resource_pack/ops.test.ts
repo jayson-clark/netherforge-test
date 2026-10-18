@@ -20,6 +20,7 @@ import {
   freeEntryKey,
   idFrom,
   importPath,
+  modelTextures,
   packOf,
   isOgg,
   newEntry,
@@ -50,7 +51,17 @@ describe('pack ops', () => {
     const textures = texturesOf(files, 'ui')
     expect(textures).toContain('gui/shop.png')
     expect(textures).not.toContain('notes.txt')
-    expect(unusedTextures(ui(), textures)).toEqual(['gui/extra.png'])
+    // The pack's model files count too: the owl's and the dart's textures are only named by their models.
+    const models = Object.fromEntries(
+      Object.entries(exampleFiles)
+        .filter(([path]) => path.startsWith('resource_packs/ui/models/'))
+        .map(([path, text]) => [path.slice('resource_packs/ui/models/'.length), JSON.parse(text)]),
+    )
+    expect(unusedTextures(ui(), textures, models)).toEqual(['gui/extra.png'])
+    expect(unusedTextures(ui(), ['dart/steel.png'])).toEqual(['dart/steel.png'])
+    expect(
+      modelTextures({ m: { textures: { a: 'x/y', b: '#a', c: 'minecraft:block/stone' } } }),
+    ).toEqual(['x/y.png'])
   })
 
   it("finds a package's pack in the package's files, by package path", () => {

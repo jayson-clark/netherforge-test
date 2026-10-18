@@ -56,10 +56,13 @@ class BlockScenario : Scenario("blocks") {
         val states = Json.parseToJsonElement(files.getValue("assets/minecraft/blockstates/note_block.json").decodeToString())
             .jsonObject.getValue("variants").jsonObject
         val models = states.values.map { it.jsonObject.getValue("model").jsonPrimitive.content }
-        // Two blocks (the ore, and the lamp a centity draws, which shows nothing of its own), each in a state of its own.
+        // Four blocks (the ore, crystal glass, the glow lamp, and the lamp a centity draws, which shows nothing of its
+        // own), each in a state of its own.
         assertEquals(1, models.count { it == "showcase:block/ui/ruby_ore" })
+        assertEquals(1, models.count { it == "showcase:block/ui/crystal_glass" })
+        assertEquals(1, models.count { it == "showcase:block/ui/glow_lamp" })
         assertEquals(1, models.count { it == "showcase:block/hidden" })
-        assertEquals(states.size - 2, models.count { it == "minecraft:block/note_block" })
+        assertEquals(states.size - 4, models.count { it == "minecraft:block/note_block" })
         // Every state of the note block is there, whatever the game version has.
         assertEquals(0, states.size % 50)
         val model = files.getValue("assets/showcase/models/block/ui/ruby_ore.json").decodeToString()

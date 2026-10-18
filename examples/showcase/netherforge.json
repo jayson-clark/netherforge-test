@@ -48,6 +48,11 @@
     }
   },
   "settings": {
+    "expo": {
+      "type": "boolean",
+      "description": "Whether the main world is the expo: its booths built along the avenue, a tour guide for everyone who joins, and the tour's boss bar and sidebar. Turn it off on a server whose main world isn't the expo's plaza (terrain/plaza.json), and the expo stays out of the way.",
+      "default": true
+    },
     "greeting": {
       "type": "string",
       "description": "What the greeter says to everyone who joins, before their name.",

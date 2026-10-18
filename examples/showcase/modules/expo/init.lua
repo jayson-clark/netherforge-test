@@ -593,8 +593,22 @@ end
 local inside = {} ---@type table<string, string|false> player id -> the booth they're in
 local bars = {} ---@type table<string, BossBar>
 local show_bar = nf.config("tour_bossbar")
+
+-- netherforge.json's `expo`: whether the main world is the expo at all. A server whose main world
+-- isn't the plaza (bukkit.yml doesn't hand it to NetherForge) turns it off, and the expo stays out
+-- of its way: nothing built, no tour guide handed out, no boss bar or sidebar.
+local active = nf.config("expo")
+local open_expo, close_expo
+
 nf.on("setting_changed", function(event)
-  if event.setting == "tour_bossbar" then
+  if event.setting == "expo" then
+    active = event.value
+    if active then
+      open_expo()
+    else
+      close_expo()
+    end
+  elseif event.setting == "tour_bossbar" then
     show_bar = event.value
     for id, bar in pairs(bars) do
       bar:remove()
@@ -670,7 +684,7 @@ function expo.enter(player, booth)
 end
 
 nf.on("player_move", function(event)
-  if nf.cutscenes.current(event.player) then
+  if not active or nf.cutscenes.current(event.player) then
     return
   end
   local booth = expo.booth_at(event.to)
@@ -682,14 +696,12 @@ nf.on("player_move", function(event)
 end)
 
 nf.on("player_join", function(event)
+  if not active then
+    return
+  end
   local player = event.player
   inside[player:id()] = false
-  local data = player:data()
-  data.expo = data.expo or {}
-  if not data.expo.arrived then
-    data.expo.arrived = true
-    player:teleport(expo.SPAWN)
-  end
+  -- No teleport: the hub is the world's spawn (build_hub sets it), so someone new arrives there.
   local inventory = player:inventory()
   if inventory and not inventory:has_item({ item = "guide" }) then
     player:give_item(nf.items.create("guide"))
@@ -813,7 +825,11 @@ local function run_steps(steps)
   end)
 end
 
-nf.after(20, function()
+-- Builds everything, a step at a time (see above).
+function open_expo()
+  if ready then
+    return
+  end
   ready = true
   local steps = {}
   for z = -16, AVENUE_END, 16 do
@@ -828,6 +844,36 @@ nf.after(20, function()
     end
   end
   run_steps(steps)
+end
+
+-- Takes away everything the expo spawned. The blocks it laid stay where they are.
+function close_expo()
+  ready = false
+  for _, booth in ipairs(expo.all()) do
+    booth:clear()
+  end
+  for _, thing in ipairs(hub.spawned) do
+    if thing:exists() then
+      thing:remove()
+    end
+  end
+  hub.spawned = {}
+  for _, entity in ipairs(world:entities({ tag = TAG })) do
+    entity:remove()
+  end
+  for id, bar in pairs(bars) do
+    bar:remove()
+    bars[id] = nil
+  end
+  expo.building = false
+end
+
+nf.after(20, function()
+  if active then
+    open_expo()
+  else
+    expo.building = false
+  end
 end)
 
 nf.on("unload", function()

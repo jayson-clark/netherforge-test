@@ -6,10 +6,13 @@ local turns = {}
 
 local count = 0
 
--- Spins the top with a sparkle around it, and says how many turns this tower has made.
+-- Spins the turret with a sparkle around it, and says how many turns this tower has made.
 function turns.spin()
   this:play_animation("spin")
-  nf.particles.play("sparkle", this:location():offset(vec3(0, 2, 0)))
+  local here = this:location()
+  if here then
+    nf.particles.play("sparkle", here:offset(vec3(0, 2.5, 0)))
+  end
   count = count + 1
   return count
 end

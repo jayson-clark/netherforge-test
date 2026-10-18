@@ -82,8 +82,8 @@ class AdminCommandTest {
             assertEquals(listOf("spawn"), commands.complete(alex, "nf sp"))
             assertEquals(
                 listOf(
-                    "bouncer", "crate", "crystal", "dart", "display_item", "door", "dummy", "kiosk", "lamp", "placard", "pool", "runner",
-                    "shrine_keeper", "tortoise", "tower", "wisp"
+                    "bouncer", "crate", "crystal", "dart", "display_item", "door", "dummy", "kiosk", "lamp", "owl", "placard", "pool",
+                    "runner", "shrine_keeper", "tortoise", "tower", "wisp"
                 ),
                 commands.complete(alex, "nf spawn ")
             )

@@ -18,7 +18,7 @@ describe("the project's names for lua-language-server", () => {
     const names = namesOf(store.getState())
     expect([...names.centity.keys()]).toContain('tower')
     // A node or animation says which centity it's in.
-    expect(names.node.get('top')).toEqual(['tower'])
+    expect(names.node.get('cap')).toEqual(['tower'])
     expect([...names.animation.keys()]).toContain('spin')
     expect([...names.dialog.keys()]).toContain('welcome')
     expect([...names.button.keys()].length).toBeGreaterThan(0)
@@ -27,6 +27,7 @@ describe("the project's names for lua-language-server", () => {
     expect([...names.glyph.keys()].every((it) => it.includes('/'))).toBe(true)
     // The project's own server-owner settings, for nf.config; the library's are the library's.
     expect([...names.setting.keys()].sort()).toEqual([
+      'expo',
       'greeting',
       'show_welcome',
       'tour_bossbar',
@@ -50,7 +51,7 @@ describe("the project's names for lua-language-server", () => {
     const stub = projectStub(namesOf(store.getState()))
     expect(stub.startsWith('---@meta\n')).toBe(true)
     expect(stub).toContain('---@alias NodeName\n')
-    expect(stub).toContain('---| "top" # node of tower\n')
+    expect(stub).toContain('---| "cap" # node of tower\n')
     expect(stub).toMatch(/---@alias CentityId\n(---\| .*\n)*---\| "tower"\n/)
     // A kind with no names gets no alias, rather than an empty one LuaLS would reject.
     const empty = projectStub(projectNames(null, () => null))
@@ -88,10 +89,10 @@ describe("the project's names for lua-language-server", () => {
       await store.getState().openFile('centities/tower/centity.json')
       await vi.advanceTimersByTimeAsync(20)
       expect(write).toHaveBeenCalledWith('.netherforge/luals/project.lua', expect.any(String))
-      expect(await backend.readText('.netherforge/luals/project.lua')).toContain('"top"')
+      expect(await backend.readText('.netherforge/luals/project.lua')).toContain('"cap"')
 
       write.mockClear()
-      store.getState().select('centities/tower/centity.json', ['top'])
+      store.getState().select('centities/tower/centity.json', ['cap'])
       await vi.advanceTimersByTimeAsync(20)
       // Only the stubs: the agent docs opening the project started may still be landing.
       expect(write.mock.calls.filter(([path]) => path.startsWith('.netherforge/luals/'))).toEqual(

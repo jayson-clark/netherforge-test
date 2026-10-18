@@ -33,7 +33,8 @@ expo.booth({
       "<white>Falling crate\n<gray>Drops, bounces a little and settles (`sleep`). Click it to topple it where you clicked.",
       3.4
     )
-    booth:spawn("pool", 6, 1.2, 7)
+    -- The skirt hangs 0.55 below the table's origin: this keeps it just off the floor.
+    booth:spawn("pool", 6, 1.56, 7)
     booth:caption(
       3,
       7,

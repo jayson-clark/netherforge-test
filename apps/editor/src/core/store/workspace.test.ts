@@ -24,9 +24,10 @@ afterEach(() => vi.useRealTimers())
 const ws = () => store.getState()
 const tower = () => modelOf<CentityFile>(ws().docs[TOWER])!
 
+// The tower's turret: an empty pivot, at [0, 2, 0] in the file.
 function setTranslation(y: number) {
   ws().edit<CentityFile>(TOWER, (draft) => {
-    draft.nodes!.top!.transform = { translation: [0, y, 0] }
+    draft.nodes!.turret!.transform = { translation: [0, y, 0] }
   })
 }
 
@@ -220,9 +221,9 @@ describe('workspace', () => {
     expect(ws().tabs.map((it) => it.id)).toEqual([`centity:${TOWER}`])
     expect(ws().docs[TOWER]!.dirty).toBe(false)
 
-    setTranslation(2)
+    setTranslation(3)
     expect(ws().docs[TOWER]!.dirty).toBe(true)
-    setTranslation(1)
+    setTranslation(2)
     // Back to what's on disk: clean again.
     expect(ws().docs[TOWER]!.dirty).toBe(false)
   })
@@ -261,35 +262,35 @@ describe('workspace', () => {
 
   it('saves through the canonical writer', async () => {
     await ws().openFile(TOWER)
-    setTranslation(3)
+    setTranslation(4)
     expect(await ws().save(TOWER)).toBe(true)
     const written = backend.testFiles()[TOWER]!
     expect(written).toBe(canonicalizeModel('centity', TOWER, tower()).text)
-    expect(written).toContain('"translation": [0, 3, 0]')
+    expect(written).toContain('"translation": [0, 4, 0]')
     expect(ws().docs[TOWER]!.dirty).toBe(false)
   })
 
   it('undoes per document, with a drag as one step', async () => {
     await ws().openFile(TOWER)
     await ws().openFile('centities/lamp/centity.json')
-    setTranslation(2)
+    setTranslation(3)
     ws().beginGesture(TOWER)
-    for (let y = 3; y <= 9; y += 1) setTranslation(y)
+    for (let y = 4; y <= 10; y += 1) setTranslation(y)
     ws().endGesture(TOWER)
     ws().edit<CentityFile>('centities/lamp/centity.json', (draft) => {
       draft.name = 'Changed'
     })
 
     await ws().undo(TOWER)
-    expect(tower().nodes!.top!.transform!.translation).toEqual([0, 2, 0])
+    expect(tower().nodes!.turret!.transform!.translation).toEqual([0, 3, 0])
     // The lamp's edit is in its own history and untouched.
     expect(modelOf<CentityFile>(ws().docs['centities/lamp/centity.json'])!.name).toBe('Changed')
     await ws().undo(TOWER)
-    expect(tower().nodes!.top!.transform!.translation).toEqual([0, 1, 0])
+    expect(tower().nodes!.turret!.transform!.translation).toEqual([0, 2, 0])
     expect(ws().docs[TOWER]!.dirty).toBe(false)
     await ws().redo(TOWER)
     await ws().redo(TOWER)
-    expect(tower().nodes!.top!.transform!.translation).toEqual([0, 9, 0])
+    expect(tower().nodes!.turret!.transform!.translation).toEqual([0, 10, 0])
   })
 
   it('tells the dev server to reload what it saved', async () => {
@@ -331,9 +332,9 @@ describe('workspace', () => {
 
   it('ignores the echo of its own save', async () => {
     await ws().openFile(TOWER)
-    setTranslation(4)
+    setTranslation(5)
     await ws().save(TOWER)
-    setTranslation(5) // dirty again before the watcher reports the save
+    setTranslation(6) // dirty again before the watcher reports the save
     await settle()
     const doc = ws().docs[TOWER]!
     expect(doc.conflict).toBeNull()
@@ -357,7 +358,7 @@ describe('workspace', () => {
 
   it('asks before overwriting unsaved edits, and both answers work', async () => {
     await ws().openFile(TOWER)
-    setTranslation(7)
+    setTranslation(8)
     const theirs = exampleFiles[TOWER]!.replace('Stone tower', 'Theirs')
     backend.testWrite(TOWER, theirs)
     await settle()
@@ -365,12 +366,12 @@ describe('workspace', () => {
 
     ws().resolveConflict(TOWER, 'mine')
     expect(ws().docs[TOWER]!.conflict).toBeNull()
-    expect(tower().nodes!.top!.transform!.translation).toEqual([0, 7, 0])
+    expect(tower().nodes!.turret!.transform!.translation).toEqual([0, 8, 0])
     expect(ws().docs[TOWER]!.dirty).toBe(true)
     await ws().save(TOWER)
     expect(backend.testFiles()[TOWER]).toContain('Stone tower')
 
-    setTranslation(8)
+    setTranslation(9)
     backend.testWrite(TOWER, theirs)
     await settle()
     ws().resolveConflict(TOWER, 'theirs')
@@ -381,7 +382,7 @@ describe('workspace', () => {
   it('closes a clean deleted document and keeps a dirty one marked', async () => {
     await ws().openFile(SCRIPT)
     await ws().openFile(TOWER)
-    setTranslation(2)
+    setTranslation(3)
     backend.testDelete('centities/tower')
     await settle()
     expect(ws().docs[SCRIPT]).toBeUndefined()
@@ -406,7 +407,7 @@ describe('workspace', () => {
   it('validates unsaved edits', async () => {
     await ws().openFile(TOWER)
     ws().edit<CentityFile>(TOWER, (draft) => {
-      draft.nodes!.top!.parent = 'nowhere'
+      draft.nodes!.cap!.parent = 'nowhere'
     })
     await ws().validateNow()
     expect(ws().problems.map((it) => it.code)).toContain('centity.unknown-parent')
@@ -739,7 +740,7 @@ describe('workspace', () => {
   it("keeps a resource's main file while one of its scripts is open, for the outline", async () => {
     await ws().openFile(TOWER)
     await ws().openFile(SCRIPT)
-    setTranslation(3)
+    setTranslation(4)
     // Closing the centity's tab throws its unsaved edit away, even though a script of it is open.
     ws().closeTab(`centity:${TOWER}`)
     expect(ws().docs[TOWER]).toBeUndefined()
@@ -844,7 +845,7 @@ describe('read-only files', () => {
     ws().setReadOnly(READ_ONLY, REASON)
     const before = backend.testFiles()
 
-    setTranslation(9)
+    setTranslation(10)
     expect(ws().docs[TOWER]?.dirty).toBe(false)
     expect(ws().notice?.text).toBe(`${TOWER} is read-only: ${REASON}.`)
     ws().setText(SCRIPT, '-- mine')
@@ -858,7 +859,7 @@ describe('read-only files', () => {
     expect(backend.testFiles()).toEqual(before)
 
     ws().setReadOnly(READ_ONLY, null)
-    setTranslation(9)
+    setTranslation(10)
     expect(ws().docs[TOWER]?.dirty).toBe(true)
   })
 
