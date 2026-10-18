@@ -3,6 +3,7 @@ import dev.netherforge.format.centity.Billboard
 import dev.netherforge.format.centity.ItemDisplay
 import dev.netherforge.format.centity.TextAlignment
 import dev.netherforge.format.centity.TextDisplay
+import dev.netherforge.format.math.Matrix4
 import dev.netherforge.plugin.TestServer
 import dev.netherforge.plugin.platform.ClickButton
 import dev.netherforge.plugin.platform.DisplayBrightness
@@ -126,6 +127,48 @@ class CentityLookTest {
             // The teleport duration follows the easing, up to Minecraft's 59.
             assertEquals(59, base.look!!.teleportTicks)
             assertEquals(1, server.platform.entities.display(sign.id, "label").look!!.teleportTicks)
+        }
+    }
+
+    @Test
+    fun `a billboard stands at its node, drawn with its scale only`() {
+        val lamp = """
+            {
+              "nodes": {
+                "light": { "transform": { "scale": [0.5, 0.5, 0.5] }, "display": { "type": "block", "block": "minecraft:stone" } },
+                "label": {
+                  "parent": "light",
+                  "transform": { "translation": [1, 2, 0], "rotation": [0, 30, 0] },
+                  "display": { "type": "text", "text": "Lamp", "billboard": "center" }
+                }
+              }
+            }
+        """
+        TestServer(mapOf("centities/lamp/centity.json" to lamp)).use { server ->
+            val centities = server.runtime.session.centities
+            // Facing east: the label's +X offset comes out along the world's -Z.
+            val instance = assertNotNull(centities.spawn("lamp", at, yaw = -90.0))
+            server.tick()
+            val entities = server.platform.entities
+            val anchor = entities.anchor(instance.id).id
+            val label = entities.display(instance.id, "label")
+            // Not on the anchor entity: the client would turn its offset and rotation to the camera with it.
+            assertNull(label.vehicle)
+            val spot = label.location
+            assertEquals(10.0, spot.x, 1e-9)
+            assertEquals(65.0, spot.y, 1e-9)
+            assertEquals(9.5, spot.z, 1e-9)
+            val drawn = label.pose!!.matrix.values
+            val scaleOnly = Matrix4().scale(0.5, 0.5, 0.5).values
+            for (i in 0 until 16) assertEquals(scaleOnly[i], drawn[i], 1e-9, "matrix value $i")
+            // The block isn't a billboard: it rides the anchor, its offset and turn in its matrix.
+            assertEquals(anchor, entities.display(instance.id, "light").vehicle)
+
+            // Made fixed, it gets back on and carries its pose in its matrix again.
+            instance.setLook(1, instance.look(1).copy(billboard = Billboard.FIXED))
+            server.tick()
+            assertEquals(anchor, label.vehicle)
+            assertEquals(instance.placed()[1].values, label.pose!!.matrix.values)
         }
     }
 

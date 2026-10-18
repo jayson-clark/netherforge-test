@@ -51,7 +51,7 @@ enum class RefScope {
  * those aren't the project's to check, so the loader leaves them to the
  * kind's validator (against game data), and find usages and renames never
  * match them. Everything else is the project's or a package's, as for any kind.
- * A kind with a [tagRegistry] also names `#tags` a project datapack defines (`#basic:soft`, under
+ * A kind with a [tagRegistry] also names `#tags` a project datapack defines (`#showcase:soft`, under
  * `data/<ns>/tags/<tagRegistry>/`): a tag in the game's namespace (or none) is the game's, any other the
  * project's or a package's, checked like any reference. A kind with [any] takes that one word for "anything".
  */

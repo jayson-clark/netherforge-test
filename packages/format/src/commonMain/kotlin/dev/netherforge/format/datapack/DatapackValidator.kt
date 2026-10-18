@@ -263,7 +263,7 @@ object DatapackValidator {
     /** The game's name for the registry whose datapack folder is [registry]: `minecraft:worldgen/biome`. */
     fun registryKey(registry: String) = RegistryKey("${GameIds.NAMESPACE}:$registry")
 
-    /** An entry or tag of [registry] in a message: `placed feature "basic:rocks"`, `biome tag "#basic:wet"`. */
+    /** An entry or tag of [registry] in a message: `placed feature "showcase:rocks"`, `biome tag "#showcase:wet"`. */
     private fun named(registry: String, key: ResourceKey, tag: Boolean) =
         if (tag) "${noun(registry)} tag \"#$key\"" else "${noun(registry)} \"$key\""
 

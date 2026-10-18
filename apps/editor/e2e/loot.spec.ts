@@ -56,9 +56,13 @@ test("includes a package's exported loot table by its full name", async ({ page 
     .getByRole('combobox', { name: 'Loot table' })
   await expect(table).toHaveValue('library:gems')
   await expect(table.getByRole('option')).toHaveText([
+    'crystal_glass',
+    'deepslate_rubble',
+    'glow_lamp',
     'junk',
     'ruby_crystal',
     'ruby_ore',
+    'shrine_chest',
     'library:gems',
   ])
 })

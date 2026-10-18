@@ -255,7 +255,7 @@ sealed interface InventoryRef {
     data class Block(val world: String, val x: Int, val y: Int, val z: Int) : InventoryRef
 
     /**
-     * A storage of the project's that [player] keeps (`player:storage`), [name] namespaced (`basic:trinkets`),
+     * A storage of the project's that [player] keeps (`player:storage`), [name] namespaced (`showcase:trinkets`),
      * kept in their own save data, so it's saved with their inventory in the one write. [size] slots of it are
      * this inventory; a slot past it keeps its item.
      */

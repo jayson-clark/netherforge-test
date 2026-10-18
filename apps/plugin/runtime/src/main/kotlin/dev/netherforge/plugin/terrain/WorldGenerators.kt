@@ -206,7 +206,7 @@ internal class WorldGenerators(
             return TerrainScripts.sourcesOf(script, own) { read(namespace?.let { ns -> PackagePaths.of(ns, it) } ?: it) }
         }
 
-        /** The dimension type a `netherforge.json` reference names, as the server knows it (`basic:deep`); null when it names none. */
+        /** The dimension type a `netherforge.json` reference names, as the server knows it (`showcase:deep`); null when it names none. */
         fun dimensionKey(snapshot: ProjectSnapshot, reference: String): String? =
             snapshot.references.resolve(RefKind.DIMENSION_TYPE, reference)?.toString()
 

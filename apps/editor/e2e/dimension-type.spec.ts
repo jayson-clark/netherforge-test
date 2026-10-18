@@ -4,7 +4,6 @@ import {
   files,
   openExample,
   openResource,
-  outside,
   save,
   showPanel,
   test,
@@ -54,19 +53,12 @@ test("the generator's preview draws a world of the dimension a world naming it h
   page,
 }) => {
   const errors = await openExample(page)
-  // A world in netherforge.json made with the example's generator and its deep dimension (-128 to 319).
-  const manifest = JSON.parse((await files(page))['netherforge.json']!)
-  manifest.worlds = { ...manifest.worlds, mine: { terrain: 'ruby_hills', dimensionType: 'deep' } }
-  await outside(
-    page,
-    (backend, text) => backend.testWrite('netherforge.json', text),
-    JSON.stringify(manifest, null, 2),
-  )
+  // The example's `hills` world is made with its generator and its deep dimension (-128 to 319).
   await openResource(page, 'ruby_hills', 'Terrain')
   const heights = page.getByRole('combobox', { name: 'Preview heights' })
   // The world's heights are the ones drawn first.
-  await expect(heights).toHaveValue('mine')
-  await expect(heights.getByRole('option', { name: 'mine: deep (y -128 to 319)' })).toHaveCount(1)
+  await expect(heights).toHaveValue('hills')
+  await expect(heights.getByRole('option', { name: 'hills: deep (y -128 to 319)' })).toHaveCount(1)
   await expect(page.getByTestId('terrain-slice')).toBeVisible()
   await expect(page.getByTestId('terrain-previews')).not.toHaveAttribute('data-drawing', 'true')
   const deep = await sliceHeight(page)

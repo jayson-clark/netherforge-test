@@ -804,7 +804,7 @@ sealed interface GameEvent {
         val player: PlayerRef,
         /**
          * Its key, always with its namespace: the game's `"minecraft:story/mine_diamond"`, or one of the
-         * project's own as `"<namespace>:<id>"` (`"basic:treasure_hunter"`).
+         * project's own as `"<namespace>:<id>"` (`"showcase:treasure_hunter"`).
          */
         val advancement: String,
         /**

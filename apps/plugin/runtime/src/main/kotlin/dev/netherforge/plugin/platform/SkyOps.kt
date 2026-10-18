@@ -20,7 +20,7 @@ interface SkyOps {
 }
 
 /**
- * Which twins a player is shown: those of the sky [sky] (`basic:blood_moon`) at [step] of its fade, in the
+ * Which twins a player is shown: those of the sky [sky] (`showcase:blood_moon`) at [step] of its fade, in the
  * project's namespace [home] (where every sky's twins are). [clock] is the world clock of the sky's timeline when
  * it holds its colours through the night (format's `SkyNight`) and the server started with one: the player is told
  * it's at [step], and at 0 again once they're shown anything else.

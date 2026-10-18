@@ -20,7 +20,7 @@ import kotlinx.serialization.json.JsonPrimitive
  *
  * Format reads its files as JSON ([readsFile]) and checks what [DatapackValidator] says, not every field of the
  * game's codecs: the server does that as it starts. The game learns worldgen only as it starts, so a change needs a
- * restart. The id is only the folder's: what's in it is named as the game names it (`basic:my_trees`).
+ * restart. The id is only the folder's: what's in it is named as the game names it (`showcase:my_trees`).
  */
 object DatapackKind : DocumentResourceKind<PackMeta, CompiledDatapack>(
     "datapack",
@@ -63,7 +63,7 @@ object DatapackKind : DocumentResourceKind<PackMeta, CompiledDatapack>(
 
     /**
      * The biomes the running datapacks of [snapshot] (the project's and its packages') define, as the server names
-     * them (`basic:caves/deep`), whatever the server's format: what a terrain's area may name besides the
+     * them (`showcase:caves/deep`), whatever the server's format: what a terrain's area may name besides the
      * project's own biomes.
      */
     fun biomes(snapshot: ProjectSnapshot): Set<String> =

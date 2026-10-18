@@ -21,7 +21,7 @@ import java.util.UUID
  * A world a project generator makes has [terrain], that generator's id as
  * [WorldManagerOps.publishGenerators] was given it (and [generator] `normal`).
  * A world of a project dimension type has [dimensionType], the type as the server
- * knows it (`basic:deep`, one of [WorldManagerOps.dimensionTypes]).
+ * knows it (`showcase:deep`, one of [WorldManagerOps.dimensionTypes]).
  */
 data class WorldSettings(
     val generator: String,
@@ -41,7 +41,7 @@ data class WorldSettings(
  * the biome each of its [areas' biomes][CompiledTerrain.biomes] is on the
  * server. A custom block's state is the note block state it's held as, which
  * the project's blocks adopt when the chunk loads; a biome is the server's key
- * for it (`minecraft:plains`, a project biome's `basic:ruby_grove`). Immutable,
+ * for it (`minecraft:plains`, a project biome's `showcase:ruby_grove`). Immutable,
  * so it's shared with every thread.
  *
  * A file with a script has [scripts]: what its Lua runs with (luajava, its
@@ -75,7 +75,7 @@ interface WorldManagerOps {
     fun create(name: String, settings: WorldSettings): Boolean
 
     /**
-     * The dimension types the server has, as it knows them (`minecraft:overworld`, a project's `basic:deep`): the
+     * The dimension types the server has, as it knows them (`minecraft:overworld`, a project's `showcase:deep`): the
      * game's, and those of the datapacks it started with. A world can be made, or loaded, with one of these only.
      */
     fun dimensionTypes(): Set<String>

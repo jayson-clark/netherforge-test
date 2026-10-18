@@ -42,7 +42,7 @@ class Advancements(
     /** Whether the project's files have the advancement [name] (as the project names it). */
     fun has(name: String): Boolean = name in names
 
-    /** [name] (as the project names it) as the server's key: `basic:adventurer`, `library:gem_collector`. */
+    /** [name] (as the project names it) as the server's key: `showcase:adventurer`, `library:gem_collector`. */
     fun keyOf(name: String): String =
         requireNotNull(ResourceRef(name).resolve(namespace())) { "\"$name\" isn't an advancement's name" }.toString()
 }

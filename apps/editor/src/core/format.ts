@@ -800,7 +800,7 @@ export function styleText(text: string): StyledChar[] {
 }
 
 /**
- * One roll of loot table [table] (its full name: `basic:treasure`,
+ * One roll of loot table [table] (its full name: `showcase:treasure`,
  * `library:gems`), as the server would roll it with no player, tool or luck,
  * from [seed] (format's roller): [tables] is every loot table's text, the
  * project's and its packages', by full name, for the ones it includes. What

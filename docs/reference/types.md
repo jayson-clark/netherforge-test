@@ -1474,7 +1474,7 @@ Has the fields and methods of [Event](#event) too.
 | Field | Type | |
 | --- | --- | --- |
 | `player` | [`Player`](player.md) | Who it was. |
-| `advancement` | `string` | Its key, always with its namespace: the game's `"minecraft:story/mine_diamond"`, or one of the project's own as `"<namespace>:<id>"` (`"basic:treasure_hunter"`). |
+| `advancement` | `string` | Its key, always with its namespace: the game's `"minecraft:story/mine_diamond"`, or one of the project's own as `"<namespace>:<id>"` (`"showcase:treasure_hunter"`). |
 | `message` | [`Text`](index.md#types)`?` | The message everyone sees, as MiniMessage, or `nil` when there's none (a recipe, or an advancement that doesn't announce itself). Writable: assign another, or `nil` for none. |
 
 ### PlayerStopUsingItemEvent {#playerstopusingitemevent}

@@ -30,7 +30,7 @@ object DimensionTypeKind : DocumentResourceKind<DimensionTypeFile, DimensionType
 
     /**
      * The name the server knows a dimension type by, as a file in namespace [home] writes it: always
-     * `<namespace>:<id>` (`deep` in `basic` is `basic:deep`). Null when it isn't shaped like a reference.
+     * `<namespace>:<id>` (`deep` in `showcase` is `showcase:deep`). Null when it isn't shaped like a reference.
      */
     fun keyOf(text: String, home: String): String? = ResourceRef(text).resolve(home)?.toString()
 

@@ -2,7 +2,7 @@ import { expect } from '@playwright/test'
 import { openExample, openResource, outside, showPanel, test } from './helpers'
 
 const FOLDER = 'datapacks/ruby_boulders'
-const PLACED = 'data/basic/worldgen/placed_feature/ruby_boulders.json'
+const PLACED = 'data/showcase/worldgen/placed_feature/ruby_boulders.json'
 
 test('a datapack lists its files by overlay, opens one as JSON, and what format finds shows in Problems', async ({
   page,
@@ -16,7 +16,7 @@ test('a datapack lists its files by overlay, opens one as JSON, and what format 
   const overlay = page.getByRole('list', { name: 'Files in mc1_21' })
   await expect(
     overlay.getByRole('button', {
-      name: 'mc1_21/data/basic/worldgen/configured_feature/ruby_boulder.json',
+      name: 'mc1_21/data/showcase/worldgen/configured_feature/ruby_boulder.json',
     }),
   ).toBeVisible()
 

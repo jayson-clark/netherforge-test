@@ -416,9 +416,8 @@ internal class NodeImpl(private val session: ProjectSession) : NodeApi {
 
     override fun billboard(self: LuaHandle.Node): String? {
         val (instance, index) = node(self) ?: return null
-        val display = instance.display(index) ?: return null
-        val own = if (display is TextDisplay) display.billboard ?: TextDisplay.DEFAULT_BILLBOARD else Billboard.FIXED
-        return (instance.look(index).billboard ?: own).name.lowercase()
+        if (instance.display(index) == null) return null
+        return instance.billboard(index).name.lowercase()
     }
 
     override fun setBillboard(self: LuaHandle.Node, billboard: String): Boolean {

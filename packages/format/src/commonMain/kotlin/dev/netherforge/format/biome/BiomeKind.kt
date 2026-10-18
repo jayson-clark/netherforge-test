@@ -82,7 +82,7 @@ object BiomeKind : DocumentResourceKind<BiomeFile, BiomeFile>(
     /**
      * The name the server knows a biome by, as a file in namespace [home] writes it: the game's as they are
      * (`minecraft:plains`, a tag `#minecraft:is_forest`), the project's and its packages' as `<namespace>:<id>`
-     * (`ruby_grove` in `basic` is `basic:ruby_grove`). Null when it isn't shaped like a biome.
+     * (`ruby_grove` in `showcase` is `showcase:ruby_grove`). Null when it isn't shaped like a biome.
      */
     fun keyOf(text: String, home: String): String? = when {
         text.startsWith("#") -> "#" + GameIds.normalize(text.removePrefix("#"))

@@ -43,7 +43,7 @@ import java.util.concurrent.ConcurrentHashMap
  * - **Out.** A name a script reads back is written as the reading package
  *   writes it: bare for its own, `ns:id` for another's. The library's gem is
  *   `gem` to the library's scripts and `library:gem` to the project's, the
- *   project's ruby `ruby` to the project and `basic:ruby` to the library.
+ *   project's ruby `ruby` to the project and `showcase:ruby` to the library.
  *
  * A project with no packages has nothing to translate: every name is the
  * project's and crosses as it's written ([spanning] is false).
@@ -107,7 +107,7 @@ class PackageNames internal constructor(private val session: ProjectSession) {
 
     /**
      * [reference], a biome the calling code named, as the server keys it: the project's own bare (`ruby_grove` is
-     * `basic:ruby_grove`), another package's `ns:id` (an error when the caller can't name it), the game's written
+     * `showcase:ruby_grove`), another package's `ns:id` (an error when the caller can't name it), the game's written
      * `minecraft:x`. Whether the server has it is the caller's to say; a bare id is never the game's.
      */
     fun biome(reference: String): String {

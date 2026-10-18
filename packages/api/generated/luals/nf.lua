@@ -6507,7 +6507,7 @@ function Event:uncancel() end
 --- A player completed an advancement.
 ---@class PlayerAdvancementEvent: Event
 ---@field player Player Who it was.
----@field advancement string Its key, always with its namespace: the game's `"minecraft:story/mine_diamond"`, or one of the project's own as `"<namespace>:<id>"` (`"basic:treasure_hunter"`).
+---@field advancement string Its key, always with its namespace: the game's `"minecraft:story/mine_diamond"`, or one of the project's own as `"<namespace>:<id>"` (`"showcase:treasure_hunter"`).
 ---@field message Text? The message everyone sees, as MiniMessage, or `nil` when there's none (a recipe, or an advancement that doesn't announce itself). Writable: assign another, or `nil` for none.
 
 --- A player let go of an item before it finished.

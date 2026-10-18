@@ -1,9 +1,11 @@
 package dev.netherforge.plugin.centity
 
+import dev.netherforge.format.centity.Billboard
 import dev.netherforge.format.centity.Channel
 import dev.netherforge.format.centity.CompiledCentity
 import dev.netherforge.format.centity.DisplayDef
 import dev.netherforge.format.centity.Easing
+import dev.netherforge.format.centity.TextDisplay
 import dev.netherforge.format.centity.Transform
 import dev.netherforge.format.math.Matrix4
 import dev.netherforge.format.math.Vec3
@@ -223,6 +225,14 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
     internal val pushedPoses = HashMap<UUID, PushedPose>()
     internal val pushedHitboxes = HashMap<UUID, Hitboxes.Bounds>()
     internal val pushedLooks = HashMap<UUID, DisplayLook>()
+
+    /**
+     * Where each billboarded display was last put. One stands on its own at its
+     * node rather than riding the anchor: the client turns a billboard to the
+     * camera before its transformation, so the matrix can't carry its offset
+     * or any rotation (see `Centities.billboardPose`).
+     */
+    internal val pushedSpots = HashMap<UUID, Location>()
 
     internal data class PushedPose(val matrix: List<Double>, val cullSize: Double)
 
@@ -622,6 +632,15 @@ class Instance(val id: UUID, declared: CompiledCentity, anchor: Location, yaw: D
     }
 
     fun contentChanged(index: Int): Boolean = contentChanged[index]
+
+    /** How node [index]'s display turns to the camera: a script's look, else a text display's own, else fixed. */
+    fun billboard(index: Int): Billboard {
+        val own = (content[index] as? TextDisplay)?.let { it.billboard ?: TextDisplay.DEFAULT_BILLBOARD } ?: Billboard.FIXED
+        return looks[index].billboard ?: own
+    }
+
+    /** Whether node [index]'s display turns to the camera at all. */
+    fun billboarded(index: Int): Boolean = content[index] != null && billboard(index) != Billboard.FIXED
 
     /** What a script changed about how node [index]'s display is drawn. */
     fun look(index: Int): DisplayLook = looks[index]

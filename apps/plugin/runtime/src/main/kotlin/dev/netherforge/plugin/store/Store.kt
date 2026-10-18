@@ -235,7 +235,7 @@ class Store private constructor(private val database: Database) : AutoCloseable 
 
     /**
      * A world a project made: the environment it was made as, the project terrain (`terrain/<id>.json`) that
-     * generated it, if one did, and the dimension type (`dimension_types/<id>.json`, as the server knows it: `basic:deep`) it
+     * generated it, if one did, and the dimension type (`dimension_types/<id>.json`, as the server knows it: `showcase:deep`) it
      * was made with, if it was.
      */
     data class OwnedWorld(val environment: String, val terrain: String? = null, val dimensionType: String? = null)

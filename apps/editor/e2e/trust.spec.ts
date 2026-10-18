@@ -31,15 +31,21 @@ test('the project settings show what the whole tree requires, with who declares 
   const table = page.getByRole('table', { name: 'Requirements across the packages' })
   await expect(table.getByRole('row')).toHaveText([
     'RequirementDeclared by',
-    'dbbasic',
+    'dbshowcase',
+    'webshowcase',
+    'botsshowcase',
+    'wasmshowcase',
     'http:api.example.comlibrary',
   ])
 
   await page.getByRole('checkbox', { name: 'Moderation' }).check()
   await expect(table.getByRole('row')).toHaveText([
     'RequirementDeclared by',
-    'moderationbasic',
-    'dbbasic',
+    'moderationshowcase',
+    'dbshowcase',
+    'webshowcase',
+    'botsshowcase',
+    'wasmshowcase',
     'http:api.example.comlibrary',
   ])
 })

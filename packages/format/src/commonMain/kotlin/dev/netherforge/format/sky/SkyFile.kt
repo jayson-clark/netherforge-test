@@ -159,7 +159,7 @@ object SkyTwins {
 
     /**
      * The key of [biome]'s twin at [step] of [sky], in the project's namespace [home], whoever's sky it is
-     * (`basic:sky/basic/blood_moon/3/minecraft/plains`).
+     * (`showcase:sky/showcase/blood_moon/3/minecraft/plains`).
      */
     fun keyOf(home: String, sky: ResourceKey, step: Int, biome: ResourceKey): ResourceKey =
         ResourceKey(home, "$FOLDER/${sky.namespace}/${sky.path}/$step/${biome.namespace}/${biome.path}")
@@ -259,7 +259,7 @@ object SkyNight {
     const val CLOCK_FOLDER = "world_clock"
     const val TIMELINE_FOLDER = "timeline"
 
-    /** The key of [sky]'s clock, and of its timeline, in the project's namespace [home] (`basic:sky/basic/blood_moon`). */
+    /** The key of [sky]'s clock, and of its timeline, in the project's namespace [home] (`showcase:sky/showcase/blood_moon`). */
     fun keyOf(home: String, sky: ResourceKey): ResourceKey = ResourceKey(home, "${SkyTwins.FOLDER}/${sky.namespace}/${sky.path}")
 
     /** The key of the clock the start-up datapack's file [path] is, when it's a sky's; else null. */

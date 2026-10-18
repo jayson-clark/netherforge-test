@@ -78,7 +78,7 @@ object StartupDatapack {
     }
 
     /**
-     * The project (or package) file that puts the entry [element] (`basic:rocks`) of the game's [registry]
+     * The project (or package) file that puts the entry [element] (`showcase:rocks`) of the game's [registry]
      * (`minecraft:worldgen/placed_feature`) in the pack for a server of [format]: a datapack's file, or a resource
      * that writes it ([KindSpec.datapackEntries]); null when nothing does. Where the server's own complaint about an
      * entry belongs.

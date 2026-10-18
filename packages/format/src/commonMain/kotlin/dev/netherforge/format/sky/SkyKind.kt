@@ -34,7 +34,7 @@ object SkyKind : DocumentResourceKind<SkyFile, SkyFile>(
 
     /**
      * Each sky's twin of every biome the server has (the game's, from the server, and the project's own and its
-     * packages'), per step of its fade, in the project's namespace (`basic:sky/blood_moon/1/minecraft/plains`).
+     * packages'), per step of its fade, in the project's namespace (`showcase:sky/blood_moon/1/minecraft/plains`).
      */
     override val datapackAll = DatapackCollection<SkyFile> { skies, ctx ->
         if (skies.isEmpty()) return@DatapackCollection emptyMap()

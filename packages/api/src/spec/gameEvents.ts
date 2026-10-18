@@ -1184,7 +1184,7 @@ export const gameShapes: LuaClass[] = [
     {
       name: 'advancement',
       type: 'string',
-      doc: 'Its key, always with its namespace: the game\'s `"minecraft:story/mine_diamond"`, or one of the project\'s own as `"<namespace>:<id>"` (`"basic:treasure_hunter"`).',
+      doc: 'Its key, always with its namespace: the game\'s `"minecraft:story/mine_diamond"`, or one of the project\'s own as `"<namespace>:<id>"` (`"showcase:treasure_hunter"`).',
     },
     {
       name: 'message',

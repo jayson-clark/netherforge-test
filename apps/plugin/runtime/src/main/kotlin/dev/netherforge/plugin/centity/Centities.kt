@@ -800,9 +800,24 @@ class Centities(
                     entities.setLook(entity, look)
                     instance.pushedLooks[entity] = look
                 }
-                if (instance.forceSync && vehicle != null) ride(instance, vehicle, entity)
-                // One that couldn't get on the anchor entity is moved on its own.
-                if ((instance.moved || instance.forceSync) && entity !in instance.riders) entities.teleport(entity, anchor)
+                if (instance.billboarded(index)) {
+                    // A billboard stands on its own at its node: riding, it could only be drawn at the anchor.
+                    if (entity in instance.riders) {
+                        entities.dismount(entity)
+                        instance.riders -= entity
+                    }
+                    val spot = standsAt(instance, index)
+                    if (instance.forceSync || instance.pushedSpots[entity] != spot) {
+                        entities.teleport(entity, spot)
+                        instance.pushedSpots[entity] = spot
+                    }
+                } else {
+                    // Back on the anchor entity when it stops being a billboard.
+                    val wasStanding = instance.pushedSpots.remove(entity) != null
+                    if ((instance.forceSync || wasStanding) && vehicle != null) ride(instance, vehicle, entity)
+                    // One that couldn't get on the anchor entity is moved on its own.
+                    if ((instance.moved || instance.forceSync || wasStanding) && entity !in instance.riders) entities.teleport(entity, anchor)
+                }
                 if (parts.active) parts.add(SYNC_DISPLAYS, parts.now() - from)
                 parts.time(SYNC_POSES) { syncPose(instance, index, entity, if (shown) world[index] else HIDDEN, shown, cull, ahead) }
             }
@@ -868,7 +883,9 @@ class Centities(
      * new clip, the first sync) sends the pose now, eased as the node says.
      */
     private fun syncPose(instance: Instance, index: Int, entity: UUID, matrix: Matrix4, shown: Boolean, cull: Double, ahead: Lookahead) {
+        val billboarded = instance.billboarded(index)
         val planned = !instance.forceSync &&
+            !billboarded &&
             shown &&
             instance.animations.active &&
             instance.interpolation(index) > 0 &&
@@ -882,13 +899,35 @@ class Centities(
             ahead.at(reach)[index] to reach
         } else {
             instance.due[index] = instance.age
-            matrix to if (instance.forceSync) 0 else instance.interpolation(index)
+            (if (billboarded) billboardPose(matrix) else matrix) to if (instance.forceSync) 0 else instance.interpolation(index)
         }
         val pushed = Instance.PushedPose(target.values.toList(), cull)
         if (instance.forceSync || instance.pushedPoses[entity] != pushed) {
             platform.entities.setPose(entity, DisplayPose(drawn(instance, index, target), ticks, cull))
             instance.pushedPoses[entity] = pushed
         }
+    }
+
+    /**
+     * Where node [index]'s display entity stands: at the anchor, its offset in
+     * its matrix; a billboard at its node, since the client turns a billboard
+     * to the camera before its transformation, which would swing an offset
+     * round the anchor and turn the text away by the centity's yaw.
+     */
+    private fun standsAt(instance: Instance, index: Int): Location {
+        if (!instance.billboarded(index)) return instance.anchor
+        val at = instance.placed()[index].translation()
+        return instance.anchor.offset(at.x, at.y, at.z)
+    }
+
+    /**
+     * A billboard's matrix: its node's scale only. Its place is the entity's
+     * ([standsAt]), and the client chooses its turn, so the node's rotation
+     * and the centity's yaw are left out.
+     */
+    private fun billboardPose(matrix: Matrix4): Matrix4 {
+        val scale = matrix.scale()
+        return Matrix4().scale(scale.x, scale.y, scale.z)
     }
 
     /**
@@ -952,9 +991,10 @@ class Centities(
                     retire(instance, existing)
                 }
                 if (instance.displays[node.name] == null) {
-                    val matrix = if (instance.shown(index)) world[index] else HIDDEN
+                    val shown = if (instance.shown(index)) world[index] else HIDDEN
+                    val matrix = if (instance.billboarded(index)) billboardPose(shown) else shown
                     entities.spawnDisplay(
-                        anchor,
+                        standsAt(instance, index),
                         display,
                         DisplayPose(drawn(instance, index, matrix), 0, cull),
                         EntityTag(instance.id, node.name, EntityRole.DISPLAY)
@@ -1015,14 +1055,14 @@ class Centities(
     /**
      * Forgets entities that can't be reached although their chunk's entities
      * are loaded: something else killed or removed them. [reconcile] spawns
-     * them again. (A display stands at the anchor; a hitbox where it was last
-     * put, which may be the next chunk over.)
+     * them again. (A display stands at the anchor; a billboard or a hitbox where
+     * it was last put, which may be the next chunk over.)
      */
     private fun dropGone(instance: Instance) {
         val entities = platform.entities
         fun gone(entity: UUID, at: Location) = !entities.isLoaded(entity) && platform.worlds.entitiesLoaded(at)
         val anchor = instance.anchor
-        val goneDisplays = instance.displays.filterValues { gone(it, anchor) }
+        val goneDisplays = instance.displays.filterValues { gone(it, instance.pushedSpots[it] ?: anchor) }
         val goneHitboxes = instance.hitboxes.filterValues { entity ->
             val at = instance.pushedHitboxes[entity]?.let { anchor.offset(it.centerX, it.bottomY, it.centerZ) } ?: anchor
             gone(entity, at)
@@ -1053,6 +1093,7 @@ class Centities(
         instance.pushedPoses.remove(entity)
         instance.pushedHitboxes.remove(entity)
         instance.pushedLooks.remove(entity)
+        instance.pushedSpots.remove(entity)
     }
 
     /**

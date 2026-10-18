@@ -70,7 +70,7 @@ class LootTables(
 
     /**
      * The table [reference] names as the server knows it (`treasure`,
-     * `library:junk`; the project's own written `basic:treasure` too), or null
+     * `library:junk`; the project's own written `showcase:treasure` too), or null
      * when no table running is called that.
      */
     fun idOf(reference: String): String? = ResourceRef(reference).nameIn(namespace())?.takeIf { it in tables }

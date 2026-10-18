@@ -25,7 +25,7 @@ import java.security.MessageDigest
 @Serializable
 data class DatapackRefusal(val hash: String, val report: String) {
     /**
-     * The report as problems: one per entry the game names (`>> Errors in element basic:rocks:` under `> Errors in
+     * The report as problems: one per entry the game names (`>> Errors in element showcase:rocks:` under `> Errors in
      * registry minecraft:worldgen/placed_feature:`), at the datapack file that wrote it when one did for [format],
      * else at `netherforge.json`; the whole report there when it names none.
      */

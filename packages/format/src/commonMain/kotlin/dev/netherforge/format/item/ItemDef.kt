@@ -81,7 +81,7 @@ data class ItemDef(
     /**
      * The blocks it can break in adventure mode (the `can_break` component): the project's (`ruby_ore`,
      * a package's `acme:gem_ore`), the game's (`minecraft:stone`), `#tags` of blocks (the game's, or one a
-     * project datapack defines: `#basic:soft`), or `*` for any block.
+     * project datapack defines: `#showcase:soft`), or `*` for any block.
      */
     @Ref(RefKind.ADVENTURE_BLOCK) val canBreak: List<String>? = null,
     /** The blocks it can be placed on in adventure mode (the `can_place_on` component), written as [canBreak]'s. */

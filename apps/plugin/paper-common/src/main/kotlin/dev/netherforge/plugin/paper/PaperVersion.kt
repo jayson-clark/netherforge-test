@@ -132,7 +132,7 @@ interface PaperVersion {
     val worlds: WorldStorage
 
     /**
-     * Gives the new world [creator] is about to make dimension type [type] (a key the server has: `basic:deep`), called
+     * Gives the new world [creator] is about to make dimension type [type] (a key the server has: `showcase:deep`), called
      * on the main thread just before `Bukkit.createWorld(creator)`, for a world the server has nothing saved of.
      *
      * Bukkit can't make a world of a datapack's dimension type: `createWorld` gives a new world its environment's level

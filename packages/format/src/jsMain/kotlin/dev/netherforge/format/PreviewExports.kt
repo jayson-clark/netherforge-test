@@ -305,10 +305,10 @@ fun particleCurveAt(keysJson: String, color: Boolean, tick: Double): String {
 }
 
 /**
- * One roll of loot table [table] (`basic:treasure`, `library:gems`) as the
+ * One roll of loot table [table] (`showcase:treasure`, `library:gems`) as the
  * server would roll it with no player, tool or luck, from [seed].
  * [tablesJson] is every loot table there is, the project's and its packages',
- * by its full name, each text as its file says (`{ "basic:treasure": "{…}" }`):
+ * by its full name, each text as its file says (`{ "showcase:treasure": "{…}" }`):
  * a table's names mean what they do in its own package, as the server reads
  * them, so what a roll gives names items in full (`library:gem`). JSON: a
  * `LootPreview`.

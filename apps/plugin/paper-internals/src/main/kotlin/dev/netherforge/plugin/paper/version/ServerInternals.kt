@@ -23,7 +23,7 @@ internal interface ServerInternals {
     /**
      * Saves the generation settings of the new world [creator] describes, as `createWorld` would make them for it (the
      * world preset of its type, its generator settings, seed and structures), but with dimension type [type] (a key
-     * the server has: `basic:deep`) for its environment's level stem. `createWorld` then finds a saved world's
+     * the server has: `showcase:deep`) for its environment's level stem. `createWorld` then finds a saved world's
      * settings and makes the world with that type: Bukkit has no other way to give a world a datapack's dimension type
      * (see [dev.netherforge.plugin.paper.PaperVersion.prepareDimension]). Where they're saved is the version's: the
      * world's own `world_gen_settings` saved data from 26.1, its `level.dat` before.
@@ -31,7 +31,7 @@ internal interface ServerInternals {
     fun prepareDimension(creator: WorldCreator, type: String)
 
     /**
-     * Stops each of the world clocks [clocks] (keys: `basic:sky/basic/blood_moon`) the server has at tick 0, as they'd
+     * Stops each of the world clocks [clocks] (keys: `showcase:sky/showcase/blood_moon`) the server has at tick 0, as they'd
      * otherwise run from the start and be saved with the world: a sky held at night ([dev.netherforge.format.sky.SkyNight])
      * shows nothing at 0. Nothing on a version without world clocks (before 26.1).
      */
