@@ -23,6 +23,10 @@ export default defineConfig({
   testDir: 'e2e',
   testMatch: '**/*.spec.ts',
   fullyParallel: true,
+  // GitHub's Windows runners draw WebGL in software, and two browsers drawing at once starve
+  // each other: 3D flows stall for tens of seconds and time out. One worker runs them all in
+  // well under a minute each (Linux and macOS keep Playwright's default).
+  workers: process.env.CI && process.platform === 'win32' ? 1 : undefined,
   forbidOnly: !!process.env.CI,
   retries: 0,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
