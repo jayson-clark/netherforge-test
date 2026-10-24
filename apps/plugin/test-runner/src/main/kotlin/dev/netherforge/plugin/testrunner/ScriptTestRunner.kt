@@ -17,6 +17,7 @@ import dev.netherforge.plugin.lua.ScriptFailure
 import dev.netherforge.plugin.platform.GameEvent
 import dev.netherforge.plugin.platform.ItemData
 import dev.netherforge.plugin.platform.PlayerRef
+import dev.netherforge.plugin.script.PerformanceConfig
 import dev.netherforge.plugin.testing.TestHarness
 import dev.netherforge.plugin.testing.TestOutcome
 import dev.netherforge.plugin.testkit.FakeItemViews
@@ -184,6 +185,9 @@ class ScriptTestRunner(
                     state.resolve("data").createDirectories(),
                     state,
                     sandbox = sandbox,
+                    // A slow-script warning is the wall clock's, not the test's: ticks run back to back on a fake
+                    // server, cold, so a busy machine would turn it into an error the test never meant.
+                    performance = PerformanceConfig(warnMillis = 0.0),
                     packageCache = packageCache,
                     testing = harness
                 )

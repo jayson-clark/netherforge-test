@@ -73,8 +73,10 @@ val repoRoot: File by rootProject.extra
 val updateGolden = System.getenv("UPDATE_GOLDEN") ?: ""
 
 tasks.withType<Test>().configureEach {
-    // A Lua budget bug shows up as a hang; fail instead of waiting forever.
-    timeout.set(Duration.ofMinutes(5))
+    // A Lua budget bug shows up as a hang; fail instead of waiting forever. Each test gets 2 minutes, so a hang
+    // names its test; the whole run, which takes about 4 minutes on CI's Windows runners, gets 15.
+    systemProperty("junit.jupiter.execution.timeout.default", "2 m")
+    timeout.set(Duration.ofMinutes(15))
     // luajava loads Lua's native library; Java 25 warns unless that's allowed explicitly.
     jvmArgs("--enable-native-access=ALL-UNNAMED")
     // The conformance test reads packages/api/generated/api.json; others load examples/. Declared
