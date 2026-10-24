@@ -7,6 +7,7 @@ import java.net.ServerSocket
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
+import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -80,7 +81,6 @@ class PaperServer(
         // a boss bar: what a server whose main world isn't the expo's plaza turns off, as these scenarios' worlds aren't.
         Files.createDirectories(folder.resolve("plugins/NetherForge/settings"))
         folder.resolve("plugins/NetherForge/settings/showcase.json").writeText("{ \"expo\": false }\n")
-        val port = ServerSocket(0).use { it.localPort }
         // The server writes its defaults into a bukkit.yml that isn't there: a scenario's routing never outlives it.
         Files.deleteIfExists(folder.resolve("bukkit.yml"))
         if (mainWorldGenerator) folder.resolve("bukkit.yml").writeText("worlds:\n  world:\n    generator: NetherForge\n")
@@ -92,7 +92,7 @@ class PaperServer(
             online-mode=$onlineMode
             white-list=false
             server-ip=127.0.0.1
-            server-port=$port
+            server-port=0
             level-type=minecraft\:flat
             generator-settings={"layers"\:[{"block"\:"minecraft\:bedrock","height"\:1},{"block"\:"minecraft\:grass_block","height"\:1}],"biome"\:"minecraft\:plains"}
             generate-structures=$structures
@@ -169,6 +169,11 @@ class PaperServer(
 
     /** Starts the JVM with [properties], its output in [log] (and the test's own output). */
     fun launch(properties: List<String>, log: String): Process {
+        // A free port for each start, not one for the scenario: a port let go is the OS's to hand out again (to the
+        // bridge's listener, or a connection's own end), so a restart reusing it could find it taken.
+        val settings = folder.resolve("server.properties")
+        val port = ServerSocket(0).use { it.localPort }
+        settings.writeText(settings.readText().replace(Regex("(?m)^server-port=.*$"), "server-port=$port"))
         val command = listOf(
             Adapter.java,
             "-Xmx2G",

@@ -252,7 +252,8 @@ test('keys an animation in the timeline, with the pointer and the keyboard', asy
 /**
  * A picture of [canvas] once the camera's damping has settled: two pictures
  * 150 ms apart are the same. Bounded, so a view that never stops moving fails
- * here rather than hanging the test.
+ * here rather than hanging the test. Damping eases per frame, and a runner
+ * drawing WebGL in software draws few: macOS CI took 11 s after an orbit.
  */
 async function settled(canvas: Locator): Promise<Buffer> {
   let last = await canvas.screenshot()
@@ -264,7 +265,7 @@ async function settled(canvas: Locator): Promise<Buffer> {
         last = next
         return still
       },
-      { message: "the camera's damping to settle", intervals: [150], timeout: 10_000 },
+      { message: "the camera's damping to settle", intervals: [150], timeout: 30_000 },
     )
     .toBe(true)
   return last
@@ -274,6 +275,8 @@ test("every 3D view draws in one canvas, which keeps each tab's scene and camera
   page,
   context,
 }) => {
+  // Two waits for the camera to settle, each up to 30 s on a slow runner.
+  test.slow()
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
